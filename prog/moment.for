@@ -1,6 +1,5 @@
-c***********************************************************************
-        program moment
-c
+      program moment
+
 c= MOMENT -  Calculate moments of a Miriad image.
 c& mchw
 c: image analysis
@@ -71,7 +70,7 @@ c       range pkmask(1) to pkmask(2) exclusive.  If only one value is
 c       given, then mask pixels with peak intensity less than pkmask.
 c       Default = 0.
 c
-c$Id: moment.for,v 1.13 2010/05/10 05:21:01 cal103 Exp $
+c$Id: moment.for,v 1.14 2010/09/06 08:06:28 cal103 Exp $
 c--
 c  History:
 c    26may89 Robert Loushin  original version - v-axis of vxy image
@@ -112,24 +111,24 @@ c-----------------------------------------------------------------------
       include 'mem.h'
 
       integer maxnax, maxboxes, maxruns
-      parameter(maxnax=3, maxboxes=2048)
-      parameter(maxruns=3*MAXDIM)
+      parameter (maxnax=3, maxboxes=2048)
+      parameter (maxruns=3*MAXDIM)
 
       logical rngmsk
       integer axis, blc(maxnax), boxes(maxboxes), i, j, lIn, lOut,
-     :        mom, n1, n2, n3, naxes, naxis(maxnax), nchan,
-     :        oaxis(maxnax), pMasks, pSpecs, span, trc(maxnax)
+     *        mom, n1, n2, n3, naxes, naxis(maxnax), nchan,
+     *        oaxis(maxnax), pMasks, pSpecs, span, trc(maxnax)
       real    blo, bhi, cdelt, clip(2), crpix, crval, pkmask(2), offset,
-     :        restfreq, scl, tmp, vrange(2)
+     *        restfreq, scl, tmp, vrange(2)
       character cin*1, ctype*9, in*64, text*72, out*64, version*80
 
-c     Externals.
-      logical hdprsnt, keyprsnt
+      logical   keyprsnt, hdprsnt
       character itoaf*1, versan*80
+      external  itoaf, keyprsnt, hdprsnt, versan
 c-----------------------------------------------------------------------
       version = versan ('moment',
-     :                  '$Revision: 1.13 $',
-     :                  '$Date: 2010/05/10 05:21:01 $')
+     *                  '$Revision: 1.14 $',
+     *                  '$Date: 2010/09/06 08:06:28 $')
 
 c     Get inputs.
       call keyini
@@ -224,8 +223,8 @@ c     Locate the spectral axis if need be.
           cin = itoaf(i)
           call rdhda(lIn, 'ctype'//cin, ctype, ' ')
           if (ctype(:4).eq.'FREQ' .or.
-     :        ctype(:4).eq.'VELO' .or.
-     :        ctype(:4).eq.'FELO') then
+     *        ctype(:4).eq.'VELO' .or.
+     *        ctype(:4).eq.'FELO') then
             axis = i
             goto 40
           endif
@@ -242,7 +241,7 @@ c     Locate the spectral axis if need be.
 c     Calculate offset and scale to convert from channels to km/s.
       cin = itoaf(axis)
       if (hdprsnt(lIn, 'crpix'//cin) .and.
-     :    hdprsnt(lIn, 'crval'//cin)) then
+     *    hdprsnt(lIn, 'crval'//cin)) then
         call rdhdr(lIn,'crpix'//cin, crpix, 0.0)
         call rdhdr(lIn,'crval'//cin, crval, 0.0)
       else
@@ -269,11 +268,11 @@ c     Compute velocity parameters.
       endif
 
 c     Transform to pixel coordinates of output axis.
-      offset = offset - blc(axis) + 1
+      offset = offset - blc(axis) + 1.0
 
 c     Report the axis range.
       nchan = trc(axis) - blc(axis) + 1
-      vrange(1) = (    1 - offset)*scl
+      vrange(1) = (  1.0 - offset)*scl
       vrange(2) = (nchan - offset)*scl
 
       if (vrange(2).lt.vrange(1)) then
@@ -289,8 +288,8 @@ c     Check span.
       endif
 
       if (ctype(:4).eq.'FREQ' .or.
-     :    ctype(:4).eq.'VELO' .or.
-     :    ctype(:4).eq.'FELO') then
+     *    ctype(:4).eq.'VELO' .or.
+     *    ctype(:4).eq.'FELO') then
         write (text, 50) vrange(1), vrange(2), scl
  50     format ('Velocity range (km/s):',f10.2,' to',f10.2,' by',f8.2)
       else
@@ -322,7 +321,7 @@ c     Open output image and write its header.
 c     Compute the moment.
       if (axis.eq.1) then
         call ax1mom(lIn,lOut,naxes,blc,trc,mom,offset,scl,clip,span,
-     :    vrange,pkmask)
+     *    vrange,pkmask)
 
       else if (axis.eq.2) then
         n1 = trc(1) - blc(1) + 1
@@ -330,7 +329,7 @@ c     Compute the moment.
         call memalloc(pSpecs,n1*n2,'r')
         call memalloc(pMasks,n1*n2,'l')
         call ax2mom(lIn,lOut,naxes,blc,trc,mom,offset,scl,clip,span,
-     :    vrange,pkmask,n1,n2,memr(pSpecs),meml(pMasks))
+     *    vrange,pkmask,n1,n2,memr(pSpecs),meml(pMasks))
         call memfree(pSpecs,n1*n2,'r')
         call memfree(pMasks,n1*n2,'l')
 
@@ -340,7 +339,7 @@ c     Compute the moment.
         call memalloc(pSpecs,n1*n3,'r')
         call memalloc(pMasks,n1*n3,'l')
         call ax3mom(lIn,lOut,naxes,blc,trc,mom,offset,scl,clip,span,
-     :    vrange,pkmask,n1,n3,memr(pSpecs),meml(pMasks))
+     *    vrange,pkmask,n1,n3,memr(pSpecs),meml(pMasks))
         call memfree(pSpecs,n1*n3,'r')
         call memfree(pMasks,n1*n3,'l')
       endif
@@ -355,11 +354,12 @@ c     Update history and close files.
 
       end
 
-c=======================================================================
+c***********************************************************************
 
       subroutine header(lIn,lOut,naxes,blc,trc,mom,axis)
+
       integer lIn,lOut,naxes,blc(naxes),trc(naxes),mom,axis
-c
+c-----------------------------------------------------------------------
 c  Copy keywords to output file.
 c
 c  Inputs:
@@ -369,82 +369,53 @@ c    blc,trc    The corners of the input image.
 c    mom        The moment to be calculated.
 c    axis       The axis for which the moment is calculated.
 c-----------------------------------------------------------------------
-      character atemp*16,ctype*10,cin*2,cout*2
-      double precision rtemp,cdelt,crval,crpix,idx
-      integer i,j,k,l
+      include 'maxdim.h'
 
-c     Externals.
+      integer   axmap(MAXDIM), i, l
+      double precision cdelt, crpix, crval, pxmid
+      character atemp*16, cin*1, cout*1, ctype*10
+
+      logical   hdprsnt
+      integer   len1
       character itoaf*2
-      integer len1
-      logical hdprsnt
-
-c     nkeys and nckeys must match the number of keywords.
-      integer nkeys,nckeys
-      parameter (nkeys=23, nckeys=4)
-      character keyw(nkeys)*8, ckeyw(nckeys)*5
-
-      data keyw/   'bmaj    ','bmin    ','bpa     ',
-     :    'obstime ','epoch   ','history ','llrot   ',
-     :    'ltype   ','lstart  ','lstep   ','lwidth  ','pbfwhm  ',
-     :    'instrume','niters  ','object  ','telescop','pbtype  ',
-     :    'restfreq','vobs    ','observer','obsra   ',
-     :    'obsdec  ','mostable'/
-
-c     Keyvalues that must be changed as they are passed from in to out.
-      data ckeyw/'ctype','cdelt','crval','crota'/
+      external  hdprsnt, itoaf, len1
 c-----------------------------------------------------------------------
-c     Copy unchanged header keywords.
-      do i = 1,nkeys
-        call hdcopy(lIn,lOut,keyw(i))
+c     Handle keywords that must be moved to another axis.
+      do i = 1, naxes
+        axmap(i) = i
       enddo
 
-c     Handle keywords that must be moved to another axis.
-      j = 0
-      do i = 1, naxes
-        if (i.ne.axis) then
-          j = j + 1
-          cin = itoaf(i)
-          cout = itoaf(j)
-          atemp = ckeyw(1)//cin
-          call rdhda(lIn,ckeyw(1)//cin,atemp,' ')
-          if (atemp.ne.' ')call wrhda(lOut,ckeyw(1)//cout,atemp)
-          do k = 2,nckeys
-            atemp = ckeyw(k)//cin
-            if (hdprsnt(lIn,atemp)) then
-              call rdhdd(lIn,ckeyw(k)//cin,rtemp,0.0d0)
-              call wrhdd(lOut,ckeyw(k)//cout,rtemp)
-            endif
-          enddo
-
-c         Special cases: the crpix change for a subcube.
-          if (hdprsnt(lIn,'crpix'//cin)) then
-            call rdhdd(lIn,'crpix'//cin,rtemp,0.0d0)
-            rtemp = rtemp - dble(blc(i)) + 1
-            call wrhdd(lOut,'crpix'//cout,rtemp)
-          endif
+      do i = 1, min(3,naxes)-1
+        if (i.ge.axis) then
+          axmap(i) = i + 1
         endif
       enddo
 
-c     Record additional information about the ``third'' dummy axis.
-c     Also the third dimension is 1 (naxis3=1), the axes are labeled
-c     as much as possible from the input cube.
-      cin = itoaf(axis)
-      idx = (blc(axis)+trc(axis))/2.0
+      axmap(min(3,naxes)) = axis
+
+c     Copy the header.
+      call headcopy(lIn, lOut, axmap, naxes, blc, trc)
+
+c     Update the axis for which the moment was computed.
+      cin  = itoaf(axis)
       call rdhdd(lIn,'crpix'//cin, crpix, 1d0)
       call rdhdd(lIn,'cdelt'//cin, cdelt, 1d0)
       call rdhdd(lIn,'crval'//cin, crval, 0d0)
       call rdhda(lIn,'ctype'//cin, ctype, ' ')
-      crval = crval + (idx-crpix)*cdelt
-      cdelt = cdelt * (trc(axis)-blc(axis)+1)
-      call wrhdd(lOut,'crpix3', 1d0)
-      call wrhdd(lOut,'cdelt3', cdelt)
-      call wrhdd(lOut,'crval3', crval)
-      call wrhda(lOut,'ctype3', ctype)
+
+      cout  = itoaf(min(3,naxes))
+      cdelt = cdelt * (trc(axis) - blc(axis) + 1)
+      pxmid = (blc(axis) + trc(axis)) / 2.0
+      crval = crval + (pxmid - crpix)*cdelt
+      call wrhdd(lOut,'crpix'//cout, 1d0)
+      call wrhdd(lOut,'cdelt'//cout, cdelt)
+      call wrhdd(lOut,'crval'//cout, crval)
+      call wrhda(lOut,'ctype'//cout, ctype)
 
 c     Brightness units.
       if (ctype(:4).eq.'FREQ' .or.
-     :    ctype(:4).eq.'VELO' .or.
-     :    ctype(:4).eq.'FELO') then
+     *    ctype(:4).eq.'VELO' .or.
+     *    ctype(:4).eq.'FELO') then
         if (mom.eq.-3) then
           call wrhda(lOut,'bunit','km/s')
           call wrbtype(lOut,'velocity')
@@ -474,16 +445,16 @@ c       Units are unknown for the most part.
 
       end
 
-c=======================================================================
+c***********************************************************************
 
       subroutine ax1mom(lIn,lOut,naxes,blc,trc,mom,offset,scl,clip,span,
-     :  vrange,pkmask)
+     *  vrange,pkmask)
 
       integer lIn, lOut, naxes, blc(naxes), trc(naxes), mom
       real    offset, scl, clip(2)
       integer span
       real    vrange(2), pkmask(2)
-c
+c-----------------------------------------------------------------------
 c  Moment calculation for axis 1.
 c
 c  Inputs:
@@ -521,7 +492,7 @@ c-----------------------------------------------------------------------
           call xyflgrd(lIn,j0,inmask)
 
           call momcalc(mom, offset, scl, clip, span, vrange, pkmask, n1,
-     :      inbuf(blc(1)), inmask(blc(1)), outbuf(j), outmsk(j))
+     *      inbuf(blc(1)), inmask(blc(1)), outbuf(j), outmsk(j))
 
           j0 = j0 + 1
         enddo
@@ -535,10 +506,10 @@ c       Write out this row of the moment map.
 
       end
 
-c=======================================================================
+c***********************************************************************
 
       subroutine ax2mom(lIn,lOut,naxes,blc,trc,mom,offset,scl,clip,span,
-     :  vrange,pkmask,n1,n2,specs,masks)
+     *  vrange,pkmask,n1,n2,specs,masks)
 
       integer lIn, lOut, naxes, blc(naxes), trc(naxes), mom
       real    offset, scl, clip(2)
@@ -547,7 +518,7 @@ c=======================================================================
       integer n1, n2
       real    specs(n2,n1)
       logical masks(n2,n1)
-c
+c-----------------------------------------------------------------------
 c  Moment calculation for axis 2.
 c
 c  Inputs:
@@ -601,7 +572,7 @@ c     Check consistency.
 
         do i = 1, n1
           call momcalc(mom, offset, scl, clip, span, vrange, pkmask, n2,
-     :      specs(1,i), masks(1,i), outbuf(i), outmsk(i))
+     *      specs(1,i), masks(1,i), outbuf(i), outmsk(i))
         enddo
 
         call xywrite(lOut, k, outbuf)
@@ -612,10 +583,10 @@ c     Check consistency.
 
       end
 
-c=======================================================================
+c***********************************************************************
 
       subroutine ax3mom(lIn,lOut,naxes,blc,trc,mom,offset,scl,clip,span,
-     :  vrange,pkmask,n1,n3,specs,masks)
+     *  vrange,pkmask,n1,n3,specs,masks)
 
       integer lIn, lOut, naxes, blc(naxes), trc(naxes), mom
       real    offset, scl, clip(2)
@@ -624,7 +595,7 @@ c=======================================================================
       integer n1, n3
       real    specs(n3,n1)
       logical masks(n3,n1)
-c
+c-----------------------------------------------------------------------
 c  Moment calculation for axis 3.
 c
 c  Inputs:
@@ -677,7 +648,7 @@ c     Check consistency.
 
         do i = 1, n1
           call momcalc(mom, offset, scl, clip, span, vrange, pkmask, n3,
-     :      specs(1,i), masks(1,i), outbuf(i), outmsk(i))
+     *      specs(1,i), masks(1,i), outbuf(i), outmsk(i))
         enddo
 
         call xywrite(lOut, j, outbuf)
@@ -688,10 +659,10 @@ c     Check consistency.
 
       end
 
-c=======================================================================
+c***********************************************************************
 
       subroutine momcalc(mom, offset, scl, clip, span, vrange, pkmask,
-     :  nchan, spec, mask, moment, flag)
+     *  nchan, spec, mask, moment, flag)
 
       integer mom
       real    offset, scl, clip(2)
@@ -702,7 +673,7 @@ c=======================================================================
       logical mask(nchan)
       real    moment
       logical flag
-
+c-----------------------------------------------------------------------
 c  Calculate the required moment for a single spectrum.
 c
 c  Inputs:
