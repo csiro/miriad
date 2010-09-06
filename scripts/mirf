@@ -37,9 +37,10 @@
 #       In view of its prevalance, we have settled on '*'.
 #
 # Original: 2010/08/19 MRC (from ancient lore).
-# $Id: mirf,v 1.2 2010/08/20 07:38:28 cal103 Exp $
+# $Id: mirf,v 1.3 2010/09/06 06:38:34 cal103 Exp $
 #-----------------------------------------------------------------------------
   DETAB=
+  LOWER=
   FILE="-"
 
   while [ "$#" -gt 0 ]
@@ -47,6 +48,9 @@
     case $1 in
       -d)
         DETAB=1
+        ;;
+      -l)
+        LOWER=1
         ;;
       *)
         FILE="$1"
@@ -59,47 +63,96 @@
     shift
   done
 
-  if [ "$DETAB" ]
-  then
-    expand "$FILE" | sed -e '{s/  *$//;/^[ 1-9]/s/^\(......\)  /\1/;}'
-  else
-    expand "$FILE"
-  fi | sed -e 's|  *$||' \
-           -e 's|^[C*]|c|' \
-           -e '/^c/b' \
-           -e 's|^     [^ ]|     *|' \
-           -e 's|^  *implicit none$||' \
-           -e 's|\([0-9]\)\.0*e\([-+0-9]\)|\1e\2|g' \
-           -e 's|\([0-9]\)\.0*d\([-+0-9]\)|\1d\2|g' \
-           -e 's|parameter(|parameter (|' \
-           -e 's|( |(|g' \
-           -e 's| )|)|g' \
-           -e 's| \.eq\.|.eq.|g' \
-           -e 's| \.ne\.|.ne.|g' \
-           -e 's| \.ge\.|.ge.|g' \
-           -e 's| \.gt\.|.gt.|g' \
-           -e 's| \.le\.|.le.|g' \
-           -e 's| \.lt\.|.lt.|g' \
-           -e 's| \.eqv\.|.eqv.|g' \
-           -e 's| \.neqv\.|.neqv.|g' \
-           -e 's|\.eq\. |.eq.|g' \
-           -e 's|\.ne\. |.ne.|g' \
-           -e 's|\.ge\. |.ge.|g' \
-           -e 's|\.gt\. |.gt.|g' \
-           -e 's|\.le\. |.le.|g' \
-           -e 's|\.lt\. |.lt.|g' \
-           -e 's|\.not\. |.not.|g' \
-           -e 's|\.eqv\. |.eqv.|g' \
-           -e 's|\.neqv\. |.neqv.|g' \
-           -e 's|\([^ ]\)\.or\.|\1 .or.|g'   \
-           -e 's|\.or\.\([^ ]\)|.or. \1|g'   \
-           -e 's|\([^ ]\)\.and\.|\1 .and.|g' \
-           -e 's|\.and\.\([^ ]\)|.and. \1|g' \
-           -e 's| if(| if (|'   \
-           -e 's|)then|) then|' \
-           -e 's|end if|endif|' \
-           -e '/ do /s|\([^ ]\)=|\1 =|g' \
-           -e '/ do /s|=\([^ ]\)|= \1|g' \
-           -e 's| dowhile\([ (]\)| do while\1|' \
-           -e 's| do while(| do while (|' \
-           -e 's|end do|enddo|'
+  expand "$FILE" |
+    if [ "$DETAB" ] ; then
+      sed -e '{s/  *$//;/^[ 1-9]/s/^\(......\)  /\1/;}'
+    else
+      cat
+    fi |
+    if [ "$LOWER" ] ; then
+      # Downcase the code.
+      sed -e 's|  *$||' \
+          -e 's|^C|c|' \
+          -e '/^c/b' \
+          -e '/^  *IMPLICIT NONE$/d' \
+          -e 's| PROGRAM *| program |' \
+          -e 's| INCLUDE | include |' \
+          -e 's| PARAMETER *(| parameter (|' \
+          -e 's| LOGICAL | logical |' \
+          -e 's| INTEGER | integer |' \
+          -e 's| REAL | real |' \
+          -e 's| DOUBLE PRECISION | double precision |' \
+          -e 's| CHARACTER | character |' \
+          -e 's| EXTERNAL | external |' \
+          -e 's| COMMON | common |' \
+          -e 's| DATA | data |' \
+          -e 's| CALL | call |' \
+          -e 's| WRITE\( *(\)| write\1|' \
+          -e 's|\([0-9]\)\.0*E\([-+0-9]\)|\1e\2|g' \
+          -e 's|\([0-9]\)\.0*D\([-+0-9]\)|\1d\2|g' \
+          -e 's|\.EQ\.|.eq.|g' \
+          -e 's|\.NE\.|.ne.|g' \
+          -e 's|\.GE\.|.ge.|g' \
+          -e 's|\.GT\.|.gt.|g' \
+          -e 's|\.LE\.|.le.|g' \
+          -e 's|\.LT\.|.lt.|g' \
+          -e 's|\.EQV\.|.eqV.|g' \
+          -e 's|\.NEQV\.|.neqv.|g' \
+          -e 's|\.NOT\. |.NOT.|g' \
+          -e 's|\.OR\.|.or.|g'   \
+          -e 's|\.AND\.|.and.|g' \
+          -e 's| IF *(| if (|'   \
+          -e 's|) *THEN|) then|' \
+          -e 's| ELSE *IF *(| else if (|' \
+          -e 's| ELSE$| else|' \
+          -e 's| END *IF$| endif|' \
+          -e 's| DO *WHILE *(| do while (|' \
+          -e 's| DO | do |' \
+          -e 's| END *DO$| enddo|' \
+          -e 's|^ *END$|      end|'
+    else
+      cat
+    fi |
+      sed -e 's|  *$||' \
+          -e 's|^[C*]|c|' \
+          -e '/^c/b' \
+          -e 's|^     [^ ]|     *|' \
+          -e '/^  *implicit none$/d' \
+          -e 's|\([0-9]\)\.0*e\([-+0-9]\)|\1e\2|g' \
+          -e 's|\([0-9]\)\.0*d\([-+0-9]\)|\1d\2|g' \
+          -e 's|\([0-9]\)\.)|\1.0)|g' \
+          -e 's|\([-+*/, ][0-9][0-9]*\)\.\([ ,)]\)|\1.0\2|g' \
+          -e 's|parameter(|parameter (|' \
+          -e 's|( |(|g' \
+          -e 's| )|)|g' \
+          -e 's|)\([a-zA-Z]\)|) \1|g' \
+          -e 's| \.eq\.|.eq.|g' \
+          -e 's| \.ne\.|.ne.|g' \
+          -e 's| \.ge\.|.ge.|g' \
+          -e 's| \.gt\.|.gt.|g' \
+          -e 's| \.le\.|.le.|g' \
+          -e 's| \.lt\.|.lt.|g' \
+          -e 's| \.eqv\.|.eqv.|g' \
+          -e 's| \.neqv\.|.neqv.|g' \
+          -e 's|\.eq\. |.eq.|g' \
+          -e 's|\.ne\. |.ne.|g' \
+          -e 's|\.ge\. |.ge.|g' \
+          -e 's|\.gt\. |.gt.|g' \
+          -e 's|\.le\. |.le.|g' \
+          -e 's|\.lt\. |.lt.|g' \
+          -e 's|\.not\. |.not.|g' \
+          -e 's|\.eqv\. |.eqv.|g' \
+          -e 's|\.neqv\. |.neqv.|g' \
+          -e 's|\([^ ]\)\.or\.|\1 .or.|g'   \
+          -e 's|\.or\.\([^ ]\)|.or. \1|g'   \
+          -e 's|\([^ ]\)\.and\.|\1 .and.|g' \
+          -e 's|\.and\.\([^ ]\)|.and. \1|g' \
+          -e 's| if(| if (|'   \
+          -e 's|)then|) then|' \
+          -e 's|end if|endif|' \
+          -e '/^ *do /s|\([^ ]\)=|\1 =|g' \
+          -e '/^ *do /s|=\([^ ]\)|= \1|g' \
+          -e '/^ *do /s|^\([^,]*\),\([^ ][^,]*\)$|\1, \2|g' \
+          -e 's| dowhile\([ (]\)| do while\1|' \
+          -e 's| do while(| do while (|' \
+          -e 's| end do$|enddo|'
