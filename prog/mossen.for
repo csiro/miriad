@@ -24,7 +24,7 @@ c       edge of mosaiced regions, Miriad does not normally totally
 c       correct for the primary beam beyond a certain point. The default
 c       is that no gain image is formed.
 c
-c$Id: mossen.for,v 1.2 2010/09/07 05:46:49 cal103 Exp $
+c$Id: mossen.for,v 1.3 2010/09/07 06:19:57 cal103 Exp $
 c--
 c  History:
 c    rjs   6nov94 Original version.
@@ -88,22 +88,23 @@ c
       do i = 4, naxis
         nout(i) = 1
       enddo
-c
-c  Do the real work.
-c
-      if (dosen) call MakeIm(tIn,tSen,sen,naxis,nout,blc,version,
-     *                                                        .true.)
-      if (dogain) call MakeIm(tIn,tGain,gain,naxis,nout,blc,version,
-     *                                                        .false.)
+
+c     Create the output images.
+      if (dosen) then
+        call mkOut(tIn,tSen,sen,naxis,nout,blc,.true.,version)
+      endif
+
+      if (dogain) then
+        call mkOut(tIn,tGain,gain,naxis,nout,blc,.false.,version)
+      endif
 
       nBuff = 0
       do k = blc(3), trc(3)
         call boxRuns(1,k,' ',boxes,Runs1,MAXRUNS,nRuns1,
      *                                xmin,xmax,ymin,ymax)
         call Count(Runs1,nRuns1,npix1)
-c
-c  Allocate memory if needed.
-c
+
+c       Allocate memory if needed.
         if (npix1.gt.nBuff) then
           if (nBuff.gt.0) then
             call memFree(pSen,nBuff,'r')
@@ -113,17 +114,15 @@ c
           call memAlloc(pSen,nBuff,'r')
           call memAlloc(pGain,nBuff,'r')
         endif
-c
-c  Do the real work now.
-c
+
+c       Do the real work now.
         call mosMini(tIn,real(k))
         call mosWtsR(Runs1,nRuns1,memr(pGain),memr(pSen),npix1)
         call Compress(memr(pSen),memr(pGain),npix1,npix2,
      *    Runs1,nRuns1,Runs2,nRuns2,MAXRUNS)
-c
-c  Store the result. What we actually compute is the receprocal
-c  of what the user wants.
-c
+
+c       Store the result.  We actually compute the reciprocal of what
+c       the user wants.
         if (dosen) then
           if (naxis.gt.2) call xysetpl(tSen,1,k-blc(3)+1)
           call PutPlane(tSen,Runs2,nRuns2,1-blc(1),1-blc(2),
@@ -131,6 +130,7 @@ c
           call PutRuns(tSen,Runs2,nRuns2,1-blc(1),1-blc(2),
      *                        nOut(1),nOut(2))
         endif
+
         if (dogain) then
           if (naxis.gt.2) call xysetpl(tGain,1,k-blc(3)+1)
           call PutPlane(tGain,Runs2,nRuns2,1-blc(1),1-blc(2),
@@ -219,56 +219,44 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine MakeIm(tIn,tOut,Out,naxis,nout,blc,version,dosen)
+      subroutine mkOut(tIn, tOut, outnam, naxis, nout, blc, dosen,
+     *                  version)
 
-      integer tIn,tOut
-      integer naxis,nout(naxis),blc(naxis)
-      character Out*(*),version*(*)
-      logical dosen
+      integer   tIn, tOut, naxis, nout(naxis), blc(naxis)
+      character outnam*(*), version*(*)
+      logical   dosen
 c-----------------------------------------------------------------------
 c  Create an output dataset.
 c-----------------------------------------------------------------------
-      integer i
+      include 'maxnax.h'
+
+      integer   iax
       double precision crpix
-      character line*72,num*3
-      integer nkeys
-      parameter (nkeys=31)
-      character keyw(nkeys)*8
+      character line*72, axn*1
 
-c     Externals.
       character itoaf*8
-
-      data keyw/   'cdelt1  ','cdelt2  ','cdelt3  ','cdelt4  ',
-     *  'cdelt5  ','crval1  ','crval2  ','crval3  ','crval4  ',
-     *  'crval5  ','ctype1  ','ctype2  ','ctype3  ','ctype4  ',
-     *  'ctype5  ','obstime ','epoch   ','history ','lstart  ',
-     *  'lstep   ','ltype   ','lwidth  ','object  ','pbfwhm  ',
-     *  'observer','telescop','restfreq','vobs    ','btype   ',
-     *  'pbtype  ','bunit   '/
+      external  itoaf
 c-----------------------------------------------------------------------
-c
-c  Open the output.
-c
-      call xyopen(tOut,Out,'new',naxis,nout)
-c
-c  Copy all the other keywords across, which have not changed and add
-c  history.
-c
-      do i = 1, nkeys
-        call hdcopy(tIn, tOut, keyw(i))
+c     Open the output.
+      call xyopen(tOut, outnam, 'new', naxis, nout)
+
+c     Start with a verbatim copy of the input keywords.
+      call headcopy(tIn, tOut, 0, 0, 0, 0)
+
+c     Adjust the reference pixel for subimaging.
+      do iax = 1, naxis
+        if (blc(iax).ne.1) then
+          axn = itoaf(iax)
+          call rdhdd(tIn,  'crpix'//axn, crpix, 1d0)
+          crpix = crpix - dble(blc(iax) - 1)
+          call wrhdd(tOut, 'crpix'//axn, crpix)
+        endif
       enddo
-c
-c  Adjust the reference pixel.
-c
-      do i = 1, naxis
-        num = itoaf(i)
-        call rdhdd(tIn,'crpix'//num,crpix,1d0)
-        call wrhdd(tOut,'crpix'//num,crpix-blc(i)+1)
-      enddo
-      if (.not.dosen) call wrhda(tOut,'bunit','GAIN')
-c
-c  Write crap to the history file.
-c
+
+c     Update changed keywords.
+      if (.not.dosen) call wrhda(tOut, 'bunit', 'GAIN')
+
+c     Write history.
       call hisopen(tOut,'append')
       line = 'MOSSEN: Miriad '//version
       call hiswrite(tOut,line)
