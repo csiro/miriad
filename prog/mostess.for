@@ -5,7 +5,7 @@ c& rjs
 c: deconvolution
 c+
 c       MOSMANY performs a joint maximum entropy deconvolution of a
-c       collection of dirty images from a mosaiced experiment.
+c       collection of dirty images from a mosaiced observation.
 c
 c@ map
 c       The input dirty maps. No default.
@@ -59,15 +59,13 @@ c         verbose    Give lots of messages during the iterations.  The
 c                    default is to give a one line message at each
 c                    iteration.
 c
-c$Id: mostess.for,v 1.2 2010/09/07 07:12:40 cal103 Exp $
+c$Id: mostess.for,v 1.3 2010/09/07 07:42:47 cal103 Exp $
 c--
 c  History:
 c    rjs   7aug95  Adapted from MOSMEM.
 c    rjs  02jul97  cellscal change.
 c    rjs  23jul97  added pbtype.
 c-----------------------------------------------------------------------
-      character version*(*)
-      parameter (version='MosTess: version 1.0 7-Aug-95')
       include 'maxdim.h'
       include 'maxnax.h'
       include 'mem.h'
@@ -77,36 +75,32 @@ c-----------------------------------------------------------------------
 
       integer MAXPNT
       parameter (MAXPNT=350)
-      integer lBeam,lDef,lMap,lOut,lMod
-      integer n,npnt,nOut(MAXNAX),nBeam(2),nDef(3),nMod(3),nMap(2)
-      integer mnx,mny,nx,ny,naxis,n1,n2
-      character MapNam(MAXPNT)*64,BeamNam(MAXPNT)*64
-      character DefNam*64,ModNam*64,OutNam*64,entropy*16
-      character line*80
-      real sigma(MAXPNT)
-      integer x0(MAXPNT),y0(MAXPNT)
-      integer Cnvl(MAXPNT),pbObj(MAXPNT)
-      integer i,icentre,jcentre,offset(3)
-      integer maxniter,niter
-      integer measure
-      real Tol,rmsfac,TFlux,Qest,Q,Sigt
-      real Alpha,Beta,De,Df
-      real StLim,StLen1,StLen2,OStLen1,OStLen2,J0,J1
-      real GradEE,GradEF,GradEH,GradEJ,GradFF,GradFH,GradFJ
-      real GradHH,GradJJ,Grad11,Immax,Immin,Flux,Rms,ClipLev
-      logical converge,positive,verbose,doflux
 
-      integer pMap,pEst,pDef,pRes,pNewEst,pNewRes,pWt,pDChi,pNewDChi
-      integer pTmp
+      logical   converge, doflux, positive, verbose
+      integer   Cnvl(MAXPNT), i, icentre, jcentre, lBeam, lDef, lMap,
+     *          lMod, lOut, maxniter, measure, mnx, mny, n, n1, n2,
+     *          naxis, nBeam(2), nDef(3), niter, nMap(2), nMod(3),
+     *          nOut(MAXNAX), npnt, nx, ny, offset(3), pbObj(MAXPNT),
+     *          pDChi, pDef, pEst, pMap, pNewDChi, pNewEst, pNewRes,
+     *          pRes, pTmp, pWt, x0(MAXPNT), y0(MAXPNT)
+      real      Alpha, Beta, ClipLev, De, Df, Flux, Grad11, GradEE,
+     *          GradEF, GradEH, GradEJ, GradFF, GradFH, GradFJ, GradHH,
+     *          GradJJ, Immax, Immin, J0, J1, OStLen1, OStLen2, Q, Qest,
+     *          Rms, rmsfac, sigma(MAXPNT), Sigt, StLen1, StLen2, StLim,
+     *          TFlux, Tol
+      character BeamNam(MAXPNT)*64, DefNam*64, entropy*16, line*80,
+     *          MapNam(MAXPNT)*64, ModNam*64, OutNam*64, version*72
 
-c     Externals.
-      character itoaf*4
-      integer ismax
+      integer   ismax
+      character itoaf*4, versan*80
+      external  ismax, itoaf, versan
 c-----------------------------------------------------------------------
+      version = versan('mostess',
+     *                 '$Revision: 1.3 $',
+     *                 '$Date: 2010/09/07 07:42:47 $')
 c
 c  Get the input parameters.
 c
-      call output(version)
       call keyini
       call mkeyf('map',MapNam,MAXPNT,npnt)
       call mkeyf('beam',BeamNam,MAXPNT,n)
@@ -130,7 +124,7 @@ c
       if (maxniter.lt.0) call bug('f','NITERS was given a bad value')
       if (OutNam.eq.' ')
      *  call bug('f','An output file name must be given')
-      if (Tol.le.0.)
+      if (Tol.le.0.0)
      *  call bug('f','The TOL parameter must be positive valued')
 
       if (entropy.eq.'gull') then
@@ -151,7 +145,7 @@ c
       call BeamChar(lBeam,n1,n2,Qest,icentre,jcentre)
       write(line,'(a,1pg8.1)')'An estimate of Q is',Qest
       call output(line)
-      if (Q.gt.0.) then
+      if (Q.gt.0.0) then
         write(line,'(a,1pg8.1)')
      *                'Using user given pixels per beam of',Q
         call output(line)
@@ -194,8 +188,8 @@ c
 c
 c  Initial values for alpha and beta.
 c
-      Alpha = 0
-      Beta = 0
+      Alpha = 0.0
+      Beta  = 0.0
 c
 c  Loop.
 c
@@ -215,8 +209,8 @@ c
 c
 c  Get the Default map and Clip level.
 c
-        if (TFlux.eq.0 .and. positive) then
-          TFlux = 0
+        if (TFlux.eq.0.0 .and. positive) then
+          TFlux = 0.0
           do i = 1, npnt
             TFlux = TFlux + sigma(i)
           enddo
@@ -402,8 +396,7 @@ c  information.
 c
       offset(1) = x0(1)
       offset(2) = y0(1)
-      offset(3) = 0
-      call Header(lMap,lOut,offset,version,niter)
+      call mkHead(lMap,lOut,offset,niter,version)
 c
 c  Close up the files. Ready to go home.
 c
@@ -941,74 +934,53 @@ c
 
 c***********************************************************************
 
-      subroutine Header(lMap,lOut,offset,version,niter)
+      subroutine mkHead(lIn,lOut,offset,niter,version)
 
-      integer lMap,lOut
-      character version*(*)
-      integer niter,offset(3)
+      integer   lIn, lOut, niter, offset(2)
+      character version*72
 c-----------------------------------------------------------------------
-c  Write a header for the output file.
+c  Write header for the output file.
 c
 c  Input:
-c    version    Program version ID.
-c    lMap       The handle of the input map.
-c    lOut       The handle of the output estimate.
-c    niter      The maximum number of iterations performed.
+c    lIn        Handle of the input map.
+c    lOut       Handle of the output estimate.
 c    offset     Offsets between the input map pixel units and the
 c               mosaiced output pixel units.
+c    niter      Maximum number of iterations performed.
+c    version    Program version ID.
 c-----------------------------------------------------------------------
       include 'maxnax.h'
-      integer i
-      real crpix
-      character line*72,num*2
-      integer nkeys
-      parameter (nkeys=17)
-      character keyw(nkeys)*8
+
+      integer   iax
+      double precision crpix
+      character axn*1
 
 c     Externals.
       character itoaf*8
-
-      data keyw/   'obstime ','epoch   ','history ','lstart  ',
-     *  'lstep   ','ltype   ','lwidth  ','object  ','pbfwhm  ',
-     *  'observer','telescop','restfreq','vobs    ','btype   ',
-     *  'mostable','cellscal','pbtype  '/
 c-----------------------------------------------------------------------
-c
-c  Fill in some parameters that will have changed between the input
-c  and output.
-c
-      call wrhda(lOut,'bunit','JY/PIXEL')
-      call wrhdi(lOut,'niters',Niter)
+c     Start with a verbatim copy of the input keywords.
+      call headcopy(lIn, lOut, 0, 0, 0, 0)
 
-      do i = 1, MAXNAX
-        num = itoaf(i)
-        if (i.le.3) then
-          call rdhdr(lMap,'crpix'//num,crpix,1.0)
-          crpix = crpix + offset(i)
-          call wrhdr(lOut,'crpix'//num,crpix)
-        else
-          call hdcopy(lMap,lOut,'crpix'//num)
+c     Adjust the reference pixel for subimaging.
+      do iax = 1, 2
+        if (offset(iax).ne.0) then
+          axn = itoaf(iax)
+          call rdhdd(lIn,  'crpix'//axn, crpix, 1d0)
+          crpix = crpix + dble(offset(iax))
+          call wrhdd(lOut, 'crpix'//axn, crpix)
         endif
-        call hdcopy(lMap,lOut,'cdelt'//num)
-        call hdcopy(lMap,lOut,'crval'//num)
-        call hdcopy(lMap,lOut,'ctype'//num)
       enddo
-c
-c  Copy all the other keywords across, which have not changed and add
-c  history.
-c
-      do i = 1, nkeys
-        call hdcopy(lMap, lOut, keyw(i))
-      enddo
-c
-c  Write crap to the history file, to attempt (ha!) to appease Neil.
-c
-      call hisopen(lOut,'append')
-      line = 'MOSTESS: Miriad '//version
-      call hiswrite(lOut,line)
-      call hisinput(lOut,'MOSTESS')
 
-      call hiswrite(lOut,'MOSTESS: Total Iterations = '//itoaf(Niter))
+c     Update changed keywords.
+      call wrhda(lOut, 'bunit', 'JY/PIXEL')
+      call wrhdi(lOut, 'niters', Niter)
+
+c     Update history.
+      call hisopen (lOut, 'append')
+      call hiswrite(lOut, 'MOSTESS: Miriad ' // version)
+      call hisinput(lOut, 'MOSTESS')
+
+      call hiswrite(lOut, 'MOSTESS: Total Iterations = '//itoaf(niter))
       call hisclose(lOut)
 
       end
