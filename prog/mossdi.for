@@ -35,7 +35,7 @@ c       Extra processing options:
 c         positive   Constrain the deconvolved image to be positive
 c                    valued.
 c
-c$Id: mossdi.for,v 1.5 2010/09/07 04:53:59 cal103 Exp $
+c$Id: mossdi.for,v 1.6 2010/09/07 05:40:44 cal103 Exp $
 c--
 c  History:
 c    rjs 31oct94 - Original version.
@@ -52,27 +52,26 @@ c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
       include 'mem.h'
-      integer MAXRUN,MAXBOXES
-      parameter (MAXRUN=5*maxdim,MAXBOXES=(1024)*8+4)
 
-      character MapNam*64,BeamNam*64,ModelNam*64,OutNam*64,line*64,
+      integer  MAXRUN, MAXBOXES
+      parameter (MAXRUN=5*maxdim, MAXBOXES=(1024)*8+4)
+
+      logical   dopos, more
+      integer   blc(3), Boxes(MAXBOXES), i, imax, imin, jmax, jmin, k,
+     *          kmax, kmin, lBeam, lMap, lModel, lOut, maxniter, nAlloc,
+     *          naxis, nbeam(3), ncomp, niter, nMap(3), nModel(3),
+     *          nout(MAXNAX), nPoint, nRun, pEst, pRes, pStep, pStepR,
+     *          pWt, Run(3,MAXRUN), trc(3), xmax, xmin, ymax, ymin
+      real      clip, cutoff, dmax, dmin, drms, flux, gain
+      character BeamNam*64, line*64, MapNam*64, ModelNam*64, OutNam*64,
      *          version*80
-      integer Boxes(MAXBOXES),Run(3,MAXRUN),nRun,blc(3),trc(3),nAlloc
-      integer nPoint
-      integer lMap,lBeam,lModel,lOut
-      integer i,k,imin,imax,jmin,jmax,kmin,kmax,xmin,xmax,ymin,ymax
-      integer naxis,nMap(3),nbeam(3),nout(MAXNAX),nModel(3)
-      integer pStep,pStepR,pRes,pEst,pWt
-      integer maxniter,niter,ncomp
-      logical more,dopos
-      real dmin,dmax,drms,cutoff,clip,gain,flux
 
-c     Externals.
       character itoaf*8, versan*80
+      external  itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('mossdi',
-     *                 '$Revision: 1.5 $',
-     *                 '$Date: 2010/09/07 04:53:59 $')
+     *                 '$Revision: 1.6 $',
+     *                 '$Date: 2010/09/07 05:40:44 $')
 c
 c  Get the input parameters.
 c
@@ -223,7 +222,7 @@ c
 c
 c  Make the header of the output.
 c
-      call Header(lMap,lOut,blc,trc,version,niter)
+      call mkHead(lMap,lOut,blc,trc,niter,version)
 c
 c  Free up memory.
 c
@@ -415,89 +414,58 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine Header(lMap,lOut,blc,trc,version,niter)
+      subroutine mkHead(lIn,lOut,blc,trc,niter,version)
 
-      integer lMap,lOut
-      integer blc(3),trc(3)
-      character version*(*)
-      integer niter
+      integer   lIn, lOut, blc(3), trc(3), niter
+      character version*72
 c-----------------------------------------------------------------------
 c  Write a header for the output file.
 c
 c  Input:
 c    version    Program version ID.
-c    lMap       The handle of the input map.
-c    lOut       The handle of the output estimate.
-c    blc        Blc of the bounding region.
-c    trc        Trc of the bounding region.
-c    niter      The maximum number of iterations performed.
-c
+c    lIn        Handle of the input map.
+c    lOut       Handle of the output estimate.
+c    blc        BLC of the bounding region.
+c    trc        TRC of the bounding region.
+c    niter      Maximum number of iterations performed.
 c-----------------------------------------------------------------------
       include 'maxnax.h'
-      integer i,lblc,ltrc
-      real crpix1,crpix2,crpix3
-      character line*72,txtblc*32,txttrc*32,num*2
-      integer nkeys
-      parameter (nkeys=17)
-      character keyw(nkeys)*8
 
-c     Externals.
+      integer   axmap(MAXNAX), iax, k1, k2, lblc(MAXNAX), ltrc(MAXNAX)
+      character line*72, txtblc*32, txttrc*32
+
       character itoaf*8
-
-      data keyw/   'obstime ','epoch   ','history ','lstart  ',
-     *  'lstep   ','ltype   ','lwidth  ','object  ','pbfwhm  ',
-     *  'observer','telescop','restfreq','vobs    ','btype   ',
-     *  'mostable','cellscal','pbtype  '/
+      external  itoaf
 c-----------------------------------------------------------------------
-c
-c  Fill in some parameters that will have changed between the input
-c  and output.
-c
-      call wrhda(lOut,'bunit','JY/PIXEL')
-      call wrhdi(lOut,'niters',Niter)
-
-      call rdhdr(lMap,'crpix1',crpix1,1.0)
-      call rdhdr(lMap,'crpix2',crpix2,1.0)
-      call rdhdr(lMap,'crpix3',crpix3,1.0)
-      crpix1 = crpix1 - blc(1) + 1
-      crpix2 = crpix2 - blc(2) + 1
-      crpix3 = crpix3 - blc(3) + 1
-      call wrhdr(lOut,'crpix1',crpix1)
-      call wrhdr(lOut,'crpix2',crpix2)
-      call wrhdr(lOut,'crpix3',crpix3)
-
-      do i = 1, MAXNAX
-        num = itoaf(i)
-        if (i.gt.3) call hdcopy(lMap,lOut,'crpix'//num)
-        call hdcopy(lMap,lOut,'cdelt'//num)
-        call hdcopy(lMap,lOut,'crval'//num)
-        call hdcopy(lMap,lOut,'ctype'//num)
+c     Set up to copy input keywords with subimaging.
+      do iax = 1, MAXNAX
+        axmap(iax) = iax
+        if (iax.le.3) then
+          lblc(iax) = blc(iax)
+        else
+          lblc(iax) = 1
+        endif
+        ltrc(iax) = 0
       enddo
-c
-c  Copy across all the other keywords that have not changed and add
-c  history.
-c
-      do i = 1, nkeys
-        call hdcopy(lMap, lOut, keyw(i))
-      enddo
-c
-c  Write crap to the history file, to attempt (ha!) to appease Neil.
-c  Neil is not easily appeased you know.  Just a little t.l.c. is all he
-c  needs.
-c
-c
-      call hisopen(lOut,'append')
-      line = 'MOSSDI: Miriad '//version
-      call hiswrite(lOut,line)
-      call hisinput(lOut,'MOSSDI')
 
-      call mitoaf(blc,3,txtblc,lblc)
-      call mitoaf(trc,3,txttrc,ltrc)
-      line = 'MOSSDI: Bounding region is Blc=('//txtblc(1:lblc)//
-     *                               '),Trc=('//txttrc(1:ltrc)//')'
-      call hiswrite(lOut,line)
+      call headcopy(lIn, lOut, axmap, MAXNAX, lblc, ltrc)
 
-      call hiswrite(lOut,'MOSSDI: Total Iterations = '//itoaf(Niter))
+c     Update parameters that will have changed.
+      call wrhda(lOut, 'bunit', 'JY/PIXEL')
+      call wrhdi(lOut, 'niters', niter)
+
+c     Write history.
+      call hisopen (lOut, 'append')
+      call hiswrite(lOut, 'MOSSDI: Miriad ' // version)
+      call hisinput(lOut, 'MOSSDI')
+
+      call mitoaf(blc, 3, txtblc, k1)
+      call mitoaf(trc, 3, txttrc, k2)
+      line = 'MOSSDI: Bounding region is BLC=(' // txtblc(:k1) //
+     *                                '),TRC=(' // txttrc(:k2) // ')'
+      call hiswrite(lOut, line)
+
+      call hiswrite(lOut, 'MOSSDI: Total Iterations = ' // itoaf(niter))
       call hisclose(lOut)
 
       end
