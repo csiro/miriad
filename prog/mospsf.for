@@ -20,7 +20,7 @@ c@ out
 c       The name of the output point-spread function.  It will be the
 c       same size as the input.
 c@ radec
-c       The RA and DEC (either in the form hh:mm:ss,dd:mm:ss or decimals
+c       The RA and DEC (either in the form hh:mm:ss,dd:mm:ss or decimal
 c       hours and degrees) at which to compute the point-spread
 c       function.  The default is the reference RA,DEC of the beam-cube.
 c@ freq
@@ -29,7 +29,7 @@ c       function.  The default is the reference frequency of the beam-
 c       cube.  The point-spread function is reasonably independent of
 c       frequency for most spectral line observations.
 c
-c$Id: mospsf.for,v 1.2 2010/09/07 04:16:02 cal103 Exp $
+c$Id: mospsf.for,v 1.3 2010/09/07 04:44:10 cal103 Exp $
 c--
 c
 c  History:
@@ -44,23 +44,25 @@ c  Program parameters:
 c    maxIn      Maximum number of input files.
 c    maxlen     Size of buffer to hold all the input file names.
 c-----------------------------------------------------------------------
-      character version*(*)
-      parameter (version='MosPsf: version 1.0 26-Oct-94')
       include 'maxdim.h'
       include 'maxnax.h'
       include 'mem.h'
-      character beam*64,out*64,coin*12
-      double precision ra,dec,freq,x(3)
-      logical doradec,dofreq
-      integer i,nx,ny,npnt,naxis,nsize(MAXNAX),tIn,tOut,pIn,pOut
 
-c     Externals.
-      logical keyprsnt
+      logical  dofreq, doradec
+      integer  i, naxis, npnt, nsize(MAXNAX), nx, ny, pIn, pOut, tIn,
+     *         tOut
+      double precision dec, freq, ra, x(3)
+      character beam*64, coin*12, out*64, version*72
+
+      logical   keyprsnt
+      character versan*80
+      external  keyprsnt, versan
 c-----------------------------------------------------------------------
-c
-c  Get the input parameters.
-c
-      call output(version)
+      version = versan('mospsf',
+     *                 '$Revision: 1.3 $',
+     *                 '$Date: 2010/09/07 04:44:10 $')
+
+c     Get the input parameters.
       call keyini
       call keya('beam',beam,' ')
       if (beam.eq.' ') call bug('f','Input beam must be given')
@@ -72,9 +74,8 @@ c
       dofreq = .not.keyprsnt('freq')
       call keyd('freq',freq,0d0)
       call keyfin
-c
-c  Open the input and the output.
-c
+
+c     Open the input and the output.
       call xyopen(tIn,beam,'old',3,nsize)
       call coInit(tIn)
       call mosLoad(tIn,npnt)
@@ -82,9 +83,8 @@ c
       ny = nsize(2)
       if (npnt.ne.nsize(3))
      *  call bug('f','Inconsistent number of pointings')
-c
-c  Set the position at which to compute the PSF.
-c
+
+c     Set the position at which to compute the PSF.
       x(1) = ra
       x(2) = dec
       x(3) = freq
@@ -97,36 +97,30 @@ c
       else
         coin = 'aw/aw/aw'
       endif
-c
-c  Allocate memory and load the input PSF data.
-c
+
+c     Allocate memory and load the input PSF data.
       call memAlloc(pIn,nx*ny*npnt,'r')
       call memAlloc(pOut,nx*ny,'r')
-c
-c  Read the input data.
-c
+
+c     Read the input data.
       call GetDat(tIn,memr(pIn),nx,ny,npnt)
-c
-c  Do the real work.
-c
+
+c     Do the real work.
       call mosPnt(tIn,coin,x,memr(pIn),memr(pOut),nx,ny,npnt)
-c
-c  Create the output dataset.
-c
+
+c     Create the output dataset.
       call rdhdi(tIn,'naxis',naxis,0)
       naxis = min(naxis-1,MAXNAX)
       do i = 3, naxis
         nsize(i) = 1
       enddo
       call xyopen(tOut,out,'new',naxis,nsize)
-      call MakeHd(tIn,tOut,version,naxis)
-c
-c  Write the output.
-c
+      call mkHead(tIn,tOut,version)
+
+c     Write the output.
       call PutDat(tOut,memr(pOut),nx,ny)
-c
-c  All said and done. Close up.
-c
+
+c     All said and done. Close up.
       call xyclose(tOut)
       call MemFree(pOut,nx*ny,'r')
       call MemFree(pIn,nx*ny*npnt,'r')
@@ -136,59 +130,31 @@ c
 
 c***********************************************************************
 
-      subroutine MakeHd(tIn,tOut,version,naxis)
+      subroutine mkHead(tIn, tOut, version)
 
-      integer tIn,tOut,naxis
-      character version*(*)
+      integer   tIn, tOut
+      character version*72
 c-----------------------------------------------------------------------
-c  Make a header for the output dataset.
+c  Write the header for the output image.
 c-----------------------------------------------------------------------
-      character line*64,ctype*16,numi*2,numo*2
-      integer i
-      double precision dval
-
-c     Externals.
       character itoaf*2
-
-      integer nkeys
-      parameter (nkeys=24)
-      character keyw(nkeys)*8
-      data keyw/   'bunit   ','crval1  ','crval2  ','ctype1  ',
-     *  'ctype2  ','cdelt1  ','cdelt2  ','crpix1  ','crpix2  ',
-     *  'obstime ','epoch   ','niters  ','object  ','telescop',
-     *  'observer','restfreq','vobs    ','lstart  ','lstep   ',
-     *  'ltype   ','lwidth  ','btype   ','history ','mask    '/
+      external  itoaf
 c-----------------------------------------------------------------------
-c
-c  Copy other parameters.
-c
-      do i = 1, nkeys
-        call hdcopy(tIn,tOut,keyw(i))
-      enddo
-c
-c  Copy the coordinate information about the axes that want.
-c
-      do i = 3, naxis
-        numi = itoaf(i+1)
-        numo = itoaf(i)
-        call rdhda(tIn,'ctype'//numi,ctype,' ')
-        if (ctype.ne.' ') then
-          call wrhda(tOut,'ctype'//numo,ctype)
-          call rdhdd(tIn, 'crpix'//numi,dval,0d0)
-          call wrhdd(tOut,'crpix'//numo,dval)
-          call rdhdd(tIn, 'crval'//numi,dval,0d0)
-          call wrhdd(tOut,'crval'//numo,dval)
-          call rdhdd(tIn, 'cdelt'//numi,dval,0d0)
-          call wrhdd(tOut,'cdelt'//numo,dval)
-        endif
-      enddo
-c
-c  Handle the history.
-c
-      call hisopen(tOut,'append')
-      line = 'MOSPSF: Miriad '//version
-      call hiswrite(tOut,line)
-      call hisinput(tOut,'MOSPSF')
+c     Make a verbatim copy of the input header.
+      call headcopy(tIn, tOut, 0, 0, 0, 0)
+
+c     Delete header parameters that shouldn't have been copied.
+      call hdelete(tIn, tOut, 'bmaj')
+      call hdelete(tIn, tOut, 'bmin')
+      call hdelete(tIn, tOut, 'bpa')
+
+c     Copy the mask (not done by headcopy).
+      call hdcopy(tIn, tOut, 'mask')
+
+c     Handle the history.
+      call hisopen (tOut, 'append')
+      call hiswrite(tOut, 'MOSPSF: Miriad ' // version)
+      call hisinput(tOut, 'MOSPSF')
       call hisclose(tOut)
 
       end
