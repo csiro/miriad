@@ -135,7 +135,7 @@ c         verbose    Give lots of messages during the iterations.  The
 c                    default is to give a one line message at each
 c                    iteration.
 c
-c$Id: mosmem.for,v 1.2 2010/09/07 02:10:45 cal103 Exp $
+c$Id: mosmem.for,v 1.3 2010/09/07 02:35:26 cal103 Exp $
 c--
 c  History:
 c    rjs  23nov94  Adapted from MAXEN.
@@ -168,50 +168,46 @@ c                  estimate to zero.
 c    nebk 07sep04  Add some words about the output information mosmem
 c                  spits out as it goes
 c-----------------------------------------------------------------------
-      character version*(*)
-      parameter (version='MosMem: version 1.0 10-Feb-99')
       include 'maxdim.h'
       include 'maxnax.h'
       include 'mem.h'
+
       integer MaxRun,MaxBoxes
       parameter (MaxRun=3*maxdim,MaxBoxes=2048)
 
       integer gull,cornwell
       parameter (gull=1,cornwell=2)
 
-      character MapNam*64,BeamNam*64,ModelNam*64,OutNam*64,DefNam*64
-      character MapSin*64,BeamSin*64
-      character entropy*8,line*80
-      integer lBeama,lMapa,lBeamb,lMapb,lModel,lOut,lDef
-      integer nMap(3),nMapb(3),nModel(3),nOut(MAXNAX),nBeam(3),nDef(3)
-      integer xmin,ymin,xmax,ymax,n1,n2,i
-      integer imin,imax,jmin,jmax,kmin,kmax,blc(3),trc(3),naxis,k
-      integer icentre,jcentre
-      integer maxniter,niter
-      integer measure
-      real Tol,rmsfaca,rmsfacb,TFlux,Qest,Qa,Qb,TRms,Trms2
-      real ffacSD,ffacDef,Alpha,Beta,De,Df,temp
-      real StLim,StLen1,StLen2,OStLen1,OStLen2,J0,J1
-      real GradEE,GradEF,GradEH,GradEJ,GradFF,GradFH,GradFJ
-      real GradHH,GradJJ,Grad11,Immax,Immin,Flux,Rmsa,Rmsb
-      real fluxlist(maxdim),fac
-      integer nfret
-      logical converge,positive,verbose,doflux,dosingle,dofac
-      integer Run(3,MaxRun),nRun,Boxes(maxBoxes),nPoint,maxPoint
-      integer xmoff,ymoff,zmoff,xdoff,ydoff,zdoff
+      logical   converge, dofac, doflux, dosingle, positive, verbose
+      integer   blc(3), Boxes(maxBoxes), Cnvl, i, icentre, imax, imin,
+     *          jcentre, jmax, jmin, k, kmax, kmin, lBeama, lBeamb,
+     *          lDef, lMapa, lMapb, lModel, lOut, maxniter, maxPoint,
+     *          measure, n1, n2, naxis, nBeam(3), nDef(3), nfret,
+     *          niter, nMap(3), nMapb(3), nModel(3), nOut(MAXNAX),
+     *          nPoint, nRun, pDef, pEst, pMapa, pMapb, pNewEst,
+     *          pNewResa, pNewResb, pResa, pResb, pWta, pWtb,
+     *          Run(3,MaxRun), trc(3), xdoff, xmax, xmin, xmoff, ydoff,
+     *          ymax, ymin, ymoff, zdoff, zmoff
+      real      Alpha, Beta, De, Df, fac, ffacDef, ffacSD, Flux,
+     *          fluxlist(maxdim), Grad11, GradEE, GradEF, GradEH,
+     *          GradEJ, GradFF, GradFH, GradFJ, GradHH, GradJJ, Immax,
+     *          Immin, J0, J1, OStLen1, OStLen2, Qa, Qb, Qest, Rmsa,
+     *          Rmsb, rmsfaca, rmsfacb, StLen1, StLen2, StLim, temp,
+     *          TFlux, Tol, TRms, Trms2
+      character BeamNam*64, BeamSin*64, DefNam*64, entropy*8, line*80,
+     *          MapNam*64, MapSin*64, ModelNam*64, OutNam*64, version*72
 
-      integer pMapa,pMapb,pEst,pDef,pResa,pResb
-      integer pNewEst,pNewResa,pNewResb,pWta,pWtb,Cnvl
-
-c     Externals.
-      character itoaf*4
-      logical hdprsnt
-      integer len1
+      logical   hdprsnt
+      integer   len1
+      character itoaf*4, versan*80
+      external  hdprsnt, itoaf, len1, versan
 c-----------------------------------------------------------------------
+      version = versan('mosmem',
+     *                 '$Revision: 1.3 $',
+     *                 '$Date: 2010/09/07 02:35:26 $')
 c
 c  Get and check the input parameters.
 c
-      call output(version)
       call keyini
       call keya('map',MapNam,' ')
       call keya('map',MapSin,' ')
@@ -393,7 +389,7 @@ c
         nOut(i) = 1
       enddo
       call xyopen(lOut,OutNam,'new',naxis,nOut)
-      call Header(lMapa,lOut,blc,trc,version)
+      call mkHead(lMapa,lOut,blc,trc,version)
       call xyflush(lOut)
 c
 c  Loop.
@@ -1345,11 +1341,10 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine Header(lMap,lOut,blc,trc,version)
+      subroutine mkHead(lMap,lOut,blc,trc,version)
 
-      integer lMap,lOut
-      integer blc(3),trc(3)
-      character version*(*)
+      integer   lMap, lOut, blc(3), trc(3)
+      character version*72
 c-----------------------------------------------------------------------
 c  Write a header for the output file.
 c
@@ -1360,64 +1355,38 @@ c    lOut       The handle of the output estimate.
 c    blc        Blc of the bounding region.
 c    trc        Trc of the bounding region.
 c-----------------------------------------------------------------------
-      include 'maxnax.h'
-      integer i,lblc,ltrc
-      real crpix
-      character line*72,txtblc*32,txttrc*32,num*2
-      integer nkeys
-      parameter (nkeys=17)
-      character keyw(nkeys)*8
+      integer   iax, lblc, ltrc
+      double precision crpix
+      character cin*1, line*72, txtblc*32, txttrc*32
 
-c     Externals.
       character itoaf*8
-
-      data keyw/   'obstime ','epoch   ','history ','lstart  ',
-     *  'lstep   ','ltype   ','lwidth  ','object  ',
-     *  'observer','telescop','restfreq','vobs    ','btype   ',
-     *  'mostable','cellscal','pbtype  ','pbfwhm  '/
+      external  itoaf
 c-----------------------------------------------------------------------
-c
-c  Fill in some parameters that will have changed between the input
-c  and output.
-c
-      call wrhda(lOut,'bunit','JY/PIXEL')
+c     Start by making a verbatim copy of the input header.
+      call headcopy(lMap, lOut, 0, 0, 0, 0)
 
-      do i = 1, MAXNAX
-        num = itoaf(i)
-        if (i.le.3) then
-          call rdhdr(lMap,'crpix'//num,crpix,1.0)
-          crpix = crpix - blc(i) + 1
-          call wrhdr(lOut,'crpix'//num,crpix)
-        else
-          call hdcopy(lMap,lOut,'crpix'//num)
+c     Update parameters that may have changed.
+      do iax = 1, 3
+        if (blc(iax).ne.1) then
+          cin = itoaf(iax)
+          call rdhdd(lMap, 'crpix'//cin, crpix, 1d0)
+          crpix = crpix - dble(blc(iax) + 1)
+          call wrhdd(lOut, 'crpix'//cin, crpix)
         endif
-        call hdcopy(lMap,lOut,'cdelt'//num)
-        call hdcopy(lMap,lOut,'crval'//num)
-        call hdcopy(lMap,lOut,'ctype'//num)
       enddo
-c
-c  Copy all the other keywords across, which have not changed and add
-c  history.
-c
-      do i = 1, nkeys
-        call hdcopy(lMap, lOut, keyw(i))
-      enddo
-c
-c  Write crap to the history file, to attempt (ha!) to appease Neil.
-c  Neil is not easily appeased you know.  Just a little t.l.c. is all he
-c  needs.
-c
-      call hisopen(lOut,'append')
-      line = 'MOSMEM: Miriad '//version
-      call hiswrite(lOut,line)
-      call hisinput(lOut,'MOSMEM')
 
-      call mitoaf(blc,3,txtblc,lblc)
-      call mitoaf(trc,3,txttrc,ltrc)
-      line = 'MOSMEM: Bounding region is Blc=('//txtblc(1:lblc)//
-     *                               '),Trc=('//txttrc(1:ltrc)//')'
-      call hiswrite(lOut,line)
+      call wrhda(lOut, 'bunit', 'JY/PIXEL')
 
+c     Update history.
+      call hisopen (lOut, 'append')
+      call hiswrite(lOut, 'MOSMEM: Miriad ' // version)
+      call hisinput(lOut, 'MOSMEM')
+
+      call mitoaf(blc, 3, txtblc, lblc)
+      call mitoaf(trc, 3, txttrc, ltrc)
+      line = 'MOSMEM: Bounding region is Blc=(' // txtblc(1:lblc) //
+     *                                '),Trc=(' // txttrc(1:ltrc) // ')'
+      call hiswrite(lOut,line)
       call hisclose(lOut)
 
       end
