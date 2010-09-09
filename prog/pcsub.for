@@ -51,7 +51,7 @@ c       map, and subtracted from the input cube.
 c       If "cont" alone is provided, ONLY the continuum map is written,
 c       no output cube is written.
 c
-c$Id: pcsub.for,v 1.2 2010/09/09 01:28:22 cal103 Exp $
+c$Id: pcsub.for,v 1.3 2010/09/09 04:14:52 cal103 Exp $
 c--
 c  History:
 c    nebk  2may89 Original version. (AVSUB.FOR)
@@ -73,30 +73,31 @@ c    nebk 25nov92 Copy btype to output
 c    mjs  27feb93 use tmpdim.h instead of maxdim.h
 c    rjs  08may00 Change incorrect call of keyf to keya.
 c-----------------------------------------------------------------------
-      character *(*) PVERSION
-      parameter (PVERSION='Version 1.0 25-nov-92')
       include 'tmpdim.h'
+
       integer MAXBOXES, MAXNAX, MAXRUNS, MAXEXP
       integer MAXPOWER, MPPLUS1
-      parameter (MAXBOXES = 1024, MAXRUNS =3*MAXDIM, MAXNAX = 3)
-      parameter (MAXPOWER=10, MAXEXP=3, MPPLUS1=MAXPOWER+1)
+      parameter (MAXBOXES = 1024, MAXRUNS = 3*MAXDIM, MAXNAX = 3)
+      parameter (MAXPOWER = 10, MAXEXP = 3, MPPLUS1 = MAXPOWER+1)
 
-      real inplanes,contin(MAXDIM),rline(MAXDIM)
-      double precision bm(MAXPOWER+1, MAXPOWER+1), y(MAXDIM),
-     *   rope(MAXDIM*MAXCHAN), c(MAXPOWER+1),
-     *   cm(MAXDIM, MAXPOWER+1)
-      integer nruns, runs(3,MAXRUNS), planes(MAXCHAN), nplanes,
-     *   xblc, xtrc, yblc, ytrc, boxes(MAXBOXES), blc(MAXNAX),
-     *   trc(MAXNAX), nin(MAXNAX), cnin(MAXNAX), i, j, k, naxis,
-     *   lin, lout, lcont, istart(MAXCHAN), iend(MAXCHAN), nsect,
-     *   isnext, nin1, nin2, nin3, nterms, b(MPPLUS1+MPPLUS1),
-     *   a(MAXPOWER+1), iostat, len1, n
-      character in*128, out*128, aline*72, cont*128, mesg*96,
-     *   msg*96, type*16, descr*16, itemname*16
-      logical more, ccreate
+      logical   ccreate, more
+      integer   a(MAXPOWER+1), b(MPPLUS1+MPPLUS1), blc(MAXNAX),
+     *          boxes(MAXBOXES), cnin(MAXNAX), i, iend(MAXCHAN), iostat,
+     *          isnext, istart(MAXCHAN), j, k, lcont, lin, lout, naxis,
+     *          nin(MAXNAX), nplanes, nruns, nsect, nterms,
+     *          planes(MAXCHAN), runs(3,MAXRUNS), trc(MAXNAX), xblc,
+     *          xtrc, yblc, ytrc
+      real      inplanes, contin(MAXDIM), rline(MAXDIM)
+      double precision bm(MAXPOWER+1,MAXPOWER+1), c(MAXPOWER+1),
+     *          cm(MAXDIM,MAXPOWER+1), rope(MAXDIM*MAXCHAN), y(MAXDIM)
+      character aline*72, cont*128, in*128, out*128, version*72
+
+      character versan*80
+      external  versan
 c-----------------------------------------------------------------------
-c     Announce:
-      call output ('PCSUB: '//PVERSION)
+      version = versan('pcsub',
+     *                 '$Revision: 1.3 $',
+     *                 '$Date: 2010/09/09 04:14:52 $')
       call bug('w','Use this program only in EXISTING cont= mode')
 
 c     Get the input parameters.
@@ -112,7 +113,7 @@ c     Get the input parameters.
       call keyi ('order', nterms, 0)
       if (nterms.gt.MAXPOWER) call bug('f',
      *    'Order too high; order=')
-      nterms=nterms+1
+      nterms = nterms + 1
       call keyfin
 
 c     Open the input image and pass some information to the box routines
@@ -123,7 +124,7 @@ c     about the region to work on.
       call rdhdi (lin, 'naxis', naxis, 0)
       if (naxis.lt.3) call bug ('f', 'Image only has 2 dimensions')
       call boxmask (lin, boxes, MAXBOXES)
-      call boxset (boxes, MAXNAX, nin,'s')
+      call boxset (boxes, MAXNAX, nin, 's')
 
 c     Find region of image which contains all channels to average and
 c     then work out which planes to read.
@@ -140,7 +141,7 @@ c     then work out which planes to read.
         endif
       enddo
 
-      if (nplanes.le.nterms .and. nterms.ne.1) then
+      if (nterms.gt.1 .and. nplanes.le.nterms) then
         call bug('w','Fit likely poor,')
         call output('since the number of planes chosen as a')
         call output('continuum to be fit is less than or equal to')
@@ -149,12 +150,6 @@ c     then work out which planes to read.
 
 c     Create the output image, copy the header keywords from the
 c     input image and add the new history.
-      nin1=nin(1)
-      nin2=nin(2)
-      nin3=nin(3)
-      cnin(1)=nin1
-      cnin(2)=nin2
-      cnin(3)=1
       if (out.ne.' ') then
         call xyopen (lout, out, 'new', MAXNAX, nin)
         call output('Creating continuum subtracted dataset: '//out)
@@ -163,116 +158,44 @@ c     input image and add the new history.
         call bug('i','No continuum subtracted dataset created')
       endif
 
+      ccreate = .false.
       if (cont.ne.' ') then
-        if (nterms.ne.1) then
-          cnin(3)=nin3
-        endif
-
 c       Dataset existence test: use hopen????? Is that OK
         call hopen(lcont,cont,'old',iostat)
-        ccreate = (iostat.ne.0)
-        if (ccreate) then
-          call output('Creating continuum map: '//cont)
-          call xyopen (lcont, cont, 'new', MAXNAX, cnin)
-        else
-          call output('Reading existing continuum map: '//cont)
-          call hclose(lcont)
-          call xyopen (lcont, cont, 'old', MAXNAX, cnin)
-          if (nterms.ne.1) nterms = 1
-          if (cnin(1).ne.nin1) call bug('f','Bad X-size of cont= map')
-          if (cnin(2).ne.nin2) call bug('f','Bad Y-size of cont= map')
-        endif
+        ccreate = iostat.ne.0
       else
-        lcont=0
-        call bug('i','No continuum map created')
+        lcont = 0
+        call output('No continuum map created.')
       endif
 
 c     Do all necessary header and history manipulation.
       if (lout.ne.0) then
-        call imhdcopy(lin, lout)
-        call hisopen (lout, 'append')
-        call hiswrite (lout, 'PCSUB (MIRIAD)')
-        aline = 'PCSUB: in = '//in
-        call hiswrite (lout, aline)
-        aline = 'PCSUB: (output) out = '//out
-        call hiswrite (lout, aline)
-        if (ccreate) then
-          aline = 'PCSUB: creating cont = '//cont
-        else
-          aline = 'PCSUB: using cont = '//cont
-        endif
-        call hiswrite (lout, aline)
+        call headcopy(lin, lout, 0, 0, 0, 0)
 
-        if (ccreate) then
-          write(mesg, '(''PCSUB: order of polynomial = '',I3)') nterms-1
-          call hiswrite (lout, mesg)
-        endif
+        call hisopen (lout, 'append')
+        call hiswrite(lout, 'PCSUB: Miriad ' // version)
+        call hisinput(lout, 'PCSUB')
       endif
 
-c     If continuum is created from a polynomial fit, do some creation
-c     work on the header and history.
-c     Who knows if this works...
       if (ccreate) then
-        call imhdcopy(lin, lcont)
-        itemname='naxis   '
-        call wrhdi(lcont,itemname,2)
+c       Continuum created from a polynomial fit.
+        call output('Creating continuum map: ' // cont)
+        call xyopen (lcont, cont, 'new', 2, nin)
 
-c       Delete all unapplicable header entries.
-        mesg='crpix3  '
-        call hdelete(lcont,mesg,iostat)
-        msg='xx  xxx'
-        if (naxis.gt.2) then
-          do i = 3, naxis
-            write(mesg, '(''cdelt'', I1)') i
-c           mesg=mesg(1:len1(mesg))//msg(3:4)
-            call hdelete(lcont,mesg,iostat)
-            if (iostat.ne.0) then
-              call bug('i','Error deleting item '//
-     *                      mesg(1:len1(mesg)))
-c             call bugno('f',iostat)
-            endif
+c       Copy header from the input image.
+        call headcopy(lin, lcont, 0, 0, 0, 0)
 
-            write(mesg, '(''crota'', I1)') i
-c           mesg=mesg(1:len1(mesg))//msg(3:4)
-            call hdelete(lcont,mesg,iostat)
-            if (iostat.ne.0) then
-              call bug('i','Error deleting item '//
-     *                      mesg(1:len1(mesg)))
-c             call bugno('f',iostat)
-            endif
+        call hisopen (lcont, 'append')
+        call hiswrite(lcont, 'PCSUB: Miriad ' // version)
+        call hisinput(lcont, 'PCSUB')
+      else
+c       Continuum supplied by user.
+        call output('Reading existing continuum map: ' // cont)
+        call xyopen(lcont, cont, 'old', MAXNAX, cnin)
 
-            write(mesg, '(''crval'', I1)') i
-c           mesg=mesg(1:len1(mesg))//msg(3:4)
-            call hdelete(lcont,mesg,iostat)
-            if (iostat.ne.0) then
-              call bug('i','Error deleting item '//
-     *                      mesg(1:len1(mesg)))
-c             call bugno('f',iostat)
-            endif
-
-            write(mesg, '(''ctype'', I1)') i
-c           mesg=mesg(1:len1(mesg))//msg(3:4)
-            call hdprobe(lcont,mesg,descr,type,n)
-            if (type.ne.'nonexistent') then
-              call hdelete(lcont,mesg,iostat)
-              if (iostat.ne.0) then
-                call bug('i','Error deleting item '//
-     *                        mesg(1:len1(mesg)))
-c               call bugno('f',iostat)
-              endif
-            endif
-          enddo
-        endif
-
-        call hisopen(lcont, 'append')
-        call hiswrite(lcont, 'PCSUB (MIRIAD) Continuum Creation')
-        aline = 'PCSUB: in = '//in
-        call hiswrite(lcont, aline)
-        aline = 'PCSUB: out = '//out
-
-        if (lout.ne.0) then
-          call hiswrite(lcont, aline)
-        endif
+        if (cnin(1).ne.nin(1)) call bug('f','Bad X-size of cont= map')
+        if (cnin(2).ne.nin(2)) call bug('f','Bad Y-size of cont= map')
+        if (nterms.ne.1) nterms = 1
       endif
 
       call listcom (nplanes, planes, istart, iend, nsect)
@@ -281,21 +204,20 @@ c               call bugno('f',iostat)
       do while (more)
         call txtplane (nsect, istart, iend, aline, isnext, more)
         if (lout.ne.0) call hiswrite (lout, aline)
-        if (ccreate) call hiswrite (lcont,aline)
+        if (ccreate)   call hiswrite (lcont,aline)
       enddo
       if (lout.ne.0) call hisclose (lout)
-      if (ccreate) call hisclose (lcont)
+      if (ccreate)   call hisclose (lcont)
 
 c     Select a line of attack going into the cube and fit it to a
 c     polynomial, using in the fit only those planes selected by input
 c     as past of the continuum.  Then, subtract the polynomial fit from
 c     each point along the line of attack (parallel to the z-axis).
       if (nterms.ne.1) then
-        do j = 1, nin2
-          call polfits(planes,nplanes,nterms,lin,lout,lcont,
-     *                        nin1, nin3, j, MAXDIM, MAXCHAN,
-     *                        MPPLUS1, MAXEXP, bm, c, b, a,
-     *                        y, rope, cm, rline, contin)
+        do j = 1, nin(2)
+          call polfits(planes, nplanes, nterms, lin, lout, lcont, nin,
+     *                 j, MAXDIM, MAXCHAN, MPPLUS1, MAXEXP, bm, c, b, a,
+     *                 y, rope, cm, rline, contin)
         enddo
       else
 c       In this case where the fit is zero order, create for each pixel
@@ -305,22 +227,22 @@ c       from each plane of the cube at that pixel and deposit the
 c       result as part of the output cube.  ==> This mode is also used
 c       when the continuum map already existed. <==
         inplanes = 1.0/REAL(nplanes)
-        do j = 1, nin2
+        do j = 1, nin(2)
           if (ccreate) then
-            do i = 1, nin1
-              contin(i)=0.0
+            do i = 1, nin(1)
+              contin(i) = 0.0
             enddo
 
             do k = 1, nplanes
               call xysetpl(lin,1,planes(k))
               call xyread(lin,j,rline)
-              do i = 1, nin1
-                contin(i)=contin(i)+rline(i)
+              do i = 1, nin(1)
+                contin(i) = contin(i) + rline(i)
               enddo
             enddo
 
-            do i = 1, nin1
-              contin(i)=contin(i)*inplanes
+            do i = 1, nin(1)
+              contin(i) = contin(i)*inplanes
             enddo
             call xywrite(lcont,j,contin)
           else
@@ -341,12 +263,12 @@ c         line of the input cube (over all channels) to make a line
 c         for the output cube.
 c
           if (lout.ne.0) then
-            do k = 1, nin3
+            do k = 1, nin(3)
               call xysetpl(lin,1,k)
               call xysetpl(lout,1,k)
               call xyread(lin,j,rline)
-              do i = 1, nin1
-                rline(i)=rline(i)-contin(i)
+              do i = 1, nin(1)
+                rline(i) = rline(i) - contin(i)
               enddo
               call xywrite(lout,j,rline)
             enddo
@@ -482,7 +404,7 @@ c-----------------------------------------------------------------------
 c***********************************************************************
 
       subroutine polfits(planes,nplanes,nterms,lin,lout,lcont,
-     *                        nin1, nin3, j, maxdim, maxchan,
+     *                        nin, j, maxdim, maxchan,
      *                        mpplus1, maxexp, bm, c, b, a, y,
      *                        rope, cm, rline, contin)
 c-----------------------------------------------------------------------
@@ -499,7 +421,7 @@ c           the cube.
 c         cm - two dimensional array accumulating the c arrays for each
 c           frontal pixel position on the line of interest.
 c         bm - the matrix, created in the outfit routine.
-c         nin1, nin3 -- dimensions of two of the axes -- x, z.
+c         nin -- axis dimensions.
 c         j -- the line of the cube front that is now being fit
 c           for each line starting from a point on j, and heading
 c           deep into all the planes of the cube.
@@ -513,7 +435,7 @@ c           or written to the output cube.
 c         contin - The line that is written to an output continuum map.
 c-----------------------------------------------------------------------
       integer maxdim, maxchan, mpplus1, maxexp, nplanes, lin, lout,
-     *        lcont, j, planes(maxchan), nterms, nin1, nin3,
+     *        lcont, j, planes(maxchan), nterms, nin(3),
      *        b(mpplus1+mpplus1)
 
       integer a(mpplus1)
@@ -528,62 +450,64 @@ c     end to end.
       do k = 1, nplanes
         call xysetpl(lin,1,planes(k))
         call xyread(lin,j,rline)
-        do i = 1, nin1
-          rope((k-1)*nin1+i)=rline(i)
+        do i = 1, nin(1)
+          rope((k-1)*nin(1)+i) = rline(i)
         enddo
       enddo
 
-      do i = 1, nin1
-c       Make array (y) of (k-1)*nin1+i positions on rope array, getting
-c       a line array parallel to the z axis and nplanes in length.
+      do i = 1, nin(1)
+c       Make array (y) of (k-1)*nin(1)+i positions on rope array,
+c       getting a line array parallel to the z axis and nplanes in
+c       length.
         do k = 1, nplanes
-          y(k)=rope((k-1)*nin1+i)
+          y(k) = rope((k-1)*nin(1)+i)
         enddo
 
 c       Create arrays and perform fit for this y(*) going into the
 c       cube at position (i,j).
         call outfit(mpplus1, maxdim, maxexp, maxchan, nterms,
-     *                nplanes, planes, bm, y, a, b, c)
+     *              nplanes, planes, bm, y, a, b, c)
 
 c       Transfer coefficients of polynomial from fit routine and place
 c       them in the 2-D grid of coefficients (Position-on-Rline versus
 c       Coefficient-Number.)
         do n = 1, nterms
-          cm(i,n)=c(n)
-          c(n)=0.0
+          cm(i,n) = c(n)
+          c(n) = 0.0
         enddo
       enddo
 
 c     Subtract the continuum from the image.
-      do k = 1, nin3
+      do k = 1, nin(3)
         call xysetpl(lin,1,k)
         if (lout.ne.0) call xysetpl(lout,1,k)
         if (lcont.ne.0) call xysetpl(lcont,1,k)
         call xyread(lin,j, rline)
-        do i = 1, nin1
-          contin(i)=0.0
+        do i = 1, nin(1)
+          contin(i) = 0.0
           do n = 1, nterms
-            expre=1
+            expre = 1
             if (n.gt.maxexp) then
 c             Form the x**n term, run by run, by which each specific
 c             coefficient is to be multiplied by for given i and
 c             Coefficient-Number)
               do m = 1, (n-1)
-                expre=expre*k
+                expre = expre*k
               enddo
             else
               if (n.gt.1) then
-                expre=k**(n-1)
+                expre = k**(n-1)
               endif
             endif
+
 c           Subtract each coefficient*x**n term of each i from rline(i).
-            rline(i)=rline(i)-cm(i,n)*DBLE(expre)
+            rline(i) = rline(i) - cm(i,n)*DBLE(expre)
             if (lcont.ne.0) then
-              contin(i)=contin(i)+cm(i,n)*DBLE(expre)
+              contin(i) = contin(i) + cm(i,n)*DBLE(expre)
             endif
           enddo
         enddo
-        if (lout.ne.0) call xywrite(lout,j,rline)
+        if (lout.ne.0)  call xywrite(lout, j,rline)
         if (lcont.ne.0) call xywrite(lcont,j,contin)
       enddo
 
@@ -607,26 +531,26 @@ c-----------------------------------------------------------------------
 c     Reset c and bm (the matrices)
       do i = 1, nterms
         do j = 1, nterms
-          bm(i,j)=0.0
+          bm(i,j) = 0.0
         enddo
-        c(i)=0.0
+        c(i) = 0.0
       enddo
 
 c     Create matrix bm and array c to be sent to the linpack fit
       do k = 1, nplanes
 c       Create array of planes**0 ... planes**(2*nterms-1)
 c       with which to work to create bm
-        b(1)=1
+        b(1) = 1
         do i = 2, (nterms+nterms-1)
-          b(i)=b((i-1))*planes(k)
+          b(i) = b((i-1))*planes(k)
         enddo
 
 c       Create bm and c.
         do i = 1, nterms
           do j = 1, nterms
-              bm(i,j)=bm(i,j)+DBLE(b(i+j-1))
+              bm(i,j) = bm(i,j) + dble(b(i+j-1))
           enddo
-          c(i)=c(i)+y(k)*DBLE(b(i))
+          c(i) = c(i) + y(k)*dble(b(i))
         enddo
       enddo
 
@@ -634,36 +558,5 @@ c     Call linpack matrix transposition and fit subroutines.
       call dgefa(bm, mpplus1, nterms, a, info)
       if (info.ne.0) call bug('f', 'Highly bogus division by zero')
       call dgesl(bm, mpplus1, nterms, a, c, 0)
-
-      end
-
-c***********************************************************************
-
-      subroutine imhdcopy (lin,lout)
-
-      integer lin, lout
-c-----------------------------------------------------------------------
-c  Copy all official Image Header keywords.
-c     lin   input file pointer
-c     lout  output file pointer
-c-----------------------------------------------------------------------
-      integer NKEYS
-      parameter (NKEYS=47)
-      character keyw(NKEYS)*8
-      integer   i
-      data keyw/   'bunit   ','crota1  ','crota2  ','crota3  ',
-     *  'crota4  ','crota5  ','crval1  ','crval2  ','crval3  ',
-     *  'crval4  ','crval5  ','ctype1  ','ctype2  ','ctype3  ',
-     *  'ctype4  ','ctype5  ','obstime ','epoch   ','history ',
-     *  'instrume','niters  ','object  ','telescop','observer',
-     *  'restfreq','vobs    ','cellscal','obsra   ',
-     *  'obsdec  ','cdelt1  ','cdelt2  ','cdelt3  ','cdelt4  ',
-     *  'cdelt5  ','crpix1  ','crpix2  ','crpix3  ','crpix4  ',
-     *  'crpix5  ','ltype   ','lstart  ','lwidth  ','lstep   ',
-     *  'bmaj    ','bmin    ','bpa     ','btype   '/
-c-----------------------------------------------------------------------
-      do i = 1, NKEYS
-         call hdcopy(lin,lout,keyw(i))
-      enddo
 
       end
