@@ -67,7 +67,7 @@ c                 invalid coordinate conversions.
 c    rjs  15jul10 Correct recent bug introduced in coVelSet.  Correct
 c                 order of "save" statement in coloc.
 c
-c $Id: co.for,v 1.8 2010/09/14 02:36:26 cal103 Exp $
+c $Id: co.for,v 1.9 2010/09/14 02:48:16 cal103 Exp $
 c***********************************************************************
 c* coInit -- Initialise coordinate conversion routines.
 c& rjs
@@ -1117,7 +1117,7 @@ c                                  wcoeff(3)*w(raw)
 c-----------------------------------------------------------------------
       include 'co.h'
 
-      integer   icrd, ilng, status
+      integer   icrd, ilng
       double precision clat, clat0, clng, fac, lat, lat0, lng, lng0,
      *          slat, slat0, slng, x2(MAXNAX)
       character dummy*8, pcode*3
@@ -2032,7 +2032,7 @@ c--
 c-----------------------------------------------------------------------
       include 'co.h'
 
-      integer   iax, icrd, status
+      integer   iax, icrd
       character ctypei*16, pcode*3
 
 c     External.
