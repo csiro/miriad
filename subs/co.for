@@ -67,7 +67,7 @@ c                 invalid coordinate conversions.
 c    rjs  15jul10 Correct recent bug introduced in coVelSet.  Correct
 c                 order of "save" statement in coloc.
 c
-c $Id: co.for,v 1.7 2010/07/28 07:12:41 cal103 Exp $
+c $Id: co.for,v 1.8 2010/09/14 02:36:26 cal103 Exp $
 c***********************************************************************
 c* coInit -- Initialise coordinate conversion routines.
 c& rjs
@@ -808,14 +808,13 @@ c+
       double precision x1(*),x2(*)
       logical valid
 
-c  Convert coordinates from one coordinate system to another.
-c  Input and output coordinates can be either "pixel" or "world"
-c  coordinates, and either "absolute" or "offset".
+c  Convert coordinates from one coordinate system to another.  Input and
+c  output coordinates can be either "pixel" or "world" coordinates, and
+c  either "absolute" or "offset".
 c
-c  "World" coordinates are the normal physical units associated with
-c  a coordinate.  World coordinates are given in radians (for
-c  astronomical positions), GHz (frequencies), km/s (velocities) and
-c  lambda (U-V axes).
+c  "World" coordinates are the normal physical coordinates.  They are
+c  given in radians (for astronomical positions), GHz (frequencies),
+c  km/s (velocities) and lambda (U-V axes).
 c
 c  Pixel coordinates are fairly conventional.
 c
@@ -837,25 +836,25 @@ c  pixel" and "offset world" coordinates differ only by the inaccuracy
 c  in the normal small angle approximation for offsets in RA and DEC.
 c
 c  Input:
-c    in         This indicates the units of the input coordinates.
-c               It consists of a sequence of,
-c                 'op'  Offset pixel coordinate
-c                 'ap'  Absolute pixel coordinate
-c                 'ow'  Offset world coordinate
+c    in         A character string indicating the input coordinate
+c               types.  It is composed of two-letter codes separated
+c               from each other by a slash (/):
+c                 'op'  Offset   pixel coordinate,
+c                 'ap'  Absolute pixel coordinate,
+c                 'ow'  Offset   world coordinate,
 c                 'aw'  Absolute world coordinate,
-c               one for each coordinate requiring conversion. Each
-c               coordinate unit specifier is separated from the other
-c               by a slash (/).
+c               one for each coordinate requiring conversion.
 c               For example 'ap/ap' indicates two coordinates, both in
-c               absolute pixels.
-c    x1         The input coordinates, in units as givien by the `in'
-c               parameter. The dimensionality must agree with the number
-c               of units given in `in'.
-c    out        This indicates the units of the output coordinates, in
-c               the same fashion as the `in' value.  The outputs must
-c               correspond one-for-one with the inputs.
+c               absolute pixels.  A special code
+c                 '...' ditto,
+c               may be used to indicate repetition of the last type
+c               specified up to the image dimensionality.
+c    x1         Input coordinate elements of type specified by the 'in'
+c               parameter.  The dimensionality must agree with 'in'.
+c    out        Output coordinate codes, in the same fashion as 'in',
+c               corresponding one-for-one with the inputs.
 c  Output:
-c    x2         The output coordinates, in units given by `out'.
+c    x2         Output coordinate elements of type specified by 'out'.
 c    valid      If true, all is OK, otherwise the coordinate conversion
 c               requested was invalid.
 c--
@@ -874,8 +873,8 @@ c
 c  Determine the operation to be performed.
 c
       icrd = coLoc(lu,.false.)
-      call coCrack(in,x1pix,x1off,naxis(icrd),MAXNAX,n)
-      call coCrack(out,x2pix,x2off,n,MAXNAX,nt)
+      call coCrack(MAXNAX,in,x1pix,x1off,naxis(icrd),n)
+      call coCrack(MAXNAX,out,x2pix,x2off,n,nt)
       docelest = .false.
       valid = .true.
 c
@@ -1086,17 +1085,22 @@ c
       lmn(3) = sin(dec)*sin(dec0) + cos(dec)*cos(dec0)*cos(ra-ra0)
 
       end
+
 c***********************************************************************
+
 c* coGeom -- Compute linear coefficients to convert geometries.
 c& rjs
 c: coordinates
 c+
       subroutine coGeom(lu,in,x1,ucoeff,vcoeff,wcoeff)
 
-      integer lu
+      integer   lu
       character in*(*)
-      double precision x1(*),ucoeff(3),vcoeff(3),wcoeff(3)
-
+      double precision x1(*), ucoeff(3), vcoeff(3), wcoeff(3)
+c-----------------------------------------------------------------------
+c  Compute matrix elements for transforming (u,v,w) coordinates to the
+c  specified field centre, for mosaicing, etc.
+c
 c  Input:
 c    lu         Handle of the coordinate object.
 c    in         As with coCvt
@@ -1110,51 +1114,46 @@ c                 v(corrected) = vcoeff(1)*u(raw) + vcoeff(2)*v(raw) +
 c                                  vcoeff(3)*w(raw)
 c                 w(corrected) = wcoeff(1)*u(raw) + wcoeff(2)*v(raw) +
 c                                  wcoeff(3)*w(raw)
-c--
 c-----------------------------------------------------------------------
       include 'co.h'
-      include 'wcslib/prj.inc'
 
-      integer   icrd, prj(PRJLEN), status
+      integer   icrd, ilng, status
       double precision clat, clat0, clng, fac, lat, lat0, lng, lng0,
      *          slat, slat0, slng, x2(MAXNAX)
-      character pcode*3
+      character dummy*8, pcode*3
 
-c     External.
       integer   coLoc
+      external  coLoc
 c-----------------------------------------------------------------------
-c
-c  Check validity.
-c
+c     Check validity.
       icrd = coLoc(lu,.false.)
       if (lngax(icrd).eq.0 .or. latax(icrd).eq.0)
-     *  call bug('f','Non-celestial coordinate system, in coLMN')
-c
-c  Convert the user's coordinate to absolute world coordinates.
-c  Fill in the reference location in the output, just in case the
-c  user was silly enough not to give enough inputs.
-c
+     *  call bug('f','Non-celestial coordinate system, in coGeom.')
+
+c     Convert the user's coordinate to absolute world coordinates.
+c     Fill in the reference location in the output, just in case the
+c     user was silly enough not to give enough inputs.
       lng0 = crval(lngax(icrd),icrd)
       lat0 = crval(latax(icrd),icrd)
       x2(lngax(icrd)) = lng0
-      x2(latax(icrd))  = lat0
+      x2(latax(icrd)) = lat0
 
       call coCvt(lu,in,x1,'aw/...',x2)
 
       lng = x2(lngax(icrd))
       lat = x2(latax(icrd))
-c
-c  Determine the conversion coefficients.
-c
+
+c     Get the projection type.
+      ilng = lngax(icrd)
+      call coExt(ctype(ilng,icrd), dummy, pcode)
+
+c     Compute the matrix elements.
       clat0 = cos(lat0)
       slat0 = sin(lat0)
       clng  = cos(lng-lng0)
       slng  = sin(lng-lng0)
-      slat  = sin(lat)
       clat  = cos(lat)
-
-      status = celget(cel(1,icrd), cel_prj, prj)
-      status = prjget(prj, prj_code, pcode)
+      slat  = sin(lat)
 
       if (pcode.eq.'NCP') then
         ucoeff(1) =  clng
@@ -1221,9 +1220,9 @@ c-----------------------------------------------------------------------
       x2 = x1
       if (iax.gt.naxis(icrd)) return
 
-      call coCrack(in,x1pix,x1off,1,1,n)
+      call coCrack(1,in,x1pix,x1off,1,n)
       if (n.ne.1) call bug('f','Invalid conversion, in coCvt1')
-      call coCrack(out,x2pix,x2off,1,1,n)
+      call coCrack(1,out,x2pix,x2off,1,n)
       if (n.ne.1) call bug('f','Invalid conversion, in coCvt1')
 
       valid = .true.
@@ -1325,7 +1324,7 @@ c  Determine the operation to be performed.
 c
       icrd = coLoc(lu,.false.)
 
-      call coCrack(in,x1pix,x1off,naxis(icrd),MAXNAX,n)
+      call coCrack(MAXNAX,in,x1pix,x1off,naxis(icrd),n)
 c
 c  Get the factors to scale cdelt1 and cdelt2 for this coordinate.
 c
@@ -2032,9 +2031,8 @@ c               interpretation will be translated to CAR.
 c--
 c-----------------------------------------------------------------------
       include 'co.h'
-      include 'wcslib/prj.inc'
 
-      integer   iax, icrd, prj(PRJLEN), status
+      integer   iax, icrd, status
       character ctypei*16, pcode*3
 
 c     External.
@@ -2044,10 +2042,6 @@ c-----------------------------------------------------------------------
 
       pcode = code
       call ucase(pcode)
-
-      status = celget(cel(1,icrd), cel_prj, prj)
-      status = prjput(prj, prj_code, pcode, 0)
-      status = celput(cel(1,icrd), cel_prj, prj, 0)
 
       if (pcode.ne.' ') then
         do iax = 1, naxis(icrd)
@@ -2406,14 +2400,18 @@ c
       coLoc = 0
 
       end
+
 c***********************************************************************
-      subroutine coCrack(code,x1pix,x1off,defn,maxnax,n)
 
-      integer maxnax,n,defn
-      logical x1pix(maxnax),x1off(maxnax)
+      subroutine coCrack(maxnax,code,x1pix,x1off,defn,n)
+
+      integer   maxnax
+      logical   x1pix(maxnax),  x1off(maxnax)
+      integer   defn, n
       character code*(*)
-
-c  Decode a coordinate conversion specifier code.
+c-----------------------------------------------------------------------
+c  Decode a coordinate conversion specifier code - refer to the prologue
+c  of coCvtv.
 c
 c  Input:
 c    code
@@ -2422,30 +2420,37 @@ c  Output:
 c    x1pix,x1off
 c    n
 c-----------------------------------------------------------------------
-      logical new,pad
-      integer i
+      logical   ditto, new
+      integer   i
       character c*1
 c-----------------------------------------------------------------------
       n = 0
       new = .true.
-      pad = .false.
+      ditto = .false.
 
       do i = 1, len(code)
         c = code(i:i)
         if (c.le.' ') then
           continue
+
         else if (c.eq.'/') then
+          if (ditto)
+     *      call bug('f','Unrecognised conversion code, in coCvt')
           new = .true.
+
         else if (c.eq.'.') then
-          pad = .true.
+          ditto = .true.
+
         else
+          if (ditto)
+     *      call bug('f','Unrecognised conversion code, in coCvt')
+
           if (new) then
             n = n + 1
             if (n.gt.maxnax) call bug('f','Too many axes, in coCvt')
-            x1pix(n) = .false.
-            x1off(n) = .false.
             new = .false.
           endif
+
           if (c.eq.'p' .or. c.eq.'P') then
             x1pix(n) = .true.
           else if (c.eq.'w' .or. c.eq.'W') then
@@ -2460,7 +2465,7 @@ c-----------------------------------------------------------------------
         endif
       enddo
 
-      if (pad .and. n.ge.1 .and. n.lt.defn) then
+      if (ditto .and. n.gt.0 .and. n.lt.defn) then
         do i = n+1, defn
           x1pix(i) = x1pix(n)
           x1off(i) = x1off(n)
