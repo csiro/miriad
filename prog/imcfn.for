@@ -98,7 +98,7 @@ c       a plot device but not an output or beam image if you just
 c       want to see the plots but don't want to spend ages computing
 c       the beam integral.
 c
-c$Id: imcfn.for,v 1.5 2010/09/15 06:45:16 cal103 Exp $
+c$Id: imcfn.for,v 1.6 2010/09/15 06:56:15 cal103 Exp $
 c--
 c  History:
 c    nebk 13sep95 Original version
@@ -106,34 +106,35 @@ c    rjs   2jul98 Increase ize of pbtype variable.
 c    rjs  08may00 Change incorrect call to keyf to keya.
 c    rjs  06apr09 Make sure do loop parameters are integer valued.
 c-----------------------------------------------------------------------
-      include 'mirconst.h'
       include 'maxdim.h'
       include 'maxnax.h'
       include 'mem.h'
 
-      character version*(*)
-      integer maxpc, maxpts
-      parameter (version = 'ImCFN: version 1.0 06-Apr-2009', maxpc = 6,
-     *           maxpts = 10000)
+      integer   MAXPC, MAXPTS
+      parameter (MAXPC = 6, MAXPTS = 10000)
 
-      real xx(maxpts), yy(maxpts), yy2(maxpts), ymin, ymax, xmin, xmax,
-     *  ymin2, ymax2
-      integer ierr, pgbeg
+      integer   i, iAxLen(MAXNAX), ierr, ip, ipi, ipo, j, li, lo,
+     *          naxisi, nc, oAxLen(MAXNAX)
+      real      xmax, xmin, xx(MAXPTS), ymax, ymax2, ymin, ymin2,
+     *          yy(MAXPTS), yy2(MAXPTS)
+      double precision a, b, c(MAXPC), cdelti(MAXNAX), crpixi(MAXNAX),
+     *          crpixo(MAXNAX), dlogs, ds, n, n0(2), nn, s, s1, s2, s3,
+     *          sJy, sb, smax, smin, sold, sum
+      character device*80, in*132, itoaf*1, line*80, out*132, str*1,
+     *          title*80, version*72, xlabel*80, ylabel*80
 
-      double precision crpixi(maxnax), crpixo(maxnax), cdelti(maxnax),
-     *  smin, smax, sb, a, b, c(maxpc), sum, s1, s2, s3, ds, n0(2),
-     *  sold, s, nn, n, dlogs, sJy
-      integer naxisi, sizei(maxnax), sizeo(maxnax), li, lo, ipi, ipo,
-     *  ip, i, j, nc
-      character in*132, out*132, str*1, itoaf*1, device*80, line*80,
-     *  xlabel*80, ylabel*80, title*80
+      integer   pgbeg
+      character versan*80
+      external  pgbeg, versan
 
-      data c /maxpc*0d0/
+      data c /MAXPC*0d0/
       data xmin,  xmax  /1e30, -1e30/
       data ymin,  ymax  /1e30, -1e30/
       data ymin2, ymax2 /1e30, -1e30/
 c-----------------------------------------------------------------------
-      call output (version)
+      version = versan('imcfn',
+     *                 '$Revision: 1.6 $',
+     *                 '$Date: 2010/09/15 06:56:15 $')
 
 c     Get the inputs.
       call keyini
@@ -142,7 +143,7 @@ c     Get the inputs.
       call keyd ('flux', smin, 0d0)
       call keyd ('flux', smax, 0d0)
       call keyd ('flux', sb, 0d0)
-      call mkeyd ('poly', c, maxpc, nc)
+      call mkeyd ('poly', c, MAXPC, nc)
       call keyd ('power', a, 0d0)
       call keyd ('power', b, 0d0)
       call keyd ('n0', n0(1), 0d0)
@@ -166,7 +167,7 @@ c     Do the source flux integral.
       s1 = log10(smin)
       s2 = log10(smax)
       s3 = log10(sb)
-      dlogs = (s2-s1)/real(maxpts-1)
+      dlogs = (s2-s1)/real(MAXPTS-1)
       sold = s1
       i = 1
 
@@ -245,21 +246,21 @@ c     Draw plot.
 
 c     Open input image.
       if (out.ne.' ') then
-        call xyopen (li, in, 'old', maxnax, sizei)
+        call xyopen (li, in, 'old', MAXNAX, iAxLen)
         call rdhdi (li, 'naxis', naxisi, 0)
         do i = 1, naxisi
           str = itoaf(i)
-          call rdhdd (li, 'crpix'//str, crpixi(i), dble(sizei(i))/2d0)
+          call rdhdd (li, 'crpix'//str, crpixi(i), dble(iAxLen(i))/2d0)
           call rdhdd (li, 'cdelt'//str, cdelti(i), 1d0)
         enddo
 
 c       Open output image and copy header items to it.
-        sizeo(1) = sizei(1) / 2
-        sizeo(2) = sizei(2) / 2
-        call xyopen (lo, out, 'new', 2, sizeo)
-        call headcopy (li, lo, 0, 2, 0, 0)
+        oAxLen(1) = iAxLen(1) / 2
+        oAxLen(2) = iAxLen(2) / 2
+        call xyopen (lo, out, 'new', 2, oAxLen)
+        call headcopy (li, lo, 0, 0, 0, 0)
         do i = 1, 2
-          crpixo(i) = sizei(i) / 2 + 1
+          crpixo(i) = iAxLen(i) / 2 + 1
           str = itoaf(i)
           call wrhdd (lo, 'crpix'//str, crpixo(i))
         enddo
@@ -271,28 +272,28 @@ c       Write history.
         call hisclose (lo)
 
 c       Allocate memory for input and output images.
-        call memalloc (ipi, sizei(1)*sizei(2), 'r')
-        call memalloc (ipo, sizeo(1)*sizeo(2), 'r')
+        call memalloc (ipi, iAxLen(1)*iAxLen(2), 'r')
+        call memalloc (ipo, oAxLen(1)*oAxLen(2), 'r')
 
 c       Read in the synthesized beam.
-        do j = 1, sizei(2)
-          ip = ipi + (j-1)*sizei(1)
+        do j = 1, iAxLen(2)
+          ip = ipi + (j-1)*iAxLen(1)
           call xyread (li, j, memr(ip))
         enddo
 
 c       Do the beam integral and multiply by source integral.
-        call bemint (li, sum, sizei(1), sizei(2), memr(ipi),
-     *               cdelti, crpixi, sizeo(1), sizeo(2), memr(ipo))
+        call bemint (li, sum, iAxLen(1), iAxLen(2), memr(ipi),
+     *               cdelti, crpixi, oAxLen(1), oAxLen(2), memr(ipo))
 
 c       Write out confusion noise image.
-        do j = 1, sizeo(2)
-          ip = ipo + (j-1)*sizeo(1)
+        do j = 1, oAxLen(2)
+          ip = ipo + (j-1)*oAxLen(1)
           call xywrite (lo, j, memr(ip))
         enddo
 
 c       Close up.
-        call memfree (ipi, sizei(1)*sizei(2), 'r')
-        call memfree (ipo, sizeo(1)*sizeo(2), 'r')
+        call memfree (ipi, iAxLen(1)*iAxLen(2), 'r')
+        call memfree (ipo, oAxLen(1)*oAxLen(2), 'r')
         call xyclose (li)
         call xyclose (lo)
       endif
