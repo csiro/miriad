@@ -40,7 +40,7 @@ c
 c       Pixels are blanked if the input pixel is blanked, the averaged
 c       channel pixel is blanked, or the output is undefined.
 c
-c$Id: avmaths.for,v 1.3 2010/08/19 06:37:10 cal103 Exp $
+c$Id: avmaths.for,v 1.4 2010/09/15 07:05:36 cal103 Exp $
 c--
 c  History:
 c    nebk 26jul90 Original version.
@@ -86,8 +86,8 @@ c-----------------------------------------------------------------------
       common buffer
 c-----------------------------------------------------------------------
       version = versan('avmaths',
-     *                 '$Revision: 1.3 $',
-     *                 '$Date: 2010/08/19 06:37:10 $')
+     *                 '$Revision: 1.4 $',
+     *                 '$Date: 2010/09/15 07:05:36 $')
 c
 c  Get the input parameters.
 c
@@ -201,11 +201,11 @@ c
 c Fix up header if reduced
 c
          if (dored) then
-           call rdhdd (lin, 'cdelt3', cdelt3, 0.d0)
+           call rdhdd (lin, 'cdelt3', cdelt3, 0d0)
            cdelt3 = cdelt3 * nplanes
 
            call wrhdd (lout, 'cdelt3', cdelt3)
-           call wrhdd (lout, 'crpix3', 1.0d0)
+           call wrhdd (lout, 'crpix3', 1d0)
            call wrhdd (lout, 'crval3', zav)
          endif
       endif
@@ -217,9 +217,12 @@ c
 
       end
 
+c***********************************************************************
 
       subroutine getopt (dosub, dood, dorepl, dored, domul)
-c----------------------------------------------------------------------
+
+      logical dosub, dood, dorepl, dored, domul
+c-----------------------------------------------------------------------
 c     Decode options array into named variables.
 c
 c   Output:
@@ -230,8 +233,6 @@ c     dored    Reduce to two dimensions
 c     domul    Multiply
 c
 c-----------------------------------------------------------------------
-      logical dosub, dood, dorepl, dored, domul
-cc
       integer maxopt
       parameter (maxopt = 5)
 
@@ -262,12 +263,16 @@ c-----------------------------------------------------------------------
 
       end
 
+c***********************************************************************
 
-        subroutine listcom (nplanes, planes, istart, iend, nsect)
-c----------------------------------------------------------------------
-c       Compact a list of planes such as: 1,2,3,4,7,10,12,13,14 to
-c       a two lists giving the start and end planes of each section
-c       for ease of formatting in history
+      subroutine listcom (nplanes, planes, istart, iend, nsect)
+
+      integer nplanes, planes(nplanes), istart(nplanes),
+     *        iend(nplanes), nsect
+c-----------------------------------------------------------------------
+c  Compact a list of planes such as: 1,2,3,4,7,10,12,13,14 to
+c  a two lists giving the start and end planes of each section
+c  for ease of formatting in history
 c
 c    Input:
 c      nplanes   size of planes
@@ -278,31 +283,33 @@ c      iend           e.g. if planes=1,2,3,5,7,8,9
 c                        istart=1,5,7
 c                        iend  =3,5,9
 c      nsect     number of sections, for above example, nsect=3
-c-------------------------------------------------------------------
-        integer nplanes, planes(nplanes), istart(nplanes),
-     *  iend(nplanes), nsect
-cc
-        integer i
-c-------------------------------------------------------------------
-        nsect = 1
+c-----------------------------------------------------------------------
+      integer i
+c-----------------------------------------------------------------------
+      nsect = 1
 
-        do i = 1, nplanes
-          if (i.eq.1) then
-            istart(nsect) = planes(1)
-          else if (planes(i).ne.(planes(i-1)+1)) then
-            iend(nsect) = planes(i-1)
-            nsect = nsect + 1
-            istart(nsect) = planes(i)
-          else
-            if (i.eq.nplanes) iend(nsect) = planes(i)
-          endif
-        enddo
+      do i = 1, nplanes
+        if (i.eq.1) then
+          istart(nsect) = planes(1)
+        else if (planes(i).ne.(planes(i-1)+1)) then
+          iend(nsect) = planes(i-1)
+          nsect = nsect + 1
+          istart(nsect) = planes(i)
+        else
+          if (i.eq.nplanes) iend(nsect) = planes(i)
+        endif
+      enddo
 
       end
 
+c***********************************************************************
 
-        subroutine txtplane (nsect, istart, iend, string, isnext, more)
-c----------------------------------------------------------------------
+      subroutine txtplane (nsect, istart, iend, string, isnext, more)
+
+      integer nsect, istart(nsect), iend(nsect), isnext
+      character string*(*)
+      logical more
+c-----------------------------------------------------------------------
 c       Write the compacted plane list into a text string
 c
 c   Input:
@@ -314,50 +321,50 @@ c     string     output string
 c   Input/Output:
 c     isnext     The number of the next section to start the next line
 c     more       Do it again please if true
-c----------------------------------------------------------------------
-        integer nsect, istart(nsect), iend(nsect), isnext
-        character string*(*)
-        logical more
-cc
-        integer strlen, l1, l2, ipt, i
-        character*4 ch1, ch2
-c------------------------------------------------------------------
-        string = 'AVMATHS: averaged channels = '
-        ipt = 29
-        strlen = len(string)
-        do i = isnext, nsect
-          if (istart(i).eq.iend(i)) then
-            call itochar (istart(i), ch1, l1)
-            if (ipt+l1.lt.strlen) then
-              string(ipt:ipt+l1) = ch1(1:l1)
-            else
-              more = .true.
-              isnext = i
-              goto 999
-            endif
-            ipt = ipt + l1 + 2
-          else
-            call itochar (istart(i), ch1, l1)
-            call itochar (iend(i), ch2, l2)
-            if (ipt+l1+l2.lt.strlen) then
-              string(ipt:ipt+l1+l2) = ch1(1:l1)//':'//ch2(1:l2)
-              ipt = ipt + l1 + l2 + 2
-            else
-              more = .true.
-              isnext = i
-              goto 999
-            endif
-          endif
-        enddo
-        more = .false.
-
- 999    return
-        end
-
-
-        subroutine itochar (ival, string, ilen)
 c-----------------------------------------------------------------------
-c       Encode an integer into a character string.
+      integer strlen, l1, l2, ipt, i
+      character*4 ch1, ch2
+c-----------------------------------------------------------------------
+      string = 'AVMATHS: averaged channels = '
+      ipt = 29
+      strlen = len(string)
+      do i = isnext, nsect
+        if (istart(i).eq.iend(i)) then
+          call itochar (istart(i), ch1, l1)
+          if (ipt+l1.lt.strlen) then
+            string(ipt:ipt+l1) = ch1(1:l1)
+          else
+            more = .true.
+            isnext = i
+            goto 999
+          endif
+          ipt = ipt + l1 + 2
+        else
+          call itochar (istart(i), ch1, l1)
+          call itochar (iend(i), ch2, l2)
+          if (ipt+l1+l2.lt.strlen) then
+            string(ipt:ipt+l1+l2) = ch1(1:l1)//':'//ch2(1:l2)
+            ipt = ipt + l1 + l2 + 2
+          else
+            more = .true.
+            isnext = i
+            goto 999
+          endif
+        endif
+      enddo
+      more = .false.
+
+ 999  return
+      end
+
+c***********************************************************************
+
+      subroutine itochar (ival, string, ilen)
+
+      integer ival, ilen
+      character*(*) string
+c-----------------------------------------------------------------------
+c  Encode an integer into a character string.
 c
 c     Input:
 c        ival      i      Integer to encode
@@ -365,23 +372,26 @@ c     Output:
 c        string    c(*)   String in which integer is placed.
 c        ilen      i      Length of encoded part of string
 c-----------------------------------------------------------------------
-        integer ival, ilen
-        character*(*) string
-cc
-        character itoaf*20, temp*20
-        integer len1
+      character itoaf*20, temp*20
+      integer len1
 c-----------------------------------------------------------------------
-        temp = itoaf(ival)
-        ilen = len1(temp)
-        string = temp(1:ilen)
+      temp = itoaf(ival)
+      ilen = len1(temp)
+      string = temp(1:ilen)
 
-        end
+      end
 
+c***********************************************************************
 
       subroutine average (nx, ny, lin, nplanes, planes, rline, flags,
      *                    aver, norm, zav)
-c----------------------------------------------------------------------
-c     Average unblanked pixels from selected planes
+
+      integer lin, nplanes, planes(nplanes), nx, ny
+      double precision zav
+      real aver(nx,ny), norm(nx,ny), rline(*)
+      logical flags(*)
+c-----------------------------------------------------------------------
+c  Average unblanked pixels from selected planes.
 c
 c   Input:
 c     nx,ny    X and Y size of image
@@ -399,11 +409,6 @@ c              should be blanked at that pixel
 c     zav      The average value of the third axis from the selected
 c              planes
 c-----------------------------------------------------------------------
-      integer lin, nplanes, planes(nplanes), nx, ny
-      double precision zav
-      real aver(nx,ny), norm(nx,ny), rline(*)
-      logical flags(*)
-cc
       double precision crpix3, crval3, cdelt3
       integer i, j, k
       character aline*72
@@ -411,13 +416,13 @@ c-----------------------------------------------------------------------
 c
 c Get axis descriptors
 c
-      call rdhdd (lin, 'cdelt3', cdelt3, 0.d0)
-      call rdhdd (lin, 'crpix3', crpix3, 0.d0)
-      call rdhdd (lin, 'crval3', crval3, 0.d0)
+      call rdhdd (lin, 'cdelt3', cdelt3, 0d0)
+      call rdhdd (lin, 'crpix3', crpix3, 0d0)
+      call rdhdd (lin, 'crval3', crval3, 0d0)
 c
 c Accumulate desired planes
 c
-      zav = 0.0d0
+      zav = 0d0
       do k = 1, nplanes
         call xysetpl (lin, 1, planes(k))
         write (aline, 20) planes(k)
@@ -450,8 +455,13 @@ c
 
       end
 
+c***********************************************************************
 
       subroutine mul (lin, lout, nx, ny, nz, rline, flags, aver, norm)
+
+      integer lin, lout, nx, ny, nz
+      real rline(*), aver(nx,ny), norm(nx,ny)
+      logical flags(*)
 c-----------------------------------------------------------------------
 c     Compute multiplied image and write it out.
 c
@@ -468,10 +478,6 @@ c              the planes were blanked at that pixel) so the output
 c              should be blanked at that pixel
 c
 c-----------------------------------------------------------------------
-      integer lin, lout, nx, ny, nz
-      real rline(*), aver(nx,ny), norm(nx,ny)
-      logical flags(*)
-cc
       integer pinc, i, j, k
       character aline*72
 c-----------------------------------------------------------------------
@@ -506,8 +512,13 @@ c-----------------------------------------------------------------------
 
       end
 
+c***********************************************************************
 
       subroutine od (lin, lout, nx, ny, nz, rline, flags, aver, norm)
+
+      integer lin, lout, nx, ny, nz
+      real rline(*), aver(nx,ny), norm(nx,ny)
+      logical flags(*)
 c-----------------------------------------------------------------------
 c     Compute optical depth image and write it out.
 c
@@ -524,10 +535,6 @@ c              the planes were blanked at that pixel) so the output
 c              should be blanked at that pixel
 c
 c-----------------------------------------------------------------------
-      integer lin, lout, nx, ny, nz
-      real rline(*), aver(nx,ny), norm(nx,ny)
-      logical flags(*)
-cc
       real temp
       integer pinc, i, j, k
       character aline*72
@@ -553,7 +560,7 @@ c-----------------------------------------------------------------------
             if (flags(i) .and. norm(i,j).gt.0.0 .and. temp.gt.0.0) then
                rline(i) = log(temp)
             else
-               rline(i) = 1.0e10
+               rline(i) = 1e10
                flags(i) = .false.
             endif
           enddo
@@ -565,8 +572,13 @@ c-----------------------------------------------------------------------
 
       end
 
+c***********************************************************************
 
       subroutine sub (lin, lout, nx, ny, nz, rline, flags, aver, norm)
+
+      integer lin, lout, nx, ny, nz
+      real rline(*), aver(nx,ny), norm(nx,ny)
+      logical flags(*)
 c-----------------------------------------------------------------------
 c     Compute subtracted image and write it out.
 c
@@ -583,10 +595,6 @@ c              the planes were blanked at that pixel) so the output
 c              should be blanked at that pixel
 c
 c-----------------------------------------------------------------------
-      integer lin, lout, nx, ny, nz
-      real rline(*), aver(nx,ny), norm(nx,ny)
-      logical flags(*)
-cc
       integer pinc, i, j, k
       character aline*72
 c-----------------------------------------------------------------------
@@ -621,8 +629,13 @@ c-----------------------------------------------------------------------
 
       end
 
+c***********************************************************************
 
       subroutine replace (lout, nx, ny, nz, rline, flags, aver, norm)
+
+      integer lout, nx, ny, nz
+      real rline(*), aver(nx,ny), norm(nx,ny)
+      logical flags(*)
 c-----------------------------------------------------------------------
 c     Compute replaced image and write it out.
 c
@@ -638,10 +651,6 @@ c              the planes were blanked at that pixel) so the output
 c              should be blanked at that pixel
 c
 c-----------------------------------------------------------------------
-      integer lout, nx, ny, nz
-      real rline(*), aver(nx,ny), norm(nx,ny)
-      logical flags(*)
-cc
       integer pinc, i, j, k
       character aline*72
 c-----------------------------------------------------------------------
