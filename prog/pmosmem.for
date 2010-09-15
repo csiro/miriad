@@ -4,9 +4,10 @@ c= pmosmem - Maximum Entropy deconvolution for polarization mosaics
 c& rjs
 c: deconvolution
 c+
-c       PMOSMEM is a MIRIAD task which performs a joint maximum entropy
+c       PMOSMEM is a MIRIAD task that performs a joint maximum entropy
 c       deconvolution of polarized mosaiced images. Optionally it can
 c       perform a joint deconvolution with a single dish image as well.
+c
 c@ map
 c       Two to five input images.  The first must be a Stokes-I mosaic,
 c       then one or more polarized mosaics (Stokes Q, U and V images),
@@ -75,7 +76,7 @@ c       where "????" is the rms noise in Jy/beam.
 c@ factor
 c       The flux calibration factor.  This is only relevant when doing a
 c       joint deconvolution of a mosaic and a single-dish image.  It
-c       gives the factor which the single-dish data should be multiplied
+c       gives the factor that the single-dish data should be multiplied
 c       by to convert it to the same flux units as the mosaic.  The
 c       default is 1.
 c@ flux
@@ -100,6 +101,8 @@ c         dofactor   Solve for the flux calibration factor.
 c         verbose    Give lots of messages during the iterations.  The
 c                    default is to give a one line message at each
 c                    iteration.
+c
+c$Id: pmosmem.for,v 1.3 2010/09/15 02:40:46 cal103 Exp $
 c--
 c  History:
 c    rjs  23nov94  Adapted from MAXEN.
@@ -123,49 +126,46 @@ c    rjs  23feb98  Added extra protection against underflow.
 c    rjs  17mar98  Added single dish support, "factor" parameter and
 c                  options=dofactor.
 c-----------------------------------------------------------------------
-      character version*(*)
-      parameter (version='PMosMem: version 1.0 17-Mar-98')
       include 'maxdim.h'
       include 'maxnax.h'
       include 'mem.h'
+
       integer MaxRun,MaxBoxes,MaxPol
       parameter (MaxRun=3*maxdim,MaxBoxes=2048,MaxPol=4)
 
-      character MapNam(MaxPol+1)*64,BeamNam(2)*64,OutNam(MaxPol)*64
-      character DefNam*64,line*80
-      integer lBeam(2),lMap(MaxPol+1),lOut(MaxPol),lDef
-      integer nMap(3),nMapb(3),nOut(MAXNAX),nBeam(3),nDef(3)
-      integer npol,nplan,iax,nbm,nt
-      integer xmin,ymin,xmax,ymax,n1,n2,i
-      integer imin,imax,jmin,jmax,kmin,kmax,blc(3),trc(3),naxis,k
-      integer icentre,jcentre
-      integer maxniter,niter
-      real Tol,rmsfaca,rmsfacb,rmsfacc,TFlux,Qest,Qa,Qb,TRms,Trms2
-      real ffacSD,ffacDef,Alpha,Beta,Gamma,De,Df,Dg,temp
-      real StLim,StLen1,StLen2,OStLen1,OStLen2,J0,J1
-      real GradEE,GradEF,GradEG,GradEH,GradEJ
-      real        GradFF,GradFG,GradFH,GradFJ
-      real               GradGG,GradGH,GradGJ
-      real GradHH,GradJJ,Grad11,Immax,Immin,Flux,Rmsa,Rmsb,Rmsc
-      real fluxlist(maxdim),fac
+      logical   converge, doflux, verbose
+      integer   blc(3), Boxes(maxBoxes), Cnvl, i, iax, icentre, imax,
+     *          imin, jcentre, jmax, jmin, k, kmax, kmin, lBeam(2),
+     *          lDef, lMap(MaxPol+1), lOut(MaxPol), maxniter, maxPoint,
+     *          n1, n2, naxis, nBeam(3), nbm, nDef(3), nfret, niter,
+     *          nMap(3), nMapb(3), nOut(MAXNAX), nplan, nPoint, npol,
+     *          nRun, nt, pDef, pEst(MaxPol), pMap(MaxPol+1),
+     *          pNewEst(MaxPol), pNewRes(MaxPol+1), pRes(MaxPol+1),
+     *          pWta, pWtb, Run(3,MaxRun), trc(3), xdoff, xmax, xmin,
+     *          xmoff, ydoff, ymax, ymin, ymoff, zdoff, zmoff
+      real      Alpha, Beta, De, Df, Dg, fac, ffacDef, ffacSD, Flux,
+     *          fluxlist(maxdim), Gamma, Grad11, GradEE, GradEF, GradEG,
+     *          GradEH, GradEJ, GradFF, GradFG, GradFH, GradFJ, GradGG,
+     *          GradGH, GradGJ, GradHH, GradJJ, Immax, Immin, J0, J1,
+     *          OStLen1, OStLen2, Qa, Qb, Qest, Rmsa, Rmsb, Rmsc,
+     *          rmsfaca, rmsfacb, rmsfacc, StLen1, StLen2, StLim, temp,
+     *          TFlux, Tol, TRms, Trms2
       double precision pol
-      integer nfret
-      logical converge,verbose,doflux
-      integer Run(3,MaxRun),nRun,Boxes(maxBoxes),nPoint,maxPoint
-      integer xmoff,ymoff,zmoff,xdoff,ydoff,zdoff
 
-      integer pMap(MaxPol+1),pEst(MaxPol),pDef,pRes(MaxPol+1)
-      integer pNewEst(MaxPol),pNewRes(MaxPol+1),pWta,pWtb,Cnvl
+      character BeamNam(2)*64, DefNam*64, line*80, MapNam(MaxPol+1)*64,
+     *          OutNam(MaxPol)*64, version*72
 
-c     Externals.
-      character itoaf*4
-      logical hdprsnt
-      integer len1
+      logical   hdprsnt
+      integer   len1
+      character itoaf*4, versan*80
+      external  hdprsnt, itoaf, len1, versan
 c-----------------------------------------------------------------------
+      version = versan('pmosmem',
+     *                 '$Revision: 1.3 $',
+     *                 '$Date: 2010/09/15 02:40:46 $')
 c
 c  Get and check the input parameters.
 c
-      call output(version)
       call keyini
       call mkeyf('map',MapNam,5,nplan)
       call mkeyf('beam',BeamNam,2,nbm)
@@ -350,7 +350,7 @@ c
       enddo
       do i = 1, npol
         call xyopen(lOut(i),OutNam(i),'new',naxis,nOut)
-        call Header(lMap(i),lOut(i),blc,trc,version)
+        call mkHead(lMap(i),lOut(i),blc,trc,version)
         call xyflush(lOut(i))
       enddo
 c
@@ -1390,11 +1390,10 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine Header(lMap,lOut,blc,trc,version)
+      subroutine mkHead(lMap,lOut,blc,trc,version)
 
-      integer lMap,lOut
-      integer blc(3),trc(3)
-      character version*(*)
+      integer   lMap, lOut, blc(3), trc(3)
+      character version*72
 c-----------------------------------------------------------------------
 c  Write a header for the output file.
 c
@@ -1406,64 +1405,38 @@ c    blc        Blc of the bounding region.
 c    trc        Trc of the bounding region.
 c
 c-----------------------------------------------------------------------
-      include 'maxnax.h'
-      integer i,lblc,ltrc
-      real crpix
-      character line*72,txtblc*32,txttrc*32,num*2
-      integer nkeys
-      parameter (nkeys=17)
-      character keyw(nkeys)*8
+      integer   iax, lblc, ltrc
+      double precision crpix
+      character cin*1, line*72, txtblc*32, txttrc*32
 
-c     Externals.
       character itoaf*8
-
-      data keyw/   'obstime ','epoch   ','history ','lstart  ',
-     *  'lstep   ','ltype   ','lwidth  ','object  ',
-     *  'observer','telescop','restfreq','vobs    ','btype   ',
-     *  'mostable','cellscal','pbtype  ','pbfwhm  '/
+      external  itoaf
 c-----------------------------------------------------------------------
-c
-c  Fill in some parameters that will have changed between the input
-c  and output.
-c
+c     Start by making a verbatim copy of the input header.
+      call headcopy(lMap, lOut, 0, 0, 0, 0)
+
+c     Update parameters that may have changed.
+      do iax = 1, 3
+        if (blc(iax).ne.1) then
+          cin = itoaf(iax)
+          call rdhdd(lMap, 'crpix'//cin, crpix, 1d0)
+          crpix = crpix - dble(blc(iax) + 1)
+          call wrhdd(lOut, 'crpix'//cin, crpix)
+        endif
+      enddo
+
       call wrhda(lOut,'bunit','JY/PIXEL')
 
-      do i = 1, MAXNAX
-        num = itoaf(i)
-        if (i.le.3) then
-          call rdhdr(lMap,'crpix'//num,crpix,1.0)
-          crpix = crpix - blc(i) + 1
-          call wrhdr(lOut,'crpix'//num,crpix)
-        else
-          call hdcopy(lMap,lOut,'crpix'//num)
-        endif
-        call hdcopy(lMap,lOut,'cdelt'//num)
-        call hdcopy(lMap,lOut,'crval'//num)
-        call hdcopy(lMap,lOut,'ctype'//num)
-      enddo
-c
-c  Copy all the other keywords across, which have not changed and add
-c  history.
-c
-      do i = 1, nkeys
-        call hdcopy(lMap, lOut, keyw(i))
-      enddo
-c
-c  Write crap to the history file, to attempt (ha!) to appease Neil.
-c  Neil is not easily appeased you know.  Just a little t.l.c. is all
-c  he needs.
-c
-      call hisopen(lOut,'append')
-      line = 'PMOSMEM: Miriad '//version
-      call hiswrite(lOut,line)
-      call hisinput(lOut,'PMOSMEM')
+c     Update history.
+      call hisopen (lOut, 'append')
+      call hiswrite(lOut, 'PMOSMEM: Miriad ' // version)
+      call hisinput(lOut, 'PMOSMEM')
 
-      call mitoaf(blc,3,txtblc,lblc)
-      call mitoaf(trc,3,txttrc,ltrc)
-      line = 'PMOSMEM: Bounding region is Blc=('//txtblc(1:lblc)//
-     *                               '),Trc=('//txttrc(1:ltrc)//')'
-      call hiswrite(lOut,line)
-
+      call mitoaf(blc, 3, txtblc, lblc)
+      call mitoaf(trc, 3, txttrc, ltrc)
+      line = 'PMOSMEM: Bounding region is Blc=(' // txtblc(1:lblc) //
+     *                                 '),Trc=(' // txttrc(1:ltrc) //')'
+      call hiswrite(lOut, line)
       call hisclose(lOut)
 
       end
