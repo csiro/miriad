@@ -40,7 +40,7 @@ c
 c       Pixels are blanked if the input pixel is blanked, the averaged
 c       channel pixel is blanked, or the output is undefined.
 c
-c$Id: avmaths.for,v 1.4 2010/09/15 07:05:36 cal103 Exp $
+c$Id: avmaths.for,v 1.5 2010/09/15 07:05:58 cal103 Exp $
 c--
 c  History:
 c    nebk 26jul90 Original version.
@@ -86,8 +86,8 @@ c-----------------------------------------------------------------------
       common buffer
 c-----------------------------------------------------------------------
       version = versan('avmaths',
-     *                 '$Revision: 1.4 $',
-     *                 '$Date: 2010/09/15 07:05:36 $')
+     *                 '$Revision: 1.5 $',
+     *                 '$Date: 2010/09/15 07:05:58 $')
 c
 c  Get the input parameters.
 c
@@ -150,7 +150,7 @@ c
 c Open output image and copy header keywords.
 c
       call xyopen (lout, out, 'new', naxis, size)
-      call headcopy (lin, lout, 0, naxis, 0, 0)
+      call headcopy (lin, lout, 0, 0, 0, 0)
 c
 c  Write the history.
 c
