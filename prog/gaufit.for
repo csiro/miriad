@@ -220,7 +220,7 @@ c@ log
 c If the name of a file is given, the results of the fitting are written
 c to this file instead of to the terminal
 c
-c$Id: gaufit.for,v 1.6 2010/04/30 08:23:28 cal103 Exp $
+c$Id: gaufit.for,v 1.7 2010/09/15 07:32:09 cal103 Exp $
 c--
 c
 c  History
@@ -324,8 +324,8 @@ c              el 4=max # gaussians, used when sorting a range
       character versan*80, version*80
 c-----------------------------------------------------------------------
       version = versan ('gaufit',
-     :                  '$Revision: 1.6 $',
-     :                  '$Date: 2010/04/30 08:23:28 $')
+     :                  '$Revision: 1.7 $',
+     :                  '$Date: 2010/09/15 07:32:09 $')
 
       call inputs(units,prfinfo,runs,ngauss,limlist,cmpsort,prnm)
       call work(  units,prfinfo,runs,ngauss,limlist,cmpsort,prnm)
@@ -538,7 +538,7 @@ c Open and get dimension of input dataset: naxis.
       endif
       if( status.eq.'new' ) then
          call xyzopen(  unit, name, 'new', naxis, axlen )
-         call headcopy( prfinfo(1), unit, 0, naxis, 0,0 )
+         call headcopy(prfinfo(1), unit, 0, 0, 0,0)
       endif
 
 c Find out which axis is to be fit. First read keyword, then call fndaxnum
