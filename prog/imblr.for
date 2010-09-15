@@ -14,7 +14,7 @@ c       Output image
 c@ value
 c       Value to replace blanked pixels by. Default is zero.
 c
-c$Id: imblr.for,v 1.2 2010/09/15 06:30:46 cal103 Exp $
+c$Id: imblr.for,v 1.3 2010/09/15 06:36:33 cal103 Exp $
 c--
 c
 c  History:
@@ -28,18 +28,19 @@ c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
 
-      character version*20
-      parameter (version = 'Version 12-Oct-99')
+      logical   first, flags(MAXDIM)
+      integer   axLen(MAXNAX), i, j, k, lin, lout, naxis
+      real      data(MAXDIM), dmm(2), npix, npix2, val
+      character in*64, line*132, out*64, version*72
 
-      integer size(maxnax), lin, lout, i, j, k, naxis
-      real dmm(2), val, data(maxdim), npix, npix2
-      logical flags(maxdim),first
-      character in*64, out*64, line*132
+      character versan*80
+      external  versan
 c-----------------------------------------------------------------------
-      call output ('ImBLR: '//version)
-c
-c Get user inputs
-c
+      version = versan('imblr',
+     *                 '$Revision: 1.3 $',
+     *                 '$Date: 2010/09/15 06:36:33 $')
+
+c     Get user inputs.
       call keyini
       call keyf ('in', in, ' ')
       call keya ('out', out, ' ')
@@ -50,31 +51,29 @@ c
       if (out.eq.' ') call bug ('f', 'No output image given')
       if (in.eq.out) call bug ('f',
      *  'Input and output images must be different')
-c
-c Open input image
-c
-      call xyopen (lin, in, 'old', maxnax, size)
+
+c     Open the input image.
+      call xyopen (lin, in, 'old', MAXNAX, axLen)
       call rdhdi (lin, 'naxis', naxis, 0)
-c
-c Open output image and copy header items to it
-c
-      call xyopen (lout, out, 'new', naxis, size)
-      call headcopy (lin, lout, 0, naxis, 0, 0)
-      call hisopen (lout,'append')
+
+c     Create the output image and copy header items to it.
+      call xyopen (lout, out, 'new', naxis, axLen)
+      call headcopy (lin, lout, 0, 0, 0, 0)
+
+      call hisopen  (lout, 'append')
       call hiswrite (lout, 'IMBLR: Miriad '//version)
-      call hisinput (lout,'IMBLR')
+      call hisinput (lout, 'IMBLR')
       call hisclose (lout)
-c
-c Loop over input image
-c
+
+c     Loop over the input image.
       first = .true.
       npix2 = 0.0
-      do k = 1, size(3)
+      do k = 1, axLen(3)
         npix = 0.0
         call xysetpl (lin, 1, k)
         call xysetpl (lout, 1, k)
 
-        do j = 1, size(2)
+        do j = 1, axLen(2)
           call xyread (lin, j, data)
           if (first) then
             dmm(1) = data(1)
@@ -83,7 +82,7 @@ c
           endif
           call xyflgrd (lin, j, flags)
 
-          do i = 1, size(1)
+          do i = 1, axLen(1)
             if (.not.flags(i)) then
               data(i) = val
               npix = npix + 1
