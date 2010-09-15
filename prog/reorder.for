@@ -16,7 +16,7 @@ c       "312" make input axis 3 the first output axis, input axis 1
 c       the second output axis, etc.  Use "-" to reverse the pixel
 c       order on an axis.  Do not include dummy axes in mode.
 c
-c$Id: reorder.for,v 1.2 2010/09/15 04:44:50 cal103 Exp $
+c$Id: reorder.for,v 1.3 2010/09/15 07:33:49 cal103 Exp $
 c--
 c
 c  History:
@@ -43,25 +43,24 @@ c    rjs  14jun00 Copy across llrot keyword.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
-      character version*(*)
-      parameter (version='Reorder: version 1.0 14-Jun-00')
-      integer naxis,lu,pnt,n
-      integer nIn(MAXNAX),nOut(MAXNAX),sgn(MAXNAX),idx(MAXNAX)
-      integer lmode,i,size
-      integer lIn,lOut
-      character in*64,out*64,mode*16
 
-      real ref(MAXBUF)
+      integer   axMap(MAXNAX), i, lIn, lmode, lOut, lu, n, nAxis,
+     *          iAxLen(MAXNAX), oAxLen(MAXNAX), pnt, sgn, size
+      real      ref(MAXBUF)
+      character in*64, mode*16, out*64, version*72
+
+      integer   len1
+      logical   hdprsnt
+      character versan*80
+      external  hdprsnt, len1, versan
+
       common ref
-
-c     Externals.
-      integer len1
-      logical hdprsnt
 c-----------------------------------------------------------------------
-      call output(version)
-c
-c  Get the input parameters.
-c
+      version = versan('reorder',
+     *                 '$Revision: 1.3 $',
+     *                 '$Date: 2010/09/15 07:33:49 $')
+
+c     Get the input parameters.
       call keyini
       call keya('in',in,' ')
       if (in.eq.' ') call bug('f','Input file name is missing')
@@ -71,59 +70,56 @@ c
       lmode = len1(mode)
       if (lmode.eq.0) call bug('f','The mode must be given')
       call keyfin
-c
-c  Reduce the mode parameter into something more managable.
-c
+
+c     Parse the mode parameter.
       do i = 1, MAXNAX
-        idx(i) = i
-        sgn(i) = 1
+        axMap(i) = i
       enddo
 
       n = 0
+      sgn = 1
       do i = 1, lmode
         if (mode(i:i).eq.'-') then
           if (n.gt.MAXNAX) call bug('f','Too many dimensions for me')
-          sgn(n+1) = -1
+          sgn = -1
         else if (mode(i:i).ge.'1' .and. mode(i:i).le.'9') then
           n = n + 1
-          idx(n) = ichar(mode(i:i)) - ichar('0')
-          if (idx(n).gt.MAXNAX)
-     *                call bug('f','Too many dimensions for me')
+          axMap(n) = ichar(mode(i:i)) - ichar('0')
+          if (axMap(n).gt.MAXNAX)
+     *      call bug('f','Too many dimensions for me')
+          axMap(n) = sgn*axMap(n)
+          sgn = 1
         else
           call bug('f','The mode parameter contains rubbish')
         endif
       enddo
-c
-c  Open the input file, and check it out.
-c
-      call xyopen(lIn,in,'old',MAXNAX,nIn)
-      call rdhdi(lIn,'naxis',naxis,0)
-      naxis = min(naxis,MAXNAX)
-c
-c  Initialise the transpose routines and output.
-c
-      call trnini(lu,naxis,nIn,mode)
 
-      do i = 1, naxis
-        nOut(i) = nIn(idx(i))
+c     Open the input file.
+      call xyopen(lIn, in, 'old', MAXNAX, iAxLen)
+      call rdhdi(lIn, 'naxis', nAxis, 0)
+      nAxis = min(nAxis, MAXNAX)
+
+c     Initialise the transpose routines and output.
+      call trnini(lu, nAxis, iAxLen, mode)
+
+      do i = 1, nAxis
+        oAxLen(i) = iAxLen(abs(axMap(i)))
       enddo
-      call xyopen(lOut,out,'new',naxis,nOut)
-      call Header(lIn,lOut,nIn,sgn,idx,naxis,version)
+      call xyopen(lOut, out, 'new', nAxis, oAxLen)
+      call mkHead(lIn, lOut, nAxis, iAxLen, axMap, version)
 
-      size = max(nIn(1)*nIn(2),nOut(1)*nOut(2))
+      size = max(iAxLen(1)*iAxLen(2), oAxLen(1)*oAxLen(2))
       call memalloc(pnt,size,'r')
-c
-c  Do the real work.
-c
-      call PixRead(lu,lIn,ref(pnt),nIn(1),nIn(2),nIn,n)
-      call PixWrit(lu,lOut,ref(pnt),nOut(1),nOut(2),nOut,n)
+
+c     Do the real work.
+      call PixRead(lu,lIn, ref(pnt),iAxLen(1),iAxLen(2),iAxLen,n)
+      call PixWrit(lu,lOut,ref(pnt),oAxLen(1),oAxLen(2),oAxLen,n)
       if (hdprsnt(lIn,'mask')) then
-        call MaskRead(lu,lIn,ref(pnt),nIn(1),nIn(2),nIn,n)
-        call MaskWrit(lu,lOut,ref(pnt),nOut(1),nOut(2),nOut,n)
+        call MaskRead(lu,lIn, ref(pnt),iAxLen(1),iAxLen(2),iAxLen,n)
+        call MaskWrit(lu,lOut,ref(pnt),oAxLen(1),oAxLen(2),oAxLen,n)
       endif
-c
-c  Tidy up afterwards.
-c
+
+c     Tidy up.
       call memfree(pnt,size,'r')
       call xyclose(lOut)
       call trnfin(lu)
@@ -245,78 +241,35 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine Header(lIn,lOut,nIn,sgn,idx,naxis,version)
+      subroutine mkHead(lIn, lOut, nAxis, iAxLen, axMap, version)
 
-      integer lIn,lOut
-      character version*(*)
-      integer naxis,nIn(naxis),sgn(naxis),idx(naxis)
+      integer   lIn, lOut, nAxis, iAxLen(nAxis), axMap(nAxis)
+      character version*72
 c-----------------------------------------------------------------------
-c  Calculate the header parameters for the output file, and write out
-c  the history file.
+c  Write a header for the output file.
 c
 c  Inputs:
-c    lIn        Handle of the input file.
-c    lOut       Handle of the output file.
-c    naxis      Nominal number of dimensions in input and output (this
-c               the the number of true plus the number of dummy).
-c    nIn        Size of the input image.
-c    idx        Mapping from input to output axes.
+c    lIn,lOut   Handle of input and output files.
+c    nAxis      Number of axes (true plus dummy) in input and output.
+c    iAxLen     Length of each axis in the input image.
+c    axMap      Mapping from input to output axes, negative if reversed.
 c    version    Version of task.
 c-----------------------------------------------------------------------
-      integer i
-      double precision temp
-      logical same
-      character line*80,numi*1,numo*1
+      include 'maxnax.h'
 
-c     Header keywords.
-      integer nkeys
-      parameter (nkeys=24)
-      character keyw(nkeys)*8
-
-c     Externals.
-      character itoaf*8
-
-      data keyw/   'bmaj    ','bmin    ','bpa     ','bunit   ',
-     *  'obstime ','epoch   ','history ','instrume','llrot   ',
-     *  'ltype   ','lstart  ','lwidth  ','lstep   ','pbtype  ',
-     *  'niters  ','object  ','observer','obsra   ','obsdec  ',
-     *  'pbfwhm  ','restfreq','telescop','vobs    ','cellscal'/
+      integer   blc(MAXNAX), iax
 c-----------------------------------------------------------------------
-c
-c  Copy header keywords.
-c
-      do i = 1, nkeys
-        call hdcopy(lIn,lOut,keyw(i))
-      enddo
-c
-c  Copy the coordinate information.
-c
-      do i = 1, naxis
-        numo = itoaf(i)
-        same = idx(i).eq.i .and. sgn(i).eq.1
-        if (same) then
-          call hdcopy(lIn,lOut,'ctype'//numo)
-          call hdcopy(lIn,lOut,'cdelt'//numo)
-          call hdcopy(lIn,lOut,'crval'//numo)
-          call hdcopy(lIn,lOut,'crpix'//numo)
-        else
-          numi = char(idx(i)+ichar('0'))
-          call rdhdd(lIn,'cdelt'//numi,temp,1d0)
-          call wrhdd(lOut,'cdelt'//numo,sgn(i)*temp)
-          call rdhdd(lIn,'crval'//numi,temp,0d0)
-          call wrhdd(lOut,'crval'//numo,temp)
-          call rdhdd(lIn,'crpix'//numi,temp,dble(nIn(idx(i))/2+1))
-          if (sgn(i).eq.-1) temp = nIn(idx(i)) - temp + 1
-          call wrhdd(lOut,'crpix'//numo,temp)
-          call rdhda(lIn,'ctype'//numi,line,' ')
-          if (line.ne.' ') call wrhda(lOut,'ctype'//numo,line)
-        endif
+c     Copy the input header with axis permutation.
+      do iax = 1, nAxis
+        blc(iax) = 1
       enddo
 
-      call hisopen(lOut,'append')
-      line = 'REORDER: Miriad '//version
-      call hiswrite(lOut,line)
-      call hisinput(lOut,'REORDER')
+      call headcopy(lIn, lOut, axMap, nAxis, blc, iAxLen)
+
+c     Update history.
+      call hisopen (lOut, 'append')
+      call hiswrite(lOut, 'REORDER: Miriad ' // version)
+      call hisinput(lOut, 'REORDER')
       call hisclose(lOut)
 
       end
