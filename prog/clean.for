@@ -96,7 +96,7 @@ c@ clip
 c       This sets the relative clip level in Steer mode. Values are
 c       typically 0.75 to 0.9. The default is image dependent.
 c
-c$Id: clean.for,v 1.9 2010/09/15 07:14:36 cal103 Exp $
+c$Id: clean.for,v 1.10 2010/09/15 07:15:00 cal103 Exp $
 c--
 c
 c  History:
@@ -199,8 +199,8 @@ c     Externals.
       character itoaf*8, versan*80
 c-----------------------------------------------------------------------
       version = versan ('clean',
-     *                  '$Revision: 1.9 $',
-     *                  '$Date: 2010/09/15 07:14:36 $')
+     *                  '$Revision: 1.10 $',
+     *                  '$Date: 2010/09/15 07:15:00 $')
 c
 c  Get the input parameters.
 c
@@ -662,7 +662,7 @@ c-----------------------------------------------------------------------
       external  itoaf
 c-----------------------------------------------------------------------
 c     Copy all header keywords.
-      call headcopy(lIn, lOut, 0, 4, 0, 0)
+      call headcopy(lIn, lOut, 0, 0, 0, 0)
 
 c     Update keywords that have changed.
       call rdhdd(lIn,  'crpix1', crpix1, 1d0)
