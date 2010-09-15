@@ -29,6 +29,7 @@ c@ nmin
 c     Minimum number of pixels in each clump.
 c     Any clumps with fewer pixels are rejected (default=4).
 c
+c$Id: clfind.for,v 1.6 2010/09/15 07:28:03 cal103 Exp $
 c--
 c       this used to be a parameter, but - as discussed in the paper -
 c       we don't want users to mess with this. (:-)
@@ -87,10 +88,10 @@ c     Dynamic memory allocations.
       equivalence(heap,pos1,pos,reg,data)
 c-----------------------------------------------------------------------
       version = versan('clfind',
-     *                 '$Revision: 1.5 $',
-     *                 '$Date: 2010/08/25 05:24:09 $')
+     *                 '$Revision: 1.6 $',
+     *                 '$Date: 2010/09/15 07:28:03 $')
 
-c.....Get the parameters from the user.
+c     Get the parameters from the user.
       call keyini
       call keya('in',filein,' ')
       call keyi('start',p1,1)
@@ -102,8 +103,8 @@ c      call keyi('naxis',p3,3)
 
       badcl=16796
 
-      if (filein.eq.' ')call bug('f','Input file name missing')
-      if (p2.eq.0.0)call bug('f','No contour interval specified')
+      if (filein.eq.' ') call bug('f','Input file name missing')
+      if (p2.eq.0.0) call bug('f','No contour interval specified')
       if (p3.lt.1 .or. p3.gt.3) call bug('f','Bad naxis')
 
       call output('Data file: '//filein)
@@ -123,7 +124,7 @@ c     Read required header keywords.
       call rdhdd(lin, 'bmin', bmin, 0d0)
       call rdhdd(lin, 'bpa',  bpa,  0d0)
 
-c.....Calculate the beam size in x and y
+c     Calculate the beam size in x and y.
       if (bmaj.lt.1e-7) then
         call bug('i','Beam size unspecified')
         beamx = 1.0
@@ -141,7 +142,7 @@ c.....Calculate the beam size in x and y
         print 1000, beamx,beamy
  1000   format('The beam size is: ',f4.2,' by ',f4.2,' pixels.')
 
-c.......But we use beam radius to connect up pixels
+c       But we use beam radius to connect up pixels.
         dx=0.5*beamx
         dy=0.5*beamy
       endif
@@ -157,21 +158,21 @@ c.......But we use beam radius to connect up pixels
  1001 format
      * ('Dist to neighbours is dx=',f3.1,', dy=',f3.1,' pix')
 
-c.....Hardwire in velocity resolution = 1 pixel
+c     Hardwire in velocity resolution = 1 pixel
       dv=1.0
 
-c.....Open the output, and add a header to it.
+c     Open the output, and add a header to it.
       xtension='.cf'
       filecf=filein(1:len1(filein))//xtension
       call output('Output clump assignment file: '//filecf)
       call xyopen(lout,filecf,'new',3,nsize)
       call wrhd(lin, lout, version)
 
-c.....space allocation for data and assign arrays
+c     space allocation for data and assign arrays
       call memalloc(Ia,nx*ny*nz,'i')
       call memalloc(It,nx*ny*nz,'r')
 
-c.....Start reading the input file
+c     Start reading the input file
       call rdgrdclf(data(It),heap(Ia))
       call xyclose(lin)
 
@@ -191,35 +192,35 @@ c 1013 format(' t(1) = ',f)
       call CntLevs(data(It),nlevs,npx1,npx2)
       nlevels=nlevs
 
-c.....space allocation for coded position arrays
+c     space allocation for coded position arrays
       call memalloc(Ipos1,npx1,'i')
       call memalloc(Ipos,nlevs*npx2,'i')
       call memalloc(Ireg,nlevs*npx2,'i')
 
       call FillLevs(data(It),nlevs,npx1,npx2,
-     *               pos1(Ipos1),pos(Ipos),reg(Ireg))
+     *              pos1(Ipos1),pos(Ipos),reg(Ireg))
 
-c.....Connect to find connected regions at each gray level
+c     Connect to find connected regions at each gray level
       call output(' ')
       call findreg(nlevs,npx2,pos(Ipos),reg(Ireg))
 
-c.....Work thru data cube, from highest level to lowest
-c.....connecting regions across levels
-c.....Unassigned regions are local maxima => new clumps
-c.....Extend (old and new) clumps to next level down
-c.....and deal with possible merging.
+c     Work thru data cube, from highest level to lowest
+c     connecting regions across levels
+c     Unassigned regions are local maxima => new clumps
+c     Extend (old and new) clumps to next level down
+c     and deal with possible merging.
       call output(' ')
-c.....Total number of clumps
+c     Total number of clumps
       nclump=0
       do ngy = nlevels,2,-1
-c........Number of clumps at level ngy
-         ncl=0
-         call findclp(ngy,ncl,nclump,data(It),heap(Ia),
+c       Number of clumps at level ngy
+        ncl=0
+        call findclp(ngy,ncl,nclump,data(It),heap(Ia),
+     *               nlevs,npx2,pos(Ipos),reg(Ireg))
+        print 1040, ngy+p1-1,ncl
+        if (ngy.gt.2)
+     *  call xtendclp(ngy,nclump,data(It),heap(Ia),
      *                nlevs,npx2,pos(Ipos),reg(Ireg))
-         print 1040, ngy+p1-1,ncl
-         if (ngy.gt.2)
-     *   call xtendclp(ngy,nclump,data(It),heap(Ia),
-     *                  nlevs,npx2,pos(Ipos),reg(Ireg))
       enddo
  1040 format(' Level ',i2,':',i5,' new clumps')
 
@@ -229,7 +230,7 @@ c........Number of clumps at level ngy
 
       call output('Testing clumps for badness')
       nstop=0
-c.....clumps must have greater than nmin pixels
+c     clumps must have greater than nmin pixels
       call testbad(nmin,nstop,nclump,heap(Ia))
 
       line2='=========================================='
@@ -269,8 +270,8 @@ c-----------------------------------------------------------------------
       real t(*)
 c-----------------------------------------------------------------------
       nlevs=-999
-      do nps = 1,nx*ny*nz
-c......Determine contour level
+      do nps = 1, nx*ny*nz
+c       Determine contour level
 
 c 1007   format(' p1 = ',i)
 c 1008   format(' p2 = ',f)
@@ -279,35 +280,35 @@ c         print 1007,  p1
 c         print 1008,  p2
 c         print 1009, nps, t(nps)
 
-         ngy=int(t(nps)/p2)-p1+1
+        ngy=int(t(nps)/p2)-p1+1
 
-c         print 1010, ngy
+c        print 1010, ngy
 c 1010   format(' Number of contours:                   ',i)
 
-      if (ngy.gt.maxlvl) then
-        call bug('f','Too many contour levels')
-      endif
-c     only count when in range, above the minimum (p1)
-      if (ngy.gt.0) then
+        if (ngy.gt.maxlvl) then
+          call bug('f','Too many contour levels')
+        endif
+c       only count when in range, above the minimum (p1)
+        if (ngy.gt.0) then
 
-         npix(ngy)=npix(ngy)+1
-         npx=npix(ngy)
-         if (ngy.gt.1 .and. npx.gt.maxpix)
-     *       call bug('f','Too many pixels per level')
+          npix(ngy)=npix(ngy)+1
+          npx=npix(ngy)
+          if (ngy.gt.1 .and. npx.gt.maxpix)
+     *      call bug('f','Too many pixels per level')
 
 c         print 1011, npx
-c 1011   format(' Number of pixels in level 1:                   ',i4)
+c 1011    format(' Number of pixels in level 1:                   ',i4)
 
-         if (ngy.eq.1 .and. npx.gt.maxpix1)
+          if (ngy.eq.1 .and. npx.gt.maxpix1)
      *        call bug('f','Too many pixels in level 1')
 
-         if (ngy.gt.nlevs) nlevs=ngy
-      endif
+          if (ngy.gt.nlevs) nlevs=ngy
+        endif
 
       enddo
 
       do ngy = nlevs,1,-1
-         print 10, ngy+p1-1,npix(ngy)
+        print 10, ngy+p1-1,npix(ngy)
       enddo
  10   format(' Level ',i2,':',i5,' pixels')
 
@@ -342,72 +343,70 @@ c-----------------------------------------------------------------------
       real t(*)
       logical done
 
-c.....temporary arrays for sucessive neighbourhood algorithm
+c     temporary arrays for sucessive neighbourhood algorithm
       integer tmpos(maxpix),tmpcl(maxpix)
 c-----------------------------------------------------------------------
       ix=int(dx-0.001)+1
       iy=int(dy-0.001)+1
       iv=int(dv-0.001)+1
 
-c.....First extend the tree structure of the clumps to level ngy-1
-      do nrgn = 1,maxreg
+c     First extend the tree structure of the clumps to level ngy-1
+      do nrgn = 1, maxreg
        merge(nrgn)=.false.
       enddo
 
-c.....Look at all higher levels from present one
-      do ngy1 = ngy,nlevels
-       do npx1 = 1,npix(ngy1)
-        nps1=npos(ngy1,npx1)
-        ncl1=a(nps1)
-        if (ncl1.eq.badcl) goto 20
+c     Look at all higher levels from present one
+      do ngy1 = ngy, nlevels
+        do npx1 = 1, npix(ngy1)
+          nps1=npos(ngy1,npx1)
+          ncl1=a(nps1)
+          if (ncl1.eq.badcl) goto 20
 
-c........Examine neighbourhood of each pixel
-         call invindx(i1,j1,k1,nps1)
-         do k2 = max(k1-iv,1),min(k1+iv,nz)
-         do j2 = max(j1-iy,1),min(j1+iy,ny)
-         do i2 = max(i1-ix,1),min(i1+ix,nx)
-          sv=real(abs(k1-k2))/dv
-          sy=real(abs(j1-j2))/dy
-          sx=real(abs(i1-i2))/dx
-          if (sv.lt.1.05 .and. sy.lt.1.05 .and. sx.lt.1.05) then
-           naxis=0
-           if (sv.gt.0.05) naxis=naxis+1
-           if (sy.gt.0.05) naxis=naxis+1
-           if (sx.gt.0.05) naxis=naxis+1
+c         Examine neighbourhood of each pixel
+          call invindx(i1,j1,k1,nps1)
+          do k2 = max(k1-iv,1),min(k1+iv,nz)
+            do j2 = max(j1-iy,1),min(j1+iy,ny)
+              do i2 = max(i1-ix,1),min(i1+ix,nx)
+                sv=real(abs(k1-k2))/dv
+                sy=real(abs(j1-j2))/dy
+                sx=real(abs(i1-i2))/dx
+                if (sv.lt.1.05 .and. sy.lt.1.05 .and. sx.lt.1.05) then
+                  naxis=0
+                  if (sv.gt.0.05) naxis=naxis+1
+                  if (sy.gt.0.05) naxis=naxis+1
+                  if (sx.gt.0.05) naxis=naxis+1
 
-c..........Check each "connected" pixel to
-c..........see if at next lower gray level
-           if (naxis.le.p3) then
-            call gtindx(i2,j2,k2,nps2)
-            ngy0=int(t(nps2)/p2)-p1+1
-            if (ngy0.eq.ngy-1) then
+c                 Check each "connected" pixel to
+c                 see if at next lower gray level
+                  if (naxis.le.p3) then
+                    call gtindx(i2,j2,k2,nps2)
+                    ngy0=int(t(nps2)/p2)-p1+1
+                    if (ngy0.eq.ngy-1) then
+c                     Search for and then flag
+c                     the region this pixel belongs to
+                      do npx = 1, npix(ngy-1)
+                        if (npos(ngy-1,npx).eq.nps2) then
+                          nrgn=nreg(ngy-1,npx)
+                          merge(nrgn)=.true.
 
-c............Search for and then flag
-c............the region this pixel belongs to
-             do npx = 1,npix(ngy-1)
-              if (npos(ngy-1,npx).eq.nps2) then
-               nrgn=nreg(ngy-1,npx)
-               merge(nrgn)=.true.
+c                         Update structure tree ---
+c                         Region <nrgn> at level <ngy-1>
+c                         is merged with clump <ncl1>
+                          tree(ngy-1,nrgn,ncl1)=.true.
+                          goto 10
+                        endif
+                      enddo
 
-c..............Update structure tree ---
-c..............Region <nrgn> at level <ngy-1>
-c..............is merged with clump <ncl1>
-               tree(ngy-1,nrgn,ncl1)=.true.
-               goto 10
-              endif
-             enddo
+ 10                   continue
+                    endif
+                  endif
+                endif
+              enddo
+            enddo
+          enddo
 
- 10          continue
-            endif
-           endif
-
-          endif
-         enddo
-         enddo
-         enddo
-
- 20      continue
-       enddo
+ 20       continue
+        enddo
       enddo
 
 
@@ -419,21 +418,21 @@ c  based on "sucessive neighbourhoods"
 c  Regions which are not merged with any higher levels
 c  are left alone (they become a new clump next time)
 c-----------------------------------------------------------------------
-      do 1001 nrgn = 1,nregions(ngy-1)
-c......Examine all regions for merging
+      do 1001 nrgn = 1, nregions(ngy-1)
+c      Examine all regions for merging
        if (merge(nrgn)) then
         nclmerge=0
-c.......Count how many clumps are merged in this region
-        do ncl = 1,nclump
+c       Count how many clumps are merged in this region
+        do ncl = 1, nclump
          if (tree(ngy-1,nrgn,ncl)) then
            nclmerge=nclmerge+1
            ncl1=ncl
          endif
         enddo
 
-c.......Set up temporary arrays
+c       Set up temporary arrays
         indx=0
-        do npx = 1,npix(ngy-1)
+        do npx = 1, npix(ngy-1)
          if (nreg(ngy-1,npx).eq.nrgn) then
           indx=indx+1
           tmpos(indx)=npos(ngy-1,npx)
@@ -442,19 +441,19 @@ c.......Set up temporary arrays
         enddo
         maxindx=indx
 
-c.......It's easy if there is just one merger (= ncl1)
-c.......---> assign all the region to this clump
+c       It's easy if there is just one merger (= ncl1)
+c       ---> assign all the region to this clump
         if (nclmerge.eq.1) then
-         do indx = 1,maxindx
+         do indx = 1, maxindx
           a(tmpos(indx))=ncl1
           clump(ncl1,4)=clump(ncl1,4)+1
          enddo
 
         else
 
-c........If there is more than one contributing clump
-c........assign pixels in this region based on method
-c........of "sucessive neighbourhoods"
+c        If there is more than one contributing clump
+c        assign pixels in this region based on method
+c        of "sucessive neighbourhoods"
          ngyhigh=ngy+1
          iter=0
  25      continue
@@ -462,10 +461,10 @@ c........of "sucessive neighbourhoods"
          if (iter.gt.10) ngyhigh=999
          iter=iter+1
 
-         do 1002 indx = 1,maxindx
+         do 1002 indx = 1, maxindx
           if (tmpcl(indx).eq.0) then
-c..........Go thru each pix in this region until all
-c..........have been (sucessively) assigned to a clump
+c          Go thru each pix in this region until all
+c          have been (sucessively) assigned to a clump
            nmax=999
            done=.false.
            call invindx(i1,j1,k1,tmpos(indx))
@@ -482,11 +481,11 @@ c..........have been (sucessively) assigned to a clump
              if (sx.gt.0.05) naxis=naxis+1
 
              if (naxis.le.p3) then
-c.............Require that pixel is a neighbour and lies
-c.............between gray levels ngy-1 and ngyhigh (defined
-c.............above). In case more than one clump fits
-c.............this category assignment goes to clump
-c.............with highest peak temperature.
+c             Require that pixel is a neighbour and lies
+c             between gray levels ngy-1 and ngyhigh (defined
+c             above). In case more than one clump fits
+c             this category assignment goes to clump
+c             with highest peak temperature.
 
               call gtindx(i2,j2,k2,nps2)
               ngy0=int(t(nps2)/p2)-p1+1
@@ -521,13 +520,13 @@ c.............with highest peak temperature.
           endif
  1002    continue
 
-         do indx = 1,maxindx
+         do indx = 1, maxindx
           ncl=tmpcl(indx)
           if (ncl.gt.0) a(tmpos(indx))=ncl
          enddo
          if (.not.done) goto 25
 
-         do indx = 1,maxindx
+         do indx = 1, maxindx
           ncl=tmpcl(indx)
           if (ncl.gt.0) clump(ncl,4)=clump(ncl,4)+1
          enddo
@@ -570,16 +569,16 @@ c-----------------------------------------------------------------------
  10   continue
       goodpix=goodpix+newpix
       newpix=0
-c.....Look at first level
-      do npx1 = 1,npix(1)
+c     Look at first level
+      do npx1 = 1, npix(1)
          nps1=npos1(npx1)
          call invindx(i1,j1,k1,nps1)
-c........Look at neighbourhood of each pixel in first level
+c        Look at neighbourhood of each pixel in first level
          do k2 = max(k1-iv,1),min(k1+iv,nz)
          do j2 = max(j1-iy,1),min(j1+iy,ny)
          do i2 = max(i1-ix,1),min(i1+ix,nx)
 
-c...........Go ahead only if neighbourhood pixel is in a clump
+c           Go ahead only if neighbourhood pixel is in a clump
             call gtindx(i2,j2,k2,nps2)
             ncl2=a(nps2)
             ncl1=a(nps1)
@@ -598,17 +597,17 @@ c...........Go ahead only if neighbourhood pixel is in a clump
             if (sv.gt.0.05) naxis=naxis+1
             if (sy.gt.0.05) naxis=naxis+1
             if (sx.gt.0.05) naxis=naxis+1
-c...........Goto next pixel if this one not in neighbourhood
+c           Goto next pixel if this one not in neighbourhood
             if (naxis.gt.p3) goto 20
 
             if (ncl1.eq.0) then
-c..............If lowest level pixel is unassigned then assign it
+c              If lowest level pixel is unassigned then assign it
                newpix=newpix+1
                a(nps1)=ncl2
                clump(ncl2,4)=clump(ncl2,4)+1
             else
-c..............If lowest level pixel is already assigned
-c..............then it is merged with >1 clump => flag it bad
+c              If lowest level pixel is already assigned
+c              then it is merged with >1 clump => flag it bad
                newpix=newpix-1
                badpix=badpix+1
                clump(ncl1,4)=clump(ncl1,4)-1
@@ -622,10 +621,10 @@ c..............then it is merged with >1 clump => flag it bad
          enddo
 
  30      continue
-c........Goto next pixel in lower level
+c        Goto next pixel in lower level
       enddo
 
-c.....Repeat process until there are no new assigned pixels
+c     Repeat process until there are no new assigned pixels
       if (newpix.gt.0) goto 10
 
       print 40,goodpix
@@ -650,30 +649,30 @@ c-----------------------------------------------------------------------
       integer npos1(npx1),npos(nlevs,npx2),nreg(nlevs,npx2)
       real t(*)
 c-----------------------------------------------------------------------
-c.....Initialize npix() which was counted in CountLevs
-c.....but we don't want it to be recounted here
-      do ngy = 1,nlevs
+c     Initialize npix() which was counted in CountLevs
+c     but we don't want it to be recounted here
+      do ngy = 1, nlevs
        npix(ngy)=0
       enddo
 
-      do k = 1,nz
-      do j = 1,ny
-      do i = 1,nx
+      do k = 1, nz
+      do j = 1, ny
+      do i = 1, nx
        call gtindx(i,j,k,nps)
 c      do nps=1,nx*ny*nz
-c........Determine contour level
+c        Determine contour level
          ngy=int(t(nps)/p2)-p1+1
 
          if (ngy.gt.1) then
             npix(ngy)=npix(ngy)+1
             npx=npix(ngy)
 
-c...........This point is initially unassigned to any region
+c           This point is initially unassigned to any region
             nreg(ngy,npx)=-1
             npos(ngy,npx)=nps
          endif
 
-c........Treat level 1 separately from the others
+c        Treat level 1 separately from the others
          if (ngy.eq.1) then
             npix(1)=npix(1)+1
             npx=npix(1)
@@ -702,14 +701,14 @@ c-----------------------------------------------------------------------
       real t1,tpeak
       real t(*)
 c-----------------------------------------------------------------------
-      do nrgn = 1,nregions(ngy)
+      do nrgn = 1, nregions(ngy)
 c                                                unmerged rgn=>new cl
          if (.not.merge(nrgn)) then
             ncl=ncl+1
             nclump=nclump+1
-            tpeak=-999.
+            tpeak=-999.0
             npx=0
-            do npx1 = 1,npix(ngy)
+            do npx1 = 1, npix(ngy)
 c                                                assign entire rgn
                if (nreg(ngy,npx1).eq.nrgn) then
                   nps1=npos(ngy,npx1)
@@ -719,9 +718,9 @@ c                                               find #pix and..
                   t1=t(nps1)
                   if (t1.gt.tpeak) then
                      call invindx(i1,j1,k1,nps1)
-c                                               ..peak posn of..
+c                                                 peak posn of..
                      tpeak=t1
-c                                               ..new clump
+c                                                 new clump
                      ipeak=i1
                      jpeak=j1
                      kpeak=k1
@@ -753,29 +752,28 @@ c-----------------------------------------------------------------------
       real sx,sy,sv
       logical newpix
 c-----------------------------------------------------------------------
-c.....Work at each contour level, from top to bottom
+c     Work at each contour level, from top to bottom
       do ngy = nlevels,2,-1
         nrgn=0
 
-c.......Go thru pixels in this level, looking for
-c.......those which are unassigned ==> new region
-        do npx1 = 1,npix(ngy)
+c       Go thru pixels in this level, looking for
+c       those which are unassigned ==> new region
+        do npx1 = 1, npix(ngy)
         if (nreg(ngy,npx1).eq.-1) then
-
           nrgn=nrgn+1
           nreg(ngy,npx1)=nrgn
           newpix=.true.
           do while (newpix)
            newpix=.false.
 
-c..........Extend region by looking at the neighbours of
-c..........all pixels in this region
-           do npx2 = 1,npix(ngy)
+c          Extend region by looking at the neighbours of
+c          all pixels in this region
+           do npx2 = 1, npix(ngy)
            if (nreg(ngy,npx2).eq.nrgn) then
              nps2=npos(ngy,npx2)
              call invindx(i2,j2,k2,nps2)
 
-             do npx3 = 1,npix(ngy)
+             do npx3 = 1, npix(ngy)
              if (nreg(ngy,npx3).eq.-1) then
                nps3=npos(ngy,npx3)
                call invindx(i3,j3,k3,nps3)
@@ -854,12 +852,12 @@ c-----------------------------------------------------------------------
       real buff(maxdim)
       logical mask(maxdim)
 c-----------------------------------------------------------------------
-      do k = 1,nz
+      do k = 1, nz
         call xysetpl(lin,1,k)
-        do j = 1,ny
+        do j = 1, ny
           call xyread(lin,j,buff)
           call xyflgrd(lin,j,mask)
-          do i = 1,nx
+          do i = 1, nx
             call gtindx(i,j,k,nps)
             if (mask(i)) then
               t(nps)=buff(i)
@@ -877,9 +875,9 @@ c-----------------------------------------------------------------------
 
       subroutine printree(nclump,nmax,t)
 c-----------------------------------------------------------------------
-c.....Clump deconvolution is done - now print out the
-c.....tree structure (which clumps appear at which level
-c.....and how they merge together at lower levels)
+c     Clump deconvolution is done - now print out the
+c     tree structure (which clumps appear at which level
+c     and how they merge together at lower levels)
 c-----------------------------------------------------------------------
       include 'clfind.h'
 
@@ -899,7 +897,7 @@ c-----------------------------------------------------------------------
          call output(line)
          print 1090, ngy+p1-1
  1090    format(' Level ',i2)
-         do n3 = 1,nclump
+         do n3 = 1, nclump
             i=clump(n3,1)
             j=clump(n3,2)
             k=clump(n3,3)
@@ -911,12 +909,12 @@ c-----------------------------------------------------------------------
             endif
          enddo
 
-         do n2 = 1,nregions(ngy)
-            do nmerge = 1,maxmge
+         do n2 = 1, nregions(ngy)
+            do nmerge = 1, maxmge
                list(nmerge)=0
             enddo
             nmerge=0
-            do n3 = 1,nclump
+            do n3 = 1, nclump
                if (tree(ngy,n2,n3) .and. clump(n3,4).gt.1) then
                   nmerge=nmerge+1
                   if (nmerge.le.5*maxmge) then
@@ -965,10 +963,10 @@ c-----------------------------------------------------------------------
       integer ncl,nps
       integer a(*)
 c-----------------------------------------------------------------------
-      do ncl = 1,nclump
+      do ncl = 1, nclump
          if (clump(ncl,4).lt.nmin) then
            nstop=nstop+1
-           do nps = 1,nx*ny*nz
+           do nps = 1, nx*ny*nz
               if (a(nps).eq.ncl) a(nps)=0
            enddo
            clump(ncl,4)=0
