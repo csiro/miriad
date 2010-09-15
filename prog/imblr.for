@@ -1,19 +1,20 @@
       program imblr
-c-----------------------------------------------------------------------
-c
-c= IMBLR - Replace blanked pixels in an image with a value of user's choice
+
+c= IMBLR - Replace blanked pixels in an image with the specified value
 c& nebk
 c: image analysis
 c+
-c	IMBLR replaces any pixel that is blanked by an unblanked pixel
-c	with value specified by the user.
+c       IMBLR replaces any pixel that is blanked by an unblanked pixel
+c       with value specified by the user.
 c
 c@ in
-c	Input image.  Wild card expansion supported.
+c       Input image.  Wild card expansion supported.
 c@ out
-c	Output image
+c       Output image
 c@ value
-c	Value to replace blanked pixels by. Default is zero.
+c       Value to replace blanked pixels by. Default is zero.
+c
+c$Id: imblr.for,v 1.2 2010/09/15 06:30:46 cal103 Exp $
 c--
 c
 c  History:
@@ -24,14 +25,12 @@ c    rjs  12oct99  Do not write out gflags.
 c    rjs  08may00  Change incorrect call to keyf to keya.
 c
 c-----------------------------------------------------------------------
-      implicit none
-c
       include 'maxdim.h'
       include 'maxnax.h'
-c
+
       character version*20
       parameter (version = 'Version 12-Oct-99')
-c
+
       integer size(maxnax), lin, lout, i, j, k, naxis
       real dmm(2), val, data(maxdim), npix, npix2
       logical flags(maxdim),first
@@ -46,11 +45,11 @@ c
       call keya ('out', out, ' ')
       call keyr ('value', val, 0.0)
       call keyfin
-c
+
       if (in.eq.' ') call bug ('f', 'No input image given')
       if (out.eq.' ') call bug ('f', 'No output image given')
-      if (in.eq.out) call bug ('f', 
-     +  'Input and output images must be different')
+      if (in.eq.out) call bug ('f',
+     *  'Input and output images must be different')
 c
 c Open input image
 c
@@ -58,7 +57,7 @@ c
       call rdhdi (lin, 'naxis', naxis, 0)
 c
 c Open output image and copy header items to it
-c  
+c
       call xyopen (lout, out, 'new', naxis, size)
       call headcopy (lin, lout, 0, naxis, 0, 0)
       call hisopen (lout,'append')
@@ -74,42 +73,42 @@ c
         npix = 0.0
         call xysetpl (lin, 1, k)
         call xysetpl (lout, 1, k)
-c
+
         do j = 1, size(2)
           call xyread (lin, j, data)
-	  if(first)then
-	    dmm(1) = data(1)
-	    dmm(2) = dmm(1)
-	    first = .false.
-	  endif
+          if (first) then
+            dmm(1) = data(1)
+            dmm(2) = dmm(1)
+            first = .false.
+          endif
           call xyflgrd (lin, j, flags)
-c
+
           do i = 1, size(1)
             if (.not.flags(i)) then
               data(i) = val
               npix = npix + 1
-            end if
+            endif
             dmm(1) = min(dmm(1),data(i))
             dmm(2) = max(dmm(2),data(i))
-          end do
-c
+          enddo
+
           call xywrite (lout, j, data)
-        end do
-c
+        enddo
+
         if (npix.gt.0.0) then
           write (line, 10) k, npix
 10        format ('Plane ', i3, ' : replaced ', f8.0, ' blanks')
-          call output (line)  
+          call output (line)
           npix2 = npix2 + npix
-        end if
-      end do
-c      
+        endif
+      enddo
+
       if (npix2.le.0.0) call output ('There were no blanks')
-c   
+
       call wrhdr (lout, 'datamax', dmm(2))
       call wrhdr (lout, 'datamin', dmm(1))
-c
+
       call xyclose (lin)
       call xyclose (lout)
-c
+
       end
