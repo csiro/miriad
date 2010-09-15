@@ -34,7 +34,7 @@ c       ambiguity is needed.
 c         sum       Produce sum rather than average of pixels in
 c                   each bin
 c
-c$Id: imbin.for,v 1.6 2010/09/15 06:58:34 cal103 Exp $
+c$Id: imbin.for,v 1.7 2010/09/15 06:59:13 cal103 Exp $
 c--
 c
 c  History:
@@ -73,8 +73,8 @@ c     Externals.
       data opts /'sum     '/
 c-----------------------------------------------------------------------
       version = versan ('imbin',
-     *                  '$Revision: 1.6 $',
-     *                  '$Date: 2010/09/15 06:58:34 $')
+     *                  '$Revision: 1.7 $',
+     *                  '$Date: 2010/09/15 06:59:13 $')
 
       do i = 1, MAXNAX
         blc(i) = 1
@@ -137,7 +137,7 @@ c     binning factors integrally.
 
 c     Open output image and write header.
       call xyopen (lout, out, 'new', naxis, sizout)
-      call headcopy (lin, lout, 0, naxis, 0, 0)
+      call headcopy (lin, lout, 0, 0, 0, 0)
 
       call hisopen  (lout,'append')
       call hiswrite (lout, 'IMBIN: Miriad '//version)
