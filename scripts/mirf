@@ -18,6 +18,7 @@
 #            2. remove trailing blanks,
 #            3. remove the two blanks in columns 7 and 8 in non-comment
 #               lines.
+#   -l     Downcase Fortran keywords.
 #
 # Notes:
 #    1) As at 2010/08/19, the following continuation characters have been used
@@ -37,7 +38,7 @@
 #       In view of its prevalance, we have settled on '*'.
 #
 # Original: 2010/08/19 MRC (from ancient lore).
-# $Id: mirf,v 1.3 2010/09/06 06:38:34 cal103 Exp $
+# $Id: mirf,v 1.4 2010/09/15 01:49:39 cal103 Exp $
 #-----------------------------------------------------------------------------
   DETAB=
   LOWER=
@@ -75,7 +76,10 @@
           -e 's|^C|c|' \
           -e '/^c/b' \
           -e '/^  *IMPLICIT NONE$/d' \
+          -e '/^  *IMPLICIT none$/d' \
           -e 's| PROGRAM *| program |' \
+          -e 's| SUBROUTINE *| subroutine |' \
+          -e 's| FUNCTION *| function |' \
           -e 's| INCLUDE | include |' \
           -e 's| PARAMETER *(| parameter (|' \
           -e 's| LOGICAL | logical |' \
@@ -101,10 +105,10 @@
           -e 's|\.NOT\. |.NOT.|g' \
           -e 's|\.OR\.|.or.|g'   \
           -e 's|\.AND\.|.and.|g' \
-          -e 's| IF *(| if (|'   \
-          -e 's|) *THEN|) then|' \
           -e 's| ELSE *IF *(| else if (|' \
           -e 's| ELSE$| else|' \
+          -e 's| IF *(| if (|'   \
+          -e 's|) *THEN|) then|' \
           -e 's| END *IF$| endif|' \
           -e 's| DO *WHILE *(| do while (|' \
           -e 's| DO | do |' \
@@ -115,13 +119,17 @@
     fi |
       sed -e 's|  *$||' \
           -e 's|^[C*]|c|' \
+          -e '/^c/s|'\`\`'|"|g' \
+          -e '/^c/s|'\'\''|"|g' \
+          -e '/^c-\{72\}/s|-||' \
+          -e '/^c\*\{72\}/s|\*||' \
           -e '/^c/b' \
           -e 's|^     [^ ]|     *|' \
           -e '/^  *implicit none$/d' \
           -e 's|\([0-9]\)\.0*e\([-+0-9]\)|\1e\2|g' \
           -e 's|\([0-9]\)\.0*d\([-+0-9]\)|\1d\2|g' \
-          -e 's|\([0-9]\)\.)|\1.0)|g' \
-          -e 's|\([-+*/, ][0-9][0-9]*\)\.\([ ,)]\)|\1.0\2|g' \
+          -e 's|\([0-9]\)\.$|\1.0|g' \
+          -e 's|\([-+*/,() ][0-9][0-9]*\)\.\([-+*/,() ]\)|\1.0\2|g' \
           -e 's|parameter(|parameter (|' \
           -e 's|( |(|g' \
           -e 's| )|)|g' \
