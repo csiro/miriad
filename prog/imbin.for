@@ -1,6 +1,5 @@
       program imbin
-c-----------------------------------------------------------------------
-c
+
 c= IMBIN - Bin up an image.
 c& nebk
 c: image analysis
@@ -35,7 +34,7 @@ c       ambiguity is needed.
 c         sum       Produce sum rather than average of pixels in
 c                   each bin
 c
-c$Id: imbin.for,v 1.5 2010/04/30 08:23:28 cal103 Exp $
+c$Id: imbin.for,v 1.6 2010/09/15 06:58:34 cal103 Exp $
 c--
 c
 c  History:
@@ -57,15 +56,15 @@ c-----------------------------------------------------------------------
       integer MAXBOX, NOPTS
       parameter (MAXBOX = 1024, NOPTS = 1)
 
-      logical aver, blanks, flags(MAXDIM), present(NOPTS)
-      integer bin(2,MAXNAX), blc(MAXNAX), boxes(MAXBOX), i, ip, ipn, j,
-     :        k, krng(2), lin, lout, naxis, nbin, npnt, nx, ny, p, pn,
-     :        sizin(MAXNAX), sizout(MAXNAX), trc(MAXNAX)
-      real    dmm(2), mm(3)
+      logical   aver, blanks, flags(MAXDIM), present(NOPTS)
+      integer   bin(2,MAXNAX), blc(MAXNAX), boxes(MAXBOX), i, ip, ipn,
+     *          j, k, krng(2), lin, lout, naxis, nbin, npnt, nx, ny, p,
+     *          pn, sizin(MAXNAX), sizout(MAXNAX), trc(MAXNAX)
+      real      dmm(2), mm(3)
       double precision cdelti(MAXNAX), cdelto(MAXNAX), crpixi(MAXNAX),
-     :        crpixo(MAXNAX), crvali(MAXNAX)
+     *          crpixo(MAXNAX), crvali(MAXNAX)
       character in*64, itoaf*1, line*80, opts(NOPTS)*8, out*64, str*1,
-     :        version*80
+     *          version*80
 
 c     Externals.
       logical hdprsnt
@@ -74,8 +73,8 @@ c     Externals.
       data opts /'sum     '/
 c-----------------------------------------------------------------------
       version = versan ('imbin',
-     :                  '$Revision: 1.5 $',
-     :                  '$Date: 2010/04/30 08:23:28 $')
+     *                  '$Revision: 1.6 $',
+     *                  '$Date: 2010/09/15 06:58:34 $')
 
       do i = 1, MAXNAX
         blc(i) = 1
@@ -92,7 +91,7 @@ c     Get user inputs.
       call keya ('out', out, ' ')
       if (out.eq.' ') call bug ('f', 'No output image given')
       if (in.eq.out) call bug ('f',
-     :  'Input and output images must be different')
+     *  'Input and output images must be different')
       call mkeyi ('bin', bin, MAXNAX*2, nbin)
       if (nbin.eq.0) call bug ('f', 'You must give some binning')
       if (mod(nbin,2).ne.0) call bug('f','Invalid number of bins')
@@ -117,7 +116,7 @@ c     Open input image.
         if (bin(2,i).ne.1 .and. bin(2,i).ne.bin(1,i)) then
           call bug ('f', 'Image increment must equal bin size')
         endif
-      end do
+      enddo
 
 c     Finish key inputs for region of interest.
       call boxset (boxes, naxis, sizin, 's')
@@ -133,12 +132,13 @@ c     binning factors integrally.
         call rdhdd (lin, 'crval'//str, crvali(i), 0d0)
 
         call winfidcg (sizin(i), i, bin(1,i), blc(i), trc(i), sizout(i))
-      end do
+      enddo
 
 
 c     Open output image and write header.
       call xyopen (lout, out, 'new', naxis, sizout)
       call headcopy (lin, lout, 0, naxis, 0, 0)
+
       call hisopen  (lout,'append')
       call hiswrite (lout, 'IMBIN: Miriad '//version)
       call hisinput (lout,'IMBIN')
@@ -156,7 +156,7 @@ c       value which must be left unchanged for non-linear axes.
         str = itoaf(i)
         call wrhdd (lout, 'crpix'//str, crpixo(i))
         call wrhdd (lout, 'cdelt'//str, cdelto(i))
-      end do
+      enddo
 
 
 c     Allocate memory for binned images.
@@ -174,7 +174,7 @@ c       Bin up next subcube.
         mm(1) =  1e32
         mm(2) = -1e32
         call readimcg (.true., 0.0, lin, bin(1,1), bin(1,2), krng,
-     :    blc, trc, aver, memi(ipn), memr(ip), blanks, mm)
+     *    blc, trc, aver, memi(ipn), memr(ip), blanks, mm)
         if (mm(1).lt.dmm(1)) dmm(1) = mm(1)
         if (mm(2).gt.dmm(2)) dmm(2) = mm(2)
         krng(1) = krng(1) + bin(1,3)
@@ -189,18 +189,18 @@ c       Write out plane of new image.
           if (blanks) then
             do i = 1, sizout(1)
               flags(i) = memi(pn+i-1).gt.0
-            end do
+            enddo
             call xyflgwr (lout, j, flags)
-          end if
-        end do
-      end do
+          endif
+        enddo
+      enddo
       call wrhdr (lout, 'datamax', dmm(2))
       call wrhdr (lout, 'datamin', dmm(1))
 
 c     If there is a mosaicing table in the input and some sort of
 c     decimation of the RA and DEC axes, then decimate the mostable.
-      if (hdprsnt(lin,'mostable').and.
-     :   (bin(1,1).gt.1 .or. bin(1,2).gt.1)) then
+      if (hdprsnt(lin,'mostable') .and.
+     *   (bin(1,1).gt.1 .or. bin(1,2).gt.1)) then
         call mosLoad(lin,npnt)
         call mosGetn(nx,ny,npnt)
         call mosSetn(nx/bin(1,1), ny/bin(1,2))
