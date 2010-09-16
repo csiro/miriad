@@ -470,7 +470,7 @@ c       3) Check the rms of the background. If this is high then firstly
 c          the fit may not be good (as per 1), and secondly the source
 c          is in a noisy area and should be treated with caution anyway.
 c
-c$Id: sfind.for,v 1.12 2010/09/15 08:24:53 cal103 Exp $
+c$Id: sfind.for,v 1.13 2010/09/16 08:20:32 cal103 Exp $
 c--
 c
 c  History:
@@ -625,8 +625,8 @@ c-----------------------------------------------------------------------
       character versan*80, version*80
 c-----------------------------------------------------------------------
       version = versan('sfind',
-     *                  '$Revision: 1.12 $',
-     *                  '$Date: 2010/09/15 08:24:53 $')
+     *                  '$Revision: 1.13 $',
+     *                  '$Date: 2010/09/16 08:20:32 $')
 c
 c Get user inputs
 c
@@ -3760,8 +3760,9 @@ c-----------------------------------------------------------------------
       include 'maxnax.h'
       include 'mem.h'
       include 'mirconst.h'
+
       integer ii,jj,lmn,lmx,mmn,mmx,nx,ny,l,m,npix
-      integer nn,lin,maxx,maxy
+      integer nn,lIn,maxx,maxy
       parameter (nn=20000)
       real sigma, xrms, alpha
       real image(nx,ny),pvalue,pline
@@ -3771,7 +3772,7 @@ c-----------------------------------------------------------------------
       integer boxsize, blc(2),bin(2)
       integer nimage(nx,ny)
 c
-      integer lOut,lOut2,lOut3,lOut4,lo,axes(2),nfdrpix,nblanks
+      integer lOut,lOut1,lOut2,lOut3,lOut4,axes(2),nfdrpix,nblanks
       integer iii,jjj,ipim,ip2im
       real rrow(maxdim),image2(nx,ny),meanimg(nx,ny),sgimg(nx,ny)
       double precision wa(2)
@@ -3785,290 +3786,289 @@ c-----------------------------------------------------------------------
       call output('*************************')
       call output('Beginning FDR analysis...')
       call output('*************************')
-c check if input image has a mask
-      mskexst = hdprsnt(lin,'mask')
-c
-c Open output 'normalised' and 'segmentation image' datasets if
-c necessary.
-c
+
+c     Does the input image have a mask?
+      mskexst = hdprsnt(lIn,'mask')
+
+c     Open output 'normalised' and 'segmentation image' datasets if
+c     necessary.
       axes(1) = maxx
       axes(2) = maxy
-      if (fdrimg) call xyopen (lOut,'sfind.fdr','new',2,axes)
-      if (sigmaimg) call xyopen (lOut2,'sfind.sig','new',2,axes)
-      if (normimg) call xyopen (lOut3,'sfind.norm','new',2,axes)
-      if (rmsimg) call xyopen (lOut4,'sfind.rms','new',2,axes)
-c copy headers to output datasets if necessary
-      do ii = 1, 4
-       if ((ii.eq.1) .and. (fdrimg)) then
-        lo = lOut
-       else if ((ii.eq.2) .and. (sigmaimg)) then
-        lo = lOut2
-       else if ((ii.eq.3) .and. (normimg)) then
-        lo = lOut3
-       else if ((ii.eq.4) .and. (rmsimg)) then
-        lo = lOut4
-       else
-        lo = -1
-       endif
-       if (lo.gt.0) then
-        call hdcopy (lIn,lo,'observer')
-        call hdcopy (lIn,lo,'telescop')
-        call hdcopy (lIn,lo,'object')
-        call hdcopy (lIn,lo,'ctype1')
-        call hdcopy (lIn,lo,'ctype2')
-        call hdcopy (lIn,lo,'crval1')
-        call hdcopy (lIn,lo,'crval2')
-        call hdcopy (lIn,lo,'cdelt1')
-        call hdcopy (lIn,lo,'cdelt2')
-        call hdcopy (lIn,lo,'crpix1')
-        call hdcopy (lIn,lo,'crpix2')
-        call hdcopy (lIn,lo,'epoch')
-        call hdcopy (lIn,lo,'obstime')
-        call hdcopy (lIn,lo,'bunit')
-        call hdcopy (lIn,lo,'btype')
-        call hdcopy (lIn,lo,'bmaj')
-        call hdcopy (lIn,lo,'bmin')
-        call hdcopy (lIn,lo,'bpa')
-        call hdcopy (lIn,lo,'history')
-        if (mskexst) then
-         do jj = 1, axes(2)
-          call xyflgrd(lin,jj,msk)
-          call xyflgwr(lo,jj,msk)
-         enddo
-        endif
-c fill in new images with zero data to start
-        do jjj = 1, maxy
-         do iii = 1, maxx
-          rrow(iii) = 0.0
-         enddo
-         call xywrite(lo,jjj,rrow)
-        enddo
-       endif
+      if (fdrimg)   call xyopen (lOut1,'sfind.fdr', 'new',2,axes)
+      if (sigmaimg) call xyopen (lOut2,'sfind.sig', 'new',2,axes)
+      if (normimg)  call xyopen (lOut3,'sfind.norm','new',2,axes)
+      if (rmsimg)   call xyopen (lOut4,'sfind.rms', 'new',2,axes)
+
+      do iii = 1, maxx
+        rrow(iii) = 0.0
       enddo
+
+c     Create headers for the output datasets if necessary.
+      do ii = 1, 4
+        if (ii.eq.1 .and. fdrimg) then
+          lOut = lOut1
+        else if (ii.eq.2 .and. sigmaimg) then
+          lOut = lOut2
+        else if (ii.eq.3 .and. normimg) then
+          lOut = lOut3
+        else if (ii.eq.4 .and. rmsimg) then
+          lOut = lOut4
+        else
+          lOut = -1
+        endif
+
+        if (lOut.gt.0) then
+c         Copy keywords and history.
+          call headcopy (lIn, lOut, 0, 0, 0, 0)
+
+c         Copy the mask.
+          if (mskexst) then
+            do jj = 1, axes(2)
+              call xyflgrd(lIn,  jj, msk)
+              call xyflgwr(lOut, jj, msk)
+            enddo
+          endif
+
+c         Fill the new images with zeroes to start.
+          do jjj = 1, maxy
+            call xywrite(lOut, jjj, rrow)
+          enddo
+        endif
+      enddo
+
       if (normimg) call wrhda(lOut3,'bunit','SIGMA')
 
-c catch possible problem of boxsize (rmsbox input) is bigger than image
+c     Catch possible problem of boxsize (rmsbox input) is bigger than
+c     image
       boxsize = min(boxsize,nx,ny)
-c allocate memory for mask and image2 array in basecal
+
+c     Allocate memory for mask and image2 array in basecal.
       call memalloc(ipim,(boxsize+1)*(boxsize+1),'l')
       call memalloc(ip2im,(boxsize+1)*(boxsize+1),'r')
-c
-c "Normalise" image, by determining mean and sigma in boxes of size
-c boxsize, and subtracting mean and dividing by sigma, to make the fdr
-c stuff work for images with images where sigma varies significantly
-c over the image
-c
+
+c     Normalise the image: determine the mean and sigma in boxes of
+c     size boxsize, subtract the mean and divide by sigma.  This makes
+c     the FDR stuff work for images where sigma varies significantly
+c     over the image.
       do ii = 1, nint(float(nx)/float(boxsize))+1
-       do jj = 1, nint(float(ny)/float(boxsize))+1
-        l = boxsize/2 + (ii-1)*boxsize
-        m = boxsize/2 + (jj-1)*boxsize
-        if ((l.le.(nx+boxsize/2)) .and. (m.le.(ny+boxsize/2))) then
-         call basecal(nx, ny, l, m, base0, sigma, boxsize, image,
-     *           nimage, 1.5*bmajp, ok, meml(ipim),memr(ip2im), auto)
-         if (ok) then
-          lmn = max(0,(l-boxsize/2)) + 1
-          lmx = min(nx,(lmn+boxsize-1))
-          mmn = max(0,(m-boxsize/2)) + 1
-          mmx = min(ny,(mmn+boxsize-1))
-          do iii = lmn, lmx
-           do jjj = mmn, mmx
-            if (sigma.ne.0) then
-             image2(iii,jjj) = (image(iii,jjj) - base0)/sigma
-             meanimg(iii,jjj) = base0
-             sgimg(iii,jjj) = sigma
+        do jj = 1, nint(float(ny)/float(boxsize))+1
+          l = boxsize/2 + (ii-1)*boxsize
+          m = boxsize/2 + (jj-1)*boxsize
+          if ((l.le.(nx+boxsize/2)) .and. (m.le.(ny+boxsize/2))) then
+            call basecal(nx, ny, l, m, base0, sigma, boxsize, image,
+     *              nimage, 1.5*bmajp, ok, meml(ipim),memr(ip2im), auto)
+            if (ok) then
+              lmn = max(0,(l-boxsize/2)) + 1
+              lmx = min(nx,(lmn+boxsize-1))
+              mmn = max(0,(m-boxsize/2)) + 1
+              mmx = min(ny,(mmn+boxsize-1))
+              do iii = lmn, lmx
+                do jjj = mmn, mmx
+                  if (sigma.ne.0) then
+                    image2(iii,jjj) = (image(iii,jjj) - base0)/sigma
+                    meanimg(iii,jjj) = base0
+                    sgimg(iii,jjj) = sigma
+                  endif
+                enddo
+              enddo
             endif
-           enddo
-          enddo
-         endif
-        endif
-       enddo
+          endif
+        enddo
       enddo
-c
-c free memory from basecal arrays
+
+c     Free memory from basecal arrays.
       call memfree(ip2im,(boxsize+1)*(boxsize+1),'r')
       call memfree(ipim,(boxsize+1)*(boxsize+1),'l')
-c
-c make normalised image from image2 if required
-c
+
+c     Make normalised image from image2 if required.
       if (normimg) then
-       do jjj = 1, ny
-        do iii = 1, nx
-c cvt iii from binned subimage pixels to full image pixels
-         wa(1) = dble(iii)
-         call ppconcg(2, blc(1), bin(1), wa(1))
-         rrow(nint(wa(1))) = image2(iii,jjj)
+        do jjj = 1, ny
+          do iii = 1, nx
+c           cvt iii from binned subimage pixels to full image pixels.
+            wa(1) = dble(iii)
+            call ppconcg(2, blc(1), bin(1), wa(1))
+            rrow(nint(wa(1))) = image2(iii,jjj)
+          enddo
+
+c         cvt jjj from binned subimage pixels to full image pixels.
+          wa(2) = dble(jjj)
+          call ppconcg(2, blc(2), bin(2), wa(2))
+          call xywrite(lOut3,nint(wa(2)),rrow)
         enddo
-c cvt jjj from binned subimage pixels to full image pixels
-        wa(2) = dble(jjj)
-        call ppconcg(2, blc(2), bin(2), wa(2))
-        call xywrite(lOut3,nint(wa(2)),rrow)
-       enddo
-       call xyclose (lOut3)
+        call xyclose (lOut3)
       endif
-c
-c make rms image, for calculation of weighting corrections
-c
+
+c     Make rms image for calculation of weighting corrections.
       if (rmsimg) then
-       nfdrpix = 0
-       nblanks = 0
-       do m = 1, ny
-        do l = 1, nx
-c cvt l from binned subimage pixels to full image pixels
-         wa(1) = dble(l)
-         call ppconcg(2, blc(1), bin(1), wa(1))
-         if (nimage(l,m).gt.0) then
-          rrow(nint(wa(1))) = sgimg(l,m)
-         else
-          rrow(nint(wa(1))) = 0.0
-         endif
+        nfdrpix = 0
+        nblanks = 0
+        do m = 1, ny
+          do l = 1, nx
+c           cvt l from binned subimage pixels to full image pixels.
+            wa(1) = dble(l)
+            call ppconcg(2, blc(1), bin(1), wa(1))
+            if (nimage(l,m).gt.0) then
+              rrow(nint(wa(1))) = sgimg(l,m)
+            else
+              rrow(nint(wa(1))) = 0.0
+            endif
+          enddo
+
+c         Have written the m'th row, now put it in the segmentation
+c         image cvt m from binned subimage pixels to full image pixels.
+          wa(2) = dble(m)
+          call ppconcg(2, blc(2), bin(2), wa(2))
+          call xywrite(lOut4,nint(wa(2)),rrow)
         enddo
-c ok, have written the m'th row, now put it in the segmentation image
-c cvt m from binned subimage pixels to full image pixels
-        wa(2) = dble(m)
-        call ppconcg(2, blc(2), bin(2), wa(2))
-        call xywrite(lOut4,nint(wa(2)),rrow)
-       enddo
-c done writing to lOut4 - so close it.
-       call xyclose (lOut4)
+
+c       Done writing to lOut4, close it.
+        call xyclose (lOut4)
       endif
 
-c
-c make sigma-cut image, for comparison with the upcoming fdr-based
-c segmentation image - note, after above normalisation, sigma = 1
-c
+
+c     Make sigma-cut image for comparison with the upcoming FDR-based
+c     segmentation image - note, after above normalisation, sigma = 1.
       if (sigmaimg) then
-       nfdrpix = 0
-       nblanks = 0
-       do m = 1, ny
-        do l = 1, nx
-c cvt l from binned subimage pixels to full image pixels
-         wa(1) = dble(l)
-         call ppconcg(2, blc(1), bin(1), wa(1))
-         if (nimage(l,m).gt.0) then
-          if (image2(l,m).lt.xrms) then
-           rrow(nint(wa(1))) = 0.0
-          else
-           nfdrpix = nfdrpix + 1
-           rrow(nint(wa(1))) = 100.0
-          endif
-         else
-          rrow(nint(wa(1))) = 0.0
-          nblanks = nblanks + 1
-         endif
+        nfdrpix = 0
+        nblanks = 0
+        do m = 1, ny
+          do l = 1, nx
+c           cvt l from binned subimage pixels to full image pixels
+            wa(1) = dble(l)
+            call ppconcg(2, blc(1), bin(1), wa(1))
+            if (nimage(l,m).gt.0) then
+              if (image2(l,m).lt.xrms) then
+                rrow(nint(wa(1))) = 0.0
+              else
+                nfdrpix = nfdrpix + 1
+                rrow(nint(wa(1))) = 100.0
+              endif
+            else
+              rrow(nint(wa(1))) = 0.0
+              nblanks = nblanks + 1
+            endif
+          enddo
+c         Have written the m'th row, now put it in the segmentation image
+c         cvt m from binned subimage pixels to full image pixels.
+          wa(2) = dble(m)
+          call ppconcg(2, blc(2), bin(2), wa(2))
+          call xywrite(lOut2,nint(wa(2)),rrow)
         enddo
-c ok, have written the m'th row, now put it in the segmentation image
-c cvt m from binned subimage pixels to full image pixels
-        wa(2) = dble(m)
-        call ppconcg(2, blc(2), bin(2), wa(2))
-        call xywrite(lOut2,nint(wa(2)),rrow)
-       enddo
-c done writing to lOut2 - so close it.
-       call xyclose (lOut2)
-       write(line,'("Of a total of ",i7," non-blanked pixels,")')
-     *        nx*ny - nblanks
-       call output(line)
-       write(line,'(f5.1,"-sigma cut gives ",i7," pixels.")')
-     *               xrms,nfdrpix
-       call output(line)
+
+c       Done writing to lOut2, close it.
+        call xyclose (lOut2)
+        write(line,'("Of a total of ",i7," non-blanked pixels,")')
+     *         nx*ny - nblanks
+        call output(line)
+        write(line,'(f5.1,"-sigma cut gives ",i7," pixels.")')
+     *                xrms,nfdrpix
+        call output(line)
       endif
 
-c
-c Now (finally) to the actual FDR bit...
-c
+
+c     Now (finally) to the actual FDR bit...
       lmn = 1
       lmx = nx
       mmn = 1
       mmx = ny
-c calculate area covered by beam, in pixels
+
+c     Calculate area covered by beam, in pixels.
       bareap = bmajp *bminp * PI_4 / log(2.0)
-c ee is constant e.
+
+c     ee is constant e.
       ee = exp(1.0)
-c
+
       npix = 0
 
-c looping over pixels assigning pvalues - the actual FDR bit
+c     Looping over pixels assigning pvalues - the actual FDR bit.
       do ii = lmn, lmx
-       do jj = mmn, mmx
-        if (nimage(ii,jj).ne.0) then
-c Note: Gaussian Probability Distribution Function (GPDF) is related to
-c the error function erf(x) by GPDF(x) = 0.5(1+erf(x/sqrt(2)))
-         pvalue = 0.5*(1+errfun(image2(ii,jj)/sqrt(2.0)))
-         image2(ii,jj) = 1.0 - pvalue
-         npix = npix + 1
-         plist(npix) = 1.0 - pvalue
-        endif
-       enddo
+        do jj = mmn, mmx
+          if (nimage(ii,jj).ne.0) then
+c           Note: Gaussian Probability Distribution Function (GPDF) is
+c           related to the error function erf(x) by
+c           GPDF(x) = 0.5(1+erf(x/sqrt(2)))
+            pvalue = 0.5*(1+errfun(image2(ii,jj)/sqrt(2.0)))
+            image2(ii,jj) = 1.0 - pvalue
+            npix = npix + 1
+            plist(npix) = 1.0 - pvalue
+          endif
+        enddo
       enddo
-c sort plist into order
+
+c     Sort plist into order.
       call sortr(plist,npix)
-c fdrdenom is the denominator of the slope (alpha/fdrdenom) for the fdr
-c line defined this way, it runs from 1 to sum_i=1^N (1/i), for
-c bareap=1 (uncorrelated) to N (fully correlated)
+
+c     fdrdenom is the denominator of the slope (alpha/fdrdenom) for the
+c     fdr line defined this way, it runs from 1 to sum_i=1^N (1/i), for
+c     bareap=1 (uncorrelated) to N (fully correlated).
       if (bareap.lt.1.) then
-       fdrdenom = 1.0
+        fdrdenom = 1.0
       else if (bareap.gt.float(npix)) then
-       fdrdenom = 0
-       do ii = 1, npix
-        fdrdenom = fdrdenom + 1/float(ii)
-       enddo
+        fdrdenom = 0
+        do ii = 1, npix
+          fdrdenom = fdrdenom + 1/float(ii)
+        enddo
       else
-       fdrdenom = 0
-       do ii = 1, int(bareap)
-        fdrdenom = fdrdenom + 1/float(ii)
-       enddo
+        fdrdenom = 0
+        do ii = 1, int(bareap)
+          fdrdenom = fdrdenom + 1/float(ii)
+        enddo
       endif
-c find crossing point
+
+c     Find crossing point.
       gotit = .false.
       pcut = 0.0
       do ii = npix,1,-1
-       pline = (alpha/(100.0*fdrdenom))
+        pline = (alpha/(100.0*fdrdenom))
+     *              *(float(ii)/float(npix))
 c       pline = (alpha/(100.*log(float(npix))))
 c       pline = (alpha/100.)
-     *              *(float(ii)/float(npix))
-       if ((pline.ge.plist(ii)) .and. (.not.gotit)) then
-        pcut = pline
-        gotit = .true.
-       endif
+        if ((pline.ge.plist(ii)) .and. (.not.gotit)) then
+          pcut = pline
+          gotit = .true.
+        endif
       enddo
-c
-c Loop over all pixels to test whether image2(l,m)<P_cut.
-c If image2(l,m) > pcut, then pixel is most likely background,
-c and if not, store it in the 'segmentation image' if required
-c
+
+c     Loop over all pixels to test whether image2(l,m) < P_cut.
+c     If image2(l,m) > pcut, then pixel is most likely background,
+c     and if not, store it in the 'segmentation image' if required
       nfdrpix = 0
       fluxctoff = 1e9
       sigctoff = 1e9
       do m = 1, ny
-       do l = 1, nx
-c cvt l from binned subimage pixels to full image pixels
-        wa(1) = dble(l)
-        call ppconcg(2, blc(1), bin(1), wa(1))
-        if (nimage(l,m).gt.0) then
-         if (image2(l,m).gt.pcut) then
-          rrow(nint(wa(1))) = 0.0
-         else
-          fluxctoff=min(fluxctoff,image(l,m))
-          sigctoff=min(sigctoff,(image(l,m)-meanimg(l,m))/sgimg(l,m))
-          nfdrpix = nfdrpix + 1
-          rrow(nint(wa(1))) = 100.0
-         endif
-        else
-         rrow(nint(wa(1))) = 0.0
+        do l = 1, nx
+c         cvt l from binned subimage pixels to full image pixels
+          wa(1) = dble(l)
+          call ppconcg(2, blc(1), bin(1), wa(1))
+          if (nimage(l,m).gt.0) then
+            if (image2(l,m).gt.pcut) then
+              rrow(nint(wa(1))) = 0.0
+            else
+              fluxctoff=min(fluxctoff,image(l,m))
+              sigctoff =min(sigctoff,(image(l,m)-meanimg(l,m))/
+     *                        sgimg(l,m))
+              nfdrpix  = nfdrpix + 1
+              rrow(nint(wa(1))) = 100.0
+            endif
+          else
+            rrow(nint(wa(1))) = 0.0
+          endif
+        enddo
+
+c       have written the m'th row, now put it in the segmentation image.
+        if (fdrimg) then
+c         cvt m from binned subimage pixels to full image pixels.
+          wa(2) = dble(m)
+          call ppconcg(2, blc(2), bin(2), wa(2))
+          call xywrite(lOut1,nint(wa(2)),rrow)
         endif
-       enddo
-c ok, have written the m'th row, now put it in the segmentation image
-       if (fdrimg) then
-c cvt m from binned subimage pixels to full image pixels
-        wa(2) = dble(m)
-        call ppconcg(2, blc(2), bin(2), wa(2))
-        call xywrite(lOut,nint(wa(2)),rrow)
-       endif
       enddo
-c done writing to lOut - so close it, if it was open.
-      if (fdrimg) call xyclose (lOut)
-c
+
+c     Done writing to lOut1, close it if it was open.
+      if (fdrimg) call xyclose (lOut1)
+
       if (.not.sigmaimg) then
-       write(line,'("Of a total of ",i7," non-blanked pixels,")')
+        write(line,'("Of a total of ",i7," non-blanked pixels,")')
      *        nx*ny - nblanks
       endif
       call output(' ')
@@ -4089,7 +4089,7 @@ c
       call output(line)
       write(line,'("FDR detected ",i7," pixels.")') nfdrpix
       call output(line)
-c
+
       return
       end
 
