@@ -50,7 +50,7 @@ c          image is blanked).
 c       "force"     Force masking of pixels in the output image which
 c          are masked in the input image.
 c
-c$Id: smooth.for,v 1.2 2010/09/17 06:24:34 cal103 Exp $
+c$Id: smooth.for,v 1.3 2010/09/17 06:44:00 cal103 Exp $
 c--
 c
 c  History:
@@ -75,42 +75,37 @@ c-----------------------------------------------------------------------
       include 'maxnax.h'
       include 'mirconst.h'
 
-      double precision a2r
-      integer MAXK, MAXK2
-      character version*25
-      parameter (MAXK = 100, MAXK2 = (2*MAXK+1)**2,
-     *           a2r = dpi / 180d0 / 3600d0)
-      parameter (version = 'version 19-Jun-01')
+      integer MAXK, MAXK2, NTYPE
+      parameter (MAXK = 100, MAXK2 = (2*MAXK+1)**2, NTYPE = 2)
 
-      integer ipin, ipout, ipmin, ipmout
-      real data(maxbuf)
+      logical   force, lrow(MAXDIM), nocheck
+      integer   ipin, ipmin, ipmout, ipout, k, kipnt(MAXK2),
+     *          kjpnt(MAXK2), ksize2, ksizex, ksizey, lin, lout, naxis,
+     *          nktype, nsize(MAXNAX)
+      real      bmaj, bmin, bpa, data(MAXBUF), fwhm1, fwhm2,
+     *          kern(MAXK2), ksum, major, minor, pa, scale
+      double precision cdelt1, cdelt2
+      character bunit*8, in*256, ktype*8, line*80, out*256,
+     *          type(NTYPE)*8, version*72
+
+      logical   hdprsnt
+      character versan*80
+      external  hdprsnt, versan
+
       common data
 
-      character in*256, out*256, line*80, ktype*8, bunit*8
-      integer nsize(maxnax), kipnt(MAXK2), kjpnt(MAXK2), lin, lout,
-     *naxis, ksizex, ksizey, ksize2, k, nktype
-      double precision cdelt1, cdelt2
-      real kern(MAXK2), fwhm1, fwhm2, pa, scale, major, minor, ksum,
-     *bmaj, bmin, bpa
-      logical lrow(maxdim), hdprsnt, nocheck,force
-
-      integer ntype
-      parameter (ntype = 2)
-      character type(ntype)*8
       data type  /'gaussian', 'boxcar'/
 c-----------------------------------------------------------------------
-      call output ('SMOOTH '//version)
-      call output (' ')
-      call bug ('i', 'Keyword "norm" replaced by keyword "scale"')
-      call bug ('i', 'Keyword "scale" offers automatic Jy/beam scaling')
-      call output (' ')
+      version = versan('smooth',
+     *                 '$Revision: 1.3 $',
+     *                 '$Date: 2010/09/17 06:44:00 $')
 c
 c  Get the input parameters.
 c
       call keyini
       call keyf ('in', in, ' ')
       call keya ('out', out, ' ')
-      call keymatch ('type', ntype, type, 1, ktype, nktype)
+      call keymatch ('type', NTYPE, type, 1, ktype, nktype)
       call keyr ('fwhm', fwhm1, 0.0)
       call keyr ('fwhm', fwhm2, fwhm1)
       call keyr ('pa', pa, 0.0)
@@ -120,7 +115,7 @@ c
 c
 c  Check inputs.
 c
-      if (in.eq.' ') call bug ('f', 'No input image given')
+      if (in .eq.' ') call bug ('f', 'No input image given')
       if (out.eq.' ') call bug ('f', 'No output image given')
       if (fwhm1.le.0.0 .or. fwhm2.le.0.0) call bug ('f', 'Invalid FWHM')
       major = max(fwhm1,fwhm2)
@@ -150,12 +145,12 @@ c
 c
 c  Open the input image
 c
-      call xyopen (lin, in, 'old', maxnax, nsize)
-      if (nsize(1).gt.maxdim)
+      call xyopen (lin, in, 'old', MAXNAX, nsize)
+      if (nsize(1).gt.MAXDIM)
      *  call bug ('f', 'First dimension of image too large for storage')
       if (nsize(3).le.0) nsize(3) = 1
       call rdhdi (lin, 'naxis', naxis, 3)
-      if (naxis.gt.maxnax)
+      if (naxis.gt.MAXNAX)
      *   call bug ('f', 'Image has too many dimensions')
       if (naxis.ge.4) then
          do k = 4, naxis
@@ -180,10 +175,10 @@ c
       call memalloc (ipout,  nsize(1)*nsize(2), 'r')
       call memalloc (ipmout, nsize(1)*nsize(2), 'r')
 c
-c  Open the output image and fill its header
+c  Open the output image and fill its header.
 c
       call xyopen (lout, out, 'new', naxis, nsize)
-      call header (lin, lout)
+      call headcopy (lin, lout, 0, 0, 0, 0)
 c
 c  Compute convolving Gaussian or boxcar and normalization factor
 c
@@ -191,7 +186,7 @@ c
         call makgauss (pa, major, minor, cdelt1, cdelt2, MAXK2,
      *     ksizex, ksizey, ksize2, kern, kipnt, kjpnt, ksum)
         if (scale.lt.0.0) then
-          call gaupar1 (lin, real(major*a2r), real(minor*a2r),
+          call gaupar1 (lin, real(major*AS2R), real(minor*AS2R),
      *                  pa, bunit, bmaj, bmin, bpa, scale)
           call wrhda (lout, 'bunit', bunit)
           call wrhdr (lout, 'bmaj', bmaj)
@@ -252,7 +247,6 @@ c
 c  Output:
 c     nocheck   don't check for blanks
 c     force     force masking of output pixel when input pixel masked
-c
 c-----------------------------------------------------------------------
       integer maxopt
       parameter (maxopt = 2)
@@ -299,12 +293,11 @@ c                   offsets in X and Y from the Gaussian centre
 c     ksum      r   Integral of Gaussian
 c-----------------------------------------------------------------------
       include 'mirconst.h'
-      double precision ra, rd
-      parameter (rd = 180d0/dpi, ra = rd*3600d0)
 
-      real phi, theta, cphi, sphi, ctheta, stheta, majmin, xmax,
-     *ymax, x, y, xp, yp, gfac, majsq, minsq, kmin, kmax, d1a, d2a
-      integer h, i, j
+      integer   h, i, j
+      real      phi, theta, cphi, sphi, ctheta, stheta, majmin, xmax,
+     *          ymax, x, y, xp, yp, gfac, majsq, minsq, kmin, kmax, d1a,
+     *          d2a
       character line*80
 c-----------------------------------------------------------------------
 c
@@ -320,8 +313,8 @@ c
 c
 c Theta is the angle defining the axial ratio of the Gaussian
 c
-      cphi = cos(phi/rd)
-      sphi = sin(phi/rd)
+      cphi = cos(phi*D2R)
+      sphi = sin(phi*D2R)
 
       theta = atan(minor/major)
       ctheta = cos(theta)
@@ -336,10 +329,10 @@ c
       xmax = majmin * sqrt((ctheta**2*cphi**2) + (stheta**2*sphi**2))
       ymax = majmin * sqrt((ctheta**2*sphi**2) + (stheta**2*cphi**2))
 c
-c Convert increments to pixels  (rounded up)
+c Convert increments to pixels (rounded up).
 c
-      d1a = abs(cdelt1) * ra
-      d2a = abs(cdelt2) * ra
+      d1a = abs(cdelt1) * DR2AS
+      d2a = abs(cdelt2) * DR2AS
       ksizex = int(xmax / d1a) + 1
       ksizey = int(ymax / d2a) + 1
 c
@@ -386,12 +379,7 @@ c
       write (line, 100) 2*ksizex+1, 2*ksizey+1
 100   format ('Gaussian array is ', i4, ' by ', i4, ' pixels')
       call output (line)
-c
-c      write (line, 200) kmin, kmax
-c200   format ('Minimum and maximum array border values are ',
-c     +         1pe11.4, ',', 1pe11.4)
-c      call output (line)
-c
+
       write (line, 300) ksum
 300   format ('Gaussian integral = ', 1pe11.4)
       call output (line)
@@ -429,20 +417,18 @@ c                   offsets in X and Y from the boxcar centre
 c     ksum      r   Integral of Boxcar
 c-----------------------------------------------------------------------
       include 'mirconst.h'
-      double precision  ra, rd
-      parameter (rd = 180d0/dpi, ra = rd*3600d0)
 
+      integer   h, i, j
+      real      kmin, kmax
       double precision d1a, d2a, xpix, ypix
-      real kmin, kmax
-      integer h, i, j
       character line*80
 c-----------------------------------------------------------------------
 c
 c Work out kernel widths in pixels.  The full width is always rounded
 c up to an odd number of pixels.
 c
-      d1a = abs(cdelt1) * ra
-      d2a = abs(cdelt2) * ra
+      d1a = abs(cdelt1) * DR2AS
+      d2a = abs(cdelt2) * DR2AS
 
       xpix = fwhm1 / (2*d1a)
       ypix = fwhm2 / (2*d2a)
@@ -635,10 +621,9 @@ c     maskin    r   Input blanking mask; +1 = .true., -1 = .false.
 c  Output:
 c     out       r   Output image
 c     maskout   r   Output blanking mask.  Equal to input mask.
-c
 c-----------------------------------------------------------------------
       integer h, i, j
-      real sum, kscale
+      real    sum, kscale
 c-----------------------------------------------------------------------
       if (scale.eq.0.0) then
         kscale = 1.0 / ksum
@@ -687,35 +672,6 @@ c-----------------------------------------------------------------------
          call xyflgwr (lun, j, lrow)
 
          ip  = ip + size(1)
-      enddo
-
-      end
-
-c***********************************************************************
-
-      subroutine header (lin, lout)
-
-      integer lin, lout
-c-----------------------------------------------------------------------
-c  Write header of output image.
-c-----------------------------------------------------------------------
-      integer nkeys, i
-      parameter (nkeys = 35)
-      character keyw(nkeys)*8
-      data keyw/     'cdelt1  ','cdelt2  ','cdelt3  ','cdelt4  ',
-     *    'crval1  ','crval2  ','crval3  ','crval4  ','crval5  ',
-     *    'ctype1  ','ctype2  ','ctype3  ','ctype4  ','ctype5  ',
-     *    'obstime ','epoch   ','instrume','niters  ','object  ',
-     *    'telescop','cellscal','history ','restfreq',
-     *    'vobs    ','observer','obsra   ','obsdec  ','crpix1  ',
-     *    'crpix2  ','crpix3  ','crpix4  ','crpix5  ','pbfwhm',
-     *    'btype   ','pbtype  '/
-c-----------------------------------------------------------------------
-c
-c  Copy keywords across
-c
-      do i = 1, nkeys
-        call hdcopy (lin, lout, keyw(i))
       enddo
 
       end
