@@ -4,19 +4,19 @@ c= shifty - Align two images.
 c& rjs
 c: image analysis
 c+
-c       SHIFTY is a MIRIAD task that shifts one image to align it as
-c       well as possible with another image with the restriction that
-c       only integral pixel shifts are performed.
+c       SHIFTY is a MIRIAD task that shifts one image by an integral
+c       number of pixels to align it as well as possible with another
+c       image.
 c@ in1
 c       The first input image is considered to be the master.
 c       No default.
 c@ in2
-c       The second input image is shifted to make it align better with
-c       the master.  No default.
+c       The second input image is shifted to align it with the master.
+c       No default.
 c@ out
 c       The output image.  No default.
 c
-c$Id: shifty.for,v 1.2 2010/09/16 08:31:49 cal103 Exp $
+c$Id: shifty.for,v 1.3 2010/09/17 05:37:40 cal103 Exp $
 c--
 c  History:
 c    rjs  21nov90 Original version.
@@ -25,31 +25,20 @@ c    rjs  15dec92 Use memalloc.
 c    rjs   1may96 Fix coordinates for Brett.
 c    rjs  02jul97 cellscal change.
 c-----------------------------------------------------------------------
-      character version*(*)
-      parameter (version='version 1.0 1-May-96')
       include 'maxdim.h'
-      character in1*64,in2*64,out*64,text*80
-      integer lIn1,lIn2,lOut,nsize1(3),nsize2(3),shift(2),length,i
-      integer naxis
 
-c     Header keywords.
-      integer nkeys
-      parameter (nkeys=43)
-      character keyw(nkeys)*8
-      data keyw/   'bunit   ','crota1  ','crota2  ','crota3  ',
-     *  'crota4  ','crota5  ','crval1  ','crval2  ','crval3  ',
-     *  'crval4  ','crval5  ','ctype1  ','ctype2  ','ctype3  ',
-     *  'ctype4  ','ctype5  ','obstime ','epoch   ','history ',
-     *  'instrume','niters  ','object  ','telescop','observer',
-     *  'restfreq','vobs    ','cellscal','obsra   ',
-     *  'obsdec  ','lstart  ','lstep   ','ltype   ','lwidth  ',
-     *  'cdelt1  ','cdelt2  ','cdelt3  ','cdelt4  ','cdelt5  ',
-     *  'crpix1  ','crpix2  ','crpix3  ','crpix4  ','crpix5  '/
+      integer   i, lIn1, lIn2, lOut, length, naxis, nsize1(3),
+     *          nsize2(3), shift(2)
+      character in1*64, in2*64, out*64, text*80, version*72
+
+      character versan*80
+      external  versan
 c-----------------------------------------------------------------------
-c
-c  Get the input parameters, and check them.
-c
-      call output('Shifty '//version)
+      version = versan('shifty',
+     *                 '$Revision: 1.3 $',
+     *                 '$Date: 2010/09/17 05:37:40 $')
+
+c     Get the input parameters and check them.
       call keyini
       call keya('in1',in1,' ')
       call keya('in2',in2,' ')
@@ -59,9 +48,8 @@ c
       if (out.eq.' ')
      *  call bug('f','Output image name must be given')
       call keyfin
-c
-c  Open the two inputs and check that they are the same size.
-c
+
+c     Open the two inputs and check that they are the same size.
       call xyopen(lIn1,in1,'old',3,nsize1)
       call xyopen(lIn2,in2,'old',3,nsize2)
       do i = 1, 3
@@ -70,39 +58,37 @@ c
         if (nsize1(i).ne.nsize2(i))
      *    call bug('f','Input image sizes are not the same')
       enddo
-c
-c  Determine the shift.
-c
+
+c     Determine the shift.
       call DetShift(lIn1,lIn2,nsize1(1),nsize1(2),nsize1(3),
-     *                                           shift(1),shift(2))
-c
-c  Open an output image, and apply the shift.
-c
+     *              shift(1),shift(2))
+
+c     Open an output image and apply the shift.
       call rdhdi(lIn2,'naxis',naxis,3)
       naxis = min(naxis,3)
       call xyopen(lOut,out,'new',naxis,nsize1)
 
       call DatShift(lIn2,lOut,nsize1(1),nsize1(2),nsize1(3),
-     *                                           shift(1),shift(2))
-c
-c  Make the header of the output.  This is a straight copy of the input.
-c
-      do i = 1, nkeys
-        call hdcopy(lIn1,lOut,keyw(i))
-      enddo
-      call hisopen(lOut,'append')
-      call hiswrite (lOut, 'SHIFTY: Miriad Shifty '//version)
-      call hisinput(lOut,'SHIFTY')
+     *              shift(1),shift(2))
+
+c     Copy the output header verbatim from the master input image.
+      call headcopy(lIn1, lOut, 0, 0, 0, 0)
+
+c     Update history.
+      call hisopen (lOut, 'append')
+      call hiswrite(lOut, 'SHIFTY: Miriad ' // version)
+      call hisinput(lOut, 'SHIFTY')
+
       call mitoaf(shift,2,text,length)
       call output('Applying a shift of ('//text(1:length)//')')
       call hiswrite(lOut,'SHIFTY: Shift = ('//text(1:length)//')')
       call hisclose(lOut)
-c
-c  All said and done. Close up.
-c
+
+c     All said and done. Close up.
       call xyclose(lIn1)
       call xyclose(lIn2)
       call xyclose(lOut)
+
       end
 
 c***********************************************************************
@@ -326,7 +312,5 @@ c
           endif
         enddo
       enddo
-c
-c  All said and done.
-c
+
       end
