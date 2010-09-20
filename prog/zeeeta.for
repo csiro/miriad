@@ -14,11 +14,11 @@ c       where sigma is the standard deviation of the I or V image,
 c       and N is the number of channels in the spectrum.
 c
 c@ in
-c       The input Stokes I image in vxy order. No default.
+c       The input Stokes I image in vxy order.  No default.
 c@ out
-c       The output eta image, if blc,trc is not specified
+c       The output eta image, if blc,trc is not specified.
 c@ sigma
-c       r.m.s. noise of signal free I spectrum
+c       r.m.s. noise of signal free I spectrum.
 c@ chan
 c       The channel range. Default is all channels.
 c@ blc
@@ -32,11 +32,12 @@ c       Specify the trc of the spatial window in pixels
 c@ der
 c       1 or 2 for one or two sided derivative.  If you would
 c       like to see a plot of the last derivative spectrum, include
-c       a `p' as well.  E.g., 2p or 1p
+c       a 'p' as well, e.g. 2p or 1p.
 c@ aveop
-c       'a' to average spectra before computing eta. Only if blc,trc set
+c       'a' to average spectra before computing eta.  Only if blc,trc
+c       set.
 c
-c$Id: zeeeta.for,v 1.2 2010/09/20 01:30:38 cal103 Exp $
+c$Id: zeeeta.for,v 1.3 2010/09/20 01:53:13 cal103 Exp $
 c--
 c
 c  History:
@@ -53,31 +54,22 @@ c    rjs  02jul97  cellscal change.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
 
-      real sigma, buf(maxdim), bufav(maxdim), eata(maxdim), der(maxdim),
-     *chan(maxdim), sumsq, dfac
-      integer i, j, k, lunin, lunout, siz(3), ioff, bchan, echan, ist,
-     *iend, jst, jend, kst, kend, naxis, blc(2), trc(2), nxy, nxyz, nz
-      character in*24, out*24, aline*72, ctype*10, ader*2, aveop*1
-      logical dutput, flags(maxdim)
+      logical   dutput, flags(MAXDIM)
+      integer   bchan, blc(2), echan, i, iend, ioff, ist, j, jend, jst,
+     *          k, kend, kst, lIn, lOut, naxis, nxy, nxyz, nz,
+     *          siz(3), trc(2)
+      real      buf(MAXDIM), bufav(MAXDIM), chan(MAXDIM), der(MAXDIM),
+     *          dfac, eata(MAXDIM), sigma, sumsq
+      character ader*2, aveop*1, ctype*10, in*24, out*24, version*72
 
-      integer nkeys
-      parameter (nkeys = 40)
-      character keyw(nkeys)*8
-
-      data keyw/   'bunit   ','cdelt1  ','cdelt2  ','cdelt3  ',
-     *  'cdelt4  ','cdelt5  ','crota1  ','crota2  ','crota3  ',
-     *  'crota4  ','crota5  ','crpix1  ','crpix2  ','crpix3  ',
-     *  'crval1  ','crval2  ','crval3  ','crval4  ','crval5  ',
-     *  'ctype1  ','ctype2  ','ctype3  ','ctype4  ','ctype5  ',
-     *  'obstime ','epoch   ','history ','instrume','niters  ',
-     *  'object  ','restfreq','telescop','vobs    ','obsra   ',
-     *  'obsdec  ','observer','cellscal','bmaj    ',
-     *  'bmin    ','bpa     '/
+      character versan*80
+      external  versan
 c-----------------------------------------------------------------------
-c
-c Get user inputs
-c
-      call output('Zeeta: version 1.0 27-oct-89')
+      version = versan('zeeeta',
+     *                 '$Revision: 1.3 $',
+     *                 '$Date: 2010/09/20 01:53:13 $')
+
+c     Get user inputs.
       call keyini
       call keya ('in', in, ' ')
       if (in.eq.' ') call bug ('f', 'Input image not given')
@@ -92,21 +84,19 @@ c
       call keya ('der', ader, ' ')
       call keya ('aveop', aveop, 's')
       call keyfin
-c
-c Open input file
-c
-      call xyopen (lunin, in, 'old', 3, siz)
-      if (siz(1).gt.maxdim) call bug ('f','Image too big')
-      call rdhdi (lunin, 'naxis', naxis, 0)
+
+c     Open input file.
+      call xyopen (lIn, in, 'old', 3, siz)
+      if (siz(1).gt.MAXDIM) call bug ('f','Image too big')
+      call rdhdi (lIn, 'naxis', naxis, 0)
       if (naxis.lt.3) call bug ('f', 'Image only has 2 dimensions')
-      call rdhda (lunin, 'ctype1', ctype, ' ')
+      call rdhda (lIn, 'ctype1', ctype, ' ')
       if (ctype(1:4).ne.'FREQ' .and.
      *    ctype(1:4).ne.'VELO' .and.
      *    ctype(1:4).ne.'FELO') call bug ('f',
      *      'Input image not in correct order')
-c
-c Check some more inputs
-c
+
+c     Check some more inputs.
       if (sigma.le.0.0) call bug ('f', 'sigma must be positive')
       if (bchan.le.0) bchan = 1
       if (echan.le.0 .or. echan.gt.siz(1)) echan = siz(1)
@@ -118,14 +108,13 @@ c
 
       if (index(ader,'1').eq.0 .and. index(ader,'2').eq.0)
      *    call bug ('f', 'Derivative type must be 1 or 2')
-c
-c Open output image if required and set loop indices
-c
-      if (blc(1).eq.0 .and. blc(2).eq.0 .and. trc(1).eq.0 .and.
-     *    trc(2).eq.0) then
+
+c     Open output image if required and set loop indices.
+      if (blc(1).eq.0 .and. blc(2).eq.0 .and.
+     *    trc(1).eq.0 .and. trc(2).eq.0) then
         if (out.eq.' ') call bug ('f', 'Output image not given')
         dutput = .true.
-        call xyopen (lunout, out, 'new', 2, siz(2))
+        call xyopen (lOut, out, 'new', 2, siz(2))
         jst = 1
         jend = siz(2)
         kst = 1
@@ -148,113 +137,94 @@ c
         ioff = 1
         dfac = 0.5
       endif
-c
-c Add header and history to output file
-c
+
+c     Add header and history to output file.
       if (dutput) then
-        do i = 1, nkeys
-          call hdcopy (lunin, lunout, keyw(i))
-        enddo
-        call hisopen (lunout, 'append')
-        call hiswrite (lunout, 'ZEEETA (MIRIAD)')
-        aline = 'ZEEETA: in = '//in
-        call hiswrite (lunout, aline)
-        aline = 'ZEEETA out = '//out
-        call hiswrite (lunout, aline)
-        write (aline, 10) sigma
-10      format ('ZEEETA: sigma = ', 1pe12.4)
-        call hiswrite (lunout, aline)
-        write (aline, 20) bchan, echan
-20      format ('ZEEETA: channel range = ', i4, ' to ', i4)
-        call hiswrite (lunout, aline)
-        if (ioff.eq.0) then
-          aline = 'ZEEETA: one sided derivative selected'
-        else
-          aline = 'ZEEETA: two sided derivative selected'
-        endif
-        call hiswrite (lunout, aline)
-        call hisclose (lunout)
-c
-c Fill output row with zeros where derivative will not be evaluated
-c and set flagging mask
-c
+        call headcopy (lIn, lOut, 0, 0, 0, 0)
+
+        call hisopen (lOut, 'append')
+        call hiswrite (lOut, 'ZEEETA: MIRIAD' // version)
+        call hisinput (lOut, 'ZEEETA')
+        call hisclose (lOut)
+
+c       Fill output row with zeros where derivative will not be
+c       evaluated and set flagging mask.
         do i = 1, ist - 1
           eata(i) = 0.0
           flags(i) = .false.
         enddo
+
         if (iend.lt.siz(1)) then
           do i = iend + 1, siz(1)
             eata(i) = 0.0
             flags(i) = .false.
           enddo
         endif
+
         do i = ist, iend
           flags(i) = .true.
         enddo
       endif
-c
-c Loop over image. Do average and summing options separately
-c
+
+c     Loop over image. Do average and summing options separately.
       if (.not.dutput .and. aveop.eq.'a') then
-c
-c Initialize average spectrum
-c
+c       Initialize average spectrum.
         do i = 1, siz(1)
           bufav(i) = 0.0
         enddo
-c
-c Make average spectrum
-c
+
+c       Make average spectrum.
         nxy = (jend - jst + 1) * (kend - kst + 1)
         do k = kst, kend
-           call xysetpl (lunin, 1, k)
-           do j = jst, jend
-              call xyread (lunin, j, buf)
-              do i = 1, siz(1)
-                bufav(i) = bufav(i) + buf(i)/nxy
-              enddo
-           enddo
-         enddo
-c
-c Compute eta
-c
-         sumsq = 0.0
-         do i = ist, iend
-            chan(i) = i
-            der(i) = dfac * (bufav(i+ioff) - bufav(i-1))
-            sumsq = sumsq + der(i)**2
-         enddo
-         nz = (iend - ist + 1)
-         eata(1) = sqrt(sumsq/nz) / sigma
+          call xysetpl (lIn, 1, k)
+          do j = jst, jend
+            call xyread (lIn, j, buf)
+            do i = 1, siz(1)
+              bufav(i) = bufav(i) + buf(i)/nxy
+            enddo
+          enddo
+        enddo
+
+c       Compute eta.
+        sumsq = 0.0
+        do i = ist, iend
+          chan(i) = i
+          der(i) = dfac * (bufav(i+ioff) - bufav(i-1))
+          sumsq = sumsq + der(i)**2
+        enddo
+
+        nz = (iend - ist + 1)
+        eata(1) = sqrt(sumsq/nz) / sigma
+
       else
         sumsq = 0.0
         do k = kst, kend
-           call xysetpl (lunin, 1, k)
-           do j = jst, jend
-              call xyread (lunin, j, buf)
-c
-c Compute derivative, sum of squares, and eta
-c
-              if (dutput) sumsq = 0.0
-              do i = ist, iend
-                 chan(i) = i
-                 der(i) = dfac * (buf(i+ioff) - buf(i-1))
-                 sumsq = sumsq + der(i)**2
-              enddo
-              if (dutput) eata(j) = sqrt(sumsq/(iend-ist+1)) / sigma
-           enddo
-           if (dutput) then
-             call xywrite (lunout, k, eata)
-             call xyflgwr (lunout, k, flags)
-           endif
+          call xysetpl (lIn, 1, k)
+          do j = jst, jend
+            call xyread (lIn, j, buf)
+
+c           Compute derivative, sum of squares, and eta.
+            if (dutput) sumsq = 0.0
+            do i = ist, iend
+              chan(i) = i
+              der(i) = dfac * (buf(i+ioff) - buf(i-1))
+              sumsq = sumsq + der(i)**2
+            enddo
+            if (dutput) eata(j) = sqrt(sumsq/(iend-ist+1)) / sigma
+          enddo
+
+          if (dutput) then
+            call xywrite (lOut, k, eata)
+            call xyflgwr (lOut, k, flags)
+          endif
         enddo
+
         nxyz = (iend - ist + 1) * (jend - jst + 1) * (kend - kst + 1)
         eata(1) = sqrt(sumsq/nxyz) / sigma
       endif
-c
-c Close up and report answer if necessary
-c
-      call xyclose (lunin)
+
+c     Close up and report answer if necessary.
+      call xyclose (lIn)
       if (.not.dutput) then
         write (*, 30) bchan, echan, blc(1), blc(2), trc(1), trc(2),
      *                sigma, ader, aveop, eata(1)
@@ -265,7 +235,7 @@ c
      *          /,' averaging mode = ',a,
      *          /,'            eta = ',1pe12.4,/)
       else
-        call xyclose (lunout)
+        call xyclose (lOut)
       endif
 
       end
