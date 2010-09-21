@@ -16,12 +16,17 @@ c@ posout
 c       Optional text file to write out (u,v,w) values (Mopra/PKS only).
 c       These contain the UT time (seconds), RA & DEC position stamps
 c       for OTF mapping.  Default is not to write this file.
+c@ tsysout
+c       Optional text file to write out Tsys values (Mopra/PKS only).
+c       These contain the UT time (seconds), systemps, SDO, and GTP
+c       values.  Default is not to write this file.  Cannot be used with
+c       options=brief or options=header.
 c@ options
 c       Extra processing options.
 c       'brief'  Output a one-line summary for each scan.
 c       'header' Output only the source/frequency header information.
 c
-c$Id: rpfread.for,v 1.10 2010/04/30 08:23:28 cal103 Exp $
+c$Id: rpfread.for,v 1.11 2010/09/21 05:17:22 cal103 Exp $
 c--
 c History:
 c 19 Feb 2004 by tw.
@@ -38,6 +43,7 @@ c 27jul06 - tw - fix bug in output call
 c 02aug06 - tw - accommodate Parkes MB data, report obstype
 c 25sep06 - tw - output az/el every cycle (Mopra)
 c 16may07 - tw - detab; change label 900 from GOTO to CONTINUE
+c 24nov09 - tw - output Tsys table
 c-----------------------------------------------------------------------
 
       program rpfread
@@ -54,7 +60,7 @@ c-----------------------------------------------------------------------
       logical dohms, isref, atca, brief, header, present(MAXOPT)
       character ctime*10, rastr*12, dcstr*12, fitsfile*80, wuvfmt*10
       character cdash*2, src*16, opts(MAXOPT)*8, posfile*40, tline*80
-      character fline*24, versn*80
+      character fline*24, versn*80, tsysfile*40, otype*9
       integer jstat, flag, bin, if_no, source_no, baseline
       integer gtpa,gtpb,sdoa,sdob,iant1,iant2
       integer i, j, nsp, nhead, srclen, ncyc
@@ -82,6 +88,7 @@ c-----------------------------------------------------------------------
       call keya ('in', fitsfile, ' ')
       call keya ('tformat', wuvfmt, 'raw')
       call keya ('posout', posfile, '')
+      call keya ('tsysout', tsysfile, '')
       if (wuvfmt(1:3).eq.'hms') dohms = .true.
       call options ('options',opts,present,2)
       brief = present(1)
@@ -89,8 +96,8 @@ c-----------------------------------------------------------------------
 
       if (.not.brief) then
         versn = versan ('rpfread',
-     :                  '$Revision: 1.10 $',
-     :                  '$Date: 2010/04/30 08:23:28 $')
+     :                  '$Revision: 1.11 $',
+     :                  '$Date: 2010/09/21 05:17:22 $')
       end if
 
       if (fitsfile.eq.' ') then
@@ -99,6 +106,11 @@ c-----------------------------------------------------------------------
       if (brief .and. header) then
          call bug('f','Only one option can be given')
       endif
+      if (brief .or. header) then
+         if (tsysfile.ne.'') then
+           call bug('f','No options allowed when outputting Tsys')
+         endif
+      endif
       call keyfin ()
 
 *-----------------------------------------------------------------------
@@ -106,12 +118,18 @@ c-----------------------------------------------------------------------
       ln = len1(fitsfile)
       write (file,'(A)') fitsfile(1:ln)
 
-c Open the (w,u,v) logfile if requested
+c Open the log files if requested
       if (posfile .ne. '') then
          write (tline,'(a,a)') 'Writing positions to file ',
      :         posfile(1:len1(posfile))
          call output(tline)
          open(unit=11,file=posfile,status='unknown',err=1000)
+      endif
+      if (tsysfile.ne.'') then
+         write (tline,'(a,a)') 'Writing systemps to file ',
+     :         tsysfile(1:len1(tsysfile))
+         call output(tline)
+         open(unit=12,file=tsysfile,status='unknown',err=1000)
       endif
 
 c Open the RPFITS file
@@ -156,7 +174,10 @@ c CASE 1: HEADER ENCOUNTERED OR END OF FILE
                    endif
                 endif
              else
-                if (.not. header) write(6,*)
+                if (.not. header) then 
+                  write(6,*)
+                  if (tsysfile.ne.'') write(12,*)
+                endif
                 write(6,*) 'Number of spectra: ', nsp
                 write(6,*) 'Number of cycles: ', ncyc
              endif
@@ -180,8 +201,19 @@ c load the header of the next scan
              if (.not.brief) then
                 write (6,'(a,a12)') ' UT Date: ',datobs
                 write (6,'(a,a12)') ' Instrument: ',instrument
+                if (tsysfile.ne.'') then
+                   write(12,'(a,6x,a,2x,a,$)') '#UT','Bm','Obs '
+                   do i = 1,n_if
+                      do j = 1,if_nstok(i)
+                        if(j.eq.1)write(12,121) '_A',i,'_A',i,'_A',i
+                        if(j.eq.2)write(12,121) '_B',i,'_B',i,'_B',i
+                      enddo
+                   enddo
+                   write(12,*)
+                endif
              endif
           endif
+121       format(2x,'Tsys',a,i1,2x,'GTP',a,i1,2x,'SDO',a,i1,$)
           if (.not.brief) then
              if (.not.header) write(6,*)
              write(6,99)
@@ -193,12 +225,15 @@ c load the header of the next scan
           dec = dec * 180.d0 / pi
           rastr = dangle(ra/15.)
           dcstr = dangle(dec)
+          otype = obstype(1:9)
+          if (otype(3:3).eq.' '.and.otype(4:4).ne.' ')
+     *       otype(3:3) = '_'
 
 c report some parameters
 
           if (.not.brief) then
              write (6, 100) su_name(1), rastr(1:11), dcstr(1:11),
-     *              intime, obstype(1:9)
+     *              intime, otype
              do i = 1, n_if
                write (6,101) i, if_bw(i)/1e6, if_nfreq(i), if_nstok(i)
                write (6,102) if_freq(i)/1e6,if_ref(i),if_sampl(i)
@@ -273,10 +308,16 @@ c          write(*,*)
                  gtpb = sc_buffer(iptr+20)
                  sdoa = sc_buffer(iptr+19)-sc_buffer(iptr+18)
                  sdob = sc_buffer(iptr+21)-sc_buffer(iptr+20)
-                 if (.not.atca .and..not.brief .and. .not.header) then
+                 if (.not.atca .and. .not.brief .and. .not.header) then
                     write(6,105) iant, ifno, 1, tsysa, gtpa, sdoa
+                    if (tsysfile.ne.'') then
+                        if (ifno.eq.1) 
+     *                     write(12,109) sc_ut, iant, otype(1:5)
+                        write(12,120) tsysa, gtpa, sdoa
+                    endif
                     if (if_nstok(ifno).gt.1) then
                        write(6,105) iant, ifno, 2, tsysb, gtpb, sdob
+                       if (tsysfile.ne.'')write(12,120) tsysb,gtpb,sdob
                     endif
                  else if (.not.brief .and. .not.header) then
                     write(6,106) iant,sc_ut,ifno,tsysa/10,tsysb/10
@@ -301,7 +342,8 @@ c          write(*,*)
      :            i1,': ',2f8.2)
  107       format(a8,1x,a10,1x,a11,1x,a9,i7,i7,4i5,$)
  108       format(a8,1x,a10,1x,a8,1x,a9,i4,i3,2i7,2i5,2i4,$)
-
+ 109       format(f8.2,i3,1x,a5,$)
+ 120       format(1x,f8.2,i8,i8,$)
            goto 900
         endif
 
@@ -314,7 +356,10 @@ c CASE 3: BAD RECORD
 
         if (jstat .eq. 5) then
 c            write(6,*) 'JSTAT=5 (bad record skipped)'
-           if (.not.brief.and..not.header) write(6,*)
+           if (.not.brief.and..not.header) then
+              write(6,*)
+              if (tsysfile.ne.'')write(12,*)
+           endif
            ncyc = ncyc + 1
            goto 900
         endif
