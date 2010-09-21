@@ -9,55 +9,56 @@ c       a transition by measuring the shift in the line owing to the
 c       Zeeman effect.
 c
 c@ iin
-c       Stokes I spectral cube, with axes in order Channel, X, Y.
+c       Stokes I spectral cube with channel on the first axis.
 c@ vin
-c       Stokes V spectral cube, with axes in order Channel, X, Y.
+c       Stokes V spectral cube with channel on the first axis.
 c@ b
 c       Output file name for line-of-sight magnetic field.
-c@ g
-c       Output file name for amount of residual I found in V (FIT only)
 c@ d
-c       Output file name for the derivative of I/2 spectrum (DIV only)
+c       Output file name for the derivative of I/2 spectrum (op=div
+c       only).
 c@ be
-c       Output file name for the error in B (DIV only)
+c       Output file name for the error in B (op=div only).
+c@ g
+c       Output file name for amount of residual I found in V (op=fit
+c       only).
 c@ blc
-c       Bottom left corner of box to be fit
+c       Bottom left corner of box to be fit.
 c@ trc
-c       Top right corner of box to be fit
+c       Top right corner of box to be fit.
 c@ freq
-c       Frequency of line in GHz. This is used to determine amount of
-c       splitting per Gauss.
+c       Frequency of line in GHz, used to determine amount of splitting
+c       per Gauss.
 c@ op
-c       Operation code. Possible values are "div" and "fit". For
-c       "div", the line shift is determined by dividing V by the
-c       derivative of I/2. For "fit", the line shift is determined
-c       by fitting of the derivative of I and I to V.
+c       Operation code that controls how the line shift is determined -
+c         div: by dividing V by the derivative of I/2, or
+c         fit: by fitting of the derivative of I and I to V.
 c@ cutoff
-c       For "div", the division will not be performed unless the
+c       For op="div", the division will not be performed unless the
 c       derivative of I/2 is greater than cutoff.
-c       For "fit", the fit will not be performed unless one or more
-c       channels in the I spectrum is larger in absolute
-c       value than cutoff.
+c       For op="fit", the fit will not be performed unless one or more
+c       channels in the I spectrum is larger in absolute value than
+c       cutoff.
 c@ vrms
 c       RMS deviation in V spectrum in a signal free area.  This can
-c       easily be gotten using histo.  Used for calculating error in B
+c       be obtained using histo.  Used for calculating error in B
 c       for op=div.
 c@ mode
 c       This determines the algorithms used, if operation="fit". It
 c       can consist of several flags:
-c        l  Include leakage term.
-c        2  Use 2 sided derivative approximation.
-c        m  Use maximum likelihood technique.
+c        l  Include leakage term,
+c        2  Use 2 sided derivative approximation,
+c        m  Use maximum likelihood technique,
 c        x  Perform extra checks for better solutions, when
 c           using the maximum likelihood technique.
-c       Default mode=2m
+c       Default mode=2m.
 c@y corlen
 c       Correlation length.  Selected window must be divisible by this
 c       number, which is the number of pixels over which you think the
 c       magnetic field might be constant.  Default is 1, try maybe 2
 c       or 4.
 c
-c$Id: zeemap.for,v 1.2 2010/09/20 05:08:20 cal103 Exp $
+c$Id: zeemap.for,v 1.3 2010/09/21 06:58:03 cal103 Exp $
 c--
 c
 c  History:
@@ -86,8 +87,9 @@ c  rjs        02-jul-1997     cellscal change
 c
 c-----------------------------------------------------------------------
       include 'tmpdim.h'
-      real blank
-      integer maxcor
+
+      real      blank
+      integer   maxcor
       parameter (blank = 0.0, maxcor = 4)
 
       real cutoff, vrms, freq
@@ -104,20 +106,6 @@ c-----------------------------------------------------------------------
      *  naxis, j, k, l, jj, kk, ll, corlen2, n1
       character aline*80, ctypei*8, ctypev*8, itoaf*1
       logical noline, converge, flags(maxdim,maxcor)
-c
-c     Define header keywords.  Since op=fit and div require different
-c     keywords to be modified, pass the header copying routine a
-c     different number of keywords depending on the op.  Must get the
-c     list in the right order here for this to work.
-c
-      integer nkeys, nkeysmal, nkeylarg
-      parameter (nkeys=19, nkeysmal=8, nkeylarg=17)
-      character keyw(nkeys)*9
-
-      data keyw/        'obstime  ','epoch    ','history  ','instrume ',
-     *      'object   ','telescop ','observer ','restfreq ','cdelt1   ',
-     *      'cdelt2   ','cdelt3   ','crval1   ','crval2   ','crval3   ',
-     *      'ctype1   ','ctype2   ','ctype3   ','cellscal ','vobs     '/
 c-----------------------------------------------------------------------
       call output('Zeemap: version 1.0 01-jul-94')
 c
@@ -163,11 +151,10 @@ c
       call sizes (op, blc, trc, siz, fsiz, dsiz, naxis)
       call corcheck (maxcor, corlen, fsiz)
 c
-c Open output files and write headers.
+c Create the output files and write their headers.
 c
-      call headers (op, nkeys, keyw, nkeysmal, nkeylarg, lunI, lunB,
-     *              lunG, lunD, lunBE, B, G, D, BE, naxis, siz, dsiz,
-     *              blc, noline)
+      call mkOut (op, lunI, lunB, lunG, lunD, lunBE, B, G, D, BE,
+     *            naxis, siz, dsiz, blc, noline)
 c
 c Add history to output files.
 c
@@ -190,12 +177,14 @@ c
           if (B.ne.' ') call xysetpl(lunB,1,j-blc(3)+1)
           if (D.ne.' ') call xysetpl(lunD,1,j-blc(3)+1)
           if (BE.ne.' ') call xysetpl(lunBE,1,j-blc(3)+1)
+
           do k = blc(2), trc(2)
             call xyread(lunI,k,ibuf)
             call xyread(lunV,k,Vbuf)
             do l = blc(1)+1, trc(1)-1
               di(l-blc(1)) = (ibuf(l+1)-ibuf(l-1))*0.25
             enddo
+
             do l = 1, trc(1)-blc(1)-1
               if (abs(di(l)).ge.cutoff) then
                 Bbuf(l,1)  = scale*Vbuf(l+blc(1))/di(l)
@@ -205,6 +194,7 @@ c
                 Bebuf(l,1) = blank
               endif
             enddo
+
             if (B.ne.' ') call xywrite(lunB,k-blc(2)+1,Bbuf(1,1))
             if (D.ne.' ') call xywrite(lunD,k-blc(2)+1,di)
             if (BE.ne.' ') call xywrite(lunBE,k-blc(2)+1,Bebuf(1,1))
@@ -508,7 +498,7 @@ c***********************************************************************
       subroutine corcheck (maxcor, corlen, fsiz)
       integer maxcor, corlen, fsiz(*)
 c-----------------------------------------------------------------------
-c  Check validity of correlation length
+c  Check validity of correlation length.
 c-----------------------------------------------------------------------
       if (corlen.le.1) corlen = 1
       if (corlen.gt.maxcor) call bug ('f',
@@ -522,107 +512,74 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine headers (op, nkeys, keyw, nkeysmal, nkeylarg, lunI,
-     *                    lunB, lunG, lunD, lunBE, B, G, D, BE, naxis,
-     *                    siz, dsiz, blc, noline)
+      subroutine mkOut(op, lunI, lunB, lunG, lunD, lunBE, B, G, D, BE,
+     *                 naxis, siz, dsiz, blc, noline)
 
-      integer nkeys, nkeysmal, nkeylarg, lunI, lunB, lunG, lunD,
-     *  lunBE, naxis, siz(3), dsiz(3), blc(3)
-      character keyw(nkeys)*(*), op*(*), B*(*), G*(*), D*(*), BE*(*)
-      logical noline
+      logical   noline
+      integer   lunI, lunB, lunG, lunD, lunBE, naxis, siz(3), dsiz(3),
+     *          blc(3)
+      character op*(*), B*(*), G*(*), D*(*), BE*(*)
 c-----------------------------------------------------------------------
 c  Open the output files, copy across unchanged header keywords and
 c  write new ones to the output files.
 c-----------------------------------------------------------------------
-      integer ikeys, j
-      real cdelt, crval, crpix
-      character bunit*9, ctype*9
+      integer   axmap(3), nblc(3)
+      character bunit*5
 c-----------------------------------------------------------------------
-c
-c First open the output files and copy across header keywords from the
-c I file.  Do the files that are common to FIT and DIV first, always
-c copy larger keyword list for D
-c
-      if (op.eq.'fit') then
-        ikeys = nkeysmal
+c     "Brightness" units in the B and B(error) maps.
+      if (noline) then
+        bunit = 'HERTZ'
       else
-        ikeys = nkeylarg
+        bunit = 'GAUSS'
       endif
-      if (B.ne.' ')  call opimhcop (lunI, lunB, B, naxis, siz,
-     *                              ikeys, keyw)
-c
-c Files for DIV only
-c
-      if (D.ne.' ')  call opimhcop (lunI, lunD, D, naxis, Dsiz,
-     *                              nkeylarg, keyw)
-      if (BE.ne.' ') call opimhcop (lunI, lunBE, BE, naxis, siz,
-     *                              nkeylarg, keyw)
-c
-c File for FIT only
-c
-      if (G.ne.' ')  call opimhcop (lunI, lunG, G, naxis, siz,
-     *                              nkeysmal, keyw)
-c
-c Now write new header keywords where necessary
-c
+
+c     Create the output files and copy header keywords from the I file.
       if (op.eq.'div') then
-        if (B.ne.' ')  call hdcrpix (lunI, lunB, blc)
+        axmap(1) = 1
+        axmap(2) = 2
+        axmap(3) = 3
+
+        nblc(1) = blc(1) + 1
+        nblc(2) = blc(2)
+        nblc(3) = blc(3)
+
+        if (B.ne.' ') then
+          call xyopen (lunB, B, 'new', naxis, siz)
+          call headcopy(lunI, lunB, axMap, 3, nblc, 0)
+          call wrhda (lunB,  'bunit', bunit)
+        endif
 
         if (D.ne.' ') then
-          call hdcrpix (lunI, lunD, blc)
-          bunit = 'JY/BEAM'
-          call wrhda (lunD, 'bunit', bunit)
+          call xyopen (lunD, D, 'new', naxis, siz)
+          call headcopy(lunI, lunD, axMap, 3, nblc, 0)
+          call wrhda (lunD, 'bunit', 'JY/BEAM')
         endif
 
         if (BE.ne.' ') then
-          call hdcrpix (lunI, lunBE, blc)
-          if (noline) then
-            bunit = 'HERTZ'
-            call wrhda (lunBE, 'bunit', bunit)
-          else
-            bunit = 'GAUSS'
-            call wrhda (lunBE, 'bunit', bunit)
-          endif
+          call xyopen (lunBE, BE, 'new', naxis, siz)
+          call headcopy(lunI, lunBE, axMap, 3, nblc, 0)
+          call wrhda (lunBE, 'bunit', bunit)
         endif
-      else
-c
-c Do some keywords for the first two output axes
-c
-        do j = 2, 3
-          call rdhdmul (lunI, j, ctype, cdelt, crval, crpix)
-          crpix = crpix - real(blc(j)) + 1.0
-          if (B.ne.' ') call wrhdmul (lunB, j-1, ctype, cdelt, crval,
-     *                                crpix)
-          if (G.ne.' ') call wrhdmul (lunG, j-1, ctype, cdelt, crval,
-     *                                crpix)
-        enddo
-c
-c Now the third axis
-c
-        ctype = 'UNKNOWN'
-        cdelt = 1.0
-        crval = 0.0
-        crpix = 1.0
-        if (B.ne.' ') call wrhdmul(lunB, 3, ctype, cdelt, crval, crpix)
-        if (G.ne.' ') call wrhdmul(lunG, 3, ctype, cdelt, crval, crpix)
-c
-c Now fix the units
-c
+
+      else if (op.eq.'fit') then
+        axmap(1) = 2
+        axmap(2) = 3
+        axmap(3) = 0
+
+        nblc(1) = blc(2)
+        nblc(2) = blc(3)
+        nblc(3) = 1
+
+        if (B.ne.' ') then
+          call xyopen (lunB, B, 'new', naxis, siz)
+          call headcopy(lunI, lunB, axMap, 3, nblc, 0)
+          call wrhda (lunB,  'bunit', bunit)
+        endif
+
         if (G.ne.' ') then
-          call wrhdmul (lunG, 3, ctype, cdelt, crval, crpix)
-          call wrhda (lunG, 'bunit', '       ')
-        endif
-      endif
-c
-c     B is common output to FIT and DIV, put some keywords in here.
-c
-      if (B.ne.' ') then
-        if (noline) then
-          bunit = 'HERTZ'
-          call wrhda (lunB,  'bunit', bunit)
-        else
-          bunit = 'GAUSS'
-          call wrhda (lunB,  'bunit', bunit)
+          call xyopen (lunG, G, 'new', naxis, siz)
+          call headcopy(lunI, lunG, axMap, 3, nblc, 0)
+          call wrhda (lunG, 'bunit', ' ')
         endif
       endif
 
@@ -653,118 +610,24 @@ c-----------------------------------------------------------------------
       endif
 
       if (G.ne.' ') then
-        call newhis (lunG, I, V, B, G, D, BE, blc, trc,
-     *               op, cutoff, freq, mode, corlen)
+        call newhis (lunG, I, V, B, G, D, BE, blc, trc, op, cutoff,
+     *               freq, mode, corlen)
         call hisclose(lunG)
       endif
 
       if (D.ne.' ') then
-        call newhis (lunD, I, V, B, G, D, BE, blc, trc,
-     *               op, cutoff, freq, mode, corlen)
+        call newhis (lunD, I, V, B, G, D, BE, blc, trc, op, cutoff,
+     *               freq, mode, corlen)
         call hisclose(lunD)
       endif
 
       if (BE.ne.' ') then
-        call newhis (lunBE, I, V, B, G, D, BE, blc, trc,
-     *               op, cutoff, freq, mode, corlen)
+        call newhis (lunBE, I, V, B, G, D, BE, blc, trc, op, cutoff,
+     *               freq, mode, corlen)
         write (string,100) vrms
         if (op.eq.'div') call hiswrite (lunBE,string)
         call hisclose(lunBE)
       endif
-
-      end
-
-c***********************************************************************
-
-      subroutine opimhcop (lunI, lun, fnam, naxis, siz, nkeys, keyw)
-
-      integer lunI, lun, naxis, siz(3), nkeys
-      character keyw(nkeys)*(*), fnam*(*)
-c-----------------------------------------------------------------------
-c  Open an output image file and copy header keywords from the input I
-c  image to it.
-c-----------------------------------------------------------------------
-      integer i
-c-----------------------------------------------------------------------
-      call xyopen (lun, fnam, 'new', naxis, siz)
-      do i = 1, nkeys
-        call hdcopy (lunI, lun, keyw(i))
-      enddo
-
-      end
-
-c***********************************************************************
-
-      subroutine hdcrpix (lin, lout, blc)
-
-      integer lin, lout, blc(*)
-c-----------------------------------------------------------------------
-c  Modify the CRPIX header keyword to reflect the size of the fitted
-c  area and write to an output file
-c-----------------------------------------------------------------------
-      real crpix
-c-----------------------------------------------------------------------
-      call rdhdr (lin, 'crpix1', crpix, 1.0)
-      crpix = crpix - blc(1)
-      call wrhdr (lout, 'crpix1', crpix)
-
-      call rdhdr (lin, 'crpix2', crpix, 1.0)
-      crpix = crpix - blc(2) + 1
-      call wrhdr (lout, 'crpix2', crpix)
-
-      call rdhdr (lin, 'crpix3', crpix, 1.0)
-      crpix = crpix - blc(3) + 1
-      call wrhdr (lout, 'crpix3', crpix)
-
-      end
-
-c***********************************************************************
-
-      subroutine rdhdmul (lun, axis, ctype, cdelt, crval, crpix)
-
-      integer lun, axis
-      real cdelt, crval, crpix
-      character ctype*(*)
-c-----------------------------------------------------------------------
-c  Read a group of multiple keywrds from a header.
-c-----------------------------------------------------------------------
-      character*1 cn, itoaf
-      character*80 umsg
-c-----------------------------------------------------------------------
-      cn = itoaf(axis)
-      umsg = 'ctype'//cn
-      call rdhda (lun, umsg , ctype, ' ')
-      umsg = 'cdelt'//cn
-      call rdhdr (lun, umsg , cdelt, 0.0)
-      umsg = 'crval'//cn
-      call rdhdr (lun, umsg , crval, 0.0)
-      umsg = 'crpix'//cn
-      call rdhdr (lun, umsg , crpix, 1.0)
-
-      end
-
-c***********************************************************************
-
-      subroutine wrhdmul (lun, axis, ctype, cdelt, crval, crpix)
-
-      real cdelt, crval, crpix
-      integer lun, axis
-      character ctype*(*)
-c-----------------------------------------------------------------------
-c  Write a group of multiple keywords into the header.
-c-----------------------------------------------------------------------
-      character*1 itoaf, cn
-      character*80 umsg
-c-----------------------------------------------------------------------
-      cn = itoaf(axis)
-      umsg = 'ctype'//cn
-      call wrhda (lun, umsg , ctype)
-      umsg = 'cdelt'//cn
-      call wrhdr (lun, umsg , cdelt)
-      umsg = 'crval'//cn
-      call wrhdr (lun, umsg , crval)
-      umsg = 'crpix'//cn
-      call wrhdr (lun, umsg, crpix)
 
       end
 
