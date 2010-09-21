@@ -1,4 +1,5 @@
-c
+      program rpfread
+
 c= RPFREAD - Output information about an ATNF RPFITS file
 c& tw
 c: utilities
@@ -26,7 +27,7 @@ c       Extra processing options.
 c       'brief'  Output a one-line summary for each scan.
 c       'header' Output only the source/frequency header information.
 c
-c$Id: rpfread.for,v 1.11 2010/09/21 05:17:22 cal103 Exp $
+c$Id: rpfread.for,v 1.12 2010/09/21 23:49:07 cal103 Exp $
 c--
 c History:
 c 19 Feb 2004 by tw.
@@ -45,18 +46,15 @@ c 25sep06 - tw - output az/el every cycle (Mopra)
 c 16may07 - tw - detab; change label 900 from GOTO to CONTINUE
 c 24nov09 - tw - output Tsys table
 c-----------------------------------------------------------------------
-
-      program rpfread
-
+      include 'mirconst.h'
       include 'rpfits.inc'
 
-      double precision pi
-      parameter (pi = 3.1415 92653 58979 3238 d0)
       integer MAXOPT
       parameter (MAXOPT = 2)
       integer MAXCHAN, MAXPOL
       parameter (MAXCHAN = 8192)
       parameter (MAXPOL = 4)
+
       logical dohms, isref, atca, brief, header, present(MAXOPT)
       character ctime*10, rastr*12, dcstr*12, fitsfile*80, wuvfmt*10
       character cdash*2, src*16, opts(MAXOPT)*8, posfile*40, tline*80
@@ -72,16 +70,14 @@ c-----------------------------------------------------------------------
       real    az, el, par, tsysa, tsysb
       double precision rvis, rvisq
       complex vis(MAXCHAN*MAXPOL)
-      equivalence ( sc_buffer(1), sc_cal(1,1,1) )
+      equivalence (sc_buffer(1), sc_cal(1,1,1))
       data    opts /'brief','header'/
 
-* functions
+c functions
       integer   len1
       real      amin1, amax1
       character dangle*12, versan*80
-
-*-----------------------------------------------------------------------
-
+c-----------------------------------------------------------------------
       dohms = .false.
       atca = .false.
       call keyini ()
@@ -96,9 +92,9 @@ c-----------------------------------------------------------------------
 
       if (.not.brief) then
         versn = versan ('rpfread',
-     :                  '$Revision: 1.11 $',
-     :                  '$Date: 2010/09/21 05:17:22 $')
-      end if
+     *                  '$Revision: 1.12 $',
+     *                  '$Date: 2010/09/21 23:49:07 $')
+      endif
 
       if (fitsfile.eq.' ') then
          call bug('f','Input file must be given (in=)')
@@ -113,21 +109,20 @@ c-----------------------------------------------------------------------
       endif
       call keyfin ()
 
-*-----------------------------------------------------------------------
 
       ln = len1(fitsfile)
       write (file,'(A)') fitsfile(1:ln)
 
 c Open the log files if requested
-      if (posfile .ne. '') then
+      if (posfile.ne.'') then
          write (tline,'(a,a)') 'Writing positions to file ',
-     :         posfile(1:len1(posfile))
+     *         posfile(1:len1(posfile))
          call output(tline)
          open(unit=11,file=posfile,status='unknown',err=1000)
       endif
       if (tsysfile.ne.'') then
          write (tline,'(a,a)') 'Writing systemps to file ',
-     :         tsysfile(1:len1(tsysfile))
+     *         tsysfile(1:len1(tsysfile))
          call output(tline)
          open(unit=12,file=tsysfile,status='unknown',err=1000)
       endif
@@ -136,12 +131,12 @@ c Open the RPFITS file
 
       jstat = -3  ! open and read first header
       call rpfitsin (jstat, vis, weight, baseline, ut, u, v, w,
-     :                        flag, bin, if_no, source_no)
+     *                        flag, bin, if_no, source_no)
 
-      if (jstat .eq. -1) then
+      if (jstat.eq.-1) then
         call output(' file open troubles')
         goto 999
-      end if
+      endif
 
       if (.not.brief) then
          call output(' Reading ' // file)
@@ -157,14 +152,14 @@ c Try to read data
 
         jstat = 0
         call rpfitsin (jstat, vis, weight, baseline, ut, u, v, w,
-     :                 flag, bin, if_no, source_no)
+     *                 flag, bin, if_no, source_no)
 
 c CASE 1: HEADER ENCOUNTERED OR END OF FILE
 
-        if (jstat .eq. 1 .or. jstat .eq. 3) then
+        if (jstat.eq.1 .or. jstat.eq.3) then
 
-          if (nhead .gt. 0) then            ! output if not start
-             if (nsp .gt. 0) ncyc = ncyc + 1
+          if (nhead.gt.0) then            ! output if not start
+             if (nsp.gt.0) ncyc = ncyc + 1
              if (brief) then
                 if (ncyc.gt.0) then
                    if (atca) then
@@ -174,7 +169,7 @@ c CASE 1: HEADER ENCOUNTERED OR END OF FILE
                    endif
                 endif
              else
-                if (.not. header) then 
+                if (.not.header) then
                   write(6,*)
                   if (tsysfile.ne.'') write(12,*)
                 endif
@@ -186,8 +181,8 @@ c CASE 1: HEADER ENCOUNTERED OR END OF FILE
 
 c IF END OF FILE: exit here
 
-          if (jstat .eq. 3) then
-             if (.not. brief) write(6,*) 'END OF FILE'
+          if (jstat.eq.3) then
+             if (.not.brief) write(6,*) 'END OF FILE'
              goto 999
           endif
 
@@ -195,18 +190,18 @@ c load the header of the next scan
 
           jstat = -1
           call rpfitsin (jstat, vis, weight, baseline, ut, u, v, w,
-     :                   flag, bin, if_no, source_no)
-          if (nhead .eq. 1) then
+     *                   flag, bin, if_no, source_no)
+          if (nhead.eq.1) then
              if (instrument(1:4).eq.'ATCA') atca=.true.
              if (.not.brief) then
                 write (6,'(a,a12)') ' UT Date: ',datobs
                 write (6,'(a,a12)') ' Instrument: ',instrument
                 if (tsysfile.ne.'') then
                    write(12,'(a,6x,a,2x,a,$)') '#UT','Bm','Obs '
-                   do i = 1,n_if
-                      do j = 1,if_nstok(i)
-                        if(j.eq.1)write(12,121) '_A',i,'_A',i,'_A',i
-                        if(j.eq.2)write(12,121) '_B',i,'_B',i,'_B',i
+                   do i = 1, n_if
+                      do j = 1, if_nstok(i)
+                        if (j.eq.1) write(12,121) '_A',i,'_A',i,'_A',i
+                        if (j.eq.2) write(12,121) '_B',i,'_B',i,'_B',i
                       enddo
                    enddo
                    write(12,*)
@@ -221,12 +216,12 @@ c load the header of the next scan
              write(6,*)
           endif
  99       format('--------------------------------------',$)
-          ra  = ra  * 180.d0 / pi
-          dec = dec * 180.d0 / pi
-          rastr = dangle(ra/15.)
+          ra  = ra  * DR2D
+          dec = dec * DR2D
+          rastr = dangle(ra/15.0)
           dcstr = dangle(dec)
           otype = obstype(1:9)
-          if (otype(3:3).eq.' '.and.otype(4:4).ne.' ')
+          if (otype(3:3).eq.' ' .and. otype(4:4).ne.' ')
      *       otype(3:3) = '_'
 
 c report some parameters
@@ -249,11 +244,11 @@ c Get frequency info (brief mode)
           freq1 = nint(if_freq(1)/1e6)
           bw1 = nint(if_bw(1)/1e6)
           nch1 = if_nfreq(1)
-          if (n_if .gt. 1) then
+          if (n_if.gt.1) then
              freq2 = nint(if_freq(2)/1e6)
              bw2 = nint(if_bw(2)/1e6)
              nch2 = if_nfreq(2)
-          else if (if_nstok(1) .eq. 2) then
+          else if (if_nstok(1).eq.2) then
              freq2 = freq1
              bw2 = bw1
              nch2 = nch1
@@ -276,11 +271,11 @@ c determine if this is a reference obsn
           ncyc = 0
           goto 900
 
-        end if         ! jstat .eq. 1 or 3
+        endif         ! jstat.eq.1 or 3
 
 c CASE 2: SYSCAL RECORD
 
-        if (baseline .eq. -1) then    ! SYS cal data
+        if (baseline.eq.-1) then    ! SYS cal data
            call format_time(sc_ut,ctime)
            iptr = 1
            bufdim = sc_q * sc_if * sc_ant
@@ -289,12 +284,12 @@ c          do i = 1, bufdim
 c             write(*,*) i, sc_buffer(i)
 c           enddo
 c          write(*,*)
-           do while (iptr .lt. bufdim)
+           do while (iptr.lt.bufdim)
               iant = (sc_buffer(iptr) + 0.5)
-              if (iant .eq. 0) then ! Ant 0 record
-                 az  = sc_buffer(iptr+1)*180./pi
-                 el  = sc_buffer(iptr+2)*180./pi
-                 par = sc_buffer(iptr+3)*180./pi
+              if (iant.eq.0) then ! Ant 0 record
+                 az  = sc_buffer(iptr+1)*DR2D
+                 el  = sc_buffer(iptr+2)*DR2D
+                 par = sc_buffer(iptr+3)*DR2D
                  if (ifno.eq.1) then
                     if (.not.(atca .or. brief .or. header)) then
                        write(6,104) az,el,par
@@ -311,13 +306,13 @@ c          write(*,*)
                  if (.not.atca .and. .not.brief .and. .not.header) then
                     write(6,105) iant, ifno, 1, tsysa, gtpa, sdoa
                     if (tsysfile.ne.'') then
-                        if (ifno.eq.1) 
+                        if (ifno.eq.1)
      *                     write(12,109) sc_ut, iant, otype(1:5)
                         write(12,120) tsysa, gtpa, sdoa
                     endif
                     if (if_nstok(ifno).gt.1) then
                        write(6,105) iant, ifno, 2, tsysb, gtpb, sdob
-                       if (tsysfile.ne.'')write(12,120) tsysb,gtpb,sdob
+                       if (tsysfile.ne.'') write(12,120) tsysb,gtpb,sdob
                     endif
                  else if (.not.brief .and. .not.header) then
                     write(6,106) iant,sc_ut,ifno,tsysa/10,tsysb/10
@@ -337,9 +332,9 @@ c          write(*,*)
 
  104       format(' Az, El, par ang (deg): ',3f8.2)
  105       format(' Beam',i2,' IF',i2,' Pol ',i1,': Tsys, GTP, SDO: ',
-     :            f8.2,i10,i10)
+     *            f8.2,i10,i10)
  106       format(' Ant',i2,' UT ',f8.2,', Tsys for chan A,B IF ',
-     :            i1,': ',2f8.2)
+     *            i1,': ',2f8.2)
  107       format(a8,1x,a10,1x,a11,1x,a9,i7,i7,4i5,$)
  108       format(a8,1x,a10,1x,a8,1x,a9,i4,i3,2i7,2i5,2i4,$)
  109       format(f8.2,i3,1x,a5,$)
@@ -349,16 +344,16 @@ c          write(*,*)
 
 c CASE 3: BAD RECORD
 
-        if (baseline .lt. 257) then
+        if (baseline.lt.257) then
           write (6, '('' bad baseline # : '', I5)') baseline
           goto 900
         endif
 
-        if (jstat .eq. 5) then
+        if (jstat.eq.5) then
 c            write(6,*) 'JSTAT=5 (bad record skipped)'
-           if (.not.brief.and..not.header) then
+           if (.not.brief .and. .not.header) then
               write(6,*)
-              if (tsysfile.ne.'')write(12,*)
+              if (tsysfile.ne.'') write(12,*)
            endif
            ncyc = ncyc + 1
            goto 900
@@ -370,7 +365,7 @@ c CASE 4: SPECTRUM TO READ IN
         iant1 = baseline/256
         iant2 = baseline - (256*iant1)
 
-        if (flag .eq. 0) then
+        if (flag.eq.0) then
            cdash = '--'
            if (isref) cdash = '-R'
         else
@@ -385,25 +380,25 @@ c CASE 4: SPECTRUM TO READ IN
            write(tline,114) iant1, iant2, if_no, ut, bin, intbase
         endif
  110    format (' Spectrum for bsln ',i2,'-',i2,' IF ',i2,' at UT ',
-     :          a,'  bin ',i2,' inttime',f8.3)
+     *          a,'  bin ',i2,' inttime',f8.3)
  114    format (' Spectrum for bsln ',i2,'-',i2,' IF ',i2,' at UT ',
-     :          f9.3,'  bin ',i2,' inttime',f8.3)
-        if (.not.brief.and..not.header) call output(tline)
+     *          f9.3,'  bin ',i2,' inttime',f8.3)
+        if (.not.brief .and. .not.header) call output(tline)
         if (atca) goto 900
 
-        if (bin .eq. 1 .and. if_no .eq. 1) then
+        if (bin.eq.1 .and. if_no.eq.1) then
            write (fline, 116) cdash, iant1
            if (dohms) then
               call format_time(w,ctime)
-              rastr = dangle(dble(u)*180.d0/(15.d0*pi))
-              dcstr = dangle(dble(v)*180.d0/pi)
+              rastr = dangle(dble(u)*DR2D/15d0)
+              dcstr = dangle(dble(v)*DR2D)
               write (tline, 111) ctime, rastr, dcstr
            else
-              write (tline, 113) w, u*12./pi, v*180./pi
+              write (tline, 113) w, u*DR2D/15d0, v*DR2D
            endif
-           if (.not.brief.and..not.header) call output(fline//tline)
-           if (posfile .ne. '') then
-              write (11, 115) w, u*12./pi, v*180./pi, iant1, iant2
+           if (.not.brief .and. .not.header) call output(fline//tline)
+           if (posfile.ne.'') then
+              write (11, 115) w, u*DR2D/15d0, v*DR2D, iant1, iant2
            endif
         endif
  111    format (a,2x,a,2x,a)
@@ -416,13 +411,13 @@ c CASE 4: SPECTRUM TO READ IN
 c Calculate the max, min, mean and rms of the spectrum
 
         do i = 1, if_nstok(if_no)
-          rmin = 9999.
-          rmax = -9999.
-          rvis = 0.
-          rvisq = 0.
+          rmin = 9999.0
+          rmax = -9999.0
+          rvis = 0.0
+          rvisq = 0.0
 c         write(*,*) 'Pol ',i,' has ',if_nfreq(if_no),' chans'
           do j = 1, if_nfreq(if_no)
-            if (if_nstok(if_no) .eq. 2) then
+            if (if_nstok(if_no).eq.2) then
                rvis = rvis + real(vis(2*j-(2-i)))
                rvisq = rvisq + real(vis(2*j-(2-i)))**2
                rmin = amin1(rmin,real(vis(2*j-(2-i))))
@@ -437,10 +432,10 @@ c         write(*,*) 'Pol ',i,' has ',if_nfreq(if_no),' chans'
           rvis = rvis / if_nfreq(if_no)
           rvisq = sqrt(rvisq / if_nfreq(if_no) - rvis**2)
           write(6,112) cdash, i,': ',rvis,' rms: ',rvisq,' min: ',rmin,
-     :                 ' max: ',rmax
+     *                 ' max: ',rmax
         enddo
  112    format(1x,a2,' Data mean, pol',i2,a,f9.3,a,f9.3,a,f9.3,a,f9.3)
-        if (flag .ne. 0) then
+        if (flag.ne.0) then
            write(6,*) 'THIS SPECTRUM IS FLAGGED'
         endif
 
@@ -450,12 +445,12 @@ c         write(*,*) 'Pol ',i,' has ',if_nfreq(if_no),' chans'
 
       jstat = 1
       call rpfitsin (jstat, vis, weight, baseline, ut, u, v, w,
-     :                        flag, bin, if_no, source_no)
+     *                        flag, bin, if_no, source_no)
 
       if (jstat.ne.0) THEN
          write(6,*)  'Error closing file'
       endif
-      if (posfile .ne. '') then
+      if (posfile.ne.'') then
          call txtclose(tun)
       endif
 
@@ -466,39 +461,38 @@ c         write(*,*) 'Pol ',i,' has ',if_nfreq(if_no),' chans'
       stop
       end
 
-************************************************************************
+c***********************************************************************
 
       subroutine  format_time (uts, tim_str)
 
-      real ut,uts,left
+      real    uts
       character*(*) tim_str
-
+c-----------------------------------------------------------------------
       integer ihr, imn, isec, fsec
-
-*-----------------------------------------------------------------------
-
-      ut = uts/3600.
-      ihr = ut
-      left = (ut - ihr) * 60.
-      imn = left
-      left = (left - imn) * 60.
+      real    left, ut
+c-----------------------------------------------------------------------
+      ut   = uts/3600.0
+      ihr  = ut
+      left = (ut - ihr) * 60.0
+      imn  = left
+      left = (left - imn) * 60.0
       isec = left
-      fsec = nint((left - isec)*10.)
+      fsec = nint((left - isec)*10.0)
 
-      if (fsec .eq. 10) then
+      if (fsec.eq.10) then
          isec = isec + 1
          fsec = 0
       endif
 
-      if (isec .ge. 60) then
+      if (isec.ge.60) then
         isec = isec - 60
-        imn = imn + 1
-      end if
+        imn  = imn + 1
+      endif
 
-      if (imn .ge. 60) then
+      if (imn.ge.60) then
         imn = imn - 60
         ihr = ihr + 1
-      end if
+      endif
 
       write (tim_str, 10) ihr, imn, isec, fsec
  10   format (I2.2, ':', I2.2, ':', I2.2, '.', I1)
