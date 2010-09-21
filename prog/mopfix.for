@@ -25,8 +25,15 @@ c       Maximum position jump in arcmin for interpolation.  If the
 c       distance between the flanking position stamps exceeds this, the
 c       spectrum is flagged.  Default: 1 arcmin.
 c@ flagtime
-c       Optional time range to flag spectra.  Give two values in UT
-c       hh:mm:ss format separated by comma.  Default is no flagging.
+c       Up to four time ranges to flag spectra.  Give up to four pairs of 
+c       values in UT hh:mm:ss format separated by commas.  Default is no 
+c       flagging.  If a pair is in reverse time order, it is assumed that
+c       the time range wraps around a UT day boundary.
+c@ flagscan
+c       Up to four scan ranges to flag spectra.  Give up to four pairs of 
+c       values numbered starting from 1.  RPFREAD options=brief can be used
+c       to list all the scans in a file (including offs and paddles).  
+c       Default is no flagging.
 c@ resample
 c       Factor (>0) to change the channel width by.  Total bandwidth is
 c       approximately preserved while the number of channels changes (a
@@ -40,7 +47,7 @@ c       'doextrap'  Use linear extrapolation if gap between flanking
 c                   position stamps exceeds maxgap.
 c       'noref'     Eliminate the reference scans from the file.
 c
-c$Id: mopfix.for,v 1.9 2010/04/30 08:23:28 cal103 Exp $
+c$Id: mopfix.for,v 1.10 2010/09/21 05:03:30 cal103 Exp $
 c--
 c 28jun04 - tw - created from rpfread and mapread
 c 13jul04 - tw - write OBSTYPE card for LiveData
@@ -57,6 +64,7 @@ c 20jul06 - tw - remove polflag parameter (didn't work); tidy for miriad
 c 21jul06 - tw - fixed subtle error in cos(dc) correction
 c 16may07 - tw - detab; change label 900 from GOTO to CONTINUE
 c 29aug09 - tw - resample option; convert bunit to 'K'
+c 16dec09 - tw - additional time ranges in flagtime; flagscan parameter
 c-----------------------------------------------------------------------
 
       program mopfix
@@ -78,15 +86,15 @@ c-----------------------------------------------------------------------
       real maxgap, shift, loshift, hishift, lotimegap, hitimegap
       real utpos(MAXPOS), rapos(MAXPOS), dcpos(MAXPOS), utrelp(MAXPOS)
       real delfac, avg1, avg2
-      double precision ftime(2), rval2
+      double precision ftime(8), rval2
       double precision bwold(max_if), bwnew(max_if), delf(max_if)
       double precision refold(max_if), refnew(max_if)
       double precision f(MAXCHAN,max_if), f2(MAXCHAN,max_if)
       double precision bsp(MAXCHAN), csp(MAXCHAN), dsp(MAXCHAN)
       double precision xsp(MAXCHAN), rspec(MAXCHAN), uval, seval
       complex vis(2*MAXCHAN)
-      integer az, el, tsysa, tsysb
-      integer i, j, i1, i2, iref, nsp, nhead, ncyc
+      integer az, el, tsysa, tsysb, fscan(8), nfscan
+      integer i, j, i1, i2, iref, nsp, nhead, ncyc, nftime
       integer ln, npos, bw1, bw2, freq1, freq2, srclen
       logical extrap, keepflag, doextrap, isref, noref, dopos
       integer iptr, bufdim, iant, ifno
@@ -98,8 +106,8 @@ c-----------------------------------------------------------------------
 
 *--------------------------------------------------------------
       versn = versan ('mopfix',
-     :                '$Revision: 1.9 $',
-     :                '$Date: 2010/04/30 08:23:28 $')
+     :                '$Revision: 1.10 $',
+     :                '$Date: 2010/09/21 05:03:30 $')
 
 c Get input parameters
       call keyini ()
@@ -115,8 +123,23 @@ c Get input parameters
       call keya ('postab', postab, 'pos.tab')
       call keyr ('maxgap', maxgap, 1.)
       call keyr ('resample', delfac, -1.)
-      call keyt ('flagtime', ftime(1), 'dtime', -1.d0)
-      call keyt ('flagtime', ftime(2), 'dtime', -1.d0)
+      call mkeyt ('flagtime', ftime, 8, nftime, 'dtime')
+      if (nftime .gt. 0) then
+         if (mod(nftime,2).ne.0) then
+            call bug('f','Even number of flagtimes must be given')
+         endif
+      endif
+      call mkeyi ('flagscan', fscan, 8, nfscan)
+      if (nfscan .gt. 0) then
+         if (mod(nfscan,2).ne.0) then
+            call bug('f','Even number of flagscans must be given')
+         endif
+         do j = 1, nfscan/2
+            if (fscan(2*j).lt.fscan(2*j-1)) then
+                call bug('f','Flag ranges must be in scan order')
+            endif
+         enddo
+      endif
       call GetOpt(keepflag,doextrap,noref)
       call keyfin ()
 
@@ -126,11 +149,22 @@ c This card is needed for LiveData
       ncard = 1
       card(1) = 'OBSTYPE'
 
-c Convert flag range to seconds
-      ftime(1) = 86400. * ftime(1)
-      ftime(2) = 86400. * ftime(2)
-      if (ftime(1) .gt. 0) then
-         write(*,*) 'Flagging times: ',ftime(1),ftime(2)
+c Report flag ranges
+      if (nfscan .gt. 0) then
+         do j = 1, nfscan
+            if (mod(j,2).eq.1) then
+              write(*,*) 'Flagging scans: ',fscan(j),fscan(j+1)
+            endif
+         enddo
+      endif
+c Convert flagtime range to seconds
+      if (nftime .gt. 0) then
+         do j = 1, nftime
+            ftime(j) = 86400. * ftime(j)
+            if (mod(j,2).eq.0) then
+              write(*,*) 'Flagging times: ',ftime(j-1),ftime(j)
+            endif
+         enddo
       endif
 
 c Read in the positions table
@@ -287,7 +321,7 @@ c             if (iif.eq.1.and.nhead.eq.1) write(33,*) ich,f2(ich,iif)
              enddo
           endif
 
-c write header to the output file (unless ref scans to be omitted)
+c write header to the output file (unless ref scans are to be omitted)
           if (.not.(noref .and. isref)) then
              file = outfile
              if (delfac .gt. 0) then
@@ -531,14 +565,23 @@ c Change flags if not reference
            endif
         endif
 
+c Change flags according to flagscan parameter
+        if (nfscan .gt. 0) then
+           do j = 1, nfscan/2
+             if (nhead.ge.fscan(2*j-1).and.nhead.le.fscan(2*j)) flag = 1
+           enddo
+        endif
+
 c Change flags according to flagtime parameter
-        if (ftime(1) .ge. 0) then
-           if (ftime(1) .le. ftime(2)) then
-              if (ut .gt. ftime(1) .and. ut .lt. ftime(2)) flag = 1
+        if (nftime .gt. 0) then
+           do j = 1, nftime/2
+           if (ftime(2*j-1) .le. ftime(2*j)) then
+             if (ut .gt. ftime(2*j-1) .and. ut .lt. ftime(2*j)) flag = 1
            else
-              if (ut .lt. ftime(1) .and. ut .lt. ftime(2)) flag = 1
-              if (ut .gt. ftime(1) .and. ut .gt. ftime(2)) flag = 1
+             if (ut .lt. ftime(2*j-1) .and. ut .lt. ftime(2*j)) flag = 1
+             if (ut .gt. ftime(2*j-1) .and. ut .gt. ftime(2*j)) flag = 1
            endif
+           enddo
         endif
 
         file = outfile
