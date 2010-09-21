@@ -1,14 +1,15 @@
-c
+      program mopfix
+
 c= MOPFIX - Recalculate (u,v,w) in a Mopra RPFITS file
 c& tw
 c: analysis
 c+
-c       MOPFIX reads in an RPF file and a table of (t,RA,DEC) values from
-c       RPFREAD.  The position table is interpolated onto the spectral
-c       timestamps and a corrected RPFITS file is produced.  MOPFIX can
-c       also be used to resample in frequency (by spline interpolation),
-c       flag data over a certain time range, and convert BUNIT to 'K'
-c       (it does the last of these automatically).
+c       MOPFIX reads in an RPF file and a table of (t,RA,DEC) values
+c       from RPFREAD.  The position table is interpolated onto the
+c       spectral timestamps and a corrected RPFITS file is produced.
+c       MOPFIX can also be used to resample in frequency (by spline
+c       interpolation), flag data over a certain time range, and convert
+c       BUNIT to 'K' (it does the last of these automatically).
 c
 c@ in
 c       Input RPFITS file.  No default.
@@ -25,19 +26,20 @@ c       Maximum position jump in arcmin for interpolation.  If the
 c       distance between the flanking position stamps exceeds this, the
 c       spectrum is flagged.  Default: 1 arcmin.
 c@ flagtime
-c       Up to four time ranges to flag spectra.  Give up to four pairs of 
-c       values in UT hh:mm:ss format separated by commas.  Default is no 
-c       flagging.  If a pair is in reverse time order, it is assumed that
-c       the time range wraps around a UT day boundary.
+c       Up to four time ranges to flag spectra.  Give up to four pairs
+c       of values in UT hh:mm:ss format separated by commas.  Default is
+c       no flagging.  If a pair is in reverse time order, it is assumed
+c       that the time range wraps around a UT day boundary.
 c@ flagscan
-c       Up to four scan ranges to flag spectra.  Give up to four pairs of 
-c       values numbered starting from 1.  RPFREAD options=brief can be used
-c       to list all the scans in a file (including offs and paddles).  
-c       Default is no flagging.
+c       Up to four scan ranges to flag spectra.  Give up to four pairs
+c       of values numbered starting from 1.  RPFREAD options=brief can
+c       be used to list all the scans in a file (including offs and
+c       paddles).  Default is no flagging.
 c@ resample
 c       Factor (>0) to change the channel width by.  Total bandwidth is
 c       approximately preserved while the number of channels changes (a
-c       spline interpolation is performed).  Default is not to change this.
+c       spline interpolation is performed).  Default is not to change
+c       this.
 c@ options
 c       Extra processing options.
 c       'keepflag'  Preserve online flagging.  By default all spectra
@@ -47,7 +49,7 @@ c       'doextrap'  Use linear extrapolation if gap between flanking
 c                   position stamps exceeds maxgap.
 c       'noref'     Eliminate the reference scans from the file.
 c
-c$Id: mopfix.for,v 1.10 2010/09/21 05:03:30 cal103 Exp $
+c$Id: mopfix.for,v 1.11 2010/09/21 05:13:26 cal103 Exp $
 c--
 c 28jun04 - tw - created from rpfread and mapread
 c 13jul04 - tw - write OBSTYPE card for LiveData
@@ -66,8 +68,6 @@ c 16may07 - tw - detab; change label 900 from GOTO to CONTINUE
 c 29aug09 - tw - resample option; convert bunit to 'K'
 c 16dec09 - tw - additional time ranges in flagtime; flagscan parameter
 c-----------------------------------------------------------------------
-
-      program mopfix
       include 'rpfits.inc'
 
       double precision pi
@@ -98,16 +98,15 @@ c-----------------------------------------------------------------------
       integer ln, npos, bw1, bw2, freq1, freq2, srclen
       logical extrap, keepflag, doextrap, isref, noref, dopos
       integer iptr, bufdim, iant, ifno
-      equivalence ( sc_buffer(1), sc_cal(1,1,1) )
+      equivalence (sc_buffer(1), sc_cal(1,1,1))
 
-* functions
       integer   len1
       character hangle*12, rangle*12, versan*80
-
-*--------------------------------------------------------------
+      external  hangle, len1, rangle, versan
+c-----------------------------------------------------------------------
       versn = versan ('mopfix',
-     :                '$Revision: 1.10 $',
-     :                '$Date: 2010/09/21 05:03:30 $')
+     *                '$Revision: 1.11 $',
+     *                '$Date: 2010/09/21 05:13:26 $')
 
 c Get input parameters
       call keyini ()
@@ -121,16 +120,16 @@ c Get input parameters
          write (outfile,'(A,A)') infile(1:ln),'ix'
       endif
       call keya ('postab', postab, 'pos.tab')
-      call keyr ('maxgap', maxgap, 1.)
-      call keyr ('resample', delfac, -1.)
+      call keyr ('maxgap', maxgap, 1.0)
+      call keyr ('resample', delfac, -1.0)
       call mkeyt ('flagtime', ftime, 8, nftime, 'dtime')
-      if (nftime .gt. 0) then
+      if (nftime.gt.0) then
          if (mod(nftime,2).ne.0) then
             call bug('f','Even number of flagtimes must be given')
          endif
       endif
       call mkeyi ('flagscan', fscan, 8, nfscan)
-      if (nfscan .gt. 0) then
+      if (nfscan.gt.0) then
          if (mod(nfscan,2).ne.0) then
             call bug('f','Even number of flagscans must be given')
          endif
@@ -143,14 +142,12 @@ c Get input parameters
       call GetOpt(keepflag,doextrap,noref)
       call keyfin ()
 
-*-------------------------------------------------------
-
 c This card is needed for LiveData
       ncard = 1
       card(1) = 'OBSTYPE'
 
 c Report flag ranges
-      if (nfscan .gt. 0) then
+      if (nfscan.gt.0) then
          do j = 1, nfscan
             if (mod(j,2).eq.1) then
               write(*,*) 'Flagging scans: ',fscan(j),fscan(j+1)
@@ -158,9 +155,9 @@ c Report flag ranges
          enddo
       endif
 c Convert flagtime range to seconds
-      if (nftime .gt. 0) then
+      if (nftime.gt.0) then
          do j = 1, nftime
-            ftime(j) = 86400. * ftime(j)
+            ftime(j) = 86400.0 * ftime(j)
             if (mod(j,2).eq.0) then
               write(*,*) 'Flagging times: ',ftime(j-1),ftime(j)
             endif
@@ -175,12 +172,12 @@ c Read in the positions table
 c Convert RA and DEC to radians
       i = 1
  98   read(11,'(a80)',end=99) cline
-      if (cline(1:1) .eq. '#') goto 98
+      if (cline(1:1).eq.'#') goto 98
       read (cline,*) utpos(i), rapos(i), dcpos(i)
-      rapos(i) = rapos(i) * pi/12.
-      dcpos(i) = dcpos(i) * pi/180.
-      if (i .ge. 2) then
-         if (abs(utpos(i)-utpos(i-1)) .lt. 0.1) i = i - 1
+      rapos(i) = rapos(i) * pi/12.0
+      dcpos(i) = dcpos(i) * pi/180.0
+      if (i.ge.2) then
+         if (abs(utpos(i)-utpos(i-1)).lt.0.1) i = i - 1
       endif
       i = i + 1
       goto 98
@@ -192,7 +189,7 @@ c Use the first dec for dc0
       dc0 = dcpos(1)
 
 c Convert maxgap from arcmin to radians
-      maxgap = maxgap * 60 / 206265.
+      maxgap = maxgap * 60 / 206265.0
       goto 41
 
  1000 dopos = .false.
@@ -204,12 +201,12 @@ c Open the RPFITS file
  41   file = infile
       jstat = -3
       call rpfitsin (jstat, vis, weight, baseline, ut, u, v, w,
-     :                        flag, bin, if_no, source_no)
+     *                        flag, bin, if_no, source_no)
 
-      if (jstat .eq. -1) then
+      if (jstat.eq.-1) then
         write (6, '('' Error reading RPFITS file'')')
         goto 999
-      end if
+      endif
       write (6, '(a,a70)') ' Reading ', file
 
 c Open the output RPFITS file
@@ -217,11 +214,11 @@ c Open the output RPFITS file
       file = outfile
       jstat = -3
       call rpfitsout (jstat, vis, weight, baseline, ut, u, v, w,
-     :                        flag, bin, if_no, source_no)
-      if (jstat .eq. -1) then
+     *                        flag, bin, if_no, source_no)
+      if (jstat.eq.-1) then
         write (6, '('' Error writing RPFITS file'')')
         goto 999
-      end if
+      endif
       write (6, '(a,a40)') ' Writing ', file
 
       nsp = 0
@@ -235,32 +232,32 @@ c Try to read data
         file = infile
         jstat = 0
         call rpfitsin (jstat, vis, weight, baseline, ut, u, v, w,
-     :                 flag, bin, if_no, source_no)
+     *                 flag, bin, if_no, source_no)
 
 c CASE 1: HEADER ENCOUNTERED OR END OF FILE
 
-        if (jstat .eq. 1 .or. jstat .eq. 3) then
+        if (jstat.eq.1 .or. jstat.eq.3) then
 
 c Output the number of cycles in the preceding record
-          if (nhead .gt. 0) then
+          if (nhead.gt.0) then
              ncyc = nsp/n_if * nint(intbase/intime)
-             if (ncyc .gt. 0) write(6,'(i3)') ncyc
+             if (ncyc.gt.0) write(6,'(i3)') ncyc
           endif
           nhead = nhead + 1
 
 c IF END OF FILE: close
 
-          if (jstat .eq. 3) then
+          if (jstat.eq.3) then
              write(6,*) 'END OF FILE'
              goto 999
           endif
 
 c Flush the buffer of the output file
-          if (nhead .gt. 0 .and. .not.(noref.and.isref)) then
+          if (nhead.gt.0 .and. .not.(noref .and. isref)) then
              file = outfile
              jstat = 3
              call rpfitsout (jstat, vis, weight, baseline, ut,u,v,w,
-     :                       flag, bin, if_no, source_no)
+     *                       flag, bin, if_no, source_no)
           endif
 
 c load the header of the next scan
@@ -268,7 +265,7 @@ c load the header of the next scan
           file = infile
           jstat = -1
           call rpfitsin (jstat, vis, weight, baseline, ut, u, v, w,
-     :                   flag, bin, if_no, source_no)
+     *                   flag, bin, if_no, source_no)
 
 c figure out observation type (source or reference)
           src = su_name(1)
@@ -282,10 +279,10 @@ c figure out observation type (source or reference)
 c get up to two frequencies from header for display
           freq1 = nint(if_freq(1)/1e6)
           bw1 = nint(if_bw(1)/1e6)
-          if (n_if .ge. 2) then
+          if (n_if.ge.2) then
              freq2 = nint(if_freq(2)/1e6)
              bw2 = nint(if_bw(2)/1e6)
-          else if (if_nstok(1) .eq. 2) then
+          else if (if_nstok(1).eq.2) then
              freq2 = freq1
              bw2 = bw1
           else
@@ -294,10 +291,10 @@ c get up to two frequencies from header for display
           endif
 
 c if resampling, determine the new header parameters
-          if (delfac .gt. 0) then
+          if (delfac.gt.0) then
              do iif = 1, n_if
                 nchan1(iif) = if_nfreq(iif)
-                bwold(iif)  = if_bw(iif) * 1.e-6
+                bwold(iif)  = if_bw(iif) * 1e-6
                 refold(iif) = if_ref(iif)
                 delf(iif)   = bwold(iif)/(nchan1(iif)-1)
                 do ich = 1, if_nfreq(iif)
@@ -308,12 +305,12 @@ c             if (iif.eq.1.and.nhead.eq.1) write(32,*) ich,f(ich,iif)
 c               if (mod(nchan2(iif),2).eq.0) nchan2(iif) = nchan2(iif)-1
                 bwnew(iif)  = (nchan2(iif)-1) * delf(iif) * delfac
                 refnew(iif) = nint(nchan2(iif)*if_ref(iif)/nchan1(iif))
-                if (nhead .eq. 1) then
+                if (nhead.eq.1) then
                    write(6,111) nchan1(iif),nchan2(iif),bwold(iif),
-     :                 bwnew(iif),refold(iif),refnew(iif)
+     *                 bwnew(iif),refold(iif),refnew(iif)
                 endif
  111            format('nchan:',i5,'-->',i5,'  bw:',f8.3,'-->',f8.3,
-     :              '  refch:',f7.1,'-->',f7.1)
+     *              '  refch:',f7.1,'-->',f7.1)
                 do ich = 1, nchan2(iif)
                    f2(ich,iif) = (ich-refnew(iif)) * delf(iif)*delfac
 c             if (iif.eq.1.and.nhead.eq.1) write(33,*) ich,f2(ich,iif)
@@ -324,17 +321,17 @@ c             if (iif.eq.1.and.nhead.eq.1) write(33,*) ich,f2(ich,iif)
 c write header to the output file (unless ref scans are to be omitted)
           if (.not.(noref .and. isref)) then
              file = outfile
-             if (delfac .gt. 0) then
+             if (delfac.gt.0) then
                do iif = 1, n_if
                  if_nfreq(iif) = nchan2(iif)
-                 if_bw(iif)    = bwnew(iif) * 1.e6
+                 if_bw(iif)    = bwnew(iif) * 1e6
                  if_ref(iif)   = refnew(iif)
                enddo
              endif
              if (bunit(1:2).eq.'JY') bunit='K '
              jstat = -1
              call rpfitsout (jstat, vis, weight, baseline, ut, u, v,
-     :                       w, flag, bin, if_no, source_no)
+     *                       w, flag, bin, if_no, source_no)
           endif
 
 c extract header position
@@ -342,11 +339,11 @@ c extract header position
           dcstr = rangle(dec)
 
 c Revert to old frequency grid (for reading data)
-          if (delfac .gt. 0) then
+          if (delfac.gt.0) then
              nfreq = nchan1(1)
              do iif = 1, n_if
                if_nfreq(iif) = nchan1(iif)
-               if_bw(iif)    = bwold(iif) * 1.e6
+               if_bw(iif)    = bwold(iif) * 1e6
                if_ref(iif)   = refold(iif)
              enddo
           endif
@@ -354,30 +351,30 @@ c Revert to old frequency grid (for reading data)
           nsp  = 0
           goto 900
 
-        end if
+        endif
 
 c CASE 2: DATA IN SYSCAL RECORD
 
-        if (baseline .eq. -1) then
+        if (baseline.eq.-1) then
            call format_time(sc_ut,ctime)
            iptr = 1
            bufdim = sc_q * sc_if * sc_ant
-           do while (iptr .lt. bufdim)
+           do while (iptr.lt.bufdim)
               iant = (sc_buffer(iptr) + 0.5)
-              if (iant .eq. 1) then
+              if (iant.eq.1) then
                  ifno = nint(sc_buffer(iptr+1))
                  tsysa = nint(sc_buffer(iptr+3)**2)
                  tsysb = nint(sc_buffer(iptr+4)**2)
 c Unflag records flagged as off source
-                 if (.not. keepflag) then
+                 if (.not.keepflag) then
                     if (nint(sc_buffer(iptr+12)).eq.1) then
 c                        write(*,*) 'This record is flagged'
-                       sc_buffer(iptr+12) = 0.
+                       sc_buffer(iptr+12) = 0.0
                     endif
                  endif
-              else if (iant .eq. 0) then
-                 az  = nint(sc_buffer(iptr+1)*180./pi)
-                 el  = nint(sc_buffer(iptr+2)*180./pi)
+              else if (iant.eq.0) then
+                 az  = nint(sc_buffer(iptr+1)*180.0/pi)
+                 el  = nint(sc_buffer(iptr+2)*180.0/pi)
               endif
               iptr = iptr + sc_q
            enddo
@@ -413,7 +410,7 @@ c
               file = outfile
               jstat = 0
               call rpfitsout (jstat, vis, weight, baseline, ut, u, v,
-     :                        w, flag, bin, if_no, source_no)
+     *                        w, flag, bin, if_no, source_no)
            endif
 
            goto 900
@@ -421,12 +418,12 @@ c
 
 c CASE 3: CLOSE/REOPEN OPERATION
 
-        if (jstat .eq. 5) then
+        if (jstat.eq.5) then
            if (.not.(noref .and. isref)) then
               file = outfile
               jstat = 3
               call rpfitsout (jstat, vis, weight, baseline, ut, u, v,
-     :                        w, flag, bin, if_no, source_no)
+     *                        w, flag, bin, if_no, source_no)
            endif
            goto 900
         endif
@@ -439,14 +436,14 @@ c End of processing if reference scans to be omitted
         if (noref .and. isref) goto 900
 
 c Resample the spectra if requested
-        if (delfac .gt. 0) then
-          avg1 = 0.
-          avg2 = 0.
+        if (delfac.gt.0) then
+          avg1 = 0.0
+          avg2 = 0.0
           nch1 = if_nfreq(if_no)
           do i = 1, if_nstok(if_no)
             do j = 1, nch1
               xsp(j) = dble(f(j,if_no))
-              if (if_nstok(if_no) .eq. 2) then
+              if (if_nstok(if_no).eq.2) then
                  rspec(j) = dble(real(vis(2*j-(2-i))))
               else
                  rspec(j) = dble(real(vis(j)))
@@ -460,7 +457,7 @@ c             if (nhead.eq.1.and.nsp.eq.3) write(45,*)j,xsp(j),rspec(j)
               uval = dble(f2(j,if_no))
               rval2 = seval(nch1,uval,xsp,rspec,bsp,csp,dsp)
               avg2 = avg2 + rval2
-              if (if_nstok(if_no) .eq. 2) then
+              if (if_nstok(if_no).eq.2) then
                  vis(2*j-(2-i)) = cmplx(rval2, 0.0)
               else
                  vis(j) = cmplx(rval2, 0.0)
@@ -479,39 +476,39 @@ c Change the number of channels in the header for writing out
 c Skip all the position fixing if no positions table given
         if (dopos) then
 c Deal with UT day transition
-           do i = 1,npos
+           do i = 1, npos
               if (utpos(i).lt.utpos(1)) then
-                 utrelp(i) = utpos(i) + 86400.
+                 utrelp(i) = utpos(i) + 86400.0
               else
                  utrelp(i) = utpos(i)
               endif
            enddo
-           if (ut .lt. utpos(1)-60) then
-              utrel = ut + 86400.
+           if (ut.lt.utpos(1)-60) then
+              utrel = ut + 86400.0
            else
               utrel = ut
            endif
 
 c Look up position in table
-           if (utrel .lt. utrelp(1)) then
+           if (utrel.lt.utrelp(1)) then
               i1 = 1
               i2 = 2
               iref = 1
               extrap = .false.
-           else if (utrel .gt. utrelp(npos)) then
+           else if (utrel.gt.utrelp(npos)) then
               i1 = npos-1
               i2 = npos
               iref = npos
               extrap = .true.
            else
               i = 1
-              do while (utrel .ge. utrelp(i))
+              do while (utrel.ge.utrelp(i))
                  i = i + 1
               enddo
               dra = (rapos(i) - rapos(i-1)) * cos(dc0)
               ddc = (dcpos(i) - dcpos(i-1))
               shift = sqrt(dra**2 + ddc**2)
-              if (shift .gt. maxgap .and. i .gt. 2) then
+              if (shift.gt.maxgap .and. i.gt.2) then
                  extrap = .true.
                  dra = (rapos(i-1) - rapos(i-2)) * cos(dc0)
                  ddc = (dcpos(i-1) - dcpos(i-2))
@@ -523,8 +520,8 @@ c Look up position in table
                  hitimegap = utrelp(i) - utrel
                  midtime = 0.5*(utrelp(i-1)+utrelp(i))
 c Extrapolate from above if slew rate is lower and time not too far
-                 if (hishift .lt. loshift .and. hitimegap .lt.
-     :                  2*lotimegap .and. i .lt. npos) then
+                 if (hishift.lt.loshift .and. hitimegap.lt.
+     *                  2*lotimegap .and. i.lt.npos) then
                     i1 = i
                     i2 = i+1
                     iref = i
@@ -545,41 +542,43 @@ c Recompute uvw
            m1 = (rapos(i2)-rapos(i1))/(utrelp(i2)-utrelp(i1))
            m2 = (dcpos(i2)-dcpos(i1))/(utrelp(i2)-utrelp(i1))
            w = ut
-           if (w .gt. 86400) then
+           if (w.gt.86400) then
 c            In case ut timestamp > 86400
-             w = w - 86400.
+             w = w - 86400.0
            endif
            u = rapos(iref) + (utrel - utrelp(iref)) * m1
            v = dcpos(iref) + (utrel - utrelp(iref)) * m2
            shift = (utrel-utrelp(iref)) * sqrt(m2**2+(m1*cos(dc0))**2)
 
 c Change flags if not reference
-           if (.not. isref) then
+           if (.not.isref) then
               if (extrap .and. .not.doextrap) then
                  flag = 1
-              else if (abs(shift) .gt. maxgap) then
+              else if (abs(shift).gt.maxgap) then
                  flag = 1
-              else if (.not. keepflag) then
+              else if (.not.keepflag) then
                  flag = 0
               endif
            endif
         endif
 
 c Change flags according to flagscan parameter
-        if (nfscan .gt. 0) then
+        if (nfscan.gt.0) then
            do j = 1, nfscan/2
-             if (nhead.ge.fscan(2*j-1).and.nhead.le.fscan(2*j)) flag = 1
+             if (nhead.ge.fscan(2*j-1) .and. nhead.le.fscan(2*j)) then
+               flag = 1
+             endif
            enddo
         endif
 
 c Change flags according to flagtime parameter
-        if (nftime .gt. 0) then
+        if (nftime.gt.0) then
            do j = 1, nftime/2
-           if (ftime(2*j-1) .le. ftime(2*j)) then
-             if (ut .gt. ftime(2*j-1) .and. ut .lt. ftime(2*j)) flag = 1
+           if (ftime(2*j-1).le.ftime(2*j)) then
+             if (ut.gt.ftime(2*j-1) .and. ut.lt.ftime(2*j)) flag = 1
            else
-             if (ut .lt. ftime(2*j-1) .and. ut .lt. ftime(2*j)) flag = 1
-             if (ut .gt. ftime(2*j-1) .and. ut .gt. ftime(2*j)) flag = 1
+             if (ut.lt.ftime(2*j-1) .and. ut.lt.ftime(2*j)) flag = 1
+             if (ut.gt.ftime(2*j-1) .and. ut.gt.ftime(2*j)) flag = 1
            endif
            enddo
         endif
@@ -587,10 +586,10 @@ c Change flags according to flagtime parameter
         file = outfile
         jstat = 0
         call rpfitsout (jstat, vis, weight, baseline, ut, u, v, w,
-     :                  flag, bin, if_no, source_no)
+     *                  flag, bin, if_no, source_no)
 
 c Revert to old frequency grid (for reading data)
-        if (delfac .gt. 0) then
+        if (delfac.gt.0) then
            if_nfreq(if_no) = nchan1(if_no)
            nfreq = nchan1(if_no)
         endif
@@ -603,7 +602,7 @@ c Revert to old frequency grid (for reading data)
       file = infile
       jstat = 1
       call rpfitsin (jstat, vis, weight, baseline, ut, u, v, w,
-     :               flag, bin, if_no, source_no)
+     *               flag, bin, if_no, source_no)
       if (jstat.ne.0) THEN
          write(6,*)  'Error closing input file'
       endif
@@ -611,7 +610,7 @@ c Revert to old frequency grid (for reading data)
       file = outfile
       jstat = 1
       call rpfitsout (jstat, vis, weight, baseline, ut, u, v, w,
-     :                flag, bin, if_no, source_no)
+     *                flag, bin, if_no, source_no)
       if (jstat.ne.0) THEN
          write(6,*)  'Error closing output file'
       endif
@@ -619,40 +618,38 @@ c Revert to old frequency grid (for reading data)
       stop
       end
 
-
-*****************************************************
+c***********************************************************************
 
       subroutine  format_time (uts, tim_str)
 
-      real ut,uts,left
+      real uts
       character*(*) tim_str
-
+c-----------------------------------------------------------------------
       integer ihr, imn, isec, fsec
-
-*-------------------------------------------------
-
-      ut = uts/3600.
+      real    ut, left
+c-----------------------------------------------------------------------
+      ut = uts/3600.0
       ihr = ut
-      left = (ut - ihr) * 60.
+      left = (ut - ihr) * 60.0
       imn = left
-      left = (left - imn) * 60.
+      left = (left - imn) * 60.0
       isec = left
-      fsec = nint((left - isec)*10.)
+      fsec = nint((left - isec)*10.0)
 
-      if (fsec .eq. 10) then
+      if (fsec.eq.10) then
          isec = isec + 1
          fsec = 0
       endif
 
-      if (isec .ge. 60) then
+      if (isec.ge.60) then
         isec = isec - 60
         imn = imn + 1
-      end if
+      endif
 
-      if (imn .ge. 60) then
+      if (imn.ge.60) then
         imn = imn - 60
         ihr = ihr + 1
-      end if
+      endif
 
       write (tim_str, 10) ihr, imn, isec, fsec
  10   format (I2.2, ':', I2.2, ':', I2.2, '.', I1)
@@ -661,22 +658,24 @@ c Revert to old frequency grid (for reading data)
       end
 
 c***********************************************************************
+
       subroutine GetOpt(keepflag,doextrap,noref)
-c
+
       logical keepflag,doextrap,noref
-c
+c-----------------------------------------------------------------------
 c  Determine extra processing options.
-c
 c-----------------------------------------------------------------------
       integer nopt
-      parameter(nopt=3)
+      parameter (nopt=3)
       character opts(nopt)*8
       logical present(nopt)
       data opts/'keepflag','doextrap','noref'/
+c-----------------------------------------------------------------------
       call options('options',opts,present,nopt)
       keepflag = present(1)
       doextrap = present(2)
       noref = present(3)
+
       return
       end
 
