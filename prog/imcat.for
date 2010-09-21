@@ -23,7 +23,7 @@ c         relax  This instructs IMCAT to ignore axis descriptor
 c                mismatches (e.g. pixel increments etc).  Use this with
 c                care.
 c
-c$Id: imcat.for,v 1.2 2010/09/21 07:10:17 cal103 Exp $
+c$Id: imcat.for,v 1.3 2010/09/21 07:56:26 cal103 Exp $
 c--
 c
 c  History:
@@ -54,45 +54,25 @@ c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
 
-      character version*(*)
-      parameter (version='IMCAT: version 12-Jun-97')
-      integer MAXMAP
+      integer    MAXMAP
       parameter (MAXMAP=300)
 
-      character in(MAXMAP)*80,out*80
-      integer map,nmap,plane,i,axis,lin,lout,naxis
-      integer size(MAXNAX),nsize(MAXNAX),Outplane
-      real cdelt(MAXNAX),crval(MAXNAX),crpix(MAXNAX)
-      real cdelt1,crval1,crpix1,dmin,dmax
-      logical first,relax,ok,warned,warned1,domask
-      character*1 caxis,wflag
+      logical   domask, first, ok, relax, warned, warned1
+      integer   axis, i, lin, lout, map, naxis, nmap, nsize(MAXNAX),
+     *          Outplane, plane, size(MAXNAX)
+      real      cdelt(MAXNAX), cdelt1, crpix(MAXNAX), crpix1,
+     *          crval(MAXNAX), crval1, dmax, dmin
+      character caxis*1, in(MAXMAP)*80, out*80, version*72, wflag*1
 
-c     Externals.
-      character*1 itoaf
-      logical hdprsnt
-
-c     Header keywords.
-      integer nkeys
-      parameter (nkeys=51)
-      character keyw(nkeys)*8
-      data keyw/   'bmaj    ','bmin    ','bpa     ','bunit   ',
-     *  'cdelt1  ','cdelt2  ','cdelt3  ','cdelt4  ','cdelt5  ',
-     *  'cdelt6  ','cdelt7  ',
-     *  'crpix1  ','crpix2  ','crpix3  ','crpix4  ','crpix5  ',
-     *  'crpix6  ','crpix7  ',
-     *  'crval1  ','crval2  ','crval3  ','crval4  ','crval5  ',
-     *  'crval6  ','crval7  ',
-     *  'ctype1  ','ctype2  ','ctype3  ','ctype4  ','ctype5  ',
-     *  'ctype6  ','ctype7  ',
-     *  'epoch   ','history ','niters  ','obstime ','object  ',
-     *  'observer','pbfwhm  ','obsra   ','obsdec  ','restfreq',
-     *  'telescop','vobs    ','ltype   ','lstart  ','lwidth  ',
-     *  'lstep   ','btype   ','cellscal','pbtype  '/
+      logical   hdprsnt
+      character itoaf*1, versan*80
+      external  hdprsnt, itoaf, versan
 c-----------------------------------------------------------------------
-c
-c  Get the input parameters.
-c
-      call output(version)
+      version = versan('imcat',
+     *                 '$Revision: 1.3 $',
+     *                 '$Date: 2010/09/21 07:56:26 $')
+
+c     Get the input parameters.
       call keyini
       call mkeyf('in',in,MAXMAP,nmap)
       if (nmap.le.1) call bug('f','Must have more than one input map')
@@ -104,21 +84,19 @@ c
      *  call bug('f','Invalid value for axis keyword')
       call decopt (relax)
       call keyfin
-c
-c  Give warning about relax option.
-c
+
+c     Warn about relax option.
       wflag = 'f'
       if (relax) then
         wflag = 'w'
         call bug ('i', 'Axis descriptor mismatches will be tolerated')
       endif
-c
-c  Open the input maps and check sizes, crpix and cdelt.
-c
+
+c     Open the input maps and check sizes, crpix and cdelt.
       call xyopen(lin,in(1),'old',axis,size)
       call rdhdi(lin,'naxis',naxis,axis)
       naxis = max(min(naxis,MAXNAX),axis)
-      if (size(1).gt.maxdim) call bug('f','Image too big for me')
+      if (size(1).gt.MAXDIM) call bug('f','Image too big for me')
       do i = axis+1, naxis
         size(i) = 1
       enddo
@@ -131,11 +109,11 @@ c
         call rdhdr(lin,'crval'//caxis,crval(i),0.0)
       enddo
 
-      warned = .false.
+      warned  = .false.
       warned1 = .false.
       do map = 2, nmap
         call xyopen(lin,in(map),'old',axis,nsize)
-        if (nsize(1).gt.maxdim) call bug('f','Image too big for me')
+        if (nsize(1).gt.MAXDIM) call bug('f','Image too big for me')
         do i = axis+1, naxis
           nsize(i) = 1
         enddo
@@ -161,7 +139,7 @@ c
      *        'crpix values differ on axis '//caxis)
             warned1 = warned1 .or. .not.ok
             if (nsize(i).ne.size(i)) call bug('f',
-     *        'The images do not have compatable dimensions')
+     *        'The images do not have compatible dimensions')
           else
             ok = abs((crval1+(1-crpix1)*cdelt1)-
      *        (crval(i)+(1-crpix(i))*cdelt(i) + size(i)*cdelt(i)))
@@ -171,29 +149,25 @@ c
             warned1 = warned1 .or. .not.ok
           endif
         enddo
+
         warned = warned .or. warned1
         call xyclose(lin)
         size(axis) = size(axis) + nsize(axis)
       enddo
-c
-c  Open the output file, and make its header from the first input image.
-c
+
+c     Open the output and make its header from the first input image.
       call xyopen(lin,In(1),'old',axis,nsize)
       call xyopen(lOut,Out,'new',naxis,size)
-      do i = 1, nkeys
-        call hdcopy(lin,lOut,keyw(i))
-      enddo
-c
-c  Write the history.
-c
-      call hisopen(lOut,'append')
-      call hiswrite(lOut,'IMCAT: Miriad '//version)
-      call hisinput(lOut,'IMCAT')
+      call headcopy(lin, lOut, 0, 0, 0, 0)
+
+c     Update history.
+      call hisopen (lOut, 'append')
+      call hiswrite(lOut, 'IMCAT: Miriad ' // version)
+      call hisinput(lOut, 'IMCAT')
       call hisclose(lOut)
-c
-c  Copy the maps into the output, plane by plane, row by row.
-c  Find new max/min.
-c
+
+c     Copy the maps into the output, plane by plane, row by row.
+c     Find new max/min.
       first = .true.
       Outplane = 0
       do map = 1, nmap
@@ -202,13 +176,12 @@ c
         do plane = 1, nsize(axis)
           Outplane = Outplane + 1
           call DatCpy(lin,plane,lout,Outplane,nsize,axis,domask,
-     *                                        dmin,dmax,first)
+     *                dmin,dmax,first)
         enddo
         call xyclose(lin)
       enddo
-c
-c  Update header info' and close output file.
-c
+
+c     Update header info and close output file.
       call wrhdr(lout,'datamin',dmin)
       call wrhdr(lout,'datamax',dmax)
       call xyclose(lOut)
@@ -237,11 +210,9 @@ c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
 
-      integer inp(MAXNAX),outp(MAXNAX)
-      integer i,row
-      logical done
-      real Data(MAXDIM)
-      logical mask(MAXDIM)
+      logical   done, mask(MAXDIM)
+      integer   i, inp(MAXNAX), outp(MAXNAX), row
+      real      Data(MAXDIM)
 c-----------------------------------------------------------------------
       do i = 1, axis-1
         inp(i) = 1
