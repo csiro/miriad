@@ -2,7 +2,7 @@
 # GNUmakefile used to compile Miriad.
 #
 # Original: 2006/08/28, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.33 2010/07/07 02:19:22 cal103 Exp $
+# $Id: GNUmakefile,v 1.34 2010/09/23 12:21:59 cal103 Exp $
 #-----------------------------------------------------------------------------
 ifeq "$(MIR)" ""
   # Try to deduce basic Miriad environment variables.  Obviously this only
@@ -161,7 +161,8 @@ ifeq "$(MAKEMODE)" "system"
 	   cp $< $@
 	 @ ci -u -m"Updated from /usr/local/include/rpfits.inc." $@
 
-    wcslib : $(MIRINCD)/wcslib $(MIRLIBD)/libwcs.a
+    wcslib : $(MIRINCD)/wcslib $(MIRLIBD)/libwcs.a \
+      $(addprefix $(MIRBIND)/,HPXcvt fitshdr wcsgrid wcsware)
 
     $(MIRINCD)/wcslib : /usr/local/include/wcslib
 	-@ mkdir -m 2775 -p -v $@
