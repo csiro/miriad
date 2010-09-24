@@ -26,12 +26,12 @@ c       Default is no output images.
 c@ phase
 c       Up to two values; the output position angle image and
 c       optionally, its associated error image (which will not be
-c       constant).  These will be in degress, radians or microns (see
+c       constant).  These will be in degrees, radians or microns (see
 c       'options').  Default is no output images.
 c@ sigma
 c       The mean standard deviation of the noise in the images.
 c       Required when debiasing or blanking; try to make it as accurate
-c       a value as possible. The default is 0.
+c       a value as possible.  The default is 0.
 c@ sncut
 c       This is the S/N ratio below which the output images
 c       are blanked (see also options=zero below). It is STRONGLY
@@ -76,7 +76,7 @@ c                 instead of giving a fatal error
 c         bmfit   Fit focus and pointing offsets to aperture E-field
 c                 maps.
 c
-c$Id: imhol.for,v 1.2 2010/09/22 01:37:59 cal103 Exp $
+c$Id: imhol.for,v 1.3 2010/09/24 02:39:26 cal103 Exp $
 c--
 c  History:
 c    nebk 21may92 Original version.
@@ -96,145 +96,129 @@ c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
 
-      character version*40
-      parameter (version = 'ImHol : version 05-Aug-2004')
+      logical   bmfit, debias, microns, radians, relax, zero
+      integer   axLen(MAXNAX), axLenI(MAXNAX), istkax, lInIm, lOutM(2),
+     *          lOutPA(2), lInRe, nOutPA, nOutM, naxis
+      real      paclip, sigma, snclip
+      character bflag, blstr*7, inIm*64, inRe*64, line*80, outMag(2)*64,
+     *          outPA(2)*64, ustr*8, version*72
 
-      real qepoch, uepoch, qcrpix(maxnax),ucrpix(maxnax), sigma,
-     *          snclip, paclip
-      double precision qcdelt(maxnax), ucdelt(maxnax), qcrval(maxnax),
-     *          ucrval(maxnax)
-
-      integer lq, lu, lpout(2), lpaout(2), qsize(maxnax), usize(maxnax),
-     *qnaxis, unaxis, qstkax, ustkax, npout, npaout
-
-      character qin*64, uin*64, pout(2)*64, paout(2)*64, ustr*8,
-     *qctype(maxnax)*9, uctype(maxnax)*9, bflag, line*80, blstr*7
-
-      logical radians, microns, debias, relax, zero, bmfit
-
-      integer nkeys
-      parameter (nkeys = 22)
-      character keyw(nkeys)*8
-
-      data keyw/     'obstime ','epoch   ','history ','instrume',
-     *    'niters  ','object  ','restfreq','telescop','vobs    ',
-     *    'obsra   ','obsdec  ','observer','cellscal',
-     *    'bmaj    ','bmin    ','bpa     ','pbfwhm  ','lstart  ',
-     *    'lstep   ','ltype   ','lwidth  ','vobs    '/
+      character versan*80
+      external  versan
 c-----------------------------------------------------------------------
-      call output (version)
-c
-c Get the inputs
-c
+      version = versan('imhol',
+     *                 '$Revision: 1.3 $',
+     *                 '$Date: 2010/09/24 02:39:26 $')
+
+c     Get the inputs.
       call keyini
 
-      call keyf ('in', qin, ' ')
-      call keyf ('in', uin, ' ')
-      call mkeya ('mag', pout, 2, npout)
-      call mkeya ('phase', paout, 2, npaout)
-      if (qin.eq.' ' .or. uin.eq.' ') call bug ('f',
-     *      'You must specify both real and imaginary input images')
+      call keyf('in', inRe, ' ')
+      call keyf('in', inIm, ' ')
+      call mkeya('mag',  outMag, 2, nOutM)
+      call mkeya('phase', outPA, 2, nOutPA)
+      if (inRe.eq.' ' .or. inIm.eq.' ') call bug('f',
+     *  'You must specify both real and imaginary input images')
 
-      call getopt (debias, radians, microns, relax, zero, bmfit)
+      call getopt(debias, radians, microns, relax, zero, bmfit)
 
-      call keyr ('sncut', snclip, 0.0)
+      call keyr('sncut', snclip, 0.0)
       snclip = max(snclip,0.0)
-      call keyr ('paclip', paclip, 0.0)
+      call keyr('paclip', paclip, 0.0)
       blstr = 'blanked'
       if (zero) blstr = 'zeroed'
 
-      call keyr ('sigma', sigma, 0.0)
+      call keyr('sigma', sigma, 0.0)
 
       bflag = 'f'
       if (relax) bflag = 'w'
       call keyfin
-c
-c Issue some messages if producing an output image
-c
-      write (line, 10) blstr, snclip
-10    format ('Output ', a, ' when     P/sigma < ', f6.2)
-      call output (line)
+
+c     Issue some messages if producing an output image.
+      write(line, 10) blstr, snclip
+10    format('Output ',a,' when P/sigma < ',f6.2)
+      call output(line)
 
       if (paclip.gt.0.0) then
         ustr = ' degrees'
         if (radians) ustr = ' radians'
-        write (line, 30) blstr, paclip, ustr
-30      format ('Output images ', a, ' when sigma(P.A.) > ',
-     *            1pe10.4, a)
-        call output (line)
+        write(line, 30) blstr, paclip, ustr
+30      format('Output images ',a,' when sigma(P.A.) > ',1pe10.4,a)
+        call output(line)
 
         if ((snclip.gt.0.0 .or. paclip.gt.0.0 .or. debias) .and.
      *       sigma.le.0.0)
-     *     call bug ('f', 'You must specify sigma')
+     *    call bug('f', 'You must specify sigma')
 
-        if (npout.gt.0) then
+        if (nOutM.gt.0) then
           if (debias) then
-            call output ('The polarized intensity image '//
-     *                   'will be debiased')
+            call output('The polarized intensity image '//
+     *                  'will be debiased')
           else
-            call bug ('w',
-     *         'You are NOT debiasing the intensity image')
-            if (snclip.lt.2.0) call bug ('w',
+            call bug('w', 'You are NOT debiasing the intensity image')
+            if (snclip.lt.2.0) call bug('w',
      *        'Nor have you safely blanked the image with SNCUT > 2')
           endif
         endif
       endif
-c
-c Open the input images
-c
-      call openin (bflag, maxdim, maxnax, qin, lq, qnaxis, qsize,
-     *     qepoch, qcrpix, qcdelt, qcrval, qctype, qstkax)
 
-      call openin (bflag, maxdim, maxnax, uin, lu, unaxis, usize,
-     *      uepoch, ucrpix, ucdelt, ucrval, uctype, ustkax)
-c
-c Compare images for consistency
-c
-      call chkdes (bflag, qin, uin, qnaxis, unaxis, qsize, usize,
-     *     qcrpix, ucrpix, qcdelt, ucdelt, qcrval, ucrval, qepoch,
-     *     uepoch, qctype, uctype, qstkax, ustkax)
-c
-c Strip the Stokes axis from the input header
-c
-      call axstrip (qstkax, qnaxis, qsize, qcrval, qcrpix, qcdelt,
-     *                qctype)
-c
-c Open polarized intensity images as required
-c
-      lpout(1) = 0
-      if (npout.gt.0) call openout (lq, qnaxis, qsize, nkeys, keyw,
-     *     qcrval, qcrpix, qcdelt, qctype, pout(1),
-     *     version, lpout(1))
-      lpout(2) = 0
-      if (npout.eq.2) call openout (lq, qnaxis, qsize, nkeys, keyw,
-     *     qcrval, qcrpix, qcdelt, qctype, pout(2),
-     *     version, lpout(2))
-c
-c Open position angle images as required
-c
-      lpaout(2) = 0
-      if (npaout.gt.0) call openout (lq, qnaxis, qsize, nkeys, keyw,
-     *     qcrval, qcrpix, qcdelt, qctype, paout(1),
-     *     version, lpaout(1))
-      lpaout(2) = 0
-      if (npaout.eq.2) call openout (lq, qnaxis, qsize, nkeys, keyw,
-     *     qcrval, qcrpix, qcdelt, qctype, paout(2),
-     *     version, lpaout(2))
-c
-c Now compute and write out the output image(s)
-c
-       call bmproc (lq, lu, lpout, lpaout, qnaxis, qsize, qcrpix,
-     *   qcrval, qcdelt, qctype, debias, radians, microns, snclip,
-     *   paclip, sigma, zero, bmfit)
-c
-c Close up
-c
-      call xyclose (lq)
-      call xyclose (lu)
-      if (lpout(1).ne.0) call xyclose (lpout(1))
-      if (lpout(2).ne.0) call xyclose (lpout(2))
-      if (lpaout(1).ne.0) call xyclose (lpaout(1))
-      if (lpaout(2).ne.0) call xyclose (lpaout(2))
+      if (nOutM.eq.0 .and. nOutPA.eq.0) then
+        call bug('f', 'No output was specified.')
+      endif
+
+
+c     Open the input images.
+      call xyopen(lInRe, inRe, 'old', MAXNAX, axLen)
+      if (axLen(1).gt.MAXDIM) call bug('f',
+     *  'First axis of real image exceeds storage.')
+
+      call xyopen(lInIm, inIm, 'old', MAXNAX, axLenI)
+      if (axLenI(1).gt.MAXDIM) call bug('f',
+     *  'First axis of imaginary image exceeds storage.')
+
+c     Check them for consistency.
+      call chkdes(lInRe, lInIm, inRe, inIm, axLen, axLenI, bflag,
+     *            istkax)
+
+c     Open polarized intensity and position angle images as required.
+      call rdhdi(lInRe, 'naxis', naxis, 0)
+      naxis = min(naxis,MAXNAX)
+
+      lOutM(1) = 0
+      if (nOutM.gt.0) then
+        call xyopen(lOutM(1), outMag(1), 'new', naxis, axLen)
+        call mkHead(lInRe, lOutM(1), istkax, version)
+      endif
+
+      lOutM(2) = 0
+      if (nOutM.eq.2) then
+        call xyopen(lOutM(2), outMag(2), 'new', naxis, axLen)
+        call mkHead(lInRe, lOutM(2), istkax, version)
+      endif
+
+      lOutPA(2) = 0
+      if (nOutPA.gt.0) then
+        call xyopen(lOutPA(1), outPA(1), 'new', naxis, axLen)
+        call mkHead(lInRe, lOutPA(1), istkax, version)
+      endif
+
+      lOutPA(2) = 0
+      if (nOutPA.eq.2) then
+        call xyopen(lOutPA(2), outPA(2), 'new', naxis, axLen)
+        call mkHead(lInRe, lOutPA(2), istkax, version)
+      endif
+
+c     Now compute and write out the output image(s).
+       call bmproc(lInRe, lInIm, lOutM, lOutPA, naxis, axLen, debias,
+     *   radians, microns, snclip, paclip, sigma, zero, bmfit)
+
+c     Close up.
+      call xyclose(lInRe)
+      call xyclose(lInIm)
+      if (lOutM(1).ne.0) call xyclose(lOutM(1))
+      if (lOutM(2).ne.0) call xyclose(lOutM(2))
+      if (lOutPA(1).ne.0) call xyclose(lOutPA(1))
+      if (lOutPA(2).ne.0) call xyclose(lOutPA(2))
 
       end
 
@@ -262,7 +246,7 @@ c-----------------------------------------------------------------------
       data opshuns /'bias    ', 'radians ', 'microns ',
      *              'relax   ', 'zero    ', 'bmfit   '/
 c-----------------------------------------------------------------------
-      call options ('options', opshuns, present, MAXOPT)
+      call options('options', opshuns, present, MAXOPT)
 
       debias  = .not.present(1)
       radians = present(2)
@@ -277,320 +261,151 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine openin (bflag, maxdim, maxnax, in, lun, naxis, size,
-     *                   epoch, crpix, cdelt, crval, ctype, stkax)
+      subroutine chkdes(lIn1, lIn2, in1, in2, axLen1, axLen2, bflag,
+     *                  istkax)
 
-      integer maxdim, maxnax, lun, naxis, size(maxnax), stkax
-      double precision cdelt(maxnax), crval(maxnax)
-      real epoch, crpix(maxnax)
-      character*(*) ctype(maxnax), in, bflag*1
-c-----------------------------------------------------------------------
-c  Open an image and return some information about it.
-c
-c  Input
-c    bflag      Bug flag
-c    maxdim     Maximum size a row can be
-c    maxnax     Maximum number of axes image can have
-c    in         Image name
-c  Output
-c    lun        Handle
-c    naxis      Number of axes
-c    size       Size of each axis
-c    epoch      EPoch of image
-c    crpix      Refernce pixels
-c    cdelt      Increments
-c    crval      Reference values
-c    ctype      Axis types
-c    stkax      Stokes axis
-c-----------------------------------------------------------------------
-      integer len1, i
-      character*80 aline
-c-----------------------------------------------------------------------
-      call xyopen (lun, in, 'old', maxnax, size)
-      call rdhdi (lun, 'naxis', naxis, 0)
-      if (naxis.eq.0) then
-        aline = in(1:len1(in))//' has zero dimensions !!'
-        call bug ('f', aline)
-      endif
-
-      if (size(1).gt.maxdim) then
-        aline = 'First dimension of '//in(1:len1(in))//
-     *             ' too large for storage'
-        call bug ('f', aline)
-      endif
-      call hedinf (lun, naxis, size, epoch, crpix, cdelt, crval, ctype)
-
-      stkax = 0
-      do i = 1, naxis
-        if (ctype(i).eq.'STOKES') stkax = i
-      enddo
-      if (stkax.eq.0) then
-        aline = 'Could not find Stokes axis in '//in(1:len1(in))
-        call bug (bflag, aline)
-      endif
-
-      end
-
-c***********************************************************************
-
-      subroutine hedinf (lun, naxis, size, epoch, crpix, cdelt,
-     *                   crval, ctype)
-
-      integer   lun, naxis, size(naxis)
-      real      crpix(naxis), epoch
-      double precision cdelt(naxis), crval(naxis)
-      character*(*) ctype(naxis)
-c-----------------------------------------------------------------------
-c  Get some header keywords from the image associated with LUN.
-c
-c  Input
-c       lun      Handle of image
-c       naxis    Number of dimensions in image
-c       size     Size of each axis
-c  Output
-c       epoch    Epoch of image
-c       crpix    Array of image reference pixels
-c       cdelt    Array of image increments (natural inits; rad)
-c       crval    Array of image reference values (natural units)
-c       ctype    Array of image axis types
-c-----------------------------------------------------------------------
-      integer i
-      character str*1, itoaf*1
-c-----------------------------------------------------------------------
-      do i = 1, naxis
-        str = itoaf(i)
-
-        call rdhdr (lun, 'crpix'//str, crpix(i), real(size(i))/2.0)
-        call rdhdd (lun, 'cdelt'//str, cdelt(i), 1.0)
-        call rdhda (lun, 'ctype'//str, ctype(i), ' ')
-        call rdhdd (lun, 'crval'//str, crval(i), 0.0)
-      enddo
-      call rdhdr (lun, 'epoch', epoch, 0.0)
-
-      end
-
-c***********************************************************************
-
-      subroutine chkdes (bflag, im1, im2, naxis1, naxis2, size1, size2,
-     *   crpix1, crpix2, cdelt1, cdelt2, crval1, crval2, epoch1,
-     *   epoch2, ctype1, ctype2, stkax1, stkax2)
-
-      integer naxis1, naxis2, size1(*), size2(*), stkax1, stkax2
-      character*(*) im1, im2, ctype1(*), ctype2(*), bflag
-      real    crpix1(*), crpix2(*), epoch1, epoch2
-      double precision crval1(*), crval2(*), cdelt1(*), cdelt2(*)
+      integer   lIn1, lIn2, axLen1(*), axLen2(*), istkax
+      character bflag*1, in1*(*), in2*(*)
 c-----------------------------------------------------------------------
 c  Compare axis descriptors.
 c
 c  Input:
-c   im1,2        Images
-c   naxis1,2     Number of axes
-c   size1,2      Sizes of each dimension
-c   crpix1,2     Reference pixels
-c   cdelt1,2     Increments
-c   crval1,2     Refernce values
-c   ctype1,2     types of axes
-c   epoch1,2     Epochs
-c   stkax1,2     Stokes axis
-c  Output
-c   stkax        Stokes axis
+c   lIn1,2       Image handles
+c   in1,2        Images
+c   axLen1,2     Sizes of each dimension
+c   bflag        Bug handling flag, 'f' or 'w'.
 c-----------------------------------------------------------------------
-      integer k, l1, l2, len1
-      character line*130
-c-----------------------------------------------------------------------
-      l1 = len1(im1)
-      l2 = len1(im2)
+      integer   iax, l1, l2, naxis1, naxis2
+      double precision dval1, dval2
+      character cax*1, ctype1*9, ctype2*9, text*130
 
-      if (epoch1.ne.epoch2) then
-        line = 'Unequal epochs for images '//im1(1:l1)//' & '//im2(1:l2)
-        call bug (bflag, line)
+      integer   len1
+      character itoaf*1
+      external  itoaf, len1
+c-----------------------------------------------------------------------
+      l1 = len1(in1)
+      l2 = len1(in2)
+
+      call rdhdi(lIn1, 'naxis', naxis1, 0)
+      if (naxis1.eq.0) then
+        text = in1(:l1) // ' has zero dimensions!'
+        call bug('f', text)
+      endif
+
+      call rdhdi(lIn2, 'naxis', naxis2, 0)
+      if (naxis2.eq.0) then
+        text = in2(:l2) // ' has zero dimensions!'
+        call bug('f', text)
       endif
 
       if (naxis1.ne.naxis2) then
-        line = 'Unequal number dimensions for images '//
-     *         im1(1:l1)//' & '//im2(1:l2)
-        call bug (bflag, line)
+        text = 'Unequal number dimensions for images '//
+     *         in1(:l1)//' & '//in2(:l2)
+        call bug(bflag, text)
       endif
 
-      do k = 1, min(naxis1,naxis2)
-        if (size1(k).ne.size2(k)) then
-          write (line, 10) im1(1:l1), im2(1:l2), k
-10        format ('Unequal sizes for images ', a, ' & ', a,
-     *            ' on axis ', i1)
-          call bug (bflag, line)
+      istkax = 0
+      do iax = 1, min(naxis1,naxis2)
+        if (axLen1(iax).ne.axLen2(iax)) then
+          write(text, 10) in1(1:l1), in2(1:l2), iax
+10        format('Unequal axLens for images ',a,' & ',a,' on axis ',i1)
+          call bug(bflag, text)
         endif
 
-        if (ctype1(k).ne.ctype2(k)) then
-          write (line, 20) im1(1:l1), im2(1:l2), k
-20        format ('Unequal ctype for images ', a, ' & ', a,
-     *            ' on axis ', i1)
-          call bug (bflag, line)
-        endif
+        cax = itoaf(iax)
 
-        call chkds2 (bflag, 'crpix', k, im1(1:l1), im2(1:l2),
-     *               crpix1(k), crpix2(k))
-        call chkds2 (bflag, 'cdelt', k, im1(1:l1), im2(1:l2),
-     *               real(cdelt1(k)), real(cdelt2(k)))
-        if (k.ne.stkax1 .or. k.ne.stkax2)
-     *    call chkds2 (bflag, 'crval', k, im1(1:l1), im2(1:l2),
-     *                 real(crval1(k)), real(crval2(k)))
+        call rdhda(lIn1, 'ctype'//cax, ctype1, ' ')
+        call rdhda(lIn2, 'ctype'//cax, ctype2, ' ')
+        if (ctype1.eq.'STOKES' .and. ctype2.eq.'STOKES') then
+          istkax = iax
+        else
+          if (ctype1.ne.ctype2) then
+            write(text, 20) 'ctype', in1(:l1), in2(:l2), iax
+20          format('Unequal ',a,' for images ',a,' & ',a,' on axis ',i1)
+            call bug(bflag, text)
+          endif
+
+          call rdhdd(lIn1, 'crpix'//cax, dval1, dble(axLen1(iax))/2d0)
+          call rdhdd(lIn2, 'crpix'//cax, dval2, dble(axLen2(iax))/2d0)
+          if (abs(dval1-dval2).gt.0.01*max(abs(dval1),abs(dval2))) then
+            write(text, 20) 'crpix', in1(:l1), in2(:l2), iax
+            call bug(bflag, text)
+          endif
+
+          call rdhdd(lIn1, 'cdelt'//cax, dval1, 1d0)
+          call rdhdd(lIn2, 'cdelt'//cax, dval2, 1d0)
+          if (abs(dval1-dval2).gt.0.01*max(abs(dval1),abs(dval2))) then
+            write(text, 20) 'cdelt', in1(:l1), in2(:l2), iax
+            call bug(bflag, text)
+          endif
+
+          call rdhdd(lIn1, 'crval'//cax, dval1, 0d0)
+          call rdhdd(lIn2, 'crval'//cax, dval2, 0d0)
+          if (abs(dval1-dval2).gt.0.01*max(abs(dval1),abs(dval2))) then
+            write(text, 20) 'crval', in1(:l1), in2(:l2), iax
+            call bug(bflag, text)
+          endif
+        endif
       enddo
 
-      end
-
-c***********************************************************************
-
-      subroutine chkds2 (bflag, type, iaxis, im1, im2, des1, des2)
-
-      character*(*) type, im1, im2, bflag
-      integer iaxis
-      real des1, des2
-c-----------------------------------------------------------------------
-c  Compare an axis descriptor from two images.
-c
-c  Input:
-c    type    Type fo descriptor
-c    iaxis   Axis number
-c    im1,2   Images
-c    des1,2  Descriptors
-c-----------------------------------------------------------------------
-      character line*130
-c-----------------------------------------------------------------------
-      if (abs(des1-des2).gt.0.01*max(abs(des1),abs(des2))) then
-        write (line, 10) type, im1, im2, iaxis
-10      format ('Unequal ', a, ' for images ', a, ' & ', a,
-     *          ' on axis ', i1)
-        call bug (bflag, line)
+      call rdhdr(lIn1, 'epoch', dval1, 0.0)
+      call rdhdr(lIn2, 'epoch', dval2, 0.0)
+      if (dval1.ne.dval2) then
+        text = 'Unequal epochs for images '//in1(:l1)//' & '//in2(:l2)
+        call bug(bflag, text)
       endif
 
       end
 
 c***********************************************************************
 
-      subroutine axstrip (iax, naxis, size, crval, crpix, cdelt,
-     *                    ctype)
+      subroutine mkHead(lIn, lOut, istkax, version)
 
-      integer iax, naxis, size(naxis)
-      real crpix(naxis)
-      double precision crval(naxis), cdelt(naxis)
-      character*(*) ctype(naxis)
+      integer   lIn, lOut, istkax
+      character version*72
 c-----------------------------------------------------------------------
-c  Strip an axis from the header items.
-c
-c  Input:
-c    iax    Axis to strip
-c  Input/output
-c    naxis  Number of axes
-c    size   Size of axes
-c    crval  Ref. values
-c    crpix  Ref. pixels
-c    cdelt  Increments
-c    ctype  Axis types
-c-----------------------------------------------------------------------
-      integer i
-c-----------------------------------------------------------------------
-      if (iax.eq.0) return
-
-      if (naxis.eq.1) call bug ('f',
-     *   'This image has only one dimension; cannot strip it')
-
-      naxis = naxis - 1
-      if (iax.eq.naxis+1) return
-
-      do i = iax, naxis
-        size(i) = size(i+1)
-        crval(i) = crval(i+1)
-        crpix(i) = crpix(i+1)
-        cdelt(i) = cdelt(i+1)
-        ctype(i) = ctype(i+1)
-      enddo
-
-      end
-
-c***********************************************************************
-
-      subroutine openout (lin, naxis, size, nkeys, keyw, crval, crpix,
-     *                    cdelt, ctype, out, version, lout)
-
-      integer lin, lout, naxis, size(naxis), nkeys
-      real    crpix(naxis)
-      double precision crval(naxis), cdelt(naxis)
-      character*(*) keyw(nkeys), out, version, ctype(naxis)
-c-----------------------------------------------------------------------
-c  Open an output image, copy header keywords across and write
-c  the history.
+c  Write a header for the output file.
 c
 c  Input
-c   lin    Image to copy keuwrods from
-c   naxis  Number of axes
-c   size   Size of axes
-c   nkeys  Number of header keywords to copy
-c   keyw   Keywords
-c   crval  Refernce values
-c   crpix  Reference pixels
-c   cdelt  Increments
-c   ctype  Axis types
-c   out    Name of output image
-c   versionVersion of this program
-c  Output
-c   lout   Handle for output image
+c    lIn        Handle of input image.
+c    lOut       Handle of output image.
+c    istkax     Stokes axis (excluded).
+c    version    Version of this program.
 c-----------------------------------------------------------------------
-      integer i
-      character itoaf*1, istr*1, aline*80
+      include 'maxnax.h'
+
+      integer   axMap(MAXNAX), iax, jax, naxis
 c-----------------------------------------------------------------------
-      call xyopen (lout, out, 'new', naxis, size)
-      do i = 1, nkeys
-        call hdcopy (lin, lout, keyw(i))
-      enddo
-c
-c Do these separately because we had to strip the Stokes
-c axis from the input image
-c
-      do i = 1, naxis
-        istr = itoaf(i)
-        call wrhdd (lout, 'crval'//istr, crval(i))
-        call wrhdr (lout, 'crpix'//istr, crpix(i))
-        call wrhdd (lout, 'cdelt'//istr, cdelt(i))
-        call wrhda (lout, 'ctype'//istr, ctype(i))
+c     Exclude the Stokes axis.
+      call rdhdi(lIn, 'naxis', naxis, 0)
+      naxis = min(naxis,MAXNAX)
+
+      jax = 0
+      do iax = 1, naxis
+        if (iax.ne.istkax) then
+          jax = jax + 1
+          axmap(jax) = iax
+        endif
       enddo
 
-      call hisopen  (lout, 'append')
-      aline = 'IMHOL Miriad'//version
-      call hiswrite (lout, aline)
-      call hisinput (lout, 'IMHOL')
-      call hisclose (lout)
+      call headcopy(lIn, lOut, axMap, naxis, 0, 0)
+
+c     Update history.
+      call hisopen (lOut, 'append')
+      call hiswrite(lOut, 'IMHOL Miriad ' // version)
+      call hisinput(lOut, 'IMHOL')
+      call hisclose(lOut)
 
       end
 
 c***********************************************************************
 
-      subroutine allblnk (p, pf, ep, epf, pa, paf, epa, epaf)
-c-----------------------------------------------------------------------
-      real p, ep, pa, epa
-      logical pf, epf, paf, epaf
-c-----------------------------------------------------------------------
-      p = 0.0
-      pf = .false.
-      ep = 0.0
-      epf = .false.
-      pa = 0.0
-      paf = .false.
-      epa = 0.0
-      epaf = .false.
+      subroutine bmproc(lInRe, lInIm, lOutM, lOutPA, naxis, axLen,
+     *   debias, radians, microns, snclip, paclip, sigma, zero,bmfit)
 
-      end
-
-c***********************************************************************
-
-      subroutine bmproc (lq, lu, lpout, lpaout, naxis, size, crpix,
-     *   crval, cdelt, ctype, debias, radians, microns, snclip, paclip,
-     *   sigma, zero,bmfit)
-
-      integer lq, lu, lpout(2), lpaout(2), naxis, size(naxis)
-      real crpix(naxis), snclip, paclip, sigma
-      double precision crval(naxis), cdelt(naxis)
+      integer lInRe, lInIm, lOutM(2), lOutPA(2), naxis, axLen(naxis)
+      real    snclip, paclip, sigma
       logical radians, debias, zero, bmfit, microns
-      character*(*) ctype(naxis)
 c-----------------------------------------------------------------------
 c  Compute aperture E-field amplitude, position angle image and
 c  associated error images.
@@ -598,83 +413,110 @@ c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mirconst.h'
 
-      logical qflags(maxdim),uflags(maxdim),pflags(maxdim),
-     *  epflags(maxdim),paflags(maxdim),epaflags(maxdim)
-      real qline(maxdim),uline(maxdim),pline(maxdim),
-     *  epline(maxdim),paline(maxdim),epaline(maxdim)
-      logical pass1, ok
-      integer i,j,k, frqax
-      double precision fac, antdiam, subdiam
-      real psq, sigsq, snclipsq, freq, snr, p, rms, rmsw
-      character ustr*8, aline*80, telescop*10
-      double precision sum,sumxx,sumyy,sumr2,sumr4,sumz,sumzz,sumw,
-     *  sumwz,sumwzz,sumzx,sumzy,sumzr2,det,x,y,r2,dd,a,b,c,d,fitph
-c-----------------------------------------------------------------------
-c
-c  Get dish and subreflector radius in nanosecs for masking the images.
-c
-      call rdhda(lq,'telescop',telescop,' ')
-      call obspar(telescop,'antdiam',antdiam,ok)
-      if (ok) then
-        antdiam = antdiam / 2.0 / 0.3
-      else
-        antdiam = 6.1
-        call output('Unknown antenna diameter; setting to 6.1 m.')
-        antdiam = antdiam / 2.0 / 0.3
-      endif
-      call obspar(telescop,'subdiam',subdiam,ok)
-      if (ok) then
-        subdiam = subdiam / 2.0 / 0.3
-      else
-        subdiam = 0.0
-        call output('Unknown subreflector diameter; setting to 0.')
-      endif
-c
-c  Find frequency axis.
-c
-      frqax = 0
-      do i = 1, naxis
-        if (index(ctype(i),'FREQ').ne.0) frqax = i
-      enddo
-      if (frqax.eq.0) call bug ('w',
-     *    'Could not find frequency axis')
-      if (frqax.le.2) call bug ('f',
-     *    'Frequency axis is either 1 or 2.0  These should be spatial')
-c
-c  Make amplitude and phase images for each plane (frequency axis)
-c
-      do k = 1, size(3)
-        call xysetpl (lq,   1, k)
-        call xysetpl (lu,   1, k)
-        if (lpout(1).ne.0) call xysetpl (lpout(1), 1, k)
-        if (lpout(2).ne.0) call xysetpl (lpout(2), 1, k)
-        if (lpaout(1).ne.0) call xysetpl (lpaout(1), 1, k)
-        if (lpaout(2).ne.0) call xysetpl (lpaout(2), 1, k)
+      logical   epaflags(MAXDIM), epflags(MAXDIM), ok, paflags(MAXDIM),
+     *          pass1, pflags(MAXDIM), flagRe(MAXDIM), flagIm(MAXDIM)
+      integer   frqax, iax, jax, kax, lOut
+      real      epaline(MAXDIM), epline(MAXDIM), p, paline(MAXDIM),
+     *          pline(MAXDIM), psq, lineRe(MAXDIM), rms, rmsw, sigsq,
+     *          snclipsq, snr, lineIm(MAXDIM)
+      double precision a, antdiam, antr2, b, c, crpix(3), cdelt(3),
+     *          crval(3), d, dd, det, fac, fitph, freq, lambda, r2,
+     *          subdiam, subr2, sum, sumr2, sumr4, sumw, sumwz, sumwzz,
+     *          sumxx, sumyy, sumz, sumzr2, sumzx, sumzy, sumzz, x, y
+      character cax*1, ctype*9, text*80, telescop*10, ustr*8
 
-        fac = 180.0/pi
-        ustr = 'degrees'
+      character itoaf*1
+      external  itoaf
+c-----------------------------------------------------------------------
+c     Get dish and subreflector diameters (m) for masking.
+      call rdhda(lInRe,'telescop',telescop,' ')
+
+      call obspar(telescop,'antdiam',antdiam,ok)
+      if (.not.ok) then
+        call output('Unknown antenna diameter; setting to 6.1m.')
+        antdiam = 6.1
+      endif
+
+      call obspar(telescop,'subdiam',subdiam,ok)
+      if (.not.ok) then
+        call output('Unknown subreflector diameter; setting to 0.')
+        subdiam = 0.0
+      endif
+
+c     Get coordinate keywords and find the frequency axis.
+      lOut = lOutM(1)
+      if (lOut.eq.0) lOut = lOutM(2)
+      if (lOut.eq.0) lOut = lOutPA(1)
+      if (lOut.eq.0) lOut = lOutPA(2)
+
+      frqax = 0
+      do iax = 1, naxis
+        if (iax.le.3) then
+          cax = itoaf(iax)
+          call rdhdd(lOut, 'crpix'//cax, crpix(iax), 0d0)
+          call rdhdd(lOut, 'cdelt'//cax, cdelt(iax), 1d0)
+          call rdhdd(lOut, 'crval'//cax, crval(iax), 0d0)
+        endif
+
+        call rdhda(lOut, 'ctype'//cax, ctype, ' ')
+        if (index(ctype,'FREQ').ne.0) frqax = iax
+      enddo
+
+      if (frqax.eq.0) then
+        call bug('w', 'Could not find frequency axis.')
+      else if (frqax.le.2) then
+        call bug('f',
+     *    'Frequency axis is either 1 or 2; these should be spatial.')
+      endif
+
+
+c     Make amplitude and phase images for each plane (frequency axis).
+      do kax = 1, axLen(3)
+        call xysetpl(lInRe, 1, kax)
+        call xysetpl(lInIm, 1, kax)
+        if (lOutM(1).ne.0)  call xysetpl(lOutM(1),  1, kax)
+        if (lOutM(2).ne.0)  call xysetpl(lOutM(2),  1, kax)
+        if (lOutPA(1).ne.0) call xysetpl(lOutPA(1), 1, kax)
+        if (lOutPA(2).ne.0) call xysetpl(lOutPA(2), 1, kax)
+
         if (radians) then
-          fac = 1.0
+          fac  = 1.0
           ustr = 'radians'
+        else
+          fac  = DR2D
+          ustr = 'degrees'
         endif
-c
-c Convert antdiam to wavelengths, and output phase image to microns
-c
+
         if (frqax.eq.3) then
-                freq = (k-crpix(3))*cdelt(3) + crval(3)
-                antdiam = antdiam * freq
-                if (microns) then
-          fac = 0.5 / (2*pi) * cmks/freq * 1e-3
-          ustr = 'microns'
-                endif
+c         Get frequency in Hz.
+          freq = ((dble(kax)-crpix(3))*cdelt(3) + crval(3))*1d9
+
+c         Convert diameters to wavelengths.
+          lambda  = DCMKS / freq
+          antdiam = antdiam / lambda
+          subdiam = subdiam / lambda
+
+          if (microns) then
+c           Convert output phase to micron.
+            fac  = (0.5d0/DTWOPI)*lambda*1d6
+            ustr = 'microns'
+          endif
+        else
+c         Convert diameters to nanosec.
+          antdiam = (antdiam/DCMKS)*1d9
+          subdiam = (subdiam/DCMKS)*1d9
         endif
-        sigsq = sigma * sigma
+
+c       Antenna and subreflector radii squared.
+        antr2 = (antdiam/2d0)**2
+        subr2 = (subdiam/2d0)**2
+
+        sigsq    = sigma * sigma
         snclipsq = snclip * snclip
-        paclip = fac * paclip
-c
-c  If(bmfit) then go thro' this loop twice:
-c  1st pass to accumulate the sums and 2nd pass to correct the data.
-c
+        paclip   = fac * paclip
+
+c       If(bmfit) then go thro' this loop twice: 1st pass to accumulate
+c       the sums and 2nd pass to correct the data.
         pass1 = .true.
 100     continue
         sum    = 0d0
@@ -691,154 +533,143 @@ c
         sumzy  = 0d0
         sumzr2 = 0d0
 
-        do j = 1, size(2)
-          call xyread  (lq, j, qline)
-          call xyflgrd (lq, j, qflags)
-          call xyread  (lu, j, uline)
-          call xyflgrd (lu, j, uflags)
-c
-c Work out everything, but only write out what is requested
-c
-          do i = 1, size(1)
-            psq = qline(i)**2 + uline(i)**2
+        do jax = 1, axLen(2)
+          call xyread (lInRe, jax, lineRe)
+          call xyflgrd(lInRe, jax, flagRe)
+          call xyread (lInIm, jax, lineIm)
+          call xyflgrd(lInIm, jax, flagIm)
+
+c         Work out everything, but only write out what is requested.
+          do iax = 1, axLen(1)
+            psq = lineRe(iax)**2 + lineIm(iax)**2
             snr = 1.0
             if (snclip.gt.0.0) snr = psq / sigsq
 
-            call allblnk (pline(i), pflags(i), epline(i),
-     *         epflags(i), paline(i), paflags(i), epaline(i),
-     *         epaflags(i))
-            if (zero) pflags(i) = .true.
+            call allblnk(pline(iax), pflags(iax), epline(iax),
+     *         epflags(iax), paline(iax), paflags(iax), epaline(iax),
+     *         epaflags(iax))
+            if (zero) pflags(iax) = .true.
 
-            if ((uline(i).eq.0.0 .and. qline(i).eq.0.0) .or.
-     *           (.not.qflags(i) .or. .not.uflags(i))) then
-c
-c Undefined, so don't allow the "zero" blanking option
-c
-              pflags(i)   = .false.
+            if ((lineIm(iax).eq.0.0 .and. lineRe(iax).eq.0.0) .or.
+     *          (.not.flagRe(iax) .or. .not.flagIm(iax))) then
+c             Undefined, so don't allow the "zero" blanking option.
+              pflags(iax) = .false.
+
             else if (snr.gt.snclipsq) then
-c
-c Passed the S/N ration criterion; work out amplitude and phase
-c
-              pline(i) = sqrt(psq)
-              epline(i) = sigma
-              pflags(i) = .true.
-              epflags(i) = .true.
+c             Passed the S/N ratio criterion; work out amp and phase.
+              pline(iax)   = sqrt(psq)
+              epline(iax)  = sigma
+              pflags(iax)  = .true.
+              epflags(iax) = .true.
 
-              paline(i) = fac * atan2(uline(i),qline(i))
-              epaline(i) = fac * sigma / sqrt(psq)
-              paflags(i) = .true.
-              epaflags(i) = .true.
+              paline(iax)   = fac * atan2(lineIm(iax),lineRe(iax))
+              epaline(iax)  = fac * sigma / sqrt(psq)
+              paflags(iax)  = .true.
+              epaflags(iax) = .true.
 
-              if (paclip.gt.0.0 .and. epaline(i).gt.paclip) then
-c
-c Failed the phase error blanking test.   Don't allow "zero"
-c blanking here. Blank both amplitude and phase.
-c
-                call allblnk (pline(i), pflags(i), epline(i),
-     *            epflags(i), paline(i), paflags(i), epaline(i),
-     *            epaflags(i))
+              if (paclip.gt.0.0 .and. epaline(iax).gt.paclip) then
+c               Failed the phase error blanking test.  Don't allow
+c               "zero" blanking here.  Blank both amplitude and phase.
+                call allblnk(pline(iax), pflags(iax), epline(iax),
+     *            epflags(iax), paline(iax), paflags(iax), epaline(iax),
+     *            epaflags(iax))
+
               else
-c
-c Debias intensity if required
-c
+c               Debias intensity if required.
                 if (debias) then
                   p = psq - sigsq
                   if (p.gt.0.0) then
-                    pline(i) = sqrt(p)
+                    pline(iax) = sqrt(p)
                   else
-c
-c Blank amplitude and phase if we can't debias amplitude
-c
-                    call allblnk (pline(i), pflags(i), epline(i),
-     *                epflags(i), paline(i), paflags(i), epaline(i),
-     *                epaflags(i))
-c
-c Zero is a reasonable estimate for this pixel so if requested,
-c leave the flag mask at good for the amplitude image
-c
-                    if (zero) pflags(i) = .true.
+
+c                   Blank amp and phase if we can't debias amp.
+                    call allblnk(pline(iax), pflags(iax), epline(iax),
+     *                epflags(iax), paline(iax), paflags(iax),
+     *                epaline(iax), epaflags(iax))
+
+c                     Zero is a reasonable estimate for this pixel so if
+c                     requested, leave the flag mask at good for the
+c                     amplitude image.
+                    if (zero) pflags(iax) = .true.
                   endif
                 endif
               endif
             endif
-c
-c  Fit focus and pointing offsets to aperture E-field maps.
-c  Fit linear and quadratic terms to phase across aperture
-c  phase(x,y)=a+bx+cy+d(x*x+y*y)
-c
-            x  = (i-crpix(1))*cdelt(1)
-            y  = (j-crpix(2))*cdelt(2)
+
+c           Fit focus and pointing offsets to aperture E-field maps.
+c           Fit linear and quadratic terms to phase across aperture
+c           phase(x,y)=a+bx+cy+d(x*x+y*y).
+            x  = (iax-crpix(1))*cdelt(1)
+            y  = (jax-crpix(2))*cdelt(2)
             r2 = (x*x+y*y)
-c
-c  Mask amplitude and phase outside of illuminated aperture surface.
-c
-            if (r2.gt.antdiam**2 .or. r2.lt.subdiam**2) then
-              pflags(i)   = .false.
-              paflags(i) = .false.
+
+c           Mask amp and phase outside illuminated aperture surface.
+            if (r2.lt.subr2 .or. antr2.lt.r2) then
+              pflags(iax)  = .false.
+              paflags(iax) = .false.
             endif
-c
-c  Accumulate the sums.
-c
-            if (pass1 .and. paflags(i)) then
+
+c           Accumulate the sums.
+            if (pass1 .and. paflags(iax)) then
               sum    = sum    + 1.0
-              sumz   = sumz   + paline(i)
-              sumzz  = sumzz  + paline(i)*paline(i)
+              sumz   = sumz   + paline(iax)
+              sumzz  = sumzz  + paline(iax)*paline(iax)
               sumxx  = sumxx  + x*x
               sumyy  = sumyy  + y*y
               sumr2  = sumr2  + r2
               sumr4  = sumr4  + r2*r2
-              sumzx  = sumzx  + paline(i)*x
-              sumzy  = sumzy  + paline(i)*y
-              sumzr2 = sumzr2 + paline(i)*r2
+              sumzx  = sumzx  + paline(iax)*x
+              sumzy  = sumzy  + paline(iax)*y
+              sumzr2 = sumzr2 + paline(iax)*r2
             else if (bmfit .and. .not.pass1) then
               fitph  = a + b*x + c*y + d*r2
-              paline(i) = paline(i) - fitph
-              if (paflags(i)) then
-                sum    = sum    + 1.0
-                sumz   = sumz   + paline(i)
-                sumzz  = sumzz  + paline(i)*paline(i)
+              paline(iax) = paline(iax) - fitph
+              if (paflags(iax)) then
+                sum   = sum    + 1.0
+                sumz  = sumz   + paline(iax)
+                sumzz = sumzz  + paline(iax)*paline(iax)
               endif
-              if (pflags(i)) then
-                sumw    = sumw    + pline(i)
-                sumwz   = sumwz   + pline(i)*paline(i)
-                sumwzz  = sumwzz  + pline(i)*paline(i)*paline(i)
+              if (pflags(iax)) then
+                sumw   = sumw    + pline(iax)
+                sumwz  = sumwz   + pline(iax)*paline(iax)
+                sumwzz = sumwzz  + pline(iax)*paline(iax)*paline(iax)
               endif
             endif
           enddo
-c
-c Write out the images.
-c
+
+c         Write out the images.
           if (bmfit .and. .not.pass1 .or. pass1 .and. .not.bmfit) then
-            if (lpout(1).ne.0) then
-              call xywrite (lpout(1), j, pline)
-              call xyflgwr (lpout(1), j, pflags)
+            if (lOutM(1).ne.0) then
+              call xywrite(lOutM(1), jax, pline)
+              call xyflgwr(lOutM(1), jax, pflags)
             endif
-            if (lpout(2).ne.0) then
-              call xywrite (lpout(2), j, epline)
-              call xyflgwr (lpout(2), j, epflags)
+            if (lOutM(2).ne.0) then
+              call xywrite(lOutM(2), jax, epline)
+              call xyflgwr(lOutM(2), jax, epflags)
             endif
 
-            if (lpaout(1).ne.0) then
-              call xywrite (lpaout(1), j, paline)
-              call xyflgwr (lpaout(1), j, paflags)
+            if (lOutPA(1).ne.0) then
+              call xywrite(lOutPA(1), jax, paline)
+              call xyflgwr(lOutPA(1), jax, paflags)
             endif
-            if (lpaout(2).ne.0) then
-              call xywrite (lpaout(2), j, epaline)
-              call xyflgwr (lpaout(2), j, epaflags)
+            if (lOutPA(2).ne.0) then
+              call xywrite(lOutPA(2), jax, epaline)
+              call xyflgwr(lOutPA(2), jax, epaflags)
             endif
           endif
-c  Get next image row
+
+c         Get next image row
         enddo
-c
-c  Sumarize results of focus and pointing fits.
-c
+
+c       Sumarize results of focus and pointing fits.
         if (pass1) then
-          write(aline,'(a,i6)')
+          write(text,'(a,i8)')
      *      'Number of points in phase fit =',int(sum)
-          call output(aline)
+          call output(text)
           b   = sumzx/sumxx
           c   = sumzy/sumyy
           det = sumr2*sumr2 - sum*sumr4
+
           if (abs(det).gt.1d-10) then
             dd = (sumz*sumr2-sumzr2*sum)/det
             d  = dd
@@ -853,57 +684,58 @@ c
      *      'Fit linear and quadratic terms to phase across aperture')
           call output('Phase(x,y) = A + Bx + Cy + D(x*x+y*y) '//ustr)
           call output('Results of Phase Fit are:')
-          write(aline,'(a,4(g12.5,3x))') 'A,B,C,D = ',A,B,C,D
-          call output(aline)
+          write(text,'(a,4(g12.5,3x))') 'A,B,C,D = ',A,B,C,D
+          call output(text)
         endif
-c
-c  Compute the surface rms.
-c
+
+c       Compute the surface rms.
         if (sum.gt.0.) then
           rms = sqrt(sumzz/sum - (sumz/sum)**2)
           if (pass1) then
-            write(aline,'(a,g12.5,1x,a)')
+            write(text,'(a,g12.5,1x,a)')
      *           'Surface rms before fit = ',rms, ustr
           else
-            write(aline,'(a,g12.5,1x,a)')
+            write(text,'(a,g12.5,1x,a)')
      *           'Surface rms after fit = ',rms, ustr
           endif
-          call output(aline)
+          call output(text)
         endif
-c
-c  Compute the amplitude weighted surface rms.
-c
+
+c       Compute the amplitude weighted surface rms.
         if (sumw.gt.0.) then
           rmsw = sqrt(sumwzz/sumw - (sumwz/sumw)**2)
           if (.not.pass1) then
-            write(aline,'(a,g12.5,1x,a)')
+            write(text,'(a,g12.5,1x,a)')
      *        'Amplitude weighted surface rms after fit = ',
      *          rmsw, ustr
-            call output(aline)
+            call output(text)
           endif
         endif
-c
-c  Convert the fits to sensible units.  B and C have units of 1/fac
-c  radians per wavelength.  Convert to arcsecs.
-c
+
+c       Convert the fits to sensible units.  B and C have units of 1/fac
+c       radians per wavelength.  Convert to arcsecs.
         if (frqax.eq.3) then
-          freq = (real(k)-crpix(3))*cdelt(3) + crval(3)
-          write(aline,'(a,2g12.5,a)') 'Pointing offset in az,el = ',
-     *      b/fac/twopi*cmks/(freq*1e9)*180/pi*3600,
-     *      c/fac/twopi*cmks/(freq*1e9)*180/pi*3600, ' arcsecs'
-          call output(aline)
+c         Get frequency in Hz, wavelength in metre.
+          freq = ((dble(kax)-crpix(3))*cdelt(3) + crval(3))*1d9
+          lambda = DCMKS/freq
+
+          write(text,'(a,2g12.5,a)') 'Pointing offset in az,el = ',
+     *      b/fac/DTWOPI*lambda*DR2AS,
+     *      c/fac/DTWOPI*lambda*DR2AS, ' arcsecs'
+          call output(text)
+
           if (pass1) then
-            write(aline,'(a,g12.5,a)') 'Surface rms before fit = ',
-     *        0.5*rms/fac/twopi/freq*cmks*1e-3, ' microns'
-            call output(aline)
+            write(text,'(a,g12.5,a)') 'Surface rms before fit = ',
+     *        0.5d0*rms/fac/DTWOPI*lambda*1d6, ' microns'
+            call output(text)
           else
-            write(aline,'(a,g12.5,a)') 'Surface rms after fit = ',
-     *        0.5*rms/fac/twopi/freq*cmks*1e-3, ' microns'
-            call output(aline)
-            write(aline,'(a,g12.5,a)')
+            write(text,'(a,g12.5,a)') 'Surface rms after fit = ',
+     *        0.5d0*rms/fac/DTWOPI*lambda*1d6, ' microns'
+            call output(text)
+            write(text,'(a,g12.5,a)')
      *        'Amplitude weighted surface rms after fit = ',
-     *        0.5*rmsw/fac/twopi/freq*cmks*1e-3, ' microns'
-            call output(aline)
+     *        0.5d0*rmsw/fac/DTWOPI*lambda*1d6, ' microns'
+            call output(text)
           endif
         endif
 
@@ -913,15 +745,31 @@ c
           pass1 = .false.
           goto 100
         endif
-c
-c  Get next image plane
-c
+
+c       Get next image plane.
       enddo
-c
-c  Write some header info.
-c
+
+c     Write header info.
       call lcase(ustr)
-      if (lpaout(1).ne.0) call wrhda (lpaout(1), 'bunit', ustr)
-      if (lpaout(2).ne.0) call wrhda (lpaout(2), 'bunit', ustr)
+      if (lOutPA(1).ne.0) call wrhda(lOutPA(1), 'bunit', ustr)
+      if (lOutPA(2).ne.0) call wrhda(lOutPA(2), 'bunit', ustr)
+
+      end
+
+c***********************************************************************
+
+      subroutine allblnk(p, pf, ep, epf, pa, paf, epa, epaf)
+c-----------------------------------------------------------------------
+      real p, ep, pa, epa
+      logical pf, epf, paf, epaf
+c-----------------------------------------------------------------------
+      p    = 0.0
+      pf   = .false.
+      ep   = 0.0
+      epf  = .false.
+      pa   = 0.0
+      paf  = .false.
+      epa  = 0.0
+      epaf = .false.
 
       end
