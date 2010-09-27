@@ -15,7 +15,7 @@ c       See the Users Manual for instructions on how to specify this.
 c@ incr
 c       Increment to be used along each axis. Default is 1.
 c
-c$Id: imsub.for,v 1.3 2010/08/26 05:50:58 cal103 Exp $
+c$Id: imsub.for,v 1.4 2010/09/27 07:01:10 cal103 Exp $
 c--
 c  History:
 c    rjs Dark-ages Original version.
@@ -65,8 +65,8 @@ c-----------------------------------------------------------------------
       external  BoxRect, hdprsnt, itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('imsub',
-     *                 '$Revision: 1.3 $',
-     *                 '$Date: 2010/08/26 05:50:58 $')
+     *                 '$Revision: 1.4 $',
+     *                 '$Date: 2010/09/27 07:01:10 $')
 
 c     Get the input parameters.
       call keyini
@@ -97,8 +97,13 @@ c     Determine portion of image to copy.
         nOut(i) = (trc(i) - blc(i) + incr(i))/incr(i)
       enddo
 
-c     Create the output image, and make its header.
+c     Create the output image.
       call xyopen(lOut,outNam,'new',naxis,nOut)
+
+c     Start with a verbatim copy of the input header.
+      call headcopy(lIn, lOut, 0, 0, 0, 0)
+
+c     Update changed keywords.
       do i = 1, naxis
         keyw = 'crpix' // itoaf(i)
         call rdhdd(lIn, keyw, crpix, 1d0)
@@ -111,11 +116,12 @@ c     Create the output image, and make its header.
         call wrhdd(lOut,keyw, cdelt)
       enddo
 
-      call headcopy(lIn, lOut, 0, 0, 0, 0)
       call hdcopy(lIn, lOut, 'rms')
-      call hisopen(lOut,'append')
-      call hiswrite (lOut, 'IMSUB: Miriad ' // version)
-      call hisinput(lOut,'IMSUB')
+
+c     Update history.
+      call hisopen (lOut, 'append')
+      call hiswrite(lOut, 'IMSUB: Miriad ' // version)
+      call hisinput(lOut, 'IMSUB')
       call hisclose(lOut)
 
 c     Initialise the plane indices.
