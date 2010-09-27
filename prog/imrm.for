@@ -19,8 +19,7 @@ c       The more frequencies you have the better.  It is very important
 c       to try and get at least two sufficiently close that there is no
 c       ambiguity between them.
 c
-c
-c       By default, IMRM attempts to remove n*pi ambiguities from the
+c       By default, IMRM attempts to remove N*pi ambiguities from the
 c       data.  Its algorithm is (pixel by pixel)
 c
 c         0) First remove angle according to the amount given by the
@@ -146,7 +145,7 @@ c       corner of the plot (unless options=accumulate).  No default.
 c@ nxy
 c       Number of subplots per page in the x and y directions, to put on
 c       the plotting device.  See options=accumulate.  The default is
-c       10x10.
+c       2,2 (i.e. 2x2).
 c@ csize
 c       PGPLOT character height.  Default is 1.0.
 c@ options
@@ -179,7 +178,7 @@ c                    same Y-axis scale, that embraces all sub-plots.
 c                    This option forces each sub-plot to be scaled
 c                    independently.
 c
-c$Id: imrm.for,v 1.5 2010/09/24 05:11:29 cal103 Exp $
+c$Id: imrm.for,v 1.6 2010/09/27 07:29:36 cal103 Exp $
 c--
 c  History:
 c    nebk 22may92   Original version.
@@ -208,99 +207,73 @@ c-----------------------------------------------------------------------
       integer MAXIM
       parameter (MAXIM = 20)
 
-      real lsq(MAXIM), pa(MAXIM), pa2(MAXIM), wt(MAXIM)
-      double precision cdelt(maxnax,MAXIM), crval(maxnax,MAXIM),
-     *  ecdelt(maxnax,MAXIM), ecrval(maxnax,MAXIM)
-      real line(maxdim,MAXIM), eline(maxdim,MAXIM), rmline(maxdim),
-     *  ermline(maxdim), paline(maxdim), epaline(maxdim),
-     *  epoch(MAXIM), eepoch(MAXIM), crpix(maxnax,MAXIM),
-     *  freq(MAXIM), ecrpix(maxnax,MAXIM), diff, d2, qcut, errcut,
-     *  rmcut, pacut, q, rmi, cs, padummy
-      integer lin(MAXIM), lein(MAXIM), lrm(2), lpa(2),
-     *  size(maxnax,MAXIM), esize(maxnax,MAXIM), naxis(MAXIM),
-     *  enaxis(MAXIM), fqax(MAXIM), efqax(MAXIM), frqax, nim,
-     *  neim, i, j, k, l, imin, jmin, nbl(6), blsum, left,
-     *  psize, ipyd, ipyf, ippyd, ippyf, nx, ny
-      character aline*100, in(MAXIM)*64, ein(MAXIM)*64, rmout*64,
-     *  ermout*64, paout*64, epaout*64, ctype(maxnax,MAXIM)*9,
-     *  ectype(maxnax,MAXIM)*9, bflag, device*32, versan*80, version*80
-      logical flags(maxdim,MAXIM), eflags(maxdim,MAXIM), oflags(maxdim),
-     *  relax, blank, oblank, doerrbl, dormbl, dopabl, noerr,
-     *  ambig, accum, yind, guess
+      logical   accum, ambig, blank, doerrbl, dopabl, dormbl,
+     *          flags(MAXDIM,MAXIM), flagsE(MAXDIM,MAXIM), guess, noerr,
+     *          oblank, oflags(MAXDIM), relax, yind
+      integer   axLen(MAXNAX), axLenP, blsum, i, imin, ippyd, ippyf,
+     *          ipyd, ipyf, j, jmin, k, l, left, lInE(MAXIM),
+     *          lIn(MAXIM), lOutPA, lOutPAe, lOutRM, lOutRMe, naxis,
+     *          nbl(6), nIn, nInE, nx, ny
+      real      cs, d2, diff, errcut, lmbdsq(MAXIM), pa(MAXIM),
+     *          pa2(MAXIM), pacut, padummy, q, qcut, rmcut, rmi,
+     *          row(MAXDIM,MAXIM), rowE(MAXDIM,MAXIM), rowPA(MAXDIM),
+     *          rowPAe(MAXDIM), rowRM(MAXDIM), rowRMe(MAXDIM), wt(MAXIM)
+      double precision dummy, freq(MAXIM)
+      character bflag, device*32, inE(MAXIM)*64, in(MAXIM)*64, outRM*64,
+     *          outRMe*64, outPA*64, outPAe*64, text*100, version*72
 
-      integer nkeys
-      parameter (nkeys = 46)
-      character keyw(nkeys)*8
+      character versan*80
+      external  versan
 
-      data keyw/     'cdelt1  ','cdelt2  ','cdelt3  ',
-     *    'cdelt4  ','cdelt5  ','crota1  ','crota2  ','crota3  ',
-     *    'crota4  ','crota5  ','crpix1  ','crpix2  ','crpix3  ',
-     *    'crval1  ','crval2  ','crval3  ','crval4  ','crval5  ',
-     *    'ctype1  ','ctype2  ','ctype3  ','ctype4  ','ctype5  ',
-     *    'obstime ','epoch   ','history ','instrume','niters  ',
-     *    'object  ','restfreq','telescop','vobs    ','obsra   ',
-     *    'obsdec  ','observer','cellscal','bmaj    ','pbtype ',
-     *    'bmin    ','bpa     ','pbfwhm  ','lstart  ','lstep   ',
-     *    'ltype   ','lwidth  ','vobs    '/
       data nbl /6*0/
       data padummy /-100000.0/
 c-----------------------------------------------------------------------
       version = versan ('imrm',
-     *                  '$Revision: 1.5 $',
-     *                  '$Date: 2010/09/24 05:11:29 $')
+     *                  '$Revision: 1.6 $',
+     *                  '$Date: 2010/09/27 07:29:36 $')
 
-      call output (version)
-      call output (' ')
-      call output ('The order of the input position angle images is ')
-      call output ('now IMPORTANT.  See the HELP file for details of ')
-      call output ('the algorithm which has been improved')
-      call output ('Plots are now available too')
-      call output (' ')
-c
-c  Get the inputs
-c
+c     Get the inputs.
       call keyini
 
-      call mkeyf ('in', in, MAXIM, nim)
-      if (nim.lt.2) call bug ('f',
+      call mkeyf('in', in, MAXIM, nIn)
+      if (nIn.lt.2) call bug('f',
      *  'You must specify at least two input images')
-      call mkeyf ('inerr', ein, MAXIM, neim)
-      if (neim.gt.0 .and. neim.ne.nim) call bug ('f',
+      call mkeyf('inerr', inE, MAXIM, nInE)
+      if (nInE.gt.0 .and. nInE.ne.nIn) call bug('f',
      *  'You must give the same number of error as input PA images')
 
-      call keya ('rm', rmout, ' ')
-      call keya ('rm', ermout, ' ')
-      call keyr ('rmi', rmi, 0.0)
-      call keya ('pa0', paout, ' ')
-      call keya ('pa0', epaout, ' ')
-c      if (rmout.eq.' ' .and. paout.eq.' ') call bug ('f',
+      call keya('rm', outRM, ' ')
+      call keya('rm', outRMe, ' ')
+      call keyr('rmi', rmi, 0.0)
+      call keya('pa0', outPA, ' ')
+      call keya('pa0', outPAe, ' ')
+c      if (outRM.eq.' ' .and. outPA.eq.' ') call bug('f',
 c     +  'You have not specified any output images')
 
-      call keyr ('qcut', qcut, 0.001)
-      call keyr ('errcut', errcut, -1.0)
-      call keyr ('rmcut', rmcut, -1.0)
-      call keyr ('pacut', pacut, -1.0)
-      call keyr ('csize', cs, 0.0)
-      call getopt (relax, ambig, accum, yind, guess)
-      if (guess .and. ambig) call bug ('f',
+      call keyr('qcut', qcut, 0.001)
+      call keyr('errcut', errcut, -1.0)
+      call keyr('rmcut', rmcut, -1.0)
+      call keyr('pacut', pacut, -1.0)
+      call keyr('csize', cs, 0.0)
+      call getopt(relax, ambig, accum, yind, guess)
+      if (guess .and. ambig) call bug('f',
      *  'Options=guess,ambiguous are mutually exclusive')
-      call keya ('device', device, ' ')
-      call keyi ('nxy', nx, 1)
-      call keyi ('nxy', ny, nx)
+      call keya('device', device, ' ')
+      call keyi('nxy', nx, 2)
+      call keyi('nxy', ny, nx)
 
       call keyfin
-c
-c Sort out inputs and give user some helpful (?) messages
-c
-      if (qcut.gt.0.0 .and. neim.le.2) then
-        call bug ('w',
+
+c     Sort out inputs and give user some helpful (?) messages.
+      if (qcut.gt.0.0 .and. nInE.le.2) then
+        call bug('w',
      *   'You need at least three input error images to be able')
-        call bug ('w',
-     *   'to compute the goodness of fit; setting q=1 & qcut=0.0')
-        call output (' ')
+        call bug('w',
+     *   'to compute the goodness of fit; setting q=1 & qcut=0.')
+        call output(' ')
         qcut = 0.0
       endif
-      if (qcut.lt.0.0 .or. qcut.gt.1.0) call bug ('f',
+      if (qcut.lt.0.0 .or. qcut.gt.1.0) call bug('f',
      *  'Your goodness of fit blanking level is invalid')
 
       dormbl = .false.
@@ -312,44 +285,44 @@ c
       doerrbl = .false.
       if (errcut.gt.0.0) doerrbl = .true.
 
-      if (doerrbl .and. neim.eq.0) call bug ('f',
+      if (doerrbl .and. nInE.eq.0) call bug('f',
      *    'Input error blanking needs input error images')
 
-      if ((dormbl .or. dopabl) .and. (nim.le.2 .and. neim.eq.0)) then
+      if ((dormbl .or. dopabl) .and. (nIn.le.2 .and. nInE.eq.0)) then
         call output
      *  ('### Fatal error: Output error blanking requires input error')
         call output
      *  ('### Fatal error: images or at least 3 input p.a. images and')
-       call bug ('f',
+       call bug('f',
      *   'the assumption that the goodness of fit is unity')
       endif
-      if ((ermout.ne.' ' .or. epaout.ne.' ') .and.
-     *     (nim.le.2 .and. neim.eq.0)) then
+      if ((outRMe.ne.' ' .or. outPAe.ne.' ') .and.
+     *     (nIn.le.2 .and. nInE.eq.0)) then
         call output
      *  ('### Fatal error: Output error images require input error')
         call output
      *  ('### Fatal error: images or at least 3 input p.a. images and')
-        call bug ('f',
+        call bug('f',
      *   'the assumption that the goodness of fit is unity')
       endif
-      if ((dormbl .or. dopabl  .or. ermout.ne.' ' .or.
-     *      epaout.ne.' ') .and. (neim.eq.0 .and. nim.gt.2)) then
-        call bug ('w', 'The output errors will be calculated')
-        call bug ('w', 'assuming the goodness of fit is unity')
-        call output (' ')
+      if ((dormbl .or. dopabl  .or. outRMe.ne.' ' .or.
+     *     outPAe.ne.' ') .and. (nInE.eq.0 .and. nIn.gt.2)) then
+        call bug('w', 'The output errors will be calculated')
+        call bug('w', 'assuming the goodness of fit is unity')
+        call output(' ')
       endif
 
       if (.not.dormbl .and. .not.dopabl .and. .not.doerrbl) then
-        call bug ('w',
-     *    'It is advised that some error based blanking is used')
-        call output (' ')
+        call bug('w',
+     *    'It is advised that some error-based blanking be used.')
+        call output(' ')
       endif
 
-      if (nim.eq.2) then
-        call bug ('w',
+      if (nIn.eq.2) then
+        call bug('w',
      *    'It must be assumed that there are no ambiguities')
-        call bug ('w', 'with only two different frequencies')
-        call output (' ')
+        call bug('w', 'with only two different frequencies.')
+        call output(' ')
       endif
       bflag = 'f'
       if (relax) bflag = 'w'
@@ -361,108 +334,40 @@ c
         nx = max(1,nx)
         ny = max(1,ny)
       endif
-c
-c Indicate that we have input error images
-c
-      noerr = .true.
-      if (neim.gt.0) noerr = .false.
-c
-c  Open the input images
-c
 
-      do i = 1, nim
-        call openin (maxdim, maxnax, bflag, in(i), lin(i), naxis(i),
-     *     size(1,i), epoch(i), crpix(1,i), cdelt(1,i), crval(1,i),
-     *     ctype(1,i), fqax(i))
+c     Indicate that we have input error images.
+      noerr = .true.
+      if (nInE.gt.0) noerr = .false.
+
+c     Open the input images and check consistency.
+      do i = 1, nIn
+        call openin(in(i), bflag, lIn(i), axLen)
+        call chkdes(lIn(i), in(i), bflag, freq(i))
       enddo
-c
-c Compare images for consistency
-c
-      do i = 1, nim-1
-        do j = i+1, nim
-          call chkdes (bflag, in(i), in(j), naxis(i), naxis(j),
-     *      size(1,i), size(1,j), crpix(1,i), crpix(1,j), cdelt(1,i),
-     *      cdelt(1,j), crval(1,i), crval(1,j), epoch(i), epoch(j),
-     *      ctype(1,i), ctype(1,j), fqax(i), fqax(j))
+
+c     Open the error images and check consistency.
+      if (nInE.gt.0) then
+        do i = 1, nInE
+          call openin(inE(i), bflag, lInE(i), axLen)
+          call chkdes(lInE(i), inE(i), bflag, dummy)
         enddo
+      endif
+
+c     Find wavelength of each image at pixel 1 in metres.
+      call output(' ')
+      do i = 1, nIn
+        lmbdsq(i) = (DCMKS / (freq(i) * 1e9))**2
+        write(text,10) freq(i)
+10      format('Found frequency ',f8.4,' GHz')
+        call output(text)
       enddo
-c
-c  Open the error images
-c
-      if (neim.gt.0) then
-        do i = 1, neim
-          call openin (maxdim, maxnax, bflag, ein(i), lein(i),
-     *       enaxis(i), esize(1,i), eepoch(i), ecrpix(1,i), ecdelt(1,i),
-     *       ecrval(1,i), ectype(1,i), efqax(i))
-        enddo
-c
-c Compare error images for consistency
-c
-        do i = 1, neim-1
-          do j = i+1, neim
-            call chkdes (bflag, ein(i), ein(j), enaxis(i), enaxis(j),
-     *        esize(1,i), esize(1,j), ecrpix(1,i), ecrpix(1,j),
-     *        ecdelt(1,i), ecdelt(1,j), ecrval(1,i), ecrval(1,j),
-     *        eepoch(i), eepoch(j), ectype(1,i), ectype(1,j),
-     *        efqax(i), efqax(j))
-          enddo
-        enddo
-c
-c Compare the first error image with the first position angle
-c image for consistency
-c
-        call chkdes (bflag, in, ein, naxis, enaxis, size, esize,
-     *        crpix, ecrpix, cdelt, ecdelt, crval, ecrval, epoch,
-     *        eepoch, ctype, ectype, fqax, efqax)
-      endif
-c
-c  Create the output images, copy the header keywords from the
-c  first input image and add the new history
-c
-      if (rmout.ne.' ') then
-        call openout (lin(1), rmout, naxis(1), size(1,1), nkeys,
-     *                keyw, version, lrm(1))
-        call wrhda (lrm, 'bunit', 'RAD/M/M')
-        call wrbtype (lrm, 'rotation_measure')
-      endif
-      if (ermout.ne.' ') then
-        call openout (lin(1), ermout, naxis(1), size(1,1), nkeys,
-     *                keyw, version, lrm(2))
-        call wrhda (lrm, 'bunit', 'RAD/M/M')
-        call wrbtype (lrm, 'rotation_measure')
-      endif
-      if (paout.ne.' ') then
-        call openout (lin(1), paout, naxis(1), size(1,1), nkeys,
-     *                keyw, version, lpa(1))
-        call wrhda (lpa, 'bunit', 'DEGREES')
-        call wrbtype (lpa, 'position_angle')
-      endif
-      if (epaout.ne.' ') then
-        call openout (lin(1), epaout, naxis(1), size(1,1), nkeys,
-     *                keyw, version, lpa(2))
-        call wrhda (lpa, 'bunit', 'DEGREES')
-        call wrbtype (lpa, 'position_angle')
-      endif
-c
-c Find wavelength of each image (at pixel 1) in metres
-c
-      frqax = fqax(1)
-      call output (' ')
-      do i = 1, nim
-        freq(i) = (1.0-crpix(frqax,i))*cdelt(frqax,i) + crval(frqax,i)
-        lsq(i) = (dcmks / (freq(i) * 1e9))**2
-        write (aline,10) freq(i)
-10      format ('Found frequency ', f8.4, ' GHz')
-        call output (aline)
-      enddo
-c
-c Warn user if degenerate frequencies
-c
+
+c     Warn user if degenerate frequencies.
       diff = 1e30
-      do i = 1, nim-1
-        do j = i+1, nim
+      do i = 1, nIn-1
+        do j = i+1, nIn
           d2 = abs(freq(j) - freq(i))
-          if (d2.eq.0.0) call bug ('w',
+          if (d2.eq.0.0) call bug('w',
      *      'There are degenerate frequencies amongst the PA images')
           if (d2.lt.diff) then
             diff = d2
@@ -473,72 +378,92 @@ c
       enddo
 
       if (.not.ambig) then
-        write (aline,20) freq(imin), freq(jmin)
-20      format ('Closest frequencies are ', f8.4, ' & ', f8.4, ' GHz')
-c        call output (aline)
+        write(text,20) freq(imin), freq(jmin)
+20      format('Closest frequencies are ',f8.4,' & ',f8.4,' GHz')
+c        call output (text)
       endif
-c
-c Use first 2 images given by user so they have control.  Using closest
-c frequencies is a lousy algorithm.
-c
+
+c     Use first 2 images given by user so they have control.  Using
+c     closest frequencies is a lousy algorithm.
       imin = 1
       jmin = 2
-c
-c Allocate space for plots
-c
-      psize = nim*size(1,1)*size(2,1)
-      call memalloc (ipyd, psize, 'r')
-      call memalloc (ipyf, psize, 'r')
+
+
+c     Create the output images, copy the header keywords from the
+c     first input image and add the new history.
+      call rdhdi(lIn(1), 'naxis', naxis, 0)
+      if (outRM.ne.' ') then
+        call xyopen(lOutRM, outRM, 'new', naxis, axLen)
+        call mkHead(lIn(1), lOutRM, version)
+        call wrhda(lOutRM, 'bunit', 'RAD/M/M')
+        call wrbtype(lOutRM, 'rotation_measure')
+      endif
+      if (outRMe.ne.' ') then
+        call xyopen(lOutRMe, outRMe, 'new', naxis, axLen)
+        call mkHead(lIn(1), lOutRMe, version)
+        call wrhda(lOutRMe, 'bunit', 'RAD/M/M')
+        call wrbtype(lOutRMe, 'rotation_measure')
+      endif
+      if (outPA.ne.' ') then
+        call xyopen(lOutPA, outPA, 'new', naxis, axLen)
+        call mkHead(lIn(1), lOutPA, version)
+        call wrhda(lOutPA, 'bunit', 'DEGREES')
+        call wrbtype(lOutPA, 'position_angle')
+      endif
+      if (outPAe.ne.' ') then
+        call xyopen(lOutPAe, outPAe, 'new', naxis, axLen)
+        call mkHead(lIn(1), lOutPAe, version)
+        call wrhda(lOutPAe, 'bunit', 'DEGREES')
+        call wrbtype(lOutPAe, 'position_angle')
+      endif
+
+
+c     Allocate space for plots.
+      axLenP = nIn*axLen(1)*axLen(2)
+      call memalloc(ipyd, axLenP, 'r')
+      call memalloc(ipyf, axLenP, 'r')
       ippyd = ipyd
       ippyf = ipyf
-c
-c Compute results; assume 2-D images only
-c
-      do j = 1, size(2,1)
-c
-c Read lines from each image
-c
-        do k = 1, nim
-          call xyread  (lin(k), j,  line(1,k))
-          call xyflgrd (lin(k), j, flags(1,k))
-          if (neim.gt.0) then
-            call xyread  (lein(k), j,  eline(1,k))
-            call xyflgrd (lein(k), j, eflags(1,k))
+
+c     Compute results; assume 2-D images only.
+      do j = 1, axLen(2)
+c       Read lines from each image.
+        do k = 1, nIn
+          call xyread (lIn(k), j,   row(1,k))
+          call xyflgrd(lIn(k), j, flags(1,k))
+          if (nInE.gt.0) then
+            call xyread (lInE(k), j,   rowE(1,k))
+            call xyflgrd(lInE(k), j, flagsE(1,k))
           endif
         enddo
-c
-c Do fit for each image pixel. Do weighted fit if errors available.
-c
-        do i = 1, size(1,1)
+
+c       Do fit for each image pixel; weighted fit if errors available.
+        do i = 1, axLen(1)
           blank = .false.
-          do k = 1, nim
-c
-c Do fit only if all the input and possibly input error image
-c pixels are unblanked.
-c
+          do k = 1, nIn
+c           Do fit only if all the input and possibly input error image
+c           pixels are unblanked.
             if ((.not.flags(i,k)) .or.
-     *           (neim.gt.0 .and. .not.eflags(i,k))) then
+     *           (nInE.gt.0 .and. .not.flagsE(i,k))) then
               blank = .true.
               nbl(1) = nbl(1) + 1
               goto 100
             endif
-c
-c Do fit only if all the input error image pixels are smaller
-c than the specified cutoff
-c
-            if (doerrbl .and. eline(i,k).gt.errcut) then
+
+c           Do fit only if all the input error image pixels are smaller
+c           than the specified cutoff.
+            if (doerrbl .and. rowE(i,k).gt.errcut) then
               blank = .true.
               nbl(2) = nbl(2) + 1
               goto 100
             endif
-c
-c Work out weights if error images given
-c
-            pa(k) = line(i,k) * DD2R
+
+c           Work out weights if error images given.
+            pa(k) = row(i,k) * DD2R
             wt(k) = 1.0
             if (.not.noerr) then
-              if (eline(i,k).ne.0.0) then
-                wt(k) = 1.0 / (eline(i,k)*DD2R)**2
+              if (rowE(i,k).ne.0.0) then
+                wt(k) = 1.0 / (rowE(i,k)*DD2R)**2
               else
                 blank = .true.
                 nbl(3) = nbl(3) + 1
@@ -548,47 +473,43 @@ c
           enddo
 
 100       if (.not.blank) then
-c
-c Do the fit if all the input criteria are satisified
-c
-            call rotfit (imin, jmin, noerr, nim, lsq, pa, pa2,
-     *        wt, guess, ambig, rmi, rmline(i), paline(i),
-     *        ermline(i), epaline(i), q, memr(ippyd))
-            ippyd = ippyd + nim
-c
-c Fill the fit into the plot buffer
-c
-            do l = 1, nim
-              memr(ippyf) = (paline(i) + rmline(i)*lsq(l))*DR2D
+
+c           Do the fit if all the input criteria are satisified.
+            call rotfit(imin, jmin, noerr, nIn, lmbdsq, pa, pa2, wt,
+     *        guess, ambig, rmi, rowRM(i), rowPA(i), rowRMe(i),
+     *        rowPAe(i), q, memr(ippyd))
+            ippyd = ippyd + nIn
+
+c           Fill the fit into the plot buffer.
+            do l = 1, nIn
+              memr(ippyf) = (rowPA(i) + rowRM(i)*lmbdsq(l))*DR2D
               ippyf = ippyf + 1
             enddo
-c
-c Put output position angle between +/- 90 degrees
-c
-            call pm90 (paline(i))
-            paline(i) = paline(i) * DR2D
-            epaline(i) = epaline(i) * DR2D
-c
-c Ditch this pixel if output blanking criteria so dictate
-c
+
+c           Put output position angle between +/- 90 degrees.
+            call pm90(rowPA(i))
+            rowPA(i) = rowPA(i) * DR2D
+            rowPAe(i) = rowPAe(i) * DR2D
+
+c           Ditch this pixel if output blanking criteria so dictate.
             oflags(i) = .true.
             oblank = .false.
             if (q.lt.qcut) then
               nbl(4) = nbl(4) + 1
               oblank = .true.
-            else if (dormbl .and. ermline(i).gt.rmcut) then
+            else if (dormbl .and. rowRMe(i).gt.rmcut) then
               nbl(5) = nbl(5) + 1
               oblank = .true.
-            else if (dopabl .and. epaline(i).gt.pacut) then
+            else if (dopabl .and. rowPAe(i).gt.pacut) then
               nbl(6) = nbl(6) + 1
               oblank = .true.
             endif
-            if (oblank) call blnkall (oflags(i), rmline(i), paline(i),
-     *        ermline(i), epaline(i))
+            if (oblank) call blnkall(oflags(i), rowRM(i), rowPA(i),
+     *        rowRMe(i), rowPAe(i))
           else
-            call blnkall (oflags(i), rmline(i), paline(i),
-     *                    ermline(i), epaline(i))
-            do l = 1, nim
+            call blnkall(oflags(i), rowRM(i), rowPA(i),
+     *                    rowRMe(i), rowPAe(i))
+            do l = 1, nIn
               memr(ippyf) = padummy
               memr(ippyd) = padummy
               ippyf = ippyf + 1
@@ -596,89 +517,84 @@ c
             enddo
           endif
         enddo
-c
-c Write out the results
-c
-        if (rmout.ne.' ') then
-          call xywrite (lrm(1), j, rmline)
-          call xyflgwr (lrm(1), j, oflags)
+
+c       Write out the results.
+        if (outRM.ne.' ') then
+          call xywrite(lOutRM, j, rowRM)
+          call xyflgwr(lOutRM, j, oflags)
         endif
-        if (ermout.ne.' ') then
-          call xywrite (lrm(2), j, ermline)
-          call xyflgwr (lrm(2), j,  oflags)
+        if (outRMe.ne.' ') then
+          call xywrite(lOutRMe, j, rowRMe)
+          call xyflgwr(lOutRMe, j, oflags)
         endif
-        if (paout.ne.' ') then
-          call xywrite (lpa(1), j, paline)
-          call xyflgwr (lpa(1), j, oflags)
+        if (outPA.ne.' ') then
+          call xywrite(lOutPA, j, rowPA)
+          call xyflgwr(lOutPA, j, oflags)
         endif
-        if (epaout.ne.' ') then
-          call xywrite (lpa(2), j, epaline)
-          call xyflgwr (lpa(2), j,  oflags)
+        if (outPAe.ne.' ') then
+          call xywrite(lOutPAe, j, rowPAe)
+          call xyflgwr(lOutPAe, j, oflags)
         endif
       enddo
-c
-c  Close up
-c
-      do k = 1, nim
-        call xyclose (lin(k))
-        if (neim.gt.0) call xyclose (lein(k))
+
+c     Close up.
+      do k = 1, nIn
+        call xyclose(lIn(k))
+        if (nInE.gt.0) call xyclose(lInE(k))
       enddo
-      if (rmout.ne.' ')  call xyclose (lrm(1))
-      if (ermout.ne.' ') call xyclose (lrm(2))
-      if (paout.ne.' ')  call xyclose (lpa(1))
-      if (epaout.ne.' ') call xyclose (lpa(2))
-c
-c Tell user about blanking
-c
-      call output (' ')
+      if (outRM.ne.' ')  call xyclose(lOutRM)
+      if (outRMe.ne.' ') call xyclose(lOutRMe)
+      if (outPA.ne.' ')  call xyclose(lOutPA)
+      if (outPAe.ne.' ') call xyclose(lOutPAe)
+
+c     Tell user about blanking.
+      call output(' ')
       if (nbl(1).gt.0) then
-        write (aline, '(i8, a)') nbl(1),
+        write(text, '(i8, a)') nbl(1),
      *    ' output pixels were blanked because so were input pixels'
-        call output (aline)
+        call output(text)
       endif
       if (nbl(3).gt.0) then
-        write (aline, '(i8, a)') nbl(3),
+        write(text, '(i8, a)') nbl(3),
      *  ' output pixels were blanked because input error pixels were 0'
-        call output (aline)
+        call output(text)
       endif
       if (nbl(2).gt.0) then
-        write (aline, '(i8, a)') nbl(2),
+        write(text, '(i8, a)') nbl(2),
      *    ' output pixels were blanked because of "ERRCUT"'
-        call output (aline)
+        call output(text)
       endif
       if (nbl(4).gt.0) then
-        write (aline, '(i8, a)') nbl(4),
+        write(text, '(i8, a)') nbl(4),
      *    ' output pixels were blanked because of "QCUT"'
-        call output (aline)
+        call output(text)
       endif
       if (nbl(5).gt.0) then
-        write (aline, '(i8, a)') nbl(5),
+        write(text, '(i8, a)') nbl(5),
      *    ' output pixels were blanked because of "RMCUT"'
-        call output (aline)
+        call output(text)
       endif
       if (nbl(6).gt.0) then
-        write (aline, '(i8, a)') nbl(6),
+        write(text, '(i8, a)') nbl(6),
      *    ' output pixels were blanked because of "PACUT"'
-        call output (aline)
+        call output(text)
       endif
 
       blsum = 0
       do i = 1, 6
         blsum = blsum + nbl(i)
       enddo
-      left = size(1,1)*size(2,1) - blsum
-      write (aline, '(i8, a)') left, ' output pixels were unblanked'
-      call output (aline)
-      call output (' ')
-c
-c Plots
-c
-      if (device.ne.' ') call plotit (device, nx, ny, accum, yind,
-     *  size(1,1), size(2,1), nim, lsq, memr(ipyd), memr(ipyf), cs,
-     *  padummy)
-      call memfree (ipyd, psize, 'r')
-      call memfree (ipyf, psize, 'r')
+      left = axLen(1)*axLen(2) - blsum
+      write(text, '(i8, a)') left, ' output pixels were unblanked'
+      call output(text)
+      call output(' ')
 
+c     Plots.
+      if (device.ne.' ') call plotit(device, nx, ny, accum, yind,
+     *  axLen(1), axLen(2), nIn, lmbdsq, memr(ipyd), memr(ipyf), cs,
+     *  padummy)
+      call memfree(ipyd, axLenP, 'r')
+      call memfree(ipyf, axLenP, 'r')
 
       end
 
@@ -699,101 +615,151 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine chkdes (bflag, im1, im2, naxis1, naxis2, size1, size2,
-     *   crpix1, crpix2, cdelt1, cdelt2, crval1, crval2, epoch1,
-     *   epoch2, ctype1, ctype2, fqax1, fqax2)
+      subroutine chkdes(lIn, inName, bflag, freq)
 
-      integer naxis1, naxis2, size1(*), size2(*), fqax1, fqax2
-      character*(*) im1, im2, ctype1(*), ctype2(*), bflag
-      double precision crval1(*), crval2(*), cdelt1(*), cdelt2(*)
-      real crpix1(*), crpix2(*), epoch1, epoch2
+      integer   lIn
+      character bflag*1, inName*(*)
+      double precision freq
 c-----------------------------------------------------------------------
-c  Compare axis descriptors.
+c  Compare image headers for conformance.  Saves header keywords for the
+c  image specified when first called and compares them with those for
+c  images specified in subsequent calls.
 c
 c  Input:
-c   im1,2        Images
-c   naxis1,2     Number of axes
-c   size1,2      Sizes of each dimension
-c   crpix1,2     Reference pixels
-c   cdelt1,2     Increments
-c   crval1,2     Refernce values
-c   ctype1,2     types of axes
-c   epoch1,2     Epochs
-c   fqax         Frequency axis
+c    lIn        Handle of input image.
+c    inName     Image name for reporting
+c    bflag      Error handling flag, either 'f' (fatal) or 'w' (warn).
+c  Ouput:
+c    freq       Frequency of first pixel.
 c-----------------------------------------------------------------------
-      integer k, l1, l2, len1
-      character line*130
+      include 'maxdim.h'
+      include 'maxnax.h'
+
+      logical   doInit
+      integer   axLen(2,MAXNAX), fqax(2), frqax, iax, k, l1, l2, len1,
+     *          naxis(2)
+      double precision cdelt(2,MAXNAX), crpix(2,MAXNAX),
+     *          crval(2,MAXNAX), epoch(2)
+      character cax*1, ctype(2,MAXNAX)*16, name1*80, text*130
+
+      character itoaf*1
+      external  itoaf
+
+      save doInit, axLen, fqax, naxis, cdelt, crpix, crval, epoch,
+     *     ctype
+
+      data doInit /.true./
 c-----------------------------------------------------------------------
-      l1 = len1(im1)
-      l2 = len1(im2)
-
-      if (epoch1.ne.epoch2) then
-        line = 'Unequal epochs for images '//im1(1:l1)//' & '//im2(1:l2)
-        call bug (bflag, line)
+      if (doInit) then
+        k = 1
+        name1 = inName
+        l1 = len1(name1)
+      else
+        k = 2
       endif
 
-      if (naxis1.ne.naxis2) then
-        line = 'Unequal number dimensions for images '//
-     *         im1(1:l1)//' & '//im2(1:l2)
-        call bug (bflag, line)
+      l2 = len1(inName)
+
+c     Read all required descriptors.
+      call rdhdi(lIn, 'naxis', naxis(k), 0)
+      if (naxis(k).eq.0) then
+        text = inName(:l2) // ' has zero dimensions!'
+        call bug('f', text)
       endif
 
-      if (fqax1.ne.fqax2) then
-        line = 'The frequency axis number are different for images '//
-     *         im1(1:l1)//' & '//im2(1:l2)
-        call bug ('f', line)
+      do iax = 1, naxis(k)
+        cax = itoaf(iax)
+        call rdhdi(lIn, 'naxis'//cax, axLen(k,iax), 0)
+        call rdhdd(lIn, 'crpix'//cax, crpix(k,iax), 0d0)
+        call rdhdd(lIn, 'cdelt'//cax, cdelt(k,iax), 1d0)
+        call rdhdd(lIn, 'crval'//cax, crval(k,iax), 0d0)
+        call rdhda(lIn, 'ctype'//cax, ctype(k,iax), ' ')
+      enddo
+      call rdhdd(lIn, 'epoch', epoch(k), 0d0)
+
+      if (axLen(k,1).gt.MAXDIM) then
+        text = 'First dimension of ' // inName(:l2) //
+     *         ' exceeds storage.'
+        call bug('f', text)
       endif
 
-      do k = 1, min(naxis1,naxis2)
-        if (size1(k).ne.size2(k)) then
-          write (line, 10) im1(1:l1), im2(1:l2), k
-10        format ('Unequal sizes for images ', a, ' & ', a,
-     *            ' on axis ', i1)
-          call bug (bflag, line)
-        endif
-
-        if (ctype1(k).ne.ctype2(k)) then
-          write (line, 20) im1(1:l1), im2(1:l2), k
-20        format ('Unequal ctype for images ', a, ' & ', a,
-     *            ' on axis ', i1)
-          call bug (bflag, line)
-        endif
-
-        if (k.ne.fqax1) then
-           call chkds2 (bflag, 'crval', k, im1(1:l1),
-     *                  im2(1:l2), real(crval1(k)), real(crval2(k)))
-           call chkds2 (bflag, 'crpix', k, im1(1:l1), im2(1:l2),
-     *                  crpix1(k), crpix2(k))
-           call chkds2 (bflag, 'cdelt', k, im1(1:l1), im2(1:l2),
-     *                  real(cdelt1(k)), real(cdelt2(k)))
-        endif
+c     Find the frequency axis and do basic checks.
+      fqax(k) = 0
+      do iax = 1, naxis(k)
+        if (index(ctype(k,iax),'FREQ').ne.0) fqax(k) = iax
       enddo
 
-      end
+      if (fqax(k).eq.0) then
+        text = inName(:l2) // ' has no frequency axis'
+        call bug('f', text)
+      endif
 
-c***********************************************************************
+      if (fqax(k).le.2) then
+        text = 'Frequency axis for ' // inName(:l2) //
+     *         ' is < 3; should be > 2.'
+        call bug('f', text)
+      endif
 
-      subroutine chkds2 (bflag, type, iaxis, im1, im2, des1, des2)
-c-----------------------------------------------------------------------
-c     Compare an axis descriptor from two images
-c
-c  Input:
-c    type    Type fo descriptor
-c    iaxis   Axis number
-c    im1,2   Images
-c    des1,2  Descriptors
-c-----------------------------------------------------------------------
-      character*(*) type, im1, im2, bflag
-      integer iaxis
-      real des1, des2
-cc
-      character line*130
-c-----------------------------------------------------------------------
-      if (des1.ne.des2) then
-        write (line, 10) type, im1, im2, iaxis
-10      format ('Unequal ', a, ' for images ', a, ' & ', a,
-     *          ' on axis ', i1)
-        call bug (bflag, line)
+      if (axLen(k,fqax(k)).gt.1) call bug('f',
+     *  'Frequency axis must be of length 1 only.')
+
+      frqax = fqax(k)
+      freq  = (1d0 - crpix(k,frqax))*cdelt(k,frqax) + crval(k,frqax)
+
+
+c     Compare descriptors.
+      if (doInit) then
+        doInit = .false.
+        return
+      endif
+
+      if (naxis(2).ne.naxis(1)) then
+        text = 'Number of axes differs for ' //
+     *          inName(:l2) // ' & ' // name1(:l1)
+        call bug(bflag, text)
+      endif
+
+      if (fqax(2).ne.fqax(1)) then
+        text = 'Frequency axis differs for ' //
+     *          inName(:l2) // ' & ' // name1(:l1)
+        call bug('f', text)
+      endif
+
+      do iax = 1, naxis(1)
+        if (axLen(2,iax).ne.axLen(1,iax)) then
+          write(text, 10) iax, inName(:l2), ' & ', name1(:l1)
+10        format('Axis ',i1,' differs in length for ',a,' & ',a)
+          call bug(bflag, text)
+        endif
+
+        if (iax.ne.fqax(1)) then
+          if (crpix(2,iax).ne.crpix(1,iax)) then
+            write(text,20) 'crpix', iax, inName(:l2),' & ',name1(:l1)
+            call bug(bflag, text)
+          endif
+
+          if (crval(2,iax).ne.crval(1,iax)) then
+            write(text,20) 'crval', iax, inName(:l2),' & ',name1(:l1)
+            call bug(bflag, text)
+          endif
+
+          if (cdelt(2,iax).ne.cdelt(1,iax)) then
+            write(text,20) 'cdelt', iax, inName(:l2),' & ',name1(:l1)
+            call bug(bflag, text)
+          endif
+
+          if (ctype(2,iax).ne.ctype(1,iax)) then
+            write(text,20) 'ctype', iax, inName(:l2),' & ',name1(:l1)
+            call bug(bflag, text)
+          endif
+        endif
+
+20      format(a,i1,' differs for ', a)
+      enddo
+
+      if (epoch(2).ne.epoch(1)) then
+        text = 'Epoch differs for ' // inName(:l2) //' & '// name1(:l1)
+        call bug(bflag, text)
       endif
 
       end
@@ -838,11 +804,11 @@ c-----------------------------------------------------------------------
 c  Decode options array into named variables.
 c
 c  Output:
-c     relax     Warnings only for axis descriptor mismatches
-c     ambig     Do not remove ambuguites
-c     accum     Put all plots on one page
-c     yind      Each subplot scaled independently
-c     guess     USe "rmi" as first guess
+c     relax     Warnings only for axis descriptor mismatches.
+c     ambig     Do not remove ambuguites.
+c     accum     Put all plots on one page.
+c     yind      Each subplot scaled independently.
+c     guess     Use "rmi" as first guess.
 c-----------------------------------------------------------------------
       integer maxopt
       parameter (maxopt = 5)
@@ -852,7 +818,7 @@ c-----------------------------------------------------------------------
       data opshuns /'relax', 'ambiguous', 'accumulate',
      *              'yindependent', 'guess'/
 c-----------------------------------------------------------------------
-      call options ('options', opshuns, present, maxopt)
+      call options('options', opshuns, present, maxopt)
 
       relax = present(1)
       ambig = present(2)
@@ -864,148 +830,58 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine hedinf (lun, naxis, size, epoch, crpix, cdelt,
-     *                   crval, ctype)
+      subroutine openin (in, bflag, lIn, axLen)
 
-      integer   lun, naxis, size(naxis)
-      real      crpix(naxis), epoch
-      double precision cdelt(naxis), crval(naxis)
-      character ctype(naxis)*(*)
+      character bflag*1, in*(*)
+      integer   lIn, axLen(*)
 c-----------------------------------------------------------------------
-c  Get some header keywords from the image associated with LUN
+c  Open an image and return some information about it.
 c
 c  Input
-c    lun        Handle of image
-c    naxis      Number of dimensions in image
-c    size       Size of each axis
+c    in         Image name.
+c    bflag      Bug flag; 'w' or 'f'.
 c  Output
-c    epoch      Epoch of image
-c    crpix      Array of image reference pixels
-c    cdelt      Array of image increments (natural inits; rad)
-c    crval      Array of image reference values (natural units)
-c    ctype      Array of image axis types
+c    lIn        Handle.
 c-----------------------------------------------------------------------
-      integer i
-      character str*1, itoaf*1
+      include 'maxnax.h'
+
+      character btype*25, text*80
+
+      integer   len1
+      character itoaf*1
+      external  itoaf, len1
 c-----------------------------------------------------------------------
-      do i = 1, naxis
-        str = itoaf(i)
+      call xyopen(lIn, in, 'old', MAXNAX, axLen)
 
-        call rdhdr (lun, 'crpix'//str, crpix(i), real(size(i))/2.0)
-        call rdhdd (lun, 'cdelt'//str, cdelt(i), 1d0)
-        call rdhda (lun, 'ctype'//str, ctype(i), ' ')
-        call rdhdd (lun, 'crval'//str, crval(i), 0d0)
-      enddo
-      call rdhdr (lun, 'epoch', epoch, 0.0)
-
-      end
-
-c***********************************************************************
-
-      subroutine openin (maxdim, maxnax, bflag, in, lun, naxis, size,
-     *                   epoch, crpix, cdelt, crval, ctype, fqax)
-
-      integer maxdim, maxnax, lun, naxis, size(maxnax), fqax
-      double precision cdelt(maxnax), crval(maxnax)
-      real epoch, crpix(maxnax)
-      character*(*) ctype(maxnax), in, bflag
-c-----------------------------------------------------------------------
-c  Open an image and return some information about it
-c
-c  Input
-c    maxdim     Maximum size a row can be
-c    maxnax     Maximum number of axes image can have
-c    in         Image name
-c    bflag      Bug flag ; 'w' or 'f'
-c  Output
-c    lun        Handle
-c    naxis      Number of axes
-c    size       Size of each axis
-c    epoch      EPoch of image
-c    crpix      Refernce pixels
-c    cdelt      Increments
-c    crval      Reference values
-c    ctype      Axis types
-c    fqax       Frequencxy axis
-c-----------------------------------------------------------------------
-      integer len1, i
-      character*80 aline, btype*25
-c-----------------------------------------------------------------------
-      call xyopen (lun, in, 'old', maxnax, size)
-      call rdhdi (lun, 'naxis', naxis, 0)
-      if (naxis.eq.0) then
-        aline = in(1:len1(in))//' has zero dimensions !!'
-        call bug ('f', aline)
-      endif
-
-      if (size(1).gt.maxdim) then
-        aline = 'First dimension of '//in(1:len1(in))//
-     *          ' too large for storage'
-        call bug ('f', aline)
-      endif
-
-      call hedinf (lun, naxis, size, epoch, crpix, cdelt, crval, ctype)
-
-      fqax = 0
-      do i = 1, naxis
-        if (index(ctype(i),'FREQ').ne.0) fqax = i
-      enddo
-      if (fqax.eq.0) then
-        aline = in(1:len1(in))//'has no frequency axis'
-        call bug ('f', aline)
-      endif
-
-      if (fqax.le.2) then
-        aline = 'Frequency axis for '//in(1:len1(in))//
-     *          ' is < 3; should be > 2'
-        call bug ('f', aline)
-      endif
-      if (size(fqax).gt.1) call bug ('f',
-     *  'Frequency axis must be of length 1 only')
-
-      call rdbtype (lun, btype, ' ')
+      call rdbtype(lIn, btype, ' ')
       if (btype.ne.'position_angle') then
-        aline = in(1:len1(in))//' does not appear to be a PA image'
-        call bug (bflag, aline)
+        text = in(1:len1(in)) // ' does not appear to be a PA image.'
+        call bug(bflag, text)
       endif
 
       end
 
 c***********************************************************************
 
-      subroutine openout (lin, out, naxis, size, nkeys, keyw,
-     *                    version, lout)
+      subroutine mkHead(lIn, lOut, version)
 
-      integer lin, lout, nkeys, naxis, size(naxis)
-      character*(*) out, keyw(nkeys), version
+      integer   lIn, lOut
+      character version*72
 c-----------------------------------------------------------------------
-c  Open an output image and write history
+c  Write header and history for an output file.
 c
 c  Input
-c    lin    Handle for an open input image from which to copy
-c           header keywords
-c    out    FIle name
-c    naxis  Numebr of axes
-c    size   SIze of axes
-c    nkeys  Number of keywords to copy from header
-c    keyw   Keywords to copy
-c    versionVerion of task
-c  Output
-c    lout   Handle
+c    lIn        Handle for an open input image from which to copy
+c               header keywords.
+c    lOut       Handleof open output image.
+c    version    Version of task.
 c-----------------------------------------------------------------------
-      integer i
-      character*132 aline
-c-----------------------------------------------------------------------
-      call xyopen (lout, out, 'new', naxis, size)
-      do i = 1, nkeys
-        call hdcopy (lin, lout, keyw(i))
-      enddo
+      call headcopy(lIn, lOut, 0, 0, 0, 0)
 
-      call hisopen  (lout, 'append')
-      aline = 'IMRM Miriad'//version
-      call hiswrite (lout, aline)
-      call hisinput (lout, 'IMRM')
-      call hisclose (lout)
+      call hisopen(lOut, 'append')
+      call hiswrite(lOut, 'IMRM Miriad' // version)
+      call hisinput(lOut, 'IMRM')
+      call hisclose(lOut)
 
       end
 
@@ -1019,82 +895,74 @@ c***********************************************************************
       logical accum, yind
       character*(*) device
 c-----------------------------------------------------------------------
-c  Plot data and fits
+c  Plot data and fits.
 c
 c  Input
-c    device    PGPLOT device
-c    nx,ny     Number of subplots in x and y
-c    accum     Put all on one plot if true
-c    yind      Scale subplots independently
-c    npx,y     Number of pixels in images in x and y.
-c    nf         Number of frequencies
-c    x,yd,yf   PLotting arrays, data and fits
-c    cs        Character height
+c    device     PGPLOT device.
+c    nx,ny      Number of subplots in x and y.
+c    accum      Put all on one plot if true.
+c    yind       Scale subplots independently.
+c    npx,y      Number of pixels in images in x and y.
+c    nf         Number of frequencies.
+c    x,yd,yf    Plotting arrays, data and fits.
+c    cs         Character height.
 c-----------------------------------------------------------------------
       integer ierr, pgbeg, i, j, ip, npts, i1, i2
       real xmin, xmax, ymin, ymax
-      character str1*10, str2*10, line*80
+      character str1*10, str2*10, text*80
 c-----------------------------------------------------------------------
-c
-c Open plot device
-c
+c     Open plot device.
       ierr = pgbeg (0, device, nx, ny)
       if (ierr.ne.1) then
         call pgldev
-        call bug ('f', 'Error opening plot device')
+        call bug('f', 'Error opening plot device')
       endif
       if (cs.le.0.0) cs = 1.0
-      call pgsch (cs)
-c
-c Find extrema
-c
-      call extreme (nf, x, x, xmin, xmax, padummy)
+      call pgsch(cs)
+
+c     Find extrema.
+      call extreme(nf, x, x, xmin, xmax, padummy)
       npts = npx*npy*nf
-      call extreme (npts, yd, yf, ymin, ymax, padummy)
-c
-c If accumulating all on one plot draw the box and label it now
-c
+      call extreme(npts, yd, yf, ymin, ymax, padummy)
+
+c     If accumulating all on one plot draw the box and label it now.
       call pgvstd
-      call pgswin (xmin, xmax, ymin, ymax)
+      call pgswin(xmin, xmax, ymin, ymax)
       if (accum) then
         call pgpage
-        call pgbox ('BCNST', 0.0, 0, 'BCNST', 0.0, 0)
-        call pglabel ('\gl\u2\d (m\u2\d)',
+        call pgbox('BCNST', 0.0, 0, 'BCNST', 0.0, 0)
+        call pglabel('\gl\u2\d (m\u2\d)',
      *                'Position angle (degrees)', ' ')
       endif
-c
-c Loop over plots
-c
+
+c     Loop over plots.
       ip = 1
       do j = 1, npy
         do i = 1, npx
           if  (yd(ip).ne.padummy .and. yf(ip).ne.padummy) then
-c
-c If not accumulating, do some things for each subplot
-c
+
+c           If not accumulating, do some things for each subplot.
             if (.not.accum) then
               call pgpage
               if (yind) then
-                call extreme (nf, yd(ip), yf(ip), ymin, ymax, padummy)
-                call pgswin (xmin, xmax, ymin, ymax)
+                call extreme(nf, yd(ip), yf(ip), ymin, ymax, padummy)
+                call pgswin(xmin, xmax, ymin, ymax)
               endif
 
-              call pgbox ('BCNST', 0.0, 0, 'BCNST', 0.0, 0)
-              call pglabel ('\gl\u2\d (m\u2\d)',
+              call pgbox('BCNST', 0.0, 0, 'BCNST', 0.0, 0)
+              call pglabel('\gl\u2\d (m\u2\d)',
      *                      'Position angle (degrees)', ' ')
-c
-c Write i,j pixel on plot
-c
-              call strfi (i, '(i4)', str1, i1)
-              call strfi (j, '(i4)', str2, i2)
-              line = str1(1:i1)//','//str2(1:i2)
-              call pgmtxt ('T', -2.0, 0.1, 0.0, line(1:i1+i2+1))
+
+c             Write i,j pixel on plot.
+              call strfi(i, '(i4)', str1, i1)
+              call strfi(j, '(i4)', str2, i2)
+              text = str1(1:i1)//','//str2(1:i2)
+              call pgmtxt('T', -2.0, 0.1, 0.0, text(1:i1+i2+1))
             endif
-c
-c Draw plot
-c
-            call pgpt (nf, x, yd(ip), 17)
-            call pgline (nf, x, yf(ip))
+
+c           Draw plot.
+            call pgpt(nf, x, yd(ip), 17)
+            call pgline(nf, x, yf(ip))
           endif
           ip = ip + nf
         enddo
@@ -1111,18 +979,18 @@ c***********************************************************************
       real pa
 c-----------------------------------------------------------------------
 c  Put an angle into the range =/- 90 degrees.   Remember up is the
-c  same as down for polarization postion angles
+c  same as down for polarization postion angles.
 c
 c  Input/output
-c     pa    position angle in radians
+c     pa        Position angle in radians.
 c-----------------------------------------------------------------------
       include 'mirconst.h'
 c-----------------------------------------------------------------------
-      pa = mod(dble(pa), dpi)
-      if (pa.gt.dpi/2d0) then
-        pa = pa - dpi
-      else if (pa.lt.-dpi/2.0) then
-        pa = pa + dpi
+      pa = mod(dble(pa), DPI)
+      if (pa.gt.DPI_2) then
+        pa = pa - DPI
+      else if (pa.lt.-DPI_2) then
+        pa = pa + DPI
       endif
 
       end
@@ -1137,205 +1005,188 @@ c-----------------------------------------------------------------------
       double precision d
 c-----------------------------------------------------------------------
       d = pa1 - pa2
-      if (d.gt.dpi/2d0) then
-        pa2 = pa2 + dpi
-      else if (d.lt.-dpi/2d0) then
-        pa2 = pa2 - dpi
+      if (d.gt.DPI_2) then
+        pa2 = pa2 + DPI
+      else if (d.lt.-DPI_2) then
+        pa2 = pa2 - DPI
       endif
 
       end
 
 c***********************************************************************
 
-      subroutine rfit (guess, c1, c2, noerr, n, lsq, pa, wt, rmi,
+      subroutine rfit (guess, c1, c2, noerr, n, lmbdsq, pa, wt, rmi,
      *                 rm, pa0, erm, epa0, q)
 
       integer n, c1, c2
-      real    lsq(n), pa(n), wt(n), rm, pa0, erm, epa0, q, chisq, rmi
+      real    lmbdsq(n), pa(n), wt(n), rm, pa0, erm, epa0, q, chisq, rmi
       logical noerr, guess
 c-----------------------------------------------------------------------
 c  Low level least squares fit PA versus LAMBDA**2, with optional
 c  ambiguity removal.
 c
 c  Input
-c    guess Use rmi as initial guess rather than removing rmi rotation
-c          and getting it from first 2 frequencies
-c    c1,2  Pointers to frequencies to use for attempt to
-c          remove ambiguities
-c    noerr True if there were no input position angle error images
-c    n     Number of frequencies
-c    lsq Wavelength squared (m**2)
-c    pa    POsition angles (radians)
-c    wt    Weights.
-c    rmi   Amount of rotation measure to remove first
+c    guess      Use rmi as initial guess rather than removing rmi
+c               rotation and getting it from first 2 frequencies.
+c    c1,2       Pointers to frequencies to use for attempt to remove
+c               ambiguities.
+c    noerr      True if there were no input position angle error images.
+c    n          Number of frequencies.
+c    lmbdsq     Wavelength squared (m**2).
+c    pa         Position angles (radians).
+c    wt         Weights.
+c    rmi        Amount of rotation measure to remove first.
 c  Output
-c    rm    Fitted rotaition measure (rad/m**2)
-c    pa0   Position angle at zero wavelength (radians)
-c    erm   Error in RM
-c    epa0  Error in PA0
-c    q     Goodness of fit
+c    rm         Fitted rotation measure (rad/m**2).
+c    pa0        Position angle at zero wavelength (radians).
+c    erm        Error in RM.
+c    epa0       Error in PA0.
+c    q          Goodness of fit.
 c-----------------------------------------------------------------------
       include 'mirconst.h'
       real rmg, pag, yp
       integer i, nturns
 c-----------------------------------------------------------------------
-c
-c Remove initial guess for RM
-c
-      if (.not.guess .and. rmi.ne.0.0) call rmsub (n, lsq, pa, rmi)
-c
-c Remove PI ambiguity from designated frequencies
-c
-      call pm90 (pa(c1))
-      call pm90 (pa(c2))
-      call rempi (pa(c1), pa(c2))
-c
-c Find initial guess for RM and PA0 from these frequencies
-c or from that input by the user
-c
+c     Remove initial guess for RM.
+      if (.not.guess .and. rmi.ne.0.0) call rmsub(n, lmbdsq, pa, rmi)
+
+c     Remove PI ambiguity from designated frequencies.
+      call pm90(pa(c1))
+      call pm90(pa(c2))
+      call rempi(pa(c1), pa(c2))
+
+c     Find initial guess for RM and PA0 from these frequencies or from
+c     that input by the user.
       if (guess) then
         rmg = rmi
       else
-        rmg = (pa(c2) - pa(c1)) / (lsq(c2) - lsq(c1))
+        rmg = (pa(c2) - pa(c1)) / (lmbdsq(c2) - lmbdsq(c1))
       endif
-      pag = pa(c1) - rmg*lsq(c1)
-c
-c Try to remove N*PI ambiguities from the other frequencies
-c If only 2 frequencies, nothing will happen here.
-c
+      pag = pa(c1) - rmg*lmbdsq(c1)
+
+c     Try to remove N*PI ambiguities from the other frequencies.
+c     If only 2 frequencies, nothing will happen here.
       do i = 1, n
         if (i.ne.c1 .and. i.ne.c2) then
-c
-c Work out how many turns will place the actual position angle closest
-c to the predicted position angle. Add these turns to the data.
-c
-          yp = rmg*lsq(i) + pag
-          nturns = nint((yp - pa(i))/dpi)
-          pa(i) = pa(i) + nturns*dpi
+
+c         How many turns will place the actual position angle closest to
+c         the predicted position angle?  Add these turns to the data.
+          yp = rmg*lmbdsq(i) + pag
+          nturns = nint((yp - pa(i))/DPI)
+          pa(i) = pa(i) + nturns*DPI
         endif
       enddo
-c
-c Do the fit
-c
-      call lsf (noerr, n, lsq, pa, wt, rm, pa0, erm, epa0,
-     *          chisq, q)
+
+c     Do the fit.
+      call lsf(noerr, n, lmbdsq, pa, wt, rm, pa0, erm, epa0, chisq, q)
 
       end
 
 c***********************************************************************
 
-      subroutine rmsub (n, lsq, pa, rmi)
+      subroutine rmsub (n, lmbdsq, pa, rmi)
 
       integer n
-      real    rmi, pa(n), lsq(n)
+      real    rmi, pa(n), lmbdsq(n)
 c-----------------------------------------------------------------------
       integer i
 c-----------------------------------------------------------------------
       do i = 1, n
-        pa(i) = pa(i) - lsq(i)*rmi
+        pa(i) = pa(i) - lmbdsq(i)*rmi
       enddo
 
       end
 
 c***********************************************************************
 
-      subroutine rotfit (c1, c2, noerr, n, lsq, pa, pa2, wt, guess,
+      subroutine rotfit (c1, c2, noerr, n, lmbdsq, pa, pa2, wt, guess,
      *                   ambig, rm0, rmf, pa0f, erm, epa0, q, ypl)
 
       integer n, c1, c2
-      real    lsq(n), pa(n), pa2(n), wt(n), rm0, rmf, pa0f, erm, epa0,
-     *  q, chisq, ypl(n)
+      real    lmbdsq(n), pa(n), pa2(n), wt(n), rm0, rmf, pa0f, erm,
+     *        epa0, q, chisq, ypl(n)
       logical noerr, ambig, guess
 c-----------------------------------------------------------------------
 c  High level least squares fit PA versus LAMBDA**2.
 c
 c  Input
-c    c1,2  Pointers to frequencies to use for attempt to
-c          remove ambiguities
-c    noerr True if there were no input position angle error images
-c    n     Number of frequencies
-c    lsq   Wavelength squared (m**2)
-c    pa    Position angles (radians)
-c    wt    Weights for each frequency
-c    guess USe rm0 as first guess instead
-c    ambig Do not remove ambiguites
-c    rm0   Initial amoutn of RM to remove from data before fitting
+c    c1,2       Pointers to frequencies to use for attempt to remove
+c               ambiguities.
+c    noerr      True if there were no input position angle error images.
+c    n          Number of frequencies.
+c    lmbdsq     Wavelength squared (m**2).
+c    pa         Position angles (radians).
+c    wt         Weights for each frequency.
+c    guess      Use rm0 as first guess instead.
+c    ambig      Do not remove ambiguites.
+c    rm0        Initial amount of RM to remove from data before fitting.
 c  Output
-c    rmf   Fitted rotation measure (rad/m**2)
-c    pa0f  Fitted position angle at zero wavelength (radians)
-c    erm   Error in RM
-c    epa0  Error in PA0
-c    q     Goodness of fit
-c    ypl   Data for plotting
+c    rmf        Fitted rotation measure (rad/m**2).
+c    pa0f       Fitted position angle at zero wavelength (radians).
+c    erm        Error in RM.
+c    epa0       Error in PA0.
+c    q          Goodness of fit.
+c    ypl        Data for plotting.
 c  Input/output
-c    pa2   Scratch array
+c    pa2        Scratch array.
 c-----------------------------------------------------------------------
       include 'mirconst.h'
-      real rmi
-      integer i
+
+      integer   i
+      real      rmi
 c-----------------------------------------------------------------------
       if (ambig) then
-c
-c Remove initial angle for initial estimate of RM
-c
-        if (rm0.ne.0.0) call rmsub (n, lsq, pa, rm0)
-c
-c Put position angles into +/- pi/2
-c
+c       Remove initial angle for initial estimate of RM.
+        if (rm0.ne.0.0) call rmsub(n, lmbdsq, pa, rm0)
+
+c       Put position angles into +/- pi/2.
         do i = 1, n
-          call pm90 (pa(i))
+          call pm90(pa(i))
         enddo
-c
-c Fit
-c
-        call lsf (noerr, n, lsq, pa, wt, rmf, pa0f, erm, epa0,
+
+c       Fit.
+        call lsf(noerr, n, lmbdsq, pa, wt, rmf, pa0f, erm, epa0,
      *            chisq, q)
-c
-c Assign final value of rotation measure. Note that zero wavelength
-c position angle is unaffected
-c
+
+c       Assign final value of rotation measure.  Note that zero
+c       wavelength position angle is unaffected.
         rmf = rmf + rm0
       else
-c
-c Save original position angles
-c
+
+c       Save original position angles.
         do i = 1, n
           pa2(i) = pa(i)
         enddo
-c
-c Do first fit; remove initial estimate, compute RM from
-c c1 and c2 frequencies, remove N*PI ambiguities, do
-c least squares fir to get rotation measure
-c
+
+c       Do first fit; remove initial estimate, compute RM from
+c       c1 and c2 frequencies, remove N*PI ambiguities, do
+c       least squares fir to get rotation measure.
         rmi = rm0
-        call rfit (guess, c1, c2, noerr, n, lsq, pa2, wt, rmi,
+        call rfit(guess, c1, c2, noerr, n, lmbdsq, pa2, wt, rmi,
      *             rmf, pa0f, erm, epa0, q)
-c
-c Now redo with the new estimate of the rotation measure. This
-c time, we always subtract the angle from for the first estimate
-c of the RM (i.e. guess = .false.)
-c
+
+c       Now redo with the new estimate of the rotation measure.  This
+c       time, we always subtract the angle from for the first estimate
+c       of the RM (i.e. guess = .false.).
         if (guess) then
           rmi = rmf
         else
           rmi = rmi + rmf
         endif
-        call rfit (.false., c1, c2, noerr, n, lsq, pa, wt, rmi,
+        call rfit(.false., c1, c2, noerr, n, lmbdsq, pa, wt, rmi,
      *             rmf, pa0f, erm, epa0, q)
-c
-c Assign final value of rotation measure. Note that zero wavelength
-c position angle is unaffected
-c
+
+c       Assign final value of rotation measure.  Note that zero
+c       wavelength position angle is unaffected.
         rmf = rmf + rmi
       endif
-c
-c Save data for plotting.  We want to plot the data that was finally
-c fitted, but with the angle subtracted for the initial RM estimate
-c added back in.
-c
+
+c     Save data for plotting.  We want to plot the data that was finally
+c     fitted, but with the angle subtracted for the initial RM estimate
+c     added back in.
       if (ambig) rmi = rm0
       do i = 1, n
-        ypl(i) = (pa(i) + rmi*lsq(i)) * 180d0/dpi
+        ypl(i) = (pa(i) + rmi*lmbdsq(i)) * DR2D
       enddo
 
       end
