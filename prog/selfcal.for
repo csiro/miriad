@@ -89,6 +89,8 @@ c       Generally if there is an input model, this parameter defaults to
 c       the linetype parameters used to construct the map.  If you wish
 c       to override this, or if the info is not in the header, or if you
 c       are using a point source model, this parameter can be useful.
+c
+c$Id: selfcal.for,v 1.5 2010/09/28 08:35:35 cal103 Exp $
 c--
 c
 c  History:
@@ -152,32 +154,32 @@ c     polarisations and pointings.
 c   * It would be desirable to apply bandpasses, and merge gain tables,
 c     apply polarisation calibration, etc.
 c-----------------------------------------------------------------------
-      character version*(*)
-      parameter (version='Selfcal: version 1.0 14-Dec-99')
-      integer MaxMod,maxsels,nhead
-      parameter (MaxMod=128,maxsels=1024,nhead=3)
+      integer   MAXMOD, MAXSELS, NHEAD
+      parameter (MAXMOD=128, MAXSELS=1024, NHEAD=3)
 
-      character Models(MaxMod)*64,vis*64,ltype*32
-      character flag1*8,flag2*8,obstype*32
-      integer tvis,tmod,tscr
-      integer nModel,minants,refant,nchan,nvis,i
-      real sels(maxsels),clip,interval,offset(2),lstart,lwidth,lstep
-      logical phase,amp,doline,noscale,relax,mfs
-      real flux(2)
-      logical selradec,doim
+      logical   amp, doim, doline, mfs, noscale, phase, relax, selradec
+      integer   i, minants, nModel, nchan, nvis, refant, tmod, tscr,
+     *          tvis
+      real      clip, flux(2), interval, lstart, lstep, lwidth,
+     *          offset(2), sels(MAXSELS)
+      character flag1*8, flag2*8, ltype*32, Models(MAXMOD)*64,
+     *          obstype*32, version*72, vis*64
 
 c     Externals.
-      external header
-      logical hdprsnt
+      logical   hdprsnt
+      character versan*80
+      external  hdprsnt, header, versan
 c-----------------------------------------------------------------------
+      version = versan('selfcal',
+     *                 '$Revision: 1.5 $',
+     *                 '$Date: 2010/09/28 08:35:35 $')
 c
 c  Get the input parameters.
 c
-      call output(version)
       call keyini
       call keyf('vis',vis,' ')
-      call SelInput('select',sels,maxsels)
-      call mkeyf('model',Models,MaxMod,nModel)
+      call SelInput('select',sels,MAXSELS)
+      call mkeyf('model',Models,MAXMOD,nModel)
       call keyr('clip',clip,0.0)
       call keyr('interval',interval,5.0)
       call keyi('minants',minants,0)
@@ -261,7 +263,7 @@ c
         call SelfSet(.true.,MinAnts)
         call SelApply(tvis,sels,.true.)
         call Model(flag2,tvis,0,offset,flux,tscr,
-     *                        nhead,header,nchan,nvis)
+     *                        NHEAD,header,nchan,nvis)
         call SelfIni
         call output('Accumulating statistics ...')
         call SelfAcc(tscr,nchan,nvis,interval)
@@ -280,7 +282,7 @@ c
             call SelApply(tmod,sels,.true.)
           endif
           call Model(flag2,tvis,tmod,offset,Clip,tscr,
-     *                        nhead,header,nchan,nvis)
+     *                        NHEAD,header,nchan,nvis)
           if (doim) then
             call xyclose(tmod)
           else
