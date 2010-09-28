@@ -26,13 +26,13 @@ c       for.  In the case of leakages and xyphases, GPCAL will check for
 c       the existence of items "leakage" and "gains" in the input data-
 c       set.  If present, these will be used as the initial estimates of
 c       these parameters.  If you are not solving for these parameters,
-c       they will be held at there initial value through the solution
+c       they will be held at their initial value through the solution
 c       process.  After converging on a solution, and if the xyphase
 c       offsets or leakage parameters have been modified, GPCAL will
 c       write out their current values to the appropriate items.
 c
 c       Conventions: Unfortunately there has been a number of changes in
-c       the "sign conventions" used within Miriad. For a discussion of
+c       the "sign conventions" used within Miriad.  For a discussion of
 c       the conventions, past sign errors and how they affect you, see
 c       the memo "The Sign of Stokes-V, etc." by Bob Sault.
 c
@@ -139,7 +139,7 @@ c                    solution for the observation already exists.  This
 c                    preliminary solution must be formed from a
 c                    calibrator with known Stokes-V.
 c
-c$Id: gpcal.for,v 1.7 2010/09/06 01:58:35 wie017 Exp $
+c$Id: gpcal.for,v 1.8 2010/09/28 23:46:09 cal103 Exp $
 c--
 c  History:
 c    rjs,nebk 1may91 Original version.
@@ -282,12 +282,11 @@ c-----------------------------------------------------------------------
       external  itoaf, keyprsnt, uvDatOpn
 c-----------------------------------------------------------------------
       version = versan('gpcal',
-     *                 '$Revision: 1.7 $',
-     *                 '$Date: 2010/09/06 01:58:35 $')
+     *                 '$Revision: 1.8 $',
+     *                 '$Date: 2010/09/28 23:46:09 $')
 c
 c  Get inputs.
 c
-      call output(version)
       call keyini
       call GetOpt(dopass,amphsol,polsol,xysol,xyref,xyvary,polref,
      *  qusolve,vsolve,oldflx,circular,reset)
@@ -599,8 +598,8 @@ c  Accumulate all the info.
 c
       do j = 1, nsoln
         do i = 1, nants
-          if (  abs(real(Gains(X,i,j)))+abs(aimag(Gains(X,i,j))).gt.0
-     *     .and. abs(real(Gains(Y,i,j)))+abs(aimag(Gains(Y,i,j))).gt.0
+          if (   abs(real(Gains(X,i,j)))+abs(aimag(Gains(X,i,j))).gt.0.0
+     *     .and. abs(real(Gains(Y,i,j)))+abs(aimag(Gains(Y,i,j))).gt.0.0
      *      ) then
             w = Gains(Y,i,j) / Gains(X,i,j)
             theta = atan2(aimag(w),real(w))
@@ -1066,7 +1065,7 @@ c
       idxD = 0
       if (polref) then
         idxD = nvar + 1
-        var(idxD ) = 1
+        var(idxD)   = 1
         var(idxD+1) = 2
         nvar = nvar + 2
       endif
