@@ -32,8 +32,12 @@
 #          access to the ATNF network is only allowed via venice.atnf.csiro.au
 #          and this is the default.  Within the ATNF, atlas, the host that
 #          serves the Miriad directory hierarchy, is a better choice.
+#          (Blank host name prints help.)
 #   -u <user>
 #          Specify your ATNF account name if your local account name differs.
+#          (Blank user name prints usage.)
+#
+# Anything else, e.g. --help, produces usage instructions.
 #
 # Exceptions:
 #   $MIR/*/GNUmakedefs	...never updated.
@@ -48,31 +52,15 @@
 #   $MIR/specdoc/	...always updated.
 #
 # Original: 2006/11/28 Mark Calabretta, ATNF
-# $Id: mirsync,v 1.8 2009/04/30 00:44:30 cal103 Exp $
+# $Id: mirsync,v 1.9 2010/09/29 02:04:40 cal103 Exp $
 #-----------------------------------------------------------------------------
 
   trap 'exit 1' 1 2 3 15
 
-# Sanity checks.
   if [ "$MIR" = "" -o ! -d "$MIR" ]
   then
     echo 'mirsync: $MIR is not defined or does not exist.' 1>&2
     exit 1
-  fi
-
-  cd $MIR || exit 1
-
-# Check that we're not trying to update the master itself!
-  ATMIR=/nfs/atapplic/miriad
-  if [ "$MIR" = "$ATMIR" ]
-  then
-    # The master's inode number will almost certainly be unique.
-    INODE=`ls -d -i $MIR | awk '{print $1}'`
-    if [ "$INODE" = 692036 ]
-    then
-      echo "mirsync: ERROR - attempting reflexive update of master." 1>&2
-      exit 1
-    fi
   fi
 
 
@@ -81,7 +69,8 @@
   DRYRUN=
   RSYNC=rsync
   SYNCHOST=venice.atnf.csiro.au
-  SYNCUSER=
+  SYNCUSER=$USER
+  DOUSAGE=
 
   while [ "$#" -gt 0 ]
   do
@@ -98,19 +87,18 @@
       # Remote host.
       shift
       SYNCHOST="$1"
+      [ "$SYNCHOST" = "" ] && DOUSAGE=1
       ;;
 
     -u)
       # Remote user
       shift
       SYNCUSER="$1"
+      [ "$SYNCUSER" = "" ] && DOUSAGE=1
       ;;
 
     *)
-      exec 1>&2
-      echo ""
-      echo "Usage: mirsync -c -d [-h <host>] [-u <user>]"
-      exit 1
+      DOUSAGE=1
       ;;
     esac
 
@@ -118,6 +106,40 @@
 
     shift
   done
+
+  for OPT in "$SYNCHOST" "$SYNCUSER"
+  do
+    case "$OPT" in
+    -*)
+      DOUSAGE=1
+      ;;
+    esac
+  done
+
+  if [ "$DOUSAGE" ]
+  then
+    exec 1>&2
+    echo ""
+    sed -n -e '2,/^$/p' $MIRARCHD/bin/mirsync
+    exit 1
+  fi
+
+
+# Sanity checks.
+  cd $MIR || exit 1
+
+# Check that we're not trying to update the master itself!
+  ATMIR=/nfs/atapplic/miriad
+  if [ "$MIR" = "$ATMIR" ]
+  then
+    # The master's inode number will almost certainly be unique.
+    INODE=`ls -d -i $MIR | awk '{print $1}'`
+    if [ "$INODE" = 692036 ]
+    then
+      echo "mirsync: ERROR - attempting reflexive update of master." 1>&2
+      exit 1
+    fi
+  fi
 
   [ "$SYNCUSER" = "" ] || SYNCHOST=$SYNCUSER@$SYNCHOST
 
