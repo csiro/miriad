@@ -5,7 +5,7 @@
 # Construct a workspace for Miriad software development.
 #
 # Original: 2007/03/06 Mark Calabretta, ATNF
-# $Id: mirtree,v 1.3 2009/09/28 08:52:11 cal103 Exp $
+# $Id: mirtree,v 1.4 2010/09/29 02:29:28 cal103 Exp $
 #-----------------------------------------------------------------------------
   trap 'exit 1' 1 2 3 15
 
@@ -26,8 +26,8 @@
 # Create only relevant subdirectories.
   SUBDIRS="cat etc guides guides/prog guides/user inc inc/linux64 linpack "
   SUBDIRS="$SUBDIRS prog scripts scripts/$MIRARCH"
-  SUBDIRS="$SUBDIRS spec spec/miriad spec/sxmtv spec/xmtv spec/xpanel"
   SUBDIRS="$SUBDIRS subs subs/unix subs/unix/alpha_linux tools"
+  SUBDIRS="$SUBDIRS spec spec/sxmtv spec/xmtv spec/xpanel tools"
 
   for SUBDIR in "" $SUBDIRS
   do
@@ -44,15 +44,30 @@
       # RCS repositories are present so link to them.
       if [ ! -h "$PGMRROOT$SUBDIR/RCS" ]
       then
-        echo "Creating symlink $PGMRROOT$SUBDIR/RCS"
-        ln -s "$MIR$SUBDIR/RCS" "$PGMRROOT$SUBDIR/RCS"
+        echo "Creating symlinks $PGMRROOT$SUBDIR/{RCS,SRC}"
+        if [ -n "$SUBDIR" ]
+        then
+          LEAF=`basename "$SUBDIR"`
+          ln -s "../RCS/$LEAF" "$PGMRROOT$SUBDIR/RCS"
+          ln -s "../SRC/$LEAF" "$PGMRROOT$SUBDIR/SRC"
+        else
+          ln -s "$MIR/RCS" "$PGMRROOT/RCS"
+          ln -s "$MIR" "$PGMRROOT/SRC"
+        fi
       fi
     else
       # RCS repositories are absent so link to the makefile.
       if [ ! -h "$PGMRROOT$SUBDIR/GNUmakefile" ]
       then
-        echo "Creating symlink $PGMRROOT$SUBDIR/GNUmakefile"
-        ln -s "$MIR$SUBDIR/GNUmakefile" "$PGMRROOT$SUBDIR/GNUmakefile"
+        echo "Creating symlinks $PGMRROOT$SUBDIR/{GNUmakefile,SRC}"
+        if [ -n "$SUBDIR" ]
+        then
+          LEAF=`basename "$SUBDIR"`
+          ln -s "../SRC/$LEAF" "$PGMRROOT$SUBDIR/SRC"
+        else
+          ln -s "$MIR" "$PGMRROOT/SRC"
+        fi
+        ln -s "SRC/GNUmakefile"
       fi
     fi
   done
