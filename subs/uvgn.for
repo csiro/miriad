@@ -31,7 +31,7 @@ c    08jan07 rjs  Use MAXWIN more rigorously.
 c    08aug07 rjs  Correct bug in averaging wide channels.
 c    27aug09 mhw  Handle multiple bandpass solution intervals
 c
-c $Id: uvgn.for,v 1.7 2010/10/05 03:31:54 cal103 Exp $
+c $Id: uvgn.for,v 1.8 2010/10/05 03:34:47 cal103 Exp $
 c***********************************************************************
 
       subroutine uvGnIni(tno1,dogains1,dopass1)
@@ -665,30 +665,29 @@ c    data       The correlation data. Corrected on output.
 c    flags      The data flags.
 c-----------------------------------------------------------------------
       include 'uvgn.h'
-      integer table,i
+
       logical upd
-      real factor
-c
-c  Dynamic memory commons.
-c
+      integer table,i
+      real    factor
+
+c     Dynamic memory commons.
       logical lref(MAXBUF)
       double precision dref(MAXBUF/2)
       complex cref(MAXBUF/2)
       equivalence (lref,dref,cref)
       common cref
-c
-c  Externals.
-c
-      logical uvvarupd
+
+      logical  uvvarupd
+      external uvvarupd
 c-----------------------------------------------------------------------
-c     Determine which table we are to use, and whether the data has been
-c     updated recently.  If we are interpolating between bandpass
-c     solutions we need to update every time.
+c     Determine which table to use and whether the data has been updated
+c     recently.  Need to update every time if interpolating between
+c     bandpass solutions.
       upd = nbpsols.gt.1
       if (first) then
         call uvGnPs1t(tno,vwide,vline)
-        bpsolno=0
-        upd=.true.
+        bpsolno = 0
+        upd = .true.
       endif
 
       first = .false.
@@ -702,30 +701,32 @@ c     solutions we need to update every time.
 
 c     Find the correct time slot, simple linear search since we expect
 c     no more than a dozen bp solutions.
-      if (time.lt.bptimes(bpsolno+1) .or.
-     *    time.ge.bptimes(bpsolno+2)) then
-        upd=.true.
-        i=0
-        bpsolno=-1
-        do while (i.le.nbpsols .and. bpsolno.lt.0)
-          if (time.ge.bptimes(i+1) .and. time.lt.bptimes(i+2)) then
-            bpsolno=i
-          endif
-          i=i+1
-        enddo
-      endif
+      if (nbpsols.gt.1) then
+        if (time.lt.bptimes(bpsolno+1) .or.
+     *      time.ge.bptimes(bpsolno+2)) then
+          upd = .true.
+          i = 0
+          bpsolno = -1
+          do while (i.le.nbpsols .and. bpsolno.lt.0)
+            if (time.ge.bptimes(i+1) .and. time.lt.bptimes(i+2)) then
+              bpsolno = i
+            endif
+            i = i + 1
+          enddo
 
-      if (bpsolno.eq.-1) call bug('f','uvGn: corrupted bp table?')
+          if (bpsolno.eq.-1) call bug('f','uvGn: corrupted bp table?')
+        endif
+      endif
 
 c     Compute the interpolation factor for the time direction.
       if (bpsolno.eq.0) then
-        factor=0
-        bpsolno=1
+        bpsolno = 1
+        factor  = 0.0
       else if (bpsolno.eq.nbpsols) then
-        factor=0
+        factor  = 0.0
       else
-        factor=(time-bptimes(bpsolno+1))/
-     *       (bptimes(bpsolno+2)-bptimes(bpsolno+1))
+        factor  = (time-bptimes(bpsolno+1)) /
+     *              (bptimes(bpsolno+2)-bptimes(bpsolno+1))
       endif
 
 
@@ -894,9 +895,7 @@ c     Dynamic memory rubbish.
 c     Externals.
       integer hsize
 c-----------------------------------------------------------------------
-c
-c  Get the dimensionality numbers.
-c
+c     Get the dimensionality numbers.
       n=max(1,nbpsols)
       call rdhdi(tno,'nchan0',nchan,0)
       call rdhdi(tno,'nspect0',nspect,0)
@@ -906,9 +905,8 @@ c
       call MemAlloc(pGains,Size,'c')
       if (nspect.gt.maxspect) call bug('f',
      *  'Too many spectral windows for me to handle, in uvDat')
-c
-c  Load the frequency table.
-c
+
+c     Load the frequency table.
       call haccess(tno,item,'freqs','read',iostat)
       if (iostat.ne.0) call uvGnBug(iostat,'accessing freqs table')
       off = 8
@@ -925,17 +923,18 @@ c
 
       call hdaccess(item,iostat)
       if (iostat.ne.0) call uvGnBug(iostat,'closing freqs table')
-c
-c  Read in the gains themselves now.
-c
+
+c     Read in the gains themselves now.
       call haccess(tno,item,'bandpass','read',iostat)
       if (iostat.ne.0) call uvGnBug(iostat,'accessing bandpass table')
-      if (hsize(item).ne.8+n*ngains*nchan*8+nbpsols*8)
-     *      call bug('f','Bandpass table size is incorrect. '//
-     *         'This happens when the inputs for mfcal and'//
-     *         ' gpcal are inconsistent')
-      bptimes(1)=-1e20
-      bptimes(nbpsols+2)=1e20
+      if (hsize(item).ne.8+n*ngains*nchan*8+nbpsols*8) then
+        call bug('f', 'Bandpass table size is incorrect. ' //
+     *    'This happens when the inputs for mfcal and gpcal are ' //
+     *    'inconsistent')
+      endif
+
+      bptimes(1) = -1e20
+      bptimes(nbpsols+2) = 1e20
       off=8
       offg=0
       do i = 1, n
@@ -1001,9 +1000,7 @@ c     Dynamic memory commons.
       equivalence (lref,dref,cref)
       common cref
 c-----------------------------------------------------------------------
-c
-c  Load the description of the data line.
-c
+c     Load the description of the data line.
       call uvGnPsGt(tno,dowide,nread,MAXSPECT,doaver,
      *        nspect0,sfreq0,sdf0,swidth0,nschan0)
       if (doaver .and. dopass .and. .not.aver) then
@@ -1013,11 +1010,10 @@ c
         call bug('w',
      *  ' ... this may be very unwise')
       endif
-c
-c  Check if we have enough space to store the data gains.
-c  Then generate the gains.
-c
+
+c     Generate the gains?
       if (dopass) then
+c       Check if we have enough space.
         if (nDat.lt.nfeeds*nants*nread) then
           if (nDat.gt.0) then
             call MemFree(pDat,nDat,'c')
@@ -1032,11 +1028,10 @@ c
      *    nschan,cref(pTab),bpsolno,factor,nread,nspect0,sfreq0,sdf0,
      *    swidth0,nschan0,cref(pDat),lref(pFlags))
       endif
-c
-c  Check if we have enough space for the frequency table.
-c  Then generate the frequency table.
-c
+
+c     Generate the frequency table?
       if (dotau) then
+c       Check if we have enough space.
         if (nFreq.lt.nread) then
           if (nFreq.gt.0) call MemFree(pFreq,nFreq,'d')
           nFreq = nread
@@ -1257,10 +1252,9 @@ c-----------------------------------------------------------------------
             endt   = sfreq(i) - 0.5*sdf(i)
             startt = sfreq(i) + sdf(i) * (nschan(i) - 0.5)
           endif
-c
-c  Is there an overlap in the frequency range of the calibrations tables
-c  and the data?
-c
+
+c         Is there an overlap in the frequency range of the calibrations
+c         tables and the data?
           width = min(endt,endd) - max(startt,startd)
           if (width.gt.0) then
             hwidth = abs(swidth0(j) / sdf(i))
@@ -1274,31 +1268,28 @@ c
           endif
         enddo
       enddo
-c
-c  We have now found the best matching bandpass for each spectral
-c  window.  Now work out the actual bandpass values.
-c
+
+c     We have now found the best matching bandpass for each spectral
+c     window.  Now work out the actual bandpass values.
       do k = 1, ngains
         off = 1
         do j = 1, nspect0
           i0 = win(j)
-c
-c  The case of no matching gains.
-c
+
+c         The case of no matching gains.
           if (i0.eq.0) then
             do i = 1, nschan0(j)
               flags(off,k) = .false.
               off = off + 1
             enddo
+
           else
-c
-c  The case of one corresponding gain in the table for each channel
-c   of data.
-c
             chan = (sfreq0(j) - sfreq(i0)) / sdf(i0)
             inc  = sdf0(j) / sdf(i0)
             hwidth = 0.5*abs(swidth0(j) / sdf(i0))
             if (hwidth.lt.0.8) then
+c             One corresponding gain in the table for each channel of
+c             data.
               do i = 1, nschan0(j)
                 l = nint(chan-0.5)
                 nearest = l.lt.0 .or. l.ge.nschan(i0)-1
@@ -1315,8 +1306,8 @@ c
                   r11=tab(l,k,ib)
                   r12=tab(l+1,k,ib)
                   if (ib.lt.nbpsols) then
-                   r21=tab(l,k,ib+1)
-                   r22=tab(l+1,k,ib+1)
+                    r21=tab(l,k,ib+1)
+                    r22=tab(l+1,k,ib+1)
                   endif
                   if (flags(off,k)) flags(off,k) =
      *              real(r11).ne.0 .or. aimag(r11).ne.0
@@ -1342,11 +1333,10 @@ c
                 off = off + 1
                 chan = chan + inc
               enddo
-c
-c  The case of many corresponding gains in the table for each channel of
-c  data. Average the gains together.
-c
+
             else
+c             Many corresponding gains in the table for each channel of
+c             data.  Average the gains together.
               do i = 1, nschan0(j)
                 ibeg = max(1,nint(chan-hwidth)+ischan(i0))
                 iend = min(nint(chan+hwidth)+ischan(i0),
