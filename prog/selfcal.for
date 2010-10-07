@@ -90,7 +90,7 @@ c       the linetype parameters used to construct the map.  If you wish
 c       to override this, or if the info is not in the header, or if you
 c       are using a point source model, this parameter can be useful.
 c
-c$Id: selfcal.for,v 1.5 2010/09/28 08:35:35 cal103 Exp $
+c$Id: selfcal.for,v 1.6 2010/10/07 01:00:50 cal103 Exp $
 c--
 c
 c  History:
@@ -171,8 +171,8 @@ c     Externals.
       external  hdprsnt, header, versan
 c-----------------------------------------------------------------------
       version = versan('selfcal',
-     *                 '$Revision: 1.5 $',
-     *                 '$Date: 2010/09/28 08:35:35 $')
+     *                 '$Revision: 1.6 $',
+     *                 '$Date: 2010/10/07 01:00:50 $')
 c
 c  Get the input parameters.
 c
@@ -499,37 +499,42 @@ c***********************************************************************
 
       subroutine SelfIni
 c-----------------------------------------------------------------------
+c  Initialise variables and allocate memory.
+c-----------------------------------------------------------------------
       include 'selfcal.h'
-      integer i,SolSize
 
-c     Externals.
-      integer prime,MemBuf
+      integer i, SolSize
+
+      integer  MemBuf, prime
+      external MemBuf, prime
 c-----------------------------------------------------------------------
       nHash = prime(maxHash-1)
       do i = 1, nHash+1
         Hash(i) = 0
       enddo
-c
-c     Determine the indices into the buffer.  These are offsets into
-c     the one scratch buffer which is used as 5 arrays, namely:
-c       complex SumVM(nBl,maxSol),Gains(nants,maxSol)
-c       real SumVV(nBl,maxSol),SumMM(maxSol),Weight(nBl,maxSol)
-c       real Count(maxSol)
-c
+
       nBl = (nants*(nants-1))/2
       SolSize = 3 + 4*nBl + 2*nants
       maxSol = min(nHash,max(minSol,(MemBuf()-10)/SolSize))
       nSols  = 0
       TotVis = 0
-      call MemAlloc(pSumVM,maxSol*nBl,'c')
-      call MemAlloc(pSumVV,maxSol*nBl,'r')
-      call MemAlloc(pSumMM,maxSol,'r')
-      call MemAlloc(pWeight,maxSol*nBl,'r')
-      call MemAlloc(pCount,maxSol,'r')
-      call MemAlloc(pGains,maxSol*nants,'c')
-      call MemAlloc(prTime,maxSol,'d')
-      call MemAlloc(pStptim,maxSol,'r')
-      call MemAlloc(pStrtim,maxSol,'r')
+
+c     Allocate memory.  The indices are offsets into a single scratch
+c     buffer used as follows:
+c       integer count(maxSol)
+c       real    stpTime(maxSol), strTime(maxSol), sumMM(maxSol),
+c               sumVV(nBl,maxSol), weight(nBl,maxSol)
+c       double precision rTime(maxSol)
+c       complex gains(nants,maxSol), sumVM(nBl,maxSol)
+      call MemAlloc(pStptim,maxSol, 'r')
+      call MemAlloc(pStrtim,maxSol, 'r')
+      call MemAlloc(pCount, maxSol, 'i')
+      call MemAlloc(prTime, maxSol, 'd')
+      call MemAlloc(pSumMM, maxSol, 'r')
+      call MemAlloc(pSumVV, maxSol*nBl, 'r')
+      call MemAlloc(pSumVM, maxSol*nBl, 'c')
+      call MemAlloc(pWeight,maxSol*nBl, 'r')
+      call MemAlloc(pGains, maxSol*nants, 'c')
 
       end
 
@@ -541,15 +546,16 @@ c  Release allocated memory.
 c-----------------------------------------------------------------------
       include 'selfcal.h'
 c-----------------------------------------------------------------------
-      call MemFree(pSumVM,maxSol*nBl,'c')
-      call MemFree(pSumVV,maxSol*nBl,'r')
-      call MemFree(pSumMM,maxSol,'r')
-      call MemFree(pWeight,maxSol*nBl,'r')
-      call MemFree(pCount,maxSol,'r')
-      call MemFree(pGains,maxSol*nants,'c')
-      call MemFree(prTime,maxSol,'d')
-      call MemFree(pstpTim,maxSol,'r')
-      call MemFree(pstrTim,maxSol,'r')
+      call MemFree(pStpTim,maxSol, 'r')
+      call MemFree(pStrTim,maxSol, 'r')
+      call MemFree(pCount, maxSol, 'i')
+      call MemFree(prTime, maxSol, 'd')
+      call MemFree(pSumMM, maxSol, 'r')
+      call MemFree(pSumVV, maxSol*nBl, 'r')
+      call MemFree(pSumVM, maxSol*nBl, 'c')
+      call MemFree(pWeight,maxSol*nBl, 'r')
+      call MemFree(pGains, maxSol*nants, 'c')
+
       end
 
 c***********************************************************************
@@ -575,7 +581,7 @@ c-----------------------------------------------------------------------
       call SelfAcc1(tscr,nchan,nvis,nBl,maxSol,nSols,
      *  nhash,Hash,Indx,interval,
      *  Memc(pSumVM),Memr(pSumVV),Memr(pSumMM),
-     *  Memr(pWeight),Memr(pCount),Memd(prTime),Memr(pstpTim),
+     *  Memr(pWeight),Memi(pCount),Memd(prTime),Memr(pstpTim),
      *  Memr(pstrTim))
 
       end
@@ -588,12 +594,12 @@ c***********************************************************************
 
       integer tscr,nchan,nvis,nBl,maxSol,nSols
       integer nHash,Hash(nHash+1),Indx(nHash)
-      real interval
+      real    interval
       complex SumVM(nBl,maxSol)
-      real SumVV(nBl,maxSol),SumMM(maxSol),Weight(nBl,maxSol)
-      real Count(maxSol),StpTime(maxSol)
+      real    SumVV(nBl,maxSol),SumMM(maxSol),Weight(nBl,maxSol)
+      integer count(maxSol)
       double precision rTime(maxSol)
-      real StrTime(maxSol)
+      real    StpTime(maxSol), StrTime(maxSol)
 c-----------------------------------------------------------------------
 c  This reads through the scratch file which contains the visibility
 c  and the model.  It finds (via a hash table) the index of the slot
@@ -647,8 +653,9 @@ c-----------------------------------------------------------------------
       integer   NHEAD, MAXLEN
       parameter (NHEAD = 3, MAXLEN = NHEAD + 5*MAXCHAN)
 
-      integer i,j,k,ihash,itime,bl,i1,i2,length
-      real Out(MAXLEN),Wt
+      integer   i, i1, i2, iBl, ihash, itime, j, k, length, sCount
+      real      mm, out(MAXLEN), sMM, sTime, sVV, vv, wgt
+      complex   sVM, vm
 c-----------------------------------------------------------------------
       if (nchan.gt.MAXCHAN) call bug('f','Too many channels')
       length = NHEAD + 5*nchan
@@ -678,36 +685,60 @@ c       Not in the hash table, add a new entry.
           if (nSols.ge.maxSol) call bug('f','Hash table overflow')
           Hash(i) = ihash
           Indx(i) = nSols
-          do k = 1, nBl
-            SumVM(k,nSols)  = (0.0,0.0)
-            SumVV(k,nSols)  = 0.0
-            Weight(k,nSols) = 0.0
-          enddo
-          SumMM(nSols) = 0
-          Count(nSols) = 0
-          rTime(nSols) = 0
+
           StpTime(nSols) = Out(2)
           StrTime(nSols) = Out(2)
-       endif
+
+          count(nSols) = 0
+          rTime(nSols) = 0d0
+          sumMM(nSols) = 0.0
+          do iBl = 1, nBl
+             sumVV(iBl,nSols) = 0.0
+             sumVM(iBl,nSols) = (0.0,0.0)
+            weight(iBl,nSols) = 0.0
+          enddo
+        endif
 
 c       Accumulate info about this visibility record.
-        i = Indx(i)
-        wt = 0.5/Out(3)
         call basant(dble(out(1)),i1,i2)
-        bl = (i2-1)*(i2-2)/2 + i1
-        StpTime(i) = min(StpTime(i),out(2))
-        StrTime(i) = max(StrTime(i),out(2))
+        iBl = (i2-1)*(i2-2)/2 + i1
+
+        i = Indx(i)
+        StpTime(i) = min(StpTime(i), out(2))
+        StrTime(i) = max(StrTime(i), out(2))
+
+c       N.B. using temporaries to accumulate statistics separately for
+c       each spectrum helps to maintain precision when there are a very
+c       large number of correlations in the solution interval.
+        sCount = 0
+        sTime  = 0.0
+        sMM    = 0.0
+        sVV    = 0.0
+        sVM    = (0.0,0.0)
+
         do k = NHEAD+1, NHEAD+5*nchan, 5
-          if (out(k+4).gt.0) then
-            SumVM(bl,i) = SumVM(bl,i) +
-     *        Wt*cmplx(Out(k),Out(k+1))*cmplx(Out(k+2),-Out(k+3))
-            SumVV(bl,i) = SumVV(bl,i) + Wt*(Out(k+2)**2 + Out(k+3)**2)
-            SumMM(i) = SumMM(i) + Wt * (Out(k)**2 + Out(k+1)**2)
-            Weight(bl,i) = Weight(bl,i) + Wt
-            Count(i) = Count(i) + 1
-            rTime(i) = rTime(i) + Out(2)
+          if (out(k+4).gt.0.0) then
+            sCount = sCount + 1
+            sTime  = sTime  + Out(2)
+
+            mm = Out(k)**2   + Out(k+1)**2
+            vv = Out(k+2)**2 + Out(k+3)**2
+            vm = cmplx(Out(k),Out(k+1)) * cmplx(Out(k+2),-Out(k+3))
+
+            sMM = sMM + mm
+            sVV = sVV + vv
+            sVM = sVM + vm
           endif
         enddo
+
+c       Accumulate statistics for this spectrum.
+        wgt = 0.5d0 / Out(3)
+         count(i)     =  count(i)     + sCount
+         rTime(i)     =  rTime(i)     + sTime
+         sumMM(i)     =  sumMM(i)     + wgt*sMM
+         sumVV(iBl,i) =  sumVV(iBl,i) + wgt*sVV
+         sumVM(iBl,i) =  sumVM(iBl,i) + wgt*sVM
+        weight(iBl,i) = weight(iBl,i) + wgt*sCount
       enddo
 
       end
@@ -749,7 +780,7 @@ c     Determine all the gain solutions.
       call Solve1(tgains,nSols,nBl,nants,phase,relax,noscale,
      *  minants,refant,Time0,interval,Indx,
      *  Memc(pSumVM),Memr(pSumVV),Memr(pSumMM),Memc(pGains),
-     *  Memr(pWeight),Memr(pCount),memD(prTime),
+     *  Memr(pWeight),Memi(pCount),memD(prTime),
      *  Memr(pStpTim),Memr(pStrTim))
 
       end
@@ -761,16 +792,17 @@ c***********************************************************************
      *  SumVM,SumVV,SumMM,Gains,Weight,Count,rTime,
      *  StpTime,StrTime)
 
-      integer tgains
+      integer tgains, nSols, nBl, nants
       logical phase,relax,noscale
-      integer nSols,nBl,nants,minants,refant
-      integer TIndx(nSols)
-      complex SumVM(nBl,nSols),Gains(nants,nSols)
-      real SumVV(nBl,nSols),SumMM(nSols),Weight(nBl,nSols)
-      real Count(nSols),StpTime(nSols),StrTime(nSols)
-      double precision rTime(nSols)
-      real interval
+      integer minants, refant
       double precision Time0
+      real   interval
+      integer TIndx(nSols)
+      complex SumVM(nBl,nSols), Gains(nants,nSols)
+      real    SumVV(nBl,nSols), SumMM(nSols), Weight(nBl,nSols)
+      integer Count(nSols)
+      double precision rTime(nSols)
+      real    StpTime(nSols),StrTime(nSols)
 c-----------------------------------------------------------------------
 c  Run through all the accumulated data and calculate the selfcal
 c  solutions.
@@ -893,14 +925,14 @@ c***********************************************************************
       subroutine Merger(nSols,nBl,TIndx,interval,StpTime,StrTime,
      *  SumVM,SumVV,SumMM,Weight,Count,rTime,nmerge)
 
-      integer nSols,nBl,nmerge
-      integer tIndx(nSols)
-      real interval
-      real StpTime(nSols),StrTime(nSols)
-      double precision rTime(nSols)
+      integer nSols, nBl, tIndx(nSols)
+      real    interval
+      real    StpTime(nSols), StrTime(nSols)
       complex SumVM(nBl,nSols)
-      real SumVV(nBl,nSols),SumMM(nSols),Weight(nBl,nSols)
-      real Count(nSols)
+      real    SumVV(nBl,nSols),SumMM(nSols),Weight(nBl,nSols)
+      integer Count(nSols)
+      double precision rTime(nSols)
+      integer nmerge
 c-----------------------------------------------------------------------
 c  Merge together adjacent solution intervals if the total span of time
 c  is last than "interval".
@@ -922,18 +954,18 @@ c    StrTime
 c  Output:
 c    nmerge     The number of mergers.
 c-----------------------------------------------------------------------
-      integer k,k0,kp,i,k1st
       logical more
+      integer iBl, iSol, jSol, jdx, idx
 c-----------------------------------------------------------------------
       nmerge = 0
 
 c     Find the first solution slot with some valid data.
-      k1st = 0
+      iSol = 0
       more = .true.
-      do while (k1st.lt.nSols .and. more)
-        k1st = k1st + 1
-        kp = TIndx(k1st)
-        if (Count(kp).le.0) then
+      do while (iSol.lt.nSols .and. more)
+        iSol = iSol + 1
+        idx = TIndx(iSol)
+        if (count(idx).le.0) then
           nmerge = nmerge + 1
         else
           more = .false.
@@ -941,24 +973,24 @@ c     Find the first solution slot with some valid data.
       enddo
       if (nmerge.eq.nSols) call bug('f','No valid data')
 
-      do k = k1st+1, nSols
-        k0 = TIndx(k)
-        if (Count(k0).le.0) then
+      do jSol = iSol+1, nSols
+        jdx = TIndx(jSol)
+        if (count(jdx).le.0) then
           nmerge = nmerge + 1
-        else if (StrTime(k0)-StpTime(kp).le.interval) then
+        else if (StrTime(jdx)-StpTime(idx).le.interval) then
           nmerge = nmerge + 1
-          StrTime(kp) = StrTime(k0)
-          Count(kp) = Count(kp) + Count(k0)
-          Count(k0) = 0
-          SumMM(kp) = SumMM(kp) + SumMM(k0)
-          rTime(kp) = rTime(kp) + rTime(k0)
-          do i = 1, nBl
-            SumVM(i,kp) = SumVM(i,kp) + SumVM(i,k0)
-            SumVV(i,kp) = SumVV(i,kp) + SumVV(i,k0)
-            Weight(i,kp) = Weight(i,kp) + Weight(i,k0)
+          StrTime(idx) = StrTime(jdx)
+          count(idx) = count(idx) + count(jdx)
+          count(jdx) = 0
+          sumMM(idx) = sumMM(idx) + sumMM(jdx)
+          rTime(idx) = rTime(idx) + rTime(jdx)
+          do iBl = 1, nBl
+             sumVM(iBl,idx) =  sumVM(iBl,idx) +  sumVM(iBl,jdx)
+             sumVV(iBl,idx) =  sumVV(iBl,idx) +  sumVV(iBl,jdx)
+            weight(iBl,idx) = weight(iBl,idx) + weight(iBl,jdx)
           enddo
         else
-          kp = k0
+          idx = jdx
         endif
       enddo
 
@@ -1155,11 +1187,11 @@ c***********************************************************************
       subroutine CalcStat(tgains,nsols,nbl,nants,SumVM,SumMM,SumVV,
      *                                Weight,Count,Gains)
 
-      integer tgains
-      integer nsols,nbl,nants
-      complex SumVM(nbl,nsols),Gains(nants,nsols)
-      real SumMM(nsols),SumVV(nbl,nsols),Weight(nbl,nsols)
-      real Count(nsols)
+      integer tgains, nsols, nbl, nants
+      complex SumVM(nbl,nsols)
+      real    SumMM(nsols), SumVV(nbl,nsols), Weight(nbl,nsols)
+      integer Count(nsols)
+      complex Gains(nants,nsols)
 c-----------------------------------------------------------------------
 c  Accumulate the various statistics.
 c-----------------------------------------------------------------------
