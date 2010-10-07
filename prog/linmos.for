@@ -1,19 +1,15 @@
       program linmos
 
-c  LINMOS is a simple linear mosaicing task.  It takes cubes as its
-c  input, and produces a single cube as its output.  The correction
-c  weights used are optimum in a minimum-mean-square sense.
 c
 c= linmos - Linear mosaicing of datacubes
 c& rjs
 c: map combination
 c+
-c       LINMOS is a MIRIAD task that performs a simple linear mosaicing
-c       of input cubes, to produce a single output cube.  If only a
-c       single input cube is given, LINMOS essentially does primary beam
-c       correction on this input.  When several, overlapping, inputs are
-c       given, then LINMOS combines the overlapping regions in such a
-c       way as to minimize the rms error in the output.
+c       LINMOS is a MIRIAD task that performs simple linear mosaicing
+c       of input cubes to produce a single output cube.  If only one
+c       input cube is given, LINMOS essentially does primary beam
+c       correction on it.  If the input cubes overlap, LINMOS combines
+c       the overlapping regions so as to minimize the rms error.
 c
 c       To determine the primary beam of the telescope, LINMOS first
 c       checks the map header for the presence of the "pbtype" and then
@@ -23,14 +19,13 @@ c       checks if the telescope is one that it knows.  If so, then the
 c       known form for the primary beam is used. See task "pbplot" to
 c       check LINMOS's primary beam models.
 c@ in
-c       This gives the names of the input cubes.  Many cubes may be
-c       given.  There is no default.  Inputs should generally be on the
-c       same grid system.  However, if they are not, linear
-c       interpolation is performed to regrid using the first image as
-c       the template.  LINMOS's ability to do this is quite inferior to
-c       task REGRID.  The intensity units of all the inputs, and the
-c       pixel size and alignment of the third dimension are assumed to
-c       be the same.
+c       The names of the input cubes - many may be given.  There is no
+c       default.  Inputs should generally be on the same grid system.
+c       If not, linear interpolation is performed to regrid using the
+c       first image as the template.  LINMOS's ability to do this is
+c       inferior to task REGRID.  The intensity units of all the inputs,
+c       and the pixel size and alignment of the third dimension are
+c       assumed to be the same.
 c@ out
 c       The name of the output cube.  No default.  The center and pixel
 c       size of the first input image is used as the grid system of the
@@ -65,7 +60,7 @@ c                      giving the effective gain across the field.  If
 c                      options=taper is used, this will be a smooth
 c                      function.  Otherwise it will be 1 or 0 (blanked).
 c
-c$Id: linmos.for,v 1.10 2010/10/07 04:18:22 cal103 Exp $
+c$Id: linmos.for,v 1.11 2010/10/07 06:20:54 cal103 Exp $
 c--
 c
 c  History:
@@ -137,18 +132,15 @@ c-----------------------------------------------------------------------
      *          naxis, offset, pOut, pWts
       real      blctrc(4,MAXIN), extent(4), rms(MAXIN), sigt, xoff,
      *          yoff
-      character inName*64, inbuf*(MAXLEN), outNam*64, version*80
-
-      double precision crval(3), cdelt(3), crpix(3)
-      character ctype(3)*16
+      character inName*64, inbuf*(MAXLEN), outNam*64, version*72
 
       integer   len1
       character versan*80
       external  len1, versan
 c-----------------------------------------------------------------------
       version = versan ('linmos',
-     *                  '$Revision: 1.10 $',
-     *                  '$Date: 2010/10/07 04:18:22 $')
+     *                  '$Revision: 1.11 $',
+     *                  '$Date: 2010/10/07 06:20:54 $')
 
 c     Get and check inputs.
       call keyini
@@ -178,7 +170,7 @@ c     Get and check inputs.
       enddo
 
 c     Get processing options.
-      call GetOpt(dosen,dogain,taper)
+      call getOpt(dosen,dogain,taper)
       call keyfin
 
       if (nIn.eq.1 .and. taper) call bug('f',
@@ -199,9 +191,9 @@ c     grid system from the first map.
         if (max(axLen(1,i),axLen(2,i)).gt.MAXDIM)
      *    call bug('f','Input map is too big')
 
+        call chkHdr(lIn(i), axLen(1,i), exact, blctrc(1,i), extent)
+
         if (i.eq.1) then
-          call ThingIni(lIn(1),axLen(1,1),ctype,crpix,crval,cdelt,
-     *                  blctrc(1,1),extent)
           call rdhdi(lIn(1),'naxis',naxis,3)
           naxis = min(naxis,4)
 
@@ -212,8 +204,6 @@ c     grid system from the first map.
             rms(1) = 1.0
           endif
         else
-          call ThingChk(lIn(i),axLen(1,i),ctype,crpix,crval,cdelt,
-     *                  exact,blctrc(1,i),extent)
           docar = docar .or. .not.exact
 
           if (axLen(3,i).ne.axLen(3,1))
@@ -260,8 +250,8 @@ c     Create the output image and make a header for it.
       nOut(4) = 1
 
       call xyopen(lOut,outNam,'new',naxis,nout)
-      call hdout(lIn(1),lOut,axLen(1,1),extent,version,
-     *           dosen,dogain,docar)
+      call mkHead(lIn(1),lOut,axLen(1,1),extent,version,docar,dosen,
+     *            dogain)
       call coInit(lOut)
 
 c     Correct blctrc for the extent of the image.
@@ -279,13 +269,13 @@ c     Allocate memory.
       call MemAlloc(pWts,nOut(1)*nOut(2),'r')
 
 c     Process each of the files.
-      call ScrOpen(lScr)
-      call ScrOpen(lWts)
+      call scrOpen(lScr)
+      call scrOpen(lWts)
       do i = 1, nIn
         call output('Processing image '//inbuf(k1(i):k2(i)))
         if (i.gt.nOpen) call xyopen(lIn(i),InBuf(k1(i):k2(i)),
      *                             'old',3,axLen(1,i))
-        call Process(i,lScr,lWts,lIn(i),lOut,memR(pOut),memR(pWts),
+        call process(i,lScr,lWts,lIn(i),lOut,memR(pOut),memR(pWts),
      *    axLen(1,i),axLen(2,i),nOut(1),nOut(2),nOut(3),dogain,
      *    blctrc(1,i),rms(i))
         call xyclose(lIn(i))
@@ -303,7 +293,7 @@ c     Determine the maximum noise to aim at.
 
 c     Go through the scratch file one more time, correcting for the
 c     change in the weights, and writing out the final data.
-      call LastPass(lOut,lScr,lWts,memR(pOut),memR(pWts),sigt,
+      call lastPass(lOut,lScr,lWts,memR(pOut),memR(pWts),sigt,
      *              nOut(1),nOut(2),nOut(3),dosen)
 
 c     Free memory.
@@ -317,13 +307,13 @@ c     Close down.
 
       end
 
-************************************************************************
+***************************************************************** getOpt
 
-      subroutine GetOpt(dosen,dogain,taper)
+      subroutine getOpt(dosen,dogain,taper)
 
       logical dosen,dogain,taper
 c-----------------------------------------------------------------------
-c  Get extra processing options.
+c  Get processing options.
 c
 c  Output:
 c    dosen      True if we are to produce a sensitivity image.
@@ -348,9 +338,9 @@ c-----------------------------------------------------------------------
      *  'Cannot do options=sensitivity,gains simultaneously')
       end
 
-************************************************************************
+**************************************************************** process
 
-      subroutine Process(fileno,lScr,lWts,lIn,lOut,Out,Wts,
+      subroutine process(fileno,lScr,lWts,lIn,lOut,Out,Wts,
      *  nx,ny,n1,n2,n3,dogain,blctrc,rms)
 
       integer fileno,lScr,lWts,lIn,lOut
@@ -438,7 +428,7 @@ c     Is there a mask file associated with this image?
      *  'Blanked pixels cannot be used when interpolating')
 
 c     Ready to construct the primary beam object.
-      call pntcent(lIn,pbtype,x(1),x(2))
+      call pntCent(lIn,pbtype,x(1),x(2))
 
 c     Loop over all planes.
       do k = 1, n3
@@ -456,8 +446,8 @@ c       Get a plane from the scratch array.
             enddo
           enddo
         else
-          call GetSec(lScr,Out,k,n1,n2,xlo,xhi,ylo,yhi)
-          call GetSec(lWts,Wts,k,n1,n2,xlo,xhi,ylo,yhi)
+          call getSec(lScr,Out,k,n1,n2,xlo,xhi,ylo,yhi)
+          call getSec(lWts,Wts,k,n1,n2,xlo,xhi,ylo,yhi)
         endif
 
 c       Determine the offsets to start reading.
@@ -471,7 +461,7 @@ c       Determine the offsets to start reading.
 
 c       Process this plane.
         do j = ylo, yhi
-          call GetDat(lIn,nx,xoff,yoff,xlo,xhi,j,pbObj,
+          call getDat(lIn,nx,xoff,yoff,xlo,xhi,j,pbObj,
      *                In,pBeam,n1,interp,mask)
           yoff = yoff + 1
 
@@ -501,11 +491,11 @@ c           Accumulate data.
 
 c       Save the output.
         if (fileno.eq.1) then
-          call PutSec(lScr,Out,k,n1,n2,1,n1,1,n2)
-          call PutSec(lWts,Wts,k,n1,n2,1,n1,1,n2)
+          call putSec(lScr,Out,k,n1,n2,1,n1,1,n2)
+          call putSec(lWts,Wts,k,n1,n2,1,n1,1,n2)
         else
-          call PutSec(lScr,Out,k,n1,n2,xlo,xhi,ylo,yhi)
-          call PutSec(lWts,Wts,k,n1,n2,xlo,xhi,ylo,yhi)
+          call putSec(lScr,Out,k,n1,n2,xlo,xhi,ylo,yhi)
+          call putSec(lWts,Wts,k,n1,n2,xlo,xhi,ylo,yhi)
         endif
 
 c       Release the primary beam object.
@@ -514,9 +504,9 @@ c       Release the primary beam object.
 
       end
 
-************************************************************************
+***************************************************************** getDat
 
-      subroutine GetDat(lIn,nx,xoff,yoff,xlo,xhi,j,pbObj,
+      subroutine getDat(lIn,nx,xoff,yoff,xlo,xhi,j,pbObj,
      *                  In,Pb,n1,interp,mask)
 
       integer lIn,xoff,yoff,xlo,xhi,n1,j,pbObj,nx
@@ -575,14 +565,14 @@ c     Zero the primary beam where the data are flagged.
 
       end
 
-************************************************************************
+***************************************************************** getSec
 
-      subroutine GetSec(lScr,Out,k,n1,n2,xlo,xhi,ylo,yhi)
+      subroutine getSec(lScr,Out,k,n1,n2,xlo,xhi,ylo,yhi)
 
       integer lScr,k,n1,n2,xlo,xhi,ylo,yhi
       real Out(n1,n2)
 c-----------------------------------------------------------------------
-c  Write out to the scratch file the region of interest.
+c  Read the region of interest from the scratch file.
 c
 c  Inputs:
 c    lScr       Handle of the scratch file.
@@ -599,20 +589,20 @@ c     well the entire x axis, read the whole lot.
       offset = (k-1)*n1*n2 + (ylo-1)*n1 + (xlo-1)
       if (10*(xhi-xlo+1).ge.8*n1) then
         length = n1*(yhi-ylo-1) + (n1-xlo+1) + xhi
-        call ScrRead(lScr,Out(xlo,ylo),offset,length)
+        call scrRead(lScr,Out(xlo,ylo),offset,length)
       else
         length = xhi - xlo + 1
         do j = ylo, yhi
-          call ScrRead(lScr,Out(xlo,j),offset,length)
+          call scrRead(lScr,Out(xlo,j),offset,length)
           offset = offset + n1
         enddo
       endif
 
       end
 
-************************************************************************
+***************************************************************** putSec
 
-      subroutine PutSec(lScr,Out,k,n1,n2,xlo,xhi,ylo,yhi)
+      subroutine putSec(lScr,Out,k,n1,n2,xlo,xhi,ylo,yhi)
 
       integer lScr,k,n1,n2,xlo,xhi,ylo,yhi
       real Out(n1,n2)
@@ -633,20 +623,20 @@ c     Try and block it into one call if that is possible.
       offset = (k-1)*n1*n2 + (ylo-1)*n1 + (xlo-1)
       if (xlo.eq.1 .and. xhi.eq.n1) then
         length = n1*(yhi-ylo-1) + (n1-xlo+1) + xhi
-        call ScrWrite(lScr,Out(xlo,ylo),offset,length)
+        call scrWrite(lScr,Out(xlo,ylo),offset,length)
       else
         length = xhi - xlo + 1
         do j = ylo, yhi
-          call ScrWrite(lScr,Out(xlo,j),offset,length)
+          call scrWrite(lScr,Out(xlo,j),offset,length)
           offset = offset + n1
         enddo
       endif
 
       end
 
-************************************************************************
+*************************************************************** lastPass
 
-      subroutine LastPass(lOut,lScr,lWts,Out,Wts,sigt,n1,n2,n3,dosen)
+      subroutine lastPass(lOut,lScr,lWts,Out,Wts,sigt,n1,n2,n3,dosen)
 
       integer lOut,lScr,lWts,n1,n2,n3
       real sigt,Out(n1,n2),Wts(n1,n2)
@@ -678,8 +668,8 @@ c-----------------------------------------------------------------------
 c     Loop over all planes.
       do k = 1, n3
 c       Get the image and weight planes.
-        call GetSec(lScr,Out,k,n1,n2,1,n1,1,n2)
-        call GetSec(lWts,Wts,k,n1,n2,1,n1,1,n2)
+        call getSec(lScr,Out,k,n1,n2,1,n1,1,n2)
+        call getSec(lWts,Wts,k,n1,n2,1,n1,1,n2)
         call xysetpl(lOut,1,k)
 
         do j = 1, n2
@@ -709,7 +699,7 @@ c               Mosaic or gain function.
 
 c         Write flags if a bad pixel has been found.
           if (doflag .and. .not.doneflag) then
-            call CatchUp(lOut,j,n1,n2,k)
+            call catchUp(lOut,j,n1,n2,k)
             doneflag = .true.
           endif
 
@@ -722,9 +712,9 @@ c         Write out the data.
 
       end
 
-************************************************************************
+**************************************************************** catchUp
 
-      subroutine CatchUp(lOut,j0,n1,n2,n3)
+      subroutine catchUp(lOut,j0,n1,n2,n3)
 
       integer lOut,j0,n1,n2,n3
 c-----------------------------------------------------------------------
@@ -763,13 +753,14 @@ c     Flag as good all rows before the first bad row.
 
       end
 
-************************************************************************
+***************************************************************** mkHead
 
-      subroutine hdout(lIn,lOut,axLen,extent,version,dosen,dogain,docar)
+      subroutine mkHead(lIn, lOut, axLen, extent, version, docar, dosen,
+     *  dogain)
 
       integer   lIn, lOut, axLen(3)
       real      extent(4)
-      character version*(*)
+      character version*72
       logical   dosen, dogain, docar
 c-----------------------------------------------------------------------
 c  Make up the header of the output file.
@@ -780,185 +771,160 @@ c               template.
 c    lOut       Handle of the output file.
 c    axLen      Size of the input image.
 c    extent     Expanded extent of the output.
+c    docar      True if we are to label with RA---CAR, DEC--CAR
 c    dosen      True if the sensitivity function is being evaluated.
 c    dogain     True if the gain function is being evaluated.
-c    docar      True if we are to label with RA---CAR, DEC--CAR
 c-----------------------------------------------------------------------
-      real crpix1,crpix2
-      character ctype1*16,ctype2*16
-      integer i
-      character line*80
+      double precision crpix
+      character ctype*16
+c-----------------------------------------------------------------------
+c     Start with a verbatim copy of the input header.
+      call headcopy(lIn, lOut, 0, 0, 0, 0)
 
-      integer nkeys
-      parameter (nkeys=36)
-      character keyw(nkeys)*8
-      data keyw/   'bunit   ','crval1  ','crval2  ','crval3  ',
-     *  'crval4  ','crval5  ','cdelt1  ','cdelt2  ','cdelt3  ',
-     *  'cdelt4  ','cdelt5  ','crpix3  ','crpix4  ','crpix5  ',
-     *  'ctype3  ','ctype4  ','ctype5  ',
-     *  'obstime ','epoch   ','bmaj    ','bmin    ','bpa     ',
-     *  'niters  ','object  ','telescop','observer',
-     *  'restfreq','vobs    ','obsra   ','obsdec  ','lstart  ',
-     *  'lstep   ','ltype   ','lwidth  ','btype   ','cellscal'/
-c-----------------------------------------------------------------------
-c     Write the output projection as cartesian.
+c     Apply sub-imaging.
+      call rdhdd(lIn,  'crpix1', crpix, dble(axLen(1)/2+1))
+      crpix = crpix - dble(extent(1)-1.0)
+      call wrhdd(lOut, 'crpix1', crpix)
+
+      call rdhdd(lIn,  'crpix2', crpix, dble(axLen(2)/2+1))
+      crpix = crpix - dble(extent(2)-1.0)
+      call wrhdd(lOut, 'crpix2', crpix)
+
+c     Write the output projection as plate carrée?
       if (docar) then
-        call rdhda(lIn,'ctype1',ctype1,'RA---CAR')
-        call rdhda(lIn,'ctype2',ctype2,'DEC--CAR')
-        if (ctype1(5:5).eq.'-') ctype1(5:8) = '-CAR'
-        if (ctype2(5:5).eq.'-') ctype2(5:8) = '-CAR'
-        call wrhda(lOut,'ctype1',ctype1)
-        call wrhda(lOut,'ctype2',ctype2)
-      else
-        call hdcopy(lIn,lOut,'ctype1')
-        call hdcopy(lIn,lOut,'ctype2')
+        call rdhda(lIn,  'ctype1', ctype, 'RA---CAR')
+        if (ctype(5:5).eq.'-') ctype(5:) = '-CAR'
+        call wrhda(lOut, 'ctype1', ctype)
+
+        call rdhda(lIn,  'ctype2', ctype, 'DEC--CAR')
+        if (ctype(5:5).eq.'-') ctype(5:) = '-CAR'
+        call wrhda(lOut, 'ctype2', ctype)
       endif
 
-c     Determine the location of the reference pixel in the output image.
-      call rdhdr(lIn,'crpix1',crpix1,real(axLen(1)/2+1))
-      call rdhdr(lIn,'crpix2',crpix2,real(axLen(2)/2+1))
-      crpix1 = crpix1 - (extent(1)-1)
-      crpix2 = crpix2 - (extent(2)-1)
-      call wrhdr(lOut,'crpix1',crpix1)
-      call wrhdr(lOut,'crpix2',crpix2)
+c     Indicate that it's primary-beam corrected.
+      call wrhda(lOut, 'pbtype', 'SINGLE')
 
-c     Set primary beam size to indicate that it is primary-beam corrected.
-      call wrhda(lOut,'pbtype','SINGLE')
-
-c     Copy other parameters.
-      do i = 1, nkeys
-        call hdcopy(lIn,lOut,keyw(i))
-      enddo
-
-c     Create the output history.
-      call hdcopy(lIn,lOut,'history')
-      call hisopen(lOut,'append')
-
-      line = 'LINMOS: Miriad '//version
-      call hiswrite(lOut,line)
-      call hisinput(lOut,'LINMOS')
+c     Update history.
+      call hisopen (lOut, 'append')
+      call hiswrite(lOut, 'LINMOS: Miriad ' // version)
+      call hisinput(lOut, 'LINMOS')
       if (dosen) then
         call hiswrite(lOut,
-     *    'LINMOS: The image is the rms noise function')
+     *    'LINMOS: The image is the rms noise function.')
       else if (dogain) then
         call hiswrite(lOut,
-     *    'LINMOS: The image is the gain function')
+     *    'LINMOS: The image is the gain function.')
       endif
       call hisclose(lOut)
-      end
-
-************************************************************************
-
-      subroutine ThingIni(lIn,axLen,ctype,crpix,crval,cdelt,
-     *  blctrc,extent)
-
-      integer lIn,axLen(2)
-      character ctype(3)*(*)
-      double precision crpix(3),crval(3),cdelt(3)
-      real blctrc(4),extent(4)
-c-----------------------------------------------------------------------
-      character num*2
-      integer i
-
-      character itoaf*2
-      external  itoaf
-c-----------------------------------------------------------------------
-c     Read the axis descriptors.
-      do i = 1, 3
-        num = itoaf(i)
-        call rdhda(lIn,'ctype'//num,ctype(i),' ')
-        call rdhdd(lIn,'crpix'//num,crpix(i),1d0)
-        call rdhdd(lIn,'crval'//num,crval(i),1d0)
-        call rdhdd(lIn,'cdelt'//num,cdelt(i),1d0)
-      enddo
-
-      blctrc(1) = 1
-      blctrc(2) = 1
-      blctrc(3) = axLen(1)
-      blctrc(4) = axLen(2)
-
-      do i = 1, 4
-        extent(i) = blctrc(i)
-      enddo
 
       end
 
-************************************************************************
+***************************************************************** chkHdr
 
-      subroutine ThingChk(lIn,axLen,ctype,crpix,crval,cdelt,
-     *                    exact,blctrc,extent)
+      subroutine chkHdr(lIn, axLen, exact, blctrc, extent)
 
       integer   lIn, axLen(3)
-      character ctype(3)*(*)
-      double precision crpix(3),crval(3),cdelt(3)
       logical   exact
       real      blctrc(4), extent(4)
 c-----------------------------------------------------------------------
-      double precision crvalx(3),crpixx(3),cdeltx(3)
-      double precision x1,x1x,y1,y1x,z1,z1x,dx,dy,cosdec,cosdecx
-      double precision cdelt1,cdelt1x
-      character ctypex(3)*16,num*2
-      integer i
+      logical   doInit
+      integer   iax, k
+      double precision cdelt(3,2), cdelt1(2), crpix(3,2), crval(3,2),
+     *          discr, frq(2), lat(2), lng(2), x, y, z
+      character cax*1, ctype(3,2)*16
+
+      save cdelt, cdelt1, crpix, crval, ctype, doInit, frq, lat, lng
 
       character itoaf*2
       external  itoaf
+
+      data doInit /.true./
 c-----------------------------------------------------------------------
+      if (doInit) then
+        k = 1
+      else
+        k = 2
+      endif
+
 c     Read the axis descriptors.
-      do i = 1, 3
-        num = itoaf(i)
-        call rdhda(lIn,'ctype'//num,ctypex(i),' ')
-        call rdhdd(lIn,'crpix'//num,crpixx(i),1d0)
-        call rdhdd(lIn,'crval'//num,crvalx(i),1d0)
-        call rdhdd(lIn,'cdelt'//num,cdeltx(i),1d0)
+      do iax = 1, 3
+        cax = itoaf(iax)
+        call rdhdd(lIn, 'crpix'//cax, crpix(iax,k), 0d0)
+        call rdhdd(lIn, 'cdelt'//cax, cdelt(iax,k), 0d0)
+        call rdhdd(lIn, 'crval'//cax, crval(iax,k), 1d0)
+        call rdhda(lIn, 'ctype'//cax, ctype(iax,k), ' ')
       enddo
 
-      cosdec  = cos(crval(2))
-      cosdecx = cos(crvalx(2))
+c     Projection-plane coordinates of pixel (1,1,1).
+      cdelt1(k) = cdelt(1,k) / cos(crval(2,k))
+      x = (1d0 - crpix(1,k))*cdelt1(k)
+      y = (1d0 - crpix(2,k))*cdelt(2,k)
+      z = (1d0 - crpix(3,k))*cdelt(3,k)
 
-      cdelt1 = cdelt(1)/cosdec
-      cdelt1x = cdeltx(1)/cosdecx
+c     Small-field approximation.
+      lng(k) = x + crval(1,k)
+      lat(k) = y + crval(2,k)
+      frq(k) = z + crval(3,k)
 
-      x1  = (1-crpix(1))*cdelt1   + crval(1)
-      x1x = (1-crpixx(1))*cdelt1x  + crvalx(1)
-      y1  = (1-crpix(2))*cdelt(2) + crval(2)
-      y1x = (1-crpixx(2))*cdeltx(2)+ crvalx(2)
-      dx = cdelt1x/cdelt1
-      dy = cdeltx(2)/cdelt(2)
+      exact = .true.
+      if (doInit) then
+        blctrc(1) = 1.0
+        blctrc(2) = 1.0
+        blctrc(3) = real(axLen(1))
+        blctrc(4) = real(axLen(2))
 
-      blctrc(1) = (x1x - x1)/cdelt1 + 1
-      blctrc(2) = (y1x - y1)/cdelt(2) + 1
-      blctrc(3) = blctrc(1) + (axLen(1)-1) * dx
-      blctrc(4) = blctrc(2) + (axLen(2)-1) * dy
-      if (blctrc(3).lt.blctrc(1) .or. blctrc(4).lt.blctrc(2))
+        extent(1) = blctrc(1)
+        extent(2) = blctrc(2)
+        extent(3) = blctrc(3)
+        extent(4) = blctrc(4)
+
+        doInit = .false.
+
+      else
+c       Are the celestial coordinate systems equivalent to within a
+c       shift?
+        do iax = 1, 2
+          discr = 0.01d0*abs(cdelt(iax,1))
+          exact = exact .and.
+     *      ctype(iax,k).eq.ctype(iax,1) .and.
+     *      abs(cdelt(iax,k)-cdelt(iax,1)).lt.discr .and.
+     *      abs(crval(iax,k)-crval(iax,1)).lt.discr
+        enddo
+
+        if (exact) then
+          blctrc(1) = 1.0 + crpix(1,1) - crpix(1,2)
+          blctrc(2) = 1.0 + crpix(2,1) - crpix(2,2)
+          blctrc(3) = blctrc(1) + real(axLen(1) - 1)
+          blctrc(4) = blctrc(2) + real(axLen(2) - 1)
+        else
+c         Approximate pixel coordinates of BLC and TRC in the coordinate
+c         system of the first image.
+          blctrc(1) = 1.0 + (lng(2) - lng(1))/cdelt1(1)
+          blctrc(2) = 1.0 + (lat(2) - lat(1))/cdelt(2,1)
+          blctrc(3) = blctrc(1) + real(axLen(1)-1)*cdelt1(2) /cdelt1(1)
+          blctrc(4) = blctrc(2) + real(axLen(2)-1)*cdelt(2,2)/cdelt(2,1)
+        endif
+
+        if (blctrc(3).lt.blctrc(1) .or. blctrc(4).lt.blctrc(2))
      *    call bug('f','Signs of cdelt of the inputs are not identical')
 
-c     Update the extent.
-      Extent(1) = min(blctrc(1),Extent(1))
-      Extent(2) = min(blctrc(2),Extent(2))
-      Extent(3) = max(blctrc(3),Extent(3))
-      Extent(4) = max(blctrc(4),Extent(4))
+c       Check third axis alignment.
+        discr = 0.5d0*abs(cdelt(3,1))
+        if (max(abs(frq(2)-frq(1)),abs(cdelt(3,2)-cdelt(3,1))).gt.discr)
+     *    call bug('w', 'Third axis of inputs do not align')
 
-c     Are the axes identical?
-      exact = .true.
-      do i = 1, 2
-        exact = exact .and.
-     *          ctype(i).eq.ctypex(i) .and.
-     *          abs(cdelt(i)-cdeltx(i)).le.0.01*abs(cdelt(i)) .and.
-     *          abs(crval(i)-crvalx(i)).lt.0.01*abs(cdelt(i))
-      enddo
-
-c     Check third axis alignment.
-      z1  = crval(3)  + (1-crpix(3))* cdelt(3)
-      z1x = crvalx(3) + (1-crpixx(3))*cdeltx(3)
-      if (max(abs(z1-z1x),
-     *        abs(cdelt(3)-cdeltx(3))).gt.0.5*abs(cdelt(3)))
-     *  call bug('w','Third axis of inputs do not align')
+c       Update the extent.
+        extent(1) = min(blctrc(1), extent(1))
+        extent(2) = min(blctrc(2), extent(2))
+        extent(3) = max(blctrc(3), extent(3))
+        extent(4) = max(blctrc(4), extent(4))
+      endif
 
       end
 
-************************************************************************
+**************************************************************** pntCent
 
-      subroutine pntcent(lIn,pbtype,pra,pdec)
+      subroutine pntCent(lIn,pbtype,pra,pdec)
 
       integer lIn
       double precision pra,pdec
