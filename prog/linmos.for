@@ -65,7 +65,7 @@ c                      giving the effective gain across the field.  If
 c                      options=taper is used, this will be a smooth
 c                      function.  Otherwise it will be 1 or 0 (blanked).
 c
-c$Id: linmos.for,v 1.9 2010/08/30 06:17:19 cal103 Exp $
+c$Id: linmos.for,v 1.10 2010/10/07 04:18:22 cal103 Exp $
 c--
 c
 c  History:
@@ -117,127 +117,123 @@ c    * Alignment of images with frequency is not correct.
 c    * The handling of geometry issues is abysmal.
 c
 c  Program parameters:
-c    maxIn      Maximum number of input files.
-c    maxOpen    Maximum number of input files to leave open.
-c    maxlen     Size of buffer to hold all the input file names.
-c    tol        Tolerance. When the grid locations of two pixels differ
+c    MAXIN      Maximum number of input files.
+c    MAXOPN     Maximum number of input files to leave open.
+c    MAXLEN     Size of buffer to hold all the input file names.
+c    TOL        Tolerance. When the grid locations of two pixels differ
 c               by less than "tol", they are taken as being the same
 c               pixel (i.e. no interpolation done).
 c-----------------------------------------------------------------------
       include 'maxdim.h'
-
-      real tol
-      integer maxIn,maxLen,maxOpen
-      parameter (maxIn=1024,maxLen=maxIn*64,maxOpen=6,tol=0.01)
-
-      character inbuf*(maxlen),in*64,out*64
-      integer tScr,tWts,tIn(maxIn),tOut,k1(maxIn),k2(maxIn),nIn
-      integer offset,length
-      integer nsize(3,maxIn),nOut(4)
-      integer i,nOpen,naxis,itemp
-      real xoff,yoff,sigt
-      real rms(maxIn),BlcTrc(4,maxIn)
-      real Extent(4)
-      double precision crval(3),cdelt(3),crpix(3)
-      character ctype(3)*16, version*80
-      logical defrms,dosen,dogain,docar,exact,taper
-
-      integer pOut,pWts
       include 'mem.h'
+
+      real      TOL
+      integer   MAXIN, MAXLEN, MAXOPN
+      parameter (MAXIN=1024, MAXLEN=MAXIN*64, MAXOPN=6, TOL=0.01)
+
+      logical   defrms, dosen, dogain, docar, exact, taper
+      integer   axLen(3,MAXIN), i, itemp, k1(MAXIN), k2(MAXIN), length,
+     *          lIn(MAXIN), lOut, lScr, lWts, nIn, nOpen, nOut(4),
+     *          naxis, offset, pOut, pWts
+      real      blctrc(4,MAXIN), extent(4), rms(MAXIN), sigt, xoff,
+     *          yoff
+      character inName*64, inbuf*(MAXLEN), outNam*64, version*80
+
+      double precision crval(3), cdelt(3), crpix(3)
+      character ctype(3)*16
 
       integer   len1
       character versan*80
       external  len1, versan
 c-----------------------------------------------------------------------
       version = versan ('linmos',
-     *                  '$Revision: 1.9 $',
-     *                  '$Date: 2010/08/30 06:17:19 $')
-c
-c  Get the input parameters, and do some checking.
-c
+     *                  '$Revision: 1.10 $',
+     *                  '$Date: 2010/10/07 04:18:22 $')
+
+c     Get and check inputs.
       call keyini
       nIn = 0
       offset = 0
-      call keyf('in',in,' ')
-      do while (in.ne.' ')
+      call keyf('in',inName,' ')
+      do while (inName.ne.' ')
         nIn = nIn + 1
-        if (nIn.gt.maxIn) call bug('f','Too many input cubes')
-        length = len1(in)
-        if (offset+length.gt.maxLen)
+        if (nIn.gt.MAXIN) call bug('f','Too many input cubes')
+        length = len1(inName)
+        if (offset+length.gt.MAXLEN)
      *    call bug('f','Input name buffer overflow')
         k1(nIn) = offset + 1
         k2(nIn) = offset + length
-        Inbuf(k1(nIn):k2(nIn)) = In
+        Inbuf(k1(nIn):k2(nIn)) = inName
         offset = offset + length
-        call keyf('in',in,' ')
+        call keyf('in',inName,' ')
       enddo
       if (nIn.eq.0) call bug('f','No input cubes given')
-      call keya('out',out,' ')
-      if (out.eq.' ') call bug('f','No output name given')
+      call keya('out',outNam,' ')
+      if (outNam.eq.' ') call bug('f','No output name given')
 
       do i = 1, nIn
-        call keyr('rms',rms(i),0.)
+        call keyr('rms',rms(i),0.0)
         if (rms(i).lt.0)
      *      call bug('f','Non-positive rms noise parameter.')
       enddo
-c
-c  Get processing options.
-c
+
+c     Get processing options.
       call GetOpt(dosen,dogain,taper)
       call keyfin
 
       if (nIn.eq.1 .and. taper) call bug('f',
      *  'options=taper reduces to no correction for single pointings')
-c
-c  Open the files, determine the size of the output. Determine the grid
-c  system from the first map.
-c
-      if (nIn.le.maxOpen) then
+
+c     Open the files, determine the size of the output.  Determine the
+c     grid system from the first map.
+      if (nIn.le.MAXOPN) then
         nOpen = nIn
       else
-        nOpen = maxOpen - 1
+        nOpen = MAXOPN - 1
       endif
 
       docar  = .false.
       defrms = .false.
       do i = 1, nIn
-        call xyopen(tin(i),InBuf(k1(i):k2(i)),'old',3,nsize(1,i))
-        if (max(nsize(1,i),nsize(2,i)).gt.maxdim)
+        call xyopen(lIn(i),InBuf(k1(i):k2(i)),'old',3,axLen(1,i))
+        if (max(axLen(1,i),axLen(2,i)).gt.MAXDIM)
      *    call bug('f','Input map is too big')
 
         if (i.eq.1) then
-          call ThingIni(tIn(1),nsize(1,1),ctype,crpix,crval,cdelt,
+          call ThingIni(lIn(1),axLen(1,1),ctype,crpix,crval,cdelt,
      *                  blctrc(1,1),extent)
-          call rdhdi(tin(1),'naxis',naxis,3)
+          call rdhdi(lIn(1),'naxis',naxis,3)
           naxis = min(naxis,4)
 
-          if (rms(1).eq.0.0) call rdhdr(tIn(1),'rms',rms(1),0.0)
+          if (rms(1).eq.0.0) call rdhdr(lIn(1),'rms',rms(1),0.0)
           defrms = rms(1).le.0.0
           if (defrms) then
             call output('WARNING: Setting RMS to 1.0 for all images.')
             rms(1) = 1.0
           endif
         else
-          call ThingChk(tIn(i),nsize(1,i),ctype,crpix,crval,cdelt,
+          call ThingChk(lIn(i),axLen(1,i),ctype,crpix,crval,cdelt,
      *                  exact,blctrc(1,i),extent)
           docar = docar .or. .not.exact
-          if (nsize(3,i).ne.nsize(3,1))
-     *      call bug('f','Different lengths for 3rd axis')
+
+          if (axLen(3,i).ne.axLen(3,1))
+     *      call bug('f', 'Different lengths for 3rd axis')
+
           if (defrms) then
             rms(i) = 1.0
           else
-            if (rms(i).le.0) call rdhdr(tIn(i),'rms',rms(i),0.0)
+            if (rms(i).le.0) call rdhdr(lIn(i),'rms',rms(i),0.0)
             if (rms(i).le.0) rms(i) = rms(i-1)
           endif
         endif
-        if (i.gt.nOpen) call xyclose(tIn(i))
+
+        if (i.gt.nOpen) call xyclose(lIn(i))
       enddo
-c
-c  Create the output image, and make a header for it.
-c
+
+c     Create the output image and make a header for it.
       do i = 1, 4
         itemp = nint(extent(i))
-        if (abs(extent(i)-itemp).gt.tol) then
+        if (abs(extent(i)-itemp).gt.TOL) then
           if (i.ge.3) itemp = nint(extent(i)+0.49)
           if (i.lt.3) itemp = nint(extent(i)-0.49)
         endif
@@ -246,60 +242,56 @@ c
 
       nOut(1) = nint(extent(3) - extent(1)) + 1
       nOut(2) = nint(extent(4) - extent(2)) + 1
-      if (max(nOut(1),nOut(2)).gt.maxdim) then
+      if (max(nOut(1),nOut(2)).gt.MAXDIM) then
         call bug('w','Output image is too large, clipping input')
-        if (nOut(1).gt.maxdim) then
-           extent(1)=extent(1)+(nOut(1)-maxdim+1)/2
-           extent(3)=extent(3)-(nOut(1)-maxdim+1)/2
+        if (nOut(1).gt.MAXDIM) then
+           extent(1)=extent(1)+(nOut(1)-MAXDIM+1)/2
+           extent(3)=extent(3)-(nOut(1)-MAXDIM+1)/2
            nOut(1) = nint(extent(3) - extent(1)) + 1
         endif
-        if (nOut(2).gt.maxdim) then
-           extent(2)=extent(2)+(nOut(2)-maxdim+1)/2
-           extent(4)=extent(4)-(nOut(2)-maxdim+1)/2
+        if (nOut(2).gt.MAXDIM) then
+           extent(2)=extent(2)+(nOut(2)-MAXDIM+1)/2
+           extent(4)=extent(4)-(nOut(2)-MAXDIM+1)/2
            nOut(2) = nint(extent(4) - extent(2)) + 1
         endif
       endif
-      nOut(3) = nsize(3,1)
+      nOut(3) = axLen(3,1)
       if (dosen .or. dogain) nOut(3) = 1
       nOut(4) = 1
 
-      call xyopen(tout,out,'new',naxis,nout)
-      call hdout(tIn(1),tout,nsize(1,1),extent,version,
+      call xyopen(lOut,outNam,'new',naxis,nout)
+      call hdout(lIn(1),lOut,axLen(1,1),extent,version,
      *           dosen,dogain,docar)
-      call coInit(tout)
-c
-c  Correct the blctrc parameter for the extent of the image.
-c
+      call coInit(lOut)
+
+c     Correct blctrc for the extent of the image.
       xoff = extent(1) - 1
       yoff = extent(2) - 1
       do i = 1, nIn
-        BlcTrc(1,i) = BlcTrc(1,i) - xoff
-        BlcTrc(2,i) = BlcTrc(2,i) - yoff
-        BlcTrc(3,i) = BlcTrc(3,i) - xoff
-        BlcTrc(4,i) = BlcTrc(4,i) - yoff
+        blctrc(1,i) = blctrc(1,i) - xoff
+        blctrc(2,i) = blctrc(2,i) - yoff
+        blctrc(3,i) = blctrc(3,i) - xoff
+        blctrc(4,i) = blctrc(4,i) - yoff
       enddo
-c
-c  Allocate memory.
-c
+
+c     Allocate memory.
       call MemAlloc(pOut,nOut(1)*nOut(2),'r')
       call MemAlloc(pWts,nOut(1)*nOut(2),'r')
-c
-c  Process each of the files.
-c
-      call ScrOpen(tScr)
-      call ScrOpen(tWts)
+
+c     Process each of the files.
+      call ScrOpen(lScr)
+      call ScrOpen(lWts)
       do i = 1, nIn
-        call output ('Processing image '//inbuf(k1(i):k2(i)))
-        if (i.gt.nOpen) call xyopen(tIn(i),InBuf(k1(i):k2(i)),
-     *                             'old',3,nsize(1,i))
-        call Process(i,tScr,tWts,tIn(i),tout,memR(pOut),memR(pWts),
-     *    nsize(1,i),nsize(2,i),nOut(1),nOut(2),nOut(3),dogain,
-     *    BlcTrc(1,i),rms(i))
-        call xyclose(tin(i))
+        call output('Processing image '//inbuf(k1(i):k2(i)))
+        if (i.gt.nOpen) call xyopen(lIn(i),InBuf(k1(i):k2(i)),
+     *                             'old',3,axLen(1,i))
+        call Process(i,lScr,lWts,lIn(i),lOut,memR(pOut),memR(pWts),
+     *    axLen(1,i),axLen(2,i),nOut(1),nOut(2),nOut(3),dogain,
+     *    blctrc(1,i),rms(i))
+        call xyclose(lIn(i))
       enddo
-c
-c  Determine the maximum noise to aim at.
-c
+
+c     Determine the maximum noise to aim at.
       if (taper) then
         sigt = Rms(1)
         do i = 2, nIn
@@ -308,26 +300,24 @@ c
       else
         sigt = 0.0
       endif
-c
-c  Go through the scratch file one more time, correcting for the change
-c  in the weights, and writting out the final data.
-c
-      call LastPass(tOut,tScr,tWts,memR(pOut),memR(pWts),sigt,
+
+c     Go through the scratch file one more time, correcting for the
+c     change in the weights, and writing out the final data.
+      call LastPass(lOut,lScr,lWts,memR(pOut),memR(pWts),sigt,
      *              nOut(1),nOut(2),nOut(3),dosen)
-c
-c  Free up the memory.
-c
+
+c     Free memory.
       call MemFree(pOut,nOut(1)*nOut(2),'r')
       call MemFree(pWts,nOut(1)*nOut(2),'r')
-c
-c  All said and done. Close up anything that is still open.
-c
-      call ScrClose(tScr)
-      call ScrClose(tWts)
-      call xyclose(tOut)
+
+c     Close down.
+      call scrClose(lScr)
+      call scrClose(lWts)
+      call xyclose(lOut)
+
       end
 
-c***********************************************************************
+************************************************************************
 
       subroutine GetOpt(dosen,dogain,taper)
 
@@ -358,15 +348,15 @@ c-----------------------------------------------------------------------
      *  'Cannot do options=sensitivity,gains simultaneously')
       end
 
-c***********************************************************************
+************************************************************************
 
-      subroutine Process(fileno,tScr,tWts,tIn,tOut,Out,Wts,
-     *  nx,ny,n1,n2,n3,dogain,BlcTrc,rms)
+      subroutine Process(fileno,lScr,lWts,lIn,lOut,Out,Wts,
+     *  nx,ny,n1,n2,n3,dogain,blctrc,rms)
 
-      integer fileno,tScr,tWts,tIn,tOut
+      integer fileno,lScr,lWts,lIn,lOut
       integer nx,ny,n1,n2,n3
       real Out(n1,n2),Wts(n1,n2)
-      real BlcTrc(4),rms
+      real blctrc(4),rms
       logical dogain
 c-----------------------------------------------------------------------
 c  First determine the initial weight to apply to each pixel and
@@ -376,13 +366,13 @@ c  accumulate the information in the scratch file.
 c
 c  Inputs:
 c    fileno     Input file number.
-c    tScr       Handle of the image scratch file.
-c    tWts       Handle of the weights scratch file.
-c    tIn        Handle of the input file.
-c    tOut       Coordinate system of the output dataset.
+c    lScr       Handle of the image scratch file.
+c    lWts       Handle of the weights scratch file.
+c    lIn        Handle of the input file.
+c    lOut       Coordinate system of the output dataset.
 c    nx,ny      Size of the image cube.
 c    n1,n2,n3   Size of the output cube.
-c    BlcTrc     Grid corrdinates, in the output, that the input maps to.
+c    blctrc     Grid corrdinates, in the output, that the input maps to.
 c    rms        Rms noise parameter.
 c    dogain     True if we are to compute the gain function rather than
 c               the normal mosaic or sensitivity function.
@@ -393,7 +383,7 @@ c    Wts        Accumulation of the weights array.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
 
-      real TOL
+      real      TOL
       parameter (TOL=0.01)
 
       logical interp, mask
@@ -405,68 +395,59 @@ c-----------------------------------------------------------------------
       logical  hdprsnt
       external hdprsnt
 c-----------------------------------------------------------------------
-c  Determine if we have to interpolate.
-c
+c     Determine if we have to interpolate.
       interp = .false.
       do i = 1, 4
-        interp = interp .or. abs(BlcTrc(i)-anint(BlcTrc(i))).gt.TOL
+        interp = interp .or. abs(blctrc(i)-anint(blctrc(i))).gt.TOL
       enddo
-      interp = interp .or. nint(BlcTrc(3)-BlcTrc(1)+1).ne.nx
-      interp = interp .or. nint(BlcTrc(4)-BlcTrc(2)+1).ne.ny
-c
-c  Determine the width of the guard band, if we have to interpolate.
-c
+      interp = interp .or. nint(blctrc(3)-blctrc(1)+1).ne.nx
+      interp = interp .or. nint(blctrc(4)-blctrc(2)+1).ne.ny
+
+c     Determine the width of the guard band, if we have to interpolate.
       xinc = 0
       yinc = 0
       if (interp) then
-        xinc = 2*(BlcTrc(3)-BlcTrc(1))/(nx-1)
-        yinc = 2*(BlcTrc(4)-BlcTrc(2))/(ny-1)
+        xinc = 2*(blctrc(3)-blctrc(1))/(nx-1)
+        yinc = 2*(blctrc(4)-blctrc(2))/(ny-1)
       endif
-      Sect(1) = max(1., BlcTrc(1) + xinc)
-      Sect(2) = max(1., BlcTrc(2) + yinc)
-      Sect(3) = min(real(n1),BlcTrc(3) - xinc)
-      Sect(4) = min(real(n2),BlcTrc(4) - yinc)
-c
-c  Having determined the section of the output we can calculate, round
-c  it to integer values.
-c
+      Sect(1) = max(1.0, blctrc(1) + xinc)
+      Sect(2) = max(1.0, blctrc(2) + yinc)
+      Sect(3) = min(real(n1),blctrc(3) - xinc)
+      Sect(4) = min(real(n2),blctrc(4) - yinc)
+
+c     Having determined the section of the output we can calculate,
+c     round it to integer values.
       xlo = nint(Sect(1) + 0.5 - TOL)
       ylo = nint(Sect(2) + 0.5 - TOL)
       xhi = nint(Sect(3) - 0.5 + TOL)
       yhi = nint(Sect(4) - 0.5 + TOL)
       if (xlo.gt.xhi .or. ylo.gt.yhi) return
-c
-c  If we are interpolating, initialise the interpolation routine.
-c
+
+c     If we are interpolating, initialise the interpolation routine.
       if (interp) then
-        Sect(1) = (nx-1)/(BlcTrc(3)-BlcTrc(1))*(xlo-BlcTrc(1)) + 1
-        Sect(2) = (ny-1)/(BlcTrc(4)-BlcTrc(2))*(ylo-BlcTrc(2)) + 1
-        Sect(3) = (nx-1)/(BlcTrc(3)-BlcTrc(1))*(xhi-BlcTrc(1)) + 1
-        Sect(4) = (ny-1)/(BlcTrc(4)-BlcTrc(2))*(yhi-BlcTrc(2)) + 1
+        Sect(1) = (nx-1)/(blctrc(3)-blctrc(1))*(xlo-blctrc(1)) + 1
+        Sect(2) = (ny-1)/(blctrc(4)-blctrc(2))*(ylo-blctrc(2)) + 1
+        Sect(3) = (nx-1)/(blctrc(3)-blctrc(1))*(xhi-blctrc(1)) + 1
+        Sect(4) = (ny-1)/(blctrc(4)-blctrc(2))*(yhi-blctrc(2)) + 1
         call IntpIni(xhi-xlo+1,yhi-ylo+1,Sect)
       endif
-c
-c  Is there a mask file associated with this image?
-c
-      mask = hdprsnt(tIn,'mask')
+
+c     Is there a mask file associated with this image?
+      mask = hdprsnt(lIn,'mask')
       if (mask .and. interp) call bug('f',
      *  'Blanked pixels cannot be used when interpolating')
-c
-c  Ready to construct the primary beam object.
-c
-      call pntcent(tIn,pbtype,x(1),x(2))
-c
-c
-c  Loop over all planes.
-c
+
+c     Ready to construct the primary beam object.
+      call pntcent(lIn,pbtype,x(1),x(2))
+
+c     Loop over all planes.
       do k = 1, n3
         x(3) = k
-        call pbInitc(pbObj,pbtype,tOut,'aw/aw/ap',x)
-        call xysetpl(tIn,1,k)
+        call pbInitc(pbObj,pbtype,lOut,'aw/aw/ap',x)
+        call xysetpl(lIn,1,k)
         if (interp) call IntpRIni
-c
-c  Get a plane from the scratch array.
-c
+
+c       Get a plane from the scratch array.
         if (fileno.eq.1) then
           do j = 1, n2
             do i = 1, n1
@@ -475,23 +456,22 @@ c
             enddo
           enddo
         else
-          call GetSec(tScr,Out,k,n1,n2,xlo,xhi,ylo,yhi)
-          call GetSec(tWts,Wts,k,n1,n2,xlo,xhi,ylo,yhi)
+          call GetSec(lScr,Out,k,n1,n2,xlo,xhi,ylo,yhi)
+          call GetSec(lWts,Wts,k,n1,n2,xlo,xhi,ylo,yhi)
         endif
-c
-c  Determine the offsets to start reading.
-c
+
+c       Determine the offsets to start reading.
         if (interp) then
           xoff = xlo
           yoff = 1
         else
-          xoff = nint(BlcTrc(1))
-          yoff = ylo - nint(BlcTrc(2)) + 1
+          xoff = nint(blctrc(1))
+          yoff = ylo - nint(blctrc(2)) + 1
         endif
 
 c       Process this plane.
         do j = ylo, yhi
-          call GetDat(tIn,nx,xoff,yoff,xlo,xhi,j,pbObj,
+          call GetDat(lIn,nx,xoff,yoff,xlo,xhi,j,pbObj,
      *                In,pBeam,n1,interp,mask)
           yoff = yoff + 1
 
@@ -518,37 +498,35 @@ c           Accumulate data.
             Wts(i,j) = Wts(i,j) + wgt
  10       enddo
         enddo
-c
-c  Save the output.
-c
+
+c       Save the output.
         if (fileno.eq.1) then
-          call PutSec(tScr,Out,k,n1,n2,1,n1,1,n2)
-          call PutSec(tWts,Wts,k,n1,n2,1,n1,1,n2)
+          call PutSec(lScr,Out,k,n1,n2,1,n1,1,n2)
+          call PutSec(lWts,Wts,k,n1,n2,1,n1,1,n2)
         else
-          call PutSec(tScr,Out,k,n1,n2,xlo,xhi,ylo,yhi)
-          call PutSec(tWts,Wts,k,n1,n2,xlo,xhi,ylo,yhi)
+          call PutSec(lScr,Out,k,n1,n2,xlo,xhi,ylo,yhi)
+          call PutSec(lWts,Wts,k,n1,n2,xlo,xhi,ylo,yhi)
         endif
-c
-c  Release the primary beam object.
-c
+
+c       Release the primary beam object.
         call pbFin(pbObj)
       enddo
 
       end
 
-c***********************************************************************
+************************************************************************
 
-      subroutine GetDat(tIn,nx,xoff,yoff,xlo,xhi,j,pbObj,
+      subroutine GetDat(lIn,nx,xoff,yoff,xlo,xhi,j,pbObj,
      *                  In,Pb,n1,interp,mask)
 
-      integer tIn,xoff,yoff,xlo,xhi,n1,j,pbObj,nx
+      integer lIn,xoff,yoff,xlo,xhi,n1,j,pbObj,nx
       logical interp,mask
       real In(n1),Pb(n1)
 c-----------------------------------------------------------------------
 c  Get a row of data (either from xyread or the interpolation routines).
 c
 c  Input:
-c    tIn
+c    lIn
 c    xoff
 c    yoff
 c    xlo,xhi
@@ -562,54 +540,52 @@ c    Pb         Primary beam response (zeroed out where the data are
 c               blanked).
 c-----------------------------------------------------------------------
       include 'maxdim.h'
-      logical flags(MAXDIM)
-      real dat(MAXDIM)
-      integer i
+
+      logical   flags(MAXDIM)
+      integer   i
+      real      dat(MAXDIM)
 
       real     PbGet
       external pbget, xyread
 c-----------------------------------------------------------------------
-c
-c  Get the data.
-c
+c     Get the data.
       if (interp) then
-        call IntpRd(tIn,yoff,In(xoff),xyread)
+        call IntpRd(lIn,yoff,In(xoff),xyread)
       else if (xoff.lt.1 .or. xoff+nx-1.gt.n1) then
-        call xyread(tin,yoff,Dat)
+        call xyread(lIn,yoff,Dat)
         do i = xlo, xhi
           In(i) = Dat(i-xoff+1)
         enddo
       else
-        call xyread(tIn,yoff,In(xoff))
+        call xyread(lIn,yoff,In(xoff))
       endif
-c
-c  Determine the primary beam.
-c
+
+c     Determine the primary beam.
       do i = xlo, xhi
         Pb(i) = PbGet(pbObj,real(i),real(j))
       enddo
-c
-c  Zero the primary beam where the data are flagged.
-c
+
+c     Zero the primary beam where the data are flagged.
       if (mask) then
-        call xyflgrd(tIn,yoff,flags)
+        call xyflgrd(lIn,yoff,flags)
         do i = xlo, xhi
           if (.not.flags(i-xoff+1)) Pb(i) = 0
         enddo
       endif
+
       end
 
-c***********************************************************************
+************************************************************************
 
-      subroutine GetSec(tScr,Out,k,n1,n2,xlo,xhi,ylo,yhi)
+      subroutine GetSec(lScr,Out,k,n1,n2,xlo,xhi,ylo,yhi)
 
-      integer tScr,k,n1,n2,xlo,xhi,ylo,yhi
+      integer lScr,k,n1,n2,xlo,xhi,ylo,yhi
       real Out(n1,n2)
 c-----------------------------------------------------------------------
 c  Write out to the scratch file the region of interest.
 c
 c  Inputs:
-c    tScr       Handle of the scratch file.
+c    lScr       Handle of the scratch file.
 c    Out        Array containing the data to write.
 c    k          Plane number.
 c    n1,n2      Dimensions of the Out array.
@@ -618,34 +594,33 @@ c    xhi,yhi    Trc of area to write.
 c-----------------------------------------------------------------------
       integer j,offset,length
 c-----------------------------------------------------------------------
-c
-c  If the section of the x dimension that we want to right is pretty
-c  well the entire x axis, read the whole lot.
-c
+c     If the section of the x dimension that we want to right is pretty
+c     well the entire x axis, read the whole lot.
       offset = (k-1)*n1*n2 + (ylo-1)*n1 + (xlo-1)
       if (10*(xhi-xlo+1).ge.8*n1) then
         length = n1*(yhi-ylo-1) + (n1-xlo+1) + xhi
-        call ScrRead(tScr,Out(xlo,ylo),offset,length)
+        call ScrRead(lScr,Out(xlo,ylo),offset,length)
       else
         length = xhi - xlo + 1
         do j = ylo, yhi
-          call ScrRead(tScr,Out(xlo,j),offset,length)
+          call ScrRead(lScr,Out(xlo,j),offset,length)
           offset = offset + n1
         enddo
       endif
+
       end
 
-c***********************************************************************
+************************************************************************
 
-      subroutine PutSec(tScr,Out,k,n1,n2,xlo,xhi,ylo,yhi)
+      subroutine PutSec(lScr,Out,k,n1,n2,xlo,xhi,ylo,yhi)
 
-      integer tScr,k,n1,n2,xlo,xhi,ylo,yhi
+      integer lScr,k,n1,n2,xlo,xhi,ylo,yhi
       real Out(n1,n2)
 c-----------------------------------------------------------------------
 c  Write out to the scratch file the region of interest.
 c
 c  Inputs:
-c    tScr       Handle of the scratch file.
+c    lScr       Handle of the scratch file.
 c    Out        Array containing the data to write.
 c    k          Plane number.
 c    n1,n2      Dimensions of the Out array.
@@ -654,27 +629,26 @@ c    xhi,yhi    Trc of area to write.
 c-----------------------------------------------------------------------
       integer j,offset,length
 c-----------------------------------------------------------------------
-c
-c  Try and block it into one call if that is possible.
-c
+c     Try and block it into one call if that is possible.
       offset = (k-1)*n1*n2 + (ylo-1)*n1 + (xlo-1)
       if (xlo.eq.1 .and. xhi.eq.n1) then
         length = n1*(yhi-ylo-1) + (n1-xlo+1) + xhi
-        call ScrWrite(tScr,Out(xlo,ylo),offset,length)
+        call ScrWrite(lScr,Out(xlo,ylo),offset,length)
       else
         length = xhi - xlo + 1
         do j = ylo, yhi
-          call ScrWrite(tScr,Out(xlo,j),offset,length)
+          call ScrWrite(lScr,Out(xlo,j),offset,length)
           offset = offset + n1
         enddo
       endif
+
       end
 
-c***********************************************************************
+************************************************************************
 
-      subroutine LastPass(tout,tScr,tWts,Out,Wts,sigt,n1,n2,n3,dosen)
+      subroutine LastPass(lOut,lScr,lWts,Out,Wts,sigt,n1,n2,n3,dosen)
 
-      integer tOut,tScr,tWts,n1,n2,n3
+      integer lOut,lScr,lWts,n1,n2,n3
       real sigt,Out(n1,n2),Wts(n1,n2)
       logical dosen
 c-----------------------------------------------------------------------
@@ -682,9 +656,9 @@ c  Read in the data from the scratch file, multiply by the scale factor,
 c  and then write out the data.
 c
 c  Inputs:
-c    tOut       Handle of the output image file.
-c    tScr       Handle of the input image file.
-c    tWts       Handle of the input weights file.
+c    lOut       Handle of the output image file.
+c    lScr       Handle of the input image file.
+c    lWts       Handle of the input weights file.
 c    sigt       Critical noise sigma.  Zero for no taper.
 c    n1,n2,n3   Size of the output cube.
 c    dosen      Determine the sensitivity function.
@@ -704,9 +678,9 @@ c-----------------------------------------------------------------------
 c     Loop over all planes.
       do k = 1, n3
 c       Get the image and weight planes.
-        call GetSec(tScr,Out,k,n1,n2,1,n1,1,n2)
-        call GetSec(tWts,Wts,k,n1,n2,1,n1,1,n2)
-        call xysetpl(tOut,1,k)
+        call GetSec(lScr,Out,k,n1,n2,1,n1,1,n2)
+        call GetSec(lWts,Wts,k,n1,n2,1,n1,1,n2)
+        call xysetpl(lOut,1,k)
 
         do j = 1, n2
           do i = 1, n1
@@ -735,30 +709,30 @@ c               Mosaic or gain function.
 
 c         Write flags if a bad pixel has been found.
           if (doflag .and. .not.doneflag) then
-            call CatchUp(tOut,j,n1,n2,k)
+            call CatchUp(lOut,j,n1,n2,k)
             doneflag = .true.
           endif
 
-          if (doflag) call xyflgwr(tOut,j,flags)
+          if (doflag) call xyflgwr(lOut,j,flags)
 
 c         Write out the data.
-          call xywrite(tOut,j,Out(1,j))
+          call xywrite(lOut,j,Out(1,j))
         enddo
       enddo
 
       end
 
-c***********************************************************************
+************************************************************************
 
-      subroutine CatchUp(tOut,j0,n1,n2,n3)
+      subroutine CatchUp(lOut,j0,n1,n2,n3)
 
-      integer tOut,j0,n1,n2,n3
+      integer lOut,j0,n1,n2,n3
 c-----------------------------------------------------------------------
 c  Write out a batch of "good" flags to the image mask file. This is
 c  to catch up on the flags that should have been written earlier.
 c
 c  Input:
-c    tOut
+c    lOut
 c    j0
 c    n1
 c    n2
@@ -768,47 +742,43 @@ c-----------------------------------------------------------------------
       integer i,j,k
       logical flags(MAXDIM)
 c-----------------------------------------------------------------------
-c
-c  Initialise the flags array.
-c
+c     Initialise the flags array.
       do i = 1, n1
         flags(i) = .true.
       enddo
-c
-c  Flag as good all planes before the first bad plane.
-c
+
+c     Flag as good all planes before the first bad plane.
       do k = 1, n3-1
-        call xysetpl(tOut,1,k)
+        call xysetpl(lOut,1,k)
         do j = 1, n2
-          call xyflgwr(tOut,j,flags)
+          call xyflgwr(lOut,j,flags)
         enddo
       enddo
-c
-c  Flag as good all rows before the first bad row.
-c
-      call xysetpl(tOut,1,n3)
+
+c     Flag as good all rows before the first bad row.
+      call xysetpl(lOut,1,n3)
       do j = 1, j0-1
-        call xyflgwr(tOut,j,flags)
+        call xyflgwr(lOut,j,flags)
       enddo
 
       end
 
-c***********************************************************************
+************************************************************************
 
-      subroutine hdout(tin,tout,nsize,extent,version,dosen,dogain,docar)
+      subroutine hdout(lIn,lOut,axLen,extent,version,dosen,dogain,docar)
 
-      integer tin,tout,nsize(3)
-      real extent(4)
+      integer   lIn, lOut, axLen(3)
+      real      extent(4)
       character version*(*)
-      logical dosen,dogain,docar
+      logical   dosen, dogain, docar
 c-----------------------------------------------------------------------
 c  Make up the header of the output file.
 c
 c  Input:
-c    tin        Handle of the input file which is to be used as a
+c    lIn        Handle of the input file which is to be used as a
 c               template.
-c    tout       Handle of the output file.
-c    nsize      Size of the input image.
+c    lOut       Handle of the output file.
+c    axLen      Size of the input image.
 c    extent     Expanded extent of the output.
 c    dosen      True if the sensitivity function is being evaluated.
 c    dogain     True if the gain function is being evaluated.
@@ -831,64 +801,58 @@ c-----------------------------------------------------------------------
      *  'restfreq','vobs    ','obsra   ','obsdec  ','lstart  ',
      *  'lstep   ','ltype   ','lwidth  ','btype   ','cellscal'/
 c-----------------------------------------------------------------------
-c
-c  Write the output projection as cartesian.
-c
+c     Write the output projection as cartesian.
       if (docar) then
-        call rdhda(tIn,'ctype1',ctype1,'RA---CAR')
-        call rdhda(tIn,'ctype2',ctype2,'DEC--CAR')
+        call rdhda(lIn,'ctype1',ctype1,'RA---CAR')
+        call rdhda(lIn,'ctype2',ctype2,'DEC--CAR')
         if (ctype1(5:5).eq.'-') ctype1(5:8) = '-CAR'
         if (ctype2(5:5).eq.'-') ctype2(5:8) = '-CAR'
-        call wrhda(tOut,'ctype1',ctype1)
-        call wrhda(tOut,'ctype2',ctype2)
+        call wrhda(lOut,'ctype1',ctype1)
+        call wrhda(lOut,'ctype2',ctype2)
       else
-        call hdcopy(tIn,tOut,'ctype1')
-        call hdcopy(tIn,tOut,'ctype2')
+        call hdcopy(lIn,lOut,'ctype1')
+        call hdcopy(lIn,lOut,'ctype2')
       endif
-c
-c  Determine the location of the reference pixel in the output image.
-c
-      call rdhdr(tIn,'crpix1',crpix1,real(nsize(1)/2+1))
-      call rdhdr(tIn,'crpix2',crpix2,real(nsize(2)/2+1))
+
+c     Determine the location of the reference pixel in the output image.
+      call rdhdr(lIn,'crpix1',crpix1,real(axLen(1)/2+1))
+      call rdhdr(lIn,'crpix2',crpix2,real(axLen(2)/2+1))
       crpix1 = crpix1 - (extent(1)-1)
       crpix2 = crpix2 - (extent(2)-1)
-      call wrhdr(tOut,'crpix1',crpix1)
-      call wrhdr(tOut,'crpix2',crpix2)
-c
-c  Set primary beam size to indicate that it is primary-beam corrected.
-c
-      call wrhda(tOut,'pbtype','SINGLE')
-c
-c  Copy other parameters.
-c
+      call wrhdr(lOut,'crpix1',crpix1)
+      call wrhdr(lOut,'crpix2',crpix2)
+
+c     Set primary beam size to indicate that it is primary-beam corrected.
+      call wrhda(lOut,'pbtype','SINGLE')
+
+c     Copy other parameters.
       do i = 1, nkeys
-        call hdcopy(tIn,tOut,keyw(i))
+        call hdcopy(lIn,lOut,keyw(i))
       enddo
-c
-c  Create the output history.
-c
-      call hdcopy(tin,tout,'history')
-      call hisopen(tout,'append')
+
+c     Create the output history.
+      call hdcopy(lIn,lOut,'history')
+      call hisopen(lOut,'append')
 
       line = 'LINMOS: Miriad '//version
-      call hiswrite(tout,line)
-      call hisinput(tout,'LINMOS')
+      call hiswrite(lOut,line)
+      call hisinput(lOut,'LINMOS')
       if (dosen) then
-        call hiswrite(tout,
+        call hiswrite(lOut,
      *    'LINMOS: The image is the rms noise function')
       else if (dogain) then
-        call hiswrite(tout,
+        call hiswrite(lOut,
      *    'LINMOS: The image is the gain function')
       endif
-      call hisclose(tout)
+      call hisclose(lOut)
       end
 
-c***********************************************************************
+************************************************************************
 
-      subroutine ThingIni(tno,nsize,ctype,crpix,crval,cdelt,
+      subroutine ThingIni(lIn,axLen,ctype,crpix,crval,cdelt,
      *  blctrc,extent)
 
-      integer tno,nsize(2)
+      integer lIn,axLen(2)
       character ctype(3)*(*)
       double precision crpix(3),crval(3),cdelt(3)
       real blctrc(4),extent(4)
@@ -899,21 +863,19 @@ c-----------------------------------------------------------------------
       character itoaf*2
       external  itoaf
 c-----------------------------------------------------------------------
-c
-c  Read the axis descriptors.
-c
+c     Read the axis descriptors.
       do i = 1, 3
         num = itoaf(i)
-        call rdhda(tno,'ctype'//num,ctype(i),' ')
-        call rdhdd(tno,'crpix'//num,crpix(i),1d0)
-        call rdhdd(tno,'crval'//num,crval(i),1d0)
-        call rdhdd(tno,'cdelt'//num,cdelt(i),1d0)
+        call rdhda(lIn,'ctype'//num,ctype(i),' ')
+        call rdhdd(lIn,'crpix'//num,crpix(i),1d0)
+        call rdhdd(lIn,'crval'//num,crval(i),1d0)
+        call rdhdd(lIn,'cdelt'//num,cdelt(i),1d0)
       enddo
 
       blctrc(1) = 1
       blctrc(2) = 1
-      blctrc(3) = nsize(1)
-      blctrc(4) = nsize(2)
+      blctrc(3) = axLen(1)
+      blctrc(4) = axLen(2)
 
       do i = 1, 4
         extent(i) = blctrc(i)
@@ -921,16 +883,16 @@ c
 
       end
 
-c***********************************************************************
+************************************************************************
 
-      subroutine ThingChk(tno,nsize,ctype,crpix,crval,cdelt,
+      subroutine ThingChk(lIn,axLen,ctype,crpix,crval,cdelt,
      *                    exact,blctrc,extent)
 
-      integer tno,nsize(3)
-      logical exact
+      integer   lIn, axLen(3)
       character ctype(3)*(*)
       double precision crpix(3),crval(3),cdelt(3)
-      real blctrc(4),extent(4)
+      logical   exact
+      real      blctrc(4), extent(4)
 c-----------------------------------------------------------------------
       double precision crvalx(3),crpixx(3),cdeltx(3)
       double precision x1,x1x,y1,y1x,z1,z1x,dx,dy,cosdec,cosdecx
@@ -941,15 +903,13 @@ c-----------------------------------------------------------------------
       character itoaf*2
       external  itoaf
 c-----------------------------------------------------------------------
-c
-c  Read the axis descriptors.
-c
+c     Read the axis descriptors.
       do i = 1, 3
         num = itoaf(i)
-        call rdhda(tno,'ctype'//num,ctypex(i),' ')
-        call rdhdd(tno,'crpix'//num,crpixx(i),1d0)
-        call rdhdd(tno,'crval'//num,crvalx(i),1d0)
-        call rdhdd(tno,'cdelt'//num,cdeltx(i),1d0)
+        call rdhda(lIn,'ctype'//num,ctypex(i),' ')
+        call rdhdd(lIn,'crpix'//num,crpixx(i),1d0)
+        call rdhdd(lIn,'crval'//num,crvalx(i),1d0)
+        call rdhdd(lIn,'cdelt'//num,cdeltx(i),1d0)
       enddo
 
       cosdec  = cos(crval(2))
@@ -967,20 +927,18 @@ c
 
       blctrc(1) = (x1x - x1)/cdelt1 + 1
       blctrc(2) = (y1x - y1)/cdelt(2) + 1
-      blctrc(3) = blctrc(1) + (nsize(1)-1) * dx
-      blctrc(4) = blctrc(2) + (nsize(2)-1) * dy
+      blctrc(3) = blctrc(1) + (axLen(1)-1) * dx
+      blctrc(4) = blctrc(2) + (axLen(2)-1) * dy
       if (blctrc(3).lt.blctrc(1) .or. blctrc(4).lt.blctrc(2))
      *    call bug('f','Signs of cdelt of the inputs are not identical')
-c
-c  Update the extent.
-c
-      Extent(1) = min(BlcTrc(1),Extent(1))
-      Extent(2) = min(BlcTrc(2),Extent(2))
-      Extent(3) = max(BlcTrc(3),Extent(3))
-      Extent(4) = max(BlcTrc(4),Extent(4))
-c
-c  Are the axes identical?
-c
+
+c     Update the extent.
+      Extent(1) = min(blctrc(1),Extent(1))
+      Extent(2) = min(blctrc(2),Extent(2))
+      Extent(3) = max(blctrc(3),Extent(3))
+      Extent(4) = max(blctrc(4),Extent(4))
+
+c     Are the axes identical?
       exact = .true.
       do i = 1, 2
         exact = exact .and.
@@ -988,9 +946,8 @@ c
      *          abs(cdelt(i)-cdeltx(i)).le.0.01*abs(cdelt(i)) .and.
      *          abs(crval(i)-crvalx(i)).lt.0.01*abs(cdelt(i))
       enddo
-c
-c  Check third axis alignment.
-c
+
+c     Check third axis alignment.
       z1  = crval(3)  + (1-crpix(3))* cdelt(3)
       z1x = crvalx(3) + (1-crpixx(3))*cdeltx(3)
       if (max(abs(z1-z1x),
@@ -999,18 +956,18 @@ c
 
       end
 
-c***********************************************************************
+************************************************************************
 
-      subroutine pntcent(tno,pbtype,pra,pdec)
+      subroutine pntcent(lIn,pbtype,pra,pdec)
 
-      integer tno
+      integer lIn
       double precision pra,pdec
       character pbtype*(*)
 c-----------------------------------------------------------------------
 c  Determine the pointing centre and the primary beam type.
 c
 c  Inputs:
-c    tno        Handle of the input image dataset
+c    lIn        Handle of the input image dataset
 c  Output:
 c    pra,pdec   Pointing centre RA and DEC, in radians.
 c    pbtype     Primary beam type. This will normally just be the
@@ -1027,28 +984,31 @@ c-----------------------------------------------------------------------
       integer  hsize
       external hdprsnt, hsize
 c-----------------------------------------------------------------------
-c
-c  Is the mosaic table present?
-c
-      if (hdprsnt(tno,'mostable')) then
-        call haccess(tno,mit,'mostable','read',iostat)
+c     Is the mosaic table present?
+      if (hdprsnt(lIn, 'mostable')) then
+c       Yes, read it.
+        call haccess(lIn, mit, 'mostable', 'read', iostat)
         if (iostat.ne.0) call bugno('f',iostat)
+
+c       Check its size.
         size = hsize(mit)
-        if (size.ne.56)
-     *    call bug('f','Bad size for mosaic table')
+        if (size.ne.56) call bug('f','Bad size for mosaic table')
+
+c       Read (RA,Dec).
         call hreadd(mit,pra,16,8,iostat)
         if (iostat.eq.0) call hreadd(mit,pdec,24,8,iostat)
+
+c       Read the primary beam type.
         if (iostat.eq.0) call hreadb(mit,string,32,16,iostat)
         call hdaccess(mit,iostat)
         if (iostat.ne.0) call bugno('f',iostat)
         pbtype = string
-c
-c  Otherwise treat a regular synthesis image.
-c
+
       else
-        call rdhdd(tno,'crval1',pra, 0d0)
-        call rdhdd(tno,'crval2',pdec,0d0)
-        call pbRead(tno,pbtype)
+c       No, treat a regular synthesis image.
+        call rdhdd(lIn, 'crval1', pra,  0d0)
+        call rdhdd(lIn, 'crval2', pdec, 0d0)
+        call pbRead(lIn, pbtype)
       endif
 
       end
