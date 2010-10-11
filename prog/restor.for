@@ -61,7 +61,7 @@ c       FWHM.  The default is determined from the dirty beam fit.
 c@ out
 c       The output restored image.  No default.
 c
-c$Id: restor.for,v 1.4 2010/10/11 00:26:34 cal103 Exp $
+c$Id: restor.for,v 1.5 2010/10/11 04:13:09 cal103 Exp $
 c--
 c
 c  History:
@@ -111,8 +111,8 @@ c-----------------------------------------------------------------------
       external  itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('restor',
-     *                 '$Revision: 1.4 $',
-     *                 '$Date: 2010/10/11 00:26:34 $')
+     *                 '$Revision: 1.5 $',
+     *                 '$Date: 2010/10/11 04:13:09 $')
 
 c     Get the input parameters.
       call keyini
@@ -310,8 +310,8 @@ c               model pixel coordinates.
 c-----------------------------------------------------------------------
       integer   iax
       double precision cdeltD, cdeltM, crpixD, crpixM, crvalD, crvalM,
-     *          temp
-      character cax*1
+     *          discr, doff
+      character cax*1, ctypeD*16, ctypeM*16
 
 c     Externals.
       character itoaf*1
@@ -321,22 +321,32 @@ c-----------------------------------------------------------------------
         call rdhdd(lMap,  'crpix'//cax, crpixM, 1d0)
         call rdhdd(lMap,  'cdelt'//cax, cdeltM, 1d0)
         call rdhdd(lMap,  'crval'//cax, crvalM, 0d0)
+        call rdhda(lMap,  'ctype'//cax, ctypeM, ' ')
 
         call rdhdd(lModel,'crpix'//cax, crpixD, 1d0)
         call rdhdd(lModel,'cdelt'//cax, cdeltD, 1d0)
         call rdhdd(lModel,'crval'//cax, crvalD, 0d0)
+        call rdhda(lModel,'ctype'//cax, ctypeD, ' ')
 
-        if (cdeltD.eq.0d0)
-     *    call bug('f', 'Increment on axis '//cax//' is zero')
+c       Check conformance between model and map.
+        if (ctypeM.ne.ctypeD)
+     *    call bug('f', 'Map and model ctype differ.')
 
-        if (abs(cdeltM-cdeltD).ge.0.001d0*abs(cdeltM))
-     *    call bug('f', 'Map and model increments differ')
+        discr = 1d-2*abs(cdeltM)
+        if (abs(cdeltM-cdeltD).ge.discr)
+     *    call bug('f', 'Map and model cdelt differ.')
 
-c       Linear (small-field) approximation unless crvalM == crvalD.
-        temp = (crpixM - crpixD) - (crvalM - crvalD)/cdeltM
-        offset(iax) = nint(temp)
+        if (abs(crvalM-crvalD).ge.discr)
+     *    call bug('f', 'Map and model crval differ.')
 
-        if (abs(offset(iax)-temp).gt.0.05d0)
+        if (cdeltM.eq.0d0)
+     *    call bug('f', 'cdelt on axis '//cax//' is zero')
+
+c       Compute the offset.
+        doff = crpixM - crpixD
+        offset(iax) = nint(doff)
+
+        if (abs(dble(offset(iax))-doff).gt.1d-2)
      *    call bug('f', 'Map and model do not align on pixels')
 
         if (offset(iax).lt.0 .or. offset(iax).ge.mapLen(iax))
