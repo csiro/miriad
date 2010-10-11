@@ -61,7 +61,7 @@ c       FWHM.  The default is determined from the dirty beam fit.
 c@ out
 c       The output restored image.  No default.
 c
-c$Id: restor.for,v 1.3 2010/10/11 00:21:09 cal103 Exp $
+c$Id: restor.for,v 1.4 2010/10/11 00:26:34 cal103 Exp $
 c--
 c
 c  History:
@@ -111,8 +111,8 @@ c-----------------------------------------------------------------------
       external  itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('restor',
-     *                 '$Revision: 1.3 $',
-     *                 '$Date: 2010/10/11 00:21:09 $')
+     *                 '$Revision: 1.4 $',
+     *                 '$Date: 2010/10/11 00:26:34 $')
 
 c     Get the input parameters.
       call keyini
@@ -333,7 +333,7 @@ c-----------------------------------------------------------------------
      *    call bug('f', 'Map and model increments differ')
 
 c       Linear (small-field) approximation unless crvalM == crvalD.
-        temp = (crvalM - crvalD)/cdeltD + (crpixM - crpixD)
+        temp = (crpixM - crpixD) - (crvalM - crvalD)/cdeltM
         offset(iax) = nint(temp)
 
         if (abs(offset(iax)-temp).gt.0.05d0)
