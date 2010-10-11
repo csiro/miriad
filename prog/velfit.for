@@ -47,7 +47,7 @@ c       The output log file.  The default is the terminal.
 c@ options
 c       None yet.  Reserved for alternative models.
 c
-c$Id: velfit.for,v 1.2 2010/10/11 04:39:50 cal103 Exp $
+c$Id: velfit.for,v 1.3 2010/10/11 05:45:23 cal103 Exp $
 c--
 c  History:
 c    30sep92  mchw  New task for Miriad.
@@ -55,40 +55,41 @@ c    29aug02  pjt   Added frang= to prevent large divisions for models
 c    31aug02  pjt   Ieck, rms calculation wrong, arrays not reset to 0
 c-----------------------------------------------------------------------
       include 'maxdim.h'
+      include 'mirconst.h'
 
-      character*(*) label,version
+      character*(*) label
       parameter (label='Fit a rotation curve to elliptical annuli')
-      parameter (version='version 1.0 31-aug-02')
 
-      double precision PI,RTS
-      parameter (PI=3.141592654,RTS=3600d0*180d0/PI)
-
-      integer MAXNAX,MAXBOXES,MAXRUNS,NAXIS
+      integer   MAXNAX, MAXBOXES, MAXRUNS, NAXIS
       parameter (MAXNAX=3,MAXBOXES=2048,NAXIS=3)
       parameter (MAXRUNS=3*MAXDIM)
 
-      integer boxes(MAXBOXES)
-      integer nsize(MAXNAX),size(MAXNAX),blc(MAXNAX),trc(MAXNAX)
-      integer irmin,irmax,nmap,map,i,j,ir,lIn(2)
-      real crpix(MAXNAX),cdelt(MAXNAX),crval(MAXNAX),crpix1,cdelt1
-      real center(2),pa,incline,rmin,rmax,rstep,vsys,crval1,vr,tmp
-      real cospa,sinpa,cosi,sini,cost,wt,x,y,xt,yt,r,ave,rms,fsum
-      real pixe(MAXDIM),amp(MAXDIM),flux(MAXDIM),vel(MAXDIM)
-      real frang,costmin
-      real vsum(MAXDIM),vsqu(MAXDIM),wsum(MAXDIM),vrot(MAXDIM)
-      logical mask(MAXDIM)
-      character*80 in(2),log,line
-      character cin*1,ctype*9
+      logical   mask(MAXDIM)
+      integer   axLen1(MAXNAX), axLen2(MAXNAX), blc(MAXNAX),
+     *          boxes(MAXBOXES), i, iax, ir, irmax, irmin, j, lIn(2),
+     *          nmap, trc(MAXNAX)
+      real      amp(MAXDIM), ave, center(2), cosi, cospa, cost, costmin,
+     *          flux(MAXDIM), frang, fsum, incline, pa, pixe(MAXDIM), r,
+     *          rmax, rmin, rms, rstep, sini, sinpa, tmp, vel(MAXDIM),
+     *          vr, vrot(MAXDIM), vsqu(MAXDIM), vsum(MAXDIM), vsys,
+     *          wsum(MAXDIM), wt, x, xt, y, yt
+      double precision cdelt(2), cdelti, crpix(2), crpixi, crval(2),
+     *          crvali
+      character cax*1, ctype(2)*9, ctypei*9, inName(2)*80, line*80,
+     *          logNam*80, version*72
 
-c     Externals.
-      integer len1
-      character*1 itoaf
+      integer   len1
+      character itoaf*1, versan*80
+      external  itoaf, len1, versan
 c-----------------------------------------------------------------------
+      version = versan('velfit',
+     *                 '$Revision: 1.3 $',
+     *                 '$Date: 2010/10/11 05:45:23 $')
+
 c     Get inputs.
-      call output('VELFIT: '//version)
       call keyini
-      call mkeyf('in',in,2,nmap)
-      call boxInput('region',in,boxes,MAXBOXES)
+      call mkeyf('in',inName,2,nmap)
+      call boxInput('region',inName,boxes,MAXBOXES)
       call keyr('center',center(1),0.0)
       call keyr('center',center(2),0.0)
       call keyr('pa',pa,0.0)
@@ -98,59 +99,64 @@ c     Get inputs.
       call keyr('radius',rstep,0.0)
       call keyr('frang',frang,0.0)
       call keyr('vsys',vsys,0.0)
-      call keya('log',log,' ')
+      call keya('log',logNam,' ')
       call keyfin
 
 c     Check inputs.
       if (nmap.lt.2) call bug('f','Must have two input maps')
-      costmin = sin(frang*PI/180.0)
+      costmin = sin(frang*D2R)
 
-c     Get center and pixel sizes from first image.
-      call xyopen(lIn(1),in(1),'old',NAXIS,size)
-      if (size(1).gt.MAXDIM .or. size(2).gt.MAXDIM)
+c     Open the input maps and check conformance.
+      call xyopen(lIn(1), inName(1), 'old', NAXIS, axLen1)
+      if (axLen1(1).gt.MAXDIM .or. axLen1(2).gt.MAXDIM)
      *  call bug('f','Image too big for MAXDIM')
-      do i = 1, 2
-        cin = itoaf(i)
-        call rdhda(lIn(1),'ctype'//cin,ctype,' ')
-        if (ctype(1:2).ne.'RA' .and. ctype(1:3).ne.'DEC')
-     *    call bug('w','Axes 1 and 2 are not RA or DEC')
-        call rdhdr(lIn(1),'crpix'//cin,crpix(i),0.0)
-        if (crpix(i).eq.0) then
-          crpix(i) = nsize(i)/2+1
-          call bug('w','Center pixel missing - assume NAXIS/2+1')
+
+      call xyopen(lIn(2),inName(2),'old',NAXIS,axLen2)
+      if (axLen2(1).ne.axLen1(1) .or. axLen2(2).ne.axLen1(2))
+     *  call bug('f','Each map must have same dimensions')
+
+      do iax = 1, 2
+        cax = itoaf(iax)
+
+        call rdhdd(lIn(1), 'crpix'//cax, crpix(iax), 0d0)
+        call rdhdd(lIn(2), 'crpix'//cax, crpixi, dble(axLen2(iax)/2+1))
+        if (crpix(iax).eq.0d0) then
+          crpix(iax) = dble(axLen1(iax)/2+1)
+          call bug('w', 'Center pixel missing - assume NAXIS/2+1')
         endif
-        call rdhdr(lIn(1),'cdelt'//cin,cdelt(i),1.0)
-        if (cdelt(i).eq.0) call bug('f','Pixel size missing')
-        call rdhdr(lIn(1),'crval'//cin,crval(i),0.0)
-      enddo
+        if (crpixi.ne.crpix(iax))
+     *    call bug('w', 'crpix differs between input maps.')
 
-c     Open the second input map and check axis match.
-      map = 2
-      call xyopen(lIn(map),in(map),'old',NAXIS,nsize)
-      if (nsize(1).ne.size(1) .or. nsize(2).ne.size(2))
-     *  call bug('f','Each map must have same xy dimensions')
+        call rdhdd(lIn(1), 'cdelt'//cax, cdelt(iax), 0d0)
+        call rdhdd(lIn(2), 'cdelt'//cax, cdelti, 0d0)
+        if (cdelt(iax).eq.0d0)
+     *    call bug('f', 'cdelt is absent or zero.')
+        if (cdelti.ne.cdelt(iax))
+     *    call bug('w', 'cdelt differs between input maps.')
 
-      do i = 1, 2
-        cin = itoaf(i)
-        call rdhdr(lIn(map),'cdelt'//cin,cdelt1,1.0)
-        if (cdelt1.ne.cdelt(i)) call bug('w','cdelt not the same')
-        call rdhdr(lIn(map),'crpix'//cin,crpix1,0.0)
-        call rdhdr(lIn(map),'crval'//cin,crval1,0.0)
-        if ((crval1+(1-crpix1)*cdelt1).ne.
-     *      (crval(i)+(1-crpix(i))*cdelt(i)))
-     *         call bug('w','reference positions not the same')
+        call rdhdd(lIn(1), 'crval'//cax, crval(iax), 0d0)
+        call rdhdd(lIn(2), 'crval'//cax, crvali, 0d0)
+        if (crvali.ne.crval(iax))
+     *    call bug('w', 'crval differs between input maps.')
+
+        call rdhda(lIn(1), 'ctype'//cax, ctype(iax), ' ')
+        call rdhda(lIn(2), 'ctype'//cax, ctypei,   ' ')
+        if (ctype(iax)(1:2).ne.'RA' .and. ctype(iax)(1:3).ne.'DEC')
+     *    call bug('w', 'Axes 1 and 2 are not RA and DEC')
+        if (ctypei.ne.ctype(iax))
+     *    call bug('w', 'ctype differs between input maps.')
       enddo
 
 c     Set up the region of interest.
       call boxMask(lIn(1),boxes,MAXBOXES)
-      call boxSet(boxes,MAXNAX,nsize,'s')
+      call boxSet(boxes,MAXNAX,axLen2,'s')
       call boxInfo(boxes,MAXNAX,blc,trc)
 
 c     Open the output text file and write title.
-      call logOpen(log,'q')
+      call logOpen(logNam,'q')
       call logWrit(' ***** '//label//' *****')
-      call logWrit(' Intensity Image = '//In(1)(1:len1(in(1))))
-      call logWrit(' Velocity  Image = '//In(2)(1:len1(in(2))))
+      call logWrit(' Intensity image = '//inName(1)(1:len1(inName(1))))
+      call logWrit(' Velocity  image = '//inName(2)(1:len1(inName(2))))
       write(line,'(a,2f7.1,a,f5.0,a,f4.0,a,f8.0)')
      *  '  center: ',center,'  Ellipse pa: ',pa,
      *        '  inclination: ',incline,' Vsys: ',vsys
@@ -159,15 +165,15 @@ c     Open the output text file and write title.
       call logWrit(line)
 
 c     Convert the inputs to more useful numbers, and defaults.
-      cdelt(1) = cdelt(1)*RTS
-      cdelt(2) = cdelt(2)*RTS
-      if (rmin.eq.0.0) rmin = abs(0.1*cdelt(1))
-      if (rmax.eq.0.0) rmax = abs(nsize(1)*cdelt(1))
+      cdelt(1) = cdelt(1)*R2AS
+      cdelt(2) = cdelt(2)*R2AS
+      if (rmin.eq.0.0)  rmin  = abs(0.1*cdelt(1))
+      if (rmax.eq.0.0)  rmax  = abs(axLen2(1)*cdelt(1))
       if (rstep.eq.0.0) rstep = abs(cdelt(1))
-      cospa = cos(pa*PI/180.0)
-      sinpa = sin(pa*PI/180.0)
-      cosi  = cos(incline*PI/180.0)
-      sini  = sin(incline*PI/180.0)
+      cospa = cos(pa*D2R)
+      sinpa = sin(pa*D2R)
+      cosi  = cos(incline*D2R)
+      sini  = sin(incline*D2R)
 
 c     Initialize integrals for each axis.
       do ir = 1, MAXDIM
@@ -186,8 +192,9 @@ c     Integrate in elliptical annuli.
         call xyread(lIn(2),j,vel)
         call xyflgrd(lIn(1),j,mask)
         y = (j-crpix(2))*cdelt(2) - center(2)
+
         do i = blc(1), trc(1)
-          x = (i-crpix(1))*cdelt(1) - center(1)
+          x  = (i-crpix(1))*cdelt(1) - center(1)
           yt =  x*sinpa + y*cospa
           xt = (x*cospa - y*sinpa)/cosi
           r  = sqrt(xt*xt+yt*yt)
@@ -230,8 +237,9 @@ c     Find the rms residuals from the fitted rotation curve.
         call xyread(lIn(2),j,vel)
         call xyflgrd(lIn(1),j,mask)
         y = (j-crpix(2))*cdelt(2) - center(2)
+
         do i = blc(1), trc(1)
-          x = (i-crpix(1))*cdelt(1) - center(1)
+          x  = (i-crpix(1))*cdelt(1) - center(1)
           yt =  x*sinpa + y*cospa
           xt = (x*cospa - y*sinpa)/cosi
           r  = sqrt(xt*xt+yt*yt)
