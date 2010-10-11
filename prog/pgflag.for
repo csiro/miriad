@@ -214,7 +214,7 @@ c       nocal   Do not apply antenna gain calibration.
 c       nopass  Do not apply bandpass correction.
 c       nopol   Do not apply polarisation leakage correction.
 c
-c$Id: pgflag.for,v 1.6 2010/04/30 08:23:28 cal103 Exp $
+c$Id: pgflag.for,v 1.7 2010/10/11 05:18:49 ste616 Exp $
 c--
 c
 c  History:
@@ -279,6 +279,14 @@ c                 baseline.
 c                 (version 1.4)
 c    vjm 09Dec09  Merge to mainline. Remove the eol characters. Add RCS
 c                 tags.
+c    jbs 07Oct10  Fix bug that stopped single-scan mosaics from being
+c                 displayed, since each source change creates a scan
+c                 break (represented internally by -2), making it
+c                 impossible to find an intermediate time sample; now
+c                 it works, but looks stupid - can make it look better
+c                 by using 'options=nosrc'. Made a number of changes
+c                 to allow selection of the first and last channels and
+c                 times.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mirconst.h'
@@ -326,8 +334,8 @@ c
       logical uvDatOpn
 
       version = versan ('pgflag',
-     :                  '$Revision: 1.6 $',
-     :                  '$Date: 2010/04/30 08:23:28 $')
+     :                  '$Revision: 1.7 $',
+     :                  '$Date: 2010/10/11 05:18:49 $')
 
 c
 c Get user inputs
@@ -479,6 +487,9 @@ c     Now plot the data.
          endif
          pressed=' '
          call pgband(7,0,0.0,0.0,curs_x,curs_y,pressed)
+c         write(status,'(A,I6,I6)') pressed(1:1),int(anint(curs_x)),
+c     *        int(anint(curs_y))
+c         call output(status)
 c     Do what the user wants and nobody gets hurt.
          if ((pressed(1:1).eq.'n').or.(pressed(1:1).eq.'p')) then
 c     change the baseline
@@ -531,13 +542,13 @@ c     check that we are within the range of the plot
             else
                meastype=1
             endif
-            if (curs_x.gt.curr_zooms(1,1)) then
-               if (curs_x.lt.curr_zooms(1,2)) then
-                  if (curs_y.gt.curr_zooms(2,1)) then
-                     if (curs_y.lt.curr_zooms(2,2)) then
+            if (int(anint(curs_x)).ge.curr_zooms(1,1)) then
+               if (int(anint(curs_x)).le.curr_zooms(1,2)) then
+                  if (int(anint(curs_y)).ge.curr_zooms(2,1)) then
+                     if (int(anint(curs_y)).le.curr_zooms(2,2)) then
                         call MakeMeasurement(memI(iFlg),memR(iDat),
-     *                       nchan,ntime,curs_x,curs_y,day0,t1,
-     *                       meas_channel,meas_freq,meas_time,
+     *                       nchan,ntime,anint(curs_x),anint(curs_y),
+     *                       day0,t1,meas_channel,meas_freq,meas_time,
      *                       meas_amp,chanoff,chanw,cfreq,meastype)
                         needplot=.true.
                         plot_top=.true.
@@ -571,18 +582,18 @@ c     set the minimum value
                endif
             else
 c     add a point on the graph
-               if ((curs_x.gt.curr_zooms(1,1)).and.
-     *              (curs_x.lt.curr_zooms(1,2)).and.
-     *              (curs_y.gt.curr_zooms(2,1)).and.
-     *              (curs_y.lt.curr_zooms(2,2))) then
+               if ((int(anint(curs_x)).ge.curr_zooms(1,1)).and.
+     *              (int(anint(curs_x)).le.curr_zooms(1,2)).and.
+     *              (int(anint(curs_y)).ge.curr_zooms(2,1)).and.
+     *              (int(anint(curs_y)).le.curr_zooms(2,2))) then
                   if (pressed(1:1).eq.'A') then
 c     left mouse button
-                     points(1,1)=int(curs_x)
-                     points(1,2)=int(curs_y)
+                     points(1,1)=int(anint(curs_x))
+                     points(1,2)=int(anint(curs_y))
                   else
 c     right mouse button
-                     points(2,1)=int(curs_x)
-                     points(2,2)=int(curs_y)
+                     points(2,1)=int(anint(curs_x))
+                     points(2,2)=int(anint(curs_y))
                   endif
                   plot_points=.true.
                   needplot=.true.
@@ -2204,6 +2215,7 @@ c
       integer xdim,ydim,curr_zooms(2,2)
       real maxval,minval,tr(6)
       real valarray(xdim,ydim,2)
+      character status*60
 c
 c  Draw the main waterfall plot, after masking the data with the
 c  current user-specified flags.
@@ -2222,6 +2234,9 @@ c                to the plot.
 c  Output:
 c    none
 c-----------------------------------------------------------------------
+c      write(status,'(A,I6,I6,I6,I6)') 'zooms',curr_zooms(1,1),
+c     *     curr_zooms(1,2),curr_zooms(2,1),curr_zooms(2,2)
+c      call output(status)
       call pggray(valarray(1,1,2),xdim,ydim,curr_zooms(1,1),
      *     curr_zooms(1,2),curr_zooms(2,1),curr_zooms(2,2),maxval,
      *     minval,tr)
@@ -2515,10 +2530,13 @@ c
       include 'maxdim.h'
       integer i,j,k,offset,length,pnt,bl,i0
       real buf(2*MAXCHAN+3),t
+      character status*60
 
       some_unflagged=.false.
       if (firstread) then
          do j=1,ntime
+c            write(status,'(A,I6,F20.10)') 't1',j,t1(j)
+c            call output(status)
             do i=1,nchan
                iflag(i,j,1)=0
                array(i,j,1)=0
@@ -2539,10 +2557,15 @@ c
             t=buf(2)+(dble(buf(3))-day0)
             do pnt=1,ntime
                if (t1(pnt).gt.-1.0) then
-                  if (t1(pnt).le.t .and. t.le.t1(pnt+1)) goto 10
+c                  call output('time valid')
+                  if ((t1(pnt).le.t).and.((t.le.t1(pnt+1)).or.
+     *               ((t1(pnt+1).eq.-2).and.(t.le.t1(pnt+2))))) goto 10
                endif
             enddo
-            call bug ('f','Time slot miscalculation')
+c            write(status,'(A,F20.10)') 'Time slot miscalculation',t
+            call output('Time slot miscalculation')
+c            call output(status)
+            goto 11
 
  10         i0=3
             do j=1,nchan
@@ -2558,7 +2581,7 @@ c
                endif
                i0=i0+2
             enddo
-         endif
+ 11      endif
       enddo
 c
       end
@@ -2830,6 +2853,7 @@ c  Externals.
 c
       logical uvvarupd
       real ctoapri
+      character status*60
 c
 c  Initialise the array to keep track of what baselines are present.
 c
@@ -2864,6 +2888,8 @@ c
         if(t.lt.0)then
           day1 = nint(preamble(3)-1) + 0.5d0
           do i=1,ntime
+c             write(status,'(A,F20.10)') 'timebad',time(i)
+c             call output(status)
             if(time(i).gt.-1)time(i) = time(i) + day0 - day1
           enddo
           tprev = tprev + day0 - day1
@@ -2888,6 +2914,8 @@ c
             if(ntime.ge.MAXTIME)call bug('f','Too many times for me')
             ntime = ntime + 1
             time(ntime) = t
+c            write(status,'(A,I10,F20.10)') 'time',ntime,time(ntime)
+c            call output(status)
             tprev = t
           endif
           blpres(bl) = .true.
