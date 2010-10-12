@@ -25,7 +25,7 @@
 # target names by running 'gmake help'
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakedefs,v 1.33 2010/07/28 07:54:50 cal103 Exp $
+# $Id: GNUmakedefs,v 1.34 2010/10/12 01:32:18 cal103 Exp $
 #-----------------------------------------------------------------------------
 # We rely only on the MIR environment variable.
 MIRROOT  := $(MIR)
@@ -232,10 +232,10 @@ READLINELIB := -lreadline -ltermcap
 # your GNUmakedefs), each executable will then depend on the library as a
 # whole.  The name of the object module is $$OBJ.
 
-nm-syms.linux      := nm -g $$OBJ | awk '/ T / {print $$3}'
+nm-syms.linux      := nm -g $$OBJ | awk '/ T [a-z]/ {print $$3}'
 nm-syms.linux64    := $(nm-syms.linux)
-nm-syms.darwin_ppc := $(nm-syms.linux)
-nm-syms.darwin_x86 := $(nm-syms.linux)
+nm-syms.darwin_x86 := nm -g $$OBJ | awk '/ T _[a-z]/ {print $$3}'
+nm-syms.darwin_ppc := $(nm-syms.darwin_x86)
 nm-syms.sun4sol    := nm -g -p $$OBJ | awk '/ T / {print $$3}'
 
 #=============================================================================
