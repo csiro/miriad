@@ -45,47 +45,51 @@ c@ options
 c       Options. Minimum match is active.
 c         relax  ignore axis descriptor mismatches
 c                (e.g. pixel increments etc).  Use with care.
+c
+c$Id: velimage.for,v 1.3 2010/10/12 03:48:37 cal103 Exp $
 c--
 c  History:
 c    23sep92 mchw  New task.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
+      include 'maxnax.h'
 
-      character version*(*)
-      parameter (version='VELIMAGE: version 30-Nov-92')
+      integer   MAXBOXES, MAXRUNS
+      parameter (MAXBOXES=2048, MAXRUNS=3*MAXDIM)
 
-      integer MAXBOXES,MAXRUNS,NAXIS
-      parameter (MAXBOXES=2048,MAXRUNS=3*maxdim,NAXIS=4)
+      logical   relax
+      integer   blc(MAXNAX), boxes(MAXBOXES), i, iax, j, k, lIn(3),
+     *          lOut, iMap, nchan, nMap, axLen(MAXNAX), axLen2(MAXNAX),
+     *          trc(MAXNAX)
+      real      amp(MAXDIM), buf(MAXDIM), sig(MAXDIM), sigma, start,
+     *          step, v, val(MAXDIM)
+      double precision cdelt(MAXNAX), cdelti, crpix(MAXNAX), crpixi,
+     *          crval(MAXNAX), crvali, discr
+      character cax*1, ctype(MAXNAX)*16, ctypei*16, inName(3)*80,
+     *          outNam*80, wflag*1, version*72
 
-      integer boxes(MAXBOXES)
-      character*80 in(3),out
-      integer i,j,k,nchan,map,nmap,lout,lIn(3)
-      integer nsize(NAXIS),size(NAXIS),blc(NAXIS),trc(NAXIS)
-      real amp(maxdim),val(maxdim),sig(maxdim),buf(maxdim)
-      real cdelt(NAXIS),crval(NAXIS),crpix(NAXIS)
-      real cdelt1,crval1,crpix1,v,sigma,start,step
-      logical relax
-      character*1 caxis,wflag
-
-c     Externals.
-      character*1 itoaf
+      character itoaf*1, versan*80
+      external  itoaf, versan
 c-----------------------------------------------------------------------
+      version = versan('velimage',
+     *                 '$Revision: 1.3 $',
+     *                 '$Date: 2010/10/12 03:48:37 $')
+
 c     Get the input parameters.
-      call output(version)
       call keyini
-      call mkeyf('in',in,3,nmap)
+      call mkeyf('in',inName,3,nMap)
       call keyr('sigma',sigma,0.0)
       call keyi('nchan',nchan,1)
       call keyr('start',start,0.0)
-      call keyr('step',step,0.0)
-      call keya('out',out,' ')
+      call keyr('step', step, 0.0)
+      call keya('out',outNam,' ')
       call getopt(relax)
       call keyfin
 
 c     Check the inputs.
-      if (nmap.lt.2) call bug('f','Must have at least two input maps')
-      if (out.eq.' ') call bug('f','output image file not given')
-      if (nmap.eq.2 .and. sigma.eq.0.0) call bug('f',
+      if (nMap.lt.2) call bug('f','Must have at least two input maps')
+      if (outNam.eq.' ') call bug('f','output image file not given')
+      if (nMap.eq.2 .and. sigma.eq.0.0) call bug('f',
      *    'Either z-dispersion image or sigma must be specified')
       if (start.eq.0.0) call bug('f','No start given for z-axis')
       if (step.eq.0.0) call bug('f','No step given for z-axis')
@@ -96,78 +100,92 @@ c     Check the inputs.
         wflag = 'f'
       endif
 
-c     Open the input maps and check sizes, crpix and cdelt.
-      call xyopen(lIn(1),in(1),'old',NAXIS,size)
-      if (size(1).gt.maxdim .or. size(2).gt.maxdim)
-     *                call bug('f','Image too big for MAXDIM')
-      do i = 1, NAXIS
-        caxis = itoaf(i)
-        call rdhdr(lIn(1),'cdelt'//caxis,cdelt(i),1.0)
-        call rdhdr(lIn(1),'crpix'//caxis,crpix(i),0.0)
-        call rdhdr(lIn(1),'crval'//caxis,crval(i),0.0)
+c     Open the input maps and check conformance.
+      call xyopen(lIn(1), inName(1), 'old', MAXNAX, axLen)
+      if (axLen(1).gt.MAXDIM .or. axLen(2).gt.MAXDIM)
+     *  call bug('f', 'Image too big for MAXDIM')
+
+      do i = 1, MAXNAX
+        cax = itoaf(i)
+        call rdhdd(lIn(1), 'crpix'//cax, crpix(i), 0d0)
+        call rdhdd(lIn(1), 'cdelt'//cax, cdelt(i), 1d0)
+        call rdhdd(lIn(1), 'crval'//cax, crval(i), 0d0)
+        call rdhda(lIn(1), 'ctype'//cax, ctype(i), ' ')
       enddo
 
-      map = 2
-      do while (map.le.nmap)
-        call xyopen(lIn(map),in(map),'old',NAXIS,nsize)
-        if (nsize(1).ne.size(1) .or. nsize(2).ne.size(2))
-     *  call bug('f','Each map must have same xy dimensions')
-        do i = 1, NAXIS
-          caxis = itoaf(i)
-          call rdhdr(lIn(map),'cdelt'//caxis,cdelt1,1.0)
-          if (cdelt1.ne.cdelt(i)) call bug(wflag,'cdelt not the same')
-          call rdhdr(lIn(map),'crpix'//caxis,crpix1,0.0)
-          call rdhdr(lIn(map),'crval'//caxis,crval1,0.0)
-          if ((crval1+(1-crpix1)*cdelt1).ne.
-     *        (crval(i)+(1-crpix(i))*cdelt(i)))
-     *           call bug(wflag,'reference positions not the same')
+      do iMap = 2, nMap
+        call xyopen(lIn(iMap), inName(iMap), 'old', MAXNAX, axLen2)
+        if (axLen2(1).ne.axLen(1) .or. axLen2(2).ne.axLen(2))
+     *    call bug('f', 'Each map must have the same dimensions.')
+
+        do iax = 1, MAXNAX
+          cax = itoaf(iax)
+
+          call rdhdd(lIn(iMap), 'crpix'//cax, crpixi, 0d0)
+          if (crpixi.ne.crpix(iax))
+     *      call bug(wflag, 'crpix differs between input maps.')
+
+          discr = 1d-2 * cdelt(iax)
+          call rdhdd(lIn(iMap), 'cdelt'//cax, cdelti, 1d0)
+          if (abs(cdelti-cdelt(iax)).gt.discr)
+     *      call bug(wflag, 'cdelt differs between input maps.')
+
+          call rdhdd(lIn(iMap), 'crval'//cax, crvali, 0d0)
+          if (abs(crvali-crval(iax)).gt.discr)
+     *      call bug(wflag, 'crval differs between input maps.')
+
+          call rdhda(lIn(iMap), 'ctype'//cax, ctypei, ' ')
+          if (ctypei.ne.ctype(iax))
+     *      call bug(wflag, 'ctype differs between input maps.')
         enddo
-        map = map + 1
       enddo
 
 c     Set up the region of interest.
-      call boxSet(boxes,NAXIS,nsize,'s')
-      call boxInfo(boxes,NAXIS,blc,trc)
+      call boxSet(boxes, MAXNAX, axLen, 's')
+      call boxInfo(boxes, MAXNAX, blc, trc)
 
-c     Open the output image and write it's header.
-      nsize(1) = trc(1)-blc(1)+1
-      nsize(2) = trc(2)-blc(2)+1
-      nsize(3) = nchan
-      call xyopen(lout,out,'new',3,nsize)
-      call headcopy(lIn,lout,0,2,blc,trc)
-      call wrhda(lout,'ctype3','VELO-LSR')
-      call wrhda(lout,'bunit','KM/S')
-      call wrhdr(lout,'crpix3',1.0)
-      call wrhdr(lout,'crval3',start)
-      call wrhdr(lout,'cdelt3',step)
+c     Open the output image and write its header.
+      axLen(1) = trc(1)-blc(1)+1
+      axLen(2) = trc(2)-blc(2)+1
+      axLen(3) = nchan
+      call xyopen(lOut, outNam, 'new', 3, axLen)
+      call headcopy(lIn, lOut, 0, 2, blc, trc)
+      call wrhdd(lOut, 'crpix3', 1d0)
+      call wrhdd(lOut, 'cdelt3', dble(step))
+      call wrhdd(lOut, 'crval3', dble(start))
+      call wrhda(lOut, 'ctype3', 'VELO-LSR')
+      call wrhda(lOut, 'bunit',  'KM/S')
 
 c     Generate the output image.
       do k = 1, nchan
-        v = start+(k-1)*step
-        call xysetpl(lout,1,k)
+        v = start + (k-1)*step
+        call xysetpl(lOut,1,k)
+
         do j = blc(2), trc(2)
           call xyread(lIn(1),j,amp)
           call xyread(lIn(2),j,val)
-          if (nmap.eq.3) call xyread(lIn(3),j,sig)
+          if (nMap.eq.3) call xyread(lIn(3),j,sig)
+
           do i = blc(1), trc(1)
-            if (nmap.eq.3) sigma=sig(i)
+            if (nMap.eq.3) sigma = sig(i)
             if (abs(v-val(i)).lt.5.0*sigma) then
               buf(i) = amp(i) * exp(-(v-val(i))**2 / (2.0*sigma**2))
             else
               buf(i) = 0.0
             endif
           enddo
-          call xywrite(lout,j-blc(2)+1,buf(blc(1)))
+
+          call xywrite(lOut,j-blc(2)+1,buf(blc(1)))
         enddo
       enddo
 
 c     Update history and close files.
-      call hisopen(lout,'append')
-      call hisWrite(lout,version)
-      call hisInput(lout,'VELIMAGE')
-      call hisClose(lout)
-      call xyclose(lout)
-      do i = 1, nmap
+      call hisopen (lOut, 'append')
+      call hisWrite(lOut, 'VELIMAGE: Miriad ' // version)
+      call hisInput(lOut, 'VELIMAGE')
+      call hisClose(lOut)
+      call xyclose(lOut)
+      do i = 1, nMap
         call xyclose(lIn(i))
       enddo
 
