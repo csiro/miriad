@@ -62,7 +62,7 @@ c    rjs  14dec99 Support for visibility datasets as models.
 c    rjs  14aug00 Re-Added "sources" file support.
 c    rjs  18sep05 Type mismatch error.
 c
-c $Id: model.for,v 1.3 2010/10/13 01:27:49 cal103 Exp $
+c $Id: model.for,v 1.4 2010/10/13 01:30:56 cal103 Exp $
 c***********************************************************************
 c*ModelIni -- Ready the uv data file for processing by the Model routine
 c&rjs
@@ -93,8 +93,6 @@ c                'l'    Set up the linetype.
 c                'p'    Set up the pointing parameters.
 c--
 c-----------------------------------------------------------------------
-      include 'mirconst.h'
-
       double precision ra,dec,cosd,tol,tmp
       integer nchan,npnt
       real rms
@@ -755,13 +753,14 @@ c  Input/Output:
 c    Intp       The data to be phase rotated.
 c-----------------------------------------------------------------------
       include 'mirconst.h'
+
       real theta
       double precision t1,t2
       integer i
       complex W
 c-----------------------------------------------------------------------
-      t1 = -2*dpi*(uu*xref1 + vv*yref1)
-      t2 = -2*dpi*(uu*xref2 + vv*yref2) / freq(1)
+      t1 = -DTWOPI*(uu*xref1 + vv*yref1)
+      t2 = -DTWOPI*(uu*xref2 + vv*yref2) / freq(1)
 
       do i = 1, nchan
         theta = t1 + t2 * freq(i)
@@ -1022,6 +1021,7 @@ c***********************************************************************
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mirconst.h'
+
       integer maxlen
       parameter (maxlen=5*maxchan+10)
 
@@ -1047,8 +1047,8 @@ c  If there is an offset to the point source, determine its true
 c  position.
 c
       if (abs(offset(1))+abs(offset(2)).gt.0) then
-        off(1) = (offset(1)/3600.0) * (pi/180)
-        off(2) = (offset(2)/3600.0) * (pi/180)
+        off(1) = offset(1)*AS2R
+        off(2) = offset(2)*AS2R
         call coLMN(tvis,'ow/ow',off,lmn)
       else
         lmn(1) = 0
@@ -1069,7 +1069,7 @@ c
               Intp(j) = flux
             enddo
           else
-            theta = 2*DPI*(lmn(1)*preamble(1) + lmn(2)*preamble(2) +
+            theta = DTWOPI*(lmn(1)*preamble(1) + lmn(2)*preamble(2) +
      *                     (lmn(3)-1)*preamble(3))
             if (nchan.eq.1) then
               skyfreq(1) = 1
