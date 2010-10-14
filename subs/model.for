@@ -62,7 +62,7 @@ c    rjs  14dec99 Support for visibility datasets as models.
 c    rjs  14aug00 Re-Added "sources" file support.
 c    rjs  18sep05 Type mismatch error.
 c
-c $Id: model.for,v 1.4 2010/10/13 01:30:56 cal103 Exp $
+c $Id: model.for,v 1.5 2010/10/14 04:00:54 cal103 Exp $
 c***********************************************************************
 c*ModelIni -- Ready the uv data file for processing by the Model routine
 c&rjs
@@ -183,7 +183,7 @@ c    nhead      Number of "header" values to write out to the scratch
 c               file.  These are filled in by the "header" routine.  If
 c               "nhead" is zero, header is not called.
 c    header     A service routine called after each visibility record
-c               is processed. Arguments to this routine are:
+c               is processed.  Arguments to this routine are:
 c                 subroutine header(tvis,preamble,data,flags,nchan,
 c                   accept,Out,nhead)
 c               where
@@ -599,10 +599,10 @@ c  Set up the gridding correction function.
 c
       call ModCorr(xcorr,ycorr,nxd,nyd)
 c
-c  Determine the clipping mode. If no clipping is to be done, then
-c  nclip = 0. If the model is an intensity-type polarisation (nclip=1)
-c  then any value below "Level" is clipped. Otherwise (nclip=2) any data
-c  in the range -Level to Level is clipped.
+c  Determine the clipping mode.  If no clipping is to be done, then
+c  nclip = 0.  If the model is an intensity-type polarisation (nclip=1)
+c  then any value below "Level" is clipped.  Otherwise (nclip=2) any
+c  data in the range -Level to Level is clipped.
 c
       nclip = 0
       if (doclip) then
@@ -1012,82 +1012,87 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine ModPnt(tvis,offset,level,tscr,nhead,header,
-     *    nchan,nvis)
+      subroutine ModPnt(tvis,offset,level,tScr,nhead,header,
+     *    nChan,nvis)
 
-      integer tvis,tscr,nhead,nchan,nvis
-      real offset(2),level(2)
-      external header
+      integer   tvis, tScr, nhead, nChan, nvis
+      real      offset(2), level(2)
+      external  header
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mirconst.h'
 
-      integer maxlen
-      parameter (maxlen=5*maxchan+10)
+      integer    MAXLEN
+      parameter (MAXLEN=5*MAXCHAN+10)
 
-      integer nread,length,j,polm
-      real theta,temp,Out(maxlen),flux
-      double precision preamble(6),lmn(3),off(2)
-      logical accept,flags(MAXCHAN)
-      complex In(MAXCHAN),Intp(MAXCHAN)
-      double precision skyfreq(MAXCHAN)
+      logical   accept, doOffs, flags(MAXCHAN)
+      integer   iChan, length, nread, polm
+      real      outBuf(MAXLEN)
+      double precision flux, l, lmn(3), m, n, n_1, off(2), preamble(6),
+     *          skyfreq(MAXCHAN), theta, thetai, u, v, w
+      complex   vis(MAXCHAN), modVis(MAXCHAN)
+
+      equivalence (l, lmn(1))
+      equivalence (m, lmn(2))
+      equivalence (n, lmn(3))
+      equivalence (u, preamble(1))
+      equivalence (v, preamble(2))
+      equivalence (w, preamble(3))
 c-----------------------------------------------------------------------
-      nvis = 0
-      polm = nint(level(2))
-      flux = level(1)
-c
-c  Get the first record.
-c
-      call uvread(tvis,preamble,In,flags,maxchan,nchan)
-      if (nchan.eq.0)
+c     Get the first record.
+      call uvread(tvis,preamble,vis,flags,MAXCHAN,nChan)
+      if (nChan.eq.0)
      *  call bug('f','No visibility data selected, in Model(map)')
       call coInit(tvis)
-c
-c  If there is an offset to the point source, determine its true
-c  position.
-c
-      if (abs(offset(1))+abs(offset(2)).gt.0) then
-        off(1) = offset(1)*AS2R
-        off(2) = offset(2)*AS2R
-        call coLMN(tvis,'ow/ow',off,lmn)
-      else
-        lmn(1) = 0
-        lmn(2) = 0
-        lmn(3) = 1
+
+c     Offset point source model?
+      doOffs = offset(1).ne.0d0 .or. offset(2).ne.0d0
+      if (doOffs) then
+c       Compute (l,m,n-1) of the point source. 
+        off(1) = offset(1)*DAS2R
+        off(2) = offset(2)*DAS2R
+        call coLMN(tvis, 'ow/ow', off, lmn)
+        n_1 = n - 1d0
       endif
 
-      nread = nchan
-      length = nhead + 5*nchan
-c
-c  Copy the data to the output, and compute the point model.
-c
-      do while (nread.eq.nchan)
-        call header(tvis,preamble,In,flags,nchan,accept,Out,nhead)
+      flux = level(1)
+      polm = nint(level(2))
+
+c     Compute model visibilities and copy to the scratch file.
+      nvis   = 0
+      nread  = nChan
+      length = nhead + 5*nChan
+
+      do while (nread.eq.nChan)
+        call header(tvis,preamble,vis,flags,nChan,accept,outBuf,nhead)
         if (accept) then
-          if (abs(lmn(1))+abs(lmn(2)).eq.0) then
-            do j = 1, nchan
-              Intp(j) = flux
-            enddo
-          else
-            theta = DTWOPI*(lmn(1)*preamble(1) + lmn(2)*preamble(2) +
-     *                     (lmn(3)-1)*preamble(3))
-            if (nchan.eq.1) then
-              skyfreq(1) = 1
+          if (doOffs) then
+            theta = DTWOPI*(l*u + m*v + n_1*w)
+
+            if (nChan.eq.1) then
+c             Only the ratio matters - skyfreq(iChan) / skyfreq(1).
+              skyfreq(1) = 1d0
             else
-              call uvinfo(tvis,'sfreq',skyfreq)
+              call uvinfo(tvis, 'sfreq', skyfreq)
               theta = theta / skyfreq(1)
             endif
-            do j = 1, nchan
-              temp = theta * skyfreq(j)
-              Intp(j) = cmplx(flux*cos(temp),flux*sin(temp))
+
+            do iChan = 1, nChan
+              thetai = theta * skyfreq(iChan)
+              modVis(iChan) = cmplx(flux*cos(thetai), flux*sin(thetai))
+            enddo
+          else
+            do iChan = 1, nChan
+              modVis(iChan) = flux
             enddo
           endif
 
-          call ModPCvt(polm,tvis,In,Intp,flags,Out(nhead+1),nchan)
-          call scrwrite(tscr,Out,nvis*length,length)
+          call modPCvt(polm,tvis,vis,modVis,flags,outBuf(nhead+1),nChan)
+          call scrWrite(tScr,outBuf,nvis*length,length)
           nvis = nvis + 1
         endif
-        call uvread(tvis,preamble,In,flags,maxchan,nread)
+
+        call uvread(tvis,preamble,vis,flags,MAXCHAN,nread)
       enddo
 
       if (nread.ne.0) call bug('w',
@@ -1097,123 +1102,128 @@ c
 
 c***********************************************************************
 
-      subroutine ModPCvt(mpol,tvis,Vis,ModVis,flags,Out,nchan)
+      subroutine ModPCvt(modPol,tvis,vis,modVis,flags,outBuf,nChan)
 
-      integer mpol,nchan,tvis
-      complex Vis(nchan),ModVis(nchan)
-      real Out(5*nchan)
-      logical flags(nchan)
+      integer  modPol, tvis, nChan
+      complex  vis(nChan), modVis(nChan)
+      logical  flags(nChan)
+      real     outBuf(5*nChan)
 c-----------------------------------------------------------------------
-c  Given the model visibilities of a particular polarisation type,
-c  compute the corresponding visibilities.
+c  Given model visibilities of a particular polarisation type, compute
+c  the corresponding visibilities.
 c
 c  Input:
+c    modPol     Polarisation type of the model.
 c    tvis       Handle of the input visibility dataset.
-c    mpol       Polarisation type of the model.
-c    Vis        Raw visibilities (of a particular polarisation type).
+c    vis        Raw visibilities (of a particular polarisation type).
+c    modVis     Model visibilities (of a particular polarisation type).
 c    flags      Visibility flags.
-c    ModVis     Model visibilities (of a particular polarisation type).
+c    nChan      Number of spectral channels.
 c  Output:
-c    out        Output buffer.
+c    outBuf     Output buffer.
 c-----------------------------------------------------------------------
-      integer PolI,PolQ,PolU,PolV
-      integer PolXX,PolYY,PolXY,PolYX,PolRR,PolLL,PolRL,PolLR
-      parameter (PolI=1,PolQ=2,PolU=3,PolV=4)
-      parameter (PolXX=-5,PolYY=-6,PolXY=-7,PolYX=-8)
-      parameter (PolRR=-1,PolLL=-2,PolRL=-3,PolLR=-4)
+      integer   PolI,   PolQ,   PolU,   PolV
+      integer   PolRR,  PolLL,  PolRL,  PolLR
+      integer   PolXX,  PolYY,  PolXY,  PolYX
+      parameter (PolI = 1,  PolQ= 2,  PolU= 3,  PolV= 4)
+      parameter (PolRR=-1, PolLL=-2, PolRL=-3, PolLR=-4)
+      parameter (PolXX=-5, PolYY=-6, PolXY=-7, PolYX=-8)
 
-      integer vpol,i,j
-      complex fac,temp
-      real cos2chi,sin2chi,chi
+      integer iChan, j, visPol
+      complex fac, temp
+      real    chi, cos2chi, sin2chi
 c-----------------------------------------------------------------------
-c
-c  Determine the polarisation type of the visibilities.
-c
-      call uvrdvri(tvis,'pol',vpol,PolI)
-c
-c No conversion needed.
-c
-      if (vpol.eq.mpol) then
-        fac = 1
-      else if (vpol*mpol.gt.0) then
-        fac = 0
-c
-c  Stokes-I model.
-c
-      else if (mpol.eq.PolI) then
-        if (vpol.eq.PolXX .or. vpol.eq.PolYY .or.
-     *     vpol.eq.PolRR .or. vpol.eq.PolLL) then
-          fac =  1.0
+c     Determine the polarisation type of the visibilities.
+      call uvrdvri(tvis,'pol',visPol,PolI)
+
+      if (modPol.eq.visPol) then
+c       No conversion needed.
+        fac = (1.0,0.0)
+
+      else if (visPol*modPol.gt.0) then
+c       Impossible conversion, e.g. between Stokes I and Q.
+        fac = (0.0,0.0)
+
+      else if (modPol.eq.PolI) then
+c       Stokes-I model.
+        if (visPol.eq.PolXX .or. visPol.eq.PolYY .or.
+     *      visPol.eq.PolRR .or. visPol.eq.PolLL) then
+          fac = (1.0,0.0)
         else
-          fac =  0.0
+c         Impossible conversion.
+          fac = (0.0,0.0)
         endif
-c
-c  Stokes-V model.
-c
-      else if (mpol.eq.PolV) then
-        if (vpol.eq.PolRR) then
-          fac =  1.0
-        else if (vpol.eq.PolLL) then
-          fac = -1.0
-        else if (vpol.eq.PolXY) then
+
+      else if (modPol.eq.PolV) then
+c       Stokes-V model.
+        if (visPol.eq.PolRR) then
+          fac = (1.0,0.0)
+        else if (visPol.eq.PolLL) then
+          fac = (-1.0,0.0)
+        else if (visPol.eq.PolXY) then
           fac = (0.0,-1.0)
-        else if (vpol.eq.PolYX) then
-          fac = (0.0, 1.0)
+        else if (visPol.eq.PolYX) then
+          fac = (0.0,1.0)
         else
-          fac = 0.0
+c         Impossible conversion.
+          fac = (0.0,0.0)
         endif
-c
-c  Linearly polarised model.
-c
+
       else
-        call uvrdvrr(tvis,'chi',chi,0.0)
-        cos2chi = cos(2*chi)
-        sin2chi = sin(2*chi)
-        if (mpol.eq.PolQ) then
-          if (vpol.eq.PolXX) then
-            fac =  cos2chi
-          else if (vpol.eq.PolYY) then
-            fac = -cos2chi
-          else if (vpol.eq.PolXY .or. vpol.eq.PolYX) then
-            fac = -sin2chi
-          else if (vpol.eq.PolRL) then
+c       Linearly polarised model; get the parallactic angle.
+        call uvrdvrr(tvis, 'chi', chi, 0.0)
+        cos2chi = cos(2.0*chi)
+        sin2chi = sin(2.0*chi)
+
+        if (modPol.eq.PolQ) then
+          if (visPol.eq.PolXX) then
+            fac = cmplx(cos2chi,0.0)
+          else if (visPol.eq.PolYY) then
+            fac = cmplx(-cos2chi,0.0)
+          else if (visPol.eq.PolXY .or. visPol.eq.PolYX) then
+            fac = cmplx(-sin2chi,0.0)
+          else if (visPol.eq.PolRL) then
             fac = cmplx(cos2chi,sin2chi)
-          else if (vpol.eq.PolLR) then
+          else if (visPol.eq.PolLR) then
             fac = cmplx(cos2chi,-sin2chi)
           else
-            fac = 0.0
+c           Impossible conversion.
+            fac = (0.0,0.0)
           endif
 
-        else if (mpol.eq.PolU) then
-          if (vpol.eq.PolXX) then
-            fac =  sin2chi
-          else if (vpol.eq.PolYY) then
-            fac = -sin2chi
-          else if (vpol.eq.PolXY .or. vpol.eq.PolYX) then
-            fac =  cos2chi
-          else if (vpol.eq.PolRL) then
+        else if (modPol.eq.PolU) then
+          if (visPol.eq.PolXX) then
+            fac = cmplx(sin2chi,0.0)
+          else if (visPol.eq.PolYY) then
+            fac = cmplx(-sin2chi,0.0)
+          else if (visPol.eq.PolXY .or. visPol.eq.PolYX) then
+            fac = cmplx(cos2chi,0.0)
+          else if (visPol.eq.PolRL) then
             fac = cmplx(sin2chi,-cos2chi)
-          else if (vpol.eq.PolLR) then
+          else if (visPol.eq.PolLR) then
             fac = cmplx(sin2chi, cos2chi)
           else
-            fac = 0.0
+c           Impossible conversion.
+            fac = (0.0,0.0)
           endif
         else
           call bug('f','Unable to perform polarisation conversion')
         endif
       endif
-c
-c  Copy the data to the output.
-c
+
+c     Copy the data to the output buffer.
       j = 0
-      do i = 1, nchan
-        Out(j+1) = real(Vis(i))
-        Out(j+2) = aimag(Vis(i))
-        temp = fac * ModVis(i)
-        Out(j+3) = real(temp)
-        Out(j+4) = aimag(temp)
-        Out(j+5) = 1
-        if (.not.flags(i)) Out(j+5) = -1
+      do iChan = 1, nChan
+        outBuf(j+1) =  real(vis(iChan))
+        outBuf(j+2) = aimag(vis(iChan))
+
+        temp = fac * modVis(iChan)
+        outBuf(j+3) =  real(temp)
+        outBuf(j+4) = aimag(temp)
+
+        outBuf(j+5) = 1.0
+        if (.not.flags(iChan)) outBuf(j+5) = -1.0
+
         j = j + 5
       enddo
 
