@@ -12,7 +12,7 @@ c    09may00 rjs  Do not allow default image size if pbtype=SINGLE.
 c    28jun05 rjs  Check the u,v coordinates to see if NCP projection is
 c                 best.
 c
-c $Id: hdtab.for,v 1.4 2010/10/14 03:51:24 cal103 Exp $
+c $Id: hdtab.for,v 1.5 2010/10/14 03:53:59 cal103 Exp $
 c***********************************************************************
 
       subroutine HdInit(mfs1,mosaic1)
@@ -239,9 +239,9 @@ c***********************************************************************
 
       subroutine HdSet(dosin,cellx,celly,ra0,dec0,freq0)
 
-      logical dosin
-      real    cellx,celly,freq0
-      double precision ra0,dec0
+      logical   dosin
+      real      cellx, celly, freq0
+      double precision ra0, dec0
 c-----------------------------------------------------------------------
 c  Set remaining hdtab variables and do some basic checks.
 c
@@ -249,8 +249,8 @@ c  Input:
 c    dosin      Force use of SIN projection.
 c    cellx      cdelt1
 c    celly      cdelt2
-c    ra0,dec0   crval1,crval2 (mosaicing only).
-c    freq0      Reference frequency (mfs only).
+c    ra0,dec0   Resets for crval1,crval2 in mosaicing mode only.
+c    freq0      Reset for reference frequency in mfs mode only.
 c-----------------------------------------------------------------------
       include 'hdtab.h'
       include 'mirconst.h'
@@ -269,7 +269,7 @@ c-----------------------------------------------------------------------
       if (mfs) crval3 = freq0
 
       if (dosin .or.
-     *    abs(dec0).lt.DECLIM .or.
+     *    abs(crval2).lt.DECLIM .or.
      *    sumlumv/sumuuvv.gt.TOL) then
         ctype1 = 'RA---SIN'
         ctype2 = 'DEC--SIN'
