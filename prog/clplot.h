@@ -1,66 +1,72 @@
-c*********************************************************************c
-c	clplot.h
-c	include file for clumplot program
-c---------------------------------------------------------------------c
-	common /box/ is,ie,ib,it,mid,midy
-        integer      is,ie,ib,it,mid,midy
-c  box in absolute pixels. (is,ib) (ie,it) can be reset by cursor.
-c---------------------------------------------------------------------c
+c***********************************************************************
+c       clplot.h
+c       include file for clumplot program
+c-----------------------------------------------------------------------
+      integer   bblc(2), blc(3), brpix(2), btrc(2), trc(3)
 
-	integer maxbuf,maxdim
-	parameter(maxbuf=4194304,maxdim=400)
+      common /box/ blc, trc, brpix, bblc, btrc
 
-	common/head/ras,decs,epoch,xy,vel,delv,posx,posy,pospa,
-     *	     bmaj,bmin,bpa,dperjy,cbof,restfreq,posend,velend,
-     *	     amin,amax,arms,niters
-	real        ras,decs,epoch,xy,vel,delv,posx,posy,pospa
-	real bmaj,bmin,bpa,dperjy,cbof,restfreq,posend,velend
-	real amin,amax,arms
-	integer		     niters
-c
-c  ras,decs, (epoch), bmaj,bmin (beam) [radians]
-c  xy (map pixel),  [arcsecs]
-c  vel,delv - lsr velocity and width of current map [km/s]
-c  restfreq, [GHz]
-c  posx, posy [arcsec] pospa [deg] (position wrt center and pa of l-v plot) 
-c  posend - Length in arcsecs of cut in l-v plot
-c  velend - Last velocity in l-v plot.  (First is in vel)
+c  box in absolute pixels. (iblc,jblc) (itrc,jtrc) can be reset by cursor.
+c-----------------------------------------------------------------------
+
+      integer    MAXBUF, MAXDIM
+      parameter (MAXBUF=4194304, MAXDIM=400)
+
+      integer   niters
+      real      amax, amin, arms, bmaj, bmin, bpa, cbof, crval(2),
+     *          delv, dperjy, epoch, posend, pospa, posx, posy,
+     *          restfreq, vel, velend, xy
+
+      common /clhead/ amax, amin, arms, bmaj, bmin, bpa, cbof, crval,
+     *          delv, dperjy, epoch, niters, posend, pospa, posx, posy,
+     *          restfreq, vel, velend, xy
+
 c  amin,amax,arms - min,max,rms for current plot.
+c  bmaj,bmin,bpa (beam) [radians]
+c  crval1,crval2,
+c  epoch,
+c  vel,delv - lsr velocity and width of current map [km/s]
+c  posx, posy [arcsec] pospa [deg] (position wrt center and pa of l-v
+c    plot)
+c  restfreq, [GHz]
+c  posend - Length in arcsec of cut in l-v plot
+c  velend - Last velocity in l-v plot (vel is the first).
+c  xy (map pixel), [arcsec]
 c  niters - clean iterations.
-c---------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 
-	common/image/file,filecf,object,bunit,ctype
-	character*9       object,bunit,ctype(3)
-	character*40 file,filecf
-	common/plotpar/units,cneg,alabel,write,abscoord,apint,percent,
-     *			maptype,pspec,gray,defgray,lgaufit,lgauplot 
-	character*1    units,cneg,alabel,write,abscoord,apint,percent,
-     *                  pspec,gray,defgray,lgaufit,lgauplot 
-	character maptype*9,device*64
-	common/args/src,levels,nlevels,conlabel,device,
-     *          fg,bg,cutoff,clump,nclumps
-	real    src,levels(10),fg,bg,cutoff
-	integer	nlevels,conlabel,nclumps,clump(20)
-c
-c  file		filename of image.
-c  filecf	filename of clump assignment file = file.cf
-c  object	source name from image.
-c  bunit	units from image.
-c  ctype	types of coordinate axes. (same as FITS keywords).
-c  units	units for displayed values.	[J or K]
-c  cneg 	Negative contours 		[Y or N]
-c  alabel 	Plot header 			[Y or N]
-c  write	Write out map to a file		[Y or N]
-c  abscoord	Absolute coordinate labels.	[Y or N]
-c  apint	Integer Plot			[Y or N]
-c  percent	Percentage contour levels	[Y or N]
+      integer   clump(20), conlabel, nclumps, nlevels
+      real      bg, cutoff, fg, levels(10), src
+      character abscoord, alabel, apint, bunit*9, cneg, ctype(3)*9,
+     *          defgray, device*64, file*40, filecf*40, gray, lgaufit,
+     *          lgauplot, maptype*9, object*9, percent, pspec, units,
+     *          write
+
+      common /clargs/ bg, clump, conlabel, cutoff, fg, levels, nclumps,
+     *          nlevels, src
+      common /clchar/ abscoord, alabel, apint, bunit, cneg, ctype,
+     *          defgray, device, file, filecf, gray, lgaufit, lgauplot,
+     *          maptype, object, percent, pspec, units, write
+
+c  abscoord     Absolute coordinate labels.     [Y or N]
+c  alabel       Plot header                     [Y or N]
+c  apint        Integer Plot                    [Y or N]
+c  bunit        units from image.
+c  clump        List of clumps to plot
+c  cneg         Negative contours               [Y or N]
+c  conlabel     Label interval for contours
+c  ctype        types of coordinate axes. (same as FITS keywords).
+c  cutoff       Cutoff level in moment maps.
+c  file         filename of image.
+c  filecf       filename of clump assignment file = file.cf
+c  levels       Contour levels
 c  lgaufit      Gaussian fit to spectra         [Y or N]
-c  maptype	maptype			[X-Y, POS-VEL or SPECTRA]
-c  src		Plot device (0=screen 1=lp 2=vers 3=imagen)
-c  levels	Contour levels
-c  nlevels	Number of levels
-c  clump    List of clumps to plot
-c  nclumps  Number of clumps
-c  conlabel	Label interval for contours
-c  cutoff	Cutoff level in moment maps.
-c---------------------------------------------------------------------c
+c  maptype      maptype                 [X-Y, POS-VEL or SPECTRA]
+c  nclumps      Number of clumps
+c  nlevels      Number of levels
+c  object       source name from image.
+c  percent      Percentage contour levels       [Y or N]
+c  src          Plot device (0=screen 1=lp 2=vers 3=imagen)
+c  units        units for displayed values.     [J or K]
+c  write        Write out map to a file         [Y or N]
+c-----------------------------------------------------------------------
