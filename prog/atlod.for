@@ -135,9 +135,7 @@ c                   comments with a '#'.
 c          'notsys' Undo the online Tsys correction. Useful if RFI in
 c                   the tvchannel range has caused the corrections
 c                   to be very noisy. The resulting data will be in raw
-c                   counts scaled down by 10^6. If you specify this
-c                   option, the xycorr option will be ignored as the
-c                   xyphase data will be affected too.
+c                   counts scaled down by 10^6.
 c          'nopack' Don't pack the two CABB autocorrelation bins into
 c                   one bin. The autocorrelation bin 1 and 2 will  
 c                   contain noise cal OFF and ON data.
@@ -166,7 +164,7 @@ c       skip, followed by the number of scans to process.  NOTE: This
 c       applies to all files read.  The default is to skip none and
 c       process all scans.
 c
-c$Id: atlod.for,v 1.29 2010/07/07 03:58:06 wie017 Exp $
+c$Id: atlod.for,v 1.30 2010/10/20 03:25:28 wie017 Exp $
 c--
 c
 c  Program Structure:
@@ -318,8 +316,10 @@ c    mhw  28mar10 Use IF number instead of IF chain for ifsel
 c    mhw  13apr10 Record ifchain in file, allow multiple values for
 c                 ifsel
 c    mhw  28jun10 Add options nopack, notsys, process auto corr bins
+c    mhw  22jul10 Fix ischan calculation.
+c    mhw  19oct10 Update 20/13 band - now 1-3 GHz
 c
-c $Id: atlod.for,v 1.29 2010/07/07 03:58:06 wie017 Exp $
+c $Id: atlod.for,v 1.30 2010/10/20 03:25:28 wie017 Exp $
 c-----------------------------------------------------------------------
 
         integer MAXFILES,MAXTIMES,MAXSIM
@@ -339,8 +339,8 @@ c
         character itoaf*8, rperr*32, versan*80
 c-----------------------------------------------------------------------
       version = versan ('atlod',
-     :                  '$Revision: 1.29 $',
-     :                  '$Date: 2010/07/07 03:58:06 $')
+     :                  '$Revision: 1.30 $',
+     :                  '$Date: 2010/10/20 03:25:28 $')
 c
 c  Get the input parameters.
 c
@@ -563,9 +563,7 @@ c       mmrelax = present(16)
         nopol   = present(21)
         rfiflag = present(22)
         dopack  = .not.present(23).and.doauto
-        dotsys  = .not.present(24)
-        if (.not.dotsys) doxyp=.false.
-        
+        dotsys  = .not.present(24)     
 c
         if((dosam.or.doxyp.or.doop).and.relax)call bug('f',
      *    'You cannot use options samcorr, xycorr or opcorr with relax')
@@ -1761,7 +1759,7 @@ c
      *                                            bchan(if),flags)
                         call FlagNaN(data(ipnt),flags,nfreq(if))
                         call rfiFlag(flags,NDATA,1,nfreq(if),
-     *                             sfreq(if),sdf(if),birdie)
+     *                             sfreq(if),sdf(if),birdie,tdash)
                         if(.not.hires)call uvputvri(tno,'bin',bin,1)
                         call uvputvrr(tno,'inttime',inttime(bl),1)
                         if(doopcorr)
@@ -1784,7 +1782,7 @@ c
             if(newfreq.and.tbin.eq.1)then
               ischan(1) = 1
               do if=2,nifs
-                ischan(if) = ischan(if-1) + nfreq(if)
+                ischan(if) = ischan(if-1) + nfreq(if-1)
               enddo
               call uvputvri(tno,'nspect',nifs,1)
               call uvputvri(tno,'ischan',ischan,nifs)
@@ -1825,7 +1823,7 @@ c
      *                  vis,flags,NDATA,nchan)
                       if(nchan.gt.0)then
                         call rfiFlag(flags,NDATA,nifs,nfreq,sfreq,
-     *                             sdf,birdie)
+     *                             sdf,birdie,tdash)
                         if(.not.hires)call uvputvri(tno,'bin',bin,1)
                         call uvputvri(tno,'pol',polcode(1,p),1)
                         call uvputvrr(tno,'inttime',inttime(bl),1)
@@ -3628,16 +3626,16 @@ c
         end
 
 c***********************************************************************
-        subroutine rfiFlag(flags,NDATA,nifs,nfreq,sfreq,sdf,birdie)
+        subroutine rfiFlag(flags,NDATA,nifs,nfreq,sfreq,sdf,birdie,time)
 c
 c-----------------------------------------------------------------------
         integer NDATA,nifs,nfreq(nifs)
         logical flags(NDATA),birdie
-        double precision sfreq(nifs),sdf(nifs)
+        double precision sfreq(nifs),sdf(nifs),time
 c
-        double precision c1,c2,tmp,cfreq
+        double precision c1,c2,tmp,cfreq,J17AUG10
         integer MAXRFI, NBIRDIE1, nrfi,ch1,ch2,i,j,k,offset
-        parameter(MAXRFI=99,NBIRDIE1=11)
+        parameter(MAXRFI=99,NBIRDIE1=11,J17AUG10=2455425.5)
         double precision rfifreq(2,MAXRFI)
         common/rficom/rfifreq,nrfi
 c
@@ -3685,12 +3683,14 @@ c             20cm band range 1131-1875, 13cm band range 1975-2675
 c
               cfreq=sfreq(i)+(nfreq(i)/2)*sdf(i)
               if (cfreq.gt.1.d0.and.cfreq.lt.3.0d0) then
-                if (cfreq.lt.2.d0) then
-                  c1=(1.131-sfreq(i))/sdf(i)
-                  c2=(1.875-sfreq(i))/sdf(i)
-                else
-                  c1=(1.975-sfreq(i))/sdf(i)
-                  c2=(2.675-sfreq(i))/sdf(i)
+                if (time.lt.J17AUG10) then
+                  if (cfreq.lt.2.d0) then
+                    c1=(1.131-sfreq(i))/sdf(i)
+                    c2=(1.875-sfreq(i))/sdf(i)
+                  else
+                    c1=(1.975-sfreq(i))/sdf(i)
+                    c2=(2.675-sfreq(i))/sdf(i)
+                  endif
                 endif
                 ch1=min(nint(c1),nint(c2))
                 ch2=max(nint(c1),nint(c2))
