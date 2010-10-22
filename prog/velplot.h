@@ -1,69 +1,73 @@
-c*********************************************************************c
-c		velplot.h
-c	include file for velplot program
-c---------------------------------------------------------------------c
+c***********************************************************************
+c       velplot.h - include file for velplot program.
 c
-c  The maximum array dimensions and size
-c  MAXDIM is used to read the image, and for 1-dimensional arrays.
-	include 'maxdim.h'
-c
+c $Id: velplot.h,v 1.2 2010/10/22 03:45:47 cal103 Exp $
+c-----------------------------------------------------------------------
+c  Maximum array dimensions and size.
+c  MAXDIM is used to read the image and for 1-dimensional arrays.
+      include 'maxdim.h'
+
 c  box in absolute pixels. (is,ib) (ie,it) can be reset by cursor.
-        integer      is,ie,ib,it,midx,midy
-	common /box/ is,ie,ib,it,midx,midy
-c---------------------------------------------------------------------c
+      integer      is,ie,ib,it,midx,midy
+      common /box/ is,ie,ib,it,midx,midy
+c-----------------------------------------------------------------------
 
-	real crval1,crval2,epoch,xy,vel,delv,posx,posy,pospa
-	real bmaj,bmin,bpa,dperjy,cbof,restfreq,posend,velend
-	real amin,amax,arms
-	integer		     niters
-	common/head/crval1,crval2,epoch,xy,vel,delv,posx,posy,pospa,
-     *	     bmaj,bmin,bpa,dperjy,cbof,restfreq,posend,velend,
-     *	     amin,amax,arms,niters
-c
-c  crval1, crval2, (epoch), bmaj, bmin (beam) [radians]
-c  xy (map pixel),  [arcsecs]
-c  vel,delv - lsr velocity and width of current map [km/s]
-c  restfreq, [GHz]
-c  posx, posy [arcsec] pospa [deg] (position wrt center and pa of l-v plot) 
-c  posend - Length in arcsecs of cut in l-v plot
-c  velend - Last velocity in l-v plot.  (First is in vel)
-c  amin,amax,arms - min,max,rms for current plot.
+      integer   bblc(2), blc(3), brpix(2), btrc(2), niters, trc(3)
+      real      amax, amin, arms, bmaj, bmin, bpa, cbof, crval(2),
+     *          delv, dperjy, epoch, posend, pospa, posx, posy,
+     *          restfreq, vel, velend, xy
+
+      common /vlhead/ amax, amin, arms, bblc, blc, btrc, brpix, bmaj,
+     *          bmin, bpa, cbof, crval, delv, dperjy, epoch, niters,
+     *          posend, pospa, posx, posy, restfreq, trc, vel, velend,
+     *          xy
+
+c  amin, amax, arms - min, max, rms for current plot.
+c  bmaj, bmin, bpa (beam) [radians]
+c  blc, trc - region of interest in in absolute pixels.
+c  bblc, ttrc - box in absolute pixels, can be reset by cursor.
+c  brpix - reference pixel in box coordinates.
+c  crval1, crval2
+c  epoch
 c  niters - clean iterations.
-c---------------------------------------------------------------------c
+c  posx, posy [arcsec] pospa [deg] (position wrt center and pa of l-v
+c    plot)
+c  posend - Length in arcsecs of cut in l-v plot
+c  restfreq, [GHz]
+c  vel, delv - lsr velocity and width of current map [km/s]
+c  velend - Last velocity in l-v plot.  (First is in vel)
+c  xy (map pixel),  [arcsecs]
+c-----------------------------------------------------------------------
 
-	character*9       object,bunit,ctype(3)
-	character*80 file
-	common/image/file,object,bunit,ctype
-c
-	character*1    units,cneg,alabel,write,abscoord,apint,percent,
-     *                  pspec,gray,defgray,lgaufit,lgauplot 
-	character maptype*9
-	common/plotpar/units,cneg,alabel,write,abscoord,apint,percent,
-     *			maptype,pspec,gray,defgray,lgaufit,lgauplot 
-c
-	character device*80
-	real    src,levels(10),fg,bg,cutoff
-	integer	nlevels,conlabel
-	common/args/src,levels,nlevels,conlabel,fg,bg,cutoff
-	common/chargs/device
-c
-c  file		filename of image.
-c  object	source name from image.
-c  bunit	units from image.
-c  ctype	types of coordinate axes. (same as FITS keywords).
-c  units	units for displayed values.	[J or K]
-c  cneg 	Negative contours 		[Y or N]
-c  alabel 	Plot header 			[Y or N]
-c  write	Write out map to a file		[Y or N]
-c  abscoord	Absolute coordinate labels.	[Y or N]
-c  apint	Integer Plot			[Y or N]
-c  percent	Percentage contour levels	[Y or N]
+      integer   conlabel, nlevels
+      real      bg, cutoff, fg, levels(10), src
+      character abscoord, alabel, apint, bunit*9, cneg, ctype(3)*9,
+     *          defgray, device*80, file*80, gray, lgaufit,
+     *          lgauplot, maptype*9, object*9, percent, pspec, units,
+     *          write
+
+      common /vlargs/ src,levels,nlevels,conlabel,fg,bg,cutoff
+      common /vlchar/ abscoord, alabel, apint, bunit, cneg, ctype,
+     *          defgray, device, file, gray, lgaufit, lgauplot,
+     *          maptype, object, percent, pspec, units, write
+
+c  abscoord     Absolute coordinate labels.     [Y or N]
+c  alabel       Plot header                     [Y or N]
+c  apint        Integer Plot                    [Y or N]
+c  bunit        units from image.
+c  cneg         Negative contours               [Y or N]
+c  conlabel     Label interval for contours
+c  ctype        types of coordinate axes. (same as FITS keywords).
+c  cutoff       Cutoff level in moment maps.
+c  file         filename of image.
+c  levels       Contour levels
 c  lgaufit      Gaussian fit to spectra         [Y or N]
-c  maptype	maptype			[X-Y, POS-VEL or SPECTRA]
-c  src		Plot device (0=screen 1=lp 2=vers 3=imagen)
-c  levels	Contour levels
-c  nlevels	Number of levels
-c  conlabel	Label interval for contours
-c  cutoff	Cutoff level in moment maps.
-c---------------------------------------------------------------------c
+c  maptype      maptype                 [X-Y, POS-VEL or SPECTRA]
+c  nlevels      Number of levels
+c  object       source name from image.
+c  percent      Percentage contour levels       [Y or N]
+c  src          Plot device (0=screen 1=lp 2=vers 3=imagen)
+c  units        units for displayed values.     [J or K]
+c  write        Write out map to a file         [Y or N]
+c-----------------------------------------------------------------------
 
