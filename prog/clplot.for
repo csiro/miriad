@@ -50,7 +50,7 @@ c@ log
 c     The output log file. The default filename is clplot.log
 c     Results from image analysis are written into the log file.
 c
-c$Id: clplot.for,v 1.7 2010/10/19 03:23:24 cal103 Exp $
+c$Id: clplot.for,v 1.8 2010/10/22 01:31:13 cal103 Exp $
 c--
 c     reads and writes 3D arrays of channel maps
 c     generates: 1) spectra
@@ -93,8 +93,8 @@ c  real ary(128*128*64)=1048576 reals = 4 MBytes
 c  real ary(256*256*128)=8388608 reals = 32 MBytes
 c-----------------------------------------------------------------------
       version = versan ('clplot',
-     *                  '$Revision: 1.7 $',
-     *                  '$Date: 2010/10/19 03:23:24 $')
+     *                  '$Revision: 1.8 $',
+     *                  '$Date: 2010/10/22 01:31:13 $')
 c
 c  Get the input parameters.
 c
@@ -189,13 +189,13 @@ c
             call output(line(1:length))
           enddo
         else if (ans(1:1).eq.'I') then
-          call Integral(ary,vlsr,nx,ny,nc)
+          call integral(ary,vlsr,nx,ny,nc)
         else if (ans(1:1).eq.'L') then
           call velohead(vlsr,nx,ny,nc)
         else if (ans(1:1).eq.'M') then
           call menu(dt)
         else if (ans(1:1).eq.'P') then
-          call PosVel(ary,vlsr,nx,ny,nc)
+          call posVel(ary,vlsr,nx,ny,nc)
         else if (ans(1:1).eq.'S') then
           call spectra(ary,vlsr,nx,ny,nc)
         else if (ans(1:1).eq.'V') then
@@ -213,870 +213,6 @@ c
           stop
         endif
       enddo
-
-      end
-
-c***********************************************************************
-
-      subroutine GetList(imaps,vmin,vmax,vlsr,nc)
-      integer imaps,nc
-      real vmin(1),vmax(1),vlsr(1)
-c-----------------------------------------------------------------------
-c       Get list of velocity intervals.
-c
-c  Inputs:
-c    vlsr(nc)   Array of velocities.
-c    nc         Number of channels in image.
-c  Outputs:
-c    imaps      Number of velocity intervals.
-c    vmin,vmax  Array of velocity intervals.
-c-----------------------------------------------------------------------
-      real velmin,velmax,swap
-      integer i,k,length
-      character line*80
-#ifdef cft
-
-c     External
-      character substr*80
-#endif
-c-----------------------------------------------------------------------
-      goto 9
-20    call output('Try again; map number must be in list,
-     *     or increment list by one')
-      call ListMaps(imaps,vmin,vmax,vlsr,nc)
-9     call output(' ')
-      call output('---- Enter list of velocity intervals ---')
-      call output('>Type -n to delete map n')
-      call output('      -99 to delete all')
-      call output('       L to list')
-      call output('      <cr> to use the current list')
-10    call prompt(line,length,
-     *  '>Enter map number and velocity range (N,Vmin,Vmax): ')
-      if (length.eq.0) return
-#ifdef cft
-      read(substr(line,1),101,err=20) i
-      read(substr(line,2),103) velmin
-      read(substr(line,3),103) velmax
-101   format(i10.0)
-103   format(f20.0)
-#else
-      read(line(1:length),102,err=20) i,velmin,velmax
-102   format(i10,2f20.0)
-#endif
-
-c  end of list; plot maps
-      if (i.eq.0) goto 50
-c  swap
-      if (velmin.gt.velmax) then
-        swap = velmin
-        velmin = velmax
-        velmax = swap
-      endif
-c  add or change map
-      if (i.ge.1 .and. i.le.min(imaps+1,25)) then
-        vmin(i) = velmin
-        vmax(i) = velmax
-        imaps = max(i,imaps)
-c  delete map
-      else if (-i.ge.1 .and. -i.le.imaps) then
-        k = -i
-        do i = k, imaps-1
-          vmin(i) = vmin(i+1)
-          vmax(i) = vmax(i+1)
-        enddo
-        imaps = imaps-1
-c  start new list
-      else if (i.le.-99) then
-        call output('All maps deleted from list')
-        imaps = 0
-      else
-        call output('Try again; map number must be in list,
-     *       or increment list by one')
-        call ListMaps(imaps,vmin,vmax,vlsr,nc)
-        goto 9
-      endif
-      goto 10
-50    return
-
-      end
-
-c***********************************************************************
-
-      subroutine GetMom(nmom)
-      integer nmom
-c-----------------------------------------------------------------------
-c  Get moment to be plotted for velomap
-c
-c  Outputs:
-c    nmom       Moment of map to be computed.
-c-----------------------------------------------------------------------
-      include 'clplot.h'
-      real value
-c-----------------------------------------------------------------------
-      goto 10
-222   print *, 'moment must be integer in range (-1 to 4)'
-10    print 120
-120   format(/, ' map computed:'/
-     *  ' (0 = straight average [default])'/
-     *  ' (1 = velocity centroid from 1st moment)'/
-     *  ' (-1 = velocity of peak channel)'/
-     *  ' (2 = velocity width or variance from 2nd moment)'/
-     *  ' (3 = degree of skewness or asymmetry)'/
-     *  ' (4 = degree of excess, or "peakiness")'/
-     *  '>Enter moment to compute (-1 to 4; default [0]):  ')
-      read(5,121,err=222) nmom
-121   format(i5)
-      if ((nmom.lt.-1) .or. (nmom.gt.4)) then
-         print *, 'moment must be integer in range (-1 to 4)'
-         goto 10
-      endif
-
-      call promptf(value,'f12.5',
-     *  '>Enter blanking cutoff level: ',cutoff)
-      cutoff = value
-
-      if (nmom.ne.0) then
-        units = ' '
-        call SetCont
-      endif
-
-      end
-
-c***********************************************************************
-
-      subroutine GetRange(imaps,vmin,vmax,vlsr,nc)
-
-      integer imaps,nc
-      real vmin(2),vmax(2),vlsr(2)
-c-----------------------------------------------------------------------
-c  Get range of velocities to plot.
-c
-c  Inputs:
-c    vlsr(nc)   Array of velocities.
-c    nc         Number of channels in image.
-c  Outputs:
-c    imaps      Number of velocity intervals.
-c    vmin,vmax  Array of velocity intervals.
-c-----------------------------------------------------------------------
-      real vfirst,vlast,vwidth,vinc,vstart,vend
-c-----------------------------------------------------------------------
-      vfirst=0.0
-      vlast=0.0
-      vinc=0.0
-      vstart=0.0
-      vend=0.0
-      vwidth=0.0
-
-      call output(' ')
-      call output(
-     *    '>Enter first and last velocity, width and increment: ')
-      read(5,*) vfirst,vlast,vwidth,vinc
-c
-c  Find min and maximum velocity.
-c
-      vstart=min(vlast,vfirst)
-      vend=max(vlast,vfirst)
-      if (vinc.eq.0.0) vinc = vlsr(2)-vlsr(1)
-      if (vstart.eq.0.0 .and. vend.eq.0.0) then
-        vstart = vlsr(1)
-        vend = vlsr(nc)
-      endif
-c
-c  Give VINC correct sign to go from VSTART to VEND
-c
-      vinc=sign(vinc,(vend-vstart))
-      vmin(1) = vstart - abs(vwidth)/2.0
-      vmax(1) = vstart + abs(vwidth)/2.0
-      imaps=1
-      if (vinc.gt.0.0) then
-        do while (vmax(imaps).lt.max(vstart, vend))
-          imaps=imaps+1
-          vmin(imaps)=vmin(imaps-1)+vinc
-          vmax(imaps)=vmax(imaps-1)+vinc
-        enddo
-      else
-        do while (vmin(imaps).gt.min(vstart, vend))
-          imaps=imaps+1
-          vmin(imaps)=vmin(imaps-1)+vinc
-          vmax(imaps)=vmax(imaps-1)+vinc
-        enddo
-      endif
-      end
-
-c***********************************************************************
-
-      subroutine integral(ary,vlsr,nx,ny,nc)
-
-      integer nx,ny,nc
-      real    ary(nx,ny,nc),vlsr(nc)
-c-----------------------------------------------------------------------
-c  List Integral and statistics within box.
-c
-c  Inputs:
-c    ary        The image.
-c    nx,ny,nc   Dimensions of image.
-c    vlsr       Array of velocities.
-c-----------------------------------------------------------------------
-      include 'clplot.h'
-
-      character*80 line
-      real tmax,tmin,ave
-      integer imin,jmin,imax,jmax,num,k
-c-----------------------------------------------------------------------
-      call header(0)
-      write(line,'(a,4i6,a)') 'Integral and rms in box (',
-     *  bblc(1)-brpix(1),bblc(2)-brpix(2),
-     *  btrc(1)-brpix(1),btrc(2)-brpix(2),')'
-      call output(line)
-      write(line,'(a,a,a,a,a,a,a)') ' plane  ','  Velocity  ',
-     *  ' Total Flux ','  Maximum   ','  Minimum   ','  Average   ',
-     *  '    rms     '
-      call output(line)
-      do k = 1, nc
-        call maxmap(ary(1,1,k),nx,ny,bblc(1),btrc(1),bblc(2),btrc(2),
-     *                tmax,imax,jmax,tmin,imin,jmin,ave,arms,num)
-        write(line,'(1x,i4,1x,6(1x,f11.4))')
-     *        k,vlsr(k),ave*num/cbof,tmax,tmin,ave,arms
-        call output(line)
-      enddo
-      call prompt(line,k,'>Type <cr> to continue')
-
-      end
-
-c***********************************************************************
-
-      subroutine ListMaps(imaps,vmin,vmax,vlsr,nc)
-
-      integer imaps,nc
-      real vmin(2),vmax(2),vlsr(2)
-c-----------------------------------------------------------------------
-c  List the maps available and current selection
-c
-c  Inputs:
-c    nc         Number of channels in image.
-c    vlsr(nc)   Array of velocities.
-c  Outputs:
-c    imaps      Number of velocity intervals.
-c    vmin,vmax  Array of velocity intervals.
-c-----------------------------------------------------------------------
-      integer i
-c-----------------------------------------------------------------------
-c
-c --- maps available ---
-c
-      print 110,vlsr(1),vlsr(nc),vlsr(2)-vlsr(1)
-110   FORMAT (/,' Velocity of first map:',F12.3,
-     *          '  Velocity of last map:',F12.3/
-     *          '    Velocity increment:',F12.3)
-c
-c --- current selection of maps ---
-c
-      if (imaps.ne.0) then
-        print *,' --- current selection of maps ---'
-        do i = 1, imaps
-          print 109, i, vmin(i), vmax(i)
-        enddo
-109     format(' map(',i2,') velocity range: (',f12.3,' to',f12.3,')')
-      else
-        print *,' --- no current selection of maps ---'
-      endif
-
-      end
-
-c***********************************************************************
-
-      subroutine PosVel(ary,vlsr,nx,ny,nc)
-
-      integer nx,ny,nc
-      real ary(nx,ny,nc),vlsr(nc)
-c-----------------------------------------------------------------------
-c  Make position-velocity images and plots.
-c
-c  Inputs:
-c    ary        The image.
-c    nx,ny,nc   Dimensions of image.
-c    vlsr       Array of velocities.
-c-----------------------------------------------------------------------
-      include 'clplot.h'
-
-      integer np,k,l,ncon
-      real xin,yin,pain,cmaj,cmin,cpa,cf
-      real xstart,xend,vstart,vend,xmin,xmax
-      real v(16384)
-c  convolution array maximum size
-      real con(99,99,4,4)
-      common /cuts/ xcut,ycut,pa,ncut
-      integer ncut
-      real xcut(MAXDIM),ycut(MAXDIM),pa(MAXDIM)
-      real tr(6),ymax,ymin,xval(MAXDIM),xcoord(MAXDIM),xdelta
-      character label*80,ans*1,old_device*80
-      character*9 lab1,lab2,lab3
-      character*1 lab4
-      character*80 xlabel,ylabel,line
-      integer i,windx,windy,cwind,length,lwidth
-      integer ii,jj,jjj,nchan,ichan(10),ifix
-#ifdef cft
-
-c     External
-      character substr*80
-#endif
-c-----------------------------------------------------------------------
-c
-c  Introduction.
-c
-      call output(
-     *'Plot intensity versus position & velocity along selected cuts')
-      call prompt(ans,length,'>Type H for help, <cr> to continue: ')
-      call ucase(ans)
-      if (ans.eq.'H') then
-        call output(' ')
-        call output(
-     *   'Plot position-velocity maps, or intensity versus position.')
-        call output('Cuts are selected with the cursor on an x-y map')
-        call output('or can be entered as a list which can be edited')
-        call output('RA-velocity or DEC-velocity maps can be plotted')
-        call output('Position-velocity maps can also be printed, or')
-        call output('written out as images for further processing.')
-        call output('(x,y) positions are in (HA,DEC) directions.')
-        call output('(Position angle is measured from N through E)')
-        call output(' ')
-      endif
-c
-c  List current selection of cuts.
-c
-      goto 9
-2222  call output('map number must edit or extend list by one')
-9     if (ncut.ne.0) then
-        call output('--- current selection of cuts ---')
-        do i = 1, ncut
-          print 109, i,xcut(i),ycut(i),pa(i)
-        enddo
-      else
-        call output('--- no current selection of cuts ---')
-      endif
-109   format(' map(',i2,')  x= ',f9.3,' y= ',f9.3,' pa= ',f8.3)
-c
-c  Specify List of cuts, or RA-vel or DEC-velocity.
-c
-      call output(' ')
-11    call prompt(ans,length,
-     *  '>List of cuts, RA-vel or DEC-vel ? ([L]/X/Y): ')
-      call ucase(ans)
-      if (ans.eq.' ') ans='L'
-c
-c  Enter list of position-velocity cuts across image.
-c
-      if (ans.eq.'L') then
-        call output(' ')
-        call output('--- Enter list of pos-vel cuts to plot ---')
-        call output(
-     *    'angles measured from north to the east (0 to 180).')
-        call output('>Type -n to delete map n')
-        call output('      -99 to delete all')
-        call output('      L to list')
-        call output('     <cr> to use the current list.')
-10      call prompt(line,length,
-     *    '>Enter map number, position and angle (n,x,y,pa): ')
-        if (length.eq.0) goto 50
-#ifdef cft
-        read(substr(line,1),101,err=2222) i
-        read(substr(line,2),103) xin
-        read(substr(line,3),103) yin
-        read(substr(line,4),103) pain
-101     format(i10.0)
-103     format(f20.0)
-#else
-        read(line(1:length),102,err=2222,end=50) i,xin,yin,pain
-102     format(i10,3f20.0)
-#endif
-c
-c  End of list. Plot maps.
-c
-        if (i.eq.0) goto 50
-c  Add or change map
-        if (i.ge.1 .and. i.le.min(ncut+1,25)) then
-          xcut(i) = xin
-          ycut(i) = yin
-          pa(i) = pain
-          ncut = max(i,ncut)
-c  Delete map
-        else if (-i.ge.1 .and. -i.le.ncut) then
-          k = -i
-          do i = k, ncut-1
-            xcut(i) = xcut(i+1)
-            ycut(i) = ycut(i+1)
-            pa(i) = pa(i+1)
-          enddo
-          ncut = ncut-1
-c  Start new list
-        else if (i.le.-99) then
-          call output('All maps deleted from list')
-          ncut = 0
-        else
-          call output('map number must edit or extend list by one')
-          goto 9
-        endif
-        goto 10
-c
-c  RA-velocity maps.
-c
-      else if (ans.eq.'X') then
-        ncut=ny
-        do i = 1, ncut
-          xcut(i) = 0.0
-          ycut(i) = (i-brpix(1)) * xy
-          pa(i) = 90.0
-        enddo
-c
-c  DEC-velocity maps.
-c
-      else if (ans.eq.'Y') then
-        ncut=nx
-        do i = 1, ncut
-          xcut(i)=(i-brpix(1)) * xy
-          ycut(i)=0.0
-          pa(i)=0.0
-        enddo
-      else
-        goto 11
-      endif
-
-50    if (ncut.eq.0) then
-        call output('--- no current selection of cuts ---')
-        return
-      endif
-c
-c  Set up convolution function.
-c
-      call convsize(cmaj,cmin,cpa,xy,ncon)
-      call convsetup(cmaj,cmin,cpa,xy,ncon,con)
-c
-c  Check whether it is contour or intensity plots
-c
-      nchan=0
-      call prompt(line,length,'Contour or Intensity plots ? [C]/I: ')
-      if (length.eq.0) goto 399
-      call ucase(line)
-      if (line.eq.'I') then
-398     continue
-        call prompt(line,length,'How many channels ? (5 max): ')
-        nchan=1
-        if (length.eq.0) goto 399
-        read (line(1:length),101) nchan
-101     format(i10.0)
-        if (nchan.gt.nc) then
-          call output('Cannot be more than there are in the image')
-          goto 398
-        endif
-        if (nchan.gt.5) then
-          call output('Up to 5 channels allowed')
-          goto 398
-        endif
-        call prompt(line,length,'Enter the channel numbers: ')
-        read(line(1:length), '(5i10)') (ichan(i),i=1,nchan)
-c         do l=1,nchan
-c           read(substr(line,l),101) ichan(l)
-c         enddo
-        call prompt(line,length,'Fix the scales ?  Y/[N]: ')
-        call ucase(line)
-        ifix=0
-        if (line.eq.'Y') then
-          ifix=1
-          call prompt(line,length,'Enter xmin,xmax,ymin,ymax: ')
-          read (line(1:length),'(4f20.0)') xmin,xmax,ymin,ymax
-        endif
-      endif
-399   continue
-c
-c  Set maptype to position-velocity, and save plot device type from
-c  menu.
-c
-      maptype = 'POS-VEL'
-      xlabel='velocity (km/s)'
-      ylabel='position (arcsec)'
-      old_device=device
-      lwidth = 1
-c
-c  Set up the plot windows.
-c
-60    if (write.ne.'Y' .and. apint.ne.'Y') then
-        call multip_npanels (ncut,windx,windy)
-        call pgbeg(0,device,windx,windy)
-        call pgslw(lwidth)
-      endif
-c
-c  Calculate the conversion factor for map units.
-c
-      call header(0)
-      cf = 1.0
-      if (units.eq.'K') cf = dperjy
-
-c
-c  Convolve array into position-velocity maps, output in V.
-c
-      do l = 1, ncut
-        call pgpage
-        if (windx*windy.eq.1 .and. alabel.eq.'Y') then
-          call pgsvp(0.1,0.7,0.1,0.9)
-        else
-          call pgsvp(0.1,0.9,0.1,0.9)
-        endif
-        call veloline(ary,nx,ny,nc,xcut(l),ycut(l),pa(l),ncon,con,
-     *    v,np,xstart,xend)
-        vstart = vlsr(1)
-        vend = vlsr(nc)
-        if (nchan.eq.0) then
-          call output('--- position velocity map ---')
-          else
-          call output('--- position intensity plot ---')
-        endif
-        print 109, l,xcut(l),ycut(l),pa(l)
-c
-c  Set up parameters for plot labels.
-c
-        write(lab1,104) xcut(l)
-        write(lab2,104) ycut(l)
-        write(lab3,104) pa(l)
-104     format(f8.2)
-        lab4=char(l+96)
-        if (pspec.eq.'Y') then
-          label=lab4//' (x,y)=('//lab1//','//lab2//')   PA='//lab3
-        else
-          label=' (x,y)=('//lab1//','//lab2//')   PA='//lab3
-        endif
-        cwind = cwind + 1
-c
-c  Write out map.
-c
-        if (write.eq.'Y') then
-          call writeposvel(v,nc,np,1,vstart,xstart,pa(l),1.0,1.0,
-     *                (vend-vstart)/(nc-1),(xend-xstart)/(np-1))
-c
-c  Integer plot.
-c
-        else if (apint.eq.'Y') then
-          call plotint(v,nc,np)
-c
-c  Plot contours.
-c
-        else
-         if (nchan.eq.0) then
-          call pgswin(vstart,vend,xstart,xend)
-c  Set up transformation array for contour routine.
-          tr(2)=(vend-vstart)/(nc-1)
-          tr(1)=vstart-tr(2)
-          tr(3)=0.0
-          tr(5)=0.0
-          tr(6)=(xend-xstart)/(np-1)
-          tr(4)=xstart-tr(6)
-c  Plot contours.
-          call plotcon(v,nc,np,cf,tr)
-          call pgbox('BCNST',0.0,0.0,'BCNST',0.0,0.0)
-          call pglab(xlabel,ylabel,label)
-        else
-          if (cf.eq.0.0) cf=1.0
-          if (ifix.eq.0) then
-            ymax=-1e+6
-            ymin=1e+6
-            do ii = 1, nchan
-              do jj = 1, np
-                jjj=(jj-1)*nc+ichan(ii)
-                if ((v(jjj)/cf).gt.ymax) ymax=v(jjj)/cf
-                if ((v(jjj)/cf).lt.ymin) ymin=v(jjj)/cf
-              enddo
-            enddo
-            ymin = ymin - 0.05 * (ymax - ymin)
-            ymax = ymax + 0.05 * (ymax - ymin)
-            call pgswin(xstart,xend,ymin,ymax)
-          else
-            call pgswin(xmin,xmax,ymin,ymax)
-          endif
-
-          call pgbox('BCNST',0.0,0.0,'BCNST',0.0,0.0)
-          if (units.eq.'K') then
-            xlabel='Kelvin'
-          else if (units.eq.'J') then
-            xlabel='Janskys'
-          else
-            xlabel='Map units'
-          endif
-
-          call pglab(ylabel,xlabel,label)
-          xdelta=(xstart-xend)/float(np-1)
-          if (xstart.lt.xend) xdelta=abs(xdelta)
-          if (xstart.gt.xend) xdelta=-1.0*abs(xdelta)
-          do ii = 1, nchan
-            do jj = 1, np
-              jjj=(jj-1)*nc+ichan(ii)
-              xval(jj)=v(jjj)/cf
-              xcoord(jj)=xstart+float(jj-1)*xdelta
-            enddo
-            call pgsls(ii)
-            call pgline(np,xcoord,xval)
-          enddo
-          call pgsls(1)
-          maptype='SPECTRA'
-        endif
-
-c       Now annotate plot (had to wait for plotcon to get values).
-        if (windx*windy.eq.1 .and. alabel.eq.'Y') then
-          call pgsvp(0.72,0.9,0.1,0.9)
-          call plotannot(cf,cmaj,cmin,cpa)
-          if (nchan.ne.0) call intannot(nchan,ichan,vlsr,nc)
-            call pgsvp(0.1,0.7,0.1,0.9)
-          endif
-
-c         Write ASCII file of channel intensities along cut.
-          if (nchan.ne.0) then
-            call writeint(v,nc,np,xstart,xend,cf,nchan,ichan,
-     *      xcut(l),ycut(l),pa(l),vlsr)
-          endif
-        endif
-      enddo
-c
-c  Replotting options.
-c
-      if (apint.ne.'Y' .and. write.ne.'Y') then
-        call pgiden
-        call pgend
-        call pgqinf('HARDCOPY',ans,length)
-        if (ans.ne.'YES') then
-          call output(' ')
-          call prompt(ans,length,'Another PGPLOT device? (Y/[N])')
-          call ucase(ans)
-          if (ans(1:1).eq.'Y') then
-            call prompt(device,length,'>Enter new PGPLOT device: ')
-            call lcase(device)
-            call prompt(ans,length,'>Enter line width [1]: ')
-            if (length.ne.0) then
-              read(ans,'(i1)') lwidth
-            endif
-            goto 60
-          endif
-        endif
-      endif
-c
-c  Restore original plot device.
-c
-      device = old_device
-
-      end
-
-c***********************************************************************
-
-      subroutine SetCont
-
-c-----------------------------------------------------------------------
-c  Set contour levels and label interval
-c-----------------------------------------------------------------------
-      include 'clplot.h'
-      character*80 ans,line
-      real cmin,cmax,cint
-      integer l,i
-c-----------------------------------------------------------------------
-      call output(' ')
-      call prompt(percent,l,
-     *  '>Enter contours as % (Y), Absolute, [use previous levels]: ')
-      if (l.eq.0) return
-      call ucase(percent)
-      call prompt(ans,l,'Enter contour List or Range (L/[R]): ')
-      call ucase(ans)
-      if (ans.eq.'L') then
-        print 122
-122     format(/,'>Enter levels (max 10, end=-9999.0):')
-        do i = 1, 10
-          levels(i)=0.0
-        enddo
-
-        do i = 1, 10
-          write(line,127) i
-127       format('>Enter: level(',i2,')=')
-          call output(line)
-          read(5,*) levels(i)
-          if (levels(i).eq.-9999.0 .or. i.eq.10) then
-            nlevels=i-1
-            goto 129
-          endif
-        enddo
-      else
-        print 128
-128     format(/,'>Enter min,max,interval :')
-        read(5,*) cmin,cmax,cint
-        nlevels =1
-        levels(1)=cmin
-        do while (levels(nlevels).lt.cmax .and. nlevels.lt.10)
-          nlevels = nlevels + 1
-          levels(nlevels) = levels(nlevels-1) + cint
-        enddo
-      endif
-
-129   end
-
-c***********************************************************************
-
-      subroutine SetGray
-
-c-----------------------------------------------------------------------
-c  Set grayscale levels
-c-----------------------------------------------------------------------
-      include 'clplot.h'
-      integer l
-c-----------------------------------------------------------------------
-c
-c Grayscale default to map min/max or
-c enter values for bg and fg
-c
-      call output(' ')
-      call prompt(defgray,l,
-     *  '>Use map min/max for graysacle (Y/[N]): ')
-      call ucase(defgray)
-      if (defgray.eq.'Y') return
-      call output(' pgplot grayscale shade is a number in the ')
-      call output(' range 0 to 1 obtained by linear interpolation')
-      call output(' between the background and foreground level,')
-      call output('e.g. shade=[A(i,j)-bg]/[fg-bg] ')
-      print 122
-122   format(/,'>Enter grayscale background (bg) level:')
-      read(5,*) bg
-      print 123
-123   format(/,'>Enter grayscale foreground (fg) level:')
-      read(5,*) fg
-
-      end
-
-c***********************************************************************
-
-      subroutine WrGauss(outfile,nc,vlsr,cmaj,cmin,cpa)
-
-c-----------------------------------------------------------------------
-c Inputs:
-c  outfile      filename for ascii fits
-c  nc           number of channels
-c  vlsr         velocity array
-c  ngauss       number of simultaneously fitted gaussians
-c  gauss        gaussian parameters
-c                gauss(i,1) amplitude of gaussian i
-c                gauss(i,2) center velocity of gaussian i
-c                gauss(i,3) sigma of gaussian i
-c-----------------------------------------------------------------------
-      include 'clplot.h'
-      common /spectrae/ xc,yc,nspec,ngauss,gauss,gausserr
-      real xc(49),yc(49),gauss(49,3,10),gausserr(49,3,10)
-      integer nc,nspec
-      integer ngauss(49)
-      real vlsr(nc)
-      real tmod(256,12)
-      real vlsr2(1280),tmod2(1280,12),dv
-      real arg1,term
-      character*10    ichar10
-      integer         len10,len10a,i10
-      character*40 outfile
-      integer lu,iostat
-      real cmaj,cmin,cpa
-      integer i,j,k,length,ns
-      character text*110
-c-----------------------------------------------------------------------
-c
-c loop through spectra to form gaussian models, max 12
-c
-      ns = min(nspec,12)
-      do k = 1, ns
-c
-c loop through channels
-c
-        do i = 1, nc
-          tmod(i,k) = 0.0
-          do j = 1, ngauss(k)
-            arg1=(vlsr(i)-gauss(k,2,j))/gauss(k,3,j)
-            if (abs(arg1).gt.4.0) then
-              term=0.0
-            else
-              term=gauss(k,1,j)*exp(-arg1*arg1)
-            endif
-            tmod(i,k) = tmod(i,k) + term
-          enddo
-        enddo
-c
-c form new gaussian model spectrum with factor of 5 oversampling
-c
-        dv=(vlsr(2)-vlsr(1))/5.0
-        do i = 1, nc*5
-          vlsr2(i)=vlsr(1)+(float(i)*dv)
-          tmod2(i,k) = 0.0
-          do j = 1, ngauss(k)
-            arg1=(vlsr2(i)-gauss(k,2,j))/gauss(k,3,j)
-            if (abs(arg1).gt.4.0) then
-              term=0.0
-            else
-              term=gauss(k,1,j)*exp(-arg1*arg1)
-            endif
-            tmod2(i,k) = tmod2(i,k) + term
-          enddo
-        enddo
-c
-c end of loop through spectra
-c
-      enddo
-c
-c  Write out gaussian fits to ASCII file.
-c
-      if (nspec.gt.12) then
-        call output('only first 12 fits written to '//outfile)
-      endif
-      call TxtOpen(lu,outfile,'new',iostat)
-      if (iostat.eq.0) write(text,'(a,a,4x,f11.6,a)')
-     *  'Gau fit for ',object,restfreq,' GHz'
-      length=12 + len(object) + 15 + 4
-      call TxtWrite(lu,text,length,iostat)
-      if (iostat.eq.0) write(text,'(a,2f12.3,a,f6.1,a)')
-     *'Convolving beam: ',cmaj,cmin,' arcsecs, pa: ',cpa,' degrees'
-      length = 17 + 12 + 12 + 14 + 6 + 8
-      call TxtWrite(lu,text,length,iostat)
-      if (iostat.eq.0) write(text,'(a)') 'Positions (x,y) arcsecs'
-      call TxtWrite(lu,text,23,iostat)
-      k=0
-      do while (iostat.eq.0 .and. k.lt.ns)
-        write(text,'(4(a,2f7.2,a))')
-     *    ('(',xc(i+k),yc(i+k),') ',i=1,min(4,ns-k))
-        length = min(4,ns-k)*(1+2*7+2)
-        call TxtWrite(lu,text,length,iostat)
-        k=k+4
-      enddo
-      do while (length.gt.0 .and. iostat.eq.0)
-        call prompt(text,length,'Enter comment: ')
-        call TxtWrite(lu,text,length,iostat)
-      enddo
-      k=1
-#ifdef vms
-      do while (iostat.eq.0 .and. k.le.nc)
-        write(text,110) vlsr2(k),(tmod2(k,i),i=1,ns)
-        call TxtWrite(lu,text,10+10*ns,iostat)
-        k=k+1
-      enddo
-110   format(x,f9.3,<ns>(1x,f9.3))
-#else
-c
-c  This eliminate the need to use <ns> format, which works for f77 -g
-c  but not without, and not on cray.
-c
-c  Note that fits are written with 5x velocity oversampling
-c
-      do while ((iostat.eq.0) .and. (k.le.(5*nc)))
-        write(ichar10,'(1x,f9.3)') vlsr2(k)
-        text(1:10) = ichar10(1:10)
-        len10  = 11
-        len10a = 20
-        do i10 = 1, ns
-          write(ichar10,'(1x,f9.3)') tmod2(k,i10)
-          text(len10:len10a) = ichar10(1:10)
-          len10  = len10 + 10
-          len10a = len10 + 9
-        enddo
-        call TxtWrite(lu,text,10+10*ns,iostat)
-        k=k+1
-      enddo
-#endif
-      call TxtClose(lu)
 
       end
 
@@ -1383,7 +519,7 @@ c       Absolute coordinate labels.
         call output('Sorry...option not yet implemented.')
       ELSE IF (KEY.EQ.'C') THEN
 c       Change  contour interval.
-        call SetCont
+        call setCont
       ELSE IF (KEY.EQ.'E') THEN
 c       Exit from plot.
         RETURN
@@ -1422,7 +558,7 @@ c       Change grayscale.
         else
           gray='Y'
           call output('-will include grayscale')
-          call SetGray
+          call setGray
         endif
       else if (key.eq.'R') then
 c       Replot on display.
@@ -2075,6 +1211,193 @@ c      call pgHline(nc,vlsr,tres,2.)
 
 c***********************************************************************
 
+      subroutine getList(imaps,vmin,vmax,vlsr,nc)
+      integer imaps,nc
+      real vmin(1),vmax(1),vlsr(1)
+c-----------------------------------------------------------------------
+c       Get list of velocity intervals.
+c
+c  Inputs:
+c    vlsr(nc)   Array of velocities.
+c    nc         Number of channels in image.
+c  Outputs:
+c    imaps      Number of velocity intervals.
+c    vmin,vmax  Array of velocity intervals.
+c-----------------------------------------------------------------------
+      real velmin,velmax,swap
+      integer i,k,length
+      character line*80
+#ifdef cft
+
+c     External
+      character substr*80
+#endif
+c-----------------------------------------------------------------------
+      goto 9
+20    call output('Try again; map number must be in list,
+     *     or increment list by one')
+      call listMaps(imaps,vmin,vmax,vlsr,nc)
+9     call output(' ')
+      call output('---- Enter list of velocity intervals ---')
+      call output('>Type -n to delete map n')
+      call output('      -99 to delete all')
+      call output('       L to list')
+      call output('      <cr> to use the current list')
+10    call prompt(line,length,
+     *  '>Enter map number and velocity range (N,Vmin,Vmax): ')
+      if (length.eq.0) return
+#ifdef cft
+      read(substr(line,1),101,err=20) i
+      read(substr(line,2),103) velmin
+      read(substr(line,3),103) velmax
+101   format(i10.0)
+103   format(f20.0)
+#else
+      read(line(1:length),102,err=20) i,velmin,velmax
+102   format(i10,2f20.0)
+#endif
+
+c  end of list; plot maps
+      if (i.eq.0) goto 50
+c  swap
+      if (velmin.gt.velmax) then
+        swap = velmin
+        velmin = velmax
+        velmax = swap
+      endif
+c  add or change map
+      if (i.ge.1 .and. i.le.min(imaps+1,25)) then
+        vmin(i) = velmin
+        vmax(i) = velmax
+        imaps = max(i,imaps)
+c  delete map
+      else if (-i.ge.1 .and. -i.le.imaps) then
+        k = -i
+        do i = k, imaps-1
+          vmin(i) = vmin(i+1)
+          vmax(i) = vmax(i+1)
+        enddo
+        imaps = imaps-1
+c  start new list
+      else if (i.le.-99) then
+        call output('All maps deleted from list')
+        imaps = 0
+      else
+        call output('Try again; map number must be in list,
+     *       or increment list by one')
+        call listMaps(imaps,vmin,vmax,vlsr,nc)
+        goto 9
+      endif
+      goto 10
+50    return
+
+      end
+
+c***********************************************************************
+
+      subroutine getMom(nmom)
+      integer nmom
+c-----------------------------------------------------------------------
+c  Get moment to be plotted for velomap
+c
+c  Outputs:
+c    nmom       Moment of map to be computed.
+c-----------------------------------------------------------------------
+      include 'clplot.h'
+      real value
+c-----------------------------------------------------------------------
+      goto 10
+222   print *, 'moment must be integer in range (-1 to 4)'
+10    print 120
+120   format(/, ' map computed:'/
+     *  ' (0 = straight average [default])'/
+     *  ' (1 = velocity centroid from 1st moment)'/
+     *  ' (-1 = velocity of peak channel)'/
+     *  ' (2 = velocity width or variance from 2nd moment)'/
+     *  ' (3 = degree of skewness or asymmetry)'/
+     *  ' (4 = degree of excess, or "peakiness")'/
+     *  '>Enter moment to compute (-1 to 4; default [0]):  ')
+      read(5,121,err=222) nmom
+121   format(i5)
+      if ((nmom.lt.-1) .or. (nmom.gt.4)) then
+         print *, 'moment must be integer in range (-1 to 4)'
+         goto 10
+      endif
+
+      call promptf(value,'f12.5',
+     *  '>Enter blanking cutoff level: ',cutoff)
+      cutoff = value
+
+      if (nmom.ne.0) then
+        units = ' '
+        call setCont
+      endif
+
+      end
+
+c***********************************************************************
+
+      subroutine getRange(imaps,vmin,vmax,vlsr,nc)
+
+      integer imaps,nc
+      real vmin(2),vmax(2),vlsr(2)
+c-----------------------------------------------------------------------
+c  Get range of velocities to plot.
+c
+c  Inputs:
+c    vlsr(nc)   Array of velocities.
+c    nc         Number of channels in image.
+c  Outputs:
+c    imaps      Number of velocity intervals.
+c    vmin,vmax  Array of velocity intervals.
+c-----------------------------------------------------------------------
+      real vfirst,vlast,vwidth,vinc,vstart,vend
+c-----------------------------------------------------------------------
+      vfirst=0.0
+      vlast=0.0
+      vinc=0.0
+      vstart=0.0
+      vend=0.0
+      vwidth=0.0
+
+      call output(' ')
+      call output(
+     *    '>Enter first and last velocity, width and increment: ')
+      read(5,*) vfirst,vlast,vwidth,vinc
+c
+c  Find min and maximum velocity.
+c
+      vstart=min(vlast,vfirst)
+      vend=max(vlast,vfirst)
+      if (vinc.eq.0.0) vinc = vlsr(2)-vlsr(1)
+      if (vstart.eq.0.0 .and. vend.eq.0.0) then
+        vstart = vlsr(1)
+        vend = vlsr(nc)
+      endif
+c
+c  Give VINC correct sign to go from VSTART to VEND
+c
+      vinc=sign(vinc,(vend-vstart))
+      vmin(1) = vstart - abs(vwidth)/2.0
+      vmax(1) = vstart + abs(vwidth)/2.0
+      imaps=1
+      if (vinc.gt.0.0) then
+        do while (vmax(imaps).lt.max(vstart, vend))
+          imaps=imaps+1
+          vmin(imaps)=vmin(imaps-1)+vinc
+          vmax(imaps)=vmax(imaps-1)+vinc
+        enddo
+      else
+        do while (vmin(imaps).gt.min(vstart, vend))
+          imaps=imaps+1
+          vmin(imaps)=vmin(imaps-1)+vinc
+          vmax(imaps)=vmax(imaps-1)+vinc
+        enddo
+      endif
+      end
+
+c***********************************************************************
+
       subroutine header(ipr)
 
       integer ipr
@@ -2197,6 +1520,46 @@ c
 
 c***********************************************************************
 
+      subroutine integral(ary,vlsr,nx,ny,nc)
+
+      integer nx,ny,nc
+      real    ary(nx,ny,nc),vlsr(nc)
+c-----------------------------------------------------------------------
+c  List integral and statistics within box.
+c
+c  Inputs:
+c    ary        The image.
+c    nx,ny,nc   Dimensions of image.
+c    vlsr       Array of velocities.
+c-----------------------------------------------------------------------
+      include 'clplot.h'
+
+      character*80 line
+      real tmax,tmin,ave
+      integer imin,jmin,imax,jmax,num,k
+c-----------------------------------------------------------------------
+      call header(0)
+      write(line,'(a,4i6,a)') 'Integral and rms in box (',
+     *  bblc(1)-brpix(1),bblc(2)-brpix(2),
+     *  btrc(1)-brpix(1),btrc(2)-brpix(2),')'
+      call output(line)
+      write(line,'(a,a,a,a,a,a,a)') ' plane  ','  Velocity  ',
+     *  ' Total Flux ','  Maximum   ','  Minimum   ','  Average   ',
+     *  '    rms     '
+      call output(line)
+      do k = 1, nc
+        call maxmap(ary(1,1,k),nx,ny,bblc(1),btrc(1),bblc(2),btrc(2),
+     *                tmax,imax,jmax,tmin,imin,jmin,ave,arms,num)
+        write(line,'(1x,i4,1x,6(1x,f11.4))')
+     *        k,vlsr(k),ave*num/cbof,tmax,tmin,ave,arms
+        call output(line)
+      enddo
+      call prompt(line,k,'>Type <cr> to continue')
+
+      end
+
+c***********************************************************************
+
       subroutine integrate(ary,nx,ny)
 
       integer nx,ny
@@ -2232,6 +1595,46 @@ c-----------------------------------------------------------------------
       write(line,'(24x,4(x,f11.4),a)')
      *        tmax*dperjy, tmin*dperjy, ave*dperjy, arms*dperjy, ' K'
       call output(line)
+
+      end
+
+c***********************************************************************
+
+      subroutine listMaps(imaps,vmin,vmax,vlsr,nc)
+
+      integer imaps,nc
+      real vmin(2),vmax(2),vlsr(2)
+c-----------------------------------------------------------------------
+c  List the maps available and current selection
+c
+c  Inputs:
+c    nc         Number of channels in image.
+c    vlsr(nc)   Array of velocities.
+c  Outputs:
+c    imaps      Number of velocity intervals.
+c    vmin,vmax  Array of velocity intervals.
+c-----------------------------------------------------------------------
+      integer i
+c-----------------------------------------------------------------------
+c
+c --- maps available ---
+c
+      print 110,vlsr(1),vlsr(nc),vlsr(2)-vlsr(1)
+110   FORMAT (/,' Velocity of first map:',F12.3,
+     *          '  Velocity of last map:',F12.3/
+     *          '    Velocity increment:',F12.3)
+c
+c --- current selection of maps ---
+c
+      if (imaps.ne.0) then
+        print *,' --- current selection of maps ---'
+        do i = 1, imaps
+          print 109, i, vmin(i), vmax(i)
+        enddo
+109     format(' map(',i2,') velocity range: (',f12.3,' to',f12.3,')')
+      else
+        print *,' --- no current selection of maps ---'
+      endif
 
       end
 
@@ -2290,6 +1693,205 @@ c-----------------------------------------------------------------------
       if (num.gt.0) then
         ave = sum/num
         rms = sqrt(sumsq/num) - ave*ave
+      endif
+
+      end
+
+c***********************************************************************
+
+      subroutine moment1(nc,vlsr,buf,clip,amp,mom1,mom2)
+
+      integer nc
+      real vlsr(nc),buf(nc),amp,mom1,mom2,clip
+c-----------------------------------------------------------------------
+c  Calculate moments.
+c
+c  Input:
+c    nc         number of channels
+c    vlsr       velocities
+c    buf        amplitudes
+c    clip       cutoff level in moment calculation
+c  Output:
+c    amp        maximum amplitude
+c    mom1       1st moment
+c    mom2       2nd moment
+c-----------------------------------------------------------------------
+      integer i
+      real mom0
+c-----------------------------------------------------------------------
+      amp = 0.0
+      mom0 = 0.0
+      mom1 = 0.0
+      mom2 = 0.0
+c
+c  Find the maximum and accumulate the moments.
+c
+      do i = 1, nc
+        if (buf(i).gt.clip) then
+          if (buf(i).gt.amp) amp=buf(i)
+          mom0 = mom0 + buf(i)
+          mom1 = mom1 + buf(i)*vlsr(i)
+          mom2 = mom2 + buf(i)*vlsr(i)*vlsr(i)
+        endif
+      enddo
+c
+c  Normalize and scale the moments.
+c
+      if (mom0.ne.0.0) then
+        mom1 =mom1/mom0
+        mom2 = mom2/mom0 - mom1*mom1
+        if (mom2.gt.0) then
+          mom2 = sqrt(mom2)
+        else
+          mom2 = 0.0
+        endif
+      endif
+
+      end
+
+c***********************************************************************
+
+      subroutine plotannot(cf,cmaj,cmin,cpa)
+
+      real cf,cmaj,cmin,cpa
+c-----------------------------------------------------------------------
+c  Annotate plots.
+c-----------------------------------------------------------------------
+      include 'clplot.h'
+      include 'mirconst.h'
+
+      common/back/rae(3),dece(3)
+      real rae,dece,yloc
+      character line*80
+      integer i,j
+      real scale,absmax
+c-----------------------------------------------------------------------
+c
+c  Set pg viewport to right side.
+c
+      call pgswin(0.0,1.0,0.0,1.0)
+
+      call header(0)
+c  object
+      call pgtext(0.0,0.95,object)
+c  ra and dec
+      write(line,'(2i3,f6.2,1x,2i3,f5.1)') int(rae(1)),
+     *  int(rae(2)),rae(3),int(dece(1)),int(dece(2)),dece(3)
+      call pgtext(0.0,0.9,line)
+c  epoch
+      write(line,'   (''('',f5.0,'')'')') epoch
+      call pgtext(0.0,0.86,line)
+c  pixel
+      write(line,'(f9.2,''  x'',f9.2)') xy, xy
+      call pgtext(0.0,0.82,line)
+c  freq
+      write(line,'(''RestFreq: '',F10.5,'' GHz'')') restfreq
+      call pgtext(0.0,0.66,line)
+c  vel
+      write(line,'(''Velocity: '',F10.3,'' km/s'')') vel
+      call pgtext(0.0,0.62,line)
+c  delv
+      write(line,'(''Width:    '',F10.3,'' km/s'')') abs(delv)
+      call pgtext(0.0,0.58,line)
+c  file
+      write(line,'(''filename:'',1x,A)') file
+      call pgtext(0.0,0.54,line)
+c  beam
+      if (bmaj.gt.0.0) then
+        write(line,'(''Beam'',1x,f6.2,1x,f6.2,1x,f6.1)')
+     *        bmaj*R2AS,bmin*R2AS,bpa
+        call pgtext(0.0,0.50,line)
+      endif
+c  convolving beam
+      if (cmaj.gt.0.0) then
+        write(line,'(''Conv'',1x,f6.2,1x,f6.2,1x,f6.1)')
+     *        cmaj,cmin,cpa
+        call pgtext(0.0,0.46,line)
+      endif
+c  bunit
+      write(line,'(''Map Unit:'',1x,A)') bunit
+      call pgtext(0.0,0.40,line)
+c  dperjy
+      write(line,'(''K/Jy ='',1pg10.3)') dperjy
+      call pgtext(0.0,0.36,line)
+c
+c  convert units for caption using cf.
+c
+      if (maptype.eq.'SPECTRA') then
+       goto 202
+      endif
+c  max
+      write(line,'(''Maximum:'',1pg10.3,1X,A)') amax*cf,units
+      call pgtext(0.0,0.30,line)
+c  min
+      write(line,'(''Minimum:'',1pg10.3,1x,a)') amin*cf,units
+      call pgtext(0.0,0.26,line)
+c  rms
+      write(line,'(''Rms:    '',1pg10.3,1x,a)') arms*cf,units
+      call pgtext(0.0,0.22,line)
+c  contours
+      scale=1.0
+      if (percent.eq.'Y') then
+        absmax=abs(amax)
+        if (cneg.eq.'Y') absmax=(max(abs(amax),abs(amin)))
+        scale=absmax*cf/100.0
+      endif
+      write(line,'(''Contour Levels:'',1x,A)') units
+      call pgtext(0.0,0.18,line)
+c  levels
+      j=0
+      yloc=14.0
+      do while (j.lt.nlevels .and. yloc.gt.2.0)
+        write(line,'(3(1pg10.3,x))')
+     *    (levels(j+i)*scale,i=1,min(3,nlevels-j))
+        call pgtext(0.0,yloc/100,line)
+        j=j+3
+        yloc=yloc-4.0
+      enddo
+c
+c  Don't forget to Restore original plot window.
+c
+202   continue
+
+      end
+
+c***********************************************************************
+
+      subroutine plotcoord(iopt,nx,ny,xmin,xmax,ymin,ymax)
+
+      integer iopt,nx,ny
+      real xmin,xmax,ymin,ymax
+c-----------------------------------------------------------------------
+c  Find the plot limits.
+c
+c  Inputs:
+c    iopt=0 for relative coords; iopt=1 for absolute coords
+c    nx,ny      Size of array.
+c    xy,crval1,crval2 come from the map header
+c  Outputs:
+c    xmin,xmax,ymin,ymax        plot limits
+c-----------------------------------------------------------------------
+      include 'clplot.h'
+      include 'mirconst.h'
+
+      real rasec,decsec
+c-----------------------------------------------------------------------
+      if (iopt.eq.0) then
+c       Relative coords.
+        xmin = -xy*(1 -brpix(1))
+        xmax = -xy*(nx-brpix(1))
+        ymin =  xy*(1 -brpix(2))
+        ymax =  xy*(ny-brpix(2))
+
+      else if (iopt.eq.1) then
+c       Absolute coords.
+        rasec  = crval(1) * R2AS/15.0
+        decsec = crval(2) * R2AS
+        xmin = rasec  - xy*(1 -brpix(1))/cos(crval(2))/15.0
+        xmax = rasec  - xy*(nx-brpix(1))/cos(crval(2))/15.0
+        ymin = decsec + xy*(1 -brpix(2))
+        ymax = decsec + xy*(ny-brpix(2))
+        print *,cos(crval(2)),cos(crval(2))/15.0,rasec,decsec
       endif
 
       end
@@ -2447,10 +2049,10 @@ c
         else
           gray='Y'
           call output('-plot will include gray scale')
-          call SetGray
+          call setGray
         endif
       else if (ans(1:1).eq.'C') then
-        call SetCont
+        call setCont
       else if (ans(1:1).eq.' ') then
         goto 90
       else if (ans(1:1).eq.'E') then
@@ -2458,205 +2060,6 @@ c
       endif
       goto 199
 200   continue
-
-      end
-
-c***********************************************************************
-
-      subroutine moment1(nc,vlsr,buf,clip,amp,mom1,mom2)
-
-      integer nc
-      real vlsr(nc),buf(nc),amp,mom1,mom2,clip
-c-----------------------------------------------------------------------
-c  Calculate moments.
-c
-c  Input:
-c    nc         number of channels
-c    vlsr       velocities
-c    buf        amplitudes
-c    clip       cutoff level in moment calculation
-c  Output:
-c    amp        maximum amplitude
-c    mom1       1st moment
-c    mom2       2nd moment
-c-----------------------------------------------------------------------
-      integer i
-      real mom0
-c-----------------------------------------------------------------------
-      amp = 0.0
-      mom0 = 0.0
-      mom1 = 0.0
-      mom2 = 0.0
-c
-c  Find the maximum and accumulate the moments.
-c
-      do i = 1, nc
-        if (buf(i).gt.clip) then
-          if (buf(i).gt.amp) amp=buf(i)
-          mom0 = mom0 + buf(i)
-          mom1 = mom1 + buf(i)*vlsr(i)
-          mom2 = mom2 + buf(i)*vlsr(i)*vlsr(i)
-        endif
-      enddo
-c
-c  Normalize and scale the moments.
-c
-      if (mom0.ne.0.0) then
-        mom1 =mom1/mom0
-        mom2 = mom2/mom0 - mom1*mom1
-        if (mom2.gt.0) then
-          mom2 = sqrt(mom2)
-        else
-          mom2 = 0.0
-        endif
-      endif
-
-      end
-
-c***********************************************************************
-
-      subroutine multip_npanels(imaps,windx,windy)
-
-      integer imaps,windx,windy
-c-----------------------------------------------------------------------
-c  Return number of plotting windows in x and y directions (windx,windy)
-c  imaps is the number of maps to be plotted
-c-----------------------------------------------------------------------
-      integer uwindx,uwindy
-c-----------------------------------------------------------------------
-      if (imaps.gt.16) then
-        windx=5
-        windy=5
-      else if (imaps.gt.9 .and. imaps.le.16) then
-        windx=4
-        windy=4
-      else if (imaps.gt.4 .and. imaps.le.9) then
-        windx=3
-        windy=3
-      else if (imaps.gt.1 .and. imaps.le.4) then
-        windx=2
-        windy=2
-      else if (imaps.eq.1) then
-        windx=1
-        windy=1
-      endif
-c
-c  See if these defaults are ok with the user
-c
-105   print 102,windx,windy
-102   FORMAT(/,
-     * '>Enter number of windows in x and y: [',i2,',',i2,']:')
-      read (5,104,err=105) uwindx,uwindy
-104   format(i10.0,i10.0)
-c104    format (i,i)
-      if (uwindx.ne.0) windx=uwindx
-      if (uwindy.ne.0) windy=uwindy
-
-      end
-
-c***********************************************************************
-
-      subroutine plotannot(cf,cmaj,cmin,cpa)
-
-      real cf,cmaj,cmin,cpa
-c-----------------------------------------------------------------------
-c  Annotate plots.
-c-----------------------------------------------------------------------
-      include 'clplot.h'
-      include 'mirconst.h'
-
-      common/back/rae(3),dece(3)
-      real rae,dece,yloc
-      character line*80
-      integer i,j
-      real scale,absmax
-c-----------------------------------------------------------------------
-c
-c  Set pg viewport to right side.
-c
-      call pgswin(0.0,1.0,0.0,1.0)
-
-      call header(0)
-c  object
-      call pgtext(0.0,0.95,object)
-c  ra and dec
-      write(line,'(2i3,f6.2,1x,2i3,f5.1)') int(rae(1)),
-     *  int(rae(2)),rae(3),int(dece(1)),int(dece(2)),dece(3)
-      call pgtext(0.0,0.9,line)
-c  epoch
-      write(line,'   (''('',f5.0,'')'')') epoch
-      call pgtext(0.0,0.86,line)
-c  pixel
-      write(line,'(f9.2,''  x'',f9.2)') xy, xy
-      call pgtext(0.0,0.82,line)
-c  freq
-      write(line,'(''RestFreq: '',F10.5,'' GHz'')') restfreq
-      call pgtext(0.0,0.66,line)
-c  vel
-      write(line,'(''Velocity: '',F10.3,'' km/s'')') vel
-      call pgtext(0.0,0.62,line)
-c  delv
-      write(line,'(''Width:    '',F10.3,'' km/s'')') abs(delv)
-      call pgtext(0.0,0.58,line)
-c  file
-      write(line,'(''filename:'',1x,A)') file
-      call pgtext(0.0,0.54,line)
-c  beam
-      if (bmaj.gt.0.0) then
-        write(line,'(''Beam'',1x,f6.2,1x,f6.2,1x,f6.1)')
-     *        bmaj*R2AS,bmin*R2AS,bpa
-        call pgtext(0.0,0.50,line)
-      endif
-c  convolving beam
-      if (cmaj.gt.0.0) then
-        write(line,'(''Conv'',1x,f6.2,1x,f6.2,1x,f6.1)')
-     *        cmaj,cmin,cpa
-        call pgtext(0.0,0.46,line)
-      endif
-c  bunit
-      write(line,'(''Map Unit:'',1x,A)') bunit
-      call pgtext(0.0,0.40,line)
-c  dperjy
-      write(line,'(''K/Jy ='',1pg10.3)') dperjy
-      call pgtext(0.0,0.36,line)
-c
-c  convert units for caption using cf.
-c
-      if (maptype.eq.'SPECTRA') then
-       goto 202
-      endif
-c  max
-      write(line,'(''Maximum:'',1pg10.3,1X,A)') amax*cf,units
-      call pgtext(0.0,0.30,line)
-c  min
-      write(line,'(''Minimum:'',1pg10.3,1x,a)') amin*cf,units
-      call pgtext(0.0,0.26,line)
-c  rms
-      write(line,'(''Rms:    '',1pg10.3,1x,a)') arms*cf,units
-      call pgtext(0.0,0.22,line)
-c  contours
-      scale=1.0
-      if (percent.eq.'Y') then
-        absmax=abs(amax)
-        if (cneg.eq.'Y') absmax=(max(abs(amax),abs(amin)))
-        scale=absmax*cf/100.0
-      endif
-      write(line,'(''Contour Levels:'',1x,A)') units
-      call pgtext(0.0,0.18,line)
-c  levels
-      j=0
-      yloc=14.0
-      do while (j.lt.nlevels .and. yloc.gt.2.0)
-        write(line,'(3(1pg10.3,x))')
-     *    (levels(j+i)*scale,i=1,min(3,nlevels-j))
-        call pgtext(0.0,yloc/100,line)
-        j=j+3
-        yloc=yloc-4.0
-      enddo
-c
-c  Don't forget to Restore original plot window.
-c
-202   continue
 
       end
 
@@ -2716,47 +2119,6 @@ c
         endif
       enddo
       call pgsls(1)
-
-      end
-
-c***********************************************************************
-
-      subroutine plotcoord(iopt,nx,ny,xmin,xmax,ymin,ymax)
-
-      integer iopt,nx,ny
-      real xmin,xmax,ymin,ymax
-c-----------------------------------------------------------------------
-c  Find the plot limits.
-c
-c  Inputs:
-c    iopt=0 for relative coords; iopt=1 for absolute coords
-c    nx,ny      Size of array.
-c    xy,crval1,crval2 come from the map header
-c  Outputs:
-c    xmin,xmax,ymin,ymax        plot limits
-c-----------------------------------------------------------------------
-      include 'clplot.h'
-      include 'mirconst.h'
-
-      real rasec,decsec
-c-----------------------------------------------------------------------
-      if (iopt.eq.0) then
-c       Relative coords.
-        xmin = -xy*(1 -brpix(1))
-        xmax = -xy*(nx-brpix(1))
-        ymin =  xy*(1 -brpix(2))
-        ymax =  xy*(ny-brpix(2))
-
-      else if (iopt.eq.1) then
-c       Absolute coords.
-        rasec  = crval(1) * R2AS/15.0
-        decsec = crval(2) * R2AS
-        xmin = rasec  - xy*(1 -brpix(1))/cos(crval(2))/15.0
-        xmax = rasec  - xy*(nx-brpix(1))/cos(crval(2))/15.0
-        ymin = decsec + xy*(1 -brpix(2))
-        ymax = decsec + xy*(ny-brpix(2))
-        print *,cos(crval(2)),cos(crval(2))/15.0,rasec,decsec
-      endif
 
       end
 
@@ -2828,6 +2190,426 @@ c
       enddo
       print 103,j-brpix(2),(i-brpix(1),i=1,iend)
 103   format(1x,i4,1x,24i3)
+
+      end
+
+c***********************************************************************
+
+      subroutine posVel(ary,vlsr,nx,ny,nc)
+
+      integer nx,ny,nc
+      real ary(nx,ny,nc),vlsr(nc)
+c-----------------------------------------------------------------------
+c  Make position-velocity images and plots.
+c
+c  Inputs:
+c    ary        The image.
+c    nx,ny,nc   Dimensions of image.
+c    vlsr       Array of velocities.
+c-----------------------------------------------------------------------
+      include 'clplot.h'
+
+      integer np,k,l,ncon
+      real xin,yin,pain,cmaj,cmin,cpa,cf
+      real xstart,xend,vstart,vend,xmin,xmax
+      real v(16384)
+c  convolution array maximum size
+      real con(99,99,4,4)
+      common /cuts/ xcut,ycut,pa,ncut
+      integer ncut
+      real xcut(MAXDIM),ycut(MAXDIM),pa(MAXDIM)
+      real tr(6),ymax,ymin,xval(MAXDIM),xcoord(MAXDIM),xdelta
+      character label*80,ans*1,old_device*80
+      character*9 lab1,lab2,lab3
+      character*1 lab4
+      character*80 xlabel,ylabel,line
+      integer i,windx,windy,cwind,length,lwidth
+      integer ii,jj,jjj,nchan,ichan(10),ifix
+#ifdef cft
+
+c     External
+      character substr*80
+#endif
+c-----------------------------------------------------------------------
+c
+c  Introduction.
+c
+      call output(
+     *'Plot intensity versus position & velocity along selected cuts')
+      call prompt(ans,length,'>Type H for help, <cr> to continue: ')
+      call ucase(ans)
+      if (ans.eq.'H') then
+        call output(' ')
+        call output(
+     *   'Plot position-velocity maps, or intensity versus position.')
+        call output('Cuts are selected with the cursor on an x-y map')
+        call output('or can be entered as a list which can be edited')
+        call output('RA-velocity or DEC-velocity maps can be plotted')
+        call output('Position-velocity maps can also be printed, or')
+        call output('written out as images for further processing.')
+        call output('(x,y) positions are in (HA,DEC) directions.')
+        call output('(Position angle is measured from N through E)')
+        call output(' ')
+      endif
+c
+c  List current selection of cuts.
+c
+      goto 9
+2222  call output('map number must edit or extend list by one')
+9     if (ncut.ne.0) then
+        call output('--- current selection of cuts ---')
+        do i = 1, ncut
+          print 109, i,xcut(i),ycut(i),pa(i)
+        enddo
+      else
+        call output('--- no current selection of cuts ---')
+      endif
+109   format(' map(',i2,')  x= ',f9.3,' y= ',f9.3,' pa= ',f8.3)
+c
+c  Specify List of cuts, or RA-vel or DEC-velocity.
+c
+      call output(' ')
+11    call prompt(ans,length,
+     *  '>List of cuts, RA-vel or DEC-vel ? ([L]/X/Y): ')
+      call ucase(ans)
+      if (ans.eq.' ') ans='L'
+c
+c  Enter list of position-velocity cuts across image.
+c
+      if (ans.eq.'L') then
+        call output(' ')
+        call output('--- Enter list of pos-vel cuts to plot ---')
+        call output(
+     *    'angles measured from north to the east (0 to 180).')
+        call output('>Type -n to delete map n')
+        call output('      -99 to delete all')
+        call output('      L to list')
+        call output('     <cr> to use the current list.')
+10      call prompt(line,length,
+     *    '>Enter map number, position and angle (n,x,y,pa): ')
+        if (length.eq.0) goto 50
+#ifdef cft
+        read(substr(line,1),101,err=2222) i
+        read(substr(line,2),103) xin
+        read(substr(line,3),103) yin
+        read(substr(line,4),103) pain
+101     format(i10.0)
+103     format(f20.0)
+#else
+        read(line(1:length),102,err=2222,end=50) i,xin,yin,pain
+102     format(i10,3f20.0)
+#endif
+c
+c  End of list. Plot maps.
+c
+        if (i.eq.0) goto 50
+c  Add or change map
+        if (i.ge.1 .and. i.le.min(ncut+1,25)) then
+          xcut(i) = xin
+          ycut(i) = yin
+          pa(i) = pain
+          ncut = max(i,ncut)
+c  Delete map
+        else if (-i.ge.1 .and. -i.le.ncut) then
+          k = -i
+          do i = k, ncut-1
+            xcut(i) = xcut(i+1)
+            ycut(i) = ycut(i+1)
+            pa(i) = pa(i+1)
+          enddo
+          ncut = ncut-1
+c  Start new list
+        else if (i.le.-99) then
+          call output('All maps deleted from list')
+          ncut = 0
+        else
+          call output('map number must edit or extend list by one')
+          goto 9
+        endif
+        goto 10
+c
+c  RA-velocity maps.
+c
+      else if (ans.eq.'X') then
+        ncut=ny
+        do i = 1, ncut
+          xcut(i) = 0.0
+          ycut(i) = (i-brpix(1)) * xy
+          pa(i) = 90.0
+        enddo
+c
+c  DEC-velocity maps.
+c
+      else if (ans.eq.'Y') then
+        ncut=nx
+        do i = 1, ncut
+          xcut(i)=(i-brpix(1)) * xy
+          ycut(i)=0.0
+          pa(i)=0.0
+        enddo
+      else
+        goto 11
+      endif
+
+50    if (ncut.eq.0) then
+        call output('--- no current selection of cuts ---')
+        return
+      endif
+c
+c  Set up convolution function.
+c
+      call convsize(cmaj,cmin,cpa,xy,ncon)
+      call convsetup(cmaj,cmin,cpa,xy,ncon,con)
+c
+c  Check whether it is contour or intensity plots
+c
+      nchan=0
+      call prompt(line,length,'Contour or Intensity plots ? [C]/I: ')
+      if (length.eq.0) goto 399
+      call ucase(line)
+      if (line.eq.'I') then
+398     continue
+        call prompt(line,length,'How many channels ? (5 max): ')
+        nchan=1
+        if (length.eq.0) goto 399
+        read (line(1:length),101) nchan
+101     format(i10.0)
+        if (nchan.gt.nc) then
+          call output('Cannot be more than there are in the image')
+          goto 398
+        endif
+        if (nchan.gt.5) then
+          call output('Up to 5 channels allowed')
+          goto 398
+        endif
+        call prompt(line,length,'Enter the channel numbers: ')
+        read(line(1:length), '(5i10)') (ichan(i),i=1,nchan)
+c         do l=1,nchan
+c           read(substr(line,l),101) ichan(l)
+c         enddo
+        call prompt(line,length,'Fix the scales ?  Y/[N]: ')
+        call ucase(line)
+        ifix=0
+        if (line.eq.'Y') then
+          ifix=1
+          call prompt(line,length,'Enter xmin,xmax,ymin,ymax: ')
+          read (line(1:length),'(4f20.0)') xmin,xmax,ymin,ymax
+        endif
+      endif
+399   continue
+c
+c  Set maptype to position-velocity, and save plot device type from
+c  menu.
+c
+      maptype = 'POS-VEL'
+      xlabel='velocity (km/s)'
+      ylabel='position (arcsec)'
+      old_device=device
+      lwidth = 1
+c
+c  Set up the plot windows.
+c
+60    if (write.ne.'Y' .and. apint.ne.'Y') then
+        call multip_npanels (ncut,windx,windy)
+        call pgbeg(0,device,windx,windy)
+        call pgslw(lwidth)
+      endif
+c
+c  Calculate the conversion factor for map units.
+c
+      call header(0)
+      cf = 1.0
+      if (units.eq.'K') cf = dperjy
+
+c
+c  Convolve array into position-velocity maps, output in V.
+c
+      do l = 1, ncut
+        call pgpage
+        if (windx*windy.eq.1 .and. alabel.eq.'Y') then
+          call pgsvp(0.1,0.7,0.1,0.9)
+        else
+          call pgsvp(0.1,0.9,0.1,0.9)
+        endif
+        call veloline(ary,nx,ny,nc,xcut(l),ycut(l),pa(l),ncon,con,
+     *    v,np,xstart,xend)
+        vstart = vlsr(1)
+        vend = vlsr(nc)
+        if (nchan.eq.0) then
+          call output('--- position velocity map ---')
+          else
+          call output('--- position intensity plot ---')
+        endif
+        print 109, l,xcut(l),ycut(l),pa(l)
+c
+c  Set up parameters for plot labels.
+c
+        write(lab1,104) xcut(l)
+        write(lab2,104) ycut(l)
+        write(lab3,104) pa(l)
+104     format(f8.2)
+        lab4=char(l+96)
+        if (pspec.eq.'Y') then
+          label=lab4//' (x,y)=('//lab1//','//lab2//')   PA='//lab3
+        else
+          label=' (x,y)=('//lab1//','//lab2//')   PA='//lab3
+        endif
+        cwind = cwind + 1
+c
+c  Write out map.
+c
+        if (write.eq.'Y') then
+          call writeposvel(v,nc,np,1,vstart,xstart,pa(l),1.0,1.0,
+     *                (vend-vstart)/(nc-1),(xend-xstart)/(np-1))
+c
+c  Integer plot.
+c
+        else if (apint.eq.'Y') then
+          call plotint(v,nc,np)
+c
+c  Plot contours.
+c
+        else
+         if (nchan.eq.0) then
+          call pgswin(vstart,vend,xstart,xend)
+c  Set up transformation array for contour routine.
+          tr(2)=(vend-vstart)/(nc-1)
+          tr(1)=vstart-tr(2)
+          tr(3)=0.0
+          tr(5)=0.0
+          tr(6)=(xend-xstart)/(np-1)
+          tr(4)=xstart-tr(6)
+c  Plot contours.
+          call plotcon(v,nc,np,cf,tr)
+          call pgbox('BCNST',0.0,0.0,'BCNST',0.0,0.0)
+          call pglab(xlabel,ylabel,label)
+        else
+          if (cf.eq.0.0) cf=1.0
+          if (ifix.eq.0) then
+            ymax=-1e+6
+            ymin=1e+6
+            do ii = 1, nchan
+              do jj = 1, np
+                jjj=(jj-1)*nc+ichan(ii)
+                if ((v(jjj)/cf).gt.ymax) ymax=v(jjj)/cf
+                if ((v(jjj)/cf).lt.ymin) ymin=v(jjj)/cf
+              enddo
+            enddo
+            ymin = ymin - 0.05 * (ymax - ymin)
+            ymax = ymax + 0.05 * (ymax - ymin)
+            call pgswin(xstart,xend,ymin,ymax)
+          else
+            call pgswin(xmin,xmax,ymin,ymax)
+          endif
+
+          call pgbox('BCNST',0.0,0.0,'BCNST',0.0,0.0)
+          if (units.eq.'K') then
+            xlabel='Kelvin'
+          else if (units.eq.'J') then
+            xlabel='Janskys'
+          else
+            xlabel='Map units'
+          endif
+
+          call pglab(ylabel,xlabel,label)
+          xdelta=(xstart-xend)/float(np-1)
+          if (xstart.lt.xend) xdelta=abs(xdelta)
+          if (xstart.gt.xend) xdelta=-1.0*abs(xdelta)
+          do ii = 1, nchan
+            do jj = 1, np
+              jjj=(jj-1)*nc+ichan(ii)
+              xval(jj)=v(jjj)/cf
+              xcoord(jj)=xstart+float(jj-1)*xdelta
+            enddo
+            call pgsls(ii)
+            call pgline(np,xcoord,xval)
+          enddo
+          call pgsls(1)
+          maptype='SPECTRA'
+        endif
+
+c       Now annotate plot (had to wait for plotcon to get values).
+        if (windx*windy.eq.1 .and. alabel.eq.'Y') then
+          call pgsvp(0.72,0.9,0.1,0.9)
+          call plotannot(cf,cmaj,cmin,cpa)
+          if (nchan.ne.0) call intannot(nchan,ichan,vlsr,nc)
+            call pgsvp(0.1,0.7,0.1,0.9)
+          endif
+
+c         Write ASCII file of channel intensities along cut.
+          if (nchan.ne.0) then
+            call writeint(v,nc,np,xstart,xend,cf,nchan,ichan,
+     *      xcut(l),ycut(l),pa(l),vlsr)
+          endif
+        endif
+      enddo
+c
+c  Replotting options.
+c
+      if (apint.ne.'Y' .and. write.ne.'Y') then
+        call pgiden
+        call pgend
+        call pgqinf('HARDCOPY',ans,length)
+        if (ans.ne.'YES') then
+          call output(' ')
+          call prompt(ans,length,'Another PGPLOT device? (Y/[N])')
+          call ucase(ans)
+          if (ans(1:1).eq.'Y') then
+            call prompt(device,length,'>Enter new PGPLOT device: ')
+            call lcase(device)
+            call prompt(ans,length,'>Enter line width [1]: ')
+            if (length.ne.0) then
+              read(ans,'(i1)') lwidth
+            endif
+            goto 60
+          endif
+        endif
+      endif
+c
+c  Restore original plot device.
+c
+      device = old_device
+
+      end
+
+c***********************************************************************
+
+      subroutine multip_npanels(imaps,windx,windy)
+
+      integer imaps,windx,windy
+c-----------------------------------------------------------------------
+c  Return number of plotting windows in x and y directions (windx,windy)
+c  imaps is the number of maps to be plotted
+c-----------------------------------------------------------------------
+      integer uwindx,uwindy
+c-----------------------------------------------------------------------
+      if (imaps.gt.16) then
+        windx=5
+        windy=5
+      else if (imaps.gt.9 .and. imaps.le.16) then
+        windx=4
+        windy=4
+      else if (imaps.gt.4 .and. imaps.le.9) then
+        windx=3
+        windy=3
+      else if (imaps.gt.1 .and. imaps.le.4) then
+        windx=2
+        windy=2
+      else if (imaps.eq.1) then
+        windx=1
+        windy=1
+      endif
+c
+c  See if these defaults are ok with the user
+c
+105   print 102,windx,windy
+102   FORMAT(/,
+     * '>Enter number of windows in x and y: [',i2,',',i2,']:')
+      read (5,104,err=105) uwindx,uwindy
+104   format(i10.0,i10.0)
+c104    format (i,i)
+      if (uwindx.ne.0) windx=uwindx
+      if (uwindy.ne.0) windy=uwindy
 
       end
 
@@ -3004,6 +2786,88 @@ c     Reference pixel in box coordinates.
           enddo
         enddo
       enddo
+
+      end
+
+c***********************************************************************
+
+      subroutine setCont
+
+c-----------------------------------------------------------------------
+c  Set contour levels and label interval
+c-----------------------------------------------------------------------
+      include 'clplot.h'
+      character*80 ans,line
+      real cmin,cmax,cint
+      integer l,i
+c-----------------------------------------------------------------------
+      call output(' ')
+      call prompt(percent,l,
+     *  '>Enter contours as % (Y), Absolute, [use previous levels]: ')
+      if (l.eq.0) return
+      call ucase(percent)
+      call prompt(ans,l,'Enter contour List or Range (L/[R]): ')
+      call ucase(ans)
+      if (ans.eq.'L') then
+        print 122
+122     format(/,'>Enter levels (max 10, end=-9999.0):')
+        do i = 1, 10
+          levels(i)=0.0
+        enddo
+
+        do i = 1, 10
+          write(line,127) i
+127       format('>Enter: level(',i2,')=')
+          call output(line)
+          read(5,*) levels(i)
+          if (levels(i).eq.-9999.0 .or. i.eq.10) then
+            nlevels=i-1
+            goto 129
+          endif
+        enddo
+      else
+        print 128
+128     format(/,'>Enter min,max,interval :')
+        read(5,*) cmin,cmax,cint
+        nlevels =1
+        levels(1)=cmin
+        do while (levels(nlevels).lt.cmax .and. nlevels.lt.10)
+          nlevels = nlevels + 1
+          levels(nlevels) = levels(nlevels-1) + cint
+        enddo
+      endif
+
+129   end
+
+c***********************************************************************
+
+      subroutine setGray
+
+c-----------------------------------------------------------------------
+c  Set grayscale levels
+c-----------------------------------------------------------------------
+      include 'clplot.h'
+      integer l
+c-----------------------------------------------------------------------
+c
+c Grayscale default to map min/max or
+c enter values for bg and fg
+c
+      call output(' ')
+      call prompt(defgray,l,
+     *  '>Use map min/max for graysacle (Y/[N]): ')
+      call ucase(defgray)
+      if (defgray.eq.'Y') return
+      call output(' pgplot grayscale shade is a number in the ')
+      call output(' range 0 to 1 obtained by linear interpolation')
+      call output(' between the background and foreground level,')
+      call output('e.g. shade=[A(i,j)-bg]/[fg-bg] ')
+      print 122
+122   format(/,'>Enter grayscale background (bg) level:')
+      read(5,*) bg
+      print 123
+123   format(/,'>Enter grayscale foreground (fg) level:')
+      read(5,*) fg
 
       end
 
@@ -3552,7 +3416,7 @@ c
       if (ngauss(1).gt.0) then
         line='>Enter filename for gaussian fits (<cr> to continue): '
         call prompt(outfile,length,line)
-        if (length.gt.0) call WrGauss(outfile,nc,vlsr,cmaj,cmin,cpa)
+        if (length.gt.0) call wrGauss(outfile,nc,vlsr,cmaj,cmin,cpa)
       endif
 
       end
@@ -3783,10 +3647,10 @@ c     Introduction.
       endif
 
 c     Get map type to be plotted.
-      call GetMom(nmom)
+      call getMom(nmom)
 
 c     List maps available and current selection of maps.
-      call ListMaps(imaps,vmin,vmax,vlsr,nc)
+      call listMaps(imaps,vmin,vmax,vlsr,nc)
 
 c     Get velocities to be plotted.
       call output(' ')
@@ -3797,9 +3661,9 @@ c     Get velocities to be plotted.
 
 c     Enter List of velocity intervals or enter Range of velocities.
       if (ans(1:1).ne.'R') then
-        call GetList(imaps,vmin,vmax,vlsr,nc)
+        call getList(imaps,vmin,vmax,vlsr,nc)
       else
-        call GetRange(imaps,vmin,vmax,vlsr,nc)
+        call getRange(imaps,vmin,vmax,vlsr,nc)
       endif
 
       if (imaps.eq.0) then
@@ -4260,6 +4124,142 @@ c
       write(line,'(i3,a,i3,a,a)') nspec,' spectra and ',ncut,
      *  ' position-velocity cuts written to ',file1(1:len1(file1))
       call output(line(1:len1(line)))
+
+      end
+
+c***********************************************************************
+
+      subroutine wrGauss(outfile,nc,vlsr,cmaj,cmin,cpa)
+
+c-----------------------------------------------------------------------
+c Inputs:
+c  outfile      filename for ascii fits
+c  nc           number of channels
+c  vlsr         velocity array
+c  ngauss       number of simultaneously fitted gaussians
+c  gauss        gaussian parameters
+c                gauss(i,1) amplitude of gaussian i
+c                gauss(i,2) center velocity of gaussian i
+c                gauss(i,3) sigma of gaussian i
+c-----------------------------------------------------------------------
+      include 'clplot.h'
+      common /spectrae/ xc,yc,nspec,ngauss,gauss,gausserr
+      real xc(49),yc(49),gauss(49,3,10),gausserr(49,3,10)
+      integer nc,nspec
+      integer ngauss(49)
+      real vlsr(nc)
+      real tmod(256,12)
+      real vlsr2(1280),tmod2(1280,12),dv
+      real arg1,term
+      character*10    ichar10
+      integer         len10,len10a,i10
+      character*40 outfile
+      integer lu,iostat
+      real cmaj,cmin,cpa
+      integer i,j,k,length,ns
+      character text*110
+c-----------------------------------------------------------------------
+c
+c loop through spectra to form gaussian models, max 12
+c
+      ns = min(nspec,12)
+      do k = 1, ns
+c
+c loop through channels
+c
+        do i = 1, nc
+          tmod(i,k) = 0.0
+          do j = 1, ngauss(k)
+            arg1=(vlsr(i)-gauss(k,2,j))/gauss(k,3,j)
+            if (abs(arg1).gt.4.0) then
+              term=0.0
+            else
+              term=gauss(k,1,j)*exp(-arg1*arg1)
+            endif
+            tmod(i,k) = tmod(i,k) + term
+          enddo
+        enddo
+c
+c form new gaussian model spectrum with factor of 5 oversampling
+c
+        dv=(vlsr(2)-vlsr(1))/5.0
+        do i = 1, nc*5
+          vlsr2(i)=vlsr(1)+(float(i)*dv)
+          tmod2(i,k) = 0.0
+          do j = 1, ngauss(k)
+            arg1=(vlsr2(i)-gauss(k,2,j))/gauss(k,3,j)
+            if (abs(arg1).gt.4.0) then
+              term=0.0
+            else
+              term=gauss(k,1,j)*exp(-arg1*arg1)
+            endif
+            tmod2(i,k) = tmod2(i,k) + term
+          enddo
+        enddo
+c
+c end of loop through spectra
+c
+      enddo
+c
+c  Write out gaussian fits to ASCII file.
+c
+      if (nspec.gt.12) then
+        call output('only first 12 fits written to '//outfile)
+      endif
+      call TxtOpen(lu,outfile,'new',iostat)
+      if (iostat.eq.0) write(text,'(a,a,4x,f11.6,a)')
+     *  'Gau fit for ',object,restfreq,' GHz'
+      length=12 + len(object) + 15 + 4
+      call TxtWrite(lu,text,length,iostat)
+      if (iostat.eq.0) write(text,'(a,2f12.3,a,f6.1,a)')
+     *'Convolving beam: ',cmaj,cmin,' arcsecs, pa: ',cpa,' degrees'
+      length = 17 + 12 + 12 + 14 + 6 + 8
+      call TxtWrite(lu,text,length,iostat)
+      if (iostat.eq.0) write(text,'(a)') 'Positions (x,y) arcsecs'
+      call TxtWrite(lu,text,23,iostat)
+      k=0
+      do while (iostat.eq.0 .and. k.lt.ns)
+        write(text,'(4(a,2f7.2,a))')
+     *    ('(',xc(i+k),yc(i+k),') ',i=1,min(4,ns-k))
+        length = min(4,ns-k)*(1+2*7+2)
+        call TxtWrite(lu,text,length,iostat)
+        k=k+4
+      enddo
+      do while (length.gt.0 .and. iostat.eq.0)
+        call prompt(text,length,'Enter comment: ')
+        call TxtWrite(lu,text,length,iostat)
+      enddo
+      k=1
+#ifdef vms
+      do while (iostat.eq.0 .and. k.le.nc)
+        write(text,110) vlsr2(k),(tmod2(k,i),i=1,ns)
+        call TxtWrite(lu,text,10+10*ns,iostat)
+        k=k+1
+      enddo
+110   format(x,f9.3,<ns>(1x,f9.3))
+#else
+c
+c  This eliminate the need to use <ns> format, which works for f77 -g
+c  but not without, and not on cray.
+c
+c  Note that fits are written with 5x velocity oversampling
+c
+      do while ((iostat.eq.0) .and. (k.le.(5*nc)))
+        write(ichar10,'(1x,f9.3)') vlsr2(k)
+        text(1:10) = ichar10(1:10)
+        len10  = 11
+        len10a = 20
+        do i10 = 1, ns
+          write(ichar10,'(1x,f9.3)') tmod2(k,i10)
+          text(len10:len10a) = ichar10(1:10)
+          len10  = len10 + 10
+          len10a = len10 + 9
+        enddo
+        call TxtWrite(lu,text,10+10*ns,iostat)
+        k=k+1
+      enddo
+#endif
+      call TxtClose(lu)
 
       end
 
