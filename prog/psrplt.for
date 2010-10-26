@@ -35,6 +35,9 @@ c       Whereas the y-axis can be
 c         flux       Plot the flux value.  This is the default.
 c         frequency  Produce a bin vs frequency greyscale display.
 c         channel    Produce a bin vs channel greyscale display.
+c@ range
+c       The minimum and maximum range used for display. Defaults
+c       to the range of values in the data.
 c@ mode
 c       This determines what "flux" quantity is plotted.  Possible
 c       values are:
@@ -55,7 +58,7 @@ c@ log
 c       File in which to write the data, if y-axis is amplitude.
 c       The default is no logfile.
 c
-c$Id: psrplt.for,v 1.4 2010/04/30 08:23:28 cal103 Exp $
+c$Id: psrplt.for,v 1.5 2010/10/26 03:07:44 wie017 Exp $
 c--
 c  History:
 c    rjs  03jun96 Original version.
@@ -64,23 +67,24 @@ c    bmg  26nov97 Added log keyword
 c    rjs  29feb00 mode keyword to allow plots of real/imag/amp.
 c    rjs  08may00 Change incorrect call of keyf to keya.
 c    rjs  03may01 Added mode=phase.
+c    mhw  26oct10 Fix indexing calculations for acc array, add range kw
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mirconst.h'
-      integer MAXBIN, MAXPOL, POLMIN, POLMAX
-      parameter (MAXBIN=32, MAXPOL=4, POLMIN=-9, POLMAX=4)
+      integer MAXCHAN1, MAXBIN, MAXPOL, POLMIN, POLMAX
+      parameter (MAXCHAN1=2049,MAXBIN=32, MAXPOL=4, POLMIN=-9, POLMAX=4)
 
       integer NXAXES, NYAXES, NFLUX
       parameter (NXAXES=1, NYAXES=3, NFLUX=4)
 
       logical docal, dochan, dogrey, dolog, dopass, dopol, doshift,
-     :        flags(MAXCHAN)
+     :        flags(MAXCHAN1)
       integer i, ibin, ijk, ipol, j, k, llog, mpol, nbad, nbin, nchan,
      :        ngood, nout, npol, nread, polIndx(POLMIN:POLMAX),
-     :        pols(MAXPOL), tno
-      real    sig2,w,wt(MAXCHAN,MAXBIN,MAXPOL)
-      complex acc(MAXCHAN*MAXBIN*MAXPOL), data(MAXCHAN)
-      double precision offset(2), preamble(4), sfreq(MAXCHAN), shift(2)
+     :        pols(MAXPOL), tno,mbin
+      real    sig2,w,wt(MAXCHAN1,MAXBIN,MAXPOL),range(2)
+      complex acc(MAXCHAN1*MAXBIN*MAXPOL), data(MAXCHAN1)
+      double precision offset(2), preamble(4), sfreq(MAXCHAN1), shift(2)
       character device*80, flux*9, fluxes(NFLUX)*9, logfile*80,
      :        uvflags*16, version*80, xaxes(NXAXES)*9, xaxis*9,
      :        yaxes(NYAXES)*9, yaxis*9
@@ -95,8 +99,8 @@ c     Externals.
       data fluxes/'real     ','imaginary','amplitude','phase    '/
 c-----------------------------------------------------------------------
       version = versan('psrplt',
-     :                 '$Revision: 1.4 $',
-     :                 '$Date: 2010/04/30 08:23:28 $')
+     :                 '$Revision: 1.5 $',
+     :                 '$Date: 2010/10/26 03:07:44 $')
 
 c     Get parameters.
       call output(version)
@@ -111,6 +115,8 @@ c     Get parameters.
       if(nout.eq.0)yaxis = yaxes(1)
       dogrey = yaxis.ne.'flux'
       dochan = yaxis.eq.'channel'
+      call keyr('range',range(1),0.d0)
+      call keyr('range',range(2),0.d0)
       dolog = (keyprsnt('log').and.(.not.dogrey))
       if(dolog) call keya('log',logfile,' ')
 c
@@ -159,7 +165,7 @@ c
       ijk = 1
       do k=1,mpol
         do j=1,MAXBIN
-          do i=1,MAXCHAN
+          do i=1,MAXCHAN1
             acc(ijk) = 0
             wt (i,j,k) = 0
             ijk = ijk + 1
@@ -177,7 +183,7 @@ c
 c  Loop the loop until we have no more files.
 c
       dowhile(uvDatOpn(tno))
-        call uvDatRd(preamble,data,flags,MAXCHAN,nchan)
+        call uvDatRd(preamble,data,flags,MAXCHAN1,nchan)
         if(nchan.eq.1.and.dogrey)
      *          call bug('f','Only one channel to plot against')
         if(nchan.eq.0)call bug('f','No data present')
@@ -216,12 +222,13 @@ c
 c
 c  Copy the data to the averaging buffer.
 c
+          mbin=0
           call uvDatGtr('variance',sig2)
           if(sig2.eq.0)call bug('f','Noise variance is zero!')
           w = 1/sig2
           do i=1,nchan
             if (flags(i)) then
-              ijk = ((ipol-1)*MAXPOL + (ibin-1))*MAXBIN + i
+              ijk = ((ipol-1)*MAXBIN + (ibin-1))*MAXCHAN1 + i
               if(flux.eq.'amplitude')then
                 acc(ijk) = acc(ijk) + w*abs(data(i))
               else
@@ -229,6 +236,7 @@ c
               endif
               wt (i,ibin,ipol) = wt (i,ibin,ipol) + w
               ngood = ngood + 1
+              mbin=max(mbin,ibin)
             else
               nbad = nbad + 1
             endif
@@ -236,7 +244,7 @@ c
 c
 c  Loop the loop.
 c
-          call uvDatRd(preamble,data,flags,MAXCHAN,nread)
+          call uvDatRd(preamble,data,flags,MAXCHAN1,nread)
         enddo
         if(nread.gt.0)call bug('f',
      *          'Number of channels changed while reading data')
@@ -248,10 +256,10 @@ c
       if(ngood.eq.0)call bug('f','No correlations to plot')
 
       if(dogrey)then
-        call FrPlot(sfreq,acc,wt,MAXCHAN,nchan,nbin,pols(1),
-     *                                  flux,dochan)
+        call FrPlot(sfreq,acc,wt,MAXCHAN1,nchan,nbin,pols(1),
+     *                                  flux,dochan,range)
       else
-        call PrPlot(acc,wt,MAXCHAN,MAXBIN,nchan,npol,nbin,
+        call PrPlot(acc,wt,MAXCHAN1,MAXBIN,nchan,npol,nbin,
      *                   pols,flux,llog,dolog,logfile)
         continue
       endif
@@ -259,14 +267,15 @@ c
       call pgend
       end
 c***********************************************************************
-      subroutine FrPlot(sfreq,acc,wt,mchan,nchan,nbin,pol,flux,dochan)
+      subroutine FrPlot(sfreq,acc,wt,mchan,nchan,nbin,pol,flux,dochan,
+     *                  range)
 
       integer mchan,nchan,nbin,pol
       logical dochan
       character flux*(*)
       double precision sfreq(nchan)
       complex acc(mchan,nbin)
-      real wt(mchan,nbin)
+      real wt(mchan,nbin),range(2)
 c
 c  Make a bin vs frequency plot.
 c
@@ -276,7 +285,7 @@ c-----------------------------------------------------------------------
       integer l
       integer pImage
       real zmin,zmax,tr(6),ymin,ymax,delta
-      character title*64
+      character title*64,line*80
 
 c     Externals.
       integer len1
@@ -302,11 +311,17 @@ c
       tr(4) = ymin - delta
       tr(5) = 0
       tr(6) = delta
+      write(line,'(''Data range ='',f8.3,'','',f8.3)') zmin,zmax
+      call output(line)
+      if (range(1).eq.range(2)) then
+        range(1)=zmin
+        range(2)=zmax
+      endif
       call pgpage
       call pgvstd
       call pgswin(0.5,nbin+0.5,ymin-0.5*delta,ymax+0.5*delta)
       call pgimag(memr(pImage),nbin,nchan,1,nbin,1,nchan,
-     *                          zmin,zmax,tr)
+     *            range(1),range(2),tr)
       call pgbox('BCNST',0.,0,'BCNST',0.,0)
       if(flux.eq.'imaginary')then
         title = 'Imaginary Part: Stokes = '//polsc2p(pol)
@@ -345,7 +360,7 @@ c
 c  Determine the min and max value.
 c
       first = .true.
-      do j=1,nbin
+      do j=nbin,1,-1
         do i=1,nchan
           if(Wt(i,j).gt.0)then
             if(flux.eq.'imaginary')then
