@@ -23,7 +23,7 @@ c         relax  This instructs IMCAT to ignore axis descriptor
 c                mismatches (e.g. pixel increments etc).  Use this with
 c                care.
 c
-c$Id: imcat.for,v 1.3 2010/09/21 07:56:26 cal103 Exp $
+c$Id: imcat.for,v 1.4 2010/11/02 05:13:00 cal103 Exp $
 c--
 c
 c  History:
@@ -58,10 +58,11 @@ c-----------------------------------------------------------------------
       parameter (MAXMAP=300)
 
       logical   domask, first, ok, relax, warned, warned1
-      integer   axis, i, lin, lout, map, naxis, nmap, nsize(MAXNAX),
-     *          Outplane, plane, size(MAXNAX)
-      real      cdelt(MAXNAX), cdelt1, crpix(MAXNAX), crpix1,
-     *          crval(MAXNAX), crval1, dmax, dmin
+      integer   axis, axLen(MAXNAX), axLen1(MAXNAX), i, lIn, lOut, map,
+     *          naxis1, nmap, outPlane, plane
+      real      dmax, dmin
+      double precision cdelt, cdelt1(MAXNAX), crpix, crpix1(MAXNAX),
+     *          crval, crval1(MAXNAX), x, x1
       character caxis*1, in(MAXMAP)*80, out*80, version*72, wflag*1
 
       logical   hdprsnt
@@ -69,8 +70,8 @@ c-----------------------------------------------------------------------
       external  hdprsnt, itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('imcat',
-     *                 '$Revision: 1.3 $',
-     *                 '$Date: 2010/09/21 07:56:26 $')
+     *                 '$Revision: 1.4 $',
+     *                 '$Date: 2010/11/02 05:13:00 $')
 
 c     Get the input parameters.
       call keyini
@@ -82,83 +83,97 @@ c     Get the input parameters.
       call keyi('axis',axis,3)
       if (axis.lt.2 .or. axis.gt.MAXNAX)
      *  call bug('f','Invalid value for axis keyword')
-      call decopt (relax)
+      call decopt(relax)
       call keyfin
 
 c     Warn about relax option.
       wflag = 'f'
       if (relax) then
         wflag = 'w'
-        call bug ('i', 'Axis descriptor mismatches will be tolerated')
+        call bug('i', 'Axis descriptor mismatches will be tolerated')
       endif
 
 c     Open the input maps and check sizes, crpix and cdelt.
-      call xyopen(lin,in(1),'old',axis,size)
-      call rdhdi(lin,'naxis',naxis,axis)
-      naxis = max(min(naxis,MAXNAX),axis)
-      if (size(1).gt.MAXDIM) call bug('f','Image too big for me')
-      do i = axis+1, naxis
-        size(i) = 1
+      call xyopen(lIn,in(1),'old',axis,axLen1)
+      call rdhdi(lIn,'naxis',naxis1,axis)
+      naxis1 = max(min(naxis1,MAXNAX),axis)
+      if (axLen1(1).gt.MAXDIM) call bug('f','Image too big for me')
+      do i = axis+1, naxis1
+        axLen1(i) = 1
       enddo
-      domask = hdprsnt(lin,'mask')
+      domask = hdprsnt(lIn,'mask')
 
-      do i = 1, naxis
+      do i = 1, naxis1
         caxis = itoaf(i)
-        call rdhdr(lin,'cdelt'//caxis,cdelt(i),1.0)
-        call rdhdr(lin,'crpix'//caxis,crpix(i),0.0)
-        call rdhdr(lin,'crval'//caxis,crval(i),0.0)
+        call rdhdd(lIn, 'crpix'//caxis, crpix1(i), 0d0)
+        call rdhdd(lIn, 'cdelt'//caxis, cdelt1(i), 1d0)
+        call rdhdd(lIn, 'crval'//caxis, crval1(i), 0d0)
       enddo
+
+      call xyclose(lIn)
+      x1 = crval1(axis) + (axLen1(axis)+1-crpix1(axis))*cdelt1(axis)
 
       warned  = .false.
       warned1 = .false.
       do map = 2, nmap
-        call xyopen(lin,in(map),'old',axis,nsize)
-        if (nsize(1).gt.MAXDIM) call bug('f','Image too big for me')
-        do i = axis+1, naxis
-          nsize(i) = 1
+        call xyopen(lIn,in(map),'old',axis,axLen)
+        if (axLen(1).gt.MAXDIM) call bug('f','Image too big for me')
+        do i = axis+1, naxis1
+          axLen(i) = 1
         enddo
-        domask = domask .or. hdprsnt(lin,'mask')
+        domask = domask .or. hdprsnt(lIn,'mask')
 
-        do i = 1, naxis
+        do i = 1, naxis1
           caxis = itoaf(i)
-          call rdhdr(lin,'cdelt'//caxis,cdelt1,1.0)
-          call descmp (cdelt1, cdelt(i), ok)
-          if (.not.ok .and. .not.warned) call bug(wflag,
+          call rdhdd(lIn, 'cdelt'//caxis, cdelt, 1d0)
+          call descmp(cdelt, cdelt1(i), ok)
+          if (.not.ok) then
+            if (.not.warned) call bug(wflag,
      *        'cdelt values differ on axis '//caxis)
-          warned1 = warned1 .or. .not.ok
+            warned1 = .true.
+          endif
 
-          call rdhdr(lin,'crpix'//caxis,crpix1,0.0)
-          call rdhdr(lin,'crval'//caxis,crval1,0.0)
+          call rdhdd(lIn, 'crpix'//caxis, crpix, 0d0)
+          call rdhdd(lIn, 'crval'//caxis, crval, 0d0)
           if (i.ne.axis) then
-            call descmp (crval1, crval(i), ok)
-            if (.not.ok .and. .not.warned) call bug(wflag,
-     *        'crval values differ on axis '//caxis)
-            warned1 = warned1 .or. .not.ok
-            call descmp (crpix1, crpix(i), ok)
-            if (.not.ok .and. .not.warned) call bug(wflag,
-     *        'crpix values differ on axis '//caxis)
-            warned1 = warned1 .or. .not.ok
-            if (nsize(i).ne.size(i)) call bug('f',
+            if (axLen(i).ne.axLen1(i)) call bug('f',
      *        'The images do not have compatible dimensions')
+
+            call descmp(crval, crval1(i), ok)
+            if (.not.ok) then
+              if (.not.warned) call bug(wflag,
+     *          'crval values differ on axis '//caxis)
+              warned1 = .true.
+            endif
+
+            call descmp(crpix, crpix1(i), ok)
+            if (.not.ok) then
+              if (.not.warned) call bug(wflag,
+     *          'crpix values differ on axis '//caxis)
+              warned1 = .true.
+            endif
           else
-            ok = abs((crval1+(1-crpix1)*cdelt1)-
-     *        (crval(i)+(1-crpix(i))*cdelt(i) + size(i)*cdelt(i)))
-     *      .le.0.01*abs(cdelt1)
-            if (.not.ok .and. .not.warned) call bug(wflag,
-     *        'Images are not contiguous on axis '//caxis)
-            warned1 = warned1 .or. .not.ok
+c           For celestial axes this test is only approximate, in normal
+c           circumstances cdelt and crval should not differ.
+            x  = crval + (1-crpix)*cdelt
+            ok = abs(x-x1).le.0.01*abs(cdelt)
+            if (.not.ok) then
+              if (.not.warned) call bug(wflag,
+     *          'Images are not contiguous on axis '//caxis)
+              warned1 = .true.
+            endif
           endif
         enddo
 
         warned = warned .or. warned1
-        call xyclose(lin)
-        size(axis) = size(axis) + nsize(axis)
+        call xyclose(lIn)
+        axLen1(axis) = axLen1(axis) + axLen(axis)
       enddo
 
 c     Open the output and make its header from the first input image.
-      call xyopen(lin,In(1),'old',axis,nsize)
-      call xyopen(lOut,Out,'new',naxis,size)
-      call headcopy(lin, lOut, 0, 0, 0, 0)
+      call xyopen(lIn,In(1),'old',axis,axLen)
+      call xyopen(lOut,Out,'new',naxis1,axLen1)
+      call headcopy(lIn, lOut, 0, 0, 0, 0)
 
 c     Update history.
       call hisopen (lOut, 'append')
@@ -169,40 +184,40 @@ c     Update history.
 c     Copy the maps into the output, plane by plane, row by row.
 c     Find new max/min.
       first = .true.
-      Outplane = 0
+      outPlane = 0
       do map = 1, nmap
-        if (map.gt.1) call xyopen(lin,in(map),'old',axis,nsize)
+        if (map.gt.1) call xyopen(lIn,in(map),'old',axis,axLen)
 
-        do plane = 1, nsize(axis)
-          Outplane = Outplane + 1
-          call DatCpy(lin,plane,lout,Outplane,nsize,axis,domask,
+        do plane = 1, axLen(axis)
+          outPlane = outPlane + 1
+          call DatCpy(lIn,plane,lOut,outPlane,axLen,axis,domask,
      *                dmin,dmax,first)
         enddo
-        call xyclose(lin)
+        call xyclose(lIn)
       enddo
 
 c     Update header info and close output file.
-      call wrhdr(lout,'datamin',dmin)
-      call wrhdr(lout,'datamax',dmax)
+      call wrhdr(lOut,'datamin',dmin)
+      call wrhdr(lOut,'datamax',dmax)
       call xyclose(lOut)
 
       end
 
 c***********************************************************************
 
-      subroutine DatCpy(lin,Inplane,lout,Outplane,size,axis,domask,
+      subroutine DatCpy(lIn,inPlane,lOut,outPlane,axLen,axis,domask,
      *                                        dmin,dmax,first)
 
-      integer axis,Inplane,Outplane,size(axis-1),lin,lout
+      integer axis,inPlane,outPlane,axLen(axis-1),lIn,lOut
       logical first,domask
       real dmin,dmax
 c-----------------------------------------------------------------------
 c  Input:
 c    axis
 c    domask
-c    Inplane
-c    Outplane
-c    size
+c    inPlane
+c    outPlane
+c    axLen
 c  Input/Output:
 c    first      True if this is the very first call.
 c    dmin,dmax  Min and max data value.
@@ -218,18 +233,18 @@ c-----------------------------------------------------------------------
         inp(i) = 1
         outp(i) = 1
       enddo
-      inp(axis)  = Inplane
-      outp(axis) = Outplane
+      inp(axis)  = inPlane
+      outp(axis) = outPlane
 
       if (axis.ge.3) then
         done = .false.
         do while (.not.done)
-          call xysetpl(lin,axis-2, Inp(3))
+          call xysetpl(lIn,axis-2, Inp(3))
           call xysetpl(lOut,axis-2,Outp(3))
-          do row = 1, size(2)
-            call xyread(lin,row,Data)
-            if (domask) call xyflgrd(lin,row,mask)
-            do i = 1, size(1)
+          do row = 1, axLen(2)
+            call xyread(lIn,row,Data)
+            if (domask) call xyflgrd(lIn,row,mask)
+            do i = 1, axLen(1)
               if (first) then
                 dmin=data(i)
                 dmax=data(i)
@@ -239,20 +254,20 @@ c-----------------------------------------------------------------------
                 dmax=max(dmax,data(i))
               endif
             enddo
-            call xywrite(lout,row,Data)
-            if (domask) call xyflgwr(lout,row,mask)
+            call xywrite(lOut,row,Data)
+            if (domask) call xyflgwr(lOut,row,mask)
           enddo
           if (axis.gt.3) then
-            call planeinc(axis-3,size(3),inp(3),done)
-            call planeinc(axis-3,size(3),outp(3),done)
+            call planeinc(axis-3,axLen(3),inp(3),done)
+            call planeinc(axis-3,axLen(3),outp(3),done)
           else
             done = .true.
           endif
         enddo
       else
-        call xyread(lin,1,Data)
-        if (domask) call xyflgrd(lin,1,mask)
-        do i = 1, size(1)
+        call xyread(lIn,1,Data)
+        if (domask) call xyflgrd(lIn,1,mask)
+        do i = 1, axLen(1)
           if (first) then
             dmin=data(i)
             dmax=data(i)
@@ -262,25 +277,25 @@ c-----------------------------------------------------------------------
             dmax=max(dmax,data(i))
           endif
         enddo
-        call xywrite(lout,Outp(2),Data)
-        if (domask) call xyflgwr(lout,Outp(2),mask)
+        call xywrite(lOut,Outp(2),Data)
+        if (domask) call xyflgwr(lOut,Outp(2),mask)
       endif
 
       end
 
 c***********************************************************************
 
-      subroutine planeinc(n,size,plane,done)
+      subroutine planeinc(n,axLen,plane,done)
 
       logical done
-      integer n,size(n),plane(n)
+      integer n,axLen(n),plane(n)
 c-----------------------------------------------------------------------
       integer k
 c-----------------------------------------------------------------------
       done = .true.
       k = 1
       do while (done .and. k.le.n)
-        done = plane(k).ge.size(k)
+        done = plane(k).ge.axLen(k)
         if (done) then
           plane(k) = 1
         else
@@ -310,7 +325,7 @@ c-----------------------------------------------------------------------
       logical present(maxopt)
       data opshuns /'relax'/
 c-----------------------------------------------------------------------
-      call options ('options', opshuns, present, maxopt)
+      call options('options', opshuns, present, maxopt)
 
       relax = present(1)
 
@@ -320,7 +335,7 @@ c***********************************************************************
 
       subroutine descmp (r1, r2, ok)
 
-      real r1, r2
+      double precision r1, r2
       logical ok
 c-----------------------------------------------------------------------
 c  Check axis descriptors agree allowing for roundoff.
@@ -328,9 +343,9 @@ c
 c  Output
 c     ok     True if axis descriptors agree.
 c-----------------------------------------------------------------------
-      real dmax
+      double precision dmax
 c-----------------------------------------------------------------------
       dmax = max(abs(r1),abs(r2))
-      ok = .not.(abs(r1-r2).gt.dmax*1e-6 .or. r1*r2.lt.0d0)
+      ok = .not.(abs(r1-r2).gt.dmax*1d-6 .or. r1*r2.lt.0d0)
 
       end
