@@ -32,43 +32,11 @@ c    subroutine coWrite(lu,tno)
 c    subroutine coFin(lu)
 c
 c  History:
-c    rjs   9aug94 Original version.
-c    rjs  13sep94 Support 'VELOCITY' and 'FELOCITY' axes.
-c    rjs  12oct94 Added a good many things ... for mosaicing.
-c    rjs  23nov94 A dummy statement to stop the alpha compiler
-c                 complaining.
-c    rjs  30jan95 Added cogeom.
-c    rjs  26sep95 More tolerant of screwy headers.
-c    rjs  22oct95 Comment out warning about assuming its a linear
-c                 coordinate system.
-c    nebk 20nov95 Terrible error.  Initialize docelest to false in
-c                 cocvt.f.
-c    rjs  15oct96 Change call sequence to cogeom.
-c    rjs  16oct96 Correct cartesian conversions near RA=0.
-c    rjs  02jul97 Support "cellscal" keyword.
-c    rjs  07jul97 Treat "epoch" and "obstime" as part of the coordinate
-c                 specification. Add coGetD. Improve coVelSet. Support
-c                 gls projection.
-c    rjs  14jul97 Fix bug in covelset introduced on above date.
-c    rjs  21jul97 More robust to bad freq values. Added coSetA.
-c    rjs  16oct97 Minor correction to the felo axis definition.
-c    rjs  10nov97 Make a linear axis if there are no header values.
-c    rjs  20nov98 Partial handling of sky rotation.
-c    rjs  15dec98 More complete handling of sky rotation.
-c    rjs   8jan98 Fix errors in cogaucvt when angle is non-zero and
-c                 pixel increments differ.
-c    rjs   8sep99 More robust algorithm in coMixed.
-c    rjs  10may00 Comment out some code to hopefully get a better wrap
-c                 algorithm.
-c    dpr  16feb01 Bump up MAXITERS to 1000 in coMixed to handle Erik
-c                 Muller data. Not a good solution.
-c    rjs  31may06 Develop coCvtv (validate coordinate), and check for
-c                 invalid coordinate conversions.
-c    rjs  15jul10 Correct recent bug introduced in coVelSet.  Correct
-c                 order of "save" statement in coloc.
+c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: co.for,v 1.10 2010/09/23 02:39:55 cal103 Exp $
+c $Id: co.for,v 1.11 2010/11/03 01:47:53 cal103 Exp $
 c***********************************************************************
+
 c* coInit -- Initialise coordinate conversion routines.
 c& rjs
 c: coordinates
@@ -76,7 +44,7 @@ c+
       subroutine coInit(lu)
 
       integer lu
-
+c  ---------------------------------------------------------------------
 c  Initialise the coordinate conversion system.
 c
 c  The coordinate conversion routines supports simultaneously a number
@@ -91,7 +59,6 @@ c    lu         The handle of the Miriad data-set. This can be either an
 c               image or visibility data-set. For a visibility data-set,
 c               the coordinate system simply consists of RA and DEC
 c               axes, centered on the observing centre.
-c--
 c-----------------------------------------------------------------------
       include 'co.h'
 
@@ -120,7 +87,9 @@ c     Finish initialising this coordinate object.
       call coReinit(lu)
 
       end
+
 c***********************************************************************
+
 c* coDup -- Duplicate a coodinate object.
 c& rjs
 c: coordinates
@@ -128,14 +97,13 @@ c+
       subroutine coDup(lin,lout)
 
       integer   lin, lout
-
+c  ---------------------------------------------------------------------
 c  Duplicate a coordinate object.
 c
 c  Input:
 c    lin        Handle of the coordinate object to be duplicated.
 c  Output:
 c    lout       Duplicated coordinate object.
-c--
 c-----------------------------------------------------------------------
       include 'co.h'
 
@@ -167,7 +135,9 @@ c-----------------------------------------------------------------------
       call coReinit(lout)
 
       end
+
 c***********************************************************************
+
 c* coRaDec -- Create a simple RA/DEC coordinate system.
 c& rjs
 c: coordinates
@@ -177,7 +147,7 @@ c+
       integer lu
       character proj*(*)
       double precision ra0,dec0
-
+c  ---------------------------------------------------------------------
 c  Create a simple RA/DEC coordinate system.
 c
 c  Input:
@@ -185,7 +155,6 @@ c    proj       Projection code: NCP, SIN, etc.
 c    ra0,dec0   RA,DEC of the reference point.
 c  Output:
 c    lu         Handle of the output coordinate object.
-c--
 c-----------------------------------------------------------------------
       character ctypei*8
 c-----------------------------------------------------------------------
@@ -204,7 +173,9 @@ c-----------------------------------------------------------------------
       call coReinit(lu)
 
       end
+
 c***********************************************************************
+
 c* coCreate -- Begin intialisation of a coordinate object.
 c& rjs
 c: coordinates
@@ -212,12 +183,11 @@ c+
       subroutine coCreate(lu)
 
       integer lu
-
+c  ---------------------------------------------------------------------
 c  Begin building up a coordinate object from scratch.
 c
 c  Output:
 c    lu         Handle of the coordinate object.
-c--
 c-----------------------------------------------------------------------
       include 'co.h'
 
@@ -240,7 +210,9 @@ c-----------------------------------------------------------------------
       frqscl(icrd)  = .true.
 
       end
+
 c***********************************************************************
+
 c* coAxSet -- Set the characteristics of a particular axis.
 c& rjs
 c: coordinates
@@ -250,14 +222,13 @@ c+
       integer lu, iax
       character ctypei*(*)
       double precision crpixi,crvali,cdelti
-
+c  ---------------------------------------------------------------------
 c  Set the coordinates of an axis to something.
 c
 c  Input:
 c    lu         Handle of the coordinate object.
 c    iax        Axis number.
 c    ctypei,... FITS-style ctype,crpix,crval,cdelt
-c--
 c-----------------------------------------------------------------------
       include 'co.h'
 
@@ -286,8 +257,10 @@ c-----------------------------------------------------------------------
       cdelt(iax,icrd) = cdelti
 
       end
+
 c***********************************************************************
-c* coSetD -- Set the value in the guts of the coordinate routines.
+
+c* coSetD -- Set a value in the guts of the coordinate routines.
 c& rjs
 c: coordinates
 c+
@@ -296,14 +269,13 @@ c+
       integer lu
       character object*(*)
       double precision value
-
-c  Set a value in the guts of the coordinate routines!
+c  ---------------------------------------------------------------------
+c  Set a value in the guts of the coordinate routines.
 c
 c  Input:
 c    lu         Handle of the coordinate object.
 c    object     Name of the thing to set.
 c    value      Value to use.
-c--
 c-----------------------------------------------------------------------
       include 'co.h'
 
@@ -342,8 +314,10 @@ c-----------------------------------------------------------------------
       endif
 
       end
+
 c***********************************************************************
-c* coSetA -- Set the value in the guts of the coordinate routines.
+
+c* coSetA -- Set a value in the guts of the coordinate routines.
 c& rjs
 c: coordinates
 c+
@@ -351,14 +325,13 @@ c+
 
       integer lu
       character object*(*),value*(*)
-
-c  Set a value in the guts of the coordinate routines!
+c  ---------------------------------------------------------------------
+c  Set a value in the guts of the coordinate routines.
 c
 c  Input:
 c    lu         Handle of the coordinate object.
 c    object     Name of the thing to set.
 c    value      Value to use.
-c--
 c-----------------------------------------------------------------------
       include 'co.h'
 
@@ -390,8 +363,10 @@ c-----------------------------------------------------------------------
       endif
 
       end
+
 c***********************************************************************
-c* coGetD -- Get the value from the guts of the coordinate routines.
+
+c* coGetD -- Get a value from the guts of the coordinate routines.
 c& rjs
 c: coordinates
 c+
@@ -400,15 +375,14 @@ c+
       integer lu
       character object*(*)
       double precision value
-
-c  Get a value from the guts of the coordinate routines!
+c  ---------------------------------------------------------------------
+c  Get a value from the guts of the coordinate routines.
 c
 c  Input:
 c    lu         Handle of the coordinate object.
 c    object     Name of the thing to set.
 c  Output:
 c    value      Value to use.
-c--
 c-----------------------------------------------------------------------
       include 'co.h'
 
@@ -452,8 +426,10 @@ c-----------------------------------------------------------------------
       endif
 
       end
+
 c***********************************************************************
-c* coGetA -- Get the value from the guts of the coordinate routines.
+
+c* coGetA -- Get a value from the guts of the coordinate routines.
 c& rjs
 c: coordinates
 c+
@@ -461,15 +437,14 @@ c+
 
       integer lu
       character object*(*),value*(*)
-
-c  Get a value from the guts of the coordinate routines!
+c  ---------------------------------------------------------------------
+c  Get a value from the guts of the coordinate routines.
 c
 c  Input:
 c    lu         Handle of the coordinate object.
 c    object     Name of the thing to set.
 c  Output:
 c    value      Value to use.
-c--
 c-----------------------------------------------------------------------
       include 'co.h'
 
@@ -501,6 +476,7 @@ c-----------------------------------------------------------------------
       end
 
 c***********************************************************************
+
 c* coAltPrj -- Translate a non-standard CAR projection.
 c& mrc
 c: coordinates
@@ -509,7 +485,7 @@ c+
       include 'mirconst.h'
 
       integer lu
-
+c  ---------------------------------------------------------------------
 c  Translate the oft-used, non-standard implementation of the CAR
 c  projection.  This is essentially a simple linear axis pair except
 c  with an implicit cos(lat) rescaling on longitude.
@@ -526,7 +502,6 @@ c  SFL (except within WCSLIB).
 c
 c  Input:
 c    lu         Handle of the coordinate object.
-c--
 c-----------------------------------------------------------------------
       include 'co.h'
 
@@ -563,7 +538,9 @@ c           Shift the reference point.
       endif
 
       end
+
 c***********************************************************************
+
 c* coReinit -- Finish initialising a coordinate object.
 c& rjs
 c: coordinates
@@ -571,14 +548,13 @@ c+
       subroutine coReinit(lu)
 
       integer lu
-
+c  ---------------------------------------------------------------------
 c  Finish initialising a coordinate object.  Identifies the celestial
 c  axes, if any, checks for consistency and sets up the celprm struct
 c  for WCSLIB.
 c
 c  Input:
 c    lu         Handle of the coordinate object.
-c--
 c-----------------------------------------------------------------------
       include 'co.h'
       include 'mirconst.h'
@@ -713,11 +689,13 @@ c         Unpaired longitude or latitude axis.
       endif
 
       end
+
 c***********************************************************************
+
       subroutine coExt(ctype, type, pcode)
 
       character ctype*(*), type*(*), pcode*(*)
-
+c-----------------------------------------------------------------------
 c  Decompose CTYPE into the coordinate type and projection code.
 c-----------------------------------------------------------------------
       logical   docode
@@ -744,7 +722,9 @@ c-----------------------------------------------------------------------
       enddo
 
       end
+
 c***********************************************************************
+
 c* coFin -- Finish up after completing coordinate conversion.
 c& rjs
 c: coordinates
@@ -752,13 +732,11 @@ c+
       subroutine coFin(lu)
 
       integer lu
-
-c  This tidies up and deletes a coordinate system previously initialised
-c  with coInit.
+c  ---------------------------------------------------------------------
+c  Delete a coordinate system previously initialised with coInit.
 c
 c  Inputs:
 c    lu         Handle of the coordinate system.
-c--
 c-----------------------------------------------------------------------
       include 'co.h'
 
@@ -772,7 +750,9 @@ c-----------------------------------------------------------------------
       if (nalloc(icrd).eq.0) lus(icrd) = 0
 
       end
+
 c***********************************************************************
+
 c* coCvt -- Convert coordinates, die on error.
 c& mrc
 c: coordinates
@@ -782,21 +762,22 @@ c+
       integer lu
       character in*(*),out*(*)
       double precision x1(*),x2(*)
-
+c  ---------------------------------------------------------------------
 c  Call coCvtv and die immediately if the conversion is invalid.  This
 c  interface exists for backwards compatibility only.  It should not be
 c  used in new code.
-c--
 c-----------------------------------------------------------------------
       logical valid
 c-----------------------------------------------------------------------
-      call coCvtv (lu, in, x1, out, x2, valid)
+      call coCvtv(lu, in, x1, out, x2, valid)
       if (.not.valid) then
-        call bug ('f', 'Invalid coordinate conversion in coCvt')
-      end if
+        call bug('f', 'Invalid coordinate conversion in coCvt')
+      endif
 
       end
+
 c***********************************************************************
+
 c* coCvtv -- Convert coordinates - with validation.
 c& rjs
 c: coordinates
@@ -807,7 +788,7 @@ c+
       character in*(*),out*(*)
       double precision x1(*),x2(*)
       logical valid
-
+c  ---------------------------------------------------------------------
 c  Convert coordinates from one coordinate system to another.  Input and
 c  output coordinates can be either "pixel" or "world" coordinates, and
 c  either "absolute" or "offset".
@@ -857,7 +838,6 @@ c  Output:
 c    x2         Output coordinate elements of type specified by 'out'.
 c    valid      If true, all is OK, otherwise the coordinate conversion
 c               requested was invalid.
-c--
 c-----------------------------------------------------------------------
       include 'co.h'
 
@@ -959,7 +939,9 @@ c
       endif
 
       end
+
 c***********************************************************************
+
 c* coFreq -- Convert spectral coordinates to frequency.
 c& rjs
 c: coordinates
@@ -969,7 +951,7 @@ c+
       integer lu
       character in*(*)
       double precision x1(*),freq1
-
+c  ---------------------------------------------------------------------
 c  Get the frequency corresponding to a particular coordinate.
 c
 c  Input:
@@ -978,7 +960,6 @@ c    in         As with coCvt
 c    x1         As with coCvt
 c  Output:
 c    freq1      The frequency.
-c--
 c-----------------------------------------------------------------------
       include 'co.h'
       include 'mirconst.h'
@@ -1027,7 +1008,9 @@ c
       endif
 
       end
+
 c***********************************************************************
+
 c* coLMN -- Convert celestial coordinates to direction cosines.
 c& rjs
 c: coordinates
@@ -1037,7 +1020,7 @@ c+
       integer lu
       character in*(*)
       double precision x1(*), lmn(3)
-
+c  ---------------------------------------------------------------------
 c  Get the direction cosines corresponding to a particular coordinate.
 c
 c  Input:
@@ -1047,7 +1030,6 @@ c    x1         As with coCvt
 c  Output:
 c    lmn        The direction cosines (with respect to the reference
 c               position) of the celestial coordinate given by x1.
-c--
 c-----------------------------------------------------------------------
       include 'co.h'
 
@@ -1097,7 +1079,7 @@ c+
       integer   lu
       character in*(*)
       double precision x1(*), ucoeff(3), vcoeff(3), wcoeff(3)
-c-----------------------------------------------------------------------
+c  ---------------------------------------------------------------------
 c  Compute matrix elements for transforming (u,v,w) coordinates to the
 c  specified field centre, for mosaicing, etc.
 c
@@ -1182,7 +1164,9 @@ c     Compute the matrix elements.
       endif
 
       end
+
 c***********************************************************************
+
 c* coCvt1 -- Do coordinate conversion on one axis only.
 c& rjs
 c: coordinates
@@ -1192,9 +1176,8 @@ c+
       integer lu,iax
       double precision x1,x2
       character in*(*),out*(*)
-
-c  This converts a coordinate, for a particular axis, from one system to
-c  another.
+c  ---------------------------------------------------------------------
+c  Do coordinate conversion on one axis only.
 c
 c  Input:
 c    lu         Handle of the coordinate system.
@@ -1203,7 +1186,6 @@ c    in,out     These indicate the conversion to be performed.
 c    x1         Input coordinate.
 c  Output:
 c    x2         Output, converted, coordinate.
-c--
 c-----------------------------------------------------------------------
       include 'co.h'
 
@@ -1269,7 +1251,9 @@ c
      *  'An invalid coordinate conversion was requested in coCvt1')
 
       end
+
 c***********************************************************************
+
 c* coGauCvt -- Change gaussian parameters between world and pixel coords
 c& rjs
 c: coordinates
@@ -1281,10 +1265,10 @@ c+
       double precision x1(*)
       character in(*),ing*(*),outg*(*)
       real bmaj1,bmin1,bpa1,bmaj2,bmin2,bpa2
-
-c  This converts the parameters that describe a gaussian between pixel
-c  and world coordinate systems.  The gaussian lies in the image formed
-c  by the first two axes of the coordinate system.
+c  ---------------------------------------------------------------------
+c  Convert the parameters that describe a gaussian between pixel and
+c  world coordinate systems.  The gaussian lies in the image formed by
+c  the first two axes of the coordinate system.
 c
 c  Input:
 c    lu         Handle of the coordinate system.
@@ -1306,7 +1290,6 @@ c               first axis. bmaj and bmin will either be in world or
 c               pixel units. bpa will be in radians.
 c  Output:
 c    bmaj2,bmin2,bpa2 Output gaussian parameters.
-c--
 c-----------------------------------------------------------------------
       include 'co.h'
       include 'mirconst.h'
@@ -1400,7 +1383,9 @@ c
       bpa2 = bpa2 - crota2
 
       end
+
 c***********************************************************************
+
 c* coVelSet -- Change the velocity axis between freq/velo/felo formats.
 c& rjs
 c: coordinates
@@ -1409,10 +1394,9 @@ c+
 
       integer lu
       character type*(*)
-
-c  This changes the axis type for the `velocity' axis of a coordinate
-c  system. The `velocity' axis can be changed between a frequency,
-c  radio velocity or optical velocity axis.
+c  ---------------------------------------------------------------------
+c  Switch a spectral axis type between frequency, radio velocity, and
+c  optical velocity.
 c
 c  Input:
 c    lu         Handle of the coordinate system.
@@ -1421,7 +1405,6 @@ c               with '   ','-OBS','-HEL','-LSR.
 c               For compatibility with the old calling sequence,
 c               "type" can also be 'radio', 'optical' and 'frequency',
 c               which are equivalent to 'VELO', 'FELO' and 'FREQ'.
-c--
 c-----------------------------------------------------------------------
       include 'co.h'
       include 'mirconst.h'
@@ -1471,7 +1454,7 @@ c
         iframe = ctype(ifrq,icrd)(5:8)
       else
         iframe = ' '
-      end if
+      endif
       oframe = ttype(5:)
       if (oframe.eq.' ') oframe = iframe
       if (iframe.eq.' ') iframe = oframe
@@ -1547,13 +1530,14 @@ c
       cotype(ifrq,icrd) = otype
 
       end
+
 c***********************************************************************
+
       subroutine coGetVel(raepo,decepo,eqnox,vel)
 
       double precision raepo,decepo,eqnox,vel
-
+c  ---------------------------------------------------------------------
 c  Determine the Sun's LSR velocity component in a given direction.
-c
 c-----------------------------------------------------------------------
       integer i
       double precision dec2000, ra2000, lmn2000(3), velsun(3)
@@ -1575,7 +1559,9 @@ c-----------------------------------------------------------------------
       enddo
 
       end
+
 c***********************************************************************
+
 c* coAxGet -- Give information about a particular axis.
 c& rjs
 c: coordinates
@@ -1585,7 +1571,7 @@ c+
       integer lu,iax
       character ctypei*(*)
       double precision crpixi,crvali,cdelti
-
+c  ---------------------------------------------------------------------
 c  Return information about a particular axis.
 c
 c  Input:
@@ -1596,7 +1582,6 @@ c    ctypei     Axis type (FITS-style).
 c    crpixi     Reference pixel.
 c    crvali     Reference value.
 c    cdelti     Increment in linear system approximation.
-c--
 c-----------------------------------------------------------------------
       include 'co.h'
 
@@ -1619,7 +1604,9 @@ c-----------------------------------------------------------------------
       endif
 
       end
+
 c***********************************************************************
+
 c* coFindAx -- Locate a particular axis in the coordinate system.
 c& rjs
 c: coordinates
@@ -1628,7 +1615,7 @@ c+
 
       integer lu,iax
       character axis*(*)
-
+c  ---------------------------------------------------------------------
 c  Locate an axis of a particular type. The type of the axis is given
 c  by the "axis" parameter.
 c
@@ -1652,7 +1639,6 @@ c
 c  Output:
 c    iax        The axis index of the desired axis. A value of 0 is
 c               returned if the axis is not found.
-c--
 c-----------------------------------------------------------------------
       include 'co.h'
 
@@ -1701,7 +1687,9 @@ c
       endif
 
       end
+
 c***********************************************************************
+
 c* coCompar - Compare two coordinate systems for likeness
 c& rjs
 c: coordinates
@@ -1710,7 +1698,7 @@ c+
 
       integer lu1,lu2
       character match*(*)
-
+c  ---------------------------------------------------------------------
 c  Compare two coordinate systems for likeness. This returns .true.
 c  if they are alike, and .false. otherwise. The "match" argument
 c  determines the tests performed for likeness.
@@ -1744,7 +1732,6 @@ c
 c  Output:
 c    coCompar   True if the two coordinate systems are alike, and false
 c               otherwise.
-c--
 c-----------------------------------------------------------------------
       include 'co.h'
 
@@ -1784,7 +1771,7 @@ c
 
       else if (match.eq.'offset') then
         do iax = 1, nax
-          if (ctype(iax,icrd1).ne.ctype(iax,icrd2))return
+          if (ctype(iax,icrd1).ne.ctype(iax,icrd2)) return
           dscr = 1d-4*min(abs(cdelt(iax,icrd1)),abs(cdelt(iax,icrd2)))
           if (abs(crval(iax,icrd1)-crval(iax,icrd2)).gt.dscr) return
           if (abs(cdelt(iax,icrd1)-cdelt(iax,icrd2)).gt.
@@ -1793,13 +1780,13 @@ c
 
       else if (match.eq.'align') then
         do iax = 1, nax
-          if (abs(crpix(iax,icrd1)-crpix(iax,icrd2)).gt.1d-4)return
+          if (abs(crpix(iax,icrd1)-crpix(iax,icrd2)).gt.1d-4) return
         enddo
 
       else if (match.eq.'approx') then
 c       Are the two systems comparable?
         do iax = 1, nax
-          if (ctype(iax,icrd1)(1:5).ne.ctype(iax,icrd2)(1:5))return
+          if (ctype(iax,icrd1)(1:5).ne.ctype(iax,icrd2)(1:5)) return
           if (abs(cdelt(iax,icrd1)-cdelt(iax,icrd2)).gt.
      *           1d-2*abs(cdelt(iax,icrd1))) return
         enddo
@@ -1828,7 +1815,9 @@ c
       coCompar = .true.
 
       end
+
 c***********************************************************************
+
 c* coLin -- Generate a linearized approximation to a nonlinear system.
 c& rjs
 c: coordinates
@@ -1838,7 +1827,7 @@ c+
       integer lu,n
       character in*(*),ctypel(n)*(*)
       double precision x1(*),crpixl(n),crvall(n),cdeltl(n)
-
+c  ---------------------------------------------------------------------
 c  Generate a linearised approximation to a non-linear coordinate
 c  system.
 c
@@ -1854,7 +1843,6 @@ c    ctypel )
 c    crpixl )   Output coordinate descriptions.
 c    crvall )
 c    cdeltl )
-c--
 c-----------------------------------------------------------------------
       include 'mirconst.h'
       include 'co.h'
@@ -1910,14 +1898,14 @@ c
                 cdeltl(iax) = cdeltl(iax) - DTWOPI
               endif
               if (delta.lt.-DPI) delta = delta + DTWOPI
-              if (delta.gt. DPI) delta = delta - DTWOPI
+              if (delta.gt.DPI) delta = delta - DTWOPI
             endif
 
             cdeltl(iax) = 0.5d0 * cdeltl(iax)
             crpixl(iax) = xp(iax) - delta/cdeltl(iax)
             if (cotype(iax,icrd).eq.LNGTYP) then
               cdeltl(iax) = cdeltl(iax) * cos(crval(latax(icrd),icrd))
-            end if
+            endif
           else
             cdeltl(iax) = cdelt(iax,icrd)
             crpixl(iax) = crpix(iax,icrd)
@@ -1931,7 +1919,9 @@ c
       enddo
 
       end
+
 c***********************************************************************
+
 c* coPrint -- Print a summary of the coordinate conversion information.
 c& rjs
 c: coordinates
@@ -1939,12 +1929,11 @@ c+
       subroutine coPrint(lu)
 
       integer lu
-
-c  Print out a description of a coordinate system.
+c  ---------------------------------------------------------------------
+c  Print a description of a coordinate system.
 c
 c  Input:
 c    lu         Handle of the coordinate system.
-c--
 c-----------------------------------------------------------------------
       include 'co.h'
       include 'mirconst.h'
@@ -1965,9 +1954,9 @@ c-----------------------------------------------------------------------
         if (ctypei.eq.'RA' .or. ctypei(1:4).eq.'RA--') then
 c         Time.
           radec = hangle(crval(iax,icrd))
-          write (line, 10) ctypei, radec, crpix(iax,icrd),
+          write(line, 10) ctypei, radec, crpix(iax,icrd),
      *      cdelt(iax,icrd)*DR2D*3600d0
- 10       format (a8,3x,a11,f10.2,3x,1pe13.6,'  arcsec')
+ 10       format(a8,3x,a11,f10.2,3x,1pe13.6,'  arcsec')
 
         else if (ctypei.eq.'DEC' .or. ctypei(1:4).eq.'DEC-' .or.
      *           ctypei(1:4).eq.'GLON' .or.
@@ -1976,9 +1965,9 @@ c         Time.
      *           ctypei(1:4).eq.'ELAT') then
 c         Angle.
           radec = rangle(crval(iax,icrd))
-          write (line, 20) ctypei, radec, crpix(iax,icrd),
+          write(line, 20) ctypei, radec, crpix(iax,icrd),
      *      cdelt(iax,icrd)*DR2D*3600d0
- 20       format (a8,2x,a12,f10.2,3x,1pe13.6,'  arcsec')
+ 20       format(a8,2x,a12,f10.2,3x,1pe13.6,'  arcsec')
 
         else if (ctypei(1:6).eq.'STOKES') then
 c         Polarization code.
@@ -1988,8 +1977,8 @@ c         Polarization code.
           else
             pols = PolsC2P(p)
           endif
-          write (line, 30) ctypei, pols
- 30       format (a8, 8x, a)
+          write(line, 30) ctypei, pols
+ 30       format(a8, 8x, a)
 
         else
           if (ctypei(1:4).eq.'FELO' .or.  ctypei(1:4).eq.'VELO') then
@@ -2003,16 +1992,18 @@ c           Visibility coordinates (wavelengths).
             units = 'lambda'
           endif
 
-          write (line, 40) ctypei, crval(iax,icrd), crpix(iax,icrd),
+          write(line, 40) ctypei, crval(iax,icrd), crpix(iax,icrd),
      *      cdelt(iax,icrd), units
- 40       format (a8,2x,1pe13.6,0pf9.2,3x,1pe13.6,2x,a)
+ 40       format(a8,2x,1pe13.6,0pf9.2,3x,1pe13.6,2x,a)
         endif
 
         call output(line)
       enddo
 
       end
+
 c***********************************************************************
+
 c* coPrjSet -- Set celestial projection type.
 c& rjs
 c: coordinates
@@ -2021,14 +2012,13 @@ c+
 
       integer lu
       character code*(*)
-
+c  ---------------------------------------------------------------------
 c  Set the coordinate system celestial projection type.
 c
 c  Input:
 c    lu         Handle of the coordinate system.
 c    code       Projection code: NCP, SIN, etc. or blank, which on
 c               interpretation will be translated to CAR.
-c--
 c-----------------------------------------------------------------------
       include 'co.h'
 
@@ -2084,7 +2074,9 @@ c-----------------------------------------------------------------------
       endif
 
       end
+
 c***********************************************************************
+
 c* coWrite -- Write out the coordinate description to an image dataset.
 c& rjs
 c: coordinates
@@ -2092,14 +2084,12 @@ c+
       subroutine coWrite(lu,tno)
 
       integer lu,tno
-
-c  This writes out the coordinate system description to an image
-c  dataset.
+c  ---------------------------------------------------------------------
+c  Write a coordinate system description to an image dataset header.
 c
 c  Input:
 c    lu         Handle of the coordinate object.
 c    tno        Handle of the output dataset.
-c--
 c-----------------------------------------------------------------------
       include 'co.h'
 
@@ -2146,11 +2136,13 @@ c-----------------------------------------------------------------------
       endif
 
       end
+
 c***********************************************************************
+
       subroutine coInitXY(icrd)
 
       integer icrd
-
+c-----------------------------------------------------------------------
 c  Initialise the coordinate information for an image data-set.
 c-----------------------------------------------------------------------
       include 'co.h'
@@ -2198,14 +2190,15 @@ c-----------------------------------------------------------------------
       enddo
 
       end
+
 c***********************************************************************
+
       subroutine coTyCvt(ctypei, itype)
 
       character ctypei*(*)
       integer itype
-
+c-----------------------------------------------------------------------
 c  Convert a coordinate type to an enumerated type.
-c
 c-----------------------------------------------------------------------
       include 'co.h'
 
@@ -2247,7 +2240,7 @@ c-----------------------------------------------------------------------
       if (ctypei.eq.' ') then
         itype = LINEAR
         return
-      end if
+      endif
 
 c     Try to identify the first part.
       itype = 0
@@ -2291,9 +2284,9 @@ c         No projection code = simple linear axis, not CAR!
             if (pcode.eq.pcodes(i)) then
 c             It's recognized.
               return
-            end if
-          end do
-        end if
+            endif
+          enddo
+        endif
 
 c       Unrecognized pcode.
         itype = LINEAR
@@ -2302,13 +2295,14 @@ c       Unrecognized pcode.
       endif
 
       end
+
 c***********************************************************************
+
       subroutine coInitUV(icrd)
 
       integer icrd
-
+c-----------------------------------------------------------------------
 c  Initialise the coordinate information for a visibility data-set.
-c
 c-----------------------------------------------------------------------
       include 'co.h'
 
@@ -2474,14 +2468,16 @@ c-----------------------------------------------------------------------
       endif
 
       end
+
 c***********************************************************************
+
       subroutine coFqFac(x1,type,crval,crpix,cdelt,vobs,x1off,x1pix,
      *  scal)
 
       double precision x1,crval,crpix,cdelt,vobs,scal
       logical x1off,x1pix
       character type*4
-
+c-----------------------------------------------------------------------
 c  Determine the frequency-dependent scaling factor of the increments in
 c  the RA and DEC axes.
 c-----------------------------------------------------------------------
@@ -2521,13 +2517,15 @@ c
       endif
 
       end
+
 c***********************************************************************
-      subroutine coFelo(x10,x2,crval,crpix,cdelt,
-     *                                x1pix,x1off,x2pix,x2off)
+
+      subroutine coFelo(x10,x2,crval,crpix,cdelt,x1pix,x1off,x2pix,
+     *  x2off)
 
       double precision x10,x2,crval,crpix,cdelt
       logical x1pix,x1off,x2pix,x2off
-
+c-----------------------------------------------------------------------
 c  Convert between pixels and velocities, to a axes in the optical
 c  velocity convention (but derived from data measured at equal
 c  frequency increments).
@@ -2587,7 +2585,9 @@ c
       endif
 
       end
+
 c***********************************************************************
+
       subroutine coCelest(cel, x10,y10,x2,y2,cosrot,sinrot,
      *  crpix1,cdelt1,crpix2,cdelt2,
      *  x1pix,y1pix,x2pix,y2pix,x1off,y1off,x2off,y2off,valid)
@@ -2599,7 +2599,7 @@ c***********************************************************************
       double precision crpix1,crpix2,cdelt1,cdelt2
       logical x1pix,y1pix,x2pix,y2pix
       logical x1off,y1off,x2off,y2off,valid
-
+c-----------------------------------------------------------------------
 c  Convert celestial coordinates between grid and world coordinates.
 c
 c  Input:
@@ -2615,7 +2615,6 @@ c    cdelt2,crpix2
 c  Output:
 c    x2,y2
 c    valid      False if an illegal coordinate conversion was attempted.
-c
 c-----------------------------------------------------------------------
       include 'mirconst.h'
 
@@ -2715,14 +2714,16 @@ c
       endif
 
       end
+
 c***********************************************************************
+
       subroutine coLinear(crval1,crpix1,cdelt1,x1pix,x1off,x2pix,x2off,
      *  bscal,bzero)
 
       logical x1pix,x1off,x2pix,x2off
       double precision crpix1,cdelt1,crval1
       double precision bscal,bzero
-
+c-----------------------------------------------------------------------
 c  Determine scale factor and offsets to convert from one coordinate
 c  system to another.
 c
@@ -2772,7 +2773,9 @@ c
       endif
 
       end
+
 c***********************************************************************
+
       subroutine coll2xy(cel, lng,lat,p1,p2,
      *  crpix1,cdelt1,crpix2,cdelt2,cosrot,sinrot, valid)
 
@@ -2782,10 +2785,9 @@ c***********************************************************************
       double precision lng,lat,p1,p2
       double precision crpix1,cdelt1,crpix2,cdelt2,cosrot,sinrot
       logical   valid
-
+c-----------------------------------------------------------------------
 c  (lng,lat) are the celestial coordinates.
 c  (p1,p2)   are pixel coordinates.
-c
 c-----------------------------------------------------------------------
       include 'mirconst.h'
       include 'wcslib/prj.inc'
@@ -2840,7 +2842,9 @@ c     Check for simple linear coordinates.
       endif
 
       end
+
 c***********************************************************************
+
       subroutine coxy2ll(cel, p1,p2, lng,lat,
      *  crpix1,cdelt1, crpix2,cdelt2, cosrot,sinrot, valid)
 
@@ -2850,7 +2854,7 @@ c***********************************************************************
       double precision p1,p2, lng,lat
       double precision crpix1,cdelt1, crpix2,cdelt2, cosrot,sinrot
       logical   valid
-
+c-----------------------------------------------------------------------
 c  (p1,p2)   are pixel coordinates.
 c  (lng,lat) are the celestial coordinates.
 c-----------------------------------------------------------------------
@@ -2893,7 +2897,9 @@ c     Check for simple linear coordinates.
       endif
 
       end
+
 c***********************************************************************
+
       subroutine coMixed(cel, x1,y1,x2,y2,
      *  crpix1,cdelt1,crpix2,cdelt2,cosrot,sinrot, pw2wp,valid)
 
@@ -2938,7 +2944,7 @@ c       (world,pixel) to (pixel,world).
 
       delta = 1.0
       niter = 0
-      dowhile (delta.gt.TOL .and. niter.lt.MAXITER)
+      do while (delta.gt.TOL .and. niter.lt.MAXITER)
         niter = niter + 1
 c       P1: based on the best estimate for the pixel coordinates.
         call coxy2ll(cel, p1(1),p1(2),w1(1),w1(2),
