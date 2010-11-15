@@ -164,7 +164,7 @@ c       skip, followed by the number of scans to process.  NOTE: This
 c       applies to all files read.  The default is to skip none and
 c       process all scans.
 c
-c$Id: atlod.for,v 1.31 2010/10/26 03:07:20 wie017 Exp $
+c$Id: atlod.for,v 1.32 2010/11/15 21:55:56 wie017 Exp $
 c--
 c
 c  Program Structure:
@@ -320,7 +320,7 @@ c    mhw  22jul10 Fix ischan calculation.
 c    mhw  19oct10 Update 20/13 band - now 1-3 GHz
 c    mhw  26oct10 Fix birdie flagging in 20/13 cm band
 c
-c $Id: atlod.for,v 1.31 2010/10/26 03:07:20 wie017 Exp $
+c $Id: atlod.for,v 1.32 2010/11/15 21:55:56 wie017 Exp $
 c-----------------------------------------------------------------------
 
         integer MAXFILES,MAXTIMES,MAXSIM
@@ -340,8 +340,8 @@ c
         character itoaf*8, rperr*32, versan*80
 c-----------------------------------------------------------------------
       version = versan ('atlod',
-     :                  '$Revision: 1.31 $',
-     :                  '$Date: 2010/10/26 03:07:20 $')
+     :                  '$Revision: 1.32 $',
+     :                  '$Date: 2010/11/15 21:55:56 $')
 c
 c  Get the input parameters.
 c
@@ -3646,7 +3646,6 @@ c
         data b1/640,256,768,1408,1280,1920,1792,1176,156,128,1152/
 c        
         if (nrfi.gt.0) then
-          write(*,*) 'flagging ',nrfi,' ranges'
           offset=1
           do i=1,nifs
             do j=1,nrfi
