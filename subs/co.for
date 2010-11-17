@@ -34,7 +34,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: co.for,v 1.11 2010/11/03 01:47:53 cal103 Exp $
+c $Id: co.for,v 1.12 2010/11/17 07:12:47 cal103 Exp $
 c***********************************************************************
 
 c* coInit -- Initialise coordinate conversion routines.
@@ -565,12 +565,8 @@ c-----------------------------------------------------------------------
       double precision lat0
       character lng*8, lat*8, pcode1*3, pcode2*3
 
-      integer   iarg(2)
-      double precision darg
-      equivalence (iarg, darg)
-
-c     External.
       integer   coLoc
+      external  coLoc
 c-----------------------------------------------------------------------
       icrd = coLoc(lu,.false.)
 
@@ -630,13 +626,12 @@ c         Check consistency.
 c           Set up the celprm struct.
             status = celini(cel(1,icrd))
 
-c           Use darg/iarg equivalence to appease the Fortran compiler.
-            darg = crval(ilng,icrd)*DR2D
-            status = celput(cel(1,icrd), cel_ref, iarg, 1)
-            darg = crval(ilat,icrd)*DR2D
-            status = celput(cel(1,icrd), cel_ref, iarg, 2)
+            status = celptd(cel(1,icrd), cel_ref,
+     *                      crval(ilng,icrd)*DR2D, 1)
+            status = celptd(cel(1,icrd), cel_ref,
+     *                      crval(ilat,icrd)*DR2D, 2)
 
-            status = celget(cel(1,icrd), cel_prj, prj)
+            status = celgti(cel(1,icrd), cel_prj, prj)
 
             call ucase(pcode1)
             if (pcode1.eq.'NCP') then
@@ -646,27 +641,24 @@ c             Convert NCP to SIN.
                 call bug('f', 'Invalid NCP projection')
               endif
 
-              status = prjput(prj, prj_code, 3HSIN, 0)
-              darg   = 0d0
-              status = prjput(prj, prj_pv, iarg, 1)
-              darg   = cos(lat0)/sin(lat0)
-              status = prjput(prj, prj_pv, iarg, 2)
+              status = prjptc(prj, prj_code, 'SIN', 0)
+              status = prjptd(prj, prj_pv, 0d0, 1)
+              status = prjptd(prj, prj_pv, cos(lat0)/sin(lat0), 2)
 
             else if (pcode1.eq.'GLS') then
 c             Convert GLS to SFL.
-              status = celput(cel(1,icrd), cel_offset, 1, 0)
-              darg   = 0d0
-              status = celput(cel(1,icrd), cel_phi0,   iarg, 0)
-              darg   = crval(ilat,icrd)*DR2D
-              status = celput(cel(1,icrd), cel_theta0, iarg, 0)
-              status = prjput(prj, prj_code, 3HSFL, 0)
+              status = celpti(cel(1,icrd), cel_offset, 1, 0)
+              status = celptd(cel(1,icrd), cel_phi0,   0d0, 0)
+              status = celptd(cel(1,icrd), cel_theta0,
+     *                        crval(ilat,icrd)*DR2D, 0)
+              status = prjptc(prj, prj_code, 'SFL', 0)
 
             else
-              status = prjput(prj, prj_code, pcode1, 0)
+              status = prjptc(prj, prj_code, pcode1, 0)
 c             Projection parameters to come...
             endif
 
-            status = celput(cel(1,icrd), cel_prj, prj, 0)
+            status = celpti(cel(1,icrd), cel_prj, prj, 0)
           endif
 
         else if (ilng.ne.0 .or. ilat.ne.0) then
@@ -1039,18 +1031,15 @@ c-----------------------------------------------------------------------
 c     External.
       integer   coLoc
 c-----------------------------------------------------------------------
-c
-c  Check validity.
-c
+c     Check validity.
       icrd = coLoc(lu,.false.)
       if (lngax(icrd).eq.0 .or. latax(icrd).eq.0)
      *  call bug('f','Non-celestial coordinate system, in coLMN')
-c
-c  Convert the users coordinate to absolute world coordinates.
-c  Fill in the reference location in the output, just in case the
-c  user was silly enough not to give enough inputs.
-c
-      ra0 = crval(lngax(icrd),icrd)
+
+c     Convert the users coordinate to absolute world coordinates.
+c     Fill in the reference location in the output, just in case the
+c     user was silly enough not to give enough inputs.
+      ra0  = crval(lngax(icrd),icrd)
       dec0 = crval(latax(icrd),icrd)
       x2(lngax(icrd)) = ra0
       x2(latax(icrd))  = dec0
@@ -1059,9 +1048,8 @@ c
 
       ra = x2(lngax(icrd))
       dec = x2(latax(icrd))
-c
-c  Convert to direction cosines.
-c
+
+c     Convert to direction cosines.
       lmn(1) = cos(dec)*sin(ra-ra0)
       lmn(2) = sin(dec)*cos(dec0) - cos(dec)*sin(dec0)*cos(ra-ra0)
       lmn(3) = sin(dec)*sin(dec0) + cos(dec)*cos(dec0)*cos(ra-ra0)
@@ -1711,18 +1699,17 @@ c               below).  Possible values are:
 c
 c                 Value         Description
 c                 -----         -----------
-c                 'exact'       Check that ctype,crval,crpix,cdelt are
-c                               identical.
-c                 'projection'  Check that ctype,crval are the same.
-c                               Thus it check whether the coordinate
-c                               systems have the same projection and
-c                               reference value.
-c                 'offset'      Check ctype,crval,cdelt.  Thus this
-c                               checks whether the coordinate systems
-c                               are identical within a shift of the
+c                 'exact'       Check that ctype, crval, crpix, and
+c                               cdelt are identical.
+c                 'projection'  Check that ctype and crval are the same,
+c                               i.e. whether the coordinate systems have
+c                               the same projection and reference value.
+c                 'offset'      Check ctype, crval, and cdelt, i.e.
+c                               whether the coordinate systems are
+c                               identical to within a shift of the
 c                               pixel coordinates.
 c                 'approx'      Check whether the two coordinate systems
-c                               are approximately the same (less than
+c                               are approximately the same - less than
 c                               0.1 pixel difference at the reference
 c                               pixel of the first system, cdelts that
 c                               agree to within 1%, and compatible
@@ -1858,18 +1845,16 @@ c-----------------------------------------------------------------------
       if (sinrot(icrd).ne.0d0) then
         call bug('w','Cannot handle sky rotation')
       endif
-c
-c  Convert to absolute pixels.
-c
+
+c     Convert to absolute pixels.
       do iax = 1, naxis(icrd)
         xp(iax) = crpix(iax,icrd)
         xw(iax) = crval(iax,icrd)
       enddo
       call coCvt(lu,in,x1,'aw/...',xw)
       call coCvt(lu,in,x1,'ap/...',xp)
-c
-c  Increment by one pixel in all directions.
-c
+
+c     Increment by one pixel in all directions.
       do iax = 1, naxis(icrd)
         xp1(iax) = xp(iax)
         xp2(iax) = xp(iax)
@@ -1939,6 +1924,7 @@ c-----------------------------------------------------------------------
       include 'mirconst.h'
 
       integer   iax, icrd, p
+      double precision cdelti, crpixi, crvali
       character ctypei*8, line*80, pols*4, radec*20, units*8
 
 c     Externals.
@@ -1948,14 +1934,15 @@ c-----------------------------------------------------------------------
       icrd = coLoc(lu,.false.)
 
       do iax = 1, naxis(icrd)
-        units = ' '
+        crpixi = crpix(iax,icrd)
+        cdelti = cdelt(iax,icrd)
+        crvali = crval(iax,icrd)
         ctypei = ctype(iax,icrd)
 
         if (ctypei.eq.'RA' .or. ctypei(1:4).eq.'RA--') then
 c         Time.
-          radec = hangle(crval(iax,icrd))
-          write(line, 10) ctypei, radec, crpix(iax,icrd),
-     *      cdelt(iax,icrd)*DR2D*3600d0
+          radec = hangle(crvali)
+          write(line, 10) ctypei, radec, crpixi, cdelti*DR2D*3600d0
  10       format(a8,3x,a11,f10.2,3x,1pe13.6,'  arcsec')
 
         else if (ctypei.eq.'DEC' .or. ctypei(1:4).eq.'DEC-' .or.
@@ -1964,14 +1951,13 @@ c         Time.
      *           ctypei(1:4).eq.'ELON' .or.
      *           ctypei(1:4).eq.'ELAT') then
 c         Angle.
-          radec = rangle(crval(iax,icrd))
-          write(line, 20) ctypei, radec, crpix(iax,icrd),
-     *      cdelt(iax,icrd)*DR2D*3600d0
+          radec = rangle(crvali)
+          write(line, 20) ctypei, radec, crpixi, cdelti*DR2D*3600d0
  20       format(a8,2x,a12,f10.2,3x,1pe13.6,'  arcsec')
 
         else if (ctypei(1:6).eq.'STOKES') then
 c         Polarization code.
-          p = nint(crval(iax,icrd))
+          p = nint(crvali)
           if (p.eq.0) then
             pols = 'beam'
           else
@@ -1981,6 +1967,7 @@ c         Polarization code.
  30       format(a8, 8x, a)
 
         else
+          units = ' '
           if (ctypei(1:4).eq.'FELO' .or.  ctypei(1:4).eq.'VELO') then
 c           Velocity.
             units = 'km/sec'
@@ -1992,8 +1979,7 @@ c           Visibility coordinates (wavelengths).
             units = 'lambda'
           endif
 
-          write(line, 40) ctypei, crval(iax,icrd), crpix(iax,icrd),
-     *      cdelt(iax,icrd), units
+          write(line, 40) ctypei, crvali, crpixi, cdelti, units
  40       format(a8,2x,1pe13.6,0pf9.2,3x,1pe13.6,2x,a)
         endif
 
@@ -2147,37 +2133,26 @@ c  Initialise the coordinate information for an image data-set.
 c-----------------------------------------------------------------------
       include 'co.h'
 
-      integer   iax, n
+      integer   iax, lu, n
       double precision dtemp
-      character num*2, cscal*16
+      character cscal*16, num*2
 
-c     External.
       character itoaf*2
+      external  itoaf
 c-----------------------------------------------------------------------
-      call rdhdi(lus(icrd),'naxis',naxis(icrd),0)
-      if (naxis(icrd).eq.0)
+      lu = lus(icrd)
+
+      call rdhdi(lu, 'naxis', naxis(icrd), 0)
+      if (naxis(icrd).le.0)
      *  call bug('f','Invalid value for NAXIS, in coInit')
-
-      call rdhdd(lus(icrd),'restfreq',restfrq(icrd),0d0)
-      call rdhdd(lus(icrd),'vobs',vobs(icrd),0d0)
-      call rdhdd(lus(icrd),'epoch',eqnox(icrd),0d0)
-      call rdhdd(lus(icrd),'obstime',obstime(icrd),0d0)
-      call rdhda(lus(icrd),'cellscal',cscal,'1/F')
-      frqscl(icrd) = cscal.eq.'1/F'
-      if (.not.frqscl(icrd) .and. cscal.ne.'CONSTANT') call bug('w',
-     *  'Unrecognised cellscal value: '//cscal)
-
-      call rdhdd(lus(icrd),'llrot',dtemp,0d0)
-      cosrot(icrd) = cos(dtemp)
-      sinrot(icrd) = sin(dtemp)
 
       do iax = 1, naxis(icrd)
         num = itoaf(iax)
-        call rdhdi(lus(icrd),'naxis'//num,n,1)
-        call rdhdd(lus(icrd),'crval'//num,crval(iax,icrd),dble(n/2+1))
-        call rdhdd(lus(icrd),'crpix'//num,crpix(iax,icrd),dble(n/2+1))
-        call rdhdd(lus(icrd),'cdelt'//num,cdelt(iax,icrd),1d0)
-        call rdhda(lus(icrd),'ctype'//num,ctype(iax,icrd),' ')
+        call rdhdi(lu, 'naxis'//num, n, 1)
+        call rdhdd(lu, 'crval'//num, crval(iax,icrd), dble(n/2+1))
+        call rdhdd(lu, 'crpix'//num, crpix(iax,icrd), dble(n/2+1))
+        call rdhdd(lu, 'cdelt'//num, cdelt(iax,icrd), 1d0)
+        call rdhda(lu, 'ctype'//num, ctype(iax,icrd), ' ')
 
         if (cdelt(iax,icrd).eq.0d0) then
           if (ctype(iax,icrd).ne.' ') then
@@ -2188,6 +2163,19 @@ c-----------------------------------------------------------------------
           cdelt(iax,icrd) = 1d0
         endif
       enddo
+
+      call rdhdd(lu,'llrot',dtemp,0d0)
+      cosrot(icrd) = cos(dtemp)
+      sinrot(icrd) = sin(dtemp)
+
+      call rdhdd(lu, 'restfreq', restfrq(icrd), 0d0)
+      call rdhdd(lu, 'vobs',     vobs(icrd), 0d0)
+      call rdhdd(lu, 'epoch',    eqnox(icrd), 0d0)
+      call rdhdd(lu, 'obstime',  obstime(icrd), 0d0)
+      call rdhda(lu, 'cellscal', cscal, '1/F')
+      frqscl(icrd) = cscal.eq.'1/F'
+      if (.not.frqscl(icrd) .and. cscal.ne.'CONSTANT') call bug('w',
+     *  'Unrecognised cellscal value: '//cscal)
 
       end
 
@@ -2620,11 +2608,8 @@ c-----------------------------------------------------------------------
 
       integer   status
       double precision clat0, crval1, crval2, ref(4), x1, y1
-
-      integer   iref(2)
-      equivalence (iref, ref)
 c-----------------------------------------------------------------------
-      status = celget(cel, cel_ref, iref)
+      status = celgtd(cel, cel_ref, ref)
       crval1 = ref(1)*DD2R
       crval2 = ref(2)*DD2R
 
@@ -2795,15 +2780,12 @@ c-----------------------------------------------------------------------
       integer   prj(PRJLEN), stat, status
       double precision dlng, lat0, lng0, phi, ref(4), t, theta, x, y
       character pcode*3
-
-      integer   iref(2)
-      equivalence (iref, ref)
 c-----------------------------------------------------------------------
 c     Check for simple linear coordinates.
-      status = celget(cel, cel_prj, prj)
-      status = prjget(prj, prj_code, pcode)
+      status = celgti(cel, cel_prj, prj)
+      status = prjgtc(prj, prj_code, pcode)
       if (pcode.eq.' ') then
-        status = celget(cel, cel_ref, iref)
+        status = celgtd(cel, cel_ref, ref)
         lng0 = ref(1)*DD2R
         lat0 = ref(2)*DD2R
 
@@ -2864,9 +2846,6 @@ c-----------------------------------------------------------------------
       integer   prj(PRJLEN), stat, status
       double precision lat0, lng0, phi, ref(4), t, theta, x, y
       character pcode*3
-
-      integer   iref(2)
-      equivalence (iref, ref)
 c-----------------------------------------------------------------------
       x = (p1 - crpix1) * cdelt1
       y = (p2 - crpix2) * cdelt2
@@ -2876,10 +2855,10 @@ c-----------------------------------------------------------------------
       x = t
 
 c     Check for simple linear coordinates.
-      status = celget(cel, cel_prj, prj)
-      status = prjget(prj, prj_code, pcode)
+      status = celgti(cel, cel_prj, prj)
+      status = prjgtc(prj, prj_code, pcode)
       if (pcode.eq.' ') then
-        status = celget(cel, cel_ref, iref)
+        status = celgtd(cel, cel_ref, ref)
         lng0 = ref(1)*DD2R
         lat0 = ref(2)*DD2R
 
