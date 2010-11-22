@@ -40,7 +40,7 @@ c
 c       Pixels are blanked if the input pixel is blanked, the averaged
 c       channel pixel is blanked, or the output is undefined.
 c
-c$Id: avmaths.for,v 1.5 2010/09/15 07:05:58 cal103 Exp $
+c$Id: avmaths.for,v 1.6 2010/11/22 04:57:55 cal103 Exp $
 c--
 c  History:
 c    nebk 26jul90 Original version.
@@ -86,50 +86,50 @@ c-----------------------------------------------------------------------
       common buffer
 c-----------------------------------------------------------------------
       version = versan('avmaths',
-     *                 '$Revision: 1.5 $',
-     *                 '$Date: 2010/09/15 07:05:58 $')
+     *                 '$Revision: 1.6 $',
+     *                 '$Date: 2010/11/22 04:57:55 $')
 c
 c  Get the input parameters.
 c
       call keyini
-      call keyf ('in', in, ' ')
-      call keya ('out', out, ' ')
+      call keyf('in', in, ' ')
+      call keya('out', out, ' ')
       if (in.eq.' ' .or. out.eq.' ')
-     *    call bug ('f', 'You must specify the input and output files')
-      call boxinput ('region', in, boxes, MAXBOXES)
-      call getopt (dosub, dood, dorepl, dored, domul)
+     *    call bug('f', 'You must specify the input and output files')
+      call boxinput('region', in, boxes, MAXBOXES)
+      call getopt(dosub, dood, dorepl, dored, domul)
       call keyfin
 c
 c  Open the input image and pass some information to the box routines
 c
-      call xyopen (lin, in, 'old', MAXNAX, size)
+      call xyopen(lin, in, 'old', MAXNAX, size)
 c
 c Allocate memory for images
 c
-      call memalloc (avpnt, size(1)*size(2), 'r')
-      call memalloc (npnt,  size(1)*size(2), 'r')
+      call memalloc(avpnt, size(1)*size(2), 'r')
+      call memalloc(npnt,  size(1)*size(2), 'r')
 c
 c Deal partly with region
 c
-      call rdhdi (lin, 'naxis', naxis, 0)
-      if (naxis.lt.3) call bug ('f', 'Image only has 2 dimensions')
-      call boxmask (lin, boxes, MAXBOXES)
-      call boxset (boxes, MAXNAX, size,' ')
+      call rdhdi(lin, 'naxis', naxis, 0)
+      if (naxis.lt.3) call bug('f', 'Image only has 2 dimensions')
+      call boxmask(lin, boxes, MAXBOXES)
+      call boxset(boxes, MAXNAX, size,' ')
 c
 c  Find region of image which contains all channels to average
 c  and then work out which planes of those specified are not
 c  completely blank (pointless to include those).
 c
-      call boxinfo (boxes, MAXNAX, blc, trc)
+      call boxinfo(boxes, MAXNAX, blc, trc)
       nplanes = 0
       do k = blc(3), trc(3)
-        call boxruns (1, k, ' ', boxes, runs, MAXRUNS,
+        call boxruns(1, k, ' ', boxes, runs, MAXRUNS,
      *                nruns, xblc, xtrc, yblc, ytrc)
 
         if (nruns.ne.0) then
            nplanes = nplanes + 1
            if (nplanes.gt.MAXPLANE)
-     *       call bug ('f', 'Too many channels to average')
+     *       call bug('f', 'Too many channels to average')
            planes(nplanes) = k
         endif
       enddo
@@ -141,7 +141,7 @@ c
         do i = 3, MAXNAX
           if (size(i).gt.1) then
             str = itoaf(i)
-            call output ('Reducing axis '//str//' size to 1')
+            call output('Reducing axis '//str//' size to 1')
             size(i) = 1
           endif
         enddo
@@ -149,23 +149,23 @@ c
 c
 c Open output image and copy header keywords.
 c
-      call xyopen (lout, out, 'new', naxis, size)
-      call headcopy (lin, lout, 0, 0, 0, 0)
+      call xyopen(lout, out, 'new', naxis, size)
+      call headcp(lin, lout, 0, 0, 0, 0)
 c
 c  Write the history.
 c
-      call hisopen (lout,'append')
-      call hiswrite (lout,'AVMATHS: Miriad '//version)
-      call hisinput (lout,'AVMATHS')
+      call hisopen(lout,'append')
+      call hiswrite(lout,'AVMATHS: Miriad '//version)
+      call hisinput(lout,'AVMATHS')
 
-      call listcom (nplanes, planes, istart, iend, nsect)
+      call listcom(nplanes, planes, istart, iend, nsect)
       isnext = 1
       more = .true.
       do while (more)
-        call txtplane (nsect, istart, iend, aline, isnext, more)
-        call hiswrite (lout, aline)
+        call txtplane(nsect, istart, iend, aline, isnext, more)
+        call hiswrite(lout, aline)
       enddo
-      call hisclose (lout)
+      call hisclose(lout)
 c
 c  Initialize arrays
 c
@@ -176,44 +176,44 @@ c
 c
 c Average the selected planes and hold in memory
 c
-      call average (size(1), size(2), lin, nplanes, planes, rline,
+      call average(size(1), size(2), lin, nplanes, planes, rline,
      *              flags, buffer(avpnt), buffer(npnt), zav)
 c
 c  Now compute and write out the output image
 c
       if (dood) then
-         call od (lin, lout, size(1), size(2), size3, rline, flags,
+         call od(lin, lout, size(1), size(2), size3, rline, flags,
      *            buffer(avpnt), buffer(npnt))
-         call wrbtype (lin, 'optical_depth')
+         call wrbtype(lin, 'optical_depth')
       else if (dosub) then
-         call sub (lin, lout, size(1), size(2), size3, rline, flags,
+         call sub(lin, lout, size(1), size(2), size3, rline, flags,
      *             buffer(avpnt), buffer(npnt))
-         call hdcopy (lin, lout, 'bunit')
+         call hdcopy(lin, lout, 'bunit')
       else if (domul) then
-         call mul (lin, lout, size(1), size(2), size3, rline, flags,
+         call mul(lin, lout, size(1), size(2), size3, rline, flags,
      *             buffer(avpnt), buffer(npnt))
-         call hdcopy (lin, lout, 'bunit')
+         call hdcopy(lin, lout, 'bunit')
       else if (dorepl) then
-         call replace (lout, size(1), size(2), size(3), rline,
+         call replace(lout, size(1), size(2), size(3), rline,
      *                 flags, buffer(avpnt), buffer(npnt))
-         call hdcopy (lin, lout, 'bunit')
+         call hdcopy(lin, lout, 'bunit')
 c
 c Fix up header if reduced
 c
          if (dored) then
-           call rdhdd (lin, 'cdelt3', cdelt3, 0d0)
+           call rdhdd(lin, 'cdelt3', cdelt3, 0d0)
            cdelt3 = cdelt3 * nplanes
 
-           call wrhdd (lout, 'cdelt3', cdelt3)
-           call wrhdd (lout, 'crpix3', 1d0)
-           call wrhdd (lout, 'crval3', zav)
+           call wrhdd(lout, 'cdelt3', cdelt3)
+           call wrhdd(lout, 'crpix3', 1d0)
+           call wrhdd(lout, 'crval3', zav)
          endif
       endif
 c
 c  Close up
 c
-      call xyclose (lin)
-      call xyclose (lout)
+      call xyclose(lin)
+      call xyclose(lout)
 
       end
 
@@ -243,16 +243,16 @@ c-----------------------------------------------------------------------
       data opshuns /'subtract', 'replace', 'odepth', 'multiply',
      *              'noreduce'/
 c-----------------------------------------------------------------------
-      call options ('options', opshuns, present, maxopt)
+      call options('options', opshuns, present, maxopt)
       found = .false.
       do i = 1, 4
         if (present(i) .and. found) then
-          call bug ('f', 'You should specify one option only')
+          call bug('f', 'You should specify one option only')
         else if (present(i)) then
           found = .true.
         endif
       enddo
-      if (.not.found) call bug ('f', 'No options specified')
+      if (.not.found) call bug('f', 'No options specified')
 
       dosub    = present(1)
       dorepl   = present(2)
@@ -330,7 +330,7 @@ c-----------------------------------------------------------------------
       strlen = len(string)
       do i = isnext, nsect
         if (istart(i).eq.iend(i)) then
-          call itochar (istart(i), ch1, l1)
+          call itochar(istart(i), ch1, l1)
           if (ipt+l1.lt.strlen) then
             string(ipt:ipt+l1) = ch1(1:l1)
           else
@@ -340,8 +340,8 @@ c-----------------------------------------------------------------------
           endif
           ipt = ipt + l1 + 2
         else
-          call itochar (istart(i), ch1, l1)
-          call itochar (iend(i), ch2, l2)
+          call itochar(istart(i), ch1, l1)
+          call itochar(iend(i), ch2, l2)
           if (ipt+l1+l2.lt.strlen) then
             string(ipt:ipt+l1+l2) = ch1(1:l1)//':'//ch2(1:l2)
             ipt = ipt + l1 + l2 + 2
@@ -416,23 +416,23 @@ c-----------------------------------------------------------------------
 c
 c Get axis descriptors
 c
-      call rdhdd (lin, 'cdelt3', cdelt3, 0d0)
-      call rdhdd (lin, 'crpix3', crpix3, 0d0)
-      call rdhdd (lin, 'crval3', crval3, 0d0)
+      call rdhdd(lin, 'cdelt3', cdelt3, 0d0)
+      call rdhdd(lin, 'crpix3', crpix3, 0d0)
+      call rdhdd(lin, 'crval3', crval3, 0d0)
 c
 c Accumulate desired planes
 c
       zav = 0d0
       do k = 1, nplanes
-        call xysetpl (lin, 1, planes(k))
-        write (aline, 20) planes(k)
-20      format (' Including plane ', i4, ' in average')
+        call xysetpl(lin, 1, planes(k))
+        write(aline, 20) planes(k)
+20      format(' Including plane ', i4, ' in average')
 c        call output(aline)
         zav = zav + (dble(planes(k))-crpix3)*cdelt3+crval3
 
         do j = 1, ny
-           call xyread  (lin, j, rline)
-           call xyflgrd (lin, j, flags)
+           call xyread(lin, j, rline)
+           call xyflgrd(lin, j, flags)
 
            do i = 1, nx
               if (flags(i)) then
@@ -443,7 +443,7 @@ c        call output(aline)
         enddo
       enddo
       zav = zav / dble(nplanes)
-      call output (' ')
+      call output(' ')
 c
 c Now normalize averaged image
 c
@@ -484,17 +484,17 @@ c-----------------------------------------------------------------------
       pinc = nz / 10 + 1
       do k = 1, nz
         if (mod(k,pinc).eq.1) then
-           write (aline, 10) k
-10         format ('Begin computation of plane ', i4)
-           call output (aline)
+           write(aline, 10) k
+10         format('Begin computation of plane ', i4)
+           call output(aline)
         endif
 
-        call xysetpl (lin,  1, k)
-        call xysetpl (lout, 1, k)
+        call xysetpl(lin,  1, k)
+        call xysetpl(lout, 1, k)
 
         do j = 1, ny
-          call xyread (lin, j, rline)
-          call xyflgrd (lin, j, flags)
+          call xyread(lin, j, rline)
+          call xyflgrd(lin, j, flags)
 
           do i = 1, nx
             if (flags(i) .and. norm(i,j).gt.0.0) then
@@ -505,8 +505,8 @@ c-----------------------------------------------------------------------
             endif
           enddo
 
-          call xywrite (lout, j, rline)
-          call xyflgwr (lout, j, flags)
+          call xywrite(lout, j, rline)
+          call xyflgwr(lout, j, flags)
         enddo
       enddo
 
@@ -542,17 +542,17 @@ c-----------------------------------------------------------------------
       pinc = nz / 10 + 1
       do k = 1, nz
         if (mod(k,pinc).eq.1) then
-           write (aline, 10) k
-10         format ('Begin computation of plane ', i4)
-           call output (aline)
+           write(aline, 10) k
+10         format('Begin computation of plane ', i4)
+           call output(aline)
         endif
 
-        call xysetpl (lin,  1, k)
-        call xysetpl (lout, 1, k)
+        call xysetpl(lin,  1, k)
+        call xysetpl(lout, 1, k)
 
         do j = 1, ny
-          call xyread (lin, j, rline)
-          call xyflgrd (lin, j, flags)
+          call xyread(lin, j, rline)
+          call xyflgrd(lin, j, flags)
 
           do i = 1, nx
             temp = -1.0
@@ -565,8 +565,8 @@ c-----------------------------------------------------------------------
             endif
           enddo
 
-          call xywrite (lout, j, rline)
-          call xyflgwr (lout, j, flags)
+          call xywrite(lout, j, rline)
+          call xyflgwr(lout, j, flags)
         enddo
       enddo
 
@@ -601,17 +601,17 @@ c-----------------------------------------------------------------------
       pinc = nz / 10 + 1
       do k = 1, nz
         if (mod(k,pinc).eq.1) then
-           write (aline, 10) k
-10         format ('Begin computation of plane ', i4)
-           call output (aline)
+           write(aline, 10) k
+10         format('Begin computation of plane ', i4)
+           call output(aline)
         endif
 
-        call xysetpl (lin,  1, k)
-        call xysetpl (lout, 1, k)
+        call xysetpl(lin,  1, k)
+        call xysetpl(lout, 1, k)
 
         do j = 1, ny
-          call xyread (lin, j, rline)
-          call xyflgrd (lin, j, flags)
+          call xyread(lin, j, rline)
+          call xyflgrd(lin, j, flags)
 
           do i = 1, nx
             if (flags(i) .and. norm(i,j).gt.0.0) then
@@ -622,8 +622,8 @@ c-----------------------------------------------------------------------
             endif
           enddo
 
-          call xywrite (lout, j, rline)
-          call xyflgwr (lout, j, flags)
+          call xywrite(lout, j, rline)
+          call xyflgwr(lout, j, flags)
         enddo
       enddo
 
@@ -657,11 +657,11 @@ c-----------------------------------------------------------------------
       pinc = nz / 10 + 1
       do k = 1, nz
         if (mod(k,pinc).eq.1) then
-           write (aline, 10) k
-10         format ('Begin computation of plane ', i4)
-           call output (aline)
+           write(aline, 10) k
+10         format('Begin computation of plane ', i4)
+           call output(aline)
         endif
-        call xysetpl (lout, 1, k)
+        call xysetpl(lout, 1, k)
 
         do j = 1, ny
           do i = 1, nx
@@ -674,8 +674,8 @@ c-----------------------------------------------------------------------
             endif
           enddo
 
-          call xywrite (lout, j, rline)
-          call xyflgwr (lout, j, flags)
+          call xywrite(lout, j, rline)
+          call xyflgwr(lout, j, flags)
         enddo
       enddo
 
