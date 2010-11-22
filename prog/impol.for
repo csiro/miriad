@@ -103,7 +103,7 @@ c       make this bias plot without actually working on any data if you
 c       wish. See also VLA memo no. 161 by Patrick Leahy.
 c       Default is no plot.
 c
-c$Id: impol.for,v 1.13 2010/08/26 02:05:16 cal103 Exp $
+c$Id: impol.for,v 1.14 2010/11/22 05:44:36 cal103 Exp $
 c--
 c  History:
 c    nebk 21may92 Original version.
@@ -157,42 +157,42 @@ c-----------------------------------------------------------------------
       data tIn, lpout, lmout, lpaout /3*0, 2*0, 2*0, 2*0/
 c-----------------------------------------------------------------------
       version = versan ('impol',
-     *                  '$Revision: 1.13 $',
-     *                  '$Date: 2010/08/26 02:05:16 $')
+     *                  '$Revision: 1.14 $',
+     *                  '$Date: 2010/11/22 05:44:36 $')
 
 c     Get user inputs.
       call keyini
-      call mkeyf ('in', ins, 3, nin)
-      call mkeya ('poli', pout, 2, npout)
-      call mkeya ('polm', mout, 2, nmout)
-      call mkeya ('pa', paout, 2, npaout)
-      call getopt (debias, radians, relax, zero)
-      call keyr ('sncut', snclip(1), 2.0)
-      call keyr ('sncut', snclip(2), 0.0)
-      call keyr ('pacut', paclip, 0.0)
-      call keyr ('sigma', sigmaqu, 0.0)
-      call keyr ('sigma', sigmai, sigmaqu)
-      call keyr ('rm', rm, 0.0)
-      call keya ('device', device, ' ')
+      call mkeyf('in', ins, 3, nin)
+      call mkeya('poli', pout, 2, npout)
+      call mkeya('polm', mout, 2, nmout)
+      call mkeya('pa', paout, 2, npaout)
+      call getopt(debias, radians, relax, zero)
+      call keyr('sncut', snclip(1), 2.0)
+      call keyr('sncut', snclip(2), 0.0)
+      call keyr('pacut', paclip, 0.0)
+      call keyr('sigma', sigmaqu, 0.0)
+      call keyr('sigma', sigmai, sigmaqu)
+      call keyr('rm', rm, 0.0)
+      call keya('device', device, ' ')
       call keyfin
 
 c     Process the inputs.
       doimage = .true.
       if (device.eq.' ') then
-        if (nin.eq.0) call bug ('f', 'Nothing to do')
+        if (nin.eq.0) call bug('f', 'Nothing to do')
       else
         if (nin.eq.0) doimage = .false.
       endif
 
       if (doimage .and. nin.lt.2)
-     *  call bug ('f', 'Not enough input images')
+     *  call bug('f', 'Not enough input images')
       in(Q) = ins(1)
       in(U) = ins(2)
       in(I) = ' '
       if (nin.eq.3) in(I) = ins(3)
 
       if (doimage .and. npout.eq.0 .and. npaout.eq.0 .and. nmout.eq.0)
-     *  call bug ('f', 'You must specify an output image')
+     *  call bug('f', 'You must specify an output image')
 
       snclip(1) = max(snclip(1),0.0)
       snclip(2) = max(snclip(2),0.0)
@@ -208,35 +208,35 @@ c     Process the inputs.
 
 c     Issue some messages if producing an output image.
       if (doimage) then
-        write (line, 10) blstr, snclip(1)
-10      format ('Output ', a, ' when     P/sigma < ', f6.2)
-        call output (line)
+        write(line, 10) blstr, snclip(1)
+10      format('Output ', a, ' when     P/sigma < ', f6.2)
+        call output(line)
 
         if (paclip.gt.0.0) then
           ustr = ' degrees'
           if (radians) ustr = ' radians'
-          write (line, 30) blstr, paclip, ustr
-30        format ('Output images ', a, ' when sigma(P.A.) > ',
+          write(line, 30) blstr, paclip, ustr
+30        format('Output images ', a, ' when sigma(P.A.) > ',
      *            1pe10.4, a)
-          call output (line)
+          call output(line)
         else
           paclip = 0.0
         endif
 
-        if (snclip(1).lt.2.0) call bug ('w', 'Interpreting polarized '
+        if (snclip(1).lt.2.0) call bug('w', 'Interpreting polarized '
      *    //'images below P/SIG=2 can be hazardous')
         if ((snclip(1).gt.0.0 .or. paclip.gt.0.0 .or. debias) .and.
      *       sigmaqu.le.0.0)
-     *     call bug ('f', 'You must specify sigma')
+     *     call bug('f', 'You must specify sigma')
 
         if (npout.gt.0) then
           if (debias) then
-            call output ('The polarized intensity image '//
+            call output('The polarized intensity image '//
      *                   'will be debiased')
           else
-            call bug ('w',
+            call bug('w',
      *      'The polarized intensity image will not be debiased')
-            if (snclip(1).lt.2.0) call bug ('w',
+            if (snclip(1).lt.2.0) call bug('w',
      *   'The polarized intensity image will not be blanked with SNCUT')
           endif
         endif
@@ -246,7 +246,7 @@ c     Open the input images.
       if (doimage) then
 c       Stokes I.
         if (in(I).ne.' ') then
-          call openin (bflag, MAXDIM, MAXNAX, in(I), tIn(I), naxes(I),
+          call openin(bflag, MAXDIM, MAXNAX, in(I), tIn(I), naxes(I),
      *      naxis(1,I), epoch(I), crpix(1,I), cdelt(1,I), crval(1,I),
      *      ctype(1,I), stkax(I))
           if (stkax(I).ne.0) then
@@ -258,14 +258,14 @@ c             Shift the coordinate reference pixel.
             endif
 
             if (crval(stkax(I),I).ne.1) then
-              call bug (bflag, in(I)(1:len1(in(I))) //
+              call bug(bflag, in(I)(1:len1(in(I))) //
      *          ' does not appear to be an I image')
             endif
           endif
         endif
 
 c       Stokes Q.
-        call openin (bflag, MAXDIM, MAXNAX, in(Q), tIn(Q), naxes(Q),
+        call openin(bflag, MAXDIM, MAXNAX, in(Q), tIn(Q), naxes(Q),
      *    naxis(1,Q), epoch(Q), crpix(1,Q), cdelt(1,Q), crval(1,Q),
      *    ctype(1,Q), stkax(Q))
         if (stkax(Q).ne.0) then
@@ -277,13 +277,13 @@ c           Shift the coordinate reference pixel.
           endif
 
           if (crval(stkax(Q),Q).ne.2) then
-            call bug (bflag, in(Q)(1:len1(in(Q))) //
+            call bug(bflag, in(Q)(1:len1(in(Q))) //
      *        ' does not appear to be a Q image')
           endif
         endif
 
 c       Stokes U.
-        call openin (bflag, MAXDIM, MAXNAX, in(U), tIn(U), naxes(U),
+        call openin(bflag, MAXDIM, MAXNAX, in(U), tIn(U), naxes(U),
      *      naxis(1,U), epoch(U), crpix(1,U), cdelt(1,U), crval(1,U),
      *      ctype(1,U), stkax(U))
         if (stkax(U).ne.0) then
@@ -295,51 +295,51 @@ c           Shift the coordinate reference pixel.
           endif
 
           if (crval(stkax(U),U).ne.3) then
-            call bug (bflag, in(U)(1:len1(in(U))) //
+            call bug(bflag, in(U)(1:len1(in(U))) //
      *        ' does not appear to be a U image')
           endif
         endif
 
 c       Compare images for consistency.
-        call chkdes (bflag, MAXNAX, Q, U, in, naxes, naxis, epoch,
+        call chkdes(bflag, MAXNAX, Q, U, in, naxes, naxis, epoch,
      *     crpix, cdelt, crval, ctype, stkax)
-        if (in(I).ne.' ') call chkdes (bflag, MAXNAX, Q, I, in, naxes,
+        if (in(I).ne.' ') call chkdes(bflag, MAXNAX, Q, I, in, naxes,
      *     naxis, epoch, crpix, cdelt, crval, ctype, stkax)
 
 c       Strip the Stokes axis from the input header (use the Q header
 c       from now on as they are all consistent).
-        call axstrip (stkax, naxes, axmap, naxis, crval, crpix, cdelt,
+        call axstrip(stkax, naxes, axmap, naxis, crval, crpix, cdelt,
       *   ctype)
 
 c       Open output images starting with polarized intensity...
         if (npout.gt.0) then
-          call openout (tIn, naxes, naxis, axmap, pout(1),
+          call openout(tIn, naxes, naxis, axmap, pout(1),
      *      'polarized_intensity', version, lpout(1))
         else if (npout.eq.2) then
-          call openout (tIn, naxes, naxis, axmap, pout(2),
+          call openout(tIn, naxes, naxis, axmap, pout(2),
      *      'polarized_intensity', version, lpout(2))
         endif
 
 c       ...fractional polarization...
         if (nmout.gt.0) then
-          call openout (tIn, naxes, naxis, axmap, mout(1),
+          call openout(tIn, naxes, naxis, axmap, mout(1),
      *      'fractional_polarization', version, lmout(1))
         else if (nmout.eq.2) then
-          call openout (tIn, naxes, naxis, axmap, mout(2),
+          call openout(tIn, naxes, naxis, axmap, mout(2),
      *      'fractional_polarization', version, lmout(2))
         endif
 
 c       ...position angle.
         if (npaout.gt.0) then
-          call openout (tIn, naxes, naxis, axmap, paout(1),
+          call openout(tIn, naxes, naxis, axmap, paout(1),
      *      'position_angle', version, lpaout(1))
         else if (npaout.eq.2) then
-          call openout (tIn, naxes, naxis, axmap, paout(2),
+          call openout(tIn, naxes, naxis, axmap, paout(2),
      *      'position_angle', version, lpaout(2))
         endif
 
 c       Compute and write out the output image(s).
-        call polout (tIn(Q), tIn(U), tIn(I), lpout, lmout, lpaout,
+        call polout(tIn(Q), tIn(U), tIn(I), lpout, lmout, lpaout,
      *   naxes, naxis, crpix, crval, cdelt, ctype, debias, radians,
      *   snclip, paclip, sigmai, sigmaqu, rm, iline, qline, uline,
      *   pline, mline, paline, epline, emline, epaline, iflags, qflags,
@@ -347,20 +347,20 @@ c       Compute and write out the output image(s).
      *   zero)
 
 c       Close down.
-        call xyclose (tIn(Q))
-        call xyclose (tIn(U))
-        if (tIn(I).ne.0) call xyclose (tIn(I))
+        call xyclose(tIn(Q))
+        call xyclose(tIn(U))
+        if (tIn(I).ne.0) call xyclose(tIn(I))
 
-        if (lpout(1) .ne.0) call xyclose (lpout(1))
-        if (lpout(2) .ne.0) call xyclose (lpout(2))
-        if (lmout(1) .ne.0) call xyclose (lmout(1))
-        if (lmout(2) .ne.0) call xyclose (lmout(2))
-        if (lpaout(1).ne.0) call xyclose (lpaout(1))
-        if (lpaout(2).ne.0) call xyclose (lpaout(2))
+        if (lpout(1).ne.0) call xyclose(lpout(1))
+        if (lpout(2).ne.0) call xyclose(lpout(2))
+        if (lmout(1).ne.0) call xyclose(lmout(1))
+        if (lmout(2).ne.0) call xyclose(lmout(2))
+        if (lpaout(1).ne.0) call xyclose(lpaout(1))
+        if (lpaout(2).ne.0) call xyclose(lpaout(2))
       endif
 
 c     Draw plot
-      if (device.ne.' ') call pltbias (device)
+      if (device.ne.' ') call pltbias(device)
 
       end
 
@@ -384,7 +384,7 @@ c-----------------------------------------------------------------------
       logical present(maxopt)
       data opshuns /'bias', 'radians', 'relax', 'zero'/
 c-----------------------------------------------------------------------
-      call options ('options', opshuns, present, maxopt)
+      call options('options', opshuns, present, maxopt)
 
       debias  = .not.present(1)
       radians = present(2)
@@ -423,19 +423,19 @@ c-----------------------------------------------------------------------
       integer len1, i
       character*80 aline
 c-----------------------------------------------------------------------
-      call xyopen (lun, in, 'old', maxnax, naxis)
-      call rdhdi (lun, 'naxis', naxes, 0)
+      call xyopen(lun, in, 'old', maxnax, naxis)
+      call rdhdi(lun, 'naxis', naxes, 0)
       if (naxes.eq.0) then
         aline = in(1:len1(in))//' has zero dimensions !!'
-        call bug ('f', aline)
+        call bug('f', aline)
       endif
 
       if (naxis(1).gt.maxdim) then
         aline = 'First dimension of ' // in(1:len1(in)) //
      *          ' too large for storage'
-        call bug ('f', aline)
+        call bug('f', aline)
       endif
-      call hedinf (lun, naxes, naxis, epoch, crpix, cdelt, crval, ctype)
+      call hedinf(lun, naxes, naxis, epoch, crpix, cdelt, crval, ctype)
 
       stkax = 0
       do i = 1, naxes
@@ -443,7 +443,7 @@ c-----------------------------------------------------------------------
       enddo
       if (stkax.eq.0) then
         aline = 'Could not find Stokes axis in '//in(1:len1(in))
-        call bug (bflag, aline)
+        call bug(bflag, aline)
       endif
 
       end
@@ -476,12 +476,12 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
       do i = 1, naxes
         str = itoaf(i)
-        call rdhdd (lun, 'crpix'//str, crpix(i), dble(naxis(i))/2d0)
-        call rdhdd (lun, 'cdelt'//str, cdelt(i), 1d0)
-        call rdhdd (lun, 'crval'//str, crval(i), 0d0)
-        call rdhda (lun, 'ctype'//str, ctype(i), ' ')
+        call rdhdd(lun, 'crpix'//str, crpix(i), dble(naxis(i))/2d0)
+        call rdhdd(lun, 'cdelt'//str, cdelt(i), 1d0)
+        call rdhdd(lun, 'crval'//str, crval(i), 0d0)
+        call rdhda(lun, 'ctype'//str, ctype(i), ' ')
       enddo
-      call rdhdr (lun, 'epoch', epoch, 0.0)
+      call rdhdr(lun, 'epoch', epoch, 0.0)
 
       end
 
@@ -517,36 +517,36 @@ c-----------------------------------------------------------------------
       if (epoch(i1).ne.epoch(i2)) then
         line = 'Unequal epochs for images ' // im(i1)(1:l1) // ' & '
      *         //im(i2)(1:l2)
-        call bug (bflag, line)
+        call bug(bflag, line)
       endif
 
       if (naxes(i1).ne.naxes(i2)) then
         line = 'Unequal number dimensions for images '//
      *         im(i1)(1:l1)//' & '//im(i2)(1:l2)
-        call bug (bflag, line)
+        call bug(bflag, line)
       endif
 
       do k = 1, min(naxes(i1),naxes(i2))
         if (naxis(k,i1).ne.naxis(k,i2)) then
-          write (line, 10) im(i1)(1:l1), im(i2)(1:l2), k
- 10       format ('Unequal dimensions for images ', a, ' & ', a,
+          write(line, 10) im(i1)(1:l1), im(i2)(1:l2), k
+ 10       format('Unequal dimensions for images ', a, ' & ', a,
      *            ' on axis ', i1)
-          call bug (bflag, line)
+          call bug(bflag, line)
         endif
 
         if (ctype(k,i1).ne.ctype(k,i2)) then
-          write (line, 20) im(i1)(1:l1), im(i2)(1:l2), k
- 20       format ('Unequal ctype for images ', a, ' & ', a,
+          write(line, 20) im(i1)(1:l1), im(i2)(1:l2), k
+ 20       format('Unequal ctype for images ', a, ' & ', a,
      *            ' on axis ', i1)
-          call bug (bflag, line)
+          call bug(bflag, line)
         endif
 
-        call chkds2 (bflag, 'crpix', k, im(i1)(1:l1), im(i2)(1:l2),
+        call chkds2(bflag, 'crpix', k, im(i1)(1:l1), im(i2)(1:l2),
      *               crpix(k,i1), crpix(k,i2))
-        call chkds2 (bflag, 'cdelt', k, im(i1)(1:l1), im(i2)(1:l2),
+        call chkds2(bflag, 'cdelt', k, im(i1)(1:l1), im(i2)(1:l2),
      *               cdelt(k,i1), cdelt(k,i2))
         if (k.ne.stkax(i1) .or. k.ne.stkax(i2)) then
-          call chkds2 (bflag, 'crval', k, im(i1)(1:l1), im(i2)(1:l2),
+          call chkds2(bflag, 'crval', k, im(i1)(1:l1), im(i2)(1:l2),
      *                 crval(k,i1), crval(k,i2))
         endif
       enddo
@@ -572,10 +572,10 @@ c-----------------------------------------------------------------------
       character line*130
 c-----------------------------------------------------------------------
       if (abs(des1-des2).gt.0.01*max(abs(des1),abs(des2))) then
-        write (line, 10) type, im1, im2, iaxis
-10      format ('Unequal ', a, ' for images ', a, ' & ', a,
+        write(line, 10) type, im1, im2, iaxis
+10      format('Unequal ', a, ' for images ', a, ' & ', a,
      *          ' on axis ', i1)
-        call bug (bflag, line)
+        call bug(bflag, line)
       endif
 
       end
@@ -605,7 +605,7 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
       if (iax.eq.0) return
 
-      if (naxes.eq.1) call bug ('f',
+      if (naxes.eq.1) call bug('f',
      *   'This image has only one dimension; cannot strip it')
 
       naxes = naxes - 1
@@ -656,15 +656,15 @@ c-----------------------------------------------------------------------
       external  itoaf, len1
 c-----------------------------------------------------------------------
 c     Create the output image and copy header from input.
-      call xyopen (lout, out, 'new', naxes, naxis)
-      call headcopy (lin, lout, axmap, naxes, 0, 0)
-      call wrbtype (lout, btype)
+      call xyopen(lout, out, 'new', naxes, naxis)
+      call headcp(lin, lout, axmap, naxes, 0, 0)
+      call wrbtype(lout, btype)
 
-      call hisopen  (lout, 'append')
+      call hisopen(lout, 'append')
       aline = 'IMPOL: Miriad ' // version(:len1(version))
-      call hiswrite (lout, aline)
-      call hisinput (lout, 'IMPOL')
-      call hisclose (lout)
+      call hiswrite(lout, aline)
+      call hisinput(lout, 'IMPOL')
+      call hisclose(lout)
 
       end
 
@@ -712,9 +712,9 @@ c     Find frequency axis if rotating position angles back.
           if (index(ctype(i),'FREQ').ne.0) frqax = i
         enddo
 
-        if (frqax.eq.0) call bug ('f',
+        if (frqax.eq.0) call bug('f',
      *    'Could not find frequency axis with which to apply RM')
-        if (frqax.le.2) call bug ('f',
+        if (frqax.le.2) call bug('f',
      *    'Frequency axis is either 1 or 2.  These should be spatial')
 
         if (frqax.gt.3 .or. naxis(frqax).eq.1) then
@@ -722,9 +722,9 @@ c         Find frequency of pixel one.
           freq = (1.0 - crpix(frqax))*cdelt(frqax) + crval(frqax)
           freq = freq * 1e9
           parot = rm * (dcmks / freq)**2
-          write (aline, 10) parot*fac, ustr
-10        format ('Rotating position angles back by ', 1pe11.4, a)
-          call output (aline)
+          write(aline, 10) parot*fac, ustr
+10        format('Rotating position angles back by ', 1pe11.4, a)
+          call output(aline)
         endif
       else
         parot = 0.0
@@ -741,31 +741,31 @@ c     Loop over planes.
         endif
 
 c       Set planes.
-        if (li.ne.0) call xysetpl (li, 1, k)
-        call xysetpl (lq, 1, k)
-        call xysetpl (lu, 1, k)
-        if (lpout(1).ne.0) call xysetpl (lpout(1), 1, k)
-        if (lpout(2).ne.0) call xysetpl (lpout(2), 1, k)
-        if (lmout(1).ne.0) call xysetpl (lmout(1), 1, k)
-        if (lmout(2).ne.0) call xysetpl (lmout(2), 1, k)
-        if (lpaout(1).ne.0) call xysetpl (lpaout(1), 1, k)
-        if (lpaout(2).ne.0) call xysetpl (lpaout(2), 1, k)
+        if (li.ne.0) call xysetpl(li, 1, k)
+        call xysetpl(lq, 1, k)
+        call xysetpl(lu, 1, k)
+        if (lpout(1).ne.0) call xysetpl(lpout(1), 1, k)
+        if (lpout(2).ne.0) call xysetpl(lpout(2), 1, k)
+        if (lmout(1).ne.0) call xysetpl(lmout(1), 1, k)
+        if (lmout(2).ne.0) call xysetpl(lmout(2), 1, k)
+        if (lpaout(1).ne.0) call xysetpl(lpaout(1), 1, k)
+        if (lpaout(2).ne.0) call xysetpl(lpaout(2), 1, k)
 
 c       Read lines of data.
         do j = 1, naxis(2)
           if (li.ne.0) then
-            call xyread  (li, j, iline)
-            call xyflgrd (li, j, iflags)
+            call xyread(li, j, iline)
+            call xyflgrd(li, j, iflags)
           endif
-          call xyread  (lq, j, qline)
-          call xyflgrd (lq, j, qflags)
-          call xyread  (lu, j, uline)
-          call xyflgrd (lu, j, uflags)
+          call xyread(lq, j, qline)
+          call xyflgrd(lq, j, qflags)
+          call xyread(lu, j, uline)
+          call xyflgrd(lu, j, uflags)
 
 c         Work out everything possible for this row.
           do i = 1, naxis(1)
 c           Output values are zeroed and flagged by default.
-            call allblnk (pline(i), pflags(i), epline(i), epflags(i),
+            call allblnk(pline(i), pflags(i), epline(i), epflags(i),
      *         mline(i), mflags(i), emline(i), emflags(i),
      *         paline(i), paflags(i), epaline(i), epaflags(i))
 
@@ -838,49 +838,49 @@ c                   Use zero as the estimate for P and m.
 
 c         Write out polarized intensity and error.
           if (lpout(1).ne.0) then
-            call xywrite (lpout(1), j, pline)
-            call xyflgwr (lpout(1), j, pflags)
+            call xywrite(lpout(1), j, pline)
+            call xyflgwr(lpout(1), j, pflags)
           endif
           if (lpout(2).ne.0) then
-            call xywrite (lpout(2), j, epline)
-            call xyflgwr (lpout(2), j, epflags)
+            call xywrite(lpout(2), j, epline)
+            call xyflgwr(lpout(2), j, epflags)
           endif
 
 c         Write out fractional polarization and error.
           if (lmout(1).ne.0) then
-            call xywrite (lmout(1), j, mline)
-            call xyflgwr (lmout(1), j, mflags)
+            call xywrite(lmout(1), j, mline)
+            call xyflgwr(lmout(1), j, mflags)
           endif
           if (lmout(2).ne.0) then
-            call xywrite (lmout(2), j, emline)
-            call xyflgwr (lmout(2), j, emflags)
+            call xywrite(lmout(2), j, emline)
+            call xyflgwr(lmout(2), j, emflags)
           endif
 
 c         Write out position angle and error.
           if (lpaout(1).ne.0) then
-            call xywrite (lpaout(1), j, paline)
-            call xyflgwr (lpaout(1), j, paflags)
+            call xywrite(lpaout(1), j, paline)
+            call xyflgwr(lpaout(1), j, paflags)
           endif
           if (lpaout(2).ne.0) then
-            call xywrite (lpaout(2), j, epaline)
-            call xyflgwr (lpaout(2), j, epaflags)
+            call xywrite(lpaout(2), j, epaline)
+            call xyflgwr(lpaout(2), j, epaflags)
           endif
         enddo
       enddo
 
       if (lpout(1).ne.0) then
-        call wrhda (lpout(1), 'bunit', 'JY/BEAM')
+        call wrhda(lpout(1), 'bunit', 'JY/BEAM')
       endif
       if (lpout(2).ne.0) then
-        call wrhda (lpout(2), 'bunit', 'JY/BEAM')
+        call wrhda(lpout(2), 'bunit', 'JY/BEAM')
       endif
       if (lpaout(1).ne.0) then
         if (radians) then
-          call wrhda (lpaout(1), 'bunit', 'RADIANS')
-          if (lpaout(2).ne.0) call wrhda (lpaout(2), 'bunit', 'RADIANS')
+          call wrhda(lpaout(1), 'bunit', 'RADIANS')
+          if (lpaout(2).ne.0) call wrhda(lpaout(2), 'bunit', 'RADIANS')
         else
-          call wrhda (lpaout(1), 'bunit', 'DEGREES')
-          if (lpaout(2).ne.0) call wrhda (lpaout(2), 'bunit', 'DEGREES')
+          call wrhda(lpaout(1), 'bunit', 'DEGREES')
+          if (lpaout(2).ne.0) call wrhda(lpaout(2), 'bunit', 'DEGREES')
         endif
       endif
 
@@ -934,9 +934,9 @@ c-----------------------------------------------------------------------
       real xmin, xmax, ymin, ymax
       data ymin, ymax /1e30, -1e30/
 c-----------------------------------------------------------------------
-      call output (' ')
-      call output ('Compute bias plots')
-      call output (' ')
+      call output(' ')
+      call output('Compute bias plots')
+      call output(' ')
       qumax = 4.0
       quinc = 0.15
       nruns = maxrun
@@ -951,18 +951,18 @@ c
 c True polarization
 c
         pp0 = sqrt(qu**2 + qu**2)
-        write (aline, 10) pp0
-10      format ('P_true / sigma = ', f5.3)
-        call output (aline)
+        write(aline, 10) pp0
+10      format('P_true / sigma = ', f5.3)
+        call output(aline)
         ptrue(j) = pp0
 c
 c Maximum likelihood
 c
-        call noisy (nruns, qu, qunoise, pobs)
+        call noisy(nruns, qu, qunoise, pobs)
         pmlsum = 0.0
         nrml = 0
         do i = 1, nruns
-          call ml (pobs(i), pml, conv)
+          call ml(pobs(i), pml, conv)
           if (conv) then
             nrml = nrml + 1
             pmlsum = pmlsum + pml
@@ -977,9 +977,9 @@ c
 c First order
 c
         pfosum = 0.0
-        call noisy (nruns, qu, qunoise, pobs)
+        call noisy(nruns, qu, qunoise, pobs)
         do i = 1, nruns
-          call firstord (pobs(i), pfo)
+          call firstord(pobs(i), pfo)
           pfosum = pfosum + pfo
         enddo
         pfodi(j) = (pfosum / nruns) - pp0
@@ -987,7 +987,7 @@ c
 c Observed
 c
         pobssum = 0.0
-        call noisy (nruns, qu, qunoise, pobs)
+        call noisy(nruns, qu, qunoise, pobs)
         do i = 1, nruns
           pobssum = pobssum + pobs(i)
         enddo
@@ -1009,35 +1009,35 @@ c
       ierr = pgbeg (0, device, 1, 1)
       if (ierr.ne.1) then
         call pgldev
-        call bug ('f', 'Error opening plot device')
+        call bug('f', 'Error opening plot device')
       else
-        call pgqinf ('hardcopy', hard, hlen)
-        call pgscf (1)
-        if (hard.eq.'YES') call pgscf (2)
+        call pgqinf('hardcopy', hard, hlen)
+        call pgscf(1)
+        if (hard.eq.'YES') call pgscf(2)
 
         xmin = 0.0
         xmax = sqrt(2.0*qumax**2) + 0.1
-        call limstr (ymin, ymax)
-        call pgswin (xmin, xmax, ymin, ymax)
+        call limstr(ymin, ymax)
+        call pgswin(xmin, xmax, ymin, ymax)
 c
 c  Draw box and label
 c
         call pgpage
-        call pgbox ('BCNST', 0.0, 0, 'BCNST', 0.0, 0)
-        call pglab ('P\dtrue\u(\gs\dP\u=1)',
+        call pgbox('BCNST', 0.0, 0, 'BCNST', 0.0, 0)
+        call pglab('P\dtrue\u(\gs\dP\u=1)',
      *                '<P\dest\u> - P\dtrue\u', 'Polarization bias')
 c
 c  Plot points
 c
-        call pgline (j-1, ptrue, pobsdi)
-        call pgsls (2)
-        call pgline (j-1, ptrue, pfodi)
-        call pgsls (3)
-        call pgline (j-1, ptrue, pmldi)
+        call pgline(j-1, ptrue, pobsdi)
+        call pgsls(2)
+        call pgline(j-1, ptrue, pfodi)
+        call pgsls(3)
+        call pgline(j-1, ptrue, pmldi)
 
-        call pgtext (4.0, 0.2, 'Observed')
-        call pgtext (1.5, 0.075, 'First order')
-        call pgtext (3.0, -0.125, 'Maximum likelihood')
+        call pgtext(4.0, 0.2, 'Observed')
+        call pgtext(1.5, 0.075, 'First order')
+        call pgtext(3.0, -0.125, 'Maximum likelihood')
         call pgend
       endif
 
@@ -1054,7 +1054,7 @@ c
 c-----------------------------------------------------------------------
       integer i
 c-----------------------------------------------------------------------
-      call gaus (qunoise,2*nruns)
+      call gaus(qunoise,2*nruns)
       do i = 1, nruns
         pobs(i) = sqrt((qu+qunoise(i))**2 + (qu+qunoise(i+nruns))**2)
       enddo

@@ -53,10 +53,10 @@ c
 c       Values for "uvrange" must be given either if "options=feather"
 c       is used or if the flux calibration factor is being deduced.
 c@ region
-c       Region-of-interest parameter.  See the help on ``region''
+c       Region-of-interest parameter.  See the help on "region"
 c       for more information.  NOTE: This parameter is ONLY used for
 c       determining the flux calibration factor.  Only plane selection
-c       (e.g. via the ``image'' command) is allowed.  Typically you
+c       (e.g. via the "image" command) is allowed.  Typically you
 c       would want to select a range of planes which contains
 c       significant signal in the overlap region.
 c@ device
@@ -98,7 +98,7 @@ c                    match any residual primary beam response in the
 c                    high-resolution image.  This option causes this
 c                    step to be skipped.
 c
-c$Id: immerge.for,v 1.3 2010/08/25 06:47:06 cal103 Exp $
+c$Id: immerge.for,v 1.4 2010/11/22 05:45:47 cal103 Exp $
 c--
 c
 c  History:
@@ -143,8 +143,8 @@ c-----------------------------------------------------------------------
      *           'feet        '/
 c-----------------------------------------------------------------------
       version = versan('immerge',
-     *                 '$Revision: 1.3 $',
-     *                 '$Date: 2010/08/25 06:47:06 $')
+     *                 '$Revision: 1.4 $',
+     *                 '$Date: 2010/11/22 05:45:47 $')
 
       call keyini
       call GetOpt(domerge,dozero,dofeath,doshift,notaper)
@@ -163,10 +163,10 @@ c-----------------------------------------------------------------------
         call BoxInput('region',in1,box,MAXBOX)
       endif
       if (dofac .or. dofeath) then
-        call keyr('uvrange',uvlo,0.)
-        call keyr('uvrange',uvhi,-1.)
+        call keyr('uvrange',uvlo,0.0)
+        call keyr('uvrange',uvhi,-1.0)
         call keymatch('uvrange',NUNITS,units,1,unit,n)
-        if (n.eq.0)unit = units(1)
+        if (n.eq.0) unit = units(1)
         if (uvlo.ge.uvhi)
      *    call bug('f','Invalid uvrange value')
       else
@@ -253,7 +253,7 @@ c
           call coVelSet(lIn2,'freq')
           call coFindAx(lIn2,'freq',iax)
           call coCvt1(lIn2,iax,'op',0d0,'aw',freq2)
-          if (min(freq1,freq2).le.0.)
+          if (min(freq1,freq2).le.0.0)
      *      call bug('f','Could not determine observing frequency')
           freq = sqrt(freq1*freq2)
           write(line,'(a,f8.3,a)')'Using a frequency of ',freq,
@@ -380,11 +380,11 @@ c-----------------------------------------------------------------------
       dx = 1/(cdelt1*ngx)
       dy = 1/(cdelt2*ngy)
 
-      theta = pi/180. * bpa
+      theta = pi/180.0 * bpa
       s2 = -sin(2*theta)
       c2 = -cos(2*theta)
-      a = 4*log(2.) / (bmajf*bmajf)
-      b = 4*log(2.) / (bminf*bminf)
+      a = 4*log(2.0) / (bmajf*bmajf)
+      b = 4*log(2.0) / (bminf*bminf)
       sxx = -0.5*(a*(c2+1) + b*(1-c2)) * dx*dx
       syy = -0.5*(b*(c2+1) + a*(1-c2)) * dy*dy
       sxy = -(b-a)*s2 * dx*dy
@@ -460,7 +460,7 @@ c-----------------------------------------------------------------------
       character line*64
 c-----------------------------------------------------------------------
 c     Copy the header verbatim.
-      call headcopy(lIn, lOut, 0, 0, 0, 0)
+      call headcp(lIn, lOut, 0, 0, 0, 0)
 
 c     Create the output history.
       call hisopen(lOut,'append')
@@ -510,7 +510,7 @@ c
         call xyRead(lIn,j,In(1,j))
         call xyflgrd(lIn,j,flags)
         do i = 1, nx
-          if (.not.flags(i))In(i,j) = 0
+          if (.not.flags(i)) In(i,j) = 0
         enddo
 
         if (dotaper) then
@@ -583,7 +583,7 @@ c  Report on the tapering.
 c
       if (ntaper.gt.0) then
         staper = staper/ntaper
-        write(ctaper,'(f4.2)')staper
+        write(ctaper,'(f4.2)') staper
         if (staper.lt.0.5) call bug('w','Taper correction for low '//
      *    'resolution image is small (mean='//ctaper//')')
         if (staper.lt.0.1) call bug('f','This is too small')
@@ -613,9 +613,9 @@ c-----------------------------------------------------------------------
       character itoaf*6
       external  itoaf
 c-----------------------------------------------------------------------
-      call rdhdr(lIn,'bmaj',bmaj,0.)
-      call rdhdr(lIn,'bmin',bmin,0.)
-      call rdhdr(lIn,'bpa',bpa,0.)
+      call rdhdr(lIn,'bmaj',bmaj,0.0)
+      call rdhdr(lIn,'bmin',bmin,0.0)
+      call rdhdr(lIn,'bpa',bpa,0.0)
 c
 c  If the gaussian parameters were not in the header, assume its
 c  a single dish, and try to get the primary beam size.
@@ -790,7 +790,7 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
       do j = 1, ngy
         do i = 1, ngx/2+1
-          data(i,j) = (0.,0.)
+          data(i,j) = (0.0,0.0)
         enddo
       enddo
 c
@@ -935,7 +935,7 @@ c
       call pgvstd
       call pgrnge(xmin,xmax,xlo,xhi)
       call pgwnad(xlo,xhi,xlo,xhi)
-      call pgbox('BCNST',0.,0,'BCNST',0.,0)
+      call pgbox('BCNST',0.0,0,'BCNST',0.0,0)
       if (n.lt.100) then
         call pgpt(n,x,y,17)
       else
@@ -1002,7 +1002,7 @@ c
       if (SumXX.eq.0) call bug('f','High resolution image is zero')
       a = SumXY/SumYY
       rms = (SumXX + a*a*SumYY - 2*a*SumXY)/(n*SumYY)
-      rms = max(0.01*a,sqrt(max(0.,rms)))
+      rms = max(0.01*a,sqrt(max(0.0,rms)))
 
       a1 = a
       f1 = medfunc(a1,X,Y,n)
@@ -1018,7 +1018,7 @@ c
 
       do while (abs(a1-a2).gt.0.001*rms)
         a = 0.5*(a1+a2)
-        if (a.eq.a1 .or. a.eq.a2)return
+        if (a.eq.a1 .or. a.eq.a2) return
         f = medfunc(a,X,Y,n)
         if (f*f1.ge.0) then
           f1 = f

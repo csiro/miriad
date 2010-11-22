@@ -14,7 +14,7 @@ c@ out
 c       The name of the output image.  The output image has the same
 c       characteristics as the input image, if present.  If no input
 c       image is given, the `imsize', `cell' and `radec' keywords give
-c       the characteristics of the output.  No default. 
+c       the characteristics of the output.  No default.
 c@ factor
 c       Factor to multiply the input image by. This is meaningless if no
 c       input image is given.  The default is 1.
@@ -97,7 +97,7 @@ c       Integer used to initialise the random number generator.  The
 c       same value of SEED produces the same noise, different values
 c       produce different noise.
 c
-c$Id: imgen.for,v 1.3 2010/08/25 05:47:36 cal103 Exp $
+c$Id: imgen.for,v 1.4 2010/11/22 05:48:54 cal103 Exp $
 c--
 c
 c  History:
@@ -186,15 +186,15 @@ c-----------------------------------------------------------------------
      *             'gauss3  ','jet     '/
 c-----------------------------------------------------------------------
       version = versan('imgen',
-     *                 '$Revision: 1.3 $',
-     *                 '$Date: 2010/08/25 05:47:36 $')
+     *                 '$Revision: 1.4 $',
+     *                 '$Date: 2010/11/22 05:48:54 $')
 c
 c  Get the parameters from the user.
 c
       call keyini
       call keya('in',In,' ')
       call keya('out',Out,' ')
-      call keyr('factor',Factor,1.)
+      call keyr('factor',Factor,1.0)
       call keymatch('object',NOBJECTS,objects,MAXOBJS,objs,nobjs)
       if (nobjs.eq.0) then
         objs(1) = 'gaussian'
@@ -205,40 +205,40 @@ c
 c  Get the source parameters.
 c
       do i = 1, nobjs
-        call keyr('spar',amp(i),1.)
+        call keyr('spar',amp(i),1.0)
         if (objs(i).ne.'level' .and. objs(i).ne.'noise') then
-          call keyr('spar',x(i),0.)
-          call keyr('spar',y(i),0.)
-          x(i) = x(i) / 3600. * pi/180.
-          y(i) = y(i) / 3600. * pi/180.
+          call keyr('spar',x(i),0.0)
+          call keyr('spar',y(i),0.0)
+          x(i) = x(i) / 3600.0 * pi/180.0
+          y(i) = y(i) / 3600.0 * pi/180.0
         else
           x(i) = 0
           y(i) = 0
         endif
-        if (objs(i).eq.'gauss3') call keyr('spar',z(i),0.)
+        if (objs(i).eq.'gauss3') call keyr('spar',z(i),0.0)
         if (objs(i)(1:5).eq.'gauss' .or. objs(i).eq.'disk' .or.
      *     objs(i).eq.'j1x' .or. objs(i).eq.'jet') then
-          call keyr('spar',fwhm1(i),5.)
-          call keyr('spar',fwhm2(i),5.)
-          call keyr('spar',posang(i),0.)
+          call keyr('spar',fwhm1(i),5.0)
+          call keyr('spar',fwhm2(i),5.0)
+          call keyr('spar',posang(i),0.0)
           if (objs(i).ne.'jet') then
-            fwhm1(i) = fwhm1(i) / 3600. * pi/180.
-            fwhm2(i) = fwhm2(i) / 3600. * pi/180.
+            fwhm1(i) = fwhm1(i) / 3600.0 * pi/180.0
+            fwhm2(i) = fwhm2(i) / 3600.0 * pi/180.0
             if (min(fwhm1(i),fwhm2(i)).le.0)
      *      call bug('f','BMAJ and BMIN parameters must be positive')
           endif
-          posang(i) = posang(i) * pi/180.
-          if (objs(i).eq.'gauss3') call keyr('spar',fwhm3(i),5.)
+          posang(i) = posang(i) * pi/180.0
+          if (objs(i).eq.'gauss3') call keyr('spar',fwhm3(i),5.0)
         elseif(objs(i).eq.'shell' .or. objs(i).eq.'comet') then
-          call keyr('spar',fwhm1(i),5.)
-          fwhm1(i) = fwhm1(i) / 3600. * pi/180.
+          call keyr('spar',fwhm1(i),5.0)
+          fwhm1(i) = fwhm1(i) / 3600.0 * pi/180.0
           if (fwhm1(i).le.0)
      *      call bug('f','BMAJ and BMIN parameters must be positive')
           fwhm2(i) = fwhm1(i)
           posang(i) = 0
         elseif(objs(i).eq.'cluster') then
-          call keyr('spar',fwhm1(i),50.)
-          fwhm1(i) = fwhm1(i) / 3600. * pi/180.
+          call keyr('spar',fwhm1(i),50.0)
+          fwhm1(i) = fwhm1(i) / 3600.0 * pi/180.0
           fwhm2(i) = fwhm1(i)
           posang(i) = 0
         else
@@ -252,8 +252,8 @@ c  Get parameters used to construct the output image (if needed).
 c
       call keyd('cell',cdelt1,-1d0)
       call keyd('cell',cdelt2,cdelt1)
-      cdelt1 = -abs(cdelt1/3600 * pi/180.)
-      cdelt2 =  abs(cdelt2/3600 * pi/180.)
+      cdelt1 = -abs(cdelt1/3600 * pi/180.0)
+      cdelt2 =  abs(cdelt2/3600 * pi/180.0)
       call keyi('imsize',n1,256)
       call keyi('imsize',n2,n1)
       call keyi('imsize',n3,1)
@@ -285,9 +285,9 @@ c
         do i = 4, naxis
           nsize(i) = 1
         enddo
-        call rdhdr(lIn,'bmaj',bmaj,0.)
-        call rdhdr(lIn,'bmin',bmin,0.)
-        call rdhdr(lIn,'bpa',bpa,0.)
+        call rdhdr(lIn,'bmaj',bmaj,0.0)
+        call rdhdr(lIn,'bmin',bmin,0.0)
+        call rdhdr(lIn,'bpa',bpa,0.0)
         call rdhdd(lIn,'cdelt1',cdelt1,1d0*cdelt1)
         call rdhdd(lIn,'cdelt2',cdelt2,1d0*cdelt2)
       else
@@ -321,8 +321,8 @@ c
           bmin = fwhm1(1)
           bpa  = 180/pi * posang(1) - 90
         endif
-        if (bpa.lt.-90)bpa = bpa + 180
-        if (bpa.gt.90)bpa = bpa - 180
+        if (bpa.lt.-90) bpa = bpa + 180
+        if (bpa.gt.90) bpa = bpa - 180
       endif
 c
 c  Now open the output, and add a header to it.
@@ -480,7 +480,7 @@ c       Create a new header.
         endif
       else
 c       Copy the old one.
-        call headcopy(lIn, lOut, 0, 0, 0, 0)
+        call headcp(lIn, lOut, 0, 0, 0, 0)
         call hdcopy(lIn, lOut, 'mask')
       endif
 
@@ -530,7 +530,7 @@ c
         endif
         cospa = cos(posang)
         sinpa = sin(posang)
-        scale = 2. * sqrt(log2)
+        scale = 2.0 * sqrt(log2)
         limit = 5/scale * max(fwhm1,fwhm2)
         ymin = nint(y-limit)
         ymax = nint(y+limit)
@@ -543,7 +543,7 @@ c
             yp =  yy*cospa + xx*sinpa
             xp = -yy*sinpa + xx*cospa
             t = (xp*xp)/(fwhm2*fwhm2) + (yp*yp)/(fwhm1*fwhm1)
-            if (t.lt.25)data(i) = data(i) + a*exp(-t)
+            if (t.lt.25) data(i) = data(i) + a*exp(-t)
           enddo
         endif
 
@@ -588,13 +588,13 @@ c       Handle a comet.
         do i = 1, n1
           xx = (i-x)
           p = sqrt(xx*xx+yy*yy)
-          sum = 0.
+          sum = 0.0
           do it = -maxit+1, maxit-1
-            theta = it*pi/2./maxit
+            theta = it*pi/2.0/maxit
             sum = sum +
-     *        exp(-p/fwhm1/(cos(theta)))*pi/2./(maxit-2)
+     *        exp(-p/fwhm1/(cos(theta)))*pi/2.0/(maxit-2)
           enddo
-          if (p.ne.0.) then
+          if (p.ne.0.0) then
             a = amp / p * sum
             data(i) = data(i) + a
           endif
@@ -606,7 +606,7 @@ c       Handle a cluster isothermal gas projection.
         do i = 1, n1
           xx = (i-x)
           p = (xx*xx+yy*yy)/(fwhm1*fwhm1)
-          a = amp * (1. + p)**-0.5
+          a = amp * (1.0 + p)**-0.5
 c           a = amp * (1. + p)**(0.5-1.5*beta)
           data(i) = data(i) + a
         enddo
@@ -658,7 +658,7 @@ c       Handle a spherical shell.
             xp = -yy*sinpa + xx*cospa
             t = (xp*xp)/(fwhm1*fwhm1) + (yp*yp)/(fwhm1*fwhm1)
             if (t.lt.0.25) data(i) = data(i) + a/0.5/fwhm1/
-      *            sqrt(1.-4.*t)
+      *            sqrt(1.0-4.0*t)
           enddo
         endif
 

@@ -41,7 +41,7 @@ c       PGPLOT device to show plots of the histograms & discretized
 c       cumulative histogram. Will plot after each plane, so really
 c       of use only for single plane images
 c
-c$Id: imheq.for,v 1.3 2010/08/25 06:10:09 cal103 Exp $
+c$Id: imheq.for,v 1.4 2010/11/22 05:47:50 cal103 Exp $
 c--
 c
 c  History:
@@ -69,62 +69,62 @@ c-----------------------------------------------------------------------
       data bmin2, bmax2 /1e32, -1e32/
 c-----------------------------------------------------------------------
       version = versan('imheq',
-     *                 '$Revision: 1.3 $',
-     *                 '$Date: 2010/08/25 06:10:09 $')
+     *                 '$Revision: 1.4 $',
+     *                 '$Date: 2010/11/22 05:47:50 $')
 
 c     Get the input parameters.
-      call output (version)
+      call output(version)
       call keyini
-      call keya ('in', in, ' ')
-      call keya ('out', out, ' ')
+      call keya('in', in, ' ')
+      call keya('out', out, ' ')
       if (in.eq.' ' .or. out.eq.' ')
-     *  call bug ('f', 'You must give an input and output file')
-      call keyi ('nbins', nbins, 128)
+     *  call bug('f', 'You must give an input and output file')
+      call keyi('nbins', nbins, 128)
       nbins = min(MAXBIN,nbins)
-      call keyr ('range', bminu, 0.0)
-      call keyr ('range', bmaxu, 0.0)
-      call keya ('device', device, ' ')
-      call decopt (global)
+      call keyr('range', bminu, 0.0)
+      call keyr('range', bmaxu, 0.0)
+      call keya('device', device, ' ')
+      call decopt(global)
       if (bminu.ne.0.0 .or. bmaxu.ne.0.0) global = .false.
       call keyfin
 
 c     Open the input.
-      call xyopen (lin, in, 'old', maxnax, nin)
+      call xyopen(lin, in, 'old', maxnax, nin)
       if (nin(1).gt.maxdim)
-     *  call bug ('f', 'Image too big for me to handle')
-      call rdhdi (lin, 'naxis', naxis, 0)
-      call imminmax (lin, naxis, nin, bming, bmaxg)
+     *  call bug('f', 'Image too big for me to handle')
+      call rdhdi(lin, 'naxis', naxis, 0)
+      call imminmax(lin, naxis, nin, bming, bmaxg)
 
 c     Make the output file, and make its header.
-      call xyopen (lout, out, 'new', naxis, nin)
-      call headcopy(lIn, lOut, 0, 0, 0, 0)
+      call xyopen(lout, out, 'new', naxis, nin)
+      call headcp(lIn, lOut, 0, 0, 0, 0)
       call hisopen (lout, 'append')
-      call hiswrite (lout, 'IMHEQ: Miriad '//version)
-      call hisinput (lout, 'IMHEQ')
-      call hisclose (lout)
+      call hiswrite(lout, 'IMHEQ: Miriad '//version)
+      call hisinput(lout, 'IMHEQ')
+      call hisclose(lout)
 
 c     Allocate memory.
-      call memalloc (ipr, nin(1)*nin(2), 'r')
-      call memalloc (ipl, nin(1)*nin(2), 'l')
+      call memalloc(ipr, nin(1)*nin(2), 'r')
+      call memalloc(ipl, nin(1)*nin(2), 'l')
 
 c     Open PGPLOT device.
       if (device.ne.' ') then
         ierr = pgbeg (0, device, 1, 1)
         if (ierr.ne.1) then
           call pgldev
-          call bug ('f', 'Error opening plot device')
+          call bug('f', 'Error opening plot device')
         endif
-        call pgsvp (0.2, 0.8, 0.2, 0.8)
+        call pgsvp(0.2, 0.8, 0.2, 0.8)
         call pgpage
       endif
 
 c     Loop over planes.
       do k = 1, nin(3)
-        call xysetpl (lin,  1, k)
-        call xysetpl (lout, 1, k)
+        call xysetpl(lin,  1, k)
+        call xysetpl(lout, 1, k)
 
 c       Read image.
-        call readim (lin, nin(1), nin(2), memr(ipr), meml(ipl),
+        call readim(lin, nin(1), nin(2), memr(ipr), meml(ipl),
      *               bmin, bmax)
         if (global) then
           bmin = bming
@@ -135,38 +135,38 @@ c       Read image.
         endif
 
 c       Apply histogram equalization.
-        call equal (nin(1)*nin(2), memr(ipr), meml(ipl), bmin, bmax,
+        call equal(nin(1)*nin(2), memr(ipr), meml(ipl), bmin, bmax,
      *              nbins, his, cumhis, bmin2, bmax2, MAXBIN, xp,
      *              yp, ymax)
 
 c       Write out image.
-        call writim (lout, nin(1), nin(2), memr(ipr), meml(ipl))
+        call writim(lout, nin(1), nin(2), memr(ipr), meml(ipl))
 
 c       Draw plot.
         if (device.ne.' ') then
-          call pgswin (bmin, bmax, 0.0, ymax)
-          call pgbox ('BCNST', 0.0, 0, 'BNST', 0.0, 0)
-          call pghline (nbins, xp, yp(1,1), 2.0)
-          call pglab ('Intensity', 'Number',
+          call pgswin(bmin, bmax, 0.0, ymax)
+          call pgbox('BCNST', 0.0, 0, 'BNST', 0.0, 0)
+          call pghline(nbins, xp, yp(1,1), 2.0)
+          call pglab('Intensity', 'Number',
      *                'Histogram and Cumulative Histogram')
 
-          call pgsci (7)
-          call pgswin (bmin, bmax, 0.0,  real(nin(1)*nin(2)))
-          call pgbox (' ', 0.0, 0, 'CMST', 0.0, 0)
-          call pghline (nbins, xp, yp(1,2), 2.0)
-          call pgmtxt ('R', 2.0, 0.5, 0.5, 'Number')
+          call pgsci(7)
+          call pgswin(bmin, bmax, 0.0,  real(nin(1)*nin(2)))
+          call pgbox(' ', 0.0, 0, 'CMST', 0.0, 0)
+          call pghline(nbins, xp, yp(1,2), 2.0)
+          call pgmtxt('R', 2.0, 0.5, 0.5, 'Number')
           call pgupdt
         endif
       enddo
 
 c     Close up.
-      call wrhdr (lout, 'datamin', bmin2)
-      call wrhdr (lout, 'datamax', bmax2)
+      call wrhdr(lout, 'datamin', bmin2)
+      call wrhdr(lout, 'datamax', bmax2)
 
-      call memfree (ipr, nin(1)*nin(2), 'i')
-      call memfree (ipl, nin(1)*nin(2), 'i')
-      call xyclose (lin)
-      call xyclose (lout)
+      call memfree(ipr, nin(1)*nin(2), 'i')
+      call memfree(ipl, nin(1)*nin(2), 'i')
+      call xyclose(lin)
+      call xyclose(lout)
       if (device.ne.' ') call pgend
 
       end
@@ -186,8 +186,8 @@ c-----------------------------------------------------------------------
       bmin =  1e32
       bmax = -1e32
       do j = 1, ny
-        call xyread (lin, j, image(k))
-        call xyflgrd (lin, j, mask(k))
+        call xyread(lin, j, image(k))
+        call xyflgrd(lin, j, mask(k))
         do i = 1, nx
           bmin = min(bmin,image(k+i-1))
           bmax = max(bmax,image(k+i-1))
@@ -211,8 +211,8 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
       k = 1
       do j = 1, ny
-        call xywrite (lin, j, image(k))
-        call xyflgwr (lin, j, mask(k))
+        call xywrite(lin, j, image(k))
+        call xyflgwr(lin, j, mask(k))
         k = k + nx
       enddo
 
@@ -328,7 +328,7 @@ c-----------------------------------------------------------------------
 
       data opshuns /'global'/
 c-----------------------------------------------------------------------
-      call options ('options', opshuns, present, MAXOPT)
+      call options('options', opshuns, present, MAXOPT)
 
       global = present(1)
 

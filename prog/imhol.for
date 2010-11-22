@@ -76,7 +76,7 @@ c                 instead of giving a fatal error
 c         bmfit   Fit focus and pointing offsets to aperture E-field
 c                 maps.
 c
-c$Id: imhol.for,v 1.3 2010/09/24 02:39:26 cal103 Exp $
+c$Id: imhol.for,v 1.4 2010/11/22 05:46:53 cal103 Exp $
 c--
 c  History:
 c    nebk 21may92 Original version.
@@ -107,8 +107,8 @@ c-----------------------------------------------------------------------
       external  versan
 c-----------------------------------------------------------------------
       version = versan('imhol',
-     *                 '$Revision: 1.3 $',
-     *                 '$Date: 2010/09/24 02:39:26 $')
+     *                 '$Revision: 1.4 $',
+     *                 '$Date: 2010/11/22 05:46:53 $')
 
 c     Get the inputs.
       call keyini
@@ -388,7 +388,7 @@ c     Exclude the Stokes axis.
         endif
       enddo
 
-      call headcopy(lIn, lOut, axMap, naxis, 0, 0)
+      call headcp(lIn, lOut, naxis, axMap, 0, 0)
 
 c     Update history.
       call hisopen (lOut, 'append')
@@ -689,7 +689,7 @@ c       Sumarize results of focus and pointing fits.
         endif
 
 c       Compute the surface rms.
-        if (sum.gt.0.) then
+        if (sum.gt.0.0) then
           rms = sqrt(sumzz/sum - (sumz/sum)**2)
           if (pass1) then
             write(text,'(a,g12.5,1x,a)')
@@ -702,7 +702,7 @@ c       Compute the surface rms.
         endif
 
 c       Compute the amplitude weighted surface rms.
-        if (sumw.gt.0.) then
+        if (sumw.gt.0.0) then
           rmsw = sqrt(sumwzz/sumw - (sumwz/sumw)**2)
           if (.not.pass1) then
             write(text,'(a,g12.5,1x,a)')
