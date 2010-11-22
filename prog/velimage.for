@@ -46,7 +46,7 @@ c       Options. Minimum match is active.
 c         relax  ignore axis descriptor mismatches
 c                (e.g. pixel increments etc).  Use with care.
 c
-c$Id: velimage.for,v 1.3 2010/10/12 03:48:37 cal103 Exp $
+c$Id: velimage.for,v 1.4 2010/11/22 05:15:59 cal103 Exp $
 c--
 c  History:
 c    23sep92 mchw  New task.
@@ -72,8 +72,8 @@ c-----------------------------------------------------------------------
       external  itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('velimage',
-     *                 '$Revision: 1.3 $',
-     *                 '$Date: 2010/10/12 03:48:37 $')
+     *                 '$Revision: 1.4 $',
+     *                 '$Date: 2010/11/22 05:15:59 $')
 
 c     Get the input parameters.
       call keyini
@@ -149,7 +149,7 @@ c     Open the output image and write its header.
       axLen(2) = trc(2)-blc(2)+1
       axLen(3) = nchan
       call xyopen(lOut, outNam, 'new', 3, axLen)
-      call headcopy(lIn, lOut, 0, 2, blc, trc)
+      call headcp(lIn, lOut, 2, 0, blc, trc)
       call wrhdd(lOut, 'crpix3', 1d0)
       call wrhdd(lOut, 'cdelt3', dble(step))
       call wrhdd(lOut, 'crval3', dble(start))
@@ -210,7 +210,7 @@ c-----------------------------------------------------------------------
       logical present(maxopt)
       data ops /'relax'/
 c-----------------------------------------------------------------------
-      call options ('options', ops, present, maxopt)
+      call options('options', ops, present, maxopt)
       relax = present(1)
 
       end

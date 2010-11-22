@@ -30,7 +30,7 @@ c       Two values.  Exclude pixels with values in the range clip(1) to
 c       clip(2).  If only one value is given, then exclude -abs(clip) to
 c       +abs(clip).
 c
-c$Id: velcolor.for,v 1.3 2010/09/17 07:54:33 cal103 Exp $
+c$Id: velcolor.for,v 1.4 2010/11/22 05:17:13 cal103 Exp $
 c--
 c  History:
 c    06aug92 mchw  Adapted from RALINT task.
@@ -55,8 +55,8 @@ c-----------------------------------------------------------------------
       external  keyprsnt, versan
 c-----------------------------------------------------------------------
       version = versan('velcolor',
-     *                 '$Revision: 1.3 $',
-     *                 '$Date: 2010/09/17 07:54:33 $')
+     *                 '$Revision: 1.4 $',
+     *                 '$Date: 2010/11/22 05:17:13 $')
 
 c     Get inputs.
       call keyini
@@ -146,7 +146,7 @@ c     Copy the input header with sub-imaging.
         axMap(iax) = iax
       enddo
 
-      call headcopy(lIn, lOut, axMap, naxis, blc, trc)
+      call headcp(lIn, lOut, naxis, axMap, blc, trc)
 
 c     Fix up the third (colour) axis.
       call rdhdr(lin, 'crpix3', crpix, 1.0)
