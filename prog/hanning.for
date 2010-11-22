@@ -8,7 +8,7 @@ c   given in the header it assumes that it is the z-axis.
 c   The width of the smooth is determined by the keyword width.
 c   If input data is masked, it is set to zero before smoothing is done.
 c@ in
-c        The input image. vxy and xyv images are acceptable inputs. 
+c        The input image. vxy and xyv images are acceptable inputs.
 c        No default.
 c@ region
 c        The region of the input image to examine.
@@ -31,11 +31,11 @@ c    bpw   2mar93  Masked data set to zero
 c    lss,vk 30mar00 Adapted from hanning to include boxcar
 c    rjs  08may00  Change key call for output file to keyf.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
        program hanning
 
        character*80 version
-       parameter ( version = 'hanning: version 1.0 2-mar-93' )
+       parameter (version = 'hanning: version 1.0 2-mar-93')
 
        include      'maxnax.h'
 
@@ -44,17 +44,17 @@ c------------------------------------------------------------------------
        integer      width
        character    object*8
 
-       call output( version )
-       call inputs(  tinp, tout, nprofiles,nchan, width, object )
-       call hsmooth( tinp, tout, nprofiles,nchan, width, object )
-       call finish(  tinp, tout, version )
+       call output(version)
+       call inputs( tinp, tout, nprofiles,nchan, width, object)
+       call hsmooth(tinp, tout, nprofiles,nchan, width, object)
+       call finish( tinp, tout, version)
 
        end
 
 
 
 
-       subroutine inputs( tinp, tout, nprofiles, nchan, width, object)
+       subroutine inputs(tinp, tout, nprofiles, nchan, width, object)
 
        include      'maxnax.h'
 
@@ -64,11 +64,11 @@ c------------------------------------------------------------------------
 
        character*1024 inp, out
        integer      MAXBOXES
-       parameter    ( MAXBOXES = 1024 )
+       parameter    (MAXBOXES = 1024)
        integer      boxes(MAXBOXES)
 
        integer      naxis
-       integer      axlen(MAXNAX), axnum(MAXNAX)
+       integer      axlen(MAXNAX)
        integer      iblc(MAXNAX),  itrc(MAXNAX)
        integer      oblc(MAXNAX),  otrc(MAXNAX)
        integer      viraxlen(MAXNAX), vircsz(MAXNAX)
@@ -79,42 +79,41 @@ c------------------------------------------------------------------------
 
        call keyini
 
-       call keyf( 'in',  inp, ' ' )
-       call keya( 'out', out, ' ' )
-       call assertl( inp.ne.' ', 'Input file name is missing' )
-       call assertl( out.ne.' ', 'Output file name is missing' )
+       call keyf('in',  inp, ' ')
+       call keya('out', out, ' ')
+       call assertl(inp.ne.' ', 'Input file name is missing')
+       call assertl(out.ne.' ', 'Output file name is missing')
        call keya('object',object,'hanning')
-       if( object.ne.'hanning'.and. object.ne.'boxcar') then
-         call bug ('f', 'Invalid object')
-       end if
+       if (object.ne.'hanning' .and. object.ne.'boxcar') then
+         call bug('f', 'Invalid object')
+       endif
        naxis = MAXNAX
-       call xyzopen( tinp, inp, 'old', naxis, axlen )
+       call xyzopen(tinp, inp, 'old', naxis, axlen)
 
-       call boxinput( 'region', inp, boxes, MAXBOXES )
-       call boxset(   boxes, naxis, axlen, ' ' )
-       call boxinfo(  boxes, naxis, iblc, itrc )
+       call boxinput('region', inp, boxes, MAXBOXES)
+       call boxset(  boxes, naxis, axlen, ' ')
+       call boxinfo( boxes, naxis, iblc, itrc)
 
-       call keyi( 'width', width, 3 )
-       call assertl( (width/2)*2.ne.width, 'Width must be odd number' )
+       call keyi('width', width, 3)
+       call assertl((width/2)*2.ne.width, 'Width must be odd number')
 
        call keyfin
 
        velaxis = 'z'
-       call fndaxnum( tinp, 'freq', velaxis, velaxnr )
+       call fndaxnum(tinp, 'freq', velaxis, velaxnr)
 
-       call xyzsetup( tinp, velaxis, iblc, itrc, viraxlen, vircsz )
+       call xyzsetup(tinp, velaxis, iblc, itrc, viraxlen, vircsz)
        nprofiles = vircsz(naxis) / vircsz(1)
        nchan     = viraxlen(1)
 
        do i = 1, naxis
-          axnum(i) = i
           axlen(i) = itrc(i) - iblc(i) + 1
           oblc(i)  = 1
           otrc(i)  = axlen(i)
        enddo
-       call xyzopen(  tout, out, 'new', naxis, axlen )
-       call headcopy( tinp, tout, axnum, naxis, iblc, itrc )
-       call xyzsetup( tout, velaxis, oblc, otrc, viraxlen, vircsz )
+       call xyzopen(tout, out, 'new', naxis, axlen)
+       call headcp(tinp, tout, naxis, 0, iblc, itrc)
+       call xyzsetup(tout, velaxis, oblc, otrc, viraxlen, vircsz)
 
        return
        end
@@ -123,7 +122,7 @@ c------------------------------------------------------------------------
 
 
 
-       subroutine hsmooth( tinp, tout, nprofiles, nchan, width, object )
+       subroutine hsmooth(tinp, tout, nprofiles, nchan, width, object)
 
        integer       tinp, tout
        integer       nprofiles, nchan
@@ -134,46 +133,46 @@ c------------------------------------------------------------------------
        logical       mask(MAXDIM)
 
        integer       MAXWIDTH
-       parameter     ( MAXWIDTH = 7 )
-       real          coeffs( MAXWIDTH*2+1 ), work( MAXWIDTH*2+1 )
+       parameter     (MAXWIDTH = 7)
+       real          coeffs(MAXWIDTH*2+1), work(MAXWIDTH*2+1)
        integer       i, j
        character     object*8
 
-       if(object.eq.'hanning') then
-         call hcoeffs( width, coeffs )
-       else if(object.eq.'boxcar') then
-         call bcoeffs( width, coeffs )
-       end if
+       if (object.eq.'hanning') then
+         call hcoeffs(width, coeffs)
+       else if (object.eq.'boxcar') then
+         call bcoeffs(width, coeffs)
+       endif
 
        do i = 1, nprofiles
-          call xyzprfrd( tinp, i, data, mask, nchan )
+          call xyzprfrd(tinp, i, data, mask, nchan)
           do j = 1, nchan
-            if(.not.mask(j)) data(j)=0.
+            if (.not.mask(j)) data(j)=0.0
           enddo
-          if(object.eq.'hanning') then
-            call hannsm( width, coeffs, nchan, data, work )
-          else if(object.eq.'boxcar') then
-            call boxcarsm( width, coeffs, nchan, data, work )
-          end if
-          call xyzprfwr( tout, i, data, mask, nchan )
+          if (object.eq.'hanning') then
+            call hannsm(width, coeffs, nchan, data, work)
+          else if (object.eq.'boxcar') then
+            call boxcarsm(width, coeffs, nchan, data, work)
+          endif
+          call xyzprfwr(tout, i, data, mask, nchan)
        enddo
 
        return
        end
 
-       subroutine finish( tinp, tout, version )
+       subroutine finish(tinp, tout, version)
 
        integer       tinp, tout
        character*(*) version
 
        character*80  line
-       
-       call hisopen(  tout, 'append' )
+
+       call hisopen( tout, 'append')
        line = 'HANNING: ' // version
-       call hisinput( tout, 'HANNING' )
-       call hisclose( tout )
-       call xyzclose( tinp )
-       call xyzclose( tout )
+       call hisinput(tout, 'HANNING')
+       call hisclose(tout)
+       call xyzclose(tinp)
+       call xyzclose(tout)
 
        return
        end
