@@ -101,7 +101,7 @@ c         residual The output data-set is the residual image.
 c                  If an output is being created, the default is to make
 c                  this the fitted model.
 c
-c$Id: imfit.for,v 1.7 2010/08/25 04:58:37 cal103 Exp $
+c$Id: imfit.for,v 1.8 2010/11/22 05:54:01 cal103 Exp $
 c--
 c  History:
 c    mchw 22apr94 new task.
@@ -148,8 +148,8 @@ c     Externals.
       external FUNCTION
 c-----------------------------------------------------------------------
       version = versan ('imfit',
-     *                '$Revision: 1.7 $',
-     *                '$Date: 2010/08/25 04:58:37 $')
+     *                '$Revision: 1.8 $',
+     *                '$Date: 2010/11/22 05:54:01 $')
 
 c     Get the input parameters.
       call keyini
@@ -516,7 +516,7 @@ c     Externals.
       logical hdprsnt
 c-----------------------------------------------------------------------
 c     Copy header verbatim.
-      call headcopy(lIn, lOut, 0, 0, 0, 0)
+      call headcp(lIn, lOut, 0, 0, 0, 0)
 
 c     Update crpix3.
       if (hdprsnt(lIn, 'crpix3')) then
@@ -528,7 +528,7 @@ c     Update crpix3.
 c     Write history.
       call hisopen(lOut,'append')
       umsg = 'IMFIT: Miriad ' // version
-      call hiswrite (lOut, umsg)
+      call hiswrite(lOut, umsg)
       call hisinput(lOut,'IMFIT')
       call hisclose(lOut)
 
@@ -560,7 +560,7 @@ c-----------------------------------------------------------------------
       call BoxRuns(1,k,' ',boxes,Runs,MAXRUNS,nRuns,
      *                                xmin,xmax,ymin,ymax)
       call GetPlane(lIn,Runs,nRuns,0,0,n1,n2,Data,MAXDATA,m)
-      if (m.eq.0)return
+      if (m.eq.0) return
 c
 c  We have the data. Clip, if required, and fill out the x,y coordinate.
 c
@@ -678,7 +678,7 @@ c-----------------------------------------------------------------------
         if (vfwhm1(i)) then
           n = n + 1
           sfwhm1(i) = sqrt(covar(n,n))
-          if (circ(i))sfwhm2(i) = sfwhm1(i)
+          if (circ(i)) sfwhm2(i) = sfwhm1(i)
         endif
         if (vfwhm2(i)) then
           n = n + 1
@@ -724,7 +724,7 @@ c-----------------------------------------------------------------------
         if (vfwhm1(i)) then
           n = n + 1
           fwhm1(i) = var(n)
-          if (circ(i))fwhm2(i) = fwhm1(i)
+          if (circ(i)) fwhm2(i) = fwhm1(i)
         endif
         if (vfwhm2(i)) then
           n = n + 1
@@ -838,7 +838,7 @@ c
             yp =  yy*cospa + xx*sinpa
             xp = -yy*sinpa + xx*cospa
             t = xscal*(xp*xp) + yscal*(yp*yp)
-            if (t.lt.70)model(i) = model(i) + flux(j) * exp(-t)
+            if (t.lt.70) model(i) = model(i) + flux(j) * exp(-t)
           enddo
 c
 c  Disk component.
@@ -854,7 +854,7 @@ c
             yp =  yy*cospa + xx*sinpa
             xp = -yy*sinpa + xx*cospa
             t = xscal*(xp*xp) + yscal*(yp*yp)
-            if (t.lt.0.25)model(i) = model(i) + flux(j)
+            if (t.lt.0.25) model(i) = model(i) + flux(j)
           enddo
         endif
       enddo
@@ -901,13 +901,13 @@ c-----------------------------------------------------------------------
       call output('-------------------------------------------------')
       if (object.ne.' ') then
         line = 'Object '//object
-        call output (line)
+        call output(line)
       endif
 
       if (trms.gt.0) then
-        write(line,5)rms,trms
+        write(line,5) rms,trms
       else
-        write(line,5)rms
+        write(line,5) rms
       endif
    5    format('RMS residual is',1pe9.2,:,
      *        ' (theoretical image noise is',1pe9.2,')')
@@ -920,9 +920,9 @@ c
         call GauFid(bmaj,bmin,0.0,0.0,bpa,0.0,f1,f2,sf1,sf2,p,sp)
         call output('Using the following beam parameters when')
         call output('deconvolving and converting to integrated flux')
-        write(line,7)f1,f2
+        write(line,7) f1,f2
         call output(line)
-        write(line,8)p
+        write(line,8) p
         call output(line)
    7    format('  Beam Major, minor axes (arcsec):',2f9.2)
    8    format('  Beam Position angle (degrees):',   f10.1)
@@ -937,7 +937,7 @@ c
      *        'Theoretical noise is uncorrelated between pixels')
       else if (bvolp.gt.0) then
         sfac = sqrt(bvolp)
-        write(line,9)sfac
+        write(line,9) sfac
    9    format('Scaling error estimates by',f5.1,' to account for')
         call output(line)
         call output('noise correlation between pixels')
@@ -950,24 +950,24 @@ c
 
       do i = 1, nsrc
         call output(' ')
-        write(line,10)i,objects(srctype(i))
+        write(line,10) i,objects(srctype(i))
   10    format('Source',i3,', Object type: ',a)
         call output(line)
         if (srctype(i).eq.LEVEL) then
           if (sflux(i).gt.0) then
-            write(line,20)flux(i),sfac*sflux(i)
+            write(line,20) flux(i),sfac*sflux(i)
           else
-            write(line,20)flux(i)
+            write(line,20) flux(i)
           endif
   20      format('  Offset Level:',f26.4,:,' +/-',1pg9.2)
           call output(line)
         else
           if (srctype(i).ne.BEAM) then
             if (sflux(i).gt.0) then
-              write(line,25)flux(i),sfac*sflux(i)
+              write(line,25) flux(i),sfac*sflux(i)
   25          format('  Peak value:',1pg27.4,:,' +/-', 1pg12.4)
             else
-              write(line,30)flux(i)
+              write(line,30) flux(i)
   30          format('  Peak value:',1pg27.4,:,' +/-',0pf8.4)
             endif
 
@@ -976,7 +976,7 @@ c
               tflux = flux(i) * pi/4.0 * fwhm1(i) * fwhm2(i)
               if (srctype(i).eq.GAUSSIAN) tflux = tflux / log(2.0)
               tflux = tflux / bvol
-              write(line,35)tflux
+              write(line,35) tflux
   35          format('  Total integrated flux:',1pg16.4)
               call output(line)
             endif
@@ -1017,9 +1017,9 @@ c
             call output(line)
   50        format('  ',a,' axis (arcsec):',f16.3,:,' +/-',f7.3)
             if (sp.gt.0) then
-              write(line,60)p,sp
+              write(line,60) p,sp
             else
-            write(line,60)p
+            write(line,60) p
             endif
   60        format('  Position angle (degrees):',f11.2,:,' +/-',f11.2)
             call output(line)
@@ -1032,11 +1032,11 @@ c
               if (ifail.eq.0) then
                 p = p*D2R
                 call GauFid(f1,f2,0.0,0.0,p,0.0,f1,f2,sf1,sf2,p,sp)
-                write(line,70)f1,f2
+                write(line,70) f1,f2
   70            format('  Deconvolved Major, minor axes (arcsec):',
      *                                                         2f9.3)
                 call output(line)
-                write(line,80)p
+                write(line,80) p
   80            format('  Deconvolved Position angle (degrees):',
      *                                                         f10.1)
                 call output(line)
