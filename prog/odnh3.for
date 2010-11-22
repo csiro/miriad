@@ -45,7 +45,7 @@ c       No default.
 c@ out
 c       Name of the output image.  No default.
 c
-c$Id: odnh3.for,v 1.3 2010/09/08 01:36:27 cal103 Exp $
+c$Id: odnh3.for,v 1.4 2010/11/22 05:32:39 cal103 Exp $
 c--
 c  The optical depth of the NH3(1,1) line is calculated from hyperfine
 c  ratios using a lookup table to invert the equation:
@@ -111,8 +111,8 @@ c-----------------------------------------------------------------------
       external  boxrect, fill, paction, vaction, versan
 c-----------------------------------------------------------------------
       version = versan('odnh3',
-     *                 '$Revision: 1.3 $',
-     *                 '$Date: 2010/09/08 01:36:27 $')
+     *                 '$Revision: 1.4 $',
+     *                 '$Date: 2010/11/22 05:32:39 $')
 c
 c  Get the input parameters.
 c
@@ -506,7 +506,7 @@ c-----------------------------------------------------------------------
       external  itoaf
 c-----------------------------------------------------------------------
 c     Start with a verbatim copy of the input keywords.
-      call headcopy(lIn, lOut, 0, 0, 0, 0)
+      call headcp(lIn, lOut, 0, 0, 0, 0)
 
 c     Adjust the reference pixel for subimaging.
       do iax = 1, naxis
@@ -527,9 +527,9 @@ c     Adjust the reference pixel for subimaging.
 
 c     Update changed keywords.
       if (op.eq.'temp') then
-        call wrbtype (lOut, 'rotational_temperature')
+        call wrbtype(lOut, 'rotational_temperature')
       else
-        call wrbtype (lOut, 'optical_depth')
+        call wrbtype(lOut, 'optical_depth')
       endif
 
 c     Write history.

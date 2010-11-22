@@ -102,7 +102,7 @@ c         verbose    Give lots of messages during the iterations.  The
 c                    default is to give a one line message at each
 c                    iteration.
 c
-c$Id: pmosmem.for,v 1.3 2010/09/15 02:40:46 cal103 Exp $
+c$Id: pmosmem.for,v 1.4 2010/11/22 05:30:50 cal103 Exp $
 c--
 c  History:
 c    rjs  23nov94  Adapted from MAXEN.
@@ -161,8 +161,8 @@ c-----------------------------------------------------------------------
       external  hdprsnt, itoaf, len1, versan
 c-----------------------------------------------------------------------
       version = versan('pmosmem',
-     *                 '$Revision: 1.3 $',
-     *                 '$Date: 2010/09/15 02:40:46 $')
+     *                 '$Revision: 1.4 $',
+     *                 '$Date: 2010/11/22 05:30:50 $')
 c
 c  Get and check the input parameters.
 c
@@ -199,7 +199,7 @@ c
       if (min(rmsfaca,rmsfacb,rmsfacc).lt.0.9)
      *  call bug('w','RMSFAC seems small')
       if (maxniter.lt.0) call bug('f','NITERS was given a bad value')
-      if (Tol.le.0.)
+      if (Tol.le.0.0)
      *  call bug('f','The TOL parameter must be positive valued')
       call keyr('factor',fac,1.0)
       call keyfin
@@ -293,7 +293,7 @@ c
       write(line,'(a,f6.1)')'For '//BeamNam(1)(1:len1(BeamNam(1)))//
      *        ', an estimate of Q is',Qest
       call output(line)
-      if (Qa.gt.0.) then
+      if (Qa.gt.0.0) then
         write(line,'(a,1pg8.1)')
      *                'Using user given pixels per beam of',Qa
         call output(line)
@@ -313,7 +313,7 @@ c
         write(line,'(a,f6.1)')'For '//BeamNam(2)(1:len1(BeamNam(2)))//
      *        ', an estimate of Q is',Qest
         call output(line)
-        if (Qb.gt.0.) then
+        if (Qb.gt.0.0) then
           write(line,'(a,1pg8.1)')
      *                'Using user given pixels per beam of',Qb
           call output(line)
@@ -1413,7 +1413,7 @@ c-----------------------------------------------------------------------
       external  itoaf
 c-----------------------------------------------------------------------
 c     Start by making a verbatim copy of the input header.
-      call headcopy(lMap, lOut, 0, 0, 0, 0)
+      call headcp(lMap, lOut, 0, 0, 0, 0)
 
 c     Update parameters that may have changed.
       do iax = 1, 3

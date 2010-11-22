@@ -16,7 +16,7 @@ c       "312" make input axis 3 the first output axis, input axis 1
 c       the second output axis, etc.  Use "-" to reverse the pixel
 c       order on an axis.  Do not include dummy axes in mode.
 c
-c$Id: reorder.for,v 1.3 2010/09/15 07:33:49 cal103 Exp $
+c$Id: reorder.for,v 1.4 2010/11/22 05:29:46 cal103 Exp $
 c--
 c
 c  History:
@@ -57,8 +57,8 @@ c-----------------------------------------------------------------------
       common ref
 c-----------------------------------------------------------------------
       version = versan('reorder',
-     *                 '$Revision: 1.3 $',
-     *                 '$Date: 2010/09/15 07:33:49 $')
+     *                 '$Revision: 1.4 $',
+     *                 '$Date: 2010/11/22 05:29:46 $')
 
 c     Get the input parameters.
       call keyini
@@ -264,7 +264,7 @@ c     Copy the input header with axis permutation.
         blc(iax) = 1
       enddo
 
-      call headcopy(lIn, lOut, axMap, nAxis, blc, iAxLen)
+      call headcp(lIn, lOut, nAxis, axMap, blc, iAxLen)
 
 c     Update history.
       call hisopen (lOut, 'append')

@@ -61,7 +61,7 @@ c       FWHM.  The default is determined from the dirty beam fit.
 c@ out
 c       The output restored image.  No default.
 c
-c$Id: restor.for,v 1.5 2010/10/11 04:13:09 cal103 Exp $
+c$Id: restor.for,v 1.6 2010/11/22 05:28:57 cal103 Exp $
 c--
 c
 c  History:
@@ -111,8 +111,8 @@ c-----------------------------------------------------------------------
       external  itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('restor',
-     *                 '$Revision: 1.5 $',
-     *                 '$Date: 2010/10/11 04:13:09 $')
+     *                 '$Revision: 1.6 $',
+     *                 '$Date: 2010/11/22 05:28:57 $')
 
 c     Get the input parameters.
       call keyini
@@ -380,7 +380,7 @@ c-----------------------------------------------------------------------
       character text*72
 c-----------------------------------------------------------------------
 c     Start with a verbatim copy of the model header.
-      call headcopy(lModel, lOut, 0, 0, 0, 0)
+      call headcp(lModel, lOut, 0, 0, 0, 0)
 
 c     Update keywords that may have changed.
       call rdhdd(lModel, 'crpix1', crpix, dble(modLen(1)/2+1))
