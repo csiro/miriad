@@ -98,7 +98,7 @@ c       x and y pixel coordinate (in the output model; this goes from 1
 c       to N), the "I" component and the "I*alpha" component.  The
 c       default is to not create a log file.
 c
-c$Id: mfclean.for,v 1.3 2010/09/02 07:42:43 cal103 Exp $
+c$Id: mfclean.for,v 1.4 2010/11/22 05:39:13 cal103 Exp $
 c--
 c  History:
 c    rjs   Nov89 - Original version.
@@ -198,8 +198,8 @@ c-----------------------------------------------------------------------
       external  itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('mfclean',
-     *                 '$Revision: 1.3 $',
-     *                 '$Date: 2010/09/02 07:42:43 $')
+     *                 '$Revision: 1.4 $',
+     *                 '$Date: 2010/11/22 05:39:13 $')
 c
 c  Get the input parameters.
 c
@@ -769,26 +769,26 @@ c-----------------------------------------------------------------------
       include 'maxdim.h'
 
       call keyini
-      call keya ('map', map, ' ')
-      call keya ('beam', beam, ' ')
-      call keya ('model', estimate,' ')
-      call keya ('out', out, ' ')
+      call keya('map', map, ' ')
+      call keya('beam', beam, ' ')
+      call keya('model', estimate,' ')
+      call keya('out', out, ' ')
       if (map.eq.' ' .or. beam.eq.' ' .or. out.eq.' ')
-     *  call bug ('f', 'A file name was missing from the parameters')
-      call keyi ('niters', Niter, 250)
+     *  call bug('f', 'A file name was missing from the parameters')
+      call keyi('niters', Niter, 250)
       negStop = Niter.lt.0
       Niter = abs(Niter)
-      if (Niter.eq.0) call bug ('f', 'NITERS must be nonzero')
-      call keyr ('cutoff', cutoff,0.0)
+      if (Niter.eq.0) call bug('f', 'NITERS must be nonzero')
+      call keyr('cutoff', cutoff,0.0)
 
       call BoxInput('region',map,box,maxbox)
 
-      call keyi ('minpatch', minpatch, 51)
-      call keyr ('gain', gain0, 0.1)
+      call keyi('minpatch', minpatch, 51)
+      call keyr('gain', gain0, 0.1)
       if (gain0.le.0 .or. gain0.gt.1)
      *  call bug('f','Bad gain value, it must be in the range (0,1]')
-      call keyr ('gain', gain1, gain0)
-      call keyr ('speed', speed, 0.0)
+      call keyr('gain', gain1, gain0)
+      call keyr('speed', speed, 0.0)
       call keya('mode',mode,'any')
       if (mode.ne.'clark' .and. mode.ne.'any' .and. mode.ne.'hogbom')
      *  call bug('f','Bad value for mode')
@@ -819,7 +819,7 @@ c-----------------------------------------------------------------------
       external  itoaf
 c-----------------------------------------------------------------------
 c     Start by making a verbatim copy.
-      call headcopy(lIn, lOut, 0, 0, 0, 0)
+      call headcp(lIn, lOut, 0, 0, 0, 0)
 
 c     Update changed parameters.
       if (xmin.ne.1) then
@@ -1289,7 +1289,7 @@ c
       if (abs(R0(i)).lt.abs(R0(j))) i = j
       ResMax = abs(R0(i))
 
-      delta  = 1./(P00*P11 - P01*P01)
+      delta  = 1.0/(P00*P11 - P01*P01)
       Wt0 = (P11*R0(pk) - P01*R1(pk))*delta
       Wt1 = (P00*R1(pk) - P01*R0(pk))*delta
 c
@@ -1440,7 +1440,7 @@ c
         do i = 1, n0
           Temp(i) = abs(Res0(l+i))
         enddo
-        call whenfgt (n0, Temp, 1, Limit, Indx,Ncmpd)
+        call whenfgt(n0, Temp, 1, Limit, Indx,Ncmpd)
         if (Ncmp+Ncmpd.gt.maxCmp)
      *        call bug('f','Internal bug in GetComp')
 

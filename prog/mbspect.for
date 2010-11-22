@@ -141,7 +141,7 @@ c@ comment
 c       A one-line comment which is written into the logfile and any
 c       plot.
 c
-c$Id: mbspect.for,v 1.9 2010/09/02 06:33:35 cal103 Exp $
+c$Id: mbspect.for,v 1.10 2010/11/22 05:40:24 cal103 Exp $
 c--
 c
 c  History:
@@ -195,8 +195,8 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 c     Don't report the ID so that gif and ps output can be piped.
       version = versan ('-mbspect',
-     *                  '$Revision: 1.9 $',
-     *                  '$Date: 2010/09/02 06:33:35 $')
+     *                  '$Revision: 1.10 $',
+     *                  '$Date: 2010/11/22 05:40:24 $')
 
 c     Get inputs.
       call keyini
@@ -207,17 +207,17 @@ c     Get inputs.
       call keyi('width',width(1),1)
       call keyi('width',width(2),width(1))
       if (mod(width(1),2).ne.1 .or. mod(width(2),2).ne.1)
-     *  call bug ('f', 'width must be an odd number')
+     *  call bug('f', 'width must be an odd number')
       call keya('xaxis',xaxis,' ')
       call keya('yaxis',yaxis,'average')
       call keyr('xrange',xrange(1),0.0)
       call keyr('xrange',xrange(2),xrange(1))
       if (xrange(1).eq.xrange(2) .and. xrange(1).ne.0.0)
-     *  call bug ('f', 'Invalid x-axis plot range')
+     *  call bug('f', 'Invalid x-axis plot range')
       call keyr('yrange',yrange(1),0.0)
       call keyr('yrange',yrange(2),yrange(1))
       if (yrange(1).eq.yrange(2) .and. yrange(1).ne.0.0)
-     *  call bug ('f', 'Invalid y-axis plot range')
+     *  call bug('f', 'Invalid y-axis plot range')
       call keyr('clip',clip(1),0.0)
       if (keyprsnt('clip')) then
         call keyr('clip',clip(2),0.0)
@@ -234,7 +234,7 @@ c     Get inputs.
       call keyi('hann',nsmth,1)
       if (nsmth.gt.MAXCO) then
         str = itoaf(MAXCO)
-        call bug ('f', 'Hanning smoothing length must be <= '//str)
+        call bug('f', 'Hanning smoothing length must be <= '//str)
       endif
       call keya('order',cpoly,' ')
       if (cpoly.eq.' ') then
@@ -251,7 +251,7 @@ c     Get inputs.
  120    poly=abs(poly)
         if (poly.gt.10) goto 100
       endif
-      call getopt (deriv1, deriv2, histo, measure, pstyle1, pstyle2,
+      call getopt(deriv1, deriv2, histo, measure, pstyle1, pstyle2,
      *             posfit, minicube)
       call keya('device',device,' ')
       call keyr('csize',csize(1),0.0)
@@ -506,8 +506,8 @@ c     Integrate the spectrum over the specified region.
 
 c     Optionally Hanning smooth spectrum..
       if (nsmth.ge.3) then
-        call hcoeffs (nsmth, coeffs)
-        call hannsm (nsmth, coeffs, nchan, spec, hwork)
+        call hcoeffs(nsmth, coeffs)
+        call hannsm(nsmth, coeffs, nchan, spec, hwork)
       endif
 
 c     Get plot axes, convert units, and write labels.
@@ -515,7 +515,7 @@ c     Get plot axes, convert units, and write labels.
      *          xlabel,ylabel,chan,value,spec,unit0)
 
 c     Optionally take derivatives.
-      if (deriv1 .or. deriv2) call der (deriv1, nchan, spec, work)
+      if (deriv1 .or. deriv2) call der(deriv1, nchan, spec, work)
 
 c     Polynomal fit
       if (poly.ge.0) then
@@ -538,7 +538,7 @@ c     Subtract fit now if required.
 c     Open plot device if requested.
       if (device.ne.' ') then
         iostat = pgbeg(0,device,1,1)
-        if (iostat.eq.0) call bug ('f', 'Error opening plot device')
+        if (iostat.eq.0) call bug('f', 'Error opening plot device')
 
 c       Work out limits.
         if (xrange(1).ne.0.0 .or. xrange(2).ne.0.0) then
@@ -577,21 +577,21 @@ c       Label sizes.
 
         if (csize(1).ne.0.0) lab1=lab1*csize(1)
         if (csize(2).ne.0.0) lab2=lab2*csize(2)
-        call pgsch (lab1)
-        call pgsls (1)
+        call pgsch(lab1)
+        call pgsls(1)
 
         if (pstyle2) then
           call pgsvp(0.01+lab1/30.0,0.99,0.01+lab1/30.0,0.99-
      *               lab2/30.0)
         endif
 
-        call pgswin (xdmin, xdmax, ydmin, ydmax)
+        call pgswin(xdmin, xdmax, ydmin, ydmax)
         call pgbox('BCNTS1',0.0,0.0,'BCNTS',0.0,0.0)
 
         if (histo) then
-          call pgHline (nchan,value,spec,2.0)
+          call pgHline(nchan,value,spec,2.0)
         else
-          call pgline (nchan,value,spec)
+          call pgline(nchan,value,spec)
         endif
 
         if (poly.ge.0) then
@@ -608,13 +608,13 @@ c       Label sizes.
             endif
           else
             call pgsci(2+poly)
-            call pgline (nchan,value,fit)
+            call pgline(nchan,value,fit)
             call pgsci(1)
             if (measure .and.
      *         (clip(1).ne.0.0 .or. clip(2).ne.0.0)) then
               call pgsls(2)
-              call pgline (nchan,value,work)
-              call pgline (nchan,value,work1)
+              call pgline(nchan,value,work)
+              call pgline(nchan,value,work1)
               call pgsls(1)
             endif
           endif
@@ -645,7 +645,7 @@ c       Label sizes.
 
 c       Axis labelling, except for options=pstyle2.
 
-        if (.not.pstyle2) call pglab (xlabel,ylabel,' ')
+        if (.not.pstyle2) call pglab(xlabel,ylabel,' ')
 
 c       Title and extra information.
         call pgqvp(0,xv(1),xv(2),yv(1),yv(2))
@@ -747,7 +747,7 @@ c       Update history and close files.
 c     Write ascii spectrum if desired.
       if (logf.ne.' ') then
         call txtopen(lOut, logf, 'new', iostat)
-        if (iostat.ne.0) call bug ('f', 'Error opening output file')
+        if (iostat.ne.0) call bug('f', 'Error opening output file')
         call txtwrite(lOut,'#File: '//In,7+len1(In),iostat)
         txt = '#Robust polynomial order: none'
         if (poly.ge.0) write(txt(27:30),*) poly
@@ -760,10 +760,10 @@ c     Write ascii spectrum if desired.
         call txtwrite(lOut,'#  Channel     Spectral axis '//
      *     '   Intensity',41,iostat)
         do i = 1, nchan
-          write (txt,'(1pe12.5, 3x, 1pe12.5, 3x, 1pe12.5)')
+          write(txt,'(1pe12.5, 3x, 1pe12.5, 3x, 1pe12.5)')
      *                                        chan(i),value(i),spec(i)
-          call txtwrite (lOut, txt, 45, iostat)
-          if (iostat.ne.0) call bug ('f', 'Error writing output file')
+          call txtwrite(lOut, txt, 45, iostat)
+          if (iostat.ne.0) call bug('f', 'Error writing output file')
         enddo
         call txtclose(lOut)
       endif
@@ -855,7 +855,7 @@ c
         call xysetpl(lIn,1,k)
         do j = blc(2), trc(2)
           call xyread(lIn,j,buf)
-          call xyflgrd (lIn,j,flags)
+          call xyflgrd(lIn,j,flags)
           do i = blc(1), trc(1)
             if (flags(i)) then
               indx=i-blc(1)+1
@@ -1152,7 +1152,7 @@ c-----------------------------------------------------------------------
         call xysetpl(lIn,1,k)
         do j = blc(2), trc(2)
           call xyread(lIn,j,buf)
-          call xyflgrd (lIn,j,flags)
+          call xyflgrd(lIn,j,flags)
           do i = blc(1), trc(1)
             if (flags(i)) then
               if (yaxis.eq.'point') then
@@ -1269,7 +1269,7 @@ c
           if (wpix(i).gt.0.0) then
              spec(i) = spec(i)/wpix(i)
           else
-             call bug ('f', 'Some channels have zero weight')
+             call bug('f', 'Some channels have zero weight')
           endif
         enddo
         if (bunit(1:7).eq.'JY/BEAM') then
@@ -1332,7 +1332,7 @@ c-----------------------------------------------------------------------
       data opshuns /'1deriv', '2deriv', 'histo', 'measure','pstyle1',
      *              'pstyle2','posfit','minicube'/
 c-----------------------------------------------------------------------
-      call options ('options', opshuns, present, maxopt)
+      call options('options', opshuns, present, maxopt)
 
       deriv1 = present(1)
       deriv2 = present(2)
@@ -2156,7 +2156,7 @@ c     Copy the header with axis permutation and partial subimaging.
       blc(2) = 1
       blc(3) = 1
 
-      call headcopy(lIn, lOut, axmap, 3, blc, 0)
+      call headcp(lIn, lOut, 3, axmap, blc, 0)
 
 c     Fix the RA and DEC axes.
       call wrhdd(lout, 'crpix2', 1d0)

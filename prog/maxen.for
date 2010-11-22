@@ -75,7 +75,7 @@ c                    This will give better stability if you are daring
 c                    enough to deconvolve more than the inner quarter of
 c                    the dirty image.
 c
-c$Id: maxen.for,v 1.3 2010/08/26 07:52:41 cal103 Exp $
+c$Id: maxen.for,v 1.4 2010/11/22 05:41:21 cal103 Exp $
 c--
 c  History:
 c    rjs   nov88 - Original version.
@@ -160,8 +160,8 @@ c-----------------------------------------------------------------------
       external  ismax, itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('maxen',
-     *                 '$Revision: 1.3 $',
-     *                 '$Date: 2010/08/26 07:52:41 $')
+     *                 '$Revision: 1.4 $',
+     *                 '$Date: 2010/11/22 05:41:21 $')
 c
 c  Get the input parameters.
 c
@@ -173,9 +173,9 @@ c
       call keya('out',OutNam,' ')
       call keyr('tol',Tol,0.01)
       call keyi('niters',maxniter,20)
-      call keyr('q',Q,0.)
-      call keyr('rms',TRms,0.)
-      call keyr('flux',TFlux,0.)
+      call keyr('q',Q,0.0)
+      call keyr('rms',TRms,0.0)
+      call keyr('flux',TFlux,0.0)
       call BoxInput('region',MapNam,Boxes,MAXBOXES)
       call GetMeas(entropy)
       call GetOpt(messlev,asym,pad)
@@ -185,11 +185,11 @@ c  Check everything makes sense.
 c
       doflux = TFlux.gt.0
       TFlux = abs(TFlux)
-      if (Trms.le.0.) call bug('f','RMS is not positive')
+      if (Trms.le.0.0) call bug('f','RMS is not positive')
       if (maxniter.lt.0) call bug('f','NITERS has bad value')
       if (MapNam.eq.' ' .or. BeamNam.eq.' ' .or. OutNam.eq.' ')
      *  call bug('f','A file name was missing from the parameters')
-      if (Tol.le.0.)
+      if (Tol.le.0.0)
      *  call bug('f','The TOL parameter must be positive valued')
 
       if (messlev.eq.'quiet') then
@@ -217,7 +217,7 @@ c
       call BeamChar(lBeam,n1,n2,Qest,icentre,jcentre)
       write(line,'(a,1pg8.1)')'An estimate of Q is',Qest
       call output(line)
-      if (Q.gt.0.) then
+      if (Q.gt.0.0) then
         write(line,'(a,1pg8.1)')
      *                'Using user given pixels per beam of',Q
         call output(line)
@@ -228,7 +228,7 @@ c
       flags = ' '
       if (.not.asym) flags(1:1) = 's'
       if (pad)       flags(2:2) = 'e'
-      call CnvlIniF(pBem,lBeam,n1,n2,icentre,jcentre,0.,flags)
+      call CnvlIniF(pBem,lBeam,n1,n2,icentre,jcentre,0.0,flags)
 c
 c  Open the input map.
 c
@@ -435,7 +435,7 @@ c  be near 1 on the first few iterations, where StLim, rather than
 c  anything else, determines the step length. If StLen2 is near 1,
 c  just swap the pointers around rather than do any real work.
 c
-          if (abs(StLen2-1.).gt.0.05) then
+          if (abs(StLen2-1.0).gt.0.05) then
             call IntStep(nPoint,Data(pEst),Data(pNewEst),StLen2)
             call IntStep(nPoint,Data(pRes),Data(pNewRes),StLen2)
           else
@@ -448,8 +448,8 @@ c  Calculate a new estimate for Q using the magic formula which seems
 c  to work. Only recalculate when we did not clip back the step length
 c  excessively. That is recalculate if StLen1 is close to 1.
 c
-          if (abs(StLen1-1.).lt.0.05)
-     *      Q = Q * sqrt((1./max(0.5,min(2.,StLen1*StLen2))+3.)/4.)
+          if (abs(StLen1-1.0).lt.0.05)
+     *      Q = Q * sqrt((1.0/max(0.5,min(2.0,StLen1*StLen2))+3.0)/4.0)
 c
 c  Get new info on the current state of play.
 c
@@ -723,7 +723,7 @@ c-----------------------------------------------------------------------
       real FracOld
       integer i
 c-----------------------------------------------------------------------
-      FracOld = 1. - FracNew
+      FracOld = 1.0 - FracNew
       do i = 1, nPoint
         Old(i) = FracOld*Old(i) + FracNew*New(i)
       enddo
@@ -762,13 +762,13 @@ c-----------------------------------------------------------------------
       real GradJ,Step
       real dH(run),d2H(run)
 c-----------------------------------------------------------------------
-      J0 = 0.
+      J0 = 0.0
       n = 0
       do while (n.lt.nPoint)
         ltot = min(nPoint-n,run)
         call EntFunc(measure,ltot,Est(n+1),Default(n+1),dH,d2H)
         do l = 1, ltot
-          GradJ = dH(l) - 2.*Alpha*Q*Res(n+l) - Beta
+          GradJ = dH(l) - 2.0*Alpha*Q*Res(n+l) - Beta
           Step = Est(n+l) - OldEst(n+l)
           J0 = J0 + GradJ*Step
         enddo
@@ -800,7 +800,7 @@ c
       if (Alpha.le.0) l = 0
 
       if (doflux) then
-        Denom = 1./(GradEE*GradFF - GradEF*GradEF)
+        Denom = 1.0/(GradEE*GradFF - GradEF*GradEF)
         Alpha1 = (GradFF*GradEH - GradEF*GradFH) * Denom
         Beta1  = (GradEE*GradFH - GradEF*GradEH) * Denom
       else
@@ -809,13 +809,13 @@ c
       endif
 
       if (doflux) then
-        Denom = 1./(GradEE*GradFF - GradEF*GradEF)
+        Denom = 1.0/(GradEE*GradFF - GradEF*GradEF)
         Dalp = (GradFF*(De+GradEJ) - GradEF*(Df+GradFJ)) * Denom
         Dbet =-(GradEF*(De+GradEJ) - GradEE*(Df+GradFJ)) * Denom
       else
-        Denom = 1./GradEE
+        Denom = 1.0/GradEE
         Dalp = (De+GradEJ) * Denom
-        Dbet = 0.
+        Dbet = 0.0
       endif
 
       b2m4ac = GradEJ*GradEJ - (GradJJ-tol1*Grad11)*GradEE
@@ -840,15 +840,15 @@ c
       Beta2  = Beta + Dbet
 
       if (l.ge.tol2 .or. Alpha2.le.0) then
-        Alpha = max(Alpha1,0.)
+        Alpha = max(Alpha1,0.0)
       else
-        Alpha = max(Alpha2,0.)
+        Alpha = max(Alpha2,0.0)
       endif
 
       if (l.ge.tol2 .or. Beta2.le.0) then
-        Beta = max(Beta1,0.)
+        Beta = max(Beta1,0.0)
       else
-        Beta = max(Beta2,0.)
+        Beta = max(Beta2,0.0)
       endif
 
       end
@@ -882,7 +882,7 @@ c-----------------------------------------------------------------------
       real Temp, Diag, GradJ, Stepd
       real dH(run),d2H(run)
 c-----------------------------------------------------------------------
-      Temp = 2.*Alpha*Q*Q
+      Temp = 2.0*Alpha*Q*Q
       J0 = 0
 
       n = 0
@@ -891,7 +891,7 @@ c-----------------------------------------------------------------------
         call EntFunc(measure,ltot,Estimate(n+1),Default(n+1),dH,d2H)
         do l = 1, ltot
           Diag = 1 / (Temp - d2H(l))
-          GradJ = dH(l) - 2.*Q*Alpha*Residual(n+l) - Beta
+          GradJ = dH(l) - 2.0*Q*Alpha*Residual(n+l) - Beta
           Stepd = Diag*GradJ
           J0 = J0 + GradJ*Stepd
           Step(n+l) = Stepd
@@ -966,21 +966,21 @@ c     Externals to find min and max indices.
 c-----------------------------------------------------------------------
       n = 0
 
-      GradEE = 0.
-      GradEF = 0.
-      GradEH = 0.
-      GradFF = 0.
-      GradFH = 0.
-      GradHH = 0.
-      Rms    = 0.
-      Flux   = 0.
+      GradEE = 0.0
+      GradEF = 0.0
+      GradEH = 0.0
+      GradFF = 0.0
+      GradFH = 0.0
+      GradHH = 0.0
+      Rms    = 0.0
+      Flux   = 0.0
       do while (n.lt.nPoint)
         ltot = min(Run,nPoint-n)
         call EntFunc(measure,ltot,Est(n+1),Default(n+1),dH,d2H)
         do l = 1, ltot
-          GradE = 2. * Q * Res(n+l)
+          GradE = 2.0 * Q * Res(n+l)
           GradH = dH(l)
-          Diag = 1./(2.*Alpha*Q*Q - d2H(l))
+          Diag = 1.0/(2.0*Alpha*Q*Q - d2H(l))
           GradEE = GradEE + GradE*Diag*GradE
           GradEF = GradEF + GradE*Diag
           GradEH = GradEH + GradE*Diag*GradH
@@ -1007,8 +1007,8 @@ c
       GradEJ = GradEH - Alpha*GradEE - Beta*GradEF
       GradFJ = GradFH - Alpha*GradEF - Beta*GradFF
       GradJJ = GradHH + Alpha*Alpha*GradEE + Beta*Beta*GradFF
-     *        - 2.*Alpha*GradEH - 2.*Beta*GradFH
-     *        + 2.*Alpha*Beta*GradEF
+     *        - 2.0*Alpha*GradEH - 2.0*Beta*GradFH
+     *        + 2.0*Alpha*Beta*GradEF
       Grad11 = GradHH + Alpha*Alpha*GradEE + Beta*Beta*GradFF
       if (Grad11.le.0) Grad11 = GradFF
 
@@ -1117,7 +1117,7 @@ c-----------------------------------------------------------------------
       external  itoaf
 c-----------------------------------------------------------------------
 c     Start by copying the header verbatim.
-      call headcopy(lIn, lOut, 0, 0, 0, 0)
+      call headcp(lIn, lOut, 0, 0, 0, 0)
 
 c     Update parameters that have changed.
       do i = 1, 3
