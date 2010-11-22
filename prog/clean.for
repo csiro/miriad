@@ -96,7 +96,7 @@ c@ clip
 c       This sets the relative clip level in Steer mode. Values are
 c       typically 0.75 to 0.9. The default is image dependent.
 c
-c$Id: clean.for,v 1.10 2010/09/15 07:15:00 cal103 Exp $
+c$Id: clean.for,v 1.11 2010/11/22 07:06:45 cal103 Exp $
 c--
 c
 c  History:
@@ -199,8 +199,8 @@ c     Externals.
       character itoaf*8, versan*80
 c-----------------------------------------------------------------------
       version = versan ('clean',
-     *                  '$Revision: 1.10 $',
-     *                  '$Date: 2010/09/15 07:15:00 $')
+     *                  '$Revision: 1.11 $',
+     *                  '$Date: 2010/11/22 07:06:45 $')
 c
 c  Get the input parameters.
 c
@@ -336,7 +336,7 @@ c
             EstASum = 0
             call NoModel(Data(pMap),Data(pEst),Data(pRes),nPoint)
           else
-            call output ('Subtracting initial model ...')
+            call output('Subtracting initial model ...')
             call AlignGet(lModel,Run,nRun,k,xmin+xoff-1,ymin+yoff-1,
      *        zoff,nModel(1),nModel(2),nModel(3),
      *        Data(pEst),MaxMap,nPoint)
@@ -345,7 +345,7 @@ c
             call SumAbs(EstASum,Data(pEst),nPoint)
           endif
           call Stats(Data(pRes),nPoint,ResMin,ResMax,ResAMax,ResRms)
-          call output ('Begin iterating')
+          call output('Begin iterating')
         else
           ResMin = 0
           ResMax = 1
@@ -586,26 +586,26 @@ c-----------------------------------------------------------------------
       include 'maxdim.h'
 c-----------------------------------------------------------------------
       call keyini
-      call keya ('map', map, ' ')
-      call keya ('beam', beam, ' ')
-      call keya ('model', estimate,' ')
-      call keya ('out', out, ' ')
+      call keya('map', map, ' ')
+      call keya('beam', beam, ' ')
+      call keya('model', estimate,' ')
+      call keya('out', out, ' ')
       if (map.eq.' ' .or. beam.eq.' ' .or. out.eq.' ')
-     *  call bug ('f', 'A file name was missing from the parameters')
+     *  call bug('f', 'A file name was missing from the parameters')
       call GetOpt(negstop,positive,pad,asym)
-      call keyi ('niters', Niter, 250)
-      if (Niter.le.0) call bug ('f', 'NITERS must be positive')
-      call keyr ('cutoff', cutoff,0.0)
+      call keyi('niters', Niter, 250)
+      if (Niter.le.0) call bug('f', 'NITERS must be positive')
+      call keyr('cutoff', cutoff,0.0)
 
       call BoxInput('region',map,box,maxbox)
 
-      call keyi ('minpatch', minpatch, 51)
-      call keyr ('gain', gain, 0.1)
+      call keyi('minpatch', minpatch, 51)
+      call keyr('gain', gain, 0.1)
       if (gain.le.0 .or. gain.gt.1)
      *  call bug('f','Bad gain value, it must be in the range (0,1]')
-      call keyr ('phat', phat, 0.0)
-      call keyr ('speed', speed, 0.0)
-      call keyr ('clip', clip, 0.0)
+      call keyr('phat', phat, 0.0)
+      call keyr('speed', speed, 0.0)
+      call keyr('clip', clip, 0.0)
       if (clip.lt.0 .or. clip.gt.1)
      *  call bug('f','Bad clip value, it must be in the range [0,1]')
       call keya('mode',mode,'any')
@@ -662,7 +662,7 @@ c-----------------------------------------------------------------------
       external  itoaf
 c-----------------------------------------------------------------------
 c     Copy all header keywords.
-      call headcopy(lIn, lOut, 0, 0, 0, 0)
+      call headcp(lIn, lOut, 0, 0, 0, 0)
 
 c     Update keywords that have changed.
       call rdhdd(lIn,  'crpix1', crpix1, 1d0)
@@ -1045,7 +1045,7 @@ c
 c  Ready to perform the subtraction step. Lets go.
 c
       call SubComp(nx,ny,Ymap,Patch,n,n/2,Gain,MaxNiter,NegStop,
-     *  positive,0.0,0.,Cutoff,EstASum,Icmp,Jcmp,Rcmp,Ccmp,Ncmp,Niter,
+     *  positive,0.0,0.0,Cutoff,EstASum,Icmp,Jcmp,Rcmp,Ccmp,Ncmp,Niter,
      *  negFound)
       end
 
@@ -1444,7 +1444,7 @@ c
         do i = 1, n0
           Temp(i) = abs(Residual(l+i))
         enddo
-        call whenfgt (n0, Temp, 1, Limit, Indx,Ncmpd)
+        call whenfgt(n0, Temp, 1, Limit, Indx,Ncmpd)
         if (Ncmp+Ncmpd.gt.maxCmp)
      *        call bug('f','Internal bug in GetComp')
 

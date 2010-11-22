@@ -54,7 +54,7 @@ c@ log
 c       The output log file. The default filename is clplot.log
 c       Results from image analysis are written into the log file.
 c
-c$Id: clplot.for,v 1.9 2010/10/22 03:44:23 cal103 Exp $
+c$Id: clplot.for,v 1.10 2010/11/22 07:04:47 cal103 Exp $
 c--
 c  History:
 c    20jan94 jpw   Copied from MIRIAD program velplot
@@ -91,8 +91,8 @@ c  real ary(128*128*64)=1048576 reals = 4 MBytes
 c  real ary(256*256*128)=8388608 reals = 32 MBytes
 c-----------------------------------------------------------------------
       version = versan ('clplot',
-     *                  '$Revision: 1.9 $',
-     *                  '$Date: 2010/10/22 03:44:23 $')
+     *                  '$Revision: 1.10 $',
+     *                  '$Date: 2010/11/22 07:04:47 $')
 c
 c  Get the input parameters.
 c
@@ -1617,9 +1617,9 @@ c
 c --- maps available ---
 c
       print 110,vlsr(1),vlsr(nc),vlsr(2)-vlsr(1)
-110   format (/,' Velocity of first map:',F12.3,
-     *          '  Velocity of last map:',F12.3/
-     *          '    Velocity increment:',F12.3)
+110   format(/,' Velocity of first map:',F12.3,
+     *         '  Velocity of last map:',F12.3/
+     *         '    Velocity increment:',F12.3)
 c
 c --- current selection of maps ---
 c
@@ -2741,7 +2741,7 @@ c-----------------------------------------------------------------------
 
       if (cdelt1.eq.0.0 .or. cdelt2.eq.0.0)
      *  call bug('f', 'Coordinate increment missing (cdelt).')
-      if (abs(cdelt1).ne.abs(cdelt2)) 
+      if (abs(cdelt1).ne.abs(cdelt2))
      *  call bug('f', 'Unequal coordinate increments (cdelt).')
 
       xy = abs(cdelt1)
@@ -4395,7 +4395,7 @@ c     Open output file and write header from values in common.
       call xyopen(lOut, filename, 'new', 3, nsize)
 
 c     Copy the header verbatim then apply updates.
-      call headcopy(lIn, lOut, 0, 3, blc, 0)
+      call headcp(lIn, lOut, 3, 0, blc, 0)
       call wrhdd(lOut, 'crpix1', dble(brpix(1)))
       call wrhdd(lOut, 'crpix2', dble(brpix(2)))
       call wrhdd(lOut, 'crpix3', 1d0)
@@ -4494,7 +4494,7 @@ c     Write it.
       enddo
 
 c     Write the history.
-      call hisopen (lOut, 'append')
+      call hisopen(lOut, 'append')
       call hiswrite(lOut, 'CLPLOT:')
       call hisinput(lOut, 'CLPLOT')
 

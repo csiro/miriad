@@ -29,7 +29,7 @@ c@ nmin
 c     Minimum number of pixels in each clump.
 c     Any clumps with fewer pixels are rejected (default=4).
 c
-c$Id: clfind.for,v 1.7 2010/09/15 07:30:33 cal103 Exp $
+c$Id: clfind.for,v 1.8 2010/11/22 07:05:42 cal103 Exp $
 c--
 c       this used to be a parameter, but - as discussed in the paper -
 c       we don't want users to mess with this. (:-)
@@ -88,8 +88,8 @@ c     Dynamic memory allocations.
       equivalence(heap,pos1,pos,reg,data)
 c-----------------------------------------------------------------------
       version = versan('clfind',
-     *                 '$Revision: 1.7 $',
-     *                 '$Date: 2010/09/15 07:30:33 $')
+     *                 '$Revision: 1.8 $',
+     *                 '$Date: 2010/11/22 07:05:42 $')
 
 c     Get the parameters from the user.
       call keyini
@@ -134,7 +134,7 @@ c     Calculate the beam size in x and y.
           beamx = abs(real(bmin/cdelt1))
           beamy = real(bmaj/cdelt2)
         else
-          write (*,*) 'beam=', bmaj,bmin,cdelt1,cdelt2
+          write(*,*) 'beam=', bmaj,bmin,cdelt1,cdelt2
           beamx = abs(real(bmaj/cdelt1))
           beamy = real(bmin/cdelt2)
         endif
@@ -1012,7 +1012,7 @@ c-----------------------------------------------------------------------
 c     Write header for the output cube.
 c-----------------------------------------------------------------------
 c     Copy the header.
-      call headcopy(lin, lout, 0, 0, 0, 0)
+      call headcp(lin, lout, 0, 0, 0, 0)
 
 c     Update history.
       call hisopen (lout, 'append')
