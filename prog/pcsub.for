@@ -51,7 +51,7 @@ c       map, and subtracted from the input cube.
 c       If "cont" alone is provided, ONLY the continuum map is written,
 c       no output cube is written.
 c
-c$Id: pcsub.for,v 1.3 2010/09/09 04:14:52 cal103 Exp $
+c$Id: pcsub.for,v 1.4 2010/11/22 05:31:43 cal103 Exp $
 c--
 c  History:
 c    nebk  2may89 Original version. (AVSUB.FOR)
@@ -96,21 +96,21 @@ c-----------------------------------------------------------------------
       external  versan
 c-----------------------------------------------------------------------
       version = versan('pcsub',
-     *                 '$Revision: 1.3 $',
-     *                 '$Date: 2010/09/09 04:14:52 $')
+     *                 '$Revision: 1.4 $',
+     *                 '$Date: 2010/11/22 05:31:43 $')
       call bug('w','Use this program only in EXISTING cont= mode')
 
 c     Get the input parameters.
       call keyini
-      call keyf ('in', in, ' ')
-      call keya ('out', out, ' ')
-      call keya ('cont', cont, ' ')
-      if (in.eq.' ') call bug ('f',
+      call keyf('in', in, ' ')
+      call keya('out', out, ' ')
+      call keya('cont', cont, ' ')
+      if (in.eq.' ') call bug('f',
      *    'You must specify an input dataset (in=)')
-      if (out.eq.' ' .and. cont.eq.' ') call bug ('f',
+      if (out.eq.' ' .and. cont.eq.' ') call bug('f',
      *    'Some form of output image is needed, i.e. out= or cont=')
-      call boxinput ('region', in, boxes, MAXBOXES)
-      call keyi ('order', nterms, 0)
+      call boxinput('region', in, boxes, MAXBOXES)
+      call keyi('order', nterms, 0)
       if (nterms.gt.MAXPOWER) call bug('f',
      *    'Order too high; order=')
       nterms = nterms + 1
@@ -118,25 +118,25 @@ c     Get the input parameters.
 
 c     Open the input image and pass some information to the box routines
 c     about the region to work on.
-      call xyopen (lin, in, 'old', MAXNAX, nin)
+      call xyopen(lin, in, 'old', MAXNAX, nin)
       if (nin(1).gt.MAXDIM .or. nin(2).gt.MAXDIM)
-     *     call bug ('f','Inpout Image too big')
-      call rdhdi (lin, 'naxis', naxis, 0)
-      if (naxis.lt.3) call bug ('f', 'Image only has 2 dimensions')
-      call boxmask (lin, boxes, MAXBOXES)
-      call boxset (boxes, MAXNAX, nin, 's')
+     *     call bug('f','Inpout Image too big')
+      call rdhdi(lin, 'naxis', naxis, 0)
+      if (naxis.lt.3) call bug('f', 'Image only has 2 dimensions')
+      call boxmask(lin, boxes, MAXBOXES)
+      call boxset(boxes, MAXNAX, nin, 's')
 
 c     Find region of image which contains all channels to average and
 c     then work out which planes to read.
-      call boxinfo (boxes, MAXNAX, blc, trc)
+      call boxinfo(boxes, MAXNAX, blc, trc)
       nplanes = 0
       do k = blc(3), trc(3)
-        call boxruns (1, k, ' ', boxes, runs, MAXRUNS,
+        call boxruns(1, k, ' ', boxes, runs, MAXRUNS,
      *                nruns, xblc, xtrc, yblc, ytrc)
         if (nruns.ne.0) then
           nplanes = nplanes + 1
           if (nplanes.gt.MAXCHAN)
-     *       call bug ('f', 'Too many channels to average')
+     *       call bug('f', 'Too many channels to average')
           planes(nplanes) = k
         endif
       enddo
@@ -151,7 +151,7 @@ c     then work out which planes to read.
 c     Create the output image, copy the header keywords from the
 c     input image and add the new history.
       if (out.ne.' ') then
-        call xyopen (lout, out, 'new', MAXNAX, nin)
+        call xyopen(lout, out, 'new', MAXNAX, nin)
         call output('Creating continuum subtracted dataset: '//out)
       else
         lout = 0
@@ -170,9 +170,9 @@ c       Dataset existence test: use hopen????? Is that OK
 
 c     Do all necessary header and history manipulation.
       if (lout.ne.0) then
-        call headcopy(lin, lout, 0, 0, 0, 0)
+        call headcp(lin, lout, 0, 0, 0, 0)
 
-        call hisopen (lout, 'append')
+        call hisopen(lout, 'append')
         call hiswrite(lout, 'PCSUB: Miriad ' // version)
         call hisinput(lout, 'PCSUB')
       endif
@@ -180,12 +180,12 @@ c     Do all necessary header and history manipulation.
       if (ccreate) then
 c       Continuum created from a polynomial fit.
         call output('Creating continuum map: ' // cont)
-        call xyopen (lcont, cont, 'new', 2, nin)
+        call xyopen(lcont, cont, 'new', 2, nin)
 
 c       Copy header from the input image.
-        call headcopy(lin, lcont, 0, 0, 0, 0)
+        call headcp(lin, lcont, 0, 0, 0, 0)
 
-        call hisopen (lcont, 'append')
+        call hisopen(lcont, 'append')
         call hiswrite(lcont, 'PCSUB: Miriad ' // version)
         call hisinput(lcont, 'PCSUB')
       else
@@ -198,16 +198,16 @@ c       Continuum supplied by user.
         if (nterms.ne.1) nterms = 1
       endif
 
-      call listcom (nplanes, planes, istart, iend, nsect)
+      call listcom(nplanes, planes, istart, iend, nsect)
       isnext = 1
       more = .true.
       do while (more)
-        call txtplane (nsect, istart, iend, aline, isnext, more)
-        if (lout.ne.0) call hiswrite (lout, aline)
-        if (ccreate)   call hiswrite (lcont,aline)
+        call txtplane(nsect, istart, iend, aline, isnext, more)
+        if (lout.ne.0) call hiswrite(lout, aline)
+        if (ccreate)   call hiswrite(lcont,aline)
       enddo
-      if (lout.ne.0) call hisclose (lout)
-      if (ccreate)   call hisclose (lcont)
+      if (lout.ne.0) call hisclose(lout)
+      if (ccreate)   call hisclose(lcont)
 
 c     Select a line of attack going into the cube and fit it to a
 c     polynomial, using in the fit only those planes selected by input
@@ -277,9 +277,9 @@ c
       endif
 
 c     Close up shop.
-      call xyclose (lin)
-      if (lout.ne.0) call xyclose (lout)
-      if (ccreate) call xyclose (lcont)
+      call xyclose(lin)
+      if (lout.ne.0) call xyclose(lout)
+      if (ccreate) call xyclose(lcont)
 
       end
 
@@ -350,7 +350,7 @@ c-----------------------------------------------------------------------
       strlen = len(string)
       do i = isnext, nsect
         if (istart(i).eq.iend(i)) then
-          call itochar (istart(i), ch1, l1)
+          call itochar(istart(i), ch1, l1)
           if (ipt+l1.lt.strlen) then
             string(ipt:ipt+l1) = ch1(1:l1)
           else
@@ -360,8 +360,8 @@ c-----------------------------------------------------------------------
           endif
           ipt = ipt + l1 + 2
         else
-          call itochar (istart(i), ch1, l1)
-          call itochar (iend(i), ch2, l2)
+          call itochar(istart(i), ch1, l1)
+          call itochar(iend(i), ch2, l2)
           if (ipt+l1+l2.lt.strlen) then
             string(ipt:ipt+l1+l2) = ch1(1:l1)//':'//ch2(1:l2)
             ipt = ipt + l1 + l2 + 2
