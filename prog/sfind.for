@@ -470,7 +470,7 @@ c       3) Check the rms of the background. If this is high then firstly
 c          the fit may not be good (as per 1), and secondly the source
 c          is in a noisy area and should be treated with caution anyway.
 c
-c$Id: sfind.for,v 1.13 2010/09/16 08:20:32 cal103 Exp $
+c$Id: sfind.for,v 1.14 2010/11/22 05:24:30 cal103 Exp $
 c--
 c
 c  History:
@@ -625,12 +625,12 @@ c-----------------------------------------------------------------------
       character versan*80, version*80
 c-----------------------------------------------------------------------
       version = versan('sfind',
-     *                  '$Revision: 1.13 $',
-     *                  '$Date: 2010/09/16 08:20:32 $')
+     *                  '$Revision: 1.14 $',
+     *                  '$Date: 2010/11/22 05:24:30 $')
 c
 c Get user inputs
 c
-      call inputs (maxlev, in, ibin, jbin, kbin, levtyp, slev, levs,
+      call inputs(maxlev, in, ibin, jbin, kbin, levtyp, slev, levs,
      *   nlevs, pixr, trfun, pdev, labtyp, logfil, do3val, do3pix,
      *   eqscale, nx, ny, cs, dopixel, mark, doerase, dowedge, dofid,
      *   grid, cut, rmsbox, alpha, xrms, nofit, asciiart, auto,
@@ -639,35 +639,35 @@ c
 c
 c Open log files
 c
-      call txtopen (llog, logfil, 'append', iostat)
+      call txtopen(llog, logfil, 'append', iostat)
       nc = nelc(logfil)
       if (iostat.ne.0)
-     *  call bug ('f', 'Error opening log file "' // logfil(:nc) // '"')
-      call output (' ')
-      call output ('*** Source list output to ' // logfil(:nc))
-      call output (' ')
-      call output ('Now opening image...')
-      call output (' ')
+     *  call bug('f', 'Error opening log file "' // logfil(:nc) // '"')
+      call output(' ')
+      call output('*** Source list output to ' // logfil(:nc))
+      call output(' ')
+      call output('Now opening image...')
+      call output(' ')
 c
 c Open image
 c
-      call opimcg (maxnax, in, lin, size, naxis)
-      call initco (lin)
+      call opimcg(maxnax, in, lin, size, naxis)
+      call initco(lin)
       if (pbcor) call mosLoad(lin,npnt)
 c
 c Finish key inputs for region of interest now
 c
-      call region (in, naxis, size, ibin, jbin, kbin, blc, trc,
+      call region(in, naxis, size, ibin, jbin, kbin, blc, trc,
      *             win, ngrps, grpbeg, ngrp)
 c
 c Try to allocate memory for images.
 c
-      call memalloc (ipim,  win(1)*win(2), 'r')
-      call memalloc (ipnim, win(1)*win(2), 'i')
+      call memalloc(ipim,  win(1)*win(2), 'r')
+      call memalloc(ipnim, win(1)*win(2), 'i')
 c
 c Work out coordinate transformation matrix
 c
-      call limitscg (blc, ibin, jbin, tr)
+      call limitscg(blc, ibin, jbin, tr)
 c
 c If the source detection procedure is not to be automated, (ie,
 c 'options=oldsfind' but not 'auto') then perform all
@@ -678,33 +678,33 @@ c
 c Compute contour levels or check pixel map for log offset
 c
        if (dopixel) then
-        call grfixcg (pixr, lin, naxis, size, trfun, pixr2,
+        call grfixcg(pixr, lin, naxis, size, trfun, pixr2,
      *                groff, blank)
        else
-        call conlevcg (.false., maxlev, lin, levtyp, slev, nlevs,
+        call conlevcg(.false., maxlev, lin, levtyp, slev, nlevs,
      *                 levs, srtlev)
         blank = -99999999.0
        endif
 c
 c Work out number of plots per page and number of plots
 c
-       call nxnycg (nxdef, nydef, ngrps, nx, ny, nlast)
+       call nxnycg(nxdef, nydef, ngrps, nx, ny, nlast)
 c
 c Work out if wedge outside or inside subplots. Also work out
 c if plotting one wedge per subplot or one wedge for all
 c
-       call wedgincg ('NO', dofid, dowedge, nx, ny, 1, trfun, wedcod)
+       call wedgincg('NO', dofid, dowedge, nx, ny, 1, trfun, wedcod)
 c
 c Work out default character sizes for axis and channel labels
 c
-       call defchrcg (nx, ny, cs)
+       call defchrcg(nx, ny, cs)
 c
 c Open plot device
 c
        ierr = pgbeg (0, pdev, 1, 1)
        if (ierr.ne.1) then
         call pgldev
-        call bug ('f', 'Error opening plot device')
+        call bug('f', 'Error opening plot device')
        endif
 c
        call pgpage
@@ -712,7 +712,7 @@ c
 c
 c Set line graphics colour indices
 c
-       call setlgc (labcol, poscol, statcol, regcol)
+       call setlgc(labcol, poscol, statcol, regcol)
 c
 c Init OFM routines
 c
@@ -720,16 +720,16 @@ c
 c
 c Set axis labels
 c
-       call setlabcg (lin, labtyp, .false., xlabel, ylabel)
+       call setlabcg(lin, labtyp, .false., xlabel, ylabel)
 c
 c Set label displacements from axes
 c
-       call setdspcg (lin, labtyp, blc, trc, xdispl, ydispb)
+       call setdspcg(lin, labtyp, blc, trc, xdispl, ydispb)
 c
 c Work out view port encompassing all sub-plots. Also return
 c the viewport size of sub-plots.
 c
-       call vpsizcg (.false., dofid, 0, ' ', ' ', 0, ' ', maxlev,
+       call vpsizcg(.false., dofid, 0, ' ', ' ', 0, ' ', maxlev,
      *   nlevs, srtlev, levs, slev, nx, ny, cs, xdispl, ydispb,
      *   gaps, doabut, dotr, wedcod, wedwid, tfdisp, labtyp, vxmin,
      *   vymin, vymax, vxgap, vygap, vxsize, vysize, tfvp, wdgvp)
@@ -737,7 +737,7 @@ c
 c Adjust viewport increments and start locations if equal scales
 c requested or if scales provided by user
 c
-       call vpadjcg (lin, 'NO', eqscale, scale, vxmin, vymin, vymax,
+       call vpadjcg(lin, 'NO', eqscale, scale, vxmin, vymin, vymax,
      *   nx, ny, blc, trc, tfvp, wdgvp, vxsize, vysize)
 c
 c Set viewport location of first sub-plot
@@ -755,82 +755,82 @@ c
 c
 c Set viewport and window for current sub-plot
 c
-         call pgsvp (vx, vx+vxsize, vy, vy+vysize)
-         call pgswin (blc(1)-0.5, trc(1)+0.5, blc(2)-0.5, trc(2)+0.5)
+         call pgsvp(vx, vx+vxsize, vy, vy+vysize)
+         call pgswin(blc(1)-0.5, trc(1)+0.5, blc(2)-0.5, trc(2)+0.5)
 c
 c Read in image
 c
-         call readimcg (.true., blank, lin, ibin, jbin, krng, blc,
+         call readimcg(.true., blank, lin, ibin, jbin, krng, blc,
      *     trc, .true., memi(ipnim), memr(ipim), doblnk, dmm)
 c
 c Apply transfer function
 c
-         call pgsci (labcol)
+         call pgsci(labcol)
          if (dopixel) then
-           if (trfun.ne.'lin') call apptrfcg (pixr, trfun, groff,
+           if (trfun.ne.'lin') call apptrfcg(pixr, trfun, groff,
      *        win(1)*win(2), memi(ipnim), memr(ipim), nbins,
      *        his, cumhis)
 c
 c Draw wedge
 c
            if (wedcod.eq.1 .or. wedcod.eq.2) then
-            call pgsch (cs(1))
-            call wedgecg (wedcod, wedwid, jj, trfun, groff, nbins,
+            call pgsch(cs(1))
+            call wedgecg(wedcod, wedwid, jj, trfun, groff, nbins,
      *                    cumhis, wdgvp, pixr(1), pixr(2))
            endif
          endif
 c
 c Draw pixel map; set default b&w colour table first.
 c
-         call pgsci (labcol)
+         call pgsci(labcol)
          if (dopixel) then
-           if (k.eq.1) call ofmcol (1, pixr2(1), pixr2(2))
-           call pgimag (memr(ipim), win(1), win(2), 1, win(1), 1,
+           if (k.eq.1) call ofmcol(1, pixr2(1), pixr2(2))
+           call pgimag(memr(ipim), win(1), win(2), 1, win(1), 1,
      *                  win(2), pixr2(1), pixr2(2), tr)
          else
 c
 c Draw contours
 c
-           call conturcg (.false., blank, .false., win(1), win(2),
+           call conturcg(.false., blank, .false., win(1), win(2),
      *       doblnk, memr(ipim), nlevs, levs, tr, 0.0, 0, 0)
          endif
 c
 c Determine if the axes need ascii or numeric labelling
 c for this subplot
 c
-         call pgsch (cs(1))
-         call dolabcg (gaps, dotr, nx, ny, ngrps, nlast, k,
+         call pgsch(cs(1))
+         call dolabcg(gaps, dotr, nx, ny, ngrps, nlast, k,
      *                 labtyp, doaxlab, doaylab, donxlab, donylab)
 c
 c Write ascii axis labels
 c
-         call aaxlabcg (doaxlab, doaylab, xdispl, ydispb,
+         call aaxlabcg(doaxlab, doaylab, xdispl, ydispb,
      *                             xlabel, ylabel)
 c
 c Draw frame, write numeric labels, ticks and optional grid
 c
-         call naxlabcg (lin, .true., blc, trc, krng, labtyp,
+         call naxlabcg(lin, .true., blc, trc, krng, labtyp,
      *                  donxlab, donylab, .false., grid)
 c
 c Draw wedge inside subplots and overwrite label ticks
 c
          if (wedcod.eq.3) then
-           call pgsch (cs(1))
-           call wedgecg (wedcod, wedwid, jj, trfun, groff, nbins,
+           call pgsch(cs(1))
+           call wedgecg(wedcod, wedwid, jj, trfun, groff, nbins,
      *                  cumhis, wdgvp, pixr(1), pixr(2))
          endif
 c
 c Modify lookup table
 c
-         if (dofid) call ofmmod (tfvp, win(1)*win(2), memr(ipim),
+         if (dofid) call ofmmod(tfvp, win(1)*win(2), memr(ipim),
      *                           memi(ipnim), pixr2(1), pixr2(2))
 c
 c Write velocity or channel label
 c
          if (do3val .or. do3pix) then
-           call pgsch (cs(2))
-           call pgsci (1)
-           call lab3cg (lin, doerase, do3val, do3pix, labtyp,
+           call pgsch(cs(2))
+           call pgsci(1)
+           call lab3cg(lin, doerase, do3val, do3pix, labtyp,
      *                  grpbeg(k), ngrp(k))
          endif
 c
@@ -842,7 +842,7 @@ c
 c
 c Increment sub-plot viewport locations and row counter
 c
-         call subinccg (k, nx, ny, vxmin, vymax, vxsize, vysize,
+         call subinccg(k, nx, ny, vxmin, vymax, vxsize, vysize,
      *                  vxgap, vygap, vx, vy)
 c
 c Page plot device
@@ -852,10 +852,10 @@ c
 c
 c Close up
 c
-       call memfree (ipim,  win(1)*win(2), 'r')
-       call memfree (ipnim, win(1)*win(2), 'i')
+       call memfree(ipim,  win(1)*win(2), 'r')
+       call memfree(ipnim, win(1)*win(2), 'i')
 c
-       call finco (lin)
+       call finco(lin)
        call xyclose(lin)
        call txtclose(llog)
        call pgend
@@ -873,7 +873,7 @@ c
 c
 c Read in image
 c
-        call readimcg (.true., blank, lin, ibin, jbin, krng, blc,
+        call readimcg(.true., blank, lin, ibin, jbin, krng, blc,
      *     trc, .true., memi(ipnim), memr(ipim), doblnk, dmm)
 c
 c The source-detection subroutine.
@@ -892,8 +892,8 @@ c
 c
 c Close up
 c
-       call memfree (ipim,  win(1)*win(2), 'r')
-       call memfree (ipnim, win(1)*win(2), 'i')
+       call memfree(ipim,  win(1)*win(2), 'r')
+       call memfree(ipnim, win(1)*win(2), 'i')
 c
        call xyclose(lin)
        call txtclose(llog)
@@ -906,9 +906,9 @@ c
       real x, y
       character ans*1
       call pgupdt
-      call pgcurs (x, y, ans)
+      call pgcurs(x, y, ans)
       call pgupdt
-      call ucase (ans)
+      call ucase(ans)
 c
       end
 c
@@ -975,23 +975,23 @@ cc
       character line1*80, line2*160, line3*160, line4*160
       logical ok, nobeam, fitok
 c-----------------------------------------------------------------------
-      call output (' ')
+      call output(' ')
       if (.not.auto) then
-       call output ('************************************')
-       call output ('Beginning Interactive Source Finding')
-       call output ('************************************')
-       call output (' ')
-       call output ('Click left button   (enter A) to flag source as Y')
+       call output('************************************')
+       call output('Beginning Interactive Source Finding')
+       call output('************************************')
+       call output(' ')
+       call output('Click left button   (enter A) to flag source as Y')
        call output
      *  ('Click middle button (enter D) to flag source as N')
-       call output ('Click right button  (enter X) to quit')
-       call output (' ')
+       call output('Click right button  (enter X) to quit')
+       call output(' ')
       else
-       call output ('****************************************')
-       call output ('Beginning Non-Interactive Source Finding')
-       call output ('****************************************')
-       call output (' ')
-       call output ('Please be patient...')
+       call output('****************************************')
+       call output('Beginning Non-Interactive Source Finding')
+       call output('****************************************')
+       call output(' ')
+       call output('Please be patient...')
       endif
 c
 c Initialize
@@ -1017,7 +1017,7 @@ c Write header for output to screen, unless "auto" option selected.
 c
       write(line1,19) '# Sources from image ',in
 19    format(a21,a59)
-      if (.not.auto) call output (line1)
+      if (.not.auto) call output(line1)
       if (nofit) then
         write(line2,20) '#','RA','DEC','flux','x','y','rms',
      *                  'flux/rms'
@@ -1025,10 +1025,10 @@ c
         if (.not.auto) call output(line2)
         line3 = '#                        mJy      pixels   '//
      *          'pixels    mJy'
-        if (.not.auto) call output (line3)
+        if (.not.auto) call output(line3)
         line4 = '#-----------------------------------------'//
      *          '-------------------------------------'
-        if (.not.auto) call output (line4)
+        if (.not.auto) call output(line4)
        else
         write(line2,30) '#','RA','DEC','err(RA)','err(DEC)','pk-flux',
      *                  'err','flux','bmaj','bmin','pa',
@@ -1039,19 +1039,19 @@ c
         line3 = '#                       arcsec   arcsec   '//
      *          'mJy      mJy       mJy  arcsec arcsec '//
      *          'deg  mJy     mJy'
-        if (.not.auto) call output (line3)
+        if (.not.auto) call output(line3)
         line4 = '#-----------------------------------------'//
      *          '-------------------------------------'//
      *          '----------------'
-        if (.not.auto) call output (line4)
+        if (.not.auto) call output(line4)
       endif
 c
 c Write output header for log file
 c
-      call txtwrite (llog, line1, len1(line1), iostat)
-      call txtwrite (llog, line2, len1(line2), iostat)
-      call txtwrite (llog, line3, len1(line3), iostat)
-      call txtwrite (llog, line4, len1(line4), iostat)
+      call txtwrite(llog, line1, len1(line1), iostat)
+      call txtwrite(llog, line2, len1(line2), iostat)
+      call txtwrite(llog, line3, len1(line3), iostat)
+      call txtwrite(llog, line4, len1(line4), iostat)
 c
 c Set the plane appropriate to the displayed image.  Since
 c this may be a range of planes averaged together, take the
@@ -1062,14 +1062,14 @@ c
 c Determine beam parameters, including determining if the beam doesn't
 c exist.
 c
-      call BeamPar (lIn, k, bvol, bvolp, bmaj, bmin, bpa,
+      call BeamPar(lIn, k, bvol, bvolp, bmaj, bmin, bpa,
      *              bmajp, bminp, bpap, nobeam)
 
 c Check that rmsbox is big enough.
-      write (line, '(a,f6.2,a)') 'Beam exclusion radius:', 1.5*bmajp,
+      write(line, '(a,f6.2,a)') 'Beam exclusion radius:', 1.5*bmajp,
      *  ' pixels.'
-      call output (' ')
-      call output (line)
+      call output(' ')
+      call output(line)
 
       if (rmsbox/2.lt.(1.5*bmajp/sqrt(2.0))) then
         call bug('f', 'rmsbox is contained within the beam ' //
@@ -1142,7 +1142,7 @@ c
 c
 c Convert location (peak or fitted) to formatted coordinate string
 c
-        call w2wfco (lin, 2, typei, ' ', posns,  typeo, ' ',
+        call w2wfco(lin, 2, typei, ' ', posns,  typeo, ' ',
      *               .true., radec, radeclen)
 c
 c if 'pbcor' selected, correct the flux densities (peak and integrated)
@@ -1196,7 +1196,7 @@ c
          do while (cch.ne.'A' .and. cch.ne.'D')
           ww(1) = wsave(1)
           ww(2) = wsave(2)
-          call cgcur (ww(1), ww(2), cch)
+          call cgcur(ww(1), ww(2), cch)
 c
 c Action depending upon user's button press
 c
@@ -1207,26 +1207,26 @@ c
 c Mark on plot if desired
 c
             if (mark) then
-              call pgslw (3)
-              call pgsci (2)
-              call pgpt (1, wsave(1), wsave(2), 2)
+              call pgslw(3)
+              call pgsci(2)
+              call pgpt(1, wsave(1), wsave(2), 2)
               call pgupdt
-              call pgslw (1)
+              call pgslw(1)
             endif
 c
             line(len1(line)+1:len1(line)+6) = '     Y'
-            call txtwrite (llog, line, len1(line), iostat)
+            call txtwrite(llog, line, len1(line), iostat)
           else if (cch.eq.'D') then
             if (mark) then
-              call pgslw (3)
-              call pgsci (5)
-              call pgpt (1, wsave(1), wsave(2), 4)
+              call pgslw(3)
+              call pgsci(5)
+              call pgpt(1, wsave(1), wsave(2), 4)
               call pgupdt
-              call pgslw (1)
+              call pgslw(1)
             endif
 c
             line(len1(line)+1:len1(line)+6) = '     N'
-            call txtwrite (llog, line, len1(line), iostat)
+            call txtwrite(llog, line, len1(line), iostat)
 c
 c When user presses quit-type command, check to see that's really what
 c they wanted to do, and if so do it. If not, accept the different
@@ -1236,14 +1236,14 @@ c
             call output('Are you sure you want to quit here?')
             call output('(press again to confirm, or other key '//
      *                    'for corresponding action)')
-            call cgcur (ww(1), ww(2), cch)
+            call cgcur(ww(1), ww(2), cch)
             if (cch.eq.'X') then
              goto 70
             else
              goto 55
             endif
           else
-            call output ('  Commands are: A (yes), D (no), X (exit).')
+            call output('  Commands are: A (yes), D (no), X (exit).')
           endif
          enddo
         else
@@ -1254,17 +1254,17 @@ c
          iloc = iloc + 1
          ysources = ysources + 1
          line(len1(line)+1:len1(line)+6) = '     Y'
-         call txtwrite (llog, line, len1(line), iostat)
+         call txtwrite(llog, line, len1(line), iostat)
         endif
 60      continue
        enddo
       enddo
 c
-70    call output (' ')
-      write (line,80) sources
+70    call output(' ')
+      write(line,80) sources
 80    format('Total number of sources detected:',i5)
       call output(line)
-      write (line,90) ysources
+      write(line,90) ysources
 90    format('Number of sources confirmed:',i5)
       call output(line)
       call output(' ')
@@ -1306,14 +1306,14 @@ c-----------------------------------------------------------------------
 c
       b = image(l+1,m) - image(l-1,m)
       a = image(l+1,m) - 2*t + image(l-1,m)
-      if ((abs(b).gt.abs(a)) .or. (a.ge.0.)) goto 2010
+      if ((abs(b).gt.abs(a)) .or. (a.ge.0.0)) goto 2010
       x = x - 0.5*b/a
       z = b*b/a
 2010  continue
 c
       b = image(l,m+1) - image(l,m-1)
       a = image(l,m+1) - 2*t + image(l,m-1)
-      if ((abs(b).gt.abs(a)) .or. (a.ge.0.)) goto 2015
+      if ((abs(b).gt.abs(a)) .or. (a.ge.0.0)) goto 2015
 c
       y = y - 0.5*b/a
       z = z + b*b/a
@@ -1665,7 +1665,7 @@ c
       endif
 
 c     Convert the fit parameters to astronomical units.
-      call gaucvt (lIn, k, bvol, bvolp, xposerr, yposerr,
+      call gaucvt(lIn, k, bvol, bvolp, xposerr, yposerr,
      *   pkfl, pkflerr, intfl, amaj, amin, posa, posns)
 c
       end
@@ -1830,19 +1830,19 @@ c
 c Start by checking beam parameters, since will die if the beam doesn't
 c exist.
 c
-      call BeamPar (lIn, k, bvol, bvolp, bmaj, bmin, bpa,
+      call BeamPar(lIn, k, bvol, bvolp, bmaj, bmin, bpa,
      *              bmajp, bminp, bpap, nobeam)
       if (nobeam) then
        call bug('f','No beam information found - FDR analysis'
      *      //' needs this to work')
       endif
 c Now begin properly.
-      call output (' ')
-      call output ('****************************************')
-      call output ('Beginning Non-Interactive Source Finding')
-      call output ('****************************************')
-      call output (' ')
-      call output ('Please be patient...')
+      call output(' ')
+      call output('****************************************')
+      call output('Beginning Non-Interactive Source Finding')
+      call output('****************************************')
+      call output(' ')
+      call output('Please be patient...')
 c
 c Initialize
 c
@@ -1878,10 +1878,10 @@ c
 c
 c Write output header for log file
 c
-      call txtwrite (llog, line1, len1(line1), iostat)
-      call txtwrite (llog, line2, len1(line2), iostat)
-      call txtwrite (llog, line3, len1(line3), iostat)
-      call txtwrite (llog, line4, len1(line4), iostat)
+      call txtwrite(llog, line1, len1(line1), iostat)
+      call txtwrite(llog, line2, len1(line2), iostat)
+      call txtwrite(llog, line3, len1(line3), iostat)
+      call txtwrite(llog, line4, len1(line4), iostat)
 c
 c Set the plane appropriate to the displayed image.  Since
 c this may be a range of planes averaged together, take the
@@ -1918,7 +1918,7 @@ c
       call memfree(ipim,nx*ny,'r')
       call memfree(ip2im,nx*ny,'r')
 c
-70    call output (' ')
+70    call output(' ')
 c
       end
 c
@@ -2229,7 +2229,7 @@ c
       ndata = nd
 c
       call packvar(xvar,nvar,MAXVAR)
-      if (nvar.eq.0) call bug ('f', 'HIST: Internal logic error')
+      if (nvar.eq.0) call bug('f', 'HIST: Internal logic error')
 c
       call lsqfit(FUNCTION,nd,nvar,xvar,covar,rms,ifail1,ifail2)
 c
@@ -2306,7 +2306,7 @@ c
      *              'fdrpeak ', 'allpix  ', 'psfsize ',
      *              'rmsimg'/
 c-----------------------------------------------------------------------
-      call optcg ('options', opshuns, present, maxopt)
+      call optcg('options', opshuns, present, maxopt)
 c
       do3val   =      present(1)
       do3pix   =      present(2)
@@ -2427,53 +2427,53 @@ c-----------------------------------------------------------------------
       data type2 /'contour', 'pixel', 'grey'/
 c-----------------------------------------------------------------------
       call keyini
-      call keyf ('in', in, ' ')
-      if (in.eq.' ') call bug ('f', 'No image specified')
-      call keymatch ('type', ntype2, type2, 1, imtype, nimtype)
+      call keyf('in', in, ' ')
+      if (in.eq.' ') call bug('f', 'No image specified')
+      call keymatch('type', ntype2, type2, 1, imtype, nimtype)
       if (nimtype.eq.0) imtype = 'pixel'
       dopixel = .true.
       if (imtype.eq.'contour') dopixel = .false.
 
-      call keyi ('xybin', ibin(1), 1)
-      call keyi ('xybin', ibin(2), ibin(1))
-      if (ibin(2).ne.1 .and. ibin(2).ne.ibin(1)) call bug ('f',
+      call keyi('xybin', ibin(1), 1)
+      call keyi('xybin', ibin(2), ibin(1))
+      if (ibin(2).ne.1 .and. ibin(2).ne.ibin(1)) call bug('f',
      *  'Non-unit x spatial averaging must be equal to increment')
       ibin(1) = max(ibin(1), 1)
       ibin(2) = max(ibin(2), 1)
 c
-      call keyi ('xybin', jbin(1), ibin(1))
-      call keyi ('xybin', jbin(2), jbin(1))
-      if (jbin(2).ne.1 .and. jbin(2).ne.jbin(1)) call bug ('f',
+      call keyi('xybin', jbin(1), ibin(1))
+      call keyi('xybin', jbin(2), jbin(1))
+      if (jbin(2).ne.1 .and. jbin(2).ne.jbin(1)) call bug('f',
      *  'Non-unit y spatial averaging must be equal to increment')
       jbin(1) = max(jbin(1), 1)
       jbin(2) = max(jbin(2), 1)
 
-      call keyi ('chan', kbin(1), 1)
-      call keyi ('chan', kbin(2), 1)
+      call keyi('chan', kbin(1), 1)
+      call keyi('chan', kbin(2), 1)
       kbin(1) = max(kbin(1), 1)
       kbin(2) = max(kbin(2), 1)
 
-      call keya ('slev', levtyp, 'a')
-      call keyr ('slev', slev, 0.0)
-      call lcase (levtyp)
-      if (levtyp.ne.'p' .and. levtyp.ne.'a') call bug ('f',
+      call keya('slev', levtyp, 'a')
+      call keyr('slev', slev, 0.0)
+      call lcase(levtyp)
+      if (levtyp.ne.'p' .and. levtyp.ne.'a') call bug('f',
      *   'Unrecognized contour level scale type; must be "p" or "a"')
 
-      call mkeyr ('levs', levs, maxlev, nlevs)
+      call mkeyr('levs', levs, maxlev, nlevs)
 
-      call keyr ('range', pixr(1), 0.0)
-      call keyr ('range', pixr(2), 0.0)
-      call keya ('range', trfun, 'lin')
-      call lcase (trfun)
+      call keyr('range', pixr(1), 0.0)
+      call keyr('range', pixr(2), 0.0)
+      call keya('range', trfun, 'lin')
+      call lcase(trfun)
       if (dopixel) then
         if (trfun.ne.'lin' .and. trfun.ne.'log' .and. trfun.ne.'heq'
-     *      .and. trfun.ne.'sqr') call bug ('f',
+     *      .and. trfun.ne.'sqr') call bug('f',
      *    'Unrecognized pixel map transfer function type')
       else
         trfun = ' '
       endif
 
-      call decopt (do3val, do3pix, eqscale, mark, doerase, dowedge,
+      call decopt(do3val, do3pix, eqscale, mark, doerase, dowedge,
      *             dofid, grid, nofit, asciiart, auto, negative,
      *             pbcor, oldsfind, fdrimg, sigmaimg, rmsimg, normimg,
      *             kvannot, fdrpeak, allpix, psfsize)
@@ -2482,35 +2482,35 @@ c
         dowedge = .false.
       endif
 
-      call keya ('device', pdev, ' ')
+      call keya('device', pdev, ' ')
       if ((pdev.eq.' ') .and. (.not.auto)) then
         call pgldev
-        call bug ('f', 'A PGPLOT device must be given')
+        call bug('f', 'A PGPLOT device must be given')
       endif
 
-      call keymatch ('labtyp', ntype, type, 2, labtyp, nlab)
+      call keymatch('labtyp', ntype, type, 2, labtyp, nlab)
       if (nlab.eq.0) labtyp(1) = 'abspix'
       if (nlab.le.1) then
         labtyp(2) = labtyp(1)
         if (labtyp(1).eq.'hms') labtyp(2) = 'dms'
       endif
 
-      call keya ('logfile', logfil, ' ')
+      call keya('logfile', logfil, ' ')
       if (logfil.eq.' ') logfil = 'sfind.log'
 
       if ((index(labtyp(1),'lin').ne.0  .and.
      *      index(labtyp(2),'lin').eq.0) .or.
      *     (index(labtyp(2),'lin').ne.0  .and.
      *      index(labtyp(1),'lin').eq.0)) then
-        if (eqscale) call bug ('i',
+        if (eqscale) call bug('i',
      *  'You might consider options=unequal with these axis types')
       endif
 
-      call keyi ('nxy', nx, 0)
-      call keyi ('nxy', ny, nx)
+      call keyi('nxy', nx, 0)
+      call keyi('nxy', ny, nx)
 
-      call keyr ('csize', cs(1), 0.0)
-      call keyr ('csize', cs(2), 0.0)
+      call keyr('csize', cs(1), 0.0)
+      call keyr('csize', cs(2), 0.0)
 
       call keyr('cutoff',cut,0.0)
       if (cut.lt.0.0)
@@ -2547,7 +2547,7 @@ c-----------------------------------------------------------------------
 c
 c See if black or white background
 c
-      call bgcolcg (bgcol)
+      call bgcolcg(bgcol)
 c
 c Labels first
 c
@@ -2563,7 +2563,7 @@ c Black background
 c
         labcol = 7
       else
-        call bug ('w', 'Non black/white background colour on device')
+        call bug('w', 'Non black/white background colour on device')
         labcol = 7
       endif
 c
@@ -2611,13 +2611,13 @@ cc
 c
       integer boxes(maxbox)
 c-----------------------------------------------------------------------
-      call boxinput ('region', in, boxes, maxbox)
-      call boxset (boxes, naxis, size, 's')
+      call boxinput('region', in, boxes, maxbox)
+      call boxset(boxes, naxis, size, 's')
       call keyfin
 c
 c Find hyper-rectangle surrounding region of interest
 c
-      call boxinfo (boxes, 3, blc, trc)
+      call boxinfo(boxes, 3, blc, trc)
       do i = 1, min(3,naxis)
         blc(i) = max(1,blc(i))
         trc(i) = min(size(i),trc(i))
@@ -2626,13 +2626,13 @@ c
 c Adjust spatial window to fit an integral number of bins and
 c find size of binned window
 c
-      call winfidcg (size(1), 1, ibin, blc(1), trc(1), win(1))
-      call winfidcg (size(2), 2, jbin, blc(2), trc(2), win(2))
+      call winfidcg(size(1), 1, ibin, blc(1), trc(1), win(1))
+      call winfidcg(size(2), 2, jbin, blc(2), trc(2), win(2))
 c
 c Find list of start channels and number of channels for each group
 c of channels selected.
 c
-      call chnselcg (blc, trc, kbin, maxbox, boxes, ngrps, grpbeg, ngrp)
+      call chnselcg(blc, trc, kbin, maxbox, boxes, ngrps, grpbeg, ngrp)
 c
       end
 c
@@ -2752,7 +2752,7 @@ c  Load the data. Ie, choose the pixels in the region of the source to
 c  be used in the fitting procedure, and encode them in a format ready
 c  to do so.
 c
-      call LoadDat (m,nx,ny,xpos,ypos,blc,bin,image,boxsize,lx,my,
+      call LoadDat(m,nx,ny,xpos,ypos,blc,bin,image,boxsize,lx,my,
      *  nimage,maxline,image2,pcut,fitok,meml(ipim),meml(ip2im),
      *  xpixused,ypixused,meanimg,sgimg,nfdrused,fdrpeak,allpix)
       call memfree(ipim,(boxsize+1)*(boxsize+1),'l')
@@ -2812,7 +2812,7 @@ c  Load the data again, using more pixels than last time, by
 c temporarily setting the fdrpeak variable to true.
 c
        fdrpeakdum = .true.
-       call LoadDat (m,nx,ny,xpos,ypos,blc,bin,image,boxsize,lx,my,
+       call LoadDat(m,nx,ny,xpos,ypos,blc,bin,image,boxsize,lx,my,
      *  nimage,maxline,image2,pcut,fitok,meml(ipim),meml(ip2im),
      *  xpixused,ypixused,meanimg,sgimg,nfdrused,fdrpeakdum,allpix)
        call memfree(ipim,(boxsize+1)*(boxsize+1),'l')
@@ -2926,7 +2926,7 @@ c record number of used pixels
       usedpixels = usedpixels + nfdrused
 
 c     Convert to astronomical units.
-      call gaucvt (lIn, k, bvol, bvolp, xposerr, yposerr,
+      call gaucvt(lIn, k, bvol, bvolp, xposerr, yposerr,
      *   pkfl, pkflerr, intfl, amaj, amin, posa, posns)
 
       end
@@ -3673,7 +3673,7 @@ c
       call rdhdr(lIn,'bmin',bmin,0.0)
       call rdhdr(lIn,'bpa',bpa,0.0)
       bpa =bpa * R2D
-        if ((bmaj.eq.0.) .or. (bmin.eq.0.)) then
+        if ((bmaj.eq.0.0) .or. (bmin.eq.0.0)) then
          call bug('w','Beam not detected in map -')
          call bug('w','Using arbitrary value of 5 pixels.')
          nobeam = .true.
@@ -3794,10 +3794,10 @@ c     Open output 'normalised' and 'segmentation image' datasets if
 c     necessary.
       axes(1) = maxx
       axes(2) = maxy
-      if (fdrimg)   call xyopen (lOut1,'sfind.fdr', 'new',2,axes)
-      if (sigmaimg) call xyopen (lOut2,'sfind.sig', 'new',2,axes)
-      if (normimg)  call xyopen (lOut3,'sfind.norm','new',2,axes)
-      if (rmsimg)   call xyopen (lOut4,'sfind.rms', 'new',2,axes)
+      if (fdrimg)   call xyopen(lOut1,'sfind.fdr', 'new',2,axes)
+      if (sigmaimg) call xyopen(lOut2,'sfind.sig', 'new',2,axes)
+      if (normimg)  call xyopen(lOut3,'sfind.norm','new',2,axes)
+      if (rmsimg)   call xyopen(lOut4,'sfind.rms', 'new',2,axes)
 
       do iii = 1, maxx
         rrow(iii) = 0.0
@@ -3819,7 +3819,7 @@ c     Create headers for the output datasets if necessary.
 
         if (lOut.gt.0) then
 c         Copy keywords and history.
-          call headcopy (lIn, lOut, 0, 0, 0, 0)
+          call headcp(lIn, lOut, 0, 0, 0, 0)
 
 c         Copy the mask.
           if (mskexst) then
@@ -3895,7 +3895,7 @@ c         cvt jjj from binned subimage pixels to full image pixels.
           call ppconcg(2, blc(2), bin(2), wa(2))
           call xywrite(lOut3,nint(wa(2)),rrow)
         enddo
-        call xyclose (lOut3)
+        call xyclose(lOut3)
       endif
 
 c     Make rms image for calculation of weighting corrections.
@@ -3922,7 +3922,7 @@ c         image cvt m from binned subimage pixels to full image pixels.
         enddo
 
 c       Done writing to lOut4, close it.
-        call xyclose (lOut4)
+        call xyclose(lOut4)
       endif
 
 
@@ -3948,15 +3948,15 @@ c           cvt l from binned subimage pixels to full image pixels
               nblanks = nblanks + 1
             endif
           enddo
-c         Have written the m'th row, now put it in the segmentation image
-c         cvt m from binned subimage pixels to full image pixels.
+c         Have written the m'th row, now put it in the segmentation
+c         image cvt m from binned subimage pixels to full image pixels.
           wa(2) = dble(m)
           call ppconcg(2, blc(2), bin(2), wa(2))
           call xywrite(lOut2,nint(wa(2)),rrow)
         enddo
 
 c       Done writing to lOut2, close it.
-        call xyclose (lOut2)
+        call xyclose(lOut2)
         write(line,'("Of a total of ",i7," non-blanked pixels,")')
      *         nx*ny - nblanks
         call output(line)
@@ -4001,7 +4001,7 @@ c     Sort plist into order.
 c     fdrdenom is the denominator of the slope (alpha/fdrdenom) for the
 c     fdr line defined this way, it runs from 1 to sum_i=1^N (1/i), for
 c     bareap=1 (uncorrelated) to N (fully correlated).
-      if (bareap.lt.1.) then
+      if (bareap.lt.1.0) then
         fdrdenom = 1.0
       else if (bareap.gt.float(npix)) then
         fdrdenom = 0
@@ -4065,7 +4065,7 @@ c         cvt m from binned subimage pixels to full image pixels.
       enddo
 
 c     Done writing to lOut1, close it if it was open.
-      if (fdrimg) call xyclose (lOut1)
+      if (fdrimg) call xyclose(lOut1)
 
       if (.not.sigmaimg) then
         write(line,'("Of a total of ",i7," non-blanked pixels,")')
@@ -4155,11 +4155,11 @@ c-----------------------------------------------------------------------
       sources = 0
       dumcount = 0
       if (kvannot) then
-       call txtopen (lann, 'sfind.ann', 'append', iostat)
+       call txtopen(lann, 'sfind.ann', 'append', iostat)
        if (iostat.ne.0)
-     *  call bug ('f', 'Error opening text file "sfind.ann"')
+     *  call bug('f', 'Error opening text file "sfind.ann"')
        write(line,'("color green")')
-       call txtwrite (lann, line, len1(line), iostat)
+       call txtwrite(lann, line, len1(line), iostat)
       endif
 c
       usedpixels = 0
@@ -4239,7 +4239,7 @@ c set xpos,ypos to initial peak pixel position
 c
 c Ok, have found the location and size of region to fit, now fit it
 c
-          call fitting (lIn, krng, nx, ny, image, rms, xpos, xposerr,
+          call fitting(lIn, krng, nx, ny, image, rms, xpos, xposerr,
      *     ypos, yposerr, pkfl, pkflerr, intfl, amaj, amin, posa,
      *     posns, blc, bin, ii, jj, bvol, bpap, bvolp,
      *     bmajp, bminp, nimage, boxsize, image2, pcut, fitok,
@@ -4251,7 +4251,7 @@ c write out annotation file line if necessary
             write(line,49) posns(1)*R2D, posns(2)*R2D,
      *         amaj/3600.0, amin/3600.0, 90.0-posa
 49          format("ellipse ",f16.10,f16.10,f16.10,f16.10,f8.2)
-            call txtwrite (lann, line, len1(line), iostat)
+            call txtwrite(lann, line, len1(line), iostat)
           endif
 c
 c Convert location (peak or fitted) to formatted coordinate string
@@ -4260,7 +4260,7 @@ c
           typei(2) = 'dms'
           typeo(1) = 'hms'
           typeo(2) = 'dms'
-          call w2wfco (lin, 2, typei, ' ', posns,  typeo, ' ',
+          call w2wfco(lin, 2, typei, ' ', posns,  typeo, ' ',
      *                 .true., radec, radeclen)
 c
 c if 'pbcor' selected, correct the flux densities (peak and integrated)
@@ -4293,7 +4293,7 @@ c consistency, since FDR mode is run in 'auto' mode, so all sources
 c are defined to be real).
 c
           line(len1(line)+1:len1(line)+6) = '     Y'
-          call txtwrite (llog, line, len1(line), iostat)
+          call txtwrite(llog, line, len1(line), iostat)
 
 cc undo change to sgimg just in case it affects something elsewhere
 c          if (pbcor) then

@@ -50,7 +50,7 @@ c          image is blanked).
 c       "force"     Force masking of pixels in the output image which
 c          are masked in the input image.
 c
-c$Id: smooth.for,v 1.3 2010/09/17 06:44:00 cal103 Exp $
+c$Id: smooth.for,v 1.4 2010/11/22 05:21:31 cal103 Exp $
 c--
 c
 c  History:
@@ -97,27 +97,27 @@ c-----------------------------------------------------------------------
       data type  /'gaussian', 'boxcar'/
 c-----------------------------------------------------------------------
       version = versan('smooth',
-     *                 '$Revision: 1.3 $',
-     *                 '$Date: 2010/09/17 06:44:00 $')
+     *                 '$Revision: 1.4 $',
+     *                 '$Date: 2010/11/22 05:21:31 $')
 c
 c  Get the input parameters.
 c
       call keyini
-      call keyf ('in', in, ' ')
-      call keya ('out', out, ' ')
-      call keymatch ('type', NTYPE, type, 1, ktype, nktype)
-      call keyr ('fwhm', fwhm1, 0.0)
-      call keyr ('fwhm', fwhm2, fwhm1)
-      call keyr ('pa', pa, 0.0)
-      call keyr ('scale', scale, -1.0)
-      call getopt (nocheck,force)
+      call keyf('in', in, ' ')
+      call keya('out', out, ' ')
+      call keymatch('type', NTYPE, type, 1, ktype, nktype)
+      call keyr('fwhm', fwhm1, 0.0)
+      call keyr('fwhm', fwhm2, fwhm1)
+      call keyr('pa', pa, 0.0)
+      call keyr('scale', scale, -1.0)
+      call getopt(nocheck,force)
       call keyfin
 c
 c  Check inputs.
 c
-      if (in .eq.' ') call bug ('f', 'No input image given')
-      if (out.eq.' ') call bug ('f', 'No output image given')
-      if (fwhm1.le.0.0 .or. fwhm2.le.0.0) call bug ('f', 'Invalid FWHM')
+      if (in .eq.' ') call bug('f', 'No input image given')
+      if (out.eq.' ') call bug('f', 'No output image given')
+      if (fwhm1.le.0.0 .or. fwhm2.le.0.0) call bug('f', 'Invalid FWHM')
       major = max(fwhm1,fwhm2)
       minor = min(fwhm1,fwhm2)
 
@@ -127,7 +127,7 @@ c
 
       if (scale.lt.0.0) then
         if (ktype.eq.'boxcar')
-     *    call bug ('f',
+     *    call bug('f',
      *    'Jy/beam output autoscaling not available for boxcars')
       else if (scale.eq.0.0) then
         if (ktype.eq.'gaussian') then
@@ -138,29 +138,29 @@ c
      *     ('Scaling convolution sums by inverse boxcar volume')
         endif
       else
-        write (line, 100) scale
-100     format ('Scaling convolution sums by ', 1pe12.5)
-        call output (line)
+        write(line, 100) scale
+100     format('Scaling convolution sums by ', 1pe12.5)
+        call output(line)
       endif
 c
 c  Open the input image
 c
-      call xyopen (lin, in, 'old', MAXNAX, nsize)
+      call xyopen(lin, in, 'old', MAXNAX, nsize)
       if (nsize(1).gt.MAXDIM)
-     *  call bug ('f', 'First dimension of image too large for storage')
+     *  call bug('f', 'First dimension of image too large for storage')
       if (nsize(3).le.0) nsize(3) = 1
-      call rdhdi (lin, 'naxis', naxis, 3)
+      call rdhdi(lin, 'naxis', naxis, 3)
       if (naxis.gt.MAXNAX)
-     *   call bug ('f', 'Image has too many dimensions')
+     *   call bug('f', 'Image has too many dimensions')
       if (naxis.ge.4) then
          do k = 4, naxis
            if (nsize(k).ne.1)
-     *        call bug ('f', 'Can''t deal with hyper-cube')
+     *        call bug('f', 'Can''t deal with hyper-cube')
          enddo
       endif
-      call rdhdd (lin, 'cdelt1', cdelt1, 0d0)
-      call rdhdd (lin, 'cdelt2', cdelt2, 0d0)
-      if (cdelt1*cdelt2.eq.0d0) call bug ('f',
+      call rdhdd(lin, 'cdelt1', cdelt1, 0d0)
+      call rdhdd(lin, 'cdelt2', cdelt2, 0d0)
+      if (cdelt1*cdelt2.eq.0d0) call bug('f',
      *    'Invalid increments in image')
 c
 c Don't bother checking for blanks if there is no blanking mask,
@@ -170,69 +170,69 @@ c
 c
 c  Try to allocate memory
 c
-      call memalloc (ipin,   nsize(1)*nsize(2), 'r')
-      call memalloc (ipmin,  nsize(1)*nsize(2), 'r')
-      call memalloc (ipout,  nsize(1)*nsize(2), 'r')
-      call memalloc (ipmout, nsize(1)*nsize(2), 'r')
+      call memalloc(ipin,   nsize(1)*nsize(2), 'r')
+      call memalloc(ipmin,  nsize(1)*nsize(2), 'r')
+      call memalloc(ipout,  nsize(1)*nsize(2), 'r')
+      call memalloc(ipmout, nsize(1)*nsize(2), 'r')
 c
 c  Open the output image and fill its header.
 c
-      call xyopen (lout, out, 'new', naxis, nsize)
-      call headcopy (lin, lout, 0, 0, 0, 0)
+      call xyopen(lout, out, 'new', naxis, nsize)
+      call headcp(lin, lout, 0, 0, 0, 0)
 c
 c  Compute convolving Gaussian or boxcar and normalization factor
 c
       if (ktype.eq.'gaussian') then
-        call makgauss (pa, major, minor, cdelt1, cdelt2, MAXK2,
+        call makgauss(pa, major, minor, cdelt1, cdelt2, MAXK2,
      *     ksizex, ksizey, ksize2, kern, kipnt, kjpnt, ksum)
         if (scale.lt.0.0) then
-          call gaupar1 (lin, real(major*AS2R), real(minor*AS2R),
+          call gaupar1(lin, real(major*AS2R), real(minor*AS2R),
      *                  pa, bunit, bmaj, bmin, bpa, scale)
-          call wrhda (lout, 'bunit', bunit)
-          call wrhdr (lout, 'bmaj', bmaj)
-          call wrhdr (lout, 'bmin', bmin)
-          call wrhdr (lout, 'bpa', bpa)
+          call wrhda(lout, 'bunit', bunit)
+          call wrhdr(lout, 'bmaj', bmaj)
+          call wrhdr(lout, 'bmin', bmin)
+          call wrhdr(lout, 'bpa', bpa)
         endif
       else if (ktype.eq.'boxcar') then
-        call makbox (fwhm1, fwhm2, cdelt1, cdelt2, MAXK2,
+        call makbox(fwhm1, fwhm2, cdelt1, cdelt2, MAXK2,
      *     ksizex, ksizey, ksize2, kern, kipnt, kjpnt, ksum)
       endif
 c
 c  Loop over the third dimension and convolve each plane
 c
-      call output (' ')
+      call output(' ')
       do k = 1, nsize(3)
-        call xysetpl (lin,  1, k)
-        call xysetpl (lout, 1, k)
-        write (line, '(a,i4)') 'Beginning plane ', k
-        call output (line)
+        call xysetpl(lin,  1, k)
+        call xysetpl(lout, 1, k)
+        write(line, '(a,i4)') 'Beginning plane ', k
+        call output(line)
 c
 c Read image.
 c
-        call readim (lin, nsize, data(ipin), data(ipmin), lrow)
+        call readim(lin, nsize, data(ipin), data(ipmin), lrow)
 c
 c Convolve image
 c
         if (.not.nocheck) then
-          call sm1 (nsize(1), nsize(2), ksize2, ksizex, ksizey, scale,
+          call sm1(nsize(1), nsize(2), ksize2, ksizex, ksizey, scale,
      *              kern, kipnt, kjpnt, data(ipin), data(ipmin),
      *              data(ipout), data(ipmout),force)
         else
-          call sm2 (nsize(1), nsize(2), ksize2, ksizex, ksizey, ksum,
+          call sm2(nsize(1), nsize(2), ksize2, ksizex, ksizey, ksum,
      *              scale, kern, kipnt, kjpnt, data(ipin), data(ipmin),
      *              data(ipout), data(ipmout))
         endif
 c
 c Write out image
 c
-        call writim (lout, nsize, data(ipout), data(ipmout), lrow)
+        call writim(lout, nsize, data(ipout), data(ipmout), lrow)
       enddo
 c
 c Close up
 c
-      call history (lout, version)
-      call xyclose (lin)
-      call xyclose (lout)
+      call history(lout, version)
+      call xyclose(lin)
+      call xyclose(lout)
 
       end
 
@@ -255,7 +255,7 @@ c-----------------------------------------------------------------------
       logical present(maxopt)
       data opshuns /'nocheck', 'force   '/
 c-----------------------------------------------------------------------
-      call options ('options', opshuns, present, maxopt)
+      call options('options', opshuns, present, maxopt)
 
       nocheck =      present(1)
       force   =      present(2)
@@ -340,7 +340,7 @@ c Size of 1-D Gaussian array
 c
       ksize2 = (2*ksizex + 1) * (2*ksizey + 1)
       if (ksize2.gt.maxk2)
-     *   call bug ('f', 'Gaussian too big for internal storage')
+     *   call bug('f', 'Gaussian too big for internal storage')
 c
 c Now compute the Gaussian
 c
@@ -376,14 +376,14 @@ c
 c
 c Report Gaussian information to user
 c
-      write (line, 100) 2*ksizex+1, 2*ksizey+1
-100   format ('Gaussian array is ', i4, ' by ', i4, ' pixels')
-      call output (line)
+      write(line, 100) 2*ksizex+1, 2*ksizey+1
+100   format('Gaussian array is ', i4, ' by ', i4, ' pixels')
+      call output(line)
 
-      write (line, 300) ksum
-300   format ('Gaussian integral = ', 1pe11.4)
-      call output (line)
-      call output (' ')
+      write(line, 300) ksum
+300   format('Gaussian integral = ', 1pe11.4)
+      call output(line)
+      call output(' ')
 
       end
 
@@ -443,7 +443,7 @@ c Size of 1-D Boxcar array
 c
       ksize2 = (2*ksizex + 1) * (2*ksizey + 1)
       if (ksize2.gt.maxk2)
-     *   call bug ('f', 'Boxcar too big for internal storage')
+     *   call bug('f', 'Boxcar too big for internal storage')
 c
 c Now compute the boxcar
 c
@@ -470,14 +470,14 @@ c
 c
 c Report Boxcar information to user
 c
-      write (line, 100) 2*ksizex+1, 2*ksizey+1
-100   format ('Boxcar array is ', i4, ' by ', i4, ' pixels')
-      call output (line)
+      write(line, 100) 2*ksizex+1, 2*ksizey+1
+100   format('Boxcar array is ', i4, ' by ', i4, ' pixels')
+      call output(line)
 
-      write (line, 300) ksum
-300   format ('Boxcar integral = ', 1pe11.4)
-      call output (line)
-      call output (' ')
+      write(line, 300) ksum
+300   format('Boxcar integral = ', 1pe11.4)
+      call output(line)
+      call output(' ')
 
       end
 
@@ -500,8 +500,8 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
       ip = 1
       do j = 1, size(2)
-         call xyread (lun, j, data(ip))
-         call xyflgrd (lun, j, lrow)
+         call xyread(lun, j, data(ip))
+         call xyflgrd(lun, j, lrow)
          do i = 1, size(1)
            mask(ip+i-1) = -1.0
            if (lrow(i)) mask(ip+i-1) = 1.0
@@ -664,12 +664,12 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
       ip = 1
       do j = 1, size(2)
-         call xywrite (lun, j, data(ip))
+         call xywrite(lun, j, data(ip))
          do i = 1, size(1)
            lrow(i) = .false.
            if (mask(ip+i-1).gt.0.0) lrow(i) = .true.
          enddo
-         call xyflgwr (lun, j, lrow)
+         call xyflgwr(lun, j, lrow)
 
          ip  = ip + size(1)
       enddo
@@ -687,10 +687,10 @@ c Write history of output image.
 c-----------------------------------------------------------------------
       character line*72
 c-----------------------------------------------------------------------
-      call hisopen (lout, 'append')
+      call hisopen(lout, 'append')
       line = 'SMOOTH Miriad '//version
-      call hiswrite (lout, line)
-      call hisinput (lout, 'SMOOTH')
+      call hiswrite(lout, line)
+      call hisinput(lout, 'SMOOTH')
       call hisclose(lout)
 
       end
