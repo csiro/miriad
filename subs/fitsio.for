@@ -130,7 +130,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: fitsio.for,v 1.7 2010/11/22 03:35:07 cal103 Exp $
+c $Id: fitsio.for,v 1.8 2010/11/22 04:06:07 cal103 Exp $
 c***********************************************************************
 
 c* FxyOpen -- Open a FITS image file.
@@ -1157,25 +1157,25 @@ c    coord      Coordinate information
 c-----------------------------------------------------------------------
       include 'fitsio.h'
 
-      integer i
-      character ctypes(4)*8,num*2
+      integer   iax
+      character cax*2, ctypes(4)*8
 
       external  itoaf
       character itoaf*2
 
       data ctypes/'STOKES  ','FREQ    ','RA      ','DEC     '/
 c-----------------------------------------------------------------------
-      call fitwrhdr(lu,'CRVAL2',1.0)
-      call fitwrhdr(lu,'CRPIX2',1.0)
-      call fitwrhdr(lu,'CDELT2',1.0)
-      call fitwrhda(lu,'CTYPE2','COMPLEX')
+      call fitwrhdd(lu, 'CRPIX2', 1d0)
+      call fitwrhdd(lu, 'CDELT2', 1d0)
+      call fitwrhdd(lu, 'CRVAL2', 1d0)
+      call fitwrhda(lu, 'CTYPE2', 'COMPLEX')
 
-      do i = 1, 4
-        num = itoaf(i+2)
-        call fitwrhdd(lu,'CRVAL'//num,coord(uvCrval,i))
-        call fitwrhdd(lu,'CRPIX'//num,coord(uvCrpix,i))
-        call fitwrhdd(lu,'CDELT'//num,coord(uvCdelt,i))
-        call fitwrhda(lu,'CTYPE'//num,ctypes(i))
+      do iax = 1, 4
+        cax = itoaf(iax+2)
+        call fitwrhdd(lu, 'CRPIX'//cax, coord(uvCrpix,iax))
+        call fitwrhdd(lu, 'CDELT'//cax, coord(uvCdelt,iax))
+        call fitwrhdd(lu, 'CRVAL'//cax, coord(uvCrval,iax))
+        call fitwrhda(lu, 'CTYPE'//cax, ctypes(iax))
       enddo
 
       end
@@ -1186,7 +1186,7 @@ c* FuvRdhd -- Get coordinate information about a UV FITS file.
 c& rjs
 c: fits
 c+
-      subroutine fuvrdhd(lu,coord)
+      subroutine fuvrdhd(lu, coord)
 
       integer lu
       double precision coord(3,4)
@@ -1202,32 +1202,30 @@ c  Though this could be done by an "ordinary" subroutine, put it here
 c  because its so commonly done, and requires a bit of fiddling around.
 c-----------------------------------------------------------------------
       include 'fitsio.h'
-      integer maxno
-      parameter (maxno=99)
+      integer    MAXNO
+      parameter (MAXNO=99)
 
-      integer naxis,found,indx,i
-      character ctype*12,num*2
+      integer   iax, indx, found, naxis
+      character cax*2, ctype*12
 
       external  itoaf
       character itoaf*2
 c-----------------------------------------------------------------------
-c  Get the number of dimensions, and do some checking.
-c
-      call fitrdhdi(lu,'NAXIS',naxis,0)
+c     Get the number of dimensions, and do some checking.
+      call fitrdhdi(lu, 'NAXIS', naxis, 0)
       if (naxis.le.1) call bug('f','Failed to find NAXIS in file')
-      if (naxis.gt.maxno) then
+      if (naxis.gt.MAXNO) then
         call bug('w','NAXIS greater than maximum, some dims ignored')
-        naxis = maxno
+        naxis = MAXNO
       endif
-c
-c  Loop around looking for things that I am interested in.
-c
+
+c     Look for things that I am interested in.
       found = 0
-      i = 1
-      do while (i.lt.naxis .and. found.lt.4)
-        i = i + 1
-        num = itoaf(i)
-        call fitrdhda(lu,'CTYPE'//num,ctype,' ')
+      iax = 1
+      do while (iax.lt.naxis .and. found.lt.4)
+        iax = iax + 1
+        cax = itoaf(iax)
+        call fitrdhda(lu, 'CTYPE'//cax, ctype, ' ')
         if (ctype.eq.'STOKES') then
           indx = uvStokes
         else if (ctype.eq.'FREQ') then
@@ -1239,13 +1237,15 @@ c
         else
           indx = 0
         endif
+
         if (indx.ne.0) then
           found = found + 1
-          call fitrdhdd(lu,'CRPIX'//num,coord(uvCrpix,indx),1d0)
-          call fitrdhdd(lu,'CDELT'//num,coord(uvCdelt,indx),0d0)
-          call fitrdhdd(lu,'CRVAL'//num,coord(uvCrval,indx),0d0)
+          call fitrdhdd(lu, 'CRPIX'//cax, coord(uvCrpix,indx), 0d0)
+          call fitrdhdd(lu, 'CDELT'//cax, coord(uvCdelt,indx), 1d0)
+          call fitrdhdd(lu, 'CRVAL'//cax, coord(uvCrval,indx), 0d0)
         endif
       enddo
+
       if (found.ne.4)
      *    call bug('f','STOKES, FREQ, RA or DEC missing in header')
 
@@ -2035,27 +2035,26 @@ c***********************************************************************
 c-----------------------------------------------------------------------
 c  Get the reference frequency from the header.
 c-----------------------------------------------------------------------
-      integer i,naxis
-      character ctype*16,num*2
-      logical found
+      integer   iax, naxis
+      character cax*2, ctype*16
 
       external  itoaf
       character itoaf*2
 c-----------------------------------------------------------------------
-      freq = 0
-      call fitrdhdi(lu,'NAXIS',naxis,0)
+      call fitrdhdi(lu, 'NAXIS', naxis, 0)
       if (naxis.le.2) call bug('f','Invalid uv FITS header')
-      i = 1
-      found = .false.
-      do while (.not.found .and. i.lt.naxis)
-        i = i + 1
-        num = itoaf(i)
-        call fitrdhda(lu,'CTYPE'//num,ctype,' ')
-        found = ctype.eq.'FREQ'
-        if (found) call fitrdhdd(lu,'CRVAL'//num,freq,0d0)
+
+      freq = 0d0
+      do iax = 1, naxis
+        cax = itoaf(iax)
+        call fitrdhda(lu, 'CTYPE'//cax, ctype, ' ')
+        if (ctype.eq.'FREQ') then
+          call fitrdhdd(lu, 'CRVAL'//cax, freq, 0d0)
+          goto 10
+        endif
       enddo
 
-      if (freq.le.0) call bug('f','Unable to determine frequency')
+ 10   if (freq.le.0d0) call bug('f','Unable to determine frequency')
 
       end
 
@@ -2145,37 +2144,38 @@ c    ipol       Index of the polarization axis.
 c    ifreq      Index of the frequency axis.
 c    iif        Index of the IF frequency axis.
 c-----------------------------------------------------------------------
-      integer i,n
-      character num*2,string*16
+      integer   iax, n
+      character cax*2, string*16
 
       external  itoaf
       character itoaf*2
 c-----------------------------------------------------------------------
       ncmplx = 0
-      npol = 1
-      nfreq = 1
-      nif = 1
+      npol   = 1
+      nfreq  = 1
+      nif    = 1
       icmplx = 0
-      ipol = 0
-      ifreq = 0
-      iif = 0
-      do i = 2, naxis
-        num = itoaf(i)
-        call fitrdhdi(lu,'NAXIS'//num,n,1)
-        call fitrdhda(lu,'CTYPE'//num,string,' ')
+      ipol   = 0
+      ifreq  = 0
+      iif    = 0
+
+      do iax = 2, naxis
+        cax = itoaf(iax)
+        call fitrdhdi(lu, 'NAXIS'//cax, n, 1)
+        call fitrdhda(lu, 'CTYPE'//cax, string, ' ')
         if (n.le.1) then
           continue
         else if (string.eq.'FREQ') then
-          ifreq = i
+          ifreq = iax
           nfreq = n
         else if (string.eq.'IF') then
           nif = n
-          iif = i
+          iif = iax
         else if (string.eq.'STOKES') then
-          ipol = i
+          ipol = iax
           npol = n
         else if (string.eq.'COMPLEX') then
-          icmplx = i
+          icmplx = iax
           ncmplx = n
         else
           call bug('f','Cannot deal with uv axis of type '//string)
