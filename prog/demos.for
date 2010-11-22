@@ -48,7 +48,7 @@ c         detaper    This indicates that the input image is not fully
 c                    primary beam corrected. Such images are formed by
 c                    LINMOS with options=taper or by MOSMEM.
 c
-c$Id: demos.for,v 1.3 2010/08/25 02:33:26 cal103 Exp $
+c$Id: demos.for,v 1.4 2010/11/22 06:28:45 cal103 Exp $
 c--
 c  History:
 c    rjs  25apr90 Original version.
@@ -94,8 +94,8 @@ c-----------------------------------------------------------------------
       external  itoaf, len1, versan
 c-----------------------------------------------------------------------
       version = versan('demos',
-     *                 '$Revision: 1.3 $',
-     *                 '$Date: 2010/08/25 02:33:26 $')
+     *                 '$Revision: 1.4 $',
+     *                 '$Date: 2010/11/22 06:28:45 $')
 c
 c  Get the input parameters.
 c
@@ -128,9 +128,9 @@ c
 c  Some checks for primary beam stuff; convert user value to radians
 c
       call coFindAx(tmap,'longitude',iax)
-      if (iax.ne.1)call bug('f','RA axis must be the first axis')
+      if (iax.ne.1) call bug('f','RA axis must be the first axis')
       call coFindAx(tmap,'latitude',iax)
-      if (iax.ne.2)call bug('f','DEC axis must be the second axis')
+      if (iax.ne.2) call bug('f','DEC axis must be the second axis')
       call coFindAx(tmap,'spectral',iax)
       if (iax.gt.0 .and. iax.ne.3 .and. nsize(3).gt.1) call bug('f',
      *  'The spectral axis of this image must be number 3')
@@ -186,9 +186,9 @@ c  Just read the first channel, to avoid unecessary work.
 c
         call uvprobvr(tvis,'corr',type,length,update)
         if (type.ne.' ') then
-          call uvset(tvis,'data','channel',1,1.,1.,1.)
+          call uvset(tvis,'data','channel',1,1.0,1.0,1.0)
         else
-          call uvset(tvis,'data','wide',   1,1.,1.,1.)
+          call uvset(tvis,'data','wide',   1,1.0,1.0,1.0)
         endif
 
         npnt = 0
@@ -267,7 +267,7 @@ c-----------------------------------------------------------------------
 c     Determine the output map size.
       n1 = outsize(1)
       n2 = outsize(2)
-      if (n1.le.0 .or. n2.le.0)call defsiz(tmap,pbtype,n1,n2)
+      if (n1.le.0 .or. n2.le.0) call defsiz(tmap,pbtype,n1,n2)
 
 c     Determine the field extent in pixels.
       xin(1) = ra
@@ -307,7 +307,7 @@ c     Open the output file.
       call xyopen(tout,name,'new',naxis,nsize)
 
 c     Process its header.
-      call headcopy(tMap, tOut, 0, 0, 0, 0)
+      call headcp(tMap, tOut, 0, 0, 0, 0)
 
       call coCvt1(tmap,1,'op',0d0,'ap',crpix1)
       call coCvt1(tmap,2,'op',0d0,'ap',crpix2)
@@ -372,7 +372,7 @@ c       Write out the data.
 
 c     All said and done.
       call memFree(pWts,nsize(1)*nsize(2),'r')
-      if (detaper)call memFree(pScr,nsize(1)*nsize(2),'r')
+      if (detaper) call memFree(pScr,nsize(1)*nsize(2),'r')
       call xyclose(tOut)
 
       end
