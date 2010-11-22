@@ -60,7 +60,7 @@ c                      giving the effective gain across the field.  If
 c                      options=taper is used, this will be a smooth
 c                      function.  Otherwise it will be 1 or 0 (blanked).
 c
-c$Id: linmos.for,v 1.11 2010/10/07 06:20:54 cal103 Exp $
+c$Id: linmos.for,v 1.12 2010/11/22 05:42:35 cal103 Exp $
 c--
 c
 c  History:
@@ -139,8 +139,8 @@ c-----------------------------------------------------------------------
       external  len1, versan
 c-----------------------------------------------------------------------
       version = versan ('linmos',
-     *                  '$Revision: 1.11 $',
-     *                  '$Date: 2010/10/07 06:20:54 $')
+     *                  '$Revision: 1.12 $',
+     *                  '$Date: 2010/11/22 05:42:35 $')
 
 c     Get and check inputs.
       call keyini
@@ -779,7 +779,7 @@ c-----------------------------------------------------------------------
       character ctype*16
 c-----------------------------------------------------------------------
 c     Start with a verbatim copy of the input header.
-      call headcopy(lIn, lOut, 0, 0, 0, 0)
+      call headcp(lIn, lOut, 0, 0, 0, 0)
 
 c     Apply sub-imaging.
       call rdhdd(lIn,  'crpix1', crpix, dble(axLen(1)/2+1))

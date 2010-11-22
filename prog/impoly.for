@@ -24,7 +24,7 @@ c@ region
 c       Full region specifications are supported.  Defaults to the
 c       entire image.
 c
-c$Id: impoly.for,v 1.3 2010/08/26 02:48:19 cal103 Exp $
+c$Id: impoly.for,v 1.4 2010/11/22 05:43:36 cal103 Exp $
 c--
 c
 c       maxorder        maximum order allowed for the polynomial fit
@@ -82,8 +82,8 @@ c-----------------------------------------------------------------------
       EXTERNAL  len1, versan
 c-----------------------------------------------------------------------
       version = versan('impoly',
-     *                 '$Revision: 1.3 $',
-     *                 '$Date: 2010/08/26 02:48:19 $')
+     *                 '$Revision: 1.4 $',
+     *                 '$Date: 2010/11/22 05:43:36 $')
 
 c     Get inputs.
       CALL keyini
@@ -105,7 +105,7 @@ c     Open files, copy relevant header items, and get the ref pixel.
       CALL rdhdi(lin, 'naxis', naxis, 1)
       naxis = min(naxis,MAXNAX)
       CALL xyopen(lout, out, 'new', naxis, nin)
-      CALL headcopy(lin, lout, 0, 0, 0, 0)
+      CALL headcp(lin, lout, 0, 0, 0, 0)
       CALL boxmask(lin, boxes, MAXBOXES)
       CALL boxset(boxes, MAXNAX, nin, ' ')
       CALL rdhdr(lin,'crpix1',x0,1.0)
