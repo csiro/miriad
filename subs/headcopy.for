@@ -1,20 +1,16 @@
-c* headcopy - Copy image header
-c& bpw
-c: utilities, image-i/o
-c+
-      subroutine headcopy(lIn, lOut, axMap, nAxMap, blc, trc)
+      subroutine headcp(lIn, lOut, nAxMap, axMap, blc, trc)
 
-      integer lIn, lOut, axMap(*), nAxMap, blc(*), trc(*)
+      integer lIn, lOut, nAxMap, axMap(*), blc(*), trc(*)
 c-----------------------------------------------------------------------
-c  Headcopy copies the small items (header keywords) and the history
-c  from one image to another.  It transfers all official header keywords
-c  with only a few exceptions:
+c  HEADCP copies the small items (header keywords) and the history from
+c  one image to another.  It transfers all official header keywords with
+c  only a few exceptions:
 c    - naxis and naxis# which are maintained by XYOPEN and XYZOPEN,
 c    - datamin, datamax, and rms must be recalculated for the output
 c      image and updated with WRHDR.
 c
 c  The items listed in the KEYW array (below) are copied verbatim except
-c  for crpix, crval, cdelt, crota and ctype which may be deleted,
+c  for crpix, crval, cdelt, crota, ctype, and pc which may be deleted,
 c  exchanged, or reversed depending on axis permutations.  The axMap
 c  array defines the relation between new and old axes in the sense
 c  axMap(new) = old, e.g.
@@ -45,52 +41,53 @@ c
 c  Input:
 c    lIn        Handle of input image.
 c    lOut       Handle of output image.
-c    axMap      Array that relates new axes with old (see above).  Can
-c               be specified as 0 (scalar) meaning that there are no
-c               swapped or reversed axes.
 c    nAxMap     Dimension of axMap array, and the blc and trc arrays.
 c               If zero, a verbatim copy is done (no axis reversals or
 c               subimaging - axMap, blc, and trc are ignored).
+c    axMap      Array that relates new axes with old (see above).  Can
+c               be specified as 0 (scalar) meaning that there are no
+c               swapped or reversed axes.
 c    blc        List of bottom-left-corners of input image region.
 c               Can be specified as 0 (scalar) meaning (1,1,...).
 c    trc        List of top-right-corners of input image region.
 c               Can be specified as 0 (scalar) meaning
 c               (naxis1,naxis2,...) for the input image.
 c
-c $Id: headcopy.for,v 1.6 2010/10/11 07:08:09 cal103 Exp $
+c $Id: headcopy.for,v 1.7 2010/11/22 04:27:53 cal103 Exp $
 c-----------------------------------------------------------------------
       integer   CRPIX, CDELT, CRVAL, CROTA, CTYPE
       parameter (CRPIX = 1, CDELT = 2, CRVAL = 3, CROTA = 4, CTYPE = 5)
 
       integer   NKEYS
-      parameter (NKEYS = 32)
+      parameter (NKEYS = 38)
 
       logical   noPerm, verbtm
-      integer   axLen, iAxIn, iAxOut, nAxOut, k
-      double precision defVal(5), dvalue
+      integer   axLen, iAxIn, iAxOut, jAxIn, jAxOut, nAxOut, k, m
+      double precision defVal(4), dvalue
       character avalue*80, keyIn*8, keyOut*8, keyw(NKEYS)*8
 
       logical   hdprsnt
       character itoaf*1
       external  hdprsnt, itoaf
 
-      data defVal /0d0, 1d0, 0d0, 0d0, 0d0/
+      data defVal /0d0, 1d0, 0d0, 0d0/
       data keyw /
-     *    'crpix   ', 'cdelt   ', 'crval   ', 'crota   ', 'ctype   ',
-     *    'bmaj    ', 'bmin    ', 'bpa     ', 'btype   ', 'bunit   ',
-     *    'cellscal', 'date-obs', 'epoch   ', 'instrume', 'llrot   ',
-     *    'ltype   ', 'lstart  ', 'lstep   ', 'lwidth  ', 'mostable',
-     *    'niters  ', 'object  ', 'observer', 'obsra   ', 'obsdec  ',
-     *    'obstime ', 'pbfwhm  ', 'pbtype  ', 'restfreq', 'telescop',
-     *    'vobs    ', 'history '/
+     *    'crpix   ', 'cdelt   ', 'crval   ', 'ctype   ', 'crota   ',
+     *    'pc      ', 'pv      ', 'phi0    ', 'theta0  ', 'lonpole ',
+     *    'latpole ', 'llrot   ', 'bmaj    ', 'bmin    ', 'bpa     ',
+     *    'btype   ', 'bunit   ', 'cellscal', 'date-obs', 'epoch   ',
+     *    'instrume', 'ltype   ', 'lstart  ', 'lstep   ', 'lwidth  ',
+     *    'mostable', 'niters  ', 'object  ', 'observer', 'obsra   ',
+     *    'obsdec  ', 'obstime ', 'pbfwhm  ', 'pbtype  ', 'restfreq',
+     *    'telescop', 'vobs    ', 'history '/
 c-----------------------------------------------------------------------
-c     All axes in the output image must have coordinate keywords.  
       call rdhdi(lOut, 'naxis', nAxOut, 0)
 
-c     Loop for crpix, crval, cdelt, crota, and ctype.  
+c     Copy crpix, crval, cdelt, and ctype for each axis.  All axes in
+c     the output image must have these basic coordinate keywords.  
       noPerm = axMap(1).eq.0
       verbtm = nAxMap.eq.0
-      do k = 1, 5
+      do k = 1, 4
 c       Set default values.
         avalue = ' '
         dvalue = defVal(k)
@@ -149,8 +146,6 @@ c                   Sub-imaging.
 
                   else if (k.eq.CDELT) then
                     dvalue = -dvalue
-                  else if (k.eq.CROTA) then
-                    dvalue = dvalue - 180d0
                   endif
                 endif
               endif
@@ -166,10 +161,106 @@ c           Write it to the output image.
         enddo
       enddo
 
-c     Copy the remaining items verbatim.
-      do k = 6, NKEYS
-         call hdcopy(lIn, lOut, keyw(k))
+
+c     crota (and llrot) is deprecated in favour of pci_j, only copy it
+c     if present in the input image.
+      do iAxOut = 1, nAxOut
+        keyOut = 'crota' // itoaf(iAxOut)
+
+        if (verbtm) then
+c         Copy verbatim.
+          call hdcopy(lIn, lOut, keyOut)
+
+        else
+c         Handle axis permutations.
+          if (noPerm) then
+            iAxIn = iAxOut
+          else if (iAxOut.le.nAxMap) then
+            iAxIn = axMap(iAxOut)
+          else
+c           Skip it.
+            iAxIn = 0
+          endif
+
+          if (iAxIn.ne.0) then
+            keyIn = 'crota' // itoaf(abs(iAxIn))
+
+            if (hdprsnt(lIn, keyIn)) then
+c             Read it from the input image.
+              call rdhdd(lIn, keyIn, dvalue, 0d0)
+
+              if (iAxIn.lt.0) then
+c               Axis reversal.
+                dvalue = dvalue - 180d0
+              endif
+
+c             Write it to the output image.
+              call wrhdd(lOut, keyOut, dvalue)
+            endif
+          endif
+        endif
       enddo
 
-      return
+
+c     Copy whatever linear transformation matrix elements are present,
+c     with transposition if necessary.
+      do iAxOut = 1, nAxOut
+        do jAxOut = 1, nAxOut
+          keyOut = 'pc' // itoaf(iAxOut) // '_' // itoaf(jAxOut)
+
+          if (verbtm) then
+c           Copy verbatim.
+            call hdcopy(lIn, lOut, keyOut)
+
+          else
+c           Handle axis permutations.
+            if (noPerm) then
+              iAxIn = iAxOut
+              jAxIn = jAxOut
+            else if (iAxOut.le.nAxMap .and. jAxOut.le.nAxMap) then
+              iAxIn = abs(axMap(iAxOut))
+              jAxIn = abs(axMap(jAxOut))
+            else
+c             Skip it.
+              iAxIn = 0
+            endif
+
+            if (iAxIn.ne.0) then
+              keyIn = 'pc' // itoaf(iAxIn) // '_' // itoaf(jAxIn)
+
+              if (hdprsnt(lIn, keyIn)) then
+c               Read it from the input image.
+                call rdhdd(lIn, keyIn, dvalue, 0d0)
+
+c               Write it to the output image.
+                call wrhdd(lOut, keyOut, dvalue)
+              endif
+            endif
+          endif
+        enddo
+      enddo
+
+
+c     Copy projection parameters, if present in the input image.
+      do m = 0, 29
+        keyOut = 'pv' // itoaf(m)
+        call hdcopy(lIn, lOut, keyOut)
+      enddo
+
+
+c     Copy the remaining items verbatim, if present.
+      do k = 8, NKEYS
+        call hdcopy(lIn, lOut, keyw(k))
+      enddo
+
+      end
+
+c***********************************************************************
+
+c     HEADCOPY is defunct, use HEADCP directly instead.  This stub
+c     exists solely to provide backward compatibility.
+
+      subroutine headcopy(lIn, lOut, axMap, nAxMap, blc, trc)
+      integer lIn, lOut, axMap(*), nAxMap, blc(*), trc(*)
+      call headcp (lIn, lOut, nAxMap, axMap, blc, trc)
       end
