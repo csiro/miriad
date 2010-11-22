@@ -35,7 +35,7 @@ c       Extra processing options:
 c         positive   Constrain the deconvolved image to be positive
 c                    valued.
 c
-c$Id: mossdi.for,v 1.6 2010/09/07 05:40:44 cal103 Exp $
+c$Id: mossdi.for,v 1.7 2010/11/22 05:34:28 cal103 Exp $
 c--
 c  History:
 c    rjs 31oct94 - Original version.
@@ -70,8 +70,8 @@ c-----------------------------------------------------------------------
       external  itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('mossdi',
-     *                 '$Revision: 1.6 $',
-     *                 '$Date: 2010/09/07 05:40:44 $')
+     *                 '$Revision: 1.7 $',
+     *                 '$Date: 2010/11/22 05:34:28 $')
 c
 c  Get the input parameters.
 c
@@ -448,7 +448,7 @@ c     Set up to copy input keywords with subimaging.
         ltrc(iax) = 0
       enddo
 
-      call headcopy(lIn, lOut, axmap, MAXNAX, lblc, ltrc)
+      call headcp(lIn, lOut, MAXNAX, axmap, lblc, ltrc)
 
 c     Update parameters that will have changed.
       call wrhda(lOut, 'bunit', 'JY/PIXEL')

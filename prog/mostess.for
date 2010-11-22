@@ -59,7 +59,7 @@ c         verbose    Give lots of messages during the iterations.  The
 c                    default is to give a one line message at each
 c                    iteration.
 c
-c$Id: mostess.for,v 1.3 2010/09/07 07:42:47 cal103 Exp $
+c$Id: mostess.for,v 1.4 2010/11/22 05:33:23 cal103 Exp $
 c--
 c  History:
 c    rjs   7aug95  Adapted from MOSMEM.
@@ -96,8 +96,8 @@ c-----------------------------------------------------------------------
       external  ismax, itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('mostess',
-     *                 '$Revision: 1.3 $',
-     *                 '$Date: 2010/09/07 07:42:47 $')
+     *                 '$Revision: 1.4 $',
+     *                 '$Date: 2010/11/22 05:33:23 $')
 c
 c  Get the input parameters.
 c
@@ -959,7 +959,7 @@ c     Externals.
       character itoaf*8
 c-----------------------------------------------------------------------
 c     Start with a verbatim copy of the input keywords.
-      call headcopy(lIn, lOut, 0, 0, 0, 0)
+      call headcp(lIn, lOut, 0, 0, 0, 0)
 
 c     Adjust the reference pixel for subimaging.
       do iax = 1, 2

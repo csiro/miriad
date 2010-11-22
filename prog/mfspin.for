@@ -62,7 +62,7 @@ c       the linearly polarized intensity spectral index image, and the
 c       second will receive an estimate of the rotation measure (units
 c       of rad/m**2).
 c
-c$Id: mfspin.for,v 1.3 2010/09/06 07:06:25 cal103 Exp $
+c$Id: mfspin.for,v 1.4 2010/11/22 05:38:14 cal103 Exp $
 c--
 c
 c  History:
@@ -102,8 +102,8 @@ c-----------------------------------------------------------------------
       common dat
 c-----------------------------------------------------------------------
       version = versan('mfspin',
-     *                 '$Revision: 1.3 $',
-     *                 '$Date: 2010/09/06 07:06:25 $')
+     *                 '$Revision: 1.4 $',
+     *                 '$Date: 2010/11/22 05:38:14 $')
 c
 c  Get the input parameters.
 c
@@ -703,7 +703,7 @@ c     Write out the data.
       call putruns(lOut,Runs,nRuns,0,0,nx,ny)
 
 c     Make a verbatim copy of the header.
-      call headcopy(lModel, lOut, 0, 0, 0, 0)
+      call headcp(lModel, lOut, 0, 0, 0, 0)
 
 c     Update items that have changed.
       if (si) then
@@ -722,8 +722,8 @@ c     Write the history file.
       call wrhdr(lOut,'bmaj', fwhm1)
       call wrhdr(lOut,'bmin', fwhm2)
       call wrhdr(lOut,'bpa',  pa)
-      write (line, 100) fwhm1*R2AS, fwhm2*R2AS, pa
-100   format ('MFSPIN: Beam = ', 1pe10.3, ' x ', 1pe10.3,
+      write(line, 100) fwhm1*R2AS, fwhm2*R2AS, pa
+100   format('MFSPIN: Beam = ', 1pe10.3, ' x ', 1pe10.3,
      *        ' arcsec, pa = ', 1pe10.3, ' degrees')
       call hiswrite(lOut,line)
 

@@ -24,7 +24,7 @@ c       edge of mosaiced regions, Miriad does not normally totally
 c       correct for the primary beam beyond a certain point. The default
 c       is that no gain image is formed.
 c
-c$Id: mossen.for,v 1.3 2010/09/07 06:19:57 cal103 Exp $
+c$Id: mossen.for,v 1.4 2010/11/22 05:33:56 cal103 Exp $
 c--
 c  History:
 c    rjs   6nov94 Original version.
@@ -241,7 +241,7 @@ c     Open the output.
       call xyopen(tOut, outnam, 'new', naxis, nout)
 
 c     Start with a verbatim copy of the input keywords.
-      call headcopy(tIn, tOut, 0, 0, 0, 0)
+      call headcp(tIn, tOut, 0, 0, 0, 0)
 
 c     Adjust the reference pixel for subimaging.
       do iax = 1, naxis

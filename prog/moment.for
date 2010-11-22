@@ -70,7 +70,7 @@ c       range pkmask(1) to pkmask(2) exclusive.  If only one value is
 c       given, then mask pixels with peak intensity less than pkmask.
 c       Default = 0.
 c
-c$Id: moment.for,v 1.14 2010/09/06 08:06:28 cal103 Exp $
+c$Id: moment.for,v 1.15 2010/11/22 05:37:20 cal103 Exp $
 c--
 c  History:
 c    26may89 Robert Loushin  original version - v-axis of vxy image
@@ -127,8 +127,8 @@ c-----------------------------------------------------------------------
       external  itoaf, keyprsnt, hdprsnt, versan
 c-----------------------------------------------------------------------
       version = versan ('moment',
-     *                  '$Revision: 1.14 $',
-     *                  '$Date: 2010/09/06 08:06:28 $')
+     *                  '$Revision: 1.15 $',
+     *                  '$Date: 2010/11/22 05:37:20 $')
 
 c     Get inputs.
       call keyini
@@ -163,8 +163,8 @@ c     Check inputs.
       endif
 
       if (axis.lt.0) then
-        write (text, 10) axis
- 10     format ('Invalid axis number:',i5)
+        write(text, 10) axis
+ 10     format('Invalid axis number:',i5)
         call bug('f', text)
       endif
 
@@ -195,8 +195,8 @@ c     Open input cube and get parameters.
 
 c     Check the axis number.
       if (axis.gt.naxes) then
-        write (text, 20) axis, naxes
- 20     format ('Axis number:',i5,', exceeds image dimensions:',i5)
+        write(text, 20) axis, naxes
+ 20     format('Axis number:',i5,', exceeds image dimensions:',i5)
         call bug('f', text)
       endif
 
@@ -208,8 +208,8 @@ c     Determine the min and max value.
       call ImMinMax(lIn,naxes,naxis,blo,bhi)
       if (blo.eq.bhi) then
         call xyclose(lIn)
-        write (text, 30) blo
- 30     format ('All pixels are ',1pg10.3)
+        write(text, 30) blo
+ 30     format('All pixels are ',1pg10.3)
         call bug('f', text)
       endif
 
@@ -290,13 +290,13 @@ c     Check span.
       if (ctype(:4).eq.'FREQ' .or.
      *    ctype(:4).eq.'VELO' .or.
      *    ctype(:4).eq.'FELO') then
-        write (text, 50) vrange(1), vrange(2), scl
- 50     format ('Velocity range (km/s):',f10.2,' to',f10.2,' by',f8.2)
+        write(text, 50) vrange(1), vrange(2), scl
+ 50     format('Velocity range (km/s):',f10.2,' to',f10.2,' by',f8.2)
       else
-        write (text, 60) vrange(1), vrange(2), scl
- 60     format ('Axis range:',f10.2,' to',f10.2,' by',f8.2)
+        write(text, 60) vrange(1), vrange(2), scl
+ 60     format('Axis range:',f10.2,' to',f10.2,' by',f8.2)
       endif
-      call output (text)
+      call output(text)
 
       if (mom.lt.1 .or. .not.rngmsk) then
 c       Don't enforce the range for moment -2 or -3.
@@ -394,7 +394,7 @@ c     Handle keywords that must be moved to another axis.
       axmap(min(3,naxes)) = axis
 
 c     Copy the header.
-      call headcopy(lIn, lOut, axmap, naxes, blc, trc)
+      call headcp(lIn, lOut, naxes, axmap, blc, trc)
 
 c     Update the axis for which the moment was computed.
       cin  = itoaf(axis)
