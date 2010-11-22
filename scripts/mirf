@@ -38,7 +38,7 @@
 #       In view of its prevalance, we have settled on '*'.
 #
 # Original: 2010/08/19 MRC (from ancient lore).
-# $Id: mirf,v 1.5 2010/09/29 01:43:19 cal103 Exp $
+# $Id: mirf,v 1.6 2010/11/22 07:07:46 cal103 Exp $
 #-----------------------------------------------------------------------------
   DETAB=
   LOWER=
@@ -81,6 +81,8 @@
           -e 's| SUBROUTINE *| subroutine |' \
           -e 's| FUNCTION *| function |' \
           -e 's| INCLUDE | include |' \
+          -e 's| PARAMETER | parameter |' \
+          -e 's| LOGICAL | logical |' \
           -e 's| INTEGER | integer |' \
           -e 's| REAL | real |' \
           -e 's| DOUBLE PRECISION | double precision |' \
@@ -90,6 +92,7 @@
           -e 's| DATA | data |' \
           -e 's| CALL | call |' \
           -e 's| WRITE\( *(\)| write\1|' \
+          -e 's| FORMAT\( *(\)| format\1|' \
           -e 's|\([0-9]\)\.0*E\([-+0-9]\)|\1e\2|g' \
           -e 's|\([0-9]\)\.0*D\([-+0-9]\)|\1d\2|g' \
           -e 's|\.EQ\.|.eq.|g' \
@@ -111,6 +114,8 @@
           -e 's| DO *WHILE *(| do while (|' \
           -e 's| DO | do |' \
           -e 's| END *DO$| enddo|' \
+          -e 's| GOTO *\([1-9][0-9]*$\)| goto \1|' \
+          -e 's| RETURN$| return|' \
           -e 's|^ *END$|      end|'
     else
       cat
@@ -128,8 +133,8 @@
           -e 's|\([0-9]\)\.0*e\([-+0-9]\)|\1e\2|g' \
           -e 's|\([0-9]\)\.0*d\([-+0-9]\)|\1d\2|g' \
           -e 's|\([0-9]\)\.$|\1.0|g' \
-          -e 's|\([-+*/,() ][0-9][0-9]*\)\.\([-+*/,() ]\)|\1.0\2|g' \
-          -e 's|\([-+*/,() ][0-9][0-9]*\)\.\([-+*/,() ]\)|\1.0\2|g' \
+          -e 's|\([-+*/=.,() ][0-9][0-9]*\)\.\([-+*/,() ]\)|\1.0\2|g' \
+          -e 's|\([-+*/=.,() ][0-9][0-9]*\)\.\([-+*/,() ]\)|\1.0\2|g' \
           -e 's|parameter(|parameter (|' \
           -e 's|( |(|g' \
           -e 's| )|)|g' \
@@ -166,4 +171,5 @@
           -e '/^ *do /s|^\([^,]*\),\([^ ][^,]*\)$|\1, \2|g' \
           -e 's| dowhile\([ (]\)| do while\1|' \
           -e 's| do while(| do while (|' \
-          -e 's| end do$| enddo|'
+          -e 's| end do$| enddo|' \
+          -e 's| goto *\([1-9][0-9]*$\)| goto \1|' \
