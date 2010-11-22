@@ -16,7 +16,7 @@ c       No default.
 c@ out
 c       The output image.  No default.
 c
-c$Id: shifty.for,v 1.3 2010/09/17 05:37:40 cal103 Exp $
+c$Id: shifty.for,v 1.4 2010/11/22 05:22:18 cal103 Exp $
 c--
 c  History:
 c    rjs  21nov90 Original version.
@@ -35,8 +35,8 @@ c-----------------------------------------------------------------------
       external  versan
 c-----------------------------------------------------------------------
       version = versan('shifty',
-     *                 '$Revision: 1.3 $',
-     *                 '$Date: 2010/09/17 05:37:40 $')
+     *                 '$Revision: 1.4 $',
+     *                 '$Date: 2010/11/22 05:22:18 $')
 
 c     Get the input parameters and check them.
       call keyini
@@ -72,7 +72,7 @@ c     Open an output image and apply the shift.
      *              shift(1),shift(2))
 
 c     Copy the output header verbatim from the master input image.
-      call headcopy(lIn1, lOut, 0, 0, 0, 0)
+      call headcp(lIn1, lOut, 0, 0, 0, 0)
 
 c     Update history.
       call hisopen (lOut, 'append')
