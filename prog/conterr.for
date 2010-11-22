@@ -47,7 +47,7 @@ c         shift  Determine an optimum shift of the phase centre to
 c                be applied before the error is evaluated. This
 c                shift will minimise the error in some sense.
 c
-c$Id: conterr.for,v 1.3 2010/08/20 07:30:03 cal103 Exp $
+c$Id: conterr.for,v 1.4 2010/11/22 06:33:55 cal103 Exp $
 c--
 c  History:
 c    rjs  28oct93 Original version.
@@ -75,8 +75,8 @@ c-----------------------------------------------------------------------
       external  hdprsnt, versan
 c-----------------------------------------------------------------------
       version = versan('conterr',
-     *                 '$Revision: 1.3 $',
-     *                 '$Date: 2010/08/20 07:30:03 $')
+     *                 '$Revision: 1.4 $',
+     *                 '$Date: 2010/11/22 06:33:55 $')
 c
 c  Get the input parameters.
 c
@@ -86,19 +86,19 @@ c
       call keyi('order',order(1),1)
       call keyi('order',order(2),order(1))
       call keyr('bw',dnu,0.008)
-      call keyr('fwhm',thetax,0.)
+      call keyr('fwhm',thetax,0.0)
       call keyr('fwhm',thetay,thetax)
       call GetOpt(doshift)
       call keyfin
 c
 c  Check the inputs.
 c
-      if (in.eq.' ')call bug('f','An input must be given')
+      if (in.eq.' ') call bug('f','An input must be given')
       if (order(1).lt.0 .or. order(1).gt.order(2) .or.
      *   order(2).gt.MAXORDER)
      *   call bug('f','Invalid order given')
       doout = out.ne.' '
-      if (dnu.lt.0)call bug('f','Invalid bandwidth')
+      if (dnu.lt.0) call bug('f','Invalid bandwidth')
 c
 c  Open the input and get info on it.
 c
@@ -112,7 +112,7 @@ c
       call rdhdd(lIn,'cdelt2',cdelt2,0d0)
       cdelt1 = 3600*180/pi * cdelt1
       cdelt2 = 3600*180/pi * cdelt2
-      if (hdprsnt(lIn,'mask'))call bug('f',
+      if (hdprsnt(lIn,'mask')) call bug('f',
      *  'Cannot handle blanked pixels')
 c
 c  Check for higher dimensions than 2.
@@ -120,27 +120,27 @@ c
       call rdhdi(lIn,'naxis',naxis,2)
       naxis = min(naxis,MAXNAX)
       higher = .false.
-      do i = 3,naxis
+      do i = 3, naxis
         higher = nsize(i).gt.1
         nsize(i) = 1
       enddo
-      if (higher)call bug('w',
+      if (higher) call bug('w',
      *  'Ignoring higher order dimensions in input')
 c
 c  Determine the frequency.
 c
       ifax = 0
       call GetFreq(lIn,1.0,ifax,f0,finc,ierr)
-      if (ierr.ne.0)call bug('f',
+      if (ierr.ne.0) call bug('f',
      *    'Failed to determine frequency of input')
-      if (ifax.le.2)call bug('f',
+      if (ifax.le.2) call bug('f',
      *    'First two dimensions must be spatial')
       nu = f0
 c
 c  If no beam parameters were given, try to get these from the
 c  header.
 c
-      if (thetax.le.0 .or. thetay.le.0)call GetFWHM(lIn,thetax,thetay)
+      if (thetax.le.0 .or. thetay.le.0) call GetFWHM(lIn,thetax,thetay)
       thetax = abs(thetax/cdelt1)
       thetay = abs(thetay/cdelt2)
 c
@@ -168,7 +168,7 @@ c
 c
 c  Loop over the orders.
 c
-      do iorder = order(1),order(2)
+      do iorder = order(1), order(2)
         if (iorder.eq.1) then
           aorder='1st'
         else if (iorder.eq.2) then
@@ -176,7 +176,7 @@ c
         else if (iorder.eq.3) then
           aorder='3rd'
         else
-          write(aorder,'(i1,a)')iorder,'th'
+          write(aorder,'(i1,a)') iorder,'th'
         endif
 c
 c  Determine the optimum shift.
@@ -209,7 +209,7 @@ c
         call output(line)
           write(line,'(a,f7.2,a,f7.2,a)')
         hline = 'CONTERR: '//line
-        if (doout)call hiswrite(lOut,hline)
+        if (doout) call hiswrite(lOut,hline)
 c
 c  Write out the result.
 c
@@ -249,10 +249,10 @@ c-----------------------------------------------------------------------
       real bmaj,bmin,bpa
       character line*64
 c-----------------------------------------------------------------------
-      call rdhdr(lIn,'bmaj',bmaj,0.)
-      call rdhdr(lIn,'bmin',bmin,0.)
-      call rdhdr(lIn,'bmpa',bpa,0.)
-      if (bmaj*bmin.le.0)call bug('f','No FWHM parameters were found')
+      call rdhdr(lIn,'bmaj',bmaj,0.0)
+      call rdhdr(lIn,'bmin',bmin,0.0)
+      call rdhdr(lIn,'bmpa',bpa,0.0)
+      if (bmaj*bmin.le.0) call bug('f','No FWHM parameters were found')
 
       bmaj = 180*3600/pi * bmaj
       bmin = 180*3600/pi * bmin
@@ -303,7 +303,7 @@ c
         fac = pi/(order+2)
       endif
 
-      do k = 1,order
+      do k = 1, order
         fac = pi/(2*k+1) * fac
       enddo
 
@@ -313,8 +313,8 @@ c
 c  Determine the error
 c
       maxerr = 0
-      do j = 1,ny
-        do i = 1,nx
+      do j = 1, ny
+        do i = 1, nx
           if (Cont(i,j).gt.0) then
             dist = sqrt(((i-x)/thetax)**2+((j-y)/thetay)**2)
             Err(i,j) = fac*Cont(i,j)*dist**n
@@ -347,7 +347,7 @@ c***********************************************************************
 c-----------------------------------------------------------------------
       integer j
 c-----------------------------------------------------------------------
-      do j = 1,ny
+      do j = 1, ny
         call xywrite(lOut,j,Data(1,j))
       enddo
 
@@ -360,7 +360,7 @@ c***********************************************************************
 c-----------------------------------------------------------------------
       integer j
 c-----------------------------------------------------------------------
-      do j = 1,ny
+      do j = 1, ny
         call xyread(lIn,j,Data(1,j))
       enddo
 
@@ -372,7 +372,7 @@ c***********************************************************************
 
 c  Make the header for the output file.
 c-----------------------------------------------------------------------
-      call headcopy(lIn, lOut, 0, 0, 0, 0)
+      call headcp(lIn, lOut, 0, 0, 0, 0)
 
       call hdcopy(lIn,lOut,'rms')
 
@@ -395,8 +395,8 @@ c-----------------------------------------------------------------------
       integer i,j
 c-----------------------------------------------------------------------
       rms = 0
-      do j = 1,ny
-        do i = 1,ny
+      do j = 1, ny
+        do i = 1, ny
           rms = rms + Cont(i,j)*Cont(i,j)
         enddo
       enddo
@@ -404,8 +404,8 @@ c-----------------------------------------------------------------------
       rms = sqrt(rms/(nx*ny))
       clip = 3*rms
 
-      do j = 1,ny
-        do i = 1,nx
+      do j = 1, ny
+        do i = 1, nx
           Cont(i,j) = abs(Cont(i,j))
           if (Cont(i,j).lt.Clip) Cont(i,j) = 0
         enddo
@@ -437,9 +437,9 @@ c  Generate the appropriate binomial coefficients.
 c
       binom(0) = 1
       binom(1) = 1
-      do k = 2,2*order+1
+      do k = 2, 2*order+1
         t = binom(0)
-        do i = 1,k-1
+        do i = 1, k-1
           s = binom(i)
           binom(i) = binom(i) + t
           t = s
@@ -452,16 +452,16 @@ c
       nmax = max(nx,ny)
       offset = nmax/2
       if (nmax.gt.MAXDIM) call bug('f','N too big, in shifty')
-      do i = 1,nmax
+      do i = 1, nmax
         Wt(i) = 1
       enddo
 
       fac = 1
-      do k = 0,2*order+1
+      do k = 0, 2*order+1
         tx = 0
         ty = 0
-        do j = 1,ny
-          do i = 1,nx
+        do j = 1, ny
+          do i = 1, nx
             tx = tx + Cont(i,j) * Cont(i,j) * Wt(i)
             ty = ty + Cont(i,j) * Cont(i,j) * Wt(j)
           enddo
@@ -472,14 +472,14 @@ c
         fac = -fac
 
 
-        do i = 1,nmax
+        do i = 1, nmax
           Wt(i) = (i-offset) * Wt(i)
         enddo
       enddo
 c
 c  Find the root.
 c
-      if (Sumx(0).eq.0)call bug('f','Image looks very constant')
+      if (Sumx(0).eq.0) call bug('f','Image looks very constant')
       call Rooted(2*order+1,Sumx,roots,x)
       call Rooted(2*order+1,Sumy,roots,y)
 
@@ -504,17 +504,17 @@ c-----------------------------------------------------------------------
       nz = order
       call dpolyzr(coeff,nz,roots,ifail)
 
-      if (ifail.ne.0)call bug('f','Poly solver failed')
+      if (ifail.ne.0) call bug('f','Poly solver failed')
 
       nz = 0
-      do j = 1,order
+      do j = 1, order
         if (aimag(roots(j)).eq.0) then
           x = roots(j)
           nz = nz + 1
         endif
       enddo
 
-      if (nz.le.0)call bug('f','Poly solver really failed')
-      if (nz.gt.1)call bug('f','Poly solver is confused')
+      if (nz.le.0) call bug('f','Poly solver really failed')
+      if (nz.gt.1) call bug('f','Poly solver is confused')
 
       end
