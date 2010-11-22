@@ -23,7 +23,7 @@ c         relax  This instructs IMCAT to ignore axis descriptor
 c                mismatches (e.g. pixel increments etc).  Use this with
 c                care.
 c
-c$Id: imcat.for,v 1.4 2010/11/02 05:13:00 cal103 Exp $
+c$Id: imcat.for,v 1.5 2010/11/22 06:08:33 cal103 Exp $
 c--
 c
 c  History:
@@ -70,8 +70,8 @@ c-----------------------------------------------------------------------
       external  hdprsnt, itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('imcat',
-     *                 '$Revision: 1.4 $',
-     *                 '$Date: 2010/11/02 05:13:00 $')
+     *                 '$Revision: 1.5 $',
+     *                 '$Date: 2010/11/22 06:08:33 $')
 
 c     Get the input parameters.
       call keyini
@@ -173,7 +173,7 @@ c           circumstances cdelt and crval should not differ.
 c     Open the output and make its header from the first input image.
       call xyopen(lIn,In(1),'old',axis,axLen)
       call xyopen(lOut,Out,'new',naxis1,axLen1)
-      call headcopy(lIn, lOut, 0, 0, 0, 0)
+      call headcp(lIn, lOut, 0, 0, 0, 0)
 
 c     Update history.
       call hisopen (lOut, 'append')

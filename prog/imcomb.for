@@ -39,7 +39,7 @@ c                      regions.
 c         relax        Do not check that the coordinate systems are
 c                      consistent.
 c
-c$Id: imcomb.for,v 1.6 2010/08/25 05:39:30 cal103 Exp $
+c$Id: imcomb.for,v 1.7 2010/11/22 06:07:03 cal103 Exp $
 c--
 c  History:
 c    rjs  29nov94 Original version.
@@ -75,8 +75,8 @@ c-----------------------------------------------------------------------
       external  stcat, versan
 c-----------------------------------------------------------------------
       version = versan ('imcomb',
-     *                  '$Revision: 1.6 $',
-     *                  '$Date: 2010/08/25 05:39:30 $')
+     *                  '$Revision: 1.7 $',
+     *                  '$Date: 2010/11/22 06:07:03 $')
 c
 c  Get the inputs.
 c
@@ -255,7 +255,7 @@ c-----------------------------------------------------------------------
       external  itoaf
 c-----------------------------------------------------------------------
 c     Start with a verbatim copy of the header.
-      call headcopy(tIn, tOut, 0, 0, 0, 0)
+      call headcp(tIn, tOut, 0, 0, 0, 0)
 
 c     Update changed header items.
       do i = 1, 3
