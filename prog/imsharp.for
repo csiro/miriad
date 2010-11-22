@@ -36,7 +36,7 @@ c
       PARAMETER (PVERSION='Version 1.0 12-mar-93')
 c
       CHARACTER file*132, outfile*132, method*20
-      INTEGER   nsize(MAXNAX), axnum(MAXNAX), blc(MAXNAX), trc(MAXNAX)
+      INTEGER   nsize(MAXNAX)
       INTEGER   i,j,k, nx, ny, nz, voldim
       INTEGER   naxis,lun,lout
       REAL      buf(MAXDIM,3), obuf(MAXDIM), d1, d2, d3, d4, dmin, dmax
@@ -59,8 +59,7 @@ c
 c
 c  Open files for in and output, check if buffers large enough, and
 c  copy all header variables. We're not changing anything here to the
-c  header. A dummy BLC/TRC is needed for HEADCOPY. AXNUM in there is
-c  used to chop off the 4th and more dimensions of the data, if present.
+c  header.
 c
       IF (file.EQ.' ') CALL bug('f',
      *          'No in= dataset specified')
@@ -75,18 +74,7 @@ c
       nx = nsize(1)
       ny = nsize(2)
       nz = nsize(3)
-c     // Fill some arrays to get HEADCOPY to do a full copy
-c     // AXNUMs are such that >3 axes are chopped
-c     // Although TRC is not used, we'll be nice, and make one
-      DO i=1,naxis
-        IF (i.LE.3) THEN
-          axnum(i) = i
-        ELSE
-          axnum(i) = 0
-        ENDIF
-        blc(i) = 1
-        trc(i) = nsize(i)
-      ENDDO
+
 c     // check if poor users dataset was really chopped in size
       IF (naxis.GT.3) THEN
          voldim=1
@@ -99,8 +87,9 @@ c     // check if poor users dataset was really chopped in size
             CALL bug('w','Weird: some naxisI values 0?')
          ENDIF
       ENDIF
-c     // Now copy the header using spiffy HEADCOPY
-      CALL headcopy(lun,lout,axnum,naxis,blc,trc)
+
+c     Copy the header.
+      CALL headcp(lun, lout, 0, 0, 0, 0)
 c
 c  Loop over the image/cube (NOTE: can only handle up to 3D)
 c

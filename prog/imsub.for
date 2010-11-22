@@ -15,7 +15,7 @@ c       See the Users Manual for instructions on how to specify this.
 c@ incr
 c       Increment to be used along each axis. Default is 1.
 c
-c$Id: imsub.for,v 1.4 2010/09/27 07:01:10 cal103 Exp $
+c$Id: imsub.for,v 1.5 2010/11/22 04:59:30 cal103 Exp $
 c--
 c  History:
 c    rjs Dark-ages Original version.
@@ -65,8 +65,8 @@ c-----------------------------------------------------------------------
       external  BoxRect, hdprsnt, itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('imsub',
-     *                 '$Revision: 1.4 $',
-     *                 '$Date: 2010/09/27 07:01:10 $')
+     *                 '$Revision: 1.5 $',
+     *                 '$Date: 2010/11/22 04:59:30 $')
 
 c     Get the input parameters.
       call keyini
@@ -101,7 +101,7 @@ c     Create the output image.
       call xyopen(lOut,outNam,'new',naxis,nOut)
 
 c     Start with a verbatim copy of the input header.
-      call headcopy(lIn, lOut, 0, 0, 0, 0)
+      call headcp(lIn, lOut, 0, 0, 0, 0)
 
 c     Update changed keywords.
       do i = 1, naxis
