@@ -37,7 +37,7 @@ c@ aveop
 c       'a' to average spectra before computing eta.  Only if blc,trc
 c       set.
 c
-c$Id: zeeeta.for,v 1.3 2010/09/20 01:53:13 cal103 Exp $
+c$Id: zeeeta.for,v 1.4 2010/11/22 05:07:09 cal103 Exp $
 c--
 c
 c  History:
@@ -66,55 +66,55 @@ c-----------------------------------------------------------------------
       external  versan
 c-----------------------------------------------------------------------
       version = versan('zeeeta',
-     *                 '$Revision: 1.3 $',
-     *                 '$Date: 2010/09/20 01:53:13 $')
+     *                 '$Revision: 1.4 $',
+     *                 '$Date: 2010/11/22 05:07:09 $')
 
 c     Get user inputs.
       call keyini
-      call keya ('in', in, ' ')
-      if (in.eq.' ') call bug ('f', 'Input image not given')
-      call keya ('out', out, ' ')
-      call keyr ('sigma', sigma, 0.0)
-      call keyi ('chan', bchan, 1)
-      call keyi ('chan', echan, 0)
-      call keyi ('blc', blc(1), 0)
-      call keyi ('blc', blc(2), 0)
-      call keyi ('trc', trc(1), 0)
-      call keyi ('trc', trc(2), 0)
-      call keya ('der', ader, ' ')
-      call keya ('aveop', aveop, 's')
+      call keya('in', in, ' ')
+      if (in.eq.' ') call bug('f', 'Input image not given')
+      call keya('out', out, ' ')
+      call keyr('sigma', sigma, 0.0)
+      call keyi('chan', bchan, 1)
+      call keyi('chan', echan, 0)
+      call keyi('blc', blc(1), 0)
+      call keyi('blc', blc(2), 0)
+      call keyi('trc', trc(1), 0)
+      call keyi('trc', trc(2), 0)
+      call keya('der', ader, ' ')
+      call keya('aveop', aveop, 's')
       call keyfin
 
 c     Open input file.
-      call xyopen (lIn, in, 'old', 3, siz)
-      if (siz(1).gt.MAXDIM) call bug ('f','Image too big')
-      call rdhdi (lIn, 'naxis', naxis, 0)
-      if (naxis.lt.3) call bug ('f', 'Image only has 2 dimensions')
-      call rdhda (lIn, 'ctype1', ctype, ' ')
+      call xyopen(lIn, in, 'old', 3, siz)
+      if (siz(1).gt.MAXDIM) call bug('f','Image too big')
+      call rdhdi(lIn, 'naxis', naxis, 0)
+      if (naxis.lt.3) call bug('f', 'Image only has 2 dimensions')
+      call rdhda(lIn, 'ctype1', ctype, ' ')
       if (ctype(1:4).ne.'FREQ' .and.
      *    ctype(1:4).ne.'VELO' .and.
-     *    ctype(1:4).ne.'FELO') call bug ('f',
+     *    ctype(1:4).ne.'FELO') call bug('f',
      *      'Input image not in correct order')
 
 c     Check some more inputs.
-      if (sigma.le.0.0) call bug ('f', 'sigma must be positive')
+      if (sigma.le.0.0) call bug('f', 'sigma must be positive')
       if (bchan.le.0) bchan = 1
       if (echan.le.0 .or. echan.gt.siz(1)) echan = siz(1)
       if (blc(1).lt.0 .or. blc(1).gt.siz(2) .or. trc(1).lt.0 .or.
      *    trc(1).gt.siz(3) .or. blc(2).lt.0 .or.
      *    blc(2).gt.siz(2) .or. trc(2).lt.0 .or.
      *    trc(2).gt.siz(3) .or. trc(1).lt.blc(1) .or.
-     *    trc(2).lt.blc(2)) call bug ('f','Invalid window')
+     *    trc(2).lt.blc(2)) call bug('f','Invalid window')
 
       if (index(ader,'1').eq.0 .and. index(ader,'2').eq.0)
-     *    call bug ('f', 'Derivative type must be 1 or 2')
+     *    call bug('f', 'Derivative type must be 1 or 2')
 
 c     Open output image if required and set loop indices.
       if (blc(1).eq.0 .and. blc(2).eq.0 .and.
      *    trc(1).eq.0 .and. trc(2).eq.0) then
-        if (out.eq.' ') call bug ('f', 'Output image not given')
+        if (out.eq.' ') call bug('f', 'Output image not given')
         dutput = .true.
-        call xyopen (lOut, out, 'new', 2, siz(2))
+        call xyopen(lOut, out, 'new', 2, siz(2))
         jst = 1
         jend = siz(2)
         kst = 1
@@ -140,12 +140,12 @@ c     Open output image if required and set loop indices.
 
 c     Add header and history to output file.
       if (dutput) then
-        call headcopy (lIn, lOut, 0, 0, 0, 0)
+        call headcp(lIn, lOut, 0, 0, 0, 0)
 
-        call hisopen (lOut, 'append')
-        call hiswrite (lOut, 'ZEEETA: MIRIAD' // version)
-        call hisinput (lOut, 'ZEEETA')
-        call hisclose (lOut)
+        call hisopen(lOut, 'append')
+        call hiswrite(lOut, 'ZEEETA: MIRIAD' // version)
+        call hisinput(lOut, 'ZEEETA')
+        call hisclose(lOut)
 
 c       Fill output row with zeros where derivative will not be
 c       evaluated and set flagging mask.
@@ -176,9 +176,9 @@ c       Initialize average spectrum.
 c       Make average spectrum.
         nxy = (jend - jst + 1) * (kend - kst + 1)
         do k = kst, kend
-          call xysetpl (lIn, 1, k)
+          call xysetpl(lIn, 1, k)
           do j = jst, jend
-            call xyread (lIn, j, buf)
+            call xyread(lIn, j, buf)
             do i = 1, siz(1)
               bufav(i) = bufav(i) + buf(i)/nxy
             enddo
@@ -199,9 +199,9 @@ c       Compute eta.
       else
         sumsq = 0.0
         do k = kst, kend
-          call xysetpl (lIn, 1, k)
+          call xysetpl(lIn, 1, k)
           do j = jst, jend
-            call xyread (lIn, j, buf)
+            call xyread(lIn, j, buf)
 
 c           Compute derivative, sum of squares, and eta.
             if (dutput) sumsq = 0.0
@@ -214,8 +214,8 @@ c           Compute derivative, sum of squares, and eta.
           enddo
 
           if (dutput) then
-            call xywrite (lOut, k, eata)
-            call xyflgwr (lOut, k, flags)
+            call xywrite(lOut, k, eata)
+            call xyflgwr(lOut, k, flags)
           endif
         enddo
 
@@ -224,18 +224,18 @@ c           Compute derivative, sum of squares, and eta.
       endif
 
 c     Close up and report answer if necessary.
-      call xyclose (lIn)
+      call xyclose(lIn)
       if (.not.dutput) then
-        write (*, 30) bchan, echan, blc(1), blc(2), trc(1), trc(2),
+        write(*, 30) bchan, echan, blc(1), blc(2), trc(1), trc(2),
      *                sigma, ader, aveop, eata(1)
-30      format (/,'  Channel range = ',i4,' to ',i4,
+30      format(/,'  Channel range = ',i4,' to ',i4,
      *          /,' spatial window = ',i4,',',i4,' to ',i4,',',i4
      *          /,'          sigma = ',1pe12.4,
      *          /,'     derivative = ',a,
      *          /,' averaging mode = ',a,
      *          /,'            eta = ',1pe12.4,/)
       else
-        call xyclose (lOut)
+        call xyclose(lOut)
       endif
 
       end

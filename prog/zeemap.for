@@ -58,7 +58,7 @@ c       number, which is the number of pixels over which you think the
 c       magnetic field might be constant.  Default is 1, try maybe 2
 c       or 4.
 c
-c$Id: zeemap.for,v 1.3 2010/09/21 06:58:03 cal103 Exp $
+c$Id: zeemap.for,v 1.4 2010/11/22 05:06:16 cal103 Exp $
 c--
 c
 c  History:
@@ -111,32 +111,32 @@ c-----------------------------------------------------------------------
 c
 c Get inputs from user
 c
-      call getinp (maxdim, I, V, B, G, D, BE, blc, trc, freq, op,
-     *             cutoff, vrms, mode, corlen)
+      call getinp(maxdim, I, V, B, G, D, BE, blc, trc, freq, op,
+     *            cutoff, vrms, mode, corlen)
 c
 c Open input files
 c
-      call xyopen (lunI, I, 'old', 3, Isiz)
-      call xyopen (lunV, V, 'old', 3, Vsiz)
+      call xyopen(lunI, I, 'old', 3, Isiz)
+      call xyopen(lunV, V, 'old', 3, Vsiz)
       do j = 1, 3
         if (Isiz(j).ne.Vsiz(j))
      *     call bug('f','Input files not same size.')
 
-        call rdhda (lunI, 'ctype'//itoaf(j), ctypei, ' ')
-        call rdhda (lunV, 'ctype'//itoaf(j), ctypev, ' ')
+        call rdhda(lunI, 'ctype'//itoaf(j), ctypei, ' ')
+        call rdhda(lunV, 'ctype'//itoaf(j), ctypev, ' ')
 c
 c Check axis types, as zedscale checks for correct axis
 c type, but only on one image (lunI in this case)
 c
         if (ctypei.ne.ctypev)
-     *  call bug ('f', 'I and V images have different axis types')
+     *  call bug('f', 'I and V images have different axis types')
       enddo
       cutoff = abs(cutoff)
 c
 c Compute scale to convert from a channel increment to a magnetic field
 c strength (noline=.false.) or a frequency increment (noline=.true.).
 c
-      call ZedScale (lunI, freq, scale, noline)
+      call ZedScale(lunI, freq, scale, noline)
 c
 c Check operation, output image names, windows and compute image sizes
 c
@@ -146,26 +146,26 @@ c
       else if (op.ne.'div' .and. op.ne.'fit') then
          call bug('f','Specified op not available; pick div or fit.')
       endif
-      call checkout (op, B, G, D, BE, vrms, mode)
-      call checkwin (op, isiz, blc, trc)
-      call sizes (op, blc, trc, siz, fsiz, dsiz, naxis)
-      call corcheck (maxcor, corlen, fsiz)
+      call checkout(op, B, G, D, BE, vrms, mode)
+      call checkwin(op, isiz, blc, trc)
+      call sizes(op, blc, trc, siz, fsiz, dsiz, naxis)
+      call corcheck(maxcor, corlen, fsiz)
 c
 c Create the output files and write their headers.
 c
-      call mkOut (op, lunI, lunB, lunG, lunD, lunBE, B, G, D, BE,
+      call mkOut(op, lunI, lunB, lunG, lunD, lunBE, B, G, D, BE,
      *            naxis, siz, dsiz, blc, noline)
 c
 c Add history to output files.
 c
-      call history (lunB, lunG, lunD, lunBE, I, V, B, G, D, BE,
-     *              blc, trc, op, cutoff, freq, vrms, mode, corlen)
+      call history(lunB, lunG, lunD, lunBE, I, V, B, G, D, BE,
+     *             blc, trc, op, cutoff, freq, vrms, mode, corlen)
 c
 c Tell user what's about to happen and initialize variables
 c
-      call telluser (op, cutoff, blc, trc, mode, corlen)
-      call initvar (maxdim, maxcor, s, ibuf, vbuf, di, Bbuf,
-     *              Bebuf, Gbuf, Gebuf, blank)
+      call telluser(op, cutoff, blc, trc, mode, corlen)
+      call initvar(maxdim, maxcor, s, ibuf, vbuf, di, Bbuf,
+     *             Bebuf, Gbuf, Gebuf, blank)
 c
 c Find B field by dividing Stokes V by the derivative of the I/2
 c spectrum.  Output B and/or the derivative of I/2 if desired.
@@ -211,8 +211,8 @@ c Loop over all planes in image, stepping by the correlation length
 c
         do l = blc(3), trc(3), corlen
 c         if (mod(l,10).eq.0 .or. l.eq.1) then
-           write (aline, '(a, i4)') 'Beginning plane ', l
-           call output (aline)
+           write(aline, '(a, i4)') 'Beginning plane ', l
+           call output(aline)
 c         end if
 c
 c Read corlen planes of I and V into memory. Each plane consists of the
@@ -221,11 +221,11 @@ c specified by blc(2) and trc(2).  They are zero padded in the second
 c dimension according to blc(2)
 c
           do ll = 1, corlen
-            call xysetpl (lunI, 1, l+ll-1)
-            call xysetpl (lunV, 1, l+ll-1)
+            call xysetpl(lunI, 1, l+ll-1)
+            call xysetpl(lunV, 1, l+ll-1)
             do kk = blc(2), trc(2)
-              call xyread (lunI, kk, iplanes(1,kk,ll))
-              call xyread (lunV, kk, vplanes(1,kk,ll))
+              call xyread(lunI, kk, iplanes(1,kk,ll))
+              call xyread(lunV, kk, vplanes(1,kk,ll))
             enddo
           enddo
 c
@@ -260,8 +260,8 @@ c of the first pixel in the second dimension (i.e. the first spatial
 c dimension) for the current group of CORLEN**2 spectra.
 c
             if (abs(imin).gt.cutoff .or. abs(imax).gt.cutoff) then
-              call zed (mode, ibuf, vbuf, n1, corlen2, Bbuf(k,1),
-     *                  Gbuf(k,1), Bebuf(k,1), Gebuf(k,1), s, converge)
+              call zed(mode, ibuf, vbuf, n1, corlen2, Bbuf(k,1),
+     *                 Gbuf(k,1), Bebuf(k,1), Gebuf(k,1), s, converge)
 c
 c From the fit we have extracted alpha, beta, and their errors, as well
 c as a spectrum (npts*corlen**2 long) which is the true stokes I
@@ -280,25 +280,25 @@ c
 c We must duplicate the results corlen**2 times to fill in the
 c output images with identical numbers
 c
-                call arrfill (maxdim, maxcor, corlen, k, Bbuf, Bebuf,
-     *                        Gbuf, Gebuf, flags, bfield, ebfield,
-     *                        beta, ebeta, .true.)
+                call arrfill(maxdim, maxcor, corlen, k, Bbuf, Bebuf,
+     *                       Gbuf, Gebuf, flags, bfield, ebfield,
+     *                       beta, ebeta, .true.)
               else
 c
 c No convergence, fill output arrays with blanks, and also turn on the
 c blanking switch for later when we write the flag mask
 c
-                call arrfill (maxdim, maxcor, corlen, k, Bbuf, Bebuf,
-     *                        Gbuf, Gebuf, flags, blank, blank,
-     *                        blank, blank, .false.)
+                call arrfill(maxdim, maxcor, corlen, k, Bbuf, Bebuf,
+     *                       Gbuf, Gebuf, flags, blank, blank,
+     *                       blank, blank, .false.)
               endif
             else
 c
 c Below cutoff, blank results
 c
-                call arrfill (maxdim, maxcor, corlen, k, Bbuf, Bebuf,
-     *                        Gbuf, Gebuf, flags, blank, blank,
-     *                        blank, blank, .false.)
+                call arrfill(maxdim, maxcor, corlen, k, Bbuf, Bebuf,
+     *                       Gbuf, Gebuf, flags, blank, blank,
+     *                       blank, blank, .false.)
             endif
           enddo
 c
@@ -308,27 +308,27 @@ c always runs from 1 to corlen.  L is the first of corlen planes read
 c from the cube to fill the arrays ready for output at the moment.
 c
           if (B.ne.' ') then
-            call xysetpl (lunB, 1, 1)
+            call xysetpl(lunB, 1, 1)
             do ll = 1, corlen
-              call xywrite (lunB, l-blc(3)+ll, Bbuf(blc(2),ll))
-              call xyflgwr (lunB, l-blc(3)+ll, flags)
+              call xywrite(lunB, l-blc(3)+ll, Bbuf(blc(2),ll))
+              call xyflgwr(lunB, l-blc(3)+ll, flags)
             enddo
-            call xysetpl (lunB, 1, 2)
+            call xysetpl(lunB, 1, 2)
             do ll = 1, corlen
-              call xywrite (lunB, l-blc(3)+ll, Bebuf(blc(2),ll))
-              call xyflgwr (lunB, l-blc(3)+ll, flags)
+              call xywrite(lunB, l-blc(3)+ll, Bebuf(blc(2),ll))
+              call xyflgwr(lunB, l-blc(3)+ll, flags)
             enddo
           endif
           if (G.ne.' ') then
-            call xysetpl (lunG, 1, 1)
+            call xysetpl(lunG, 1, 1)
             do ll = 1, corlen
-              call xywrite (lunG, l-blc(3)+ll, Gbuf(blc(2),ll))
-              call xyflgwr (lunG, l-blc(3)+ll, flags)
+              call xywrite(lunG, l-blc(3)+ll, Gbuf(blc(2),ll))
+              call xyflgwr(lunG, l-blc(3)+ll, flags)
             enddo
-            call xysetpl (lunG, 1, 2)
+            call xysetpl(lunG, 1, 2)
             do ll = 1, corlen
-              call xywrite (lunG, l-blc(3)+ll, Gebuf(blc(2),ll))
-              call xyflgwr (lunG, l-blc(3)+ll, flags)
+              call xywrite(lunG, l-blc(3)+ll, Gebuf(blc(2),ll))
+              call xyflgwr(lunG, l-blc(3)+ll, flags)
             enddo
           endif
         enddo
@@ -336,12 +336,12 @@ c
 c
 c Close up
 c
-      call xyclose (lunI)
-      call xyclose (lunV)
-      if (B.ne.' ')  call xyclose (lunB)
-      if (G.ne.' ')  call xyclose (lunG)
-      if (D.ne.' ')  call xyclose (lunD)
-      if (BE.ne.' ') call xyclose (lunBE)
+      call xyclose(lunI)
+      call xyclose(lunV)
+      if (B.ne.' ')  call xyclose(lunB)
+      if (G.ne.' ')  call xyclose(lunG)
+      if (D.ne.' ')  call xyclose(lunD)
+      if (BE.ne.' ') call xyclose(lunBE)
 
       end
 
@@ -393,7 +393,7 @@ c-----------------------------------------------------------------------
           G = ' '
         endif
         if (BE.ne.' ' .and. vrms.eq.0.0) then
-          call bug ('w', 'BE image output requires VRMS also')
+          call bug('w', 'BE image output requires VRMS also')
           BE = ' '
         endif
         if (B.eq.' ' .and. D.eq.' ') call bug('f',
@@ -408,11 +408,11 @@ c-----------------------------------------------------------------------
           BE = ' '
         endif
         if (vrms.ne.0.0) then
-          call bug ('w', 'VRMS not used for op=fit')
+          call bug('w', 'VRMS not used for op=fit')
           vrms = 0.0
         endif
         if (B.eq.' ' .and. G.eq.' ') then
-          call bug ('f', 'No output image specified')
+          call bug('f', 'No output image specified')
         endif
         if (G.ne.' ' .and. index(mode,'l').eq.0)
      *     call bug('f','G requested, but mode has no leakage term.')
@@ -434,12 +434,12 @@ c-----------------------------------------------------------------------
       do j = 1, 3
         blc(j) = max(blc(j), 1)
         trc(j) = min(trc(j), isiz(j))
-        call btswap (blc(j), trc(j))
+        call btswap(blc(j), trc(j))
       enddo
 
       if ((trc(1)-blc(1).lt.7 .and. op.eq.'fit') .or.
      *    (trc(1)-blc(1).lt.2 .and. op.eq.'div'))
-     *   call bug ('f', 'Not enough channels to work on')
+     *  call bug('f', 'Not enough channels to work on')
 
       end
 
@@ -501,11 +501,11 @@ c-----------------------------------------------------------------------
 c  Check validity of correlation length.
 c-----------------------------------------------------------------------
       if (corlen.le.1) corlen = 1
-      if (corlen.gt.maxcor) call bug ('f',
+      if (corlen.gt.maxcor) call bug('f',
      *  'Correlation length too big')
-      if (mod(fsiz(2),corlen).ne.0) call bug ('f',
+      if (mod(fsiz(2),corlen).ne.0) call bug('f',
      *  'Fitted region in second dimension not divisible by corlen')
-      if (mod(fsiz(3),corlen).ne.0) call bug ('f',
+      if (mod(fsiz(3),corlen).ne.0) call bug('f',
      *  'Fitted region in third dimension not divisible by corlen')
 
       end
@@ -544,21 +544,21 @@ c     Create the output files and copy header keywords from the I file.
         nblc(3) = blc(3)
 
         if (B.ne.' ') then
-          call xyopen (lunB, B, 'new', naxis, siz)
-          call headcopy(lunI, lunB, axMap, 3, nblc, 0)
-          call wrhda (lunB,  'bunit', bunit)
+          call xyopen(lunB, B, 'new', naxis, siz)
+          call headcp(lunI, lunB, 3, axMap, nblc, 0)
+          call wrhda(lunB,  'bunit', bunit)
         endif
 
         if (D.ne.' ') then
-          call xyopen (lunD, D, 'new', naxis, siz)
-          call headcopy(lunI, lunD, axMap, 3, nblc, 0)
-          call wrhda (lunD, 'bunit', 'JY/BEAM')
+          call xyopen(lunD, D, 'new', naxis, siz)
+          call headcp(lunI, lunD, 3, axMap, nblc, 0)
+          call wrhda(lunD, 'bunit', 'JY/BEAM')
         endif
 
         if (BE.ne.' ') then
-          call xyopen (lunBE, BE, 'new', naxis, siz)
-          call headcopy(lunI, lunBE, axMap, 3, nblc, 0)
-          call wrhda (lunBE, 'bunit', bunit)
+          call xyopen(lunBE, BE, 'new', naxis, siz)
+          call headcp(lunI, lunBE, 3, axMap, nblc, 0)
+          call wrhda(lunBE, 'bunit', bunit)
         endif
 
       else if (op.eq.'fit') then
@@ -571,15 +571,15 @@ c     Create the output files and copy header keywords from the I file.
         nblc(3) = 1
 
         if (B.ne.' ') then
-          call xyopen (lunB, B, 'new', naxis, siz)
-          call headcopy(lunI, lunB, axMap, 3, nblc, 0)
-          call wrhda (lunB,  'bunit', bunit)
+          call xyopen(lunB, B, 'new', naxis, siz)
+          call headcp(lunI, lunB, 3, axMap, nblc, 0)
+          call wrhda(lunB,  'bunit', bunit)
         endif
 
         if (G.ne.' ') then
-          call xyopen (lunG, G, 'new', naxis, siz)
-          call headcopy(lunI, lunG, axMap, 3, nblc, 0)
-          call wrhda (lunG, 'bunit', ' ')
+          call xyopen(lunG, G, 'new', naxis, siz)
+          call headcp(lunI, lunG, 3, axMap, nblc, 0)
+          call wrhda(lunG, 'bunit', ' ')
         endif
       endif
 
@@ -601,31 +601,31 @@ c-----------------------------------------------------------------------
       character string*80
 c-----------------------------------------------------------------------
       if (B.ne.' ') then
-        call newhis (lunB, I, V, B, G, D, BE, blc, trc, op, cutoff,
-     *               freq, mode, corlen)
-        write (string,100) vrms
-100     format ('ZEEMAP: vrms=',1pe14.6)
+        call newhis(lunB, I, V, B, G, D, BE, blc, trc, op, cutoff,
+     *              freq, mode, corlen)
+        write(string,100) vrms
+100     format('ZEEMAP: vrms=',1pe14.6)
         if (op.eq.'div') call hiswrite(lunB,string)
         call hisclose(lunB)
       endif
 
       if (G.ne.' ') then
-        call newhis (lunG, I, V, B, G, D, BE, blc, trc, op, cutoff,
-     *               freq, mode, corlen)
+        call newhis(lunG, I, V, B, G, D, BE, blc, trc, op, cutoff,
+     *              freq, mode, corlen)
         call hisclose(lunG)
       endif
 
       if (D.ne.' ') then
-        call newhis (lunD, I, V, B, G, D, BE, blc, trc, op, cutoff,
-     *               freq, mode, corlen)
+        call newhis(lunD, I, V, B, G, D, BE, blc, trc, op, cutoff,
+     *              freq, mode, corlen)
         call hisclose(lunD)
       endif
 
       if (BE.ne.' ') then
-        call newhis (lunBE, I, V, B, G, D, BE, blc, trc, op, cutoff,
-     *               freq, mode, corlen)
-        write (string,100) vrms
-        if (op.eq.'div') call hiswrite (lunBE,string)
+        call newhis(lunBE, I, V, B, G, D, BE, blc, trc, op, cutoff,
+     *              freq, mode, corlen)
+        write(string,100) vrms
+        if (op.eq.'div') call hiswrite(lunBE,string)
         call hisclose(lunBE)
       endif
 
@@ -649,17 +649,17 @@ c-----------------------------------------------------------------------
         call output('Divide the V spectrum by the derivative of')
         call output('the I/2 spectrum, when the former is greater')
         write(string,100) cutoff
-100     format ('than ',1pe14.6,' Jy/beam/channel')
+100     format('than ',1pe14.6,' Jy/beam/channel')
         call output(string)
 
         write(string,200) blc(1)+1, trc(1)-1
-200     format ('Channel range = ', i4, ' to ', i4)
+200     format('Channel range = ', i4, ' to ', i4)
         call output(string)
         write(string,300) blc(2),trc(2)
-300     format ('      x-range = ', i4, ' to ', i4)
+300     format('      x-range = ', i4, ' to ', i4)
         call output(string)
         write(string,400) blc(3),trc(3)
-400     format ('      y-range = ', i4, ' to ', i4)
+400     format('      y-range = ', i4, ' to ', i4)
         call output(string)
       else
         umsg = 'Do a least squares fit of the V spectrum by the ' //
@@ -677,22 +677,22 @@ c-----------------------------------------------------------------------
         write(string,400) blc(3),trc(3)
         call output(string)
         if (index(mode,'m').ne.0) then
-          call output ('Iterative least-squares used')
+          call output('Iterative least-squares used')
         else
           umsg = 'Warning, more biased non-iterative' //
      *           ' least squares used'
-          call output (umsg)
+          call output(umsg)
         endif
         if (index(mode,'2').ne.0) then
-          call output ('Two sided derivative used')
+          call output('Two sided derivative used')
         else
-          call output ('Warning, one sided derivative used')
+          call output('Warning, one sided derivative used')
         endif
         if (index(mode,'l').ne.0)
-     *    call output ('Leakage term included')
-        write (string,500) corlen
-500     format ('Correlation length = ', i3)
-        call output (string)
+     *    call output('Leakage term included')
+        write(string,500) corlen
+500     format('Correlation length = ', i3)
+        call output(string)
       endif
 
       end
@@ -713,7 +713,7 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
       call hisopen(lun,'append')
 
-      call hiswrite (lun, 'ZEEMAP: (MIRIAD)')
+      call hiswrite(lun, 'ZEEMAP: (MIRIAD)')
 
       write(string,100) I(1:len1(I)), V(1:len1(V))
 100   format('ZEEMAP: Input files: I=',a, ' V=',a)
