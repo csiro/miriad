@@ -57,7 +57,7 @@ c@ log
 c       The output log file. The default filename is velplot.log
 c       Results from image analysis are written into the log file.
 c
-c$Id: velplot.for,v 1.8 2010/10/22 03:45:47 cal103 Exp $
+c$Id: velplot.for,v 1.9 2010/11/22 05:09:47 cal103 Exp $
 c--
 c  History:
 c       developed from Ralint's Velplot (Fuller, Vogel, Wright, 1970's)
@@ -152,8 +152,8 @@ c     Set default plotting parameters.
       character versan*80, version*80
 c-----------------------------------------------------------------------
       version = versan('velplot',
-     *                 '$Revision: 1.8 $',
-     *                 '$Date: 2010/10/22 03:45:47 $')
+     *                 '$Revision: 1.9 $',
+     *                 '$Date: 2010/11/22 05:09:47 $')
 c
 c  Get the input parameters.
 c
@@ -4415,7 +4415,7 @@ c     Open output file and write header from values in common.
       call xyopen(lOut, filename, 'new', 3, nsize)
 
 c     Copy the header verbatim then apply updates.
-      call headcopy(lIn, lOut, 0, 3, blc, 0)
+      call headcp(lIn, lOut, 3, 0, blc, 0)
       call wrhdd(lOut, 'crpix1', dble(brpix(1)))
       call wrhdd(lOut, 'crpix2', dble(brpix(2)))
       call wrhdd(lOut, 'crpix3', 1d0)
