@@ -164,7 +164,7 @@ c       skip, followed by the number of scans to process.  NOTE: This
 c       applies to all files read.  The default is to skip none and
 c       process all scans.
 c
-c$Id: atlod.for,v 1.32 2010/11/15 21:55:56 wie017 Exp $
+c$Id: atlod.for,v 1.33 2010/11/23 01:52:40 wie017 Exp $
 c--
 c
 c  Program Structure:
@@ -319,8 +319,10 @@ c    mhw  28jun10 Add options nopack, notsys, process auto corr bins
 c    mhw  22jul10 Fix ischan calculation.
 c    mhw  19oct10 Update 20/13 band - now 1-3 GHz
 c    mhw  26oct10 Fix birdie flagging in 20/13 cm band
+c    mhw  11nov10 Record scan direction for otfmos scans
+c    mhw  23nov10 Fix for CABB 33 channel (64MHz) mode
 c
-c $Id: atlod.for,v 1.32 2010/11/15 21:55:56 wie017 Exp $
+c $Id: atlod.for,v 1.33 2010/11/23 01:52:40 wie017 Exp $
 c-----------------------------------------------------------------------
 
         integer MAXFILES,MAXTIMES,MAXSIM
@@ -340,8 +342,8 @@ c
         character itoaf*8, rperr*32, versan*80
 c-----------------------------------------------------------------------
       version = versan ('atlod',
-     :                  '$Revision: 1.32 $',
-     :                  '$Date: 2010/11/15 21:55:56 $')
+     :                  '$Revision: 1.33 $',
+     :                  '$Date: 2010/11/23 01:52:40 $')
 c
 c  Get the input parameters.
 c
@@ -1309,7 +1311,8 @@ c
           doneg = (polcode(if,p).eq.PolXY.or.
      *             polcode(if,p).eq.PolYX).and.doxyflip
           call DatCpy(nstoke(if),nfreq(if),nfreq1,
-     *          dohann.and.nfreq1.gt.33,birdie.and.nfreq1.eq.33,
+     *          dohann.and.nfreq1.gt.33,
+     *          birdie.and.nfreq1.eq.33.and..not.cabb,
      *          edge(if),doconj,doneg,vis(p),data(ipnt))
           if(dosam)call SamCorr(nfreq(if),data(ipnt),polcode(if,p),
      *          i2,i1,if,time,xsampler,ysampler,ATIF,ATANT)
@@ -2407,7 +2410,7 @@ c-----------------------------------------------------------------------
         double precision J01Jul04,J18Oct07
         parameter(J01Jul04=2453187.5d0,J18Oct07=2454390.5d0)
         include 'rpfits.inc'
-        integer scanno,i1,i2,baseln,i,id,j,xymode
+        integer scanno,i1,i2,baseln,i,id,j,xymode,prev,next
         logical NewScan,NewSrc,NewFreq,NewTime,Accum,ok,badbit
         logical flags(MAXPOL),corrfud,kband,qband,wband,flipper,cabb
         integer jstat,flag,bin,ifno,srcno,simno,Ssrcno,Ssimno
@@ -2416,7 +2419,7 @@ c-----------------------------------------------------------------------
         real ut,utprev,utprevsc,u,v,w,weight(MAXCHAN*MAXPOL)
         complex vis(NDATA)
         double precision reftime,ra0,dec0,pntra,pntdec
-        character calcode*16,sctype*16
+        character calcode*16,sctype*16,sname*16
 c
 c  The following has to agree with the first dimension of if_cstok in
 c  rpfits.inc.
@@ -2730,6 +2733,28 @@ c
                   pntra = su_ra(srcno)
                   pntdec = su_dec(srcno)
                 endif
+c
+c  For sctype=otfmos the antenna is scanning: use the pointing centre to
+c   indicate the scanning direction
+c                
+                if (sctype.eq.'otfmos'.and.
+     *              su_name(srcno)(1:1).ne.'@') then
+                  next = srcno + 1
+                  prev = srcno - 1
+                  if (next.gt.n_su) next = 1
+                  if (prev.lt.1) prev = n_su
+                  sname = su_name(next)
+                  if (sname.ne.' ') call lcase(sname)
+                  if (index(sname,'turn').le.0) then
+                    pntra = su_pra(next)
+                    pntdec= su_pdec(next)
+                  else
+                    pntra = su_pra(prev)
+                    pntdec = su_pdec(prev)
+                  endif
+                    
+                endif
+                
                 if(abs(pm_ra)+abs(pm_dec).gt.0)then
                   reftime = pm_epoch + 2 400 000.5d0
                   ra0  = 2*DPI/(24d0*3600d0*365.25d0) * pm_ra
