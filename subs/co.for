@@ -34,7 +34,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: co.for,v 1.13 2010/11/22 04:19:22 cal103 Exp $
+c $Id: co.for,v 1.14 2010/11/23 05:59:37 cal103 Exp $
 c***********************************************************************
 
 c* coInit -- Initialise coordinate conversion routines.
@@ -198,13 +198,16 @@ c    lu         Handle of the coordinate object.
 c-----------------------------------------------------------------------
       include 'co.h'
 
-      integer   icrd
+      integer   icrd, status
 
       external  coLoc
       integer   coLoc
 c-----------------------------------------------------------------------
-      icrd = coLoc(0,.true.)
+      icrd = coLoc(0, .true.)
       lu = -icrd
+
+c     Initialize the celprm struct.
+      status = celini(cel(1,icrd))
 
       cosrot(icrd)  = 1d0
       sinrot(icrd)  = 0d0
@@ -295,8 +298,8 @@ c-----------------------------------------------------------------------
       integer   iax, icrd, m, prj(PRJLEN), status
       character obj*8
 
-      external  coLoc
-      integer   coLoc
+      external  coLoc, len1
+      integer   coLoc, len1
 c-----------------------------------------------------------------------
       icrd = coLoc(lu,.false.)
 
@@ -304,7 +307,7 @@ c     Parse parameterized keywords.
       obj = object
       iax = 0
       m   = -1
-      if (obj(:1).eq.'c' .and. len(obj).eq.6) then
+      if (obj(:1).eq.'c' .and. len1(obj).eq.6) then
         iax = ichar(obj(6:6)) - ichar('0')
         if (1.le.iax .and. iax.le.MAXNAX) then
           obj(6:6) = ' '
@@ -312,10 +315,10 @@ c     Parse parameterized keywords.
           iax = 0
         endif
       else if (obj(:2).eq.'pv') then
-        if (len(obj).eq.3) then
+        if (len1(obj).eq.3) then
           m = ichar(obj(3:3)) - ichar('0')
           if (0.le.m .and. m.le.9) obj = 'pv'
-        else if (len(obj).eq.4) then
+        else if (len1(obj).eq.4) then
           m = 10*(ichar(obj(3:3)) - ichar('0')) +
      *            ichar(obj(4:4)) - ichar('0')
           if (0.le.m .and. m.le.29) obj = 'pv'
@@ -354,7 +357,7 @@ c     Parse parameterized keywords.
       else if (obj.eq.'obstime') then
         obstime(icrd) = value
       else
-        call bug('f','Unrecognised object in coSetD')
+        call bug('f','Unrecognised object in coSetD: '//obj)
       endif
 
       end
@@ -382,15 +385,15 @@ c-----------------------------------------------------------------------
       integer   iax, icrd
       character obj*8
 
-      external  coLoc
-      integer   coLoc
+      external  coLoc, len1
+      integer   coLoc, len1
 c-----------------------------------------------------------------------
       icrd = coLoc(lu,.false.)
 
 c     Parse parameterized keywords.
       obj = object
       iax = 0
-      if (obj(:5).eq.'ctype' .and. len(obj).eq.6) then
+      if (obj(:5).eq.'ctype' .and. len1(obj).eq.6) then
         iax = ichar(obj(6:6)) - ichar('0')
         if (1.le.iax .and. iax.le.MAXNAX) then
           obj(6:6) = ' '
@@ -411,7 +414,7 @@ c     Parse parameterized keywords.
           call bug('f','Unrecognised value for cellscal in coSetA')
         endif
       else
-        call bug('f','Unrecognised object in coSetA')
+        call bug('f','Unrecognised object in coSetA'//obj)
       endif
 
       end
@@ -443,8 +446,8 @@ c-----------------------------------------------------------------------
       double precision pv(0:29), ref(4)
       character obj*8
 
-      external  coLoc
-      integer   coLoc
+      external  coLoc, len1
+      integer   coLoc, len1
 c-----------------------------------------------------------------------
       icrd = coLoc(lu,.false.)
 
@@ -452,7 +455,7 @@ c     Parse parameterized keywords.
       obj = object
       iax = 0
       m   = -1
-      if (obj(:1).eq.'c' .and. len(obj).eq.6) then
+      if (obj(:1).eq.'c' .and. len1(obj).eq.6) then
         iax = ichar(obj(6:6)) - ichar('0')
         if (1.le.iax .and. iax.le.MAXNAX) then
           obj(6:6) = ' '
@@ -460,10 +463,10 @@ c     Parse parameterized keywords.
           iax = 0
         endif
       else if (obj(:2).eq.'pv') then
-        if (len(obj).eq.3) then
+        if (len1(obj).eq.3) then
           m = ichar(obj(3:3)) - ichar('0')
           if (0.le.m .and. m.le.9) obj = 'pv'
-        else if (len(obj).eq.4) then
+        else if (len1(obj).eq.4) then
           m = 10*(ichar(obj(3:3)) - ichar('0')) +
      *            ichar(obj(4:4)) - ichar('0')
           if (0.le.m .and. m.le.29) obj = 'pv'
@@ -511,7 +514,7 @@ c     Parse parameterized keywords.
       else if (obj.eq.'obstime') then
         value = obstime(icrd)
       else
-        call bug('f','Unrecognised object in coGetD')
+        call bug('f','Unrecognised object in coGetD'//obj)
       endif
 
       end
@@ -540,15 +543,15 @@ c-----------------------------------------------------------------------
       integer   iax, icrd
       character obj*8
 
-      external  coLoc
-      integer   coLoc
+      external  coLoc, len1
+      integer   coLoc, len1
 c-----------------------------------------------------------------------
       icrd = coLoc(lu,.false.)
 
 c     Parse parameterized keywords.
       obj = object
       iax = 0
-      if (obj(:5).eq.'ctype' .and. len(obj).eq.6) then
+      if (obj(:5).eq.'ctype' .and. len1(obj).eq.6) then
         iax = ichar(obj(6:6)) - ichar('0')
         if (1.le.iax .and. iax.le.MAXNAX) then
           obj(6:6) = ' '
@@ -566,7 +569,7 @@ c     Parse parameterized keywords.
           value = 'CONSTANT'
         endif
       else
-        call bug('f','Unrecognised object in coGetA')
+        call bug('f','Unrecognised object in coGetA'//obj)
       endif
 
       end
@@ -1729,7 +1732,7 @@ c     Do the special cases.
       else
         do jax = 1, naxis(icrd)
           if (type(1:length).eq.ctype(jax,icrd)(1:length)) then
-            match =  length.eq.len(ctype(jax,icrd))
+            match = length.eq.len(ctype(jax,icrd))
             if (.not.match) then
               match = ctype(jax,icrd)(length+1:).eq.' ' .or.
      *                ctype(jax,icrd)(length+1:length+1).eq.'-'
