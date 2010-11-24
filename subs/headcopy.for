@@ -53,10 +53,10 @@ c    trc        List of top-right-corners of input image region.
 c               Can be specified as 0 (scalar) meaning
 c               (naxis1,naxis2,...) for the input image.
 c
-c $Id: headcopy.for,v 1.7 2010/11/22 04:27:53 cal103 Exp $
+c $Id: headcopy.for,v 1.8 2010/11/24 04:53:42 cal103 Exp $
 c-----------------------------------------------------------------------
       integer   CRPIX, CDELT, CRVAL, CROTA, CTYPE
-      parameter (CRPIX = 1, CDELT = 2, CRVAL = 3, CROTA = 4, CTYPE = 5)
+      parameter (CRPIX = 1, CDELT = 2, CRVAL = 3, CTYPE = 4, CROTA = 5)
 
       integer   NKEYS
       parameter (NKEYS = 38)
