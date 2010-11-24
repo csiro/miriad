@@ -589,7 +589,7 @@ c       The OFFSET directive is not applied to ANY position fields in
 c       succeeding directives that have %OTYPEs that are "hms" or "dms".
 c       I am too lazy to code it.
 c
-c$Id: cgdisp.for,v 1.13 2010/11/24 03:53:54 cal103 Exp $
+c$Id: cgdisp.for,v 1.14 2010/11/24 04:30:40 cal103 Exp $
 c--
 c
 c  History:
@@ -829,8 +829,8 @@ c     Plotting parameters.
       data getvsc /.true./
 c-----------------------------------------------------------------------
       version = versan ('cgdisp',
-     *                  '$Revision: 1.13 $',
-     *                  '$Date: 2010/11/24 03:53:54 $')
+     *                  '$Revision: 1.14 $',
+     *                  '$Date: 2010/11/24 04:30:40 $')
 c
 c Get user inputs
 c
@@ -3482,19 +3482,22 @@ c-----------------------------------------------------------------------
      *          slen, spos
       double precision cosrho, dpx, dpy, nums(maxnum), off(2), oPix(2),
      *          pa, phi, pix(3), r, rmaj, rmin, scl, sinrho, theta,
-     *          vlen, wcen(3), width(2), wIn(3), x, y
+     *          vlen, wabs(3), wCen(3), width(2), wIn(3), x, y
       real      ssize
-      character abspix(3)*6, ctype(2)*4, oFigs(nFigs)*8, oType(2)*6,
-     *          pType(3)*6, str*4, relpix(3)*6, wover*3, yesno(2)*3
+      character absdeg(3)*6, abspix(3)*6, ctype(2)*4, oFigs(nFigs)*8,
+     *          oType(2)*6, pType(3)*6, str*4, relpix(3)*6, wover*3,
+     *          yesno(2)*3
 
 c     Externals.
       integer len1
       character itoaf*4
 
+      data absdeg /'absdeg', 'absdeg', 'abspix'/
+      data abspix /'abspix', 'abspix', 'abspix'/
+      data relpix /'relpix', 'relpix', 'abspix'/
       data oFigs  /'sym', 'star', 'box', 'line', 'vector', 'circle',
      *             'ocircle', 'ellipse', 'oellipse', 'clear'/
       data yesno  /'yes', 'no'/
-      data abspix /'abspix', 'abspix', 'abspix'/
 c-----------------------------------------------------------------------
 c     Prepare string for parsing.
       str  = itoaf(iline)
@@ -3568,8 +3571,8 @@ c     Check that we have consistent overlay units and axes.
       pType(1) = oType(1)
       pType(2) = oType(2)
       pType(3) = 'abspix'
-      wIn(3) = pix3
 
+c     Want angular coords as offsets from the field centre, in arcsec.
       if (pType(1).eq.'hms' .or. pType(1).eq.'dms') then
         pType(1) = 'arcsec'
       endif
@@ -3613,6 +3616,7 @@ c     Extract the numeric part of the line that remains.
       call matodf(aline(icomm(5)+1:lena), nums, nPres, ok)
       if (.not.ok) return
 
+c     Get the centre of the overlay in absolute pixel coordinates.
       ipt = 1
       call ol2pixcg(lun, pix3, oType, off, sgn, nums(ipt), oPix, nUsed)
       ipt = ipt + nUsed
@@ -3623,12 +3627,15 @@ c     Extract the numeric part of the line that remains.
       call rdhdi(lun, 'naxis', naxis, 0)
       naxis = min(3, naxis)
 
+c     Get the centre of the overlay in convenient coordinates.  wIn is
+c     used as a temporary variable for coordinate calculations.
+      wIn(3) = pix3
       if (dodist) then
 c       Shape distorts with grid.  Convert centre of overlay into
 c       units given by X/YOTYPE.
         wIn(1) = oPix(1)
         wIn(2) = oPix(2)
-        call w2wcov(lun, naxis, abspix, ' ', wIn, pType, ' ', wcen, ok)
+        call w2wcov(lun, naxis, abspix, ' ', wIn, pType, ' ', wCen, ok)
         if (.not.ok) return
 
         dpx = 0d0
@@ -3637,10 +3644,7 @@ c       units given by X/YOTYPE.
 c       Shape computed at the centre of the field and translated.
         wIn(1) = 0d0
         wIn(2) = 0d0
-        relpix(1) = 'relpix'
-        relpix(2) = 'relpix'
-        relpix(3) = 'abspix'
-        call w2wcov(lun, naxis, relpix, ' ', wIn, pType, ' ', wcen, ok)
+        call w2wcov(lun, naxis, relpix, ' ', wIn, pType, ' ', wCen, ok)
         if (.not.ok) return
 
         call w2wcov(lun, naxis, relpix, ' ', wIn, abspix, ' ', pix, ok)
@@ -3696,32 +3700,32 @@ c       Get optional parameters.
         if (oFig.eq.'star') then
           nVtx = 4
 
-          wIn(1) = wcen(1) - width(1)
-          wIn(2) = wcen(2)
+          wIn(1) = wCen(1) - width(1)
+          wIn(2) = wCen(2)
           call w2wcov(lun, naxis, pType, ' ', wIn, abspix, ' ', pix,
      *      ok)
           if (.not.ok) return
           xypts(1,1) = pix(1) + dpx
           xypts(1,2) = pix(2) + dpy
 
-          wIn(1) = wcen(1) + width(1)
-          wIn(2) = wcen(2)
+          wIn(1) = wCen(1) + width(1)
+          wIn(2) = wCen(2)
           call w2wcov(lun, naxis, pType, ' ', wIn, abspix, ' ', pix,
      *      ok)
           if (.not.ok) return
           xypts(2,1) = pix(1) + dpx
           xypts(2,2) = pix(2) + dpy
 
-          wIn(1) = wcen(1)
-          wIn(2) = wcen(2) - width(2)
+          wIn(1) = wCen(1)
+          wIn(2) = wCen(2) - width(2)
           call w2wcov(lun, naxis, pType, ' ', wIn, abspix, ' ', pix,
      *      ok)
           if (.not.ok) return
           xypts(3,1) = pix(1) + dpx
           xypts(3,2) = pix(2) + dpy
 
-          wIn(1) = wcen(1)
-          wIn(2) = wcen(2) + width(2)
+          wIn(1) = wCen(1)
+          wIn(2) = wCen(2) + width(2)
           call w2wcov(lun, naxis, pType, ' ', wIn, abspix, ' ', pix,
      *      ok)
           if (.not.ok) return
@@ -3729,32 +3733,32 @@ c       Get optional parameters.
           xypts(4,2) = pix(2) + dpy
         else
           nVtx = 5
-          wIn(1) = wcen(1) - width(1)
-          wIn(2) = wcen(2) - width(2)
+          wIn(1) = wCen(1) - width(1)
+          wIn(2) = wCen(2) - width(2)
           call w2wcov(lun, naxis, pType, ' ', wIn, abspix, ' ', pix,
      *      ok)
           if (.not.ok) return
           xypts(1,1) = pix(1) + dpx
           xypts(1,2) = pix(2) + dpy
 
-          wIn(1) = wcen(1) - width(1)
-          wIn(2) = wcen(2) + width(2)
+          wIn(1) = wCen(1) - width(1)
+          wIn(2) = wCen(2) + width(2)
           call w2wcov(lun, naxis, pType, ' ', wIn, abspix, ' ', pix,
      *      ok)
           if (.not.ok) return
           xypts(2,1) = pix(1) + dpx
           xypts(2,2) = pix(2) + dpy
 
-          wIn(1) = wcen(1) + width(1)
-          wIn(2) = wcen(2) + width(2)
+          wIn(1) = wCen(1) + width(1)
+          wIn(2) = wCen(2) + width(2)
           call w2wcov(lun, naxis, pType, ' ', wIn, abspix, ' ', pix,
      *      ok)
           if (.not.ok) return
           xypts(3,1) = pix(1) + dpx
           xypts(3,2) = pix(2) + dpy
 
-          wIn(1) = wcen(1) + width(1)
-          wIn(2) = wcen(2) - width(2)
+          wIn(1) = wCen(1) + width(1)
+          wIn(2) = wCen(2) - width(2)
           call w2wcov(lun, naxis, pType, ' ', wIn, abspix, ' ', pix,
      *      ok)
           if (.not.ok) return
@@ -3807,12 +3811,11 @@ c       Do we have a longitude/latitude pair?
 
         if (lng.ne.0) then
 c         Celestial axis pair.
-          if (pType(1).eq.'arcsec') then
-            wcen(1) = wcen(1) / 3600d0
-            wcen(2) = wcen(2) / 3600d0
-          endif
+          call w2wcov (lun, naxis, pType, ' ', wCen, absdeg, ' ', wabs,
+     *      ok)
+          if (.not.ok) return
 
-          call sphpad(1, wcen(lng), wcen(lat), 0.1d0, pa, wIn(lng),
+          call sphpad(1, wabs(lng), wabs(lat), 0.1d0, pa, wIn(lng),
      *      wIn(lat))
 
           pType(1) = 'absdeg'
@@ -3821,8 +3824,8 @@ c         Celestial axis pair.
 c         Some other axis types.  rho is measured from the x-axis.
           cosrho = cos((90d0+pa)*DD2R)
           sinrho = sin((90d0+pa)*DD2R)
-          wIn(1) = wcen(1) + 0.1d0*cosrho
-          wIn(2) = wcen(2) - 0.1d0*sinrho
+          wIn(1) = wCen(1) + 0.1d0*cosrho
+          wIn(2) = wCen(2) - 0.1d0*sinrho
         endif
 
         call w2wcov(lun, naxis, pType, ' ', wIn, abspix, ' ', pix, ok)
@@ -3907,11 +3910,13 @@ c       Generate poly-line coordinates for ellipse.
         if (lng.ne.0) then
 c         Celestial axis pair.
           if (pType(1).eq.'arcsec') then
-            wcen(1) = wcen(1) / 3600d0
-            wcen(2) = wcen(2) / 3600d0
             rmaj = rmaj / 3600d0
             rmin = rmin / 3600d0
           endif
+
+          call w2wcov (lun, naxis, pType, ' ', wCen, absdeg, ' ', wabs,
+     *      ok)
+          if (.not.ok) return
 
           pType(1) = 'absdeg'
           pType(2) = 'absdeg'
@@ -3923,7 +3928,7 @@ c         Celestial axis pair.
             r = sqrt(x*x + y*y)
             phi = pa + atan2(y, x)*DR2D
 
-            call sphpad(1, wcen(lng), wcen(lat), r, phi, wIn(lng),
+            call sphpad(1, wabs(lng), wabs(lat), r, phi, wIn(lng),
      *        wIn(lat))
 
             call w2wcov(lun, naxis, pType, ' ', wIn, abspix, ' ', pix,
@@ -3942,8 +3947,8 @@ c         Some other axis types.  rho is measured from the x-axis.
             theta = dble(2*(j-1))*DD2R
             x = rmaj * cos(phi)
             y = rmin * sin(phi)
-            wIn(1) = wcen(1) + x*cosrho + y*sinrho
-            wIn(2) = wcen(2) - x*sinrho + y*cosrho
+            wIn(1) = wCen(1) + x*cosrho + y*sinrho
+            wIn(2) = wCen(2) - x*sinrho + y*cosrho
 
             call w2wcov(lun, naxis, pType, ' ', wIn, abspix, ' ', pix,
      *        ok)
