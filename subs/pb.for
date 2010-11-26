@@ -72,6 +72,7 @@ c   18jun09   rjs    Recognise the EVLA.
 c   13jul09   mhw    Extend ATCA frequency range at 3 and 6 cm
 c   21jul09   rjs    Merge in mchw changes. Extend VLA/EVLA frequency
 c		     ranges. Add an entry for the ATCA at 7mm.
+c   25nov10   mhw    Add support for OTF mosaicing
 c************************************************************************
 c* pbList -- List known primary beam types.
 c& rjs
@@ -252,6 +253,50 @@ c------------------------------------------------------------------------
 	call pbInitc(pbObj,pbtype,coObj,'op',0.d0)
 	end
 c************************************************************************
+c* pbInitcc -- Initialise a primary beam object.
+c& rjs
+c: image-data
+c+
+	subroutine pbInitcc(pbObj,type,coObj,in,x1,x2)
+c
+	implicit none
+	integer pbObj,coObj
+	character type*(*),in*(*)
+        double precision x1(*),x2(*)
+c
+c  Initialise a primary beam object. The primary beam is assumed to
+c  be centred at the location given by the coordinate system (coObj),
+c  the coordinate specification (in) and the coordinate (x1).
+c  This version is for antennas that move during the integration.
+c  A piecewise convolution is done around point x1, in the direction of x2.
+c
+c  Input:
+c    pbtype	Primary beam type.
+c    coObj	The coordinate system used to form the primary beam object.
+c    in 	Form of the input coordinate defining the reference
+c		location (passed to the co routines).
+c    x1 	The reference location.
+c    x2         The location specifying the convolution direction
+c  Output:
+c    pbObj	The primary beam object.
+c--
+c------------------------------------------------------------------------
+        include 'mirconst.h'
+        include 'pb.h'
+c
+        real pbGet
+        
+        double precision x2c(2)
+        
+	call pbInitc(pbObj,type,coObj,in,x1)
+	call coCvt(coObj,in,x2,'ap/ap',x2c)
+        xn(pbObj)=x2c(1)
+        yn(pbObj)=x2c(2)
+        conv(pbObj)=.true.
+        
+	end
+
+c************************************************************************
 c* pbInitc -- Initialise a primary beam object.
 c& rjs
 c+ image-data
@@ -402,6 +447,7 @@ c
 	  xc(pbObj) = 0
 	  yc(pbObj) = 0
 	endif
+        conv(pbObj) = .false.
 c
 	end
 c************************************************************************
@@ -445,52 +491,68 @@ c    pbGet	Value of the primary beam.
 c--
 c------------------------------------------------------------------------
 	include 'pb.h'
-	double precision r2,P
-	real ax,r,b
-	integer k,off,i
+	double precision r2,P,x2,y2,t
+	real ax,r,b,pbSum
+	integer k,off,i,j,n
 c
 c  Externals.
 c
 	real j1xbyx
 c
-	r2 = xc(pbObj)*(x-x0(pbObj))**2 + yc(pbObj)*(y-y0(pbObj))**2
-c
 	k = pnt(pbObj)
 	off = indx(k)
+        n = 1
+        pbSum = 0
+        if (conv(pbObj)) n = NCONV
+c      
+        do j=1,n
+          if (n.eq.1) then
+            x2 = xc(pbObj)*(x-x0(pbObj))**2
+            y2 = yc(pbObj)*(y-y0(pbObj))**2                   
+          else
+            t = (j-0.5d0)/n-0.5d0
+            x2 = xc(pbObj)*(x-(x0(pbObj)+t*(xn(pbObj)-x0(pbObj))))**2
+            y2 = yc(pbObj)*(y-(y0(pbObj)+t*(yn(pbObj)-y0(pbObj))))**2
+          endif
+	  r2 = x2 + y2
 c
-	if(r2.gt.maxrad(k))then
-	  pbGet = 0
-	else if(pbtype(k).eq.IPOLY.and.nvals(k).eq.5)then
-	  pbGet = 1/(pbvals(off) + r2*( pbvals(off+1) +
-     *				    r2*( pbvals(off+2) +
-     *				    r2*( pbvals(off+3) +
-     *				    r2*( pbvals(off+4) ) ) ) ) )
-	else if(pbtype(k).eq.IPOLY.or.pbtype(k).eq.POLY)then
-	  off = indx(k)
-	  P = pbvals(off+nvals(k)-1)
-	  do i=off+nvals(k)-2,off,-1
-	    P = P*r2 + pbvals(i)
-	  enddo
-	  if(pbtype(k).eq.IPOLY)then
-	    pbGet = 1/P
-	  else
-	    pbGet = P
+	  if(r2.gt.maxrad(k))then
+	    pbGet = 0
+	  else if(pbtype(k).eq.IPOLY.and.nvals(k).eq.5)then
+	    pbGet = 1/(pbvals(off) + r2*( pbvals(off+1) +
+     *				     r2*( pbvals(off+2) +
+     *				     r2*( pbvals(off+3) +
+     *	 			     r2*( pbvals(off+4) )))))
+	  else if(pbtype(k).eq.IPOLY.or.pbtype(k).eq.POLY)then
+	    off = indx(k)
+	    P = pbvals(off+nvals(k)-1)
+	    do i=off+nvals(k)-2,off,-1
+	      P = P*r2 + pbvals(i)
+	    enddo
+	    if(pbtype(k).eq.IPOLY)then
+	      pbGet = 1/P
+	    else
+	      pbGet = P
+	    endif
+	  else if(pbtype(k).eq.BLOCKED)then
+	    ax = sqrt(r2)
+	    r = pbvals(off)
+	    b = pbvals(off+1)
+	    P = 2*j1xbyx(ax)
+	    if(r.gt.0)P = (P - 2*r*j1xbyx(b*ax))/(1-r)
+	    pbGet = P*P
+	  else if(pbtype(k).eq.COS6)then
+	    pbGet = cos(sqrt(r2))**6
+	  else if(pbtype(k).eq.GAUS)then
+	    pbGet = exp(-r2)
+	  else if(pbtype(k).eq.SINGLE)then
+	    pbGet = 1
 	  endif
-	else if(pbtype(k).eq.BLOCKED)then
-	  ax = sqrt(r2)
-	  r = pbvals(off)
-	  b = pbvals(off+1)
-	  P = 2*j1xbyx(ax)
-	  if(r.gt.0)P = (P - 2*r*j1xbyx(b*ax))/(1-r)
-	  pbGet = P*P
-	else if(pbtype(k).eq.COS6)then
-	  pbGet = cos(sqrt(r2))**6
-	else if(pbtype(k).eq.GAUS)then
-	  pbGet = exp(-r2)
-	else if(pbtype(k).eq.SINGLE)then
-	  pbGet = 1
-	endif
-	if(pbGet.le.cutoff(k))pbGet = 0
+	  if(pbGet.le.cutoff(k))pbGet = 0
+          pbSum = pbSum + pbGet
+        enddo
+        pbGet = pbSum/n
+        if (pbGet.le.cutoff(k)) pbGet = 0
 c
 	end
 c************************************************************************

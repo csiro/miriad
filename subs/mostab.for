@@ -43,7 +43,8 @@ c    rjs  07jul97 Change coaxdesc to coaxget.
 c    rjs  27oct98 Added mosval.
 c    rjs  12oct99 Added mosgetn and mossetn
 c    rjs  28oct99 Fix fractional pixel shift bug. 
-c    rks  29jun05 Geometry determination now outside these routines.
+c    rjs  29jun05 Geometry determination now outside these routines.
+c    mhw  25nov10 Add otf mosaic support
 c************************************************************************
 	subroutine MosCIni
 c
@@ -83,7 +84,7 @@ c
 c------------------------------------------------------------------------
 	include 'mostab.h'
 	include 'mirconst.h'
-	character tel1*16
+	character tel1*16,sctype*16
 	double precision radec1(2),dra1,ddec1
 c
 c  Externals.
@@ -95,6 +96,7 @@ c  Set the reference position, and determine if we are to operate in
 c  a mode where appreciable proper motion is anticipated.
 c
 	if(npnt.eq.0)then
+          otf=.false.
 	  solar = MosSolar(lIn)
 	  call uvrdvrd(lIn,'ra',radec0(1),0.d0)
 	  call uvrdvrd(lIn,'dec',radec0(2),0.d0)
@@ -112,6 +114,9 @@ c
 	  call uvVarSet(vPntUpd,'pbtype')
 	  call uvVarSet(vPntUpd,'dra')
 	  call uvVarSet(vPntUpd,'ddec')
+	  call uvVarSet(vPntUpd,'pntra')
+	  call uvVarSet(vPntUpd,'pntdec')
+	  call uvVarSet(vPntUpd,'sctype')
 	endif
 c
 c  Process a change in primary beam model.
@@ -137,6 +142,17 @@ c
 	  call pbRead(lIn,tel1)
 c
 	  pntno = MosLoc(tel1,radec1)
+          
+c  Check for OTF mosaicing
+          call uvrdvra(lIn,'sctype',sctype,' ')
+          if (sctype.eq.'otfmos') then
+            otf=.true.
+            call uvrdvrd(lIn,'pntra',radec2(1,pntno),0.d0)
+            call uvrdvrd(lIn,'pntdec',radec2(2,pntno),0.d0)
+          else
+            radec2(1,pntno)=0.d0
+            radec2(2,pntno)=0.d0
+          endif
 	endif
 	i = pntno
 	doinit = .false.
@@ -621,7 +637,7 @@ c  Output:
 c    npnt1	The number of pointings.
 c------------------------------------------------------------------------
 	include 'mostab.h'
-	integer i,item,iostat,offset,ival(2),size,n,iax
+	integer i,item,iostat,offset,ival(2),size,n,iax,blocksize
 	double precision crpix
 	real rval(2)
 c
@@ -640,13 +656,24 @@ c
 	    call bugno('f',iostat)
 	  endif
 c
-c  Write the main body of the pointing table.
+c  Read the main body of the pointing table.
 c
-	  offset = 8
 	  size = hsize(item)
-	  if(mod(size-offset,48).ne.0)
+          call hreadi(item,ival,0,8,iostat)
+c
+c  Check the table version number (i4 starting at offset 4)
+c  and check if we have otf data
+c
+          otf=.false.
+          blocksize = 48
+          if (ival(2).eq.2) then
+            blocksize = blocksize + 16
+            otf=.true.
+          endif
+	  offset = 8
+	  if(mod(size-offset,blocksize).ne.0)
      *	    call bug('f','Bad size for mosaic table')
-	  npnt = (size - offset)/48
+	  npnt = (size - offset)/blocksize
 	  if(npnt.gt.MAXPNT)
      *		call bug('f','Too many pointings, in mosLoad')
 	  do i=1,npnt
@@ -662,6 +689,11 @@ c
 	    if(iostat.eq.0)call hreadr(item,rval,offset,8,iostat)
 	    Rms2(i) = rval(1)
 	    offset = offset + 8
+            if (otf) then
+              if (iostat.eq.0)
+     *          call hreadd(item,radec2(1,i),offset,16,iostat)
+              offset = offset + 16
+            endif
 	  enddo
 c
 c  Finish up. Check for errors and then close the dataset.
@@ -725,18 +757,25 @@ c
 c
 	call output('    Number of pointing centers: '//itoaf(npnt))
 	call output(' ')
-	call output('     Sub-Image    Pointing Center       Primary '//
-     *		'Beam      Field')
-	call output('       Size       RA           DEC      Type    '//
-     *		'           RMS')
-	call output('      ------- ------------------------  --------'//
-     *		'----    --------')
+	call output('      Sub-Image       Pointing Center      '//
+     *		'Primary Beam      Field')
+	call output('         Size         RA           DEC     '//
+     *		'Type               RMS')
+	call output('     ----------- ------------------------  '//
+     *		'------------    --------')
 	do i=1,npnt
 	  ras = hangle(radec(1,i))
 	  decs = rangle(radec(2,i))
 	  write(line,10)i,2*nx2+1,2*ny2+1,ras,decs,telescop(i),rms2(i)
-  10	  format(i4,i5,i4,1x,3a,1pe8.2)
+  10	  format(i4,1x,i5,1x,i5,1x,3a,1pe8.2)
 	  call output(line)
+          if (otf) then
+	    ras = hangle(radec2(1,i))
+	    decs = rangle(radec2(2,i))
+            write(line,20) ras,decs
+  20        format(17x,2a)
+            call output(line)
+          endif
 	enddo
 	end
 c************************************************************************
@@ -854,6 +893,9 @@ c  Write the header.
 c
 	ival(1) = 0
 	ival(2) = 0
+        
+c  Set table version number to 2 if we're doing OTF mosaics        
+        if (otf) ival(2) = 2
 	offset = 0
 	call hwritei(item,ival,offset,8,iostat)
 	offset = offset + 8
@@ -873,6 +915,11 @@ c
 	  rval(2) = 0
 	  if(iostat.eq.0)call hwriter(item,rval,offset,8,iostat)
 	  offset = offset + 8
+          if (otf) then
+            if(iostat.eq.0)
+     *        call hwrited(item,radec2(1,i),offset,16,iostat)
+            offset = offset + 16
+          endif
 	enddo
 c
 c  Finish up. Check for errors and then close the dataset.
@@ -947,7 +994,7 @@ c
 c  Initialise ready for a mosaic operation.
 c------------------------------------------------------------------------
 	include 'mostab.h'
-	double precision x1(3),x2(2)
+	double precision x1(3),x2(2),xn(2)
 	integer i
 c
 	x1(3) = chan
@@ -957,7 +1004,13 @@ c
 	  call coCvt(coObj,'aw/aw/ap',x1,'ap/ap',x2)
 	  x0(i) = x2(1)
 	  y0(i) = x2(2)
-	  call pbInitc(pbObj(i),telescop(i),coObj,'ap/ap',x2)
+          xn(1) = radec2(1,i)
+          xn(2) = radec2(2,i)
+          if (otf.and.(xn(1).ne.0.or.xn(2).ne.0)) then 
+	    call pbInitcc(pbObj(i),telescop(i),coObj,'aw/aw/ap',x1,xn)
+          else
+	    call pbInitc(pbObj(i),telescop(i),coObj,'ap/ap',x2)
+          endif
 	enddo
 c
 	end
