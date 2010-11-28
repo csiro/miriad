@@ -284,8 +284,6 @@ c------------------------------------------------------------------------
         include 'mirconst.h'
         include 'pb.h'
 c
-        real pbGet
-        
         double precision x2c(2)
         
 	call pbInitc(pbObj,type,coObj,in,x1)
