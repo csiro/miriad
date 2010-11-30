@@ -1,4 +1,3 @@
-c***********************************************************************
       program regrid
 
 c= regrid - regrid an image dataset
@@ -150,7 +149,7 @@ c       Interpolation tolerance.  Tolerate an error of the specified
 c       amount in converting pixel locations in the input to the output.
 c       Must be less that 0.5.  The default is 0.05.
 c
-c$Id: regrid.for,v 1.4 2010/07/28 07:39:33 cal103 Exp $
+c$Id: regrid.for,v 1.5 2010/11/30 05:17:19 cal103 Exp $
 c--
 c
 c  History:
@@ -211,8 +210,8 @@ c-----------------------------------------------------------------------
       character cellscal*12, ctype*16, in*64, line*64, out*64, pcode*3,
      *          pcodes(NPCODE)*3, tin*64, version*80
 
-c     Externals.
-      logical keyprsnt
+      external  keyprsnt, versan
+      logical   keyprsnt
       character versan*80
 
 c     Projection codes (those in upper-case require non-defaulting
@@ -224,16 +223,15 @@ c     projection parameters and are not currently supported).
      *  'pco', 'tsc', 'csc', 'qsc', 'hpx'/
 c-----------------------------------------------------------------------
       version = versan ('regrid',
-     *                  '$Revision: 1.4 $',
-     *                  '$Date: 2010/07/28 07:39:33 $')
-c
-c  Get the input parameters.
-c
+     *                  '$Revision: 1.5 $',
+     *                  '$Date: 2010/11/30 05:17:19 $')
+
+c     Get the input parameters.
       call keyini
       call keya('in',in,' ')
-      if (in.eq.' ')call bug('f','An input must be given')
+      if (in.eq.' ') call bug('f','An input must be given')
       call keya('out',out,' ')
-      if (out.eq.' ')call bug('f','An output must be given')
+      if (out.eq.' ') call bug('f','An output must be given')
       call mkeyi('axes',axes,MAXNAX,nax)
       call keya('tin',tin,' ')
       call mkeyd('desc',desc,4*MAXNAX,ndesc)
@@ -241,7 +239,7 @@ c
      *  call bug('f','Invalid number of axis descriptors')
       ndesc = ndesc/4
       call keyr('tol',tol,0.05)
-      if (tol.lt.0.or.tol.ge.0.5)
+      if (tol.lt.0.0 .or. tol.ge.0.5)
      *  call bug('f','Invalid value for the tol parameter')
       call getopt(altPrj,noScale,doOff,doEqEq,doGalEq,doNear)
       call keymatch('project',NPCODE,pcodes,1,pcode,n)
@@ -250,36 +248,33 @@ c
       call keyd('rotate',rot,0d0)
       rot = DPI/180d0 * rot
       call keyfin
-c
-c  Open the input dataset.
-c
+
+c     Open the input dataset.
       call xyopen(lIn,in,'old',MAXNAX,nin)
       call rdhdi(lIn,'naxis',naxis,0)
       naxis = min(naxis,MAXNAX)
-      do i=1,naxis
+      do i = 1, naxis
         nout(i) = nin(i)
       enddo
-      do i=naxis+1,MAXNAX
+      do i = naxis+1, MAXNAX
         nout(i) = 1
       enddo
-c
-c  Check the users "axes" specification.
-c
+
+c     Check the users "axes" specification.
       if (nax.gt.0) then
-        do i=1,nax
-          if (axes(i).lt.1.or.axes(i).gt.naxis)
+        do i = 1, nax
+          if (axes(i).lt.1 .or. axes(i).gt.naxis)
      *      call bug('f','Invalid "axes" value')
         enddo
       else
         nax = naxis
-        do i=1,nax
+        do i = 1, nax
           axes(i) = i
         enddo
       endif
-c
-c  Set up the output size/coordinate system given template or
-c  descriptors.
-c
+
+c     Set up the output size/coordinate system given template or
+c     descriptors.
       call coInit(lIn)
       if (altPrj) call coAltPrj(lIn)
       call coDup(lIn,cOut)
@@ -296,8 +291,8 @@ c
         call coInit(lTem)
         call coFindAx(lTem,'latitude',ilat)
 
-        do i=1,nax
-          if (axes(i).gt.n)call bug('f',
+        do i = 1, nax
+          if (axes(i).gt.n) call bug('f',
      *        'Requested axis does not exist in the template')
           nout(axes(i)) = ntin(axes(i))
           call coAxGet(lTem,axes(i),ctype,crpix,crval,cdelt)
@@ -333,9 +328,8 @@ c
       else
         doOff = .true.
       endif
-c
-c  Process options.
-c
+
+c     Process options.
       if (noScale) call coSetA(cOut,'cellscal','CONSTANT')
       if (doRot)   call coSetD(cOut,'llrot',rot)
       if (pcode.ne.' ') call coPrjSet(cOut,pcode)
@@ -345,10 +339,8 @@ c     Set up output celestial coordinates.
 
 c     Set up offset coordinates.
       if (doOff) call doOffset(lIn,nIn,cOut,nOut)
-c
-c  Create the output.
-c
-c     Do basic checks.
+
+c     Create the output.  Do basic checks.
       if (nout(1).gt.MAXDIM) call bug('f','Output too big for me')
       do k = 4, naxis
         if (nOut(k).gt.1) call bug('f','Cannot handle hypercubes')
@@ -356,28 +348,25 @@ c     Do basic checks.
 
       call xyopen(lOut,out,'new',naxis,nout)
       call MkHeader(lIn,lOut,cOut,version)
-c
-c  Initialise things.
-c
+
+c     Initialise.
       GridSize = 0
       call pCvtInit(cOut,lIn)
       call BufIni(nBuf,off,minc,maxc,BufSize)
 
       nblank = 0
-      do k=1,nOut(3)
+      do k = 1, nOut(3)
         call xysetpl(lOut,1,k)
-c
-c  Determine the size of the coordinate translation grid.
-c
+
+c       Determine the size of the coordinate translation grid.
         if (tol.eq.0) then
           gnx = nOut(1)
           gny = nOut(2)
         else
           call GridEst(nOut(1),nOut(2),k,gnx,gny,tol)
         endif
-c
-c  Allocate space used for the coordinate translation grid.
-c
+
+c       Allocate space used for the coordinate translation grid.
         if (gnx*gny.gt.GridSize) then
           if (GridSize.gt.0) then
             call memFree(Xv,GridSize,'r')
@@ -391,10 +380,9 @@ c
           call memAlloc(Zv,GridSize,'r')
           call memAlloc(valid,GridSize,'l')
         endif
-c
-c  Calculate the coordinates translation grid, and work out some
-c  statistics about it.
-c
+
+c       Calculate the coordinates translation grid, and work out some
+c       statistics about it.
         call GridGen(nOut(1),nOut(2),k,
      *        memr(Xv),memr(Yv),memr(Zv),meml(Valid),gnx,gny)
         call GridStat(doNear,memr(Xv),memr(Yv),memr(Zv),meml(valid),
@@ -405,17 +393,15 @@ c
      *      minv(3).gt.maxv(3)) then
           nblank = nblank + nOut(1)*nOut(2)
           call BadPlane(lOut,nOut(1),nOut(2))
-c
-c  Get the required data.
-c
+
         else
+c         Get the required data.
           call BufGet(lIn,minv,maxv,nIn,nBuf,off,minc,maxc,
      *                                        rBuf,lBuf,BufSize)
           offset = minc(3) - off(3) - 1
           nxy = nBuf(1)*nBuf(2)
-c
-c  Finally to the interpolation.
-c
+
+c         Finally to the interpolation.
           call Intp(lOut,order,nOut(1),nOut(2),
      *      memr(rBuf+offset*nxy),meml(lBuf+offset*nxy),
      *      nBuf(1),nBuf(2),maxc(3)-minc(3)+1,
@@ -423,9 +409,8 @@ c
      *      memr(Xv),memr(Yv),memr(Zv),meml(valid),gnx,gny,nblank)
         endif
       enddo
-c
-c  Give warning about the number of blanked pixels.
-c
+
+c     Warn about the number of blanked pixels.
       nblank = (100*nblank)/(nOut(1)*nOut(2)*nOut(3))
       write(line,'(a,i3,a)')
      *  'Overall fraction of blanked pixels: ',nblank,'%'
@@ -434,9 +419,8 @@ c
       else if (nblank.ne.0) then
         call output(line)
       endif
-c
-c  All done. Tidy up.
-c
+
+c     All done. Tidy up.
       if (BufSize.gt.0) then
         call memFree(rBuf,BufSize,'r')
         call memFree(lBuf,BufSize,'l')
@@ -452,13 +436,15 @@ c
       call xyclose(lIn)
 
       end
+
 c***********************************************************************
+
       subroutine getopt(altPrj,noScale,offset,doEqEq,doGalEq,doNear)
 
       logical altPrj,noScale,offset,doEqEq,doGalEq,doNear
 c-----------------------------------------------------------------------
       integer NOPTS
-      parameter(NOPTS=6)
+      parameter (NOPTS=6)
       character opts(NOPTS)*8
       logical present(NOPTS)
       data opts/'altprj', 'noscale ','offset  ','equisw  ','galeqsw ',
@@ -472,12 +458,14 @@ c-----------------------------------------------------------------------
       doGalEq = present(5)
       doNear  = present(6)
       end
+
 c***********************************************************************
+
       subroutine setCel(lIn, lOut, doDesc, doEqEq, doGalEq)
 
       integer lIn, lOut
       logical doDesc, doEqEq, doGalEq
-
+c-----------------------------------------------------------------------
 c  Set up output celestial coordinates.
 c-----------------------------------------------------------------------
       include 'mirconst.h'
@@ -488,7 +476,7 @@ c-----------------------------------------------------------------------
      *          ddec, dec, dra, eqnox, obstime, ra
       character ctype1*16, ctype2*16, type1*4, type2*4
 
-c     Externals.
+      external  epo2jul
       double precision epo2jul
 c-----------------------------------------------------------------------
       call coReInit(lOut)
@@ -683,7 +671,9 @@ c     Switch equatorial coordinates?
       endif
 
       end
+
 c***********************************************************************
+
       subroutine doOffset(lIn,nIn,lOut,nOut)
 
       integer lIn,lOut,nIn(3),nOut(3)
@@ -691,12 +681,12 @@ c-----------------------------------------------------------------------
       include 'maxdim.h'
       integer NV
       double precision tol
-      parameter(tol=0.49,NV=10)
-      double precision In(3),Out(3,NV,NV,NV),crpix
+      parameter (tol=0.49,NV=10)
+      double precision in(3),out(3,NV,NV,NV),crpix
       integer minv(3),maxv(3),i,j,k,l,nv1,nv2,nv3
       logical weird(3),warned,valid(NV,NV,NV),first
 
-c     Externals.
+      external  itoaf
       character itoaf*2
 c-----------------------------------------------------------------------
       call pCvtInit(lIn,lOut)
@@ -706,82 +696,87 @@ c-----------------------------------------------------------------------
       nv1 = min(max(3,nIn(1)),NV)
 
       first = .true.
-      do k=1,nv3
-        do j=1,nv2
-          do i=1,nv1
-            In(1) = 1 + (i-1)*(nIn(1)-1)/real(nv1-1)
-            In(2) = 1 + (j-1)*(nIn(2)-1)/real(nv2-1)
-            In(3) = 1 + (k-1)*(nIn(3)-1)/real(nv3-1)
+      do k = 1, nv3
+        do j = 1, nv2
+          do i = 1, nv1
+            in(1) = 1 + (i-1)*(nIn(1)-1)/real(nv1-1)
+            in(2) = 1 + (j-1)*(nIn(2)-1)/real(nv2-1)
+            in(3) = 1 + (k-1)*(nIn(3)-1)/real(nv3-1)
             call pCvt(in,out(1,i,j,k),3,valid(i,j,k))
 
-            if (valid(i,j,k).and.first) then
+            if (valid(i,j,k) .and. first) then
               first = .false.
-              do l=1,3
+              do l = 1, 3
                 weird(l) = .false.
-                minv(l) = nint(Out(l,i,j,k)-0.49)
-                maxv(l) = nint(Out(l,i,j,k)+0.49)
+                minv(l) = nint(out(l,i,j,k)-0.49d0)
+                maxv(l) = nint(out(l,i,j,k)+0.49d0)
               enddo
             endif
           enddo
         enddo
       enddo
 
-      if (first)call bug('f','No valid pixels found')
-c
-c  Determine the min and max pixels that we are interested in.
-c
-      do k=1,nv3
-        do j=1,nv2
-          do i=1,nv1
-            do l=1,3
+      if (first) call bug('f','No valid pixels found')
+
+c     Determine the min and max pixels that we are interested in.
+      do k = 1, nv3
+        do j = 1, nv2
+          do i = 1, nv1
+            do l = 1, 3
               if (valid(i,j,k)) then
-                minv(l) = min(minv(l),nint(Out(l,i,j,k)-0.49))
-                maxv(l) = max(maxv(l),nint(Out(l,i,j,k)+0.49))
+                minv(l) = min(minv(l),nint(out(l,i,j,k)-0.49d0))
+                maxv(l) = max(maxv(l),nint(out(l,i,j,k)+0.49d0))
               endif
             enddo
           enddo
         enddo
       enddo
-c
-c  Look for weird twists or wrap arounds.
-c
-      do k=1,nv3
-        do j=1,nv2
-          do i=1,nv1-2
-            if (valid(i+2,j,k).and.valid(i+1,j,k).and.valid(i,j,k)) then
-              weird(1) = weird(1).or.
-     *          (Out(1,i+2,j,k)-Out(1,i+1,j,k))*
-     *          (Out(1,i+1,j,k)-Out(1,i,j,k)).lt.0
+
+c     Look for twists or wrap arounds.
+      do k = 1, nv3
+        do j = 1, nv2
+          do i = 1, nv1-2
+            if (valid(i  ,j,k) .and.
+     *          valid(i+1,j,k) .and.
+     *          valid(i+2,j,k)) then
+              weird(1) = weird(1) .or.
+     *          (out(1,i+2,j,k) - out(1,i+1,j,k)) *
+     *          (out(1,i+1,j,k) - out(1,i,j,k)).lt.0d0
             endif
           enddo
         enddo
       enddo
-      do k=1,nv3
-        do j=1,nv2-2
-          do i=1,nv1
-            if (valid(i,j+2,k).and.valid(i,j+1,k).and.valid(i,j,k)) then
-              weird(2) = weird(2).or.
-     *          (Out(2,i,j+2,k)-Out(2,i,j+1,k))*
-     *          (Out(2,i,j+1,k)-Out(2,i,j,k)).lt.0
+
+      do k = 1, nv3
+        do j = 1, nv2-2
+          do i = 1, nv1
+            if (valid(i,j,  k) .and.
+     *          valid(i,j+1,k) .and.
+     *          valid(i,j+2,k)) then
+              weird(2) = weird(2) .or.
+     *          (out(2,i,j+2,k) - out(2,i,j+1,k)) *
+     *          (out(2,i,j+1,k) - out(2,i,j,k)).lt.0d0
             endif
           enddo
         enddo
       enddo
-      do k=1,nv3-2
-        do j=1,nv2
-          do i=1,nv1
-            if (valid(i,j,k+2).and.valid(i,j,k+1).and.valid(i,j,k)) then
-              weird(3) = weird(3).or.
-     *          (Out(3,i,j,k+2)-Out(3,i,j,k+1))*
-     *          (Out(3,i,j,k+1)-Out(3,i,j,k)).lt.0
+
+      do k = 1, nv3-2
+        do j = 1, nv2
+          do i = 1, nv1
+            if (valid(i,j,k)   .and.
+     *          valid(i,j,k+1) .and.
+     *          valid(i,j,k+2)) then
+              weird(3) = weird(3) .or.
+     *          (out(3,i,j,k+2) - out(3,i,j,k+1)) *
+     *          (out(3,i,j,k+1) - out(3,i,j,k)).lt.0d0
             endif
           enddo
         enddo
       enddo
-c
-c  Set the template ranges. If its weird, just go with the template
-c  range and the max and min of mapped pixels.
-c
+
+c     Set the template ranges.  If it's weird, just go with the template
+c     range and the max and min of mapped pixels.
       warned = .false.
       do i = 1, 3
         if (weird(i)) then
@@ -805,7 +800,9 @@ c
       call coReinit(lOut)
 
       end
+
 c***********************************************************************
+
       subroutine MkHeader(lIn,lOut,cOut,version)
 
       integer lIn,lOut,cOut
@@ -815,7 +812,7 @@ c-----------------------------------------------------------------------
       character line*64
 
       integer nkeys
-      parameter(nkeys=21)
+      parameter (nkeys=21)
       character key(nkeys)*8
       data key /   'bmaj    ','bmin    ','bpa     ','bunit   ',
      *  'history ','instrume','niters  ',
@@ -823,7 +820,7 @@ c-----------------------------------------------------------------------
      *  'telescop','btype   ','rms     ','pbtype  ',
      *  'ltype   ','lstart  ','lwidth  ','lstep   ','mostable'/
 c-----------------------------------------------------------------------
-      do i=1,nkeys
+      do i = 1, nkeys
         call hdcopy(lIn,lOut,key(i))
       enddo
 
@@ -835,12 +832,14 @@ c-----------------------------------------------------------------------
       call hisClose(lOut)
 
       end
+
 c***********************************************************************
+
       subroutine GridEst(nx,ny,plane,gnx,gny,tol)
 
       integer nx,ny,plane,gnx,gny
       real tol
-
+c-----------------------------------------------------------------------
 c  Compute the grid size needed to allow translation between the
 c  different pixel coordinate systems.
 c
@@ -859,8 +858,8 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
       n = 1
       k = 0
-      do j=1,2
-        do i=1,2
+      do j = 1, 2
+        do i = 1, 2
           k = k + 1
           x(1,k) = (2-i) + (i-1)*nx
           x(2,k) = (2-j) + (j-1)*ny
@@ -878,46 +877,49 @@ c-----------------------------------------------------------------------
      *  call bug('f','Invalid coordinate: please use tol=0')
 
       more = .true.
-      dowhile(more)
+      do while (more)
         n = 2*n
         errmax = -1
-        do k=1,4
+        do k = 1, 4
           xmid(1,k) = 0.5*(x(1,k) + mid(1))
           xmid(2,k) = 0.5*(x(2,k) + mid(2))
           xmid(3,k) = 0.5*(x(3,k) + mid(3))
           call pCvt(xmid(1,k),txmid(1,k),3,valid)
           if (.not.valid)
      *      call bug('f','Invalid coordinate: please use tol=0')
-          err = max( abs(0.5*(tx(1,k)+tmid(1)) - txmid(1,k)),
-     *               abs(0.5*(tx(2,k)+tmid(2)) - txmid(2,k)),
-     *               abs(0.5*(tx(3,k)+tmid(3)) - txmid(3,k)))
+          err = max(abs(0.5*(tx(1,k)+tmid(1)) - txmid(1,k)),
+     *              abs(0.5*(tx(2,k)+tmid(2)) - txmid(2,k)),
+     *              abs(0.5*(tx(3,k)+tmid(3)) - txmid(3,k)))
           if (err.gt.errmax) then
             kmax = k
             errmax = err
           endif
         enddo
-        more = errmax.gt.tol.and.max(nx,ny).gt.n+1
-c
-c  If the tolerance has not yet been reached, home in on the
-c  region where the fit was worst.
-c
+        more = errmax.gt.tol .and. max(nx,ny).gt.n+1
+
+c       If the tolerance has not yet been reached, home in on the
+c       region where the fit was worst.
         if (more) then
           k1 = 1
-          if (k1.eq.kmax)k1 = k1 + 1
+          if (k1.eq.kmax) k1 = k1 + 1
           k2 = k1 + 1
-          if (k2.eq.kmax)k2 = k2 + 1
+          if (k2.eq.kmax) k2 = k2 + 1
           k3 = k2 + 1
-          if (k3.eq.kmax)k3 = k3 + 1
-          call TripMv(mid(1),   mid(2), mid(3),      x(1,k1))
-          call TripMv(tmid(1),  tmid(2),tmid(3),     tx(1,k1))
+          if (k3.eq.kmax) k3 = k3 + 1
+
+          call TripMv( mid(1),  mid(2), mid(3),      x(1,k1))
+          call TripMv(tmid(1), tmid(2),tmid(3),     tx(1,k1))
           call TripMv(x(1,kmax),mid(2), dble(plane), x(1,k2))
           call TripMv(mid(1),x(2,kmax), dble(plane), x(1,k3))
+
           call pCvt(x(1,k2),tx(1,k2),3,valid)
           if (.not.valid)
      *      call bug('f','Invalid coordinate: please use tol=0')
+
           call pCvt(x(1,k3),tx(1,k3),3,valid)
           if (.not.valid)
      *      call bug('f','Invalid coordinate: please use tol=0')
+
           call TripMv(xmid(1,kmax), xmid(2,kmax), xmid(3,kmax),mid)
           call TripMv(txmid(1,kmax),txmid(2,kmax),txmid(3,kmax),tmid)
         endif
@@ -927,22 +929,27 @@ c
       gny = min(ny,n+1)
 
       end
+
 c***********************************************************************
+
       subroutine TripMv(a,b,c,x)
-c-----------------------------------------------------------------------
+
       double precision a,b,c,x(3)
 c-----------------------------------------------------------------------
       x(1) = a
       x(2) = b
       x(3) = c
+
       end
+
 c***********************************************************************
+
       subroutine GridGen(nx,ny,plane,Xv,Yv,Zv,valid,gnx,gny)
 
       integer nx,ny,plane,gnx,gny
       real Xv(gnx,gny),Yv(gnx,gny),Zv(gnx,gny)
       logical valid(gnx,gny)
-
+c-----------------------------------------------------------------------
 c  Determine the translation between the output and input pixel
 c  coordinates on a grid.
 c
@@ -956,25 +963,27 @@ c-----------------------------------------------------------------------
       include 'maxdim.h'
 
       integer i,j
-      double precision In(3),Out(3)
+      double precision in(3),out(3)
 c-----------------------------------------------------------------------
-      In(3) = plane
+      in(3) = plane
 
-      do j=1,gny
-        In(2) = dble(ny-1)/dble(gny-1) * (j-1) + 1
-        do i=1,gnx
-          In(1) = dble(nx-1)/dble(gnx-1) * (i-1) + 1
-          call pCvt(In,Out,3,valid(i,j))
+      do j = 1, gny
+        in(2) = dble(ny-1)/dble(gny-1) * (j-1) + 1
+        do i = 1, gnx
+          in(1) = dble(nx-1)/dble(gnx-1) * (i-1) + 1
+          call pCvt(in,out,3,valid(i,j))
           if (valid(i,j)) then
-            Xv(i,j) = Out(1)
-            Yv(i,j) = Out(2)
-            Zv(i,j) = Out(3)
+            Xv(i,j) = out(1)
+            Yv(i,j) = out(2)
+            Zv(i,j) = out(3)
           endif
         enddo
       enddo
 
       end
+
 c***********************************************************************
+
       subroutine GridStat(doNear,Xv,Yv,Zv,valid,gnx,gny,n1,n2,n3,
      *    tol,minv,maxv,order)
 
@@ -988,8 +997,8 @@ c-----------------------------------------------------------------------
       logical first
 c-----------------------------------------------------------------------
       first = .true.
-      do j=1,gny
-        do i=1,gnx
+      do j = 1, gny
+        do i = 1, gnx
           if (valid(i,j)) then
             if (first) then
               first = .false.
@@ -1011,15 +1020,14 @@ c-----------------------------------------------------------------------
         enddo
       enddo
 
-      if (first)call bug('f','No valid pixels found here')
-c
-c  Determine which are going to be done by nearest neighbour, and
-c  what are the min and max limits needed for interpolation.
-c
+      if (first) call bug('f','No valid pixels found here')
+
+c     Determine which are going to be done by nearest neighbour, and
+c     what are the min and max limits needed for interpolation.
       n(1) = n1
       n(2) = n2
       n(3) = n3
-      do i=1,3
+      do i = 1, 3
         minr(i) = max(minr(i),1.0)
         maxr(i) = min(maxr(i),real(n(i)))
         diff = max(maxr(i)-minr(i),abs(nint(minr(i))-minr(i)))
@@ -1035,14 +1043,16 @@ c
       enddo
 
       end
+
 c***********************************************************************
+
       subroutine BufIni(nBuf,off,minc,maxc,BufSize)
 
       integer nBuf(3),off(3),minc(3),maxc(3),BufSize
 c-----------------------------------------------------------------------
       integer i
 c-----------------------------------------------------------------------
-      do i=1,3
+      do i = 1, 3
         nBuf(i) = 0
         off(i) = 0
         minc(i) = 0
@@ -1052,7 +1062,9 @@ c-----------------------------------------------------------------------
       BufSize = 0
 
       end
+
 c***********************************************************************
+
       subroutine BufGet(lIn,minr,maxr,n,nBuf,off,minc,maxc,
      *                                        rBuf,lBuf,BufSize)
 
@@ -1066,20 +1078,19 @@ c-----------------------------------------------------------------------
       integer i
       logical redo
 
-c     Externals.
-      integer memBuf
+      external memBuf
+      integer  memBuf
 c-----------------------------------------------------------------------
       redo = .false.
-      do i=1,2
-        redo = redo.or.minr(i).lt.minc(i)
-     *             .or.maxr(i).gt.maxc(i)
+      do i = 1, 2
+        redo = redo .or. minr(i).lt.minc(i)
+     *              .or. maxr(i).gt.maxc(i)
       enddo
-      redo = redo.or.(maxr(3)-minr(3)+1).gt.nBuf(3).or.
-     *        maxr(3).lt.minc(3).or.minr(3).gt.maxc(3)
-c
-c  If it looks as if we cannot use the previous buffers, recalculate
-c  what currently looks best, and load the needed data.
-c
+      redo = redo .or. (maxr(3)-minr(3)+1).gt.nBuf(3) .or.
+     *        maxr(3).lt.minc(3) .or. minr(3).gt.maxc(3)
+
+c     If it looks as if we cannot use the previous buffers, recalculate
+c     what currently looks best, and load the needed data.
       if (redo) then
         nBuf(1) = n(1)
         nBuf(2) = min(nint(1.2*(maxr(2)-minr(2)))+1,n(2))
@@ -1094,10 +1105,10 @@ c
           call memAlloc(rBuf,BufSize,'r')
           call memAlloc(lBuf,BufSize,'l')
         endif
-        do i=1,3
+        do i = 1, 3
           off(i) = minr(i) - (nBuf(i) - (maxr(i)-minr(i)+1))/2 - 1
           off(i) = max(0,min(off(i),n(i)-nBuf(i)))
-          if (minr(i).lt.off(i)+1.or.maxr(i).gt.off(i)+nBuf(i))
+          if (minr(i).lt.off(i)+1 .or. maxr(i).gt.off(i)+nBuf(i))
      *      call bug('f','Algorithmic failure in BufGet')
           if (i.ne.3) then
             minc(i) = 1 + off(i)
@@ -1109,62 +1120,66 @@ c
         enddo
         call BufLoad(lIn,minc,maxc,memr(rBuf),meml(lBuf),
      *    nBuf(1),nBuf(2),nBuf(3),off(1),off(2),off(3))
-c
-c  Handle the case of there being useful data already in the buffers,
-c  and that the buffers are OK in size.
-c
+
       else
+c       Useful data already in the buffers, and buffers are OK in size.
         call BufCycle(lIn,minc,maxc,minr,maxr,memr(rBuf),meml(lBuf),
      *    nBuf(1),nBuf(2),nBuf(3),off(1),off(2),off(3))
       endif
       end
+
 c***********************************************************************
+
       subroutine BufLoad(lIn,minc,maxc,Dat,Flags,
      *                        nx,ny,nz,xoff,yoff,zoff)
 
       integer lIn,minc(3),maxc(3),nx,ny,nz,xoff,yoff,zoff
       real Dat(nx,ny,nz)
       logical Flags(nx,ny,nz)
-
-c  Fill buffers up with the appropriate data.
+c-----------------------------------------------------------------------
+c  Fill buffers with the appropriate data.
 c-----------------------------------------------------------------------
       integer j,k
 c-----------------------------------------------------------------------
-      if (xoff.ne.0)call bug('f','Load assertion failure')
+      if (xoff.ne.0) call bug('f','Load assertion failure')
 
-      do k=minc(3),maxc(3)
+      do k = minc(3), maxc(3)
         call xysetpl(lIn,1,k)
-        do j=minc(2),maxc(2)
+        do j = minc(2), maxc(2)
           call xyread(lIn,j,Dat(1,j-yoff,k-zoff))
           call xyflgrd(lIn,j,Flags(1,j-yoff,k-zoff))
         enddo
       enddo
 
       end
+
 c***********************************************************************
+
       subroutine BadPlane(lOut,n1,n2)
 
       integer n1,n2,lOut
-
-c  Blank out a completely bad plane.
+c-----------------------------------------------------------------------
+c  Blank a completely bad plane.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       real data(MAXDIM)
       logical flag(MAXDIM)
       integer i,j
 c-----------------------------------------------------------------------
-      do i=1,n1
+      do i = 1, n1
         data(i) = 0
         flag(i) = .false.
       enddo
 
-      do j=1,n2
+      do j = 1, n2
         call xywrite(lOut,j,Data)
         call xyflgwr(lOut,j,Flag)
       enddo
 
       end
+
 c***********************************************************************
+
       subroutine BufCycle(lIn,minc,maxc,minr,maxr,Dat,Flags,
      *                        nx,ny,nz,xoff,yoff,zoff)
 
@@ -1175,14 +1190,12 @@ c***********************************************************************
 c-----------------------------------------------------------------------
       integer j,k,zoff1
 c-----------------------------------------------------------------------
-c
-c  Shuffle around planes that we already have in memory.
-c
+c     Shuffle planes that we already have in memory.
       if (minr(3).lt.1+zoff) then
         zoff1 = max(0,maxr(3) - nz)
         minc(3) = max(minc(3),minr(3))
         maxc(3) = min(maxc(3),maxr(3))
-        do k=maxc(3),minc(3),-1
+        do k = maxc(3),minc(3),-1
           call scopy(nx*ny,Dat(1,1,k-zoff),1,Dat(1,1,k-zoff1),1)
           call logcopy(nx*ny,Flags(1,1,k-zoff),Flags(1,1,k-zoff1))
         enddo
@@ -1191,27 +1204,27 @@ c
         zoff1 = minr(3) - 1
         minc(3) = max(minc(3),minr(3))
         maxc(3) = min(maxc(3),maxr(3))
-        do k=minc(3),maxc(3)
+        do k = minc(3), maxc(3)
           call scopy(nx*ny,Dat(1,1,k-zoff),1,Dat(1,1,k-zoff1),1)
           call logcopy(nx*ny,Flags(1,1,k-zoff),Flags(1,1,k-zoff1))
         enddo
         zoff = zoff1
       endif
 
-      if (xoff.ne.0)call bug('f','Cycle assertion failure')
-c
-c  Read in the extra planes.
-c
-      do k=minr(3),minc(3)-1
+      if (xoff.ne.0) call bug('f','Cycle assertion failure')
+
+c     Read the extra planes.
+      do k = minr(3), minc(3)-1
         call xysetpl(lIn,1,k)
-        do j=minc(2),maxc(2)
+        do j = minc(2), maxc(2)
           call xyread(lIn,j,Dat(1,j-yoff,k-zoff))
           call xyflgrd(lIn,j,Flags(1,j-yoff,k-zoff))
         enddo
       enddo
-      do k=maxc(3)+1,maxr(3)
+
+      do k = maxc(3)+1, maxr(3)
         call xysetpl(lIn,1,k)
-        do j=minc(2),maxc(2)
+        do j = minc(2), maxc(2)
           call xyread(lIn,j,Dat(1,j-yoff,k-zoff))
           call xyflgrd(lIn,j,Flags(1,j-yoff,k-zoff))
         enddo
@@ -1221,50 +1234,54 @@ c
       maxc(3) = max(maxr(3),maxc(3))
 
       end
+
 c***********************************************************************
-      subroutine logcopy(n,In,Out)
+
+      subroutine logcopy(n,in,out)
 
       integer n
-      logical In(n),Out(n)
+      logical in(n),out(n)
 c-----------------------------------------------------------------------
       integer i
 c-----------------------------------------------------------------------
-      do i=1,n
-        Out(i) = In(i)
+      do i = 1, n
+        out(i) = in(i)
       enddo
 
       end
+
 c***********************************************************************
-      subroutine Intp(lOut,order,nx,ny,In,flagIn,nix,niy,niz,
+
+      subroutine Intp(lOut,order,nx,ny,in,flagIn,nix,niy,niz,
      *        xoff,yoff,zoff,Xv,Yv,Zv,valid,gnx,gny,nblank)
 
       integer nx,ny,nix,niy,niz,gnx,gny,order(3),lOut,xoff,yoff,zoff
       integer nblank
-      real In(nix,niy,niz),Xv(gnx,gny),Yv(gnx,gny),Zv(gnx,gny)
+      real in(nix,niy,niz),Xv(gnx,gny),Yv(gnx,gny),Zv(gnx,gny)
       logical flagIn(nix,niy,niz),valid(gnx,gny)
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       real WtTol
-      parameter(WtTol=0.5)
+      parameter (WtTol=0.5)
 
       integer i,j,jx,jy
       double precision fx,fy,x,y,z
       integer id,jd,kd,imin,imax,jmin,jmax,kmin,kmax
       real Sum,SumWt,Wt,Wtx(4),Wty(4),Wtz(4)
-      real Out(MAXDIM)
+      real out(MAXDIM)
       logical flagOut(MAXDIM),cok
 c-----------------------------------------------------------------------
-      do j=1,ny
+      do j = 1, ny
         y = dble((gny-1)*(j-1))/dble(ny-1) + 1
         jy = nint(y - 0.5d0)
         fy = y - jy
-        do i=1,nx
+        do i = 1, nx
           cok = .true.
           x = dble((gnx-1)*(i-1))/dble(nx-1) + 1
           jx = nint(x - 0.5d0)
           fx = x - jx
-          if (fx.eq.0) then
-            if (fy.eq.0) then
+          if (fx.eq.0d0) then
+            if (fy.eq.0d0) then
               if (valid(jx,jy)) then
                 x = Xv(jx,jy)
                 y = Yv(jx,jy)
@@ -1273,41 +1290,41 @@ c-----------------------------------------------------------------------
                 cok = .false.
               endif
             else
-              if (valid(jx,jy).and.valid(jx,jy+1)) then
-                x = (1-fy) * Xv(jx,jy) + fy * Xv(jx,jy+1)
-                y = (1-fy) * Yv(jx,jy) + fy * Yv(jx,jy+1)
-                z = (1-fy) * Zv(jx,jy) + fy * Zv(jx,jy+1)
+              if (valid(jx,jy) .and. valid(jx,jy+1)) then
+                x = (1d0-fy) * Xv(jx,jy) + fy * Xv(jx,jy+1)
+                y = (1d0-fy) * Yv(jx,jy) + fy * Yv(jx,jy+1)
+                z = (1d0-fy) * Zv(jx,jy) + fy * Zv(jx,jy+1)
               else
                 cok = .false.
               endif
             endif
           else
-            if (fy.eq.0) then
-              if (valid(jx,jy).and.valid(jx+1,jy)) then
-                x = (1-fx) * Xv(jx,jy) + fx * Xv(jx+1,jy)
-                y = (1-fx) * Yv(jx,jy) + fx * Yv(jx+1,jy)
-                z = (1-fx) * Zv(jx,jy) + fx * Zv(jx+1,jy)
+            if (fy.eq.0d0) then
+              if (valid(jx,jy) .and. valid(jx+1,jy)) then
+                x = (1d0-fx) * Xv(jx,jy) + fx * Xv(jx+1,jy)
+                y = (1d0-fx) * Yv(jx,jy) + fx * Yv(jx+1,jy)
+                z = (1d0-fx) * Zv(jx,jy) + fx * Zv(jx+1,jy)
               else
                 cok = .false.
               endif
             else
-              if (valid(jx,jy).and.valid(jx+1,jy).and.
-     *           valid(jx,jy+1).and.valid(jx+1,jy+1)) then
-                x = (1-fy)*((1-fx)*Xv(jx,jy)  +fx*Xv(jx+1,jy)  )
-     *              + fy *((1-fx)*Xv(jx,jy+1)+fx*Xv(jx+1,jy+1))
-                y = (1-fy)*((1-fx)*Yv(jx,jy)  +fx*Yv(jx+1,jy)  )
-     *               + fy *((1-fx)*Yv(jx,jy+1)+fx*Yv(jx+1,jy+1))
-                z = (1-fy)*((1-fx)*Zv(jx,jy)  +fx*Zv(jx+1,jy)  )
-     *               + fy *((1-fx)*Zv(jx,jy+1)+fx*Zv(jx+1,jy+1))
+              if (valid(jx,jy) .and. valid(jx+1,jy) .and.
+     *           valid(jx,jy+1) .and. valid(jx+1,jy+1)) then
+                x = (1d0-fy)*((1d0-fx)*Xv(jx,jy)   + fx*Xv(jx+1,jy)) +
+     *                   fy *((1d0-fx)*Xv(jx,jy+1) + fx*Xv(jx+1,jy+1))
+                y = (1d0-fy)*((1d0-fx)*Yv(jx,jy)   + fx*Yv(jx+1,jy)) +
+     *                   fy *((1d0-fx)*Yv(jx,jy+1) + fx*Yv(jx+1,jy+1))
+                z = (1d0-fy)*((1d0-fx)*Zv(jx,jy)   + fx*Zv(jx+1,jy)) +
+     *                   fy *((1d0-fx)*Zv(jx,jy+1) + fx*Zv(jx+1,jy+1))
               else
                 cok = .false.
               endif
             endif
           endif
-c
-c  We now have the coordinates of the point that we want in the output
-c  in terms of the input coordinate system. Interpolate this point.
-c
+
+c         We now have the coordinates of the point that we want in the
+c         output in terms of the input coordinate system.  Interpolate
+c         this point.
           Sum = 0
           SumWt = 0
           if (cok) then
@@ -1315,35 +1332,36 @@ c
             call coeff(order(2),y-yoff,niy,jmin,jmax,Wty)
             call coeff(order(3),z-zoff,niz,kmin,kmax,Wtz)
 
-            do kd=kmin,kmax
-              do jd=jmin,jmax
-                do id=imin,imax
+            do kd = kmin, kmax
+              do jd = jmin, jmax
+                do id = imin, imax
                   if (flagIn(id,jd,kd)) then
                     Wt = Wtx(id-imin+1)*Wty(jd-jmin+1)*Wtz(kd-kmin+1)
-                    Sum = Sum + Wt * In(id,jd,kd)
+                    Sum = Sum + Wt * in(id,jd,kd)
                     SumWt = SumWt + Wt
                   endif
                 enddo
               enddo
             enddo
           endif
-c
-c  Determine whether the output is good or not.
-c
+
+c         Determine whether the output is good.
           flagOut(i) = SumWt.gt.WtTol
           if (flagOut(i)) then
-            Out(i) = Sum / SumWt
+            out(i) = Sum / SumWt
           else
             nblank = nblank + 1
-            Out(i) = 0
+            out(i) = 0
           endif
         enddo
-        call xywrite(lOut,j,Out)
+        call xywrite(lOut,j,out)
         call xyflgwr(lOut,j,flagOut)
       enddo
 
       end
+
 c***********************************************************************
+
       subroutine coeff(order,x,nix,imin,imax,Wtx)
 
       double precision x
@@ -1351,7 +1369,7 @@ c***********************************************************************
       real Wtx(4)
 c-----------------------------------------------------------------------
       real WtTol
-      parameter(WtTol=0.5)
+      parameter (WtTol=0.5)
       double precision fx,SumWt
       integer jx,off,i
       logical clip
@@ -1366,36 +1384,35 @@ c-----------------------------------------------------------------------
         imax = jx+2
 
         fx = x - jx
-        Wtx(1) = ((-0.5*fx+1.0)*fx-0.5)*fx
-        Wtx(2) = (( 1.5*fx-2.5)*fx    )*fx + 1.0
-        Wtx(3) = ((-1.5*fx+2.0)*fx+0.5)*fx
-        Wtx(4) = (( 0.5*fx-0.5)*fx    )*fx
+        Wtx(1) = ((-0.5*fx + 1.0)*fx - 0.5)*fx
+        Wtx(2) =  ((1.5*fx - 2.5)*fx      )*fx + 1.0
+        Wtx(3) = ((-1.5*fx + 2.0)*fx + 0.5)*fx
+        Wtx(4) =  ((0.5*fx - 0.5)*fx      )*fx
       else
         call bug('f','Unsupported order, in Coeff')
       endif
-c
-c  Clip back anything that went outside the range of the valid pixels.
-c
+
+c     Clip anything that went outside the range of the valid pixels.
       clip = .false.
       if (imax.gt.nix) then
         clip = .true.
         imax = nix
       endif
+
       if (imin.lt.1) then
         clip = .true.
         off = 1 - imin
         imin = 1
-        do i=1,imax-imin+1
+        do i = 1, imax-imin+1
           Wtx(i) = Wtx(i+off)
         enddo
       endif
-c
-c  If the range had to be clipped back, check that there is still enough
-c  weighting to bother to interpolate.
-c
+
+c     If the range was clipped, check that the weight is still high
+c     enough to bother interpolating.
       if (clip) then
         SumWt = 0
-        do i=1,imax-imin+1
+        do i = 1, imax-imin+1
           SumWt = SumWt + Wtx(i)
         enddo
 
