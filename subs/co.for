@@ -34,7 +34,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: co.for,v 1.14 2010/11/23 05:59:37 cal103 Exp $
+c $Id: co.for,v 1.15 2010/11/30 00:54:25 cal103 Exp $
 c***********************************************************************
 
 c* coInit -- Initialise coordinate conversion routines.
@@ -236,7 +236,7 @@ c  ---------------------------------------------------------------------
 c  Set basic coordinate parameters (crpix, cdelt, crval, and ctype) for
 c  the specified image axis.  Updates naxis, and initializes parameters
 c  for any axes between the old value of naxis and the new.
-c  
+c
 c  This is a convenience routine.  See also coSetD and coSetA for
 c  setting other parameters one at a time.
 c
@@ -661,7 +661,7 @@ c-----------------------------------------------------------------------
 
       logical   ok
       integer   iax, icrd, ilat, ilng, prj(PRJLEN), status
-      double precision lat0
+      double precision lat0, lng0
       character lng*8, lat*8, pcode1*3, pcode2*3
 
       external  coLoc
@@ -723,21 +723,37 @@ c         Check consistency.
             call bug('w', 'Incompatible longitude/latitude axis pair')
           else
 c           Update celprm now that we know which are the celestial axes.
-            status = celptd(cel(1,icrd), CEL_REF,
-     *                      crval(ilng,icrd)*DR2D, 1)
-            status = celptd(cel(1,icrd), CEL_REF,
-     *                      crval(ilat,icrd)*DR2D, 2)
+            lng0 = crval(ilng,icrd)*DR2D
+            lat0 = crval(ilat,icrd)*DR2D
+
+c           crval was stored as real*4 in older Miriad images, whence
+c           rounding errors may carry the reference latitude at the pole
+c           beyond 90 deg by more than the tolerance allowed by WCSLIB.
+            if (abs(lat0).gt.90d0) then
+              if (abs(lat0).lt.90.00005d0) then
+c               Assume it's a rounding error.
+                lat0 = sign(90d0, lat0)
+              else
+c               Do something tricky.
+                lat0 = sign(180d0-abs(lat0), lat0)
+                lng0 = lng0 + 180d0
+                if (lng0.gt.360d0) lng0 = lng0 - 360d0
+              endif
+            endif
+
+            status = celptd(cel(1,icrd), CEL_REF, lng0, 1)
+            status = celptd(cel(1,icrd), CEL_REF, lat0, 2)
 
             status = celgti(cel(1,icrd), CEL_PRJ, prj)
 
             call ucase(pcode1)
             if (pcode1.eq.'NCP') then
 c             Convert NCP to SIN.
-              lat0 = crval(ilat,icrd)
               if (lat0.eq.0d0) then
                 call bug('f', 'Invalid NCP projection')
               endif
 
+              lat0 = lat0*DD2R
               status = prjptc(prj, PRJ_CODE, 'SIN', 0)
               status = prjptd(prj, PRJ_PV, 0d0, 1)
               status = prjptd(prj, PRJ_PV, cos(lat0)/sin(lat0), 2)
@@ -745,9 +761,8 @@ c             Convert NCP to SIN.
             else if (pcode1.eq.'GLS') then
 c             Convert GLS to SFL.
               status = celpti(cel(1,icrd), CEL_OFFSET, 1, 0)
-              status = celptd(cel(1,icrd), CEL_PHI0,   0d0, 0)
-              status = celptd(cel(1,icrd), CEL_THETA0,
-     *                        crval(ilat,icrd)*DR2D, 0)
+              status = celptd(cel(1,icrd), CEL_PHI0,   0d0,  0)
+              status = celptd(cel(1,icrd), CEL_THETA0, lat0, 0)
               status = prjptc(prj, PRJ_CODE, 'SFL', 0)
 
             else
