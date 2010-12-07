@@ -130,7 +130,7 @@ c         velocity=lsr
 c       indicates that fits is to determine the observatory velocity
 c       wrt the LSR frame using an appropriate model.
 c
-c$Id: fits.for,v 1.16 2010/12/07 06:04:54 cal103 Exp $
+c$Id: fits.for,v 1.17 2010/12/07 06:54:15 cal103 Exp $
 c--
 c
 c  Bugs:
@@ -149,255 +149,23 @@ c    * A general mechanism to override wrong stuff from the FITS header
 c      is needed. Probably need the user to give an auxillary text file.
 c
 c  History:
-c    rjs         89
-c    nebk 05-may-89  Add new FITS history
-c    rjs  17-may-89  Improved header variables. uvin makes the output
-c                    corr format match the precision of the input.
-c                    Added the ability to specify altrpix and altrval
-c                    for uvin.
-c    rjs  18-jul-89  Made default ctype as RA---SIN and DEC--SIN for
-c                    naxis=1 or 2, for xyin.
-c    rjs  18-oct-89  Changes to accomodate changes to the interface to
-c                    get planet scaling/rotation.
-c    mchw 24-oct-89  Converted units of bmaj, bmin in xyin and xyout
-c    rjs   8-nov-89  Extracted the binary search routine.
-c    rjs  13-feb-90  Replaced velocalc with calls to uvfit. Handled some
-c                    FITS keywords for uvin somewhat better.
-c    rjs  21-feb-90  Did not write some uv variables if the
-c                    corresponding FITS keyword is blank!
-c    rjs   8-mar-89  Changed call to uvgetvrr to uvrdvrr. Calculated the
-c                    number of antenna on uvin.
-c    rjs   2-may-90  Changed call to uvsetcor to uvset.  Added version
-c                    id.
-c    pjt   3-may-90  maxdim.h now defines maxchan
-c    rjs  10-jan-91  Check for TELESCOP keyword for uv files in hdin.
-c                    More robust for ascii values containing rubbish.
-c                    Improved .doc comments.
-c    rjs  22-jan-91  Added op=print option.
-c    rjs  31-jan-91  Better Stokes handling, in both uvin and uvout.  A
-c                    significant rework of these routines.  Also got rid
-c                    of "umsg".
-c    rjs  19-feb-91  Ability for uvin to redetermine parallactic angle.
-c                    Write out DATE-OBS for uvout (AIPS pretty well
-c                    insists on it!).
-c    rjs  25-feb-91  Changed declaration in hdout, to allow keywords to
-c                    be longer that 7 characters.
-c    rjs   1-mar-91  In uvin, compute parallactic angle if there are 4
-c                    polarisations. Added lat/long for VLA. More robust
-c                    when FITS weight is zero.
-c    rjs   8-mar-91  Bug in PolCheck, determining the max polarisation
-c                    to output.
-c    rjs   5-apr-91  Fixed bug created by the change on 25feb91, which
-c                    gave extra space between the keyword and the equals
-c                    sign.  Changed itoa to itoaf.
-c    rjs   5-apr-91  Fixed AT lat/long bug. Added some AT-specific
-c                    parameters.
-c    rjs   8-apr-91  Added ORIGIN to output FITS files, at pjt's
-c                    request.
-c    rjs  11-apr-91  Changed "atod" into "atodf".
-c    rjs  18-apr-91  Increased size of a string buffer.
-c    rjs  11-jun-91  Fiddled uvin to add Hat Ck characteristics.
-c                    Calculate LST.D
-c    rjs  13-jun-91  Changed 45 degrees fiddle of parallactic angle
-c                    for the AT.
-c    rjs  17-jun-91  Changed 45 degrees fiddle of parallactic angle
-c                    for the AT AGAIN!
-c    nebk 06-aug-91  Implement UVDAT* routines for option 'uvout'.
-c                    Adds keywords STOKES and OPTIONS
-c    rjs  12-aug-91  Changed the latitude of the AT. What is the correct
-c                    latitude.
-c    nebk 16-aug-91  COnvert AT data with circular poln header to its
-c                    true linear from (just a labelling change).  Change
-c                    AT's latitude to geodetic value !!
-c    rjs  19-sep-91  Changed Jy/K for the AT.
-c    rjs   1-oct-91  Calls JulFDate, rather than internal routine. Calls
-c                    obspar, rather than using its own tables.
-c    rjs  17-oct-91  Copy image parameters crval,crpix,cdelt, etc in
-c                    double precision.
-c    rjs  17-oct-91  Changed default number of channels in uvout to all
-c                    channels.
-c    rjs  18-nov-91  Fiddles with the output header for uvout.
-c    mchw 26-nov-91  Check pointing offsets and add to output
-c                    coordinates.
-c    rjs  12-dec-91  Deleted generation of obstype parameter in uvoin
-c                    (this is now done inside uvio).
-c    rjs  28-feb-92  Better handling of OBSRA and OBSDEC.
-c    rjs  11-mar-92  Increased the length of a string buffer.
-c    rjs   8-apr-92  Changes to accomodate new version of fitsio.for.
-c    rjs   8-may-92  Handle AIPS AN, SU, FQ and CH tables on input.
-c    rjs  20-may-92  Fixed multiple bugs in the new sections of code.
-c    rjs  21-may-92  Protect against stupid AIPS Stokes values in xyin.
-c    rjs  26-may-92  Write btype header parameter.
-c    rjs  10-jun-92  Handle multisource file without FQ table.
-c    rjs  25-jun-92  More robust at handling duplicate visibilities,
-c                    in uvout (to cope with crazy data from jlim). Save
-c                    more info for op=uvin.
-c    rjs  28-jun-92  Handle restfreq better.
-c    rjs  27-jul-92  Default restfreq is 0.
-c    rjs  19-aug-92  Fixed bug in conversion of antenna positions from
-c                    meters to nanosec.
-c    rjs  26-aug-92  Added nopass options.
-c    rjs   4-sep-92  Increase a buffer in uvin.
-c    rjs   7-sep-92  Use the number of nants from AN table, where it
-c                    exists.
-c    rjs   9-sep-92  Corrected calculation of Miriad-style antenna
-c                    coordinates
-c                    and reversed antenna numbers.
-c    rjs  25-sep-92  Estimate the integration time for each visibility
-c                    in uvin.
-c    rjs  29-sep-92  Relabel RL as LR and visa versa, in uvin and uvout.
-c    rjs  24-dec-92  Fudges to get around AIPS FITLD bug.
-c    rjs  10-feb-93  Protect against NaN in uvin.
-c    rjs  15-feb-93  Variables ra and dec now double.
-c    rjs  02-mar-93  Better calculation of frequencies. Handle multiple
-c                    configurations. Use maxnax.h, use mirconst.h
-c    rjs  18-mar-93  Better handling of extension tables in op=print.
-c    rjs  29-mar-93  Increase jyperk.
-c    rjs  30-mar-93  Fixed bug in handling of altrpix, altrval, in
-c                    uvhdin, apparently introduced on 02-mar-93.
-c    rjs  28-jun-93  Use expanded obspar routines proper-like.
-c    rjs  06-jul-93  Depend more on the stuff in the AIPS AN table.
-c                    Handle pixel blanking.  Another bug in calculation
-c                    of veldop.
-c    rjs  08-jul-93  Better velocity computation for uvin.
-c    rjs  21-jul-93  Better velocity/freq handling for uvout.
-c    rjs  27-jul-93  Handle AIPS FG tables, and more multi-source/freq
-c                    tables.
-c    rjs  12-aug-93  Long time bug in hdin, which unnecessarily
-c                    discarded extra FITS info.  Would not have caused
-c                    anyone a problem because the stuff was not the
-c                    important header info.
-c    rjs  19-aug-93  Recognise galactic and ecliptic coordinates in
-c                    xyin.  Fiddle times when reading in uv data.
-c                    Include nutation and aberration when determining
-c                    apparent coordinates.
-c    rjs  16-sep-93  Rename bsrch to binsrch.
-c    rjs  22-oct-93  Did not write out the write freqid to the FG table.
-c    rjs  25-oct-93  Stokes axis in xyin was not being handled
-c                    correctly.
-c    rjs  28-nov-93  Correct calculation of parallactic angle for
-c                    multi-source files.
-c    rjs  30-nov-93  Use ftabskip when listing files.
-c    rjs   9-dec-93  Really make sure the default velocity system is
-c                    VELO-OBS.
-c    rjs  13-dec-93  Sign convention of U(circular), V(linear) change.
-c    rjs  21-jan-94  Ignore keywords in input FITS files which contain
-c                    special characters.
-c    rjs  14-mar094  Correct misunderstanding about antenna coordinates
-c                    in AIPS AN file (affects VLA FITS files only).
-c    rjs   6-apr-94  Check antenna table ref freq for validity, and use
-c                    header ref freq if it looks bad (as suggested by
-c                    Ray Plante).
-c    rjs   5-jun-94  Get BPA from fits header.
-c    rjs  19-jul-94  Fiddle WSRT sign convention to the "normal"
-c                    convention.
-c    rjs  29-jul-94  Better default integration time.
-c    rjs  17-aug-94  Label RA--- and DEC-- image axes from EW telescopes
-c                    as NCP.
-c    rjs  19-aug-94  Don't make character strings upper case, in hdout.
-c    rjs  29-aug-94  Handle w axis in uvin.
-c    rjs  13-sep-94  Recognise 'VELOCITY' and 'FELOCITY' axes.
-c    rjs  23-sep-94  Handle w axis in uvout.
-c    rjs  26-sep-95  Somewhat better handling of odd input axes.
-c    rjs   7-nov-95  options=dss.
-c    rjs  05-dec-95  Negate the cdelt1 increment when options=dss.
-c    nebk 12-jan-96  Replace "percent_polarization" by
-c                    "polarized_intensity" in subroutine AXISIN (AIPS
-c                    manuals say percent_pol but my empirical evidence
-c                    is contrary.  Recognize LL,MM as RA---SIN and
-c                    DEC--SIN.
-c    rjs  07-aug-96  Correct scaling of axis type.
-c    rjs  16-aug-96  Added options=nochi.
-c    rjs  17-oct-96  Make the visibility weight equal to 1/sigma**2.
-c                    Discard OBSRA and BLANK in reading in images.
-c    rjs  07-feb-97  Increase max string length.
-c    rjs  21-feb-97  Better treatment of missing evector. More messages.
-c    rjs  21-mar-97  Write antenna tables for options=uvout.
-c    rjs  06-may-97  Support apparent coordinates in SU table.
-c    rjs  08-may-97  Write all FITS keywords in standard format.
-c    rjs  02-jul-97  Handle cellscal keyword.
-c    rjs  07-jul-97  Improve handling of EPOCH/EQUINOX and pointing
-c                    parameters.
-c    rjs  08-jul-97  Fix bug introduced yesterday.
-c    rjs  12-jul-97  Added options=nod2.
-c    rjs  16-jul-97  Added options=compress.
-c    rjs  01-aug-97  Made FITS date string variables longer, to
-c                    allow for new FITS standard.
-c    rjs  05-aug-97  More robust in interpretation of epoch keyword.
-c    rjs  22-aug-97  More robust again. Also treat unrecognised keywords
-c                    as history comments.
-c    rjs  25-aug-97  Fix up bug I created on Friday.
-c    rjs  20-sep-97  Replace julfdate and fdatejul with julday and
-c                    dayjul.
-c    rjs  21-apr-98  Increase max number of antenna configs.
-c    rjs  19-aug-98  Added options=lefty and made the uv writer check
-c                    obspar for observatory latitude/longitude if it was
-c                    missing from the vis dataset.
-c    pjt  15-sep-98  Recognise galactic and ecliptic coordinates the
-c                    right way
-c    rjs  25-sep-98  Correct handling of OBSRA and OBSDEC in op=xyin.
-c    rjs  27-oct-98  Check in CD keyword for image pixel increment.
-c    rjs  20-nov-98  Better handling of image projections and rotation.
-c    rjs  25-nov-98  More work on better handling of image projection
-c                    and rotation.
-c    rjs  07-jan-99  Write dates in new FITS format.
-c    rjs  26-feb-99  Used new subroutine "fitdate" to be more robust to
-c                    corrupted dates.
-c    rjs  20-jul-99  uvout writes AIPS SU tables.
-c    rjs  30-aug-99  Changed some "PI" to "DPI"
-c    rjs  11-nov-99  options=varwt
-c    rjs  11-apr-00  In uvout, multisource files were always being
-c                    generated.
-c    rjs  10-may-00  In xyout, increase size of descr buffer.
-c    rjs  04-Oct-00  Make xyout work for arbitrarily large images.
-c    rjs  10-oct-00  Really do the above this time!
-c    dpr  01-nov-00  Change CROTAn to AIPS convention for xyout
-c    dpr  27-nov-00  fix stokes convention for xyin
-c    dpr  05-apr-01  Add region key for op=xyout
-c    dpr  10-may-01  Change dss to rawdss
-c    dpr  11-may-01  Check history exists before copying it
-c    dpr  26-jun-01  Relax antenna table format restrictions
-c    dpr  02-jul-01  Relax AN restrictions properly (I hope!!)
-c    rjs  04-oct-01  Get GLS history comment right.
-c    nebk 08-jan-02  In AntWrite, set POLAA and POLAB to 45/135 for ATCA
-c    rjs  29-dec-03  Be more robust to poorly formed CTYPE labels in
-c                    inputs.
-c    rjs  04-jul-05  More robust to some weirdo variants.
-c    rjs  19-sep-05  Better defaults for velocity info, and better
-c                    velocity formula. Handle AIPS OB tables.
-c    rjs  24-sep-05  Increase max number of sources in op=uvout
-c    rjs  03-aug-06  In reading in images, llrot was sometimes
-c                    incorrect.  Also handle some rare keywords a little
-c                    better.
-c    rjs  01-jan-07  Extended baseline numbering convention.  Better
-c                    handling of SMA-style Nasmyth mounts.
-c    rjs  24-jan-07  More robust to bad antenna tables.
-c    rjs  26-jan-07  Fix bug I introduced two days ago!
-c    jhz  09-feb-07  Set MAXFREQ=MAXWIN fits.h so that it
-c                    can read SMA FITS output data from IDL.
-c    rjs  09-apr-09  Apply AIPS baseline dependent calibration and
-c                    various cosmetic changes.
-c    rjs  20-jul-09  Slight changes to messages about extension files.
-c    mrc? 09-apr-10  More robust way of getting rest frequency from
-c                    cards.
-c    rjs  23-apr-10  Handle antenna tables with compacted entries in a
-c                    fashion to preserve antenna numbers (rather than
-c                    re-numbering).  Improve frequency precision.
-c    rjs  18-may-10  Make sure RA in uvin is in the range 0 - 2*pi.
+c    Refer to the RCS log, v1.1 includes prior revision information.
 c-----------------------------------------------------------------------
-      integer maxboxes
-      parameter (maxboxes=2048)
-      character in*128,out*128,op*8,uvdatop*12
-      integer velsys
-      integer boxes(maxboxes)
-      real altrpix,altrval
-      logical altr,docal,dopol,dopass,dss,dochi,nod2,compress
-      logical lefty,varwt,dobl
-      character versan*80, version*80
+      integer   MAXBOXES
+      parameter (MAXBOXES=2048)
+
+      logical   altr, compress, dobl, docal, dochi, dopass, dopol, dss,
+     *          lefty, nod2, varwt
+      integer   boxes(MAXBOXES), velsys
+      real      altrpix, altrval
+      character in*128, op*8, out*128, uvdatop*12, version*72
+
+      external  versan
+      character versan*80
 c-----------------------------------------------------------------------
-      version = versan ('fits',
-     *                  '$Revision: 1.16 $',
-     *                  '$Date: 2010/12/07 06:04:54 $')
+      version = versan('fits',
+     *                 '$Revision: 1.17 $',
+     *                 '$Date: 2010/12/07 06:54:15 $')
 c
 c  Get the input parameters.
 c
@@ -409,7 +177,7 @@ c
       if (op.ne.'print') call keya('out',out,' ')
 
       if (op.eq.'uvin') call GetVel(velsys,altr,altrval,altrpix)
-      if (op.eq.'xyout') call BoxInput('region',in,boxes,maxboxes)
+      if (op.eq.'xyout') call BoxInput('region',in,boxes,MAXBOXES)
 c
 c  Get options.
 c
@@ -2020,10 +1788,10 @@ c
         raapp(i) = mod(raapp(i),360d0)
         if (raapp(i).lt.0) raapp(i) = raapp(i) + 360d0
         diff = max(abs(raapp(i)-raepo(i)),abs(decapp(i)-decepo(i)))
-        raepo(i)  = dpi/180 * raepo(i)
-        decepo(i) = dpi/180 * decepo(i)
-        raapp(i)  = dpi/180 * raapp(i)
-        decapp(i) = dpi/180 * decapp(i)
+        raepo(i)  =  raepo(i)*DD2R
+        decepo(i) = decepo(i)*DD2R
+        raapp(i)  =  raapp(i)*DD2R
+        decapp(i) = decapp(i)*DD2R
 c
 c  If the apparent RA and DEC look bad, recompute them.
 c
@@ -2071,8 +1839,7 @@ c
             raepo(i) = raepo(j)
             decepo(i) = decepo(j)
             more = .false.
-            mosaic = mosaic .or.
-     *               (abs(dra(i))+abs(ddec(i)).gt.0.1/3600*pi/180)
+            mosaic = mosaic .or. (abs(dra(i))+abs(ddec(i)).gt.0.1*AS2R)
           endif
           j = j - 1
         enddo
@@ -2107,11 +1874,11 @@ c    lat,long   The latitude and longitude of the observatory.
 c    antpos     Antenna positions, in Miriad format.
 c-----------------------------------------------------------------------
       include 'mirconst.h'
-      double precision r,cost,sint,height,temp
-      integer i,idx
+
+      integer   i, idx
+      double precision cost, height, r, sint, temp
 c-----------------------------------------------------------------------
-c  Initialise the antenna table to zeros.
-c
+c     Initialise the antenna table.
       do i = 1, nd
         antpos(i,1) = 999999
         antpos(i,2) = 999999
@@ -2136,10 +1903,10 @@ c
           sint = xyz(2,idx) / r
           do i = 1, n
             temp = xyz(1,i)*cost + xyz(2,i)*sint - r
-            antpos(sta(i),1) = (1d9/DCMKS) * temp
+            antpos(sta(i),1) = temp * (1d9/DCMKS)
             temp = -xyz(1,i)*sint + xyz(2,i)*cost
-            antpos(sta(i),2) = (1d9/DCMKS) * temp
-            antpos(sta(i),3) = (1d9/DCMKS) * (xyz(3,i)-xyz(3,idx))
+            antpos(sta(i),2) = temp * (1d9/DCMKS)
+            antpos(sta(i),3) = (xyz(3,i)-xyz(3,idx)) * (1d9/DCMKS)
           enddo
         else
           call bug('w','Bad antenna coordinates ignored')
@@ -2151,9 +1918,9 @@ c
       else
         call xyz2llh(xc,yc,zc,lat,long,height)
         do i = 1, n
-          antpos(sta(i),1) = (1d9/DCMKS) * xyz(1,i)
-          antpos(sta(i),2) = (1d9/DCMKS) * xyz(2,i)
-          antpos(sta(i),3) = (1d9/DCMKS) * xyz(3,i)
+          antpos(sta(i),1) = xyz(1,i)*(1d9/DCMKS)
+          antpos(sta(i),2) = xyz(2,i)*(1d9/DCMKS)
+          antpos(sta(i),3) = xyz(3,i)*(1d9/DCMKS)
         enddo
       endif
 c
@@ -2412,9 +2179,11 @@ c    veldop     On input, the velocity (km/s) at the reference pixel.
 c               On output, the radial velocity of the rest frame (km/s).
 c-----------------------------------------------------------------------
       include 'mirconst.h'
+
       integer OBSRADIO,OBSOPTIC,LSRRADIO,LSROPTIC,HELRADIO,HELOPTIC
       parameter (OBSRADIO=259,OBSOPTIC=3,LSRRADIO=257,LSROPTIC=1)
       parameter (HELRADIO=258,HELOPTIC=2)
+
       double precision fref
 c-----------------------------------------------------------------------
 c  Determine the frequency at the reference channel.
@@ -2894,6 +2663,7 @@ c    version    Version of this program.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mirconst.h'
+
       integer uvCrval,uvCdelt,uvCrpix
       integer uvStokes,uvFreq,uvRa,uvDec
       parameter (uvCrval=1,uvCdelt=2,uvCrpix=3)
@@ -3117,16 +2887,16 @@ c  Create the output FITS file, and write its header.
 c
       Coord(uvCrval,uvStokes) = Pol0
       Coord(uvCdelt,uvStokes) = PolInc
-      Coord(uvCrpix,uvStokes) = 1
+      Coord(uvCrpix,uvStokes) = 1d0
       Coord(uvCrval,uvFreq) = f0
       Coord(uvCdelt,uvFreq) = df
-      Coord(uvCrpix,uvFreq) = 1
-      Coord(uvCrval,uvRa) = 180d0/dpi * ras(1)
-      Coord(uvCdelt,uvRa) = 1
-      Coord(uvCrpix,uvRa) = 1
-      Coord(uvCrval,uvDec) = 180d0/dpi * decs(1)
-      Coord(uvCdelt,uvDec) = 1
-      Coord(uvCrpix,uvDec) = 1
+      Coord(uvCrpix,uvFreq) = 1d0
+      Coord(uvCrval,uvRa)  = ras(1)*DR2D
+      Coord(uvCdelt,uvRa)  = 1d0
+      Coord(uvCrpix,uvRa)  = 1d0
+      Coord(uvCrval,uvDec) = decs(1)*DR2D
+      Coord(uvCdelt,uvDec) = 1d0
+      Coord(uvCrpix,uvDec) = 1d0
 c
 c  Open the FITS file and write out some info. NOTE that a bug in AIPS
 c  FITLD requires that the OBJECT keyword be written out as early
@@ -3139,8 +2909,8 @@ c
       call fuvSetPa(tOut,nparms,parms)
       call fuvWrhd(tOut,Coord)
       if (sources(1).ne.' ') call fitwrhda(tOut,'OBJECT',sources(1))
-      call fitwrhdd(tOut,'OBSRA', 180d0/DPI*pntra)
-      call fitwrhdd(tOut,'OBSDEC',180d0/DPI*pntdec)
+      call fitwrhdd(tOut,'OBSRA', pntra*DR2D)
+      call fitwrhdd(tOut,'OBSDEC',pntdec*DR2D)
       call fitwrhdr(tOut,'EPOCH',epoch)
 c
 c  Spectral line and velocity information.
@@ -3333,6 +3103,7 @@ c***********************************************************************
       real epoch
 c-----------------------------------------------------------------------
       include 'mirconst.h'
+
       integer i
 c-----------------------------------------------------------------------
       call ftabdini(tOut,'AIPS SU')
@@ -3373,11 +3144,11 @@ c-----------------------------------------------------------------------
         call ftabputr(tOut,'VFLUX',    i,0.0)
         call ftabputd(tOut,'FREQOFF',  i,0d0)
         call ftabputd(tOut,'BANDWIDTH',i,df)
-        call ftabputd(tOut,'RAEPO',    i,180d0/DPI*ras(i))
-        call ftabputd(tOut,'DECEPO',   i,180d0/DPI*decs(i))
+        call ftabputd(tOut,'RAEPO',    i,ras(i)*DR2D)
+        call ftabputd(tOut,'DECEPO',   i,decs(i)*DR2D)
         call ftabputd(tOut,'EPOCH',    i,dble(epoch))
-        call ftabputd(tOut,'RAAPP',    i,180d0/DPI*aras(i))
-        call ftabputd(tOut,'DECAPP',   i,180d0/DPI*adecs(i))
+        call ftabputd(tOut,'RAAPP',    i,aras(i)*DR2D)
+        call ftabputd(tOut,'DECAPP',   i,adecs(i)*DR2D)
         call ftabputd(tOut,'LSRVEL',   i,v0)
         call ftabputd(tOut,'RESTFREQ', i,restfreq)
         call ftabputd(tOut,'PMRA',     i,0d0)
@@ -3428,15 +3199,15 @@ c  Determine various things to do with time.
 c
       iatutc = deltime(rtime,'tai')
       call jullst(rtime-iatutc,0d0,gstia0)
-      gstia0 = 180d0/DPI * (gstia0 + eqeq(rtime-iatutc))
-      if (gstia0.lt.0)  gstia0 = gstia0 + 360
-      if (gstia0.ge.360) gstia0 = gstia0 - 360
+      gstia0 = (gstia0 + eqeq(rtime-iatutc))*DR2D
+      if (gstia0.lt.0d0)   gstia0 = gstia0 + 360d0
+      if (gstia0.ge.360d0) gstia0 = gstia0 - 360d0
       call jullst(rtime-iatutc+1d0,0d0,gstia1)
-      gstia1 = 180d0/DPI * (gstia1 + eqeq(rtime-iatutc+1d0))
-      if (gstia1.lt.0)  gstia1 = gstia1 + 360
-      if (gstia1.ge.360) gstia1 = gstia1 - 360
-      degpdy = gstia1 - gstia0 + 360
-      if (degpdy.lt.360) degpdy = degpdy + 360
+      gstia1 = (gstia1 + eqeq(rtime-iatutc+1d0)) * DR2D
+      if (gstia1.lt.0d0)   gstia1 = gstia1 + 360d0
+      if (gstia1.ge.360d0) gstia1 = gstia1 - 360d0
+      degpdy = gstia1 - gstia0 + 360d0
+      if (degpdy.lt.360d0) degpdy = degpdy + 360d0
 c
 c  Fill out information in the antenna table header.
 c
@@ -3946,7 +3717,8 @@ c
 c-----------------------------------------------------------------------
       include 'mirconst.h'
       include 'maxnax.h'
-      integer i,polcode,nx,ny,ilong,ilat
+
+      integer i,polcode,nx,ny,ilng,ilat
       character num*2,bunit*32,types(5)*25,btype*32
       character telescop*16,atemp*16,observer*16,cellscal*16
       character object*32,pbtype*16
@@ -3985,29 +3757,29 @@ c
       if (rms.gt.0) call wrhdr(tno,'rms',rms)
       call fitrdhdr(lu,'pbfwhm',pbfwhm,0.0)
       atemp = telescop
-      if (pbfwhm.ne.0) call pbEncode(atemp,'gaus',PI/180/3600*pbfwhm)
+      if (pbfwhm.ne.0) call pbEncode(atemp,'gaus',pbfwhm*AS2R)
       call fitrdhda(lu,'pbtype',pbtype,atemp)
 c
 c  Get the axis coordinate information.
 c
-      call cord(lu,naxis,ctype,crval,crpix,cdelt,llrot,ilong,ilat)
+      call cord(lu,naxis,ctype,crval,crpix,cdelt,llrot,ilng,ilat)
 c
 c  Handle the OBSRA and OBSDEC keywords.
 c
-      if (ilong.ne.0 .and. ilat.ne.0) then
-        if (ctype(ilong)(1:5).eq.'RA---' .and.
+      if (ilng.ne.0 .and. ilat.ne.0) then
+        if (ctype(ilng)(1:5).eq.'RA---' .and.
      *     ctype(ilat)(1:5).eq.'DEC--') then
-          call fitrdhdd(lu,'OBSRA' ,obsra, crval(ilong))
+          call fitrdhdd(lu,'OBSRA' ,obsra, crval(ilng))
           call fitrdhdd(lu,'OBSDEC',obsdec,crval(ilat))
-          if (abs(obsra-crval(ilong)).gt.abs(cdelt(ilong)) .or.
+          if (abs(obsra-crval(ilng)).gt.abs(cdelt(ilng)) .or.
      *       abs(obsdec-crval(ilat)).gt.abs(cdelt(ilat))) then
-            call fitrdhdi(lu,'NAXIS'//itoaf(ilong),nx,0)
+            call fitrdhdi(lu,'NAXIS'//itoaf(ilng),nx,0)
             call fitrdhdi(lu,'NAXIS'//itoaf(ilat), ny,0)
             call output('Phase and pointing centers differ ...'//
      *                                ' saving pointing information')
             call mosInit(nx,ny)
             if (rms.le.0) rms = 1
-            call mosSet(1,DPI/180d0*obsra,DPI/180d0*obsdec,rms,pbtype)
+            call mosSet(1,obsra*DD2R,obsdec*DD2R,rms,pbtype)
             call mosSave(tno)
           else if (pbtype.ne.telescop) then
             call wrhda(tno,'pbtype',pbtype)
@@ -4020,18 +3792,18 @@ c
       do i = 1, naxis
         num = itoaf(i)
         if (ctype(i)(1:5).eq.'RA---' .or. ctype(i)(1:5).eq.'DEC--' .or.
-     *     ctype(i)(1:5).eq.'GLON-' .or. ctype(i)(1:5).eq.'GLAT-' .or.
-     *     ctype(i)(1:5).eq.'ELON-' .or. ctype(i)(1:5).eq.'ELAT-' .or.
-     *     ctype(i).eq.'ANGLE') then
-          crval(i) = DPI/180d0 * crval(i)
-          cdelt(i) = DPI/180d0 * cdelt(i)
+     *      ctype(i)(1:5).eq.'GLON-' .or. ctype(i)(1:5).eq.'GLAT-' .or.
+     *      ctype(i)(1:5).eq.'ELON-' .or. ctype(i)(1:5).eq.'ELAT-' .or.
+     *      ctype(i).eq.'ANGLE') then
+          crval(i) = crval(i) * DD2R
+          cdelt(i) = cdelt(i) * DD2R
         else if (ctype(i)(1:4).eq.'VELO' .or.
-     *          ctype(i)(1:4).eq.'FELO') then
-          crval(i) = 1d-3 * crval(i)
-          cdelt(i) = 1d-3 * cdelt(i)
+     *           ctype(i)(1:4).eq.'FELO') then
+          crval(i) = crval(i) * 1d-3
+          cdelt(i) = cdelt(i) * 1d-3
         else if (ctype(i)(1:4).eq.'FREQ') then
-          crval(i) = 1d-9 * crval(i)
-          cdelt(i) = 1d-9 * cdelt(i)
+          crval(i) = crval(i) * 1d-9
+          cdelt(i) = cdelt(i) * 1d-9
         else if (ctype(i).eq.'STOKES') then
           polcode = nint(crval(i)+(1-crpix(i))*cdelt(i))
 c  dpr 27-nov-00 ->
@@ -4077,9 +3849,9 @@ c
       call fitrdhda(lu,'CELLSCAL',cellscal,'CONSTANT')
       if (cellscal.ne.' ') call wrhda(tno,'cellscal',cellscal)
       call fitrdhdr(lu,'BMAJ',bmaj,0.0)
-      if (bmaj.ne.0.0) call wrhdr(tno,'bmaj',(pi/180)*bmaj)
+      if (bmaj.ne.0.0) call wrhdr(tno,'bmaj',bmaj*D2R)
       call fitrdhdr(lu,'BMIN',bmin,0.0)
-      if (bmin.ne.0.0) call wrhdr(tno,'bmin',(pi/180)*bmin)
+      if (bmin.ne.0.0) call wrhdr(tno,'bmin',bmin*D2R)
       call fitrdhdr(lu,'BPA',bpa,0.0)
       if (bmaj*bmin.ne.0.0) call wrhdr(tno,'bpa',bpa)
 
@@ -4087,10 +3859,9 @@ c
 
 c***********************************************************************
 
-      subroutine cord(lu,naxis,ctype,crval,crpix,cdelt,llrot,
-     *                                                ilong,ilat)
+      subroutine cord(lu,naxis,ctype,crval,crpix,cdelt,llrot,ilng,ilat)
 
-      integer lu,naxis,ilong,ilat
+      integer lu,naxis,ilng,ilat
       character ctype(naxis)*(*)
       double precision crval(naxis),crpix(naxis),cdelt(naxis),llrot
 c-----------------------------------------------------------------------
@@ -4098,21 +3869,22 @@ c  Load in FITS coordinate system and fiddle it into a Miriad coordinate
 c  system.
 c-----------------------------------------------------------------------
       include 'mirconst.h'
+
       integer i,j,k,l,l1,l2
       double precision dtemp,scale
       logical more
       character num*2
       character templat*8,ctemp*12,ctemp1*12
 
-c     Externals.
-      character itoaf*2,pc*8,cd1*8,cd2*8
-      integer len1
+      external  cd00ij, cdi_j, itoaf, len1, pc00ij
+      integer   len1
+      character cd00ij*8, cdi_j*8, itoaf*2, pc00ij*8
 
-      data templat/'-----CAR'/
+      data templat /'-----CAR'/
 c-----------------------------------------------------------------------
-      ilong = 0
-      ilat = 0
-      llrot = 0
+      ilng  = 0
+      ilat  = 0
+      llrot = 0d0
 
       do i = 1, naxis
         num = itoaf(i)
@@ -4131,9 +3903,9 @@ c-----------------------------------------------------------------------
         if (ctemp.eq.' ' .and. i.eq.2) ctemp = 'DEC--SIN'
         if (ctemp.eq.'VLSR') then
           ctemp = 'VELO-LSR'
-          scale = 1000.0
+          scale = 1000d0
         else
-          scale = 1.0
+          scale = 1d0
         endif
 
         l1 = index(ctemp,'-') - 1
@@ -4154,19 +3926,19 @@ c-----------------------------------------------------------------------
         call fitrdhdd(lu,'CRVAL'//num,crval(i),0d0)
 
 
-        call fitrdhdd(lu,cd1(i,i),cdelt(i),1d0)
-        call fitrdhdd(lu,cd2(i,i),dtemp,cdelt(i))
+        call fitrdhdd(lu,cd00ij(i,i),cdelt(i),1d0)
+        call fitrdhdd(lu,cdi_j(i,i),dtemp,cdelt(i))
         call fitrdhdd(lu,'CDELT'//num,cdelt(i),dtemp)
         cdelt(i) = scale*cdelt(i)
         crval(i) = scale*crval(i)
 
         if (ctype(i).eq.'RA'  .or. ctype(i)(1:5).eq.'RA---' .or.
-     *     ctype(i).eq.'GLON' .or. ctype(i)(1:5).eq.'GLON-' .or.
-     *     ctype(i).eq.'ELON' .or. ctype(i)(1:5).eq.'ELON-') then
-          ilong = i
+     *      ctype(i).eq.'GLON' .or. ctype(i)(1:5).eq.'GLON-' .or.
+     *      ctype(i).eq.'ELON' .or. ctype(i)(1:5).eq.'ELON-') then
+          ilng = i
         else if (ctype(i).eq.'DEC' .or. ctype(i)(1:5).eq.'DEC--' .or.
-     *          ctype(i).eq.'GLAT' .or. ctype(i)(1:5).eq.'GLAT-' .or.
-     *          ctype(i).eq.'ELAT' .or. ctype(i)(1:5).eq.'ELAT-') then
+     *           ctype(i).eq.'GLAT' .or. ctype(i)(1:5).eq.'GLAT-' .or.
+     *           ctype(i).eq.'ELAT' .or. ctype(i)(1:5).eq.'ELAT-') then
           ilat = i
         endif
       enddo
@@ -4176,23 +3948,23 @@ c
       do j = 1, naxis
         do i = 1, naxis
           if (i.ne.j .and. .not.(
-     *        (i.eq.ilong .and. j.eq.ilat) .or.
-     *        (j.eq.ilong .and. i.eq.ilat))) then
-            call fitrdhdd(lu,pc(i,j),dtemp,0d0)
+     *        (i.eq.ilng .and. j.eq.ilat) .or.
+     *        (j.eq.ilng .and. i.eq.ilat))) then
+            call fitrdhdd(lu,pc00ij(i,j),dtemp,0d0)
             if (dtemp.ne.0) call bug('w',
      *        'Cannot handle non-zero FITS skewness parameter '//
-     *        pc(i,j))
-            call fitrdhdd(lu,cd1(i,j),dtemp,0d0)
+     *        pc00ij(i,j))
+            call fitrdhdd(lu,cd00ij(i,j),dtemp,0d0)
             if (dtemp.ne.0) call bug('w',
      *        'Cannot handle non-zero FITS skewness parameter '//
-     *        cd1(i,j))
-            call fitrdhdd(lu,cd2(i,j),dtemp,0d0)
+     *        cd00ij(i,j))
+            call fitrdhdd(lu,cdi_j(i,j),dtemp,0d0)
             if (dtemp.ne.0) call bug('w',
      *        'Cannot handle non-zero FITS skewness parameter '//
-     *        cd2(i,j))
+     *        cdi_j(i,j))
           endif
         enddo
-        if (j.ne.ilat .and. j.ne.ilong) then
+        if (j.ne.ilat .and. j.ne.ilng) then
           call fitrdhdd(lu,'CROTA'//itoaf(j),dtemp,0d0)
           if (dtemp.ne.0) call bug('w',
      *        'Cannot handle non-zero FITS rotation parameter '//
@@ -4202,20 +3974,20 @@ c
 c
 c  Determine the rotation.
 c
-      if (ilat.ne.0 .and. ilong.ne.0) then
-        call cdget(lu,ilong,ilat,cdelt(ilong),cdelt(ilat),llrot)
+      if (ilat.ne.0 .and. ilng.ne.0) then
+        call cdget(lu,ilng,ilat,cdelt(ilng),cdelt(ilat),llrot)
 c
 c  Convert projectionless latitude/longitude into -CAR projection type.
 c
-        if (ctype(ilong)(6:).eq.' ' .and. ctype(ilat)(6:).eq.' ') then
-          l = len1(ctype(ilong))
-          ctype(ilong)(l+1:) = templat(l+1:)
+        if (ctype(ilng)(6:).eq.' ' .and. ctype(ilat)(6:).eq.' ') then
+          l = len1(ctype(ilng))
+          ctype(ilng)(l+1:) = templat(l+1:)
           l = len1(ctype(ilat))
           ctype(ilat)(l+1:) =  templat(l+1:)
-          if (abs(llrot).gt.1e-3) call bug('w',
+          if (abs(llrot).gt.1d-3) call bug('w',
      *        'Cannot handle rotation with -CAR projection')
-          llrot = 0
-          cdelt(ilong) = cdelt(ilong)*cos(DPI/180d0*crval(ilat))
+          llrot = 0d0
+          cdelt(ilng) = cdelt(ilng)*cos(crval(ilat)*DD2R)
         endif
       endif
 
@@ -4223,59 +3995,59 @@ c
 
 c***********************************************************************
 
-      subroutine cdget(lu,ilong,ilat,cdelt1,cdelt2,llrot)
+      subroutine cdget(lu,ilng,ilat,cdelt1,cdelt2,llrot)
 
-      integer lu,ilong,ilat
+      integer lu,ilng,ilat
       double precision cdelt1,cdelt2,llrot
 c-----------------------------------------------------------------------
 c  Get the longitude/latitude transformation matrix.
 c-----------------------------------------------------------------------
       include 'mirconst.h'
-      double precision crota,pc11,pc12,pc21,pc22,cd11,cd12,cd21,cd22
-      double precision dtemp
 
-c     Externals.
-      character itoaf*2,pc*8,cd1*8,cd2*8
+      double precision cd11, cd12, cd21, cd22, crota1, crota2, dtemp,
+     *          pc11, pc12, pc21, pc22
+
+      external  cd00ij, cdi_j, itoaf, pc00ij
+      character cd00ij*8, cdi_j*8, itoaf*2, pc00ij*8
 c-----------------------------------------------------------------------
-      call fitrdhdd(lu,'CDELT'//itoaf(ilong),cdelt1,1d0)
+      call fitrdhdd(lu,'CDELT'//itoaf(ilng),cdelt1,1d0)
       call fitrdhdd(lu,'CDELT'//itoaf(ilat),cdelt2,1d0)
-      call fitrdhdd(lu,'CROTA'//itoaf(ilat),crota,0d0)
-      crota = DPI/180d0 * crota
+      call fitrdhdd(lu,'CROTA'//itoaf(ilat),crota2,0d0)
+      crota2 = crota2*DD2R
 
-      call fitrdhdd(lu,pc(ilong,ilong),pc11,cos(crota))
-      if (crota.ne.0) then
-        call fitrdhdd(lu,pc(ilong,ilat), pc12,
-     *                                -sin(crota)*cdelt2/cdelt1)
-        call fitrdhdd(lu,pc(ilat,ilong), pc21,
-     *                                 sin(crota)*cdelt1/cdelt2)
+      call fitrdhdd(lu,pc00ij(ilng,ilng),pc11,cos(crota2))
+      if (crota2.ne.0d0) then
+        call fitrdhdd(lu,pc00ij(ilng,ilat), pc12,
+     *                   -sin(crota2)*cdelt2/cdelt1)
+        call fitrdhdd(lu,pc00ij(ilat,ilng), pc21,
+     *                    sin(crota2)*cdelt1/cdelt2)
       else
-        pc12 = 0
-        pc21 = 0
+        pc12 = 0d0
+        pc21 = 0d0
       endif
-      call fitrdhdd(lu,pc(ilat,ilat),  pc22,cos(crota))
+      call fitrdhdd(lu,pc00ij(ilat,ilat),pc22,cos(crota2))
 
-      call fitrdhdd(lu,cd1(ilong,ilong),dtemp,pc11*cdelt1)
-      call fitrdhdd(lu,cd2(ilong,ilong),cd11,dtemp)
+      call fitrdhdd(lu,cd00ij(ilng,ilng),dtemp,pc11*cdelt1)
+      call fitrdhdd(lu,cdi_j(ilng,ilng),cd11,dtemp)
 
-      call fitrdhdd(lu,cd1(ilong,ilat),dtemp,pc12*cdelt1)
-      call fitrdhdd(lu,cd2(ilong,ilat),cd12,dtemp)
+      call fitrdhdd(lu,cd00ij(ilng,ilat),dtemp,pc12*cdelt1)
+      call fitrdhdd(lu,cdi_j(ilng,ilat),cd12,dtemp)
 
-      call fitrdhdd(lu,cd1(ilat,ilong),dtemp,pc21*cdelt2)
-      call fitrdhdd(lu,cd2(ilat,ilong),cd21,dtemp)
+      call fitrdhdd(lu,cd00ij(ilat,ilng),dtemp,pc21*cdelt2)
+      call fitrdhdd(lu,cdi_j(ilat,ilng),cd21,dtemp)
 
-      call fitrdhdd(lu,cd1(ilat,ilat),dtemp,pc22*cdelt2)
-      call fitrdhdd(lu,cd2(ilat,ilat),cd22,dtemp)
-c
-c  We have the CD parameters. Now convert these to cdelt1,cdelt2,llrot
-c
-      llrot = atan(cd21/cd11)
-      dtemp = atan(-cd12/cd22)
-      if (abs(dtemp-llrot).gt.1e-3) then
+      call fitrdhdd(lu,cd00ij(ilat,ilat),dtemp,pc22*cdelt2)
+      call fitrdhdd(lu,cdi_j(ilat,ilat),cd22,dtemp)
+
+c     Convert CDi_j to cdelt1, cdelt2, llrot.
+      crota1 = atan( cd21/cd11)
+      crota2 = atan(-cd12/cd22)
+      if (abs(crota2-crota1).gt.1d-3) then
         call bug('w',
      *    'Image plane is skew, which Miriad does not support')
         call bug('w','Using some mean rotation')
       endif
-      llrot = 0.5*(llrot + dtemp)
+      llrot  = (crota1 + crota2)/2d0
       cdelt1 = cd11/cos(llrot)
       cdelt2 = cd22/cos(llrot)
 
@@ -4283,33 +4055,27 @@ c
 
 c***********************************************************************
 
-      character*(*) function pc(i,j)
+      character*(*) function pc00ij(i,j)
 
       integer i,j
 c-----------------------------------------------------------------------
-      character keyw*8
-c-----------------------------------------------------------------------
-      write(keyw,'(a,i3.3,i3.3)')'PC',i,j
-      pc = keyw
+      write(pc00ij,'(a,i3.3,i3.3)') 'PC', i, j
 
       end
 
 c***********************************************************************
 
-      character*(*) function cd1(i,j)
+      character*(*) function cd00ij(i,j)
 
       integer i,j
 c-----------------------------------------------------------------------
-      character keyw*8
-c-----------------------------------------------------------------------
-      write(keyw,'(a,i3.3,i3.3)')'CD',i,j
-      cd1 = keyw
+      write(cd00ij,'(a,i3.3,i3.3)') 'CD', i, j
 
       end
 
 c***********************************************************************
 
-      character*(*) function cd2(i,j)
+      character*(*) function cdi_j(i,j)
 
       integer i,j
 c-----------------------------------------------------------------------
@@ -4322,7 +4088,7 @@ c     Externals.
 c-----------------------------------------------------------------------
       keyw = 'CD'//itoaf(i)
       l = len1(keyw)
-      cd2 = keyw(1:l)//'_'//itoaf(j)
+      cdi_j = keyw(1:l) // '_' // itoaf(j)
 
       end
 
@@ -4402,6 +4168,7 @@ c  Convert a DSS header into a normal Miriad one.
 c
 c-----------------------------------------------------------------------
       include 'mirconst.h'
+
       real xpixelsz,ypixelsz,pltscale,objctx,objcty,cnpix1,cnpix2
       double precision crval1,crval2,cdelt1,cdelt2,crpix1,crpix2
       character objctra*16,objctdec*16
@@ -4420,12 +4187,12 @@ c
 
       crpix1 = objctx - cnpix1 + 1
       crpix2 = objcty - cnpix2 + 1
-      cdelt1 = -dpi/180d0/3600d0 * xpixelsz * pltscale * 1e-3
-      cdelt2 =  dpi/180d0/3600d0 * ypixelsz * pltscale * 1e-3
+      cdelt1 = -xpixelsz * pltscale * 1e-3 * DAS2R
+      cdelt2 =  ypixelsz * pltscale * 1e-3 * DAS2R
       call decval(crval1,objctra)
-      crval1 = dpi/12d0 * crval1
+      crval1 = crval1*15d0*DD2R
       call decval(crval2,objctdec)
-      crval2 = dpi/180d0 * crval2
+      crval2 = crval2*DD2R
 
       call wrhdr(tno,'epoch',2000.0)
       call wrhdd(tno,'crpix1',crpix1)
@@ -4635,6 +4402,7 @@ c               used to determine crpix if a subregion was
 c               selected
 c-----------------------------------------------------------------------
       include 'mirconst.h'
+
       integer i,npnt
       character num*2,ctype*32,date*32,card*80
       real bmaj,bmin,rms
@@ -4654,8 +4422,8 @@ c
         if (npnt.gt.1) call bug('w',
      *  'Mosaicing information not stored in output FITS file')
         call mosGet(1,obsra,obsdec,rms,telescop)
-        call fitwrhdd(lu,'OBSRA',180d0/DPI * obsra)
-        call fitwrhdd(lu,'OBSDEC',180d0/DPI * obsdec)
+        call fitwrhdd(lu,'OBSRA', obsra*DR2D)
+        call fitwrhdd(lu,'OBSDEC',obsdec*DR2D)
       else
         call rdhda(tno,'telescop',telescop,' ')
       endif
@@ -4674,7 +4442,7 @@ c
      *     ctype(1:5).eq.'GLAT-' .or.
      *     ctype(1:5).eq.'ELON-' .or.
      *     ctype(1:5).eq.'ELAT-') then
-          scale = 180d0/DPI
+          scale = DR2D
 
           call coGetd(tno,'llrot',crota)
 c
@@ -4702,10 +4470,10 @@ c
             givegls = .false.
           endif
           if (crota.ne.0 .and. i.eq.2)
-     *       call fitwrhdd(lu,'CROTA'//num,180.0/DPI*crota)
+     *       call fitwrhdd(lu,'CROTA'//num,crota*DR2D)
 
         else if (ctype.eq.'ANGLE') then
-          scale =180d0/DPI
+          scale = DR2D
         else if (ctype(1:4).eq.'FREQ') then
           scale = 1d9
         else if (ctype(1:4).eq.'VELO' .or. ctype(1:4).eq.'FELO') then
@@ -4732,9 +4500,9 @@ c
       if (cellscal.ne.' ') call fitwrhda(lu,'CELLSCAL',cellscal)
 
       call rdhdr(tno,'bmaj',bmaj,0.0)
-      if (bmaj.ne.0) call fitwrhdr(lu,'BMAJ',(180/pi)*bmaj)
+      if (bmaj.ne.0) call fitwrhdr(lu,'BMAJ',bmaj*R2D)
       call rdhdr(tno,'bmin',bmin,0.0)
-      if (bmin.ne.0) call fitwrhdr(lu,'BMIN',(180/pi)*bmin)
+      if (bmin.ne.0) call fitwrhdr(lu,'BMIN',bmin*R2D)
 
       end
 
