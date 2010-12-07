@@ -9,11 +9,10 @@ c    - naxis and naxis# which are maintained by XYOPEN and XYZOPEN,
 c    - datamin, datamax, and rms must be recalculated for the output
 c      image and updated with WRHDR.
 c
-c  The items listed in the KEYW array (below) are copied verbatim except
-c  for crpix, crval, cdelt, crota, ctype, and pc which may be deleted,
-c  exchanged, or reversed depending on axis permutations.  The axMap
-c  array defines the relation between new and old axes in the sense
-c  axMap(new) = old, e.g.
+c  Keywords are copied verbatim except for crpix, crval, cdelt, ctype,
+c  and pc which may be deleted, exchanged, or reversed depending on axis
+c  permutations.  The axMap array defines the relation between new and
+c  old axes in the sense axMap(new) = old, e.g.
 c
 c                                      axMap
 c                        nAxMap  (1)  (2)  (3)  (4)
@@ -28,8 +27,7 @@ c
 c  The last entry shows the shorthand used in the common case where
 c  there are no axis permutations or reversals.
 c
-c  For reversed axes cdelt is multiplied by -1 and 180 is added to
-c  crota.
+c  For reversed axes cdelt is multiplied by -1.
 c
 c  For output images whose corners differ from the input image, crpix
 c  may have to be corrected.  This is done using the arrays blc and trc
@@ -53,44 +51,48 @@ c    trc        List of top-right-corners of input image region.
 c               Can be specified as 0 (scalar) meaning
 c               (naxis1,naxis2,...) for the input image.
 c
-c $Id: headcopy.for,v 1.8 2010/11/24 04:53:42 cal103 Exp $
+c $Id: headcopy.for,v 1.9 2010/12/07 04:56:16 cal103 Exp $
 c-----------------------------------------------------------------------
-      integer   CRPIX, CDELT, CRVAL, CROTA, CTYPE
-      parameter (CRPIX = 1, CDELT = 2, CRVAL = 3, CTYPE = 4, CROTA = 5)
+      integer   CRPIX, CDELT, CRVAL, CTYPE
+      parameter (CRPIX = 1, CDELT = 2, CRVAL = 3, CTYPE = 4)
 
-      integer   NKEYS
-      parameter (NKEYS = 38)
+      integer   NKEYW
+      parameter (NKEYW = 26)
 
       logical   noPerm, verbtm
       integer   axLen, iAxIn, iAxOut, jAxIn, jAxOut, nAxOut, k, m
-      double precision defVal(4), dvalue
-      character avalue*80, keyIn*8, keyOut*8, keyw(NKEYS)*8
+      double precision defVal(4), dval
+      character cval*80, keyIn*8, keyOut*8, keyw(NKEYW)*8
 
       logical   hdprsnt
       character itoaf*1
       external  hdprsnt, itoaf
 
       data defVal /0d0, 1d0, 0d0, 0d0/
+
+c     The following coordinate keywords are handled individually below:
+c       crpix, cdelt, crval, ctype, llrot, pc,
+c       lonpole, latpole, phi0, theta0, xyzero, pv.
+c     The remainder are copied verbatim in the order defined here if
+c     present in the input image.
       data keyw /
-     *    'crpix   ', 'cdelt   ', 'crval   ', 'ctype   ', 'crota   ',
-     *    'pc      ', 'pv      ', 'phi0    ', 'theta0  ', 'lonpole ',
-     *    'latpole ', 'llrot   ', 'bmaj    ', 'bmin    ', 'bpa     ',
-     *    'btype   ', 'bunit   ', 'cellscal', 'date-obs', 'epoch   ',
-     *    'instrume', 'ltype   ', 'lstart  ', 'lstep   ', 'lwidth  ',
-     *    'mostable', 'niters  ', 'object  ', 'observer', 'obsra   ',
-     *    'obsdec  ', 'obstime ', 'pbfwhm  ', 'pbtype  ', 'restfreq',
-     *    'telescop', 'vobs    ', 'history '/
+     *    'bmaj    ', 'bmin    ', 'bpa     ', 'btype   ', 'bunit   ',
+     *    'cellscal', 'date-obs', 'epoch   ', 'instrume', 'ltype   ',
+     *    'lstart  ', 'lstep   ', 'lwidth  ', 'mostable', 'niters  ',
+     *    'object  ', 'observer', 'obsra   ', 'obsdec  ', 'obstime ',
+     *    'pbfwhm  ', 'pbtype  ', 'restfreq', 'telescop', 'vobs    ',
+     *    'history '/
 c-----------------------------------------------------------------------
       call rdhdi(lOut, 'naxis', nAxOut, 0)
 
-c     Copy crpix, crval, cdelt, and ctype for each axis.  All axes in
+c     Copy crpix, cdelt, crval, and ctype for each axis.  All axes in
 c     the output image must have these basic coordinate keywords.  
       noPerm = axMap(1).eq.0
       verbtm = nAxMap.eq.0
       do k = 1, 4
 c       Set default values.
-        avalue = ' '
-        dvalue = defVal(k)
+        cval = ' '
+        dval = defVal(k)
 
         do iAxOut = 1, nAxOut
           keyOut = keyw(k)(1:5) // itoaf(iAxOut)
@@ -116,16 +118,16 @@ c             Use default values.
               if (hdprsnt(lIn, keyIn)) then
 c               Read it from the input image.
                 if (k.eq.CTYPE) then
-                  call rdhda(lIn, keyIn, avalue, ' ')
+                  call rdhda(lIn, keyIn, cval, ' ')
                 else
-                  call rdhdd(lIn, keyIn, dvalue, 0d0)
+                  call rdhdd(lIn, keyIn, dval, 0d0)
                 endif
 
                 if (iAxIn.gt.0) then
                   if (k.eq.CRPIX) then
 c                   Sub-imaging.
                     if (.not.verbtm .and. blc(1).ne.0) then
-                      dvalue = dvalue - dble(blc(iAxIn)-1)
+                      dval = dval - dble(blc(iAxIn)-1)
                     endif
                   endif
 
@@ -142,10 +144,10 @@ c                   Sub-imaging.
                       call rdhdi(lOut, keyIn, axLen, 0)
                     endif
 
-                    dvalue = dble(axLen+1) - dvalue
+                    dval = dble(axLen+1) - dval
 
                   else if (k.eq.CDELT) then
-                    dvalue = -dvalue
+                    dval = -dval
                   endif
                 endif
               endif
@@ -153,54 +155,20 @@ c                   Sub-imaging.
 
 c           Write it to the output image.
             if (k.eq.CTYPE) then
-              call wrhda(lOut, keyOut, avalue)
+              call wrhda(lOut, keyOut, cval)
             else
-              call wrhdd(lOut, keyOut, dvalue)
+              call wrhdd(lOut, keyOut, dval)
             endif
           endif
         enddo
       enddo
 
-
-c     crota (and llrot) is deprecated in favour of pci_j, only copy it
-c     if present in the input image.
-      do iAxOut = 1, nAxOut
-        keyOut = 'crota' // itoaf(iAxOut)
-
-        if (verbtm) then
-c         Copy verbatim.
-          call hdcopy(lIn, lOut, keyOut)
-
-        else
-c         Handle axis permutations.
-          if (noPerm) then
-            iAxIn = iAxOut
-          else if (iAxOut.le.nAxMap) then
-            iAxIn = axMap(iAxOut)
-          else
-c           Skip it.
-            iAxIn = 0
-          endif
-
-          if (iAxIn.ne.0) then
-            keyIn = 'crota' // itoaf(abs(iAxIn))
-
-            if (hdprsnt(lIn, keyIn)) then
-c             Read it from the input image.
-              call rdhdd(lIn, keyIn, dvalue, 0d0)
-
-              if (iAxIn.lt.0) then
-c               Axis reversal.
-                dvalue = dvalue - 180d0
-              endif
-
-c             Write it to the output image.
-              call wrhdd(lOut, keyOut, dvalue)
-            endif
-          endif
-        endif
-      enddo
-
+c     llrot is deprecated in favour of pci_j, only copied if present in
+c     the input image and non-zero.
+      call rdhdd(lIn, 'llrot', dval, 0d0)
+      if (dval.ne.0d0) then
+        call wrhdd(lOut, 'llrot', dval)
+      endif
 
 c     Copy whatever linear transformation matrix elements are present,
 c     with transposition if necessary.
@@ -230,26 +198,31 @@ c             Skip it.
 
               if (hdprsnt(lIn, keyIn)) then
 c               Read it from the input image.
-                call rdhdd(lIn, keyIn, dvalue, 0d0)
+                call rdhdd(lIn, keyIn, dval, 0d0)
 
 c               Write it to the output image.
-                call wrhdd(lOut, keyOut, dvalue)
+                call wrhdd(lOut, keyOut, dval)
               endif
             endif
           endif
         enddo
       enddo
 
+c     Parameters related to celestial coordinates.
+      call hdcopy(lIn, lOut, 'lonpole')
+      call hdcopy(lIn, lOut, 'latpole')
+      call hdcopy(lIn, lOut, 'phi0')
+      call hdcopy(lIn, lOut, 'theta0')
+      call hdcopy(lIn, lOut, 'xyzero')
 
-c     Copy projection parameters, if present in the input image.
+c     Projection parameters.
       do m = 0, 29
         keyOut = 'pv' // itoaf(m)
         call hdcopy(lIn, lOut, keyOut)
       enddo
 
-
 c     Copy the remaining items verbatim, if present.
-      do k = 8, NKEYS
+      do k = 1, NKEYW
         call hdcopy(lIn, lOut, keyw(k))
       enddo
 
