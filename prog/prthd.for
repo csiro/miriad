@@ -1,22 +1,21 @@
       program prthd
 
-c= PRTHD -- Print a summary about the contents of a data-set.
+c= PRTHD -- Summarise the contents of a data-set.
 c& rjs
 c: miscellaneous
 c+
-c       PRTHD is a Miriad task that summarises about a Miriad data-set.
+c       PRTHD is a Miriad task that summarises a Miriad data-set.
 c@ in
-c       Name of the input data-set. No default. This may be either a uv
-c       or image data-set. Several names can be given. Names can include
-c       wildcards.
+c       Input image and/or uv data-sets.  Several may be given, and
+c       their names may include wildcards.  No default. 
 c@ log
-c       Output log file. Default is the terminal.
+c       Output log file.  Default is the terminal.
 c@ options
-c       Extra processing options. Possible values are:
+c       Extra processing options.  Possible values are:
 c         brief   Give one line description of each file.
 c         full    Several line description of each file (default).
 c
-c$Id: prthd.for,v 1.3 2010/12/07 04:36:02 cal103 Exp $
+c$Id: prthd.for,v 1.4 2010/12/07 04:46:30 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -24,21 +23,22 @@ c
 c  Bugs and Shortcomings:
 c    * Descriptions in brief mode could be a bit more verbose!
 c-----------------------------------------------------------------------
-      character version*(*)
-      parameter (version='Prthd: version 03-Jan-05')
-
       integer    MAXIN
       parameter (MAXIN=256)
 
       logical   full, more
       integer   i, iostat, nin, tno
-      character in(MAXIN)*64, line*80, logf*64
+      character in(MAXIN)*64, line*80, logf*64, version*72
 
-      external hdprsnt
-      logical  hdprsnt
+      external  hdprsnt, versan
+      logical   hdprsnt
+      character versan*80
 c-----------------------------------------------------------------------
+      version = versan('prthd',
+     *                 '$Revision: 1.4 $',
+     *                 '$Date: 2010/12/07 04:46:30 $')
+
 c     Get input parameters.
-      call output(version)
       call keyini
       call mkeyf('in',in,MAXIN,nin)
       call keya('log',logf,' ')
@@ -136,15 +136,14 @@ c-----------------------------------------------------------------------
       include 'mirconst.h'
 
       logical   more
-      integer   il1, il2, ival
+      integer   ival, m
       real      rval1, rval2, rval3
       double precision dval
-      character aval1*72, aval2*72, line*80
+      character aval1*72, aval2*72, keyw*6, line*80
 
-      external  hdprsnt, itoaf, len1
+      external  hfff, hdprsnt, itoaf, spaste
       logical   hdprsnt
-      integer   len1
-      character itoaf*12
+      character hfff*32, itoaf*12, spaste*80
 c-----------------------------------------------------------------------
       line = 'Filename: '//in
       call logwrite(line,more)
@@ -152,42 +151,41 @@ c-----------------------------------------------------------------------
 c     Telescope/observer/object parameters.
       call rdhda(tno, 'instrume', aval1, ' ')
       call rdhda(tno, 'telescop', aval2, ' ')
-      il1 = len1(aval1)
-      il2 = len1(aval2)
-      if (il1.gt.0 .and. il2.gt.0) then
-        call logwrite('Instrument: '//aval1(1:15)//
-     *                ' Telescope: '//aval2(1:il2),more)
-      else if (il1.gt.0) then
-        call logwrite('Instrument: '//aval1(1:il1),more)
-      else if (il2.gt.0) then
-        call logwrite('Telescope: '//aval2(1:il2),more)
+      if (aval1.ne.' ') then
+        if (aval2.ne.' ') then
+          call logwrite('Instrument: '//aval1(1:15)//
+     *                  ' Telescope: '//aval2, more)
+        else
+          call logwrite('Instrument: '//aval1, more)
+        endif
+      else if (aval2.ne.' ') then
+        call logwrite('Telescope: '//aval2, more)
       endif
 
       call rdhda(tno, 'object',   aval1, ' ')
       call rdhda(tno, 'observer', aval2, ' ')
-      il1 = len1(aval1)
-      il2 = len1(aval2)
-      if (il1.gt.0 .and. il2.gt.0) then
-        call logwrite('Object: '//aval1(1:19)
-     *               //' Observer: '//aval2(1:il2),more)
-      else if (il1.gt.0) then
-        call logwrite('Object: '//aval1(1:il1),more)
-      else if (il2.gt.0) then
-        call logwrite('Observer: '//aval2(1:il2),more)
+      if (aval1.ne.' ') then
+        if (aval2.ne.' ') then
+          call logwrite('Object: '//aval1(1:19)//
+     *                  ' Observer: '//aval2, more)
+        else
+          call logwrite('Object: '//aval1, more)
+        endif
+      else if (aval2.ne.' ') then
+        call logwrite('Observer: '//aval2, more)
       endif
 
 c     Image type.
       call rdhda(tno,'btype',aval1,' ')
-      il1 = len1(aval1)
-      if (il1.gt.0) call logwrite('Image type: '//aval1(1:il1),more)
+      if (aval1.ne.' ') call logwrite('Image type: '//aval1,more)
 
 c     Min, max values and units.
       call rdhdr(tno,'datamax',rval1,0.0)
-      call rdhdr(tno,'datamin',rval2,rval1+1)
+      call rdhdr(tno,'datamin',rval2,rval1+1.0)
       call rdhda(tno,'bunit',aval1, ' ')
       if (rval1.ge.rval2) then
-        write(line, 40) rval1, rval2, aval1(1:len1(aval1))
-40      format('Maximum: ', 1pe15.8, 4x, 'Minimum: ', 1pe15.8, 2x, a)
+        write(line, 10) rval1, rval2, aval1
+ 10     format('Maximum: ',1pe15.8,4x,'Minimum: ',1pe15.8,2x,a)
         call logwrite(line,more)
       else
         call logwrite('Map flux units: '//aval1,more)
@@ -210,7 +208,7 @@ c     Synthesised beam parameters.
         call logwrite(line,more)
       endif
 
-c     Dimension info.
+c     Summarise axis coordinate info.
       call rdhdi(tno, 'naxis', ival, 0)
       write(line,'(a,i2,a)')'This image has',ival,' axes.'
       call logwrite(line,more)
@@ -221,33 +219,103 @@ c     Parameters related to coordinates.
       if (dval.ne.0d0) then
         write(line,'(a,f6.1,a)')
      *    'Image/Sky Rotation Angle:',dval*R2D,' degrees'
-        call logwrite(line,more)
-        call logwrite(' ',more)
+        call logwrite(line, more)
       endif
+
+c     lonpole and latpole.
+      if (hdprsnt(tno,'lonpole')) then
+        call rdhdd(tno, 'lonpole', dval, 0d0)
+        aval1 = hfff(dval, 0.1d0, 1d3, 1, 'f10.2', '1pe10.2')
+
+        if (hdprsnt(tno,'latpole')) then
+          line = spaste('lonpole,latpole: (', '//', aval1, ' ')
+
+          call rdhdd(tno, 'latpole', dval, 0d0)
+          aval1 = hfff(dval, 1d0, 1d3, 1, 'f10.2', '1pe10.2')
+          line = spaste(line, ',', aval1, ') deg')
+        else
+          line = spaste('lonpole:', ' ', aval1, ' deg')
+        endif
+
+        call logwrite(line, more)
+      else if (hdprsnt(tno,'latpole')) then
+        call rdhdd(tno, 'latpole', dval, 0d0)
+        aval1 = hfff(dval, 1d0, 1d3, 1, 'f10.2', '1pe10.2')
+        line = spaste('latpole:', ' ', aval1, ' deg')
+        call logwrite(line, more)
+      endif
+
+c     phi0, theta0, and xyzero.
+      if (hdprsnt(tno,'phi0') .or. hdprsnt(tno,'theta0')) then
+        if (hdprsnt(tno,'phi0')) then
+          call rdhdd(tno, 'phi0', dval, 0d0)
+          aval1 = hfff(dval, 1d0, 1d3, 1, 'f10.2', '1pe10.2')
+          if (hdprsnt(tno,'theta0')) then
+            line = spaste('phi0,theta0: (', '//', aval1, ' ')
+            call rdhdd(tno, 'theta0', dval, 0d0)
+            aval1 = hfff(dval, 1d0, 1d3, 1, 'f10.2', '1pe10.2')
+            line = spaste(line, ',', aval1, ') deg')
+          else
+            line = spaste('phi0:', ' ', aval1, '  deg')
+          endif
+        else if (hdprsnt(tno,'theta0')) then
+          call rdhdd(tno, 'theta0', dval, 0d0)
+          aval1 = hfff(dval, 1d0, 1d3, 1, 'f10.2', '1pe10.2')
+          line = spaste('theta0:', ' ', aval1, ' deg')
+        endif
+
+        call rdhdi(tno, 'xyzero', ival, 0)
+        if (ival.eq.0) then
+          line = spaste(line, ', ', 'offset not applied', ' ')
+        else
+          line = spaste(line, ', ', 'offset applied', ' ')
+        endif
+
+        call logwrite(line, more)
+      endif
+
+c     Projection parameters.
+      do m = 0, 29
+        keyw = 'pv' // itoaf(m)
+        if (hdprsnt(tno,keyw)) then
+          call rdhdd(tno, keyw, dval, 0d0)
+          keyw = spaste(keyw, '//', ':', ' ')
+          line = keyw // hfff(dval, 1d-3, 1d3, 1, 'f13.8', '1pe17.8')
+          call logwrite(line, more)
+        endif
+      enddo
+
+c     Time of observation.
       call rdhdd(tno, 'obstime', dval, 0d0)
       if (dval.gt.0) then
         call julday(dval,'H',aval1)
-        line = 'Average Time of observation: '//aval1
+        line = 'Average time of observation: '//aval1
         call logwrite(line,more)
       endif
+
+c     Equinox.
       call rdhdr(tno, 'epoch', rval1, 0.0)
       if (rval1.gt.0) then
-        if (rval1.lt.1984) then
+        if (rval1.lt.1984.0) then
           aval1 = 'B'
         else
           aval1 = 'J'
         endif
-        il1 = len1(aval1)
-        write(line, '(a,a,f7.2,a)')
+
+        write(line, '(a,a,f6.1,a)')
      *    'Equinox:                     ',aval1(1:1),rval1
         call logwrite(line,more)
       endif
+
+c     Rest frequency.
       call rdhdd(tno,'restfreq',dval,0d0)
-      if (dval.gt.0) then
+      if (dval.gt.0d0) then
         write(line,'(a,f13.6,a)')
      *    'Rest frequency:         ',dval,' GHz'
         call logwrite(line,more)
       endif
+
+c     Observatory radial velocity.
       if (hdprsnt(tno,'vobs')) then
         call rdhdr(tno,'vobs',rval1,0.0)
         write(line,'(a,f8.2,a)')
@@ -293,6 +361,88 @@ c     Check for extra tables, etc.
 
 c***********************************************************************
 
+      character*(*) function spaste (str1, sep, str2, str3)
+
+      character sep*(*), str1*(*), str2*(*), str3*(*)
+c-----------------------------------------------------------------------
+c  Paste strings together: trailing blanks are stripped from the first
+c  and leading and trailing blanks from the second, with sep sandwiched
+c  between them and str3 appended (as is).
+c
+c  Use sep = '//' to denote an empty separator (since Fortran doesn't
+c  allow empty strings).
+c-----------------------------------------------------------------------
+      integer k1, k2, k3
+c-----------------------------------------------------------------------
+      do k1 = len(str1), 1, -1
+        if (str1(k1:k1).ne.' ') goto 10
+      enddo
+
+ 10   do k2 = 1, len(str2)
+        if (str2(k2:k2).ne.' ') goto 20
+      enddo
+
+ 20   do k3 = len(str2), k2, -1
+        if (str2(k3:k3).ne.' ') goto 30
+      enddo
+
+ 30   if (sep.eq.'//') then
+        spaste = str1(:k1) // str2(k2:k3) // str3
+      else
+        spaste = str1(:k1) // sep // str2(k2:k3) // str3
+      endif
+
+      end
+
+c***********************************************************************
+
+      character*(*) function hfff (dval, rng1, rng2, clean, ffmt, efmt)
+
+      integer   clean
+      double precision dval, rng1, rng2
+      character efmt*(*), ffmt*(*)
+c-----------------------------------------------------------------------
+c  Human-friendly floating format.  If rng1 <= abs(dval) < rng2 and ffmt
+c  is not blank, write dval using (fixed) floating point format, ffmt.
+c  If clean is non-zero, strip trailing zeroes.  Use (exponential)
+c  format, efmt, otherwise.
+c
+c  The Fortran formats are specified without enclosing parentheses.
+c-----------------------------------------------------------------------
+      integer   k
+      character fmt*16
+
+      external  spaste
+      character spaste*16
+c-----------------------------------------------------------------------
+      if (ffmt.ne.' ' .and.
+     *    rng1.le.abs(dval) .and. abs(dval).lt.rng2) then
+        fmt = spaste('(', '//', ffmt, ')')
+        write(hfff,fmt) dval
+
+        if (clean.ne.0) then
+          do k = len(hfff), 1, -1
+            if (hfff(k:k).eq.'0') hfff(k:k) = ' '
+            if (hfff(k:k).ne.' ') then
+              if (hfff(k:k).eq.'.') hfff(k:k) = ' '
+              goto 999
+            endif
+          enddo
+        endif
+      else
+        if (efmt.ne.' ') then
+          fmt = spaste('(', '//', efmt, ')')
+        else
+          fmt = '(1pe15.6)'
+        endif
+        write(hfff,fmt) dval
+      endif
+
+ 999  end
+
+
+c***********************************************************************
+
       subroutine doaxes (tno,naxis)
 
       integer tno, naxis
@@ -329,19 +479,19 @@ c-----------------------------------------------------------------------
         if (aval(1:4).eq.'RA--' .or. aval.eq.'RA') then
 c         RA.
           radec = hangleh(crval)
-          write(line, 20) aval(1:8), n, radec, crpix, cdelt*R2AS
-20        format(a8, i7, 3x, a11, f10.2, 1pe16.6, '  arcsec')
+          write(line, 10) aval(1:8), n, radec, crpix, cdelt*R2AS
+ 10       format(a8, i7, 3x, a11, f10.2, 1pe16.6, '  arcsec')
 
         else if (aval(1:4).eq.'DEC-' .or. aval.eq.'DEC') then
 c         Dec.
           radec = rangleh(crval)
-          write(line, 30) aval(1:8), n, radec, crpix, cdelt*R2AS
-30        format(a8, i7, 2x, a12, f10.2, 1pe16.6, '  arcsec')
+          write(line, 20) aval(1:8), n, radec, crpix, cdelt*R2AS
+ 20       format(a8, i7, 2x, a12, f10.2, 1pe16.6, '  arcsec')
         else if (aval(1:4).eq.'GLON' .or. aval(1:4).eq.'GLAT' .or.
      *           aval(1:4).eq.'ELON' .or. aval(1:4).eq.'ELAT') then
 c         Galactic and Ecliptic coordinates.
-          write(line,35) aval(1:8), n, crval*DR2D, crpix, cdelt*DR2D
-35        format(a8,i7,f14.6,f10.2,1pe16.6,'  deg')
+          write(line,30) aval(1:8), n, crval*DR2D, crpix, cdelt*DR2D
+ 30       format(a8,i7,f14.6,f10.2,1pe16.6,'  deg')
 
         else if (aval.eq.'ANGLE') then
 c         Angles on the sky.
@@ -364,8 +514,8 @@ c         Stokes.
             endif
           enddo
 
-          write(line,38) aval(1:8), n, pols(2:length)
-38        format(a8,i7,8x,a)
+          write(line,40) aval(1:8), n, pols(2:length)
+ 40       format(a8,i7,8x,a)
 
         else
 c         Others.
@@ -378,8 +528,8 @@ c         Others.
           else if (aval.eq.'TIME') then
             units = 'seconds'
           endif
-          write(line, 40) aval(1:8), n, crval, crpix, cdelt, units
-40        format(a8,i7,2x,1pe13.6,0pf9.2,3x,1pe13.6,2x,a)
+          write(line,50) aval(1:8), n, crval, crpix, cdelt, units
+ 50       format(a8,i7,2x,1pe13.6,0pf9.2,3x,1pe13.6,2x,a)
         endif
         call logwrite(line,more)
       enddo
