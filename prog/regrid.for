@@ -19,66 +19,102 @@ c         - between LSR and barycentric velocity frames.
 c
 c       Nearest neighbour interpolation is used for axes smaller than
 c       five pixels in extent.
+c
+c       REGRID supports the FITS Celestial World Coordinate System
+c       (WCS) standard as defined in "WCS Paper II",
+c       Calabretta & Greisen (2002), A&A 395, 1077.
 c@ in
-c       The input image name.  If neither 'tin' nor 'desc' (see below)
-c       are given, coordinate descriptors for the axes of the regridded
-c       image, as selected by keyword 'axes', are copied initially from
-c       the input image.  They may then be modified by 'options',
-c       'project', and 'rotate'.  No default.
+c       The input image name.  In the first instance, coordinate
+c       descriptors for the output image are copied from the input.  
+c       They may then be overridden by other parameters as described
+c       below.  No default.
 c@ out
 c       The output image name.  No default.
 c@ axes
-c       Specify the axes to regrid.  For example, axes=1,2 regrids axes
-c       1 and 2 and the output image will contain two axes.  Likewise,
-c       axes=2,3 regrids axes 2 and 3.  The default is all axes.
+c       Specify the axes to which 'tin' and 'desc' refer.  For example,
+c       axes=1,2 resets descriptors for axes 1 and 2.  Likewise,
+c       axes=2,3 resets descriptors for axes 2 and 3.  In each case, it
+c       is still possible that another axis will be regridded due to the
+c       effect of other parameters such as 'rotate', etc.  Note that the
+c       output always contains the same number of axes as the input.
+c       The default is all axes.
 c@ tin
 c       Template image.  If present, coordinate descriptors for the axes
-c       of the regridded image, selected by keyword 'axes', are copied
-c       initially from the template image rather than the input image.
+c       to be regridded, as selected by keyword 'axes', are taken from
+c       the template image rather than the input image.  These axes must
+c       exist in the template image.
 c@ desc
-c       If 'tin' is unset, this optionally specifies the reference value
-c       (CRVAL), reference pixel (CRPIX), coordinate increment (CDELT),
-c       and number of pixels (respectively) for each and every axis of
-c       the output image selected by keyword 'axes'.  Thus, if there are
-c       any, then there should be 4 x NAXIS values, separated by commas.
-c       These values are not changed by any options other than 'offset'.
-c
-c       The axis types themselves (CTYPE), including the equatorial
-c       coordinate system (B1950 or J2000), are copied initially from
-c       the input image, subject to modification by 'options' and
-c       'project'.
+c       This optionally specifies the reference value (CRVAL), reference
+c       pixel (CRPIX), coordinate increment (CDELT), and number of
+c       pixels (respectively) for each and every axis of the output
+c       image selected by keyword 'axes'.  Thus, if there are any, then
+c       there must be 4 x naxes values, separated by commas, where naxes
+c       is the number of axes specified by 'axes'.  These values are not
+c       changed by any options other than 'offset'.
 c
 c       Note that for celestial axes (RA/DEC, GLON/GLAT, etc.), the
 c       reference values (CRVAL) and increments (CDELT) are in degrees.
-c@ options
-c       Extra processing options that alter the axis description defined
-c       by the template image, axis descriptors, or input image.
-c       Several can be given, separated by commas, with minimum-match.
-c         altprj    Interpret a CAR (plate carée) projection in the
-c                   input map as a simple linear coordinate system with
-c                   an additional 1/cos(lat0) scaling factor applied
-c                   when computing the longitude, e.g.
-c                      RA = (p1 - CRPIX1)*CDELT1/cos(CRVAL2).
-c                   This interpretation differs significantly from the
-c                   FITS standard when lat0 (i.e. CRVAL2) is non-zero.
-c         noscale   Produce a cube where the RA/DEC cell size does not
-c                   scale with frequency/velocity.
-c         offset    The coordinate system described by the template or
-c                   descriptors is modified (shift and expansion or
-c                   contraction) by an integral number of pixels so that
-c                   it completely encloses the input.
-c         equisw    Switch the output coordinate system between J2000
-c                   and B1950 equatorial.
-c         galeqsw   Switch the output coordinate system between galactic
-c                   and equatorial.  Galactic switches implicitly to
-c                   equatorial J2000.
-c         nearest   Use nearest neighbour interpolation rather than the
-c                   default cubic interpolation.
-c       If the equatorial coordinate system is not specified in the
-c       header (via the 'epoch' item), then J2000 is assumed.
+c
+c       The axis types themselves (CTYPE), including the equatorial
+c       coordinate system (B1950 or J2000), are taken from the template
+c       image, if given, else from the input image, subject to
+c       modification by 'project' and 'options' (see below).
+c@ rotate
+c       Set the rotation between the sky and the image to be this angle,
+c       in degrees.  A positive value of the angle gives an eastward
+c       rotation of the sky grid relative to the pixel grid.  If the
+c       celestial axis descriptors came from the template image then the
+c       default rotation comes from that, else the input image.
+c@ lonpole
+c       The native longitude (deg), and...
+c@ latpole
+c       ...the native latitude (deg) of the celestial pole, being the
+c       same as the celestial latitude of the native pole.  Normally
+c       set by the LONPOLEa and LATPOLEa keywords in FITS, or else by
+c       PVi_3a and PVi_4a which have precedence, where i is the
+c       longitude axis number.  Normally only lonpole is needed.
+c       Together with the two angles specified by CRVAL, these provide
+c       the third Euler angle for a spherical coordinate transformation
+c       between celestial spherical coordinates and the projection's
+c       "native" spherical coordinates as defined by WCS Paper II.  You
+c       should rarely need to set these.
+c
+c       Defaults are taken from the template image if the projection
+c       (see below) defaulted from CTYPE in the template image.  Else
+c       from the input image if the projection defaulted from that.
+c       Else default values depend on the projection.
+c@ phi0
+c       The native longitude (deg), and...
+c@ theta0
+c       ...the native latitude (deg) of the fiducial point of the
+c       projection (i.e. the point whose celestial coordinates are given
+c       by CRVAL), as defined by WCS Paper II.  Fiddling with these is
+c       "courageous" in the sense of Sir Humphrey Appleby
+c       (http://en.wikiquote.org/wiki/Yes,_Minister).  Set by the PVi_1a
+c       and PVi_2a keywords in FITS, where i is the longitude axis.
+c
+c       Defaults are taken from the template image if the projection
+c       (see below) defaulted from CTYPE in the template image.  Else
+c       from the input image if the projection defaulted from that.
+c       Else default values depend on the projection.
+c@ xyzero
+c       A logical value.  If true, apply an offset so that the origin of
+c       Cartesian coordinates in the plane of projection corresponds to
+c       the fiducial point - i.e. (x,y) = (0,0) at (phi0,theta0).  This
+c       is always the case if (phi0,theta0) assume their default values,
+c       it only has effect if they are reset (see above).  In FITS this
+c       logical is set by the PVi_0a keyword, where i is the longitude
+c       axis.
+c
+c       The default is taken from the template image if the projection
+c       (see below) defaulted from CTYPE in the template image.  Else
+c       from the input image if the projection defaulted from that.
+c       Else false.
 c@ project
-c       Three-letter code for the output map projection, unchanged by
-c       default.  Projection codes follow the FITS WCS standard.
+c       Three-letter code for the output map projection.  Projection
+c       codes follow the FITS WCS standard where they are encoded in the
+c       CTYPE keyword.
+c
 c         Zenithals:
 c           AZP  Zenithal/azimuthal perspective (2,C?,D?,d)
 c           SZP  Slant zenithal perspective (3,C?,D?,d)
@@ -123,11 +159,15 @@ c           CSC  COBE spherical cube (0,G)
 c           QSC  Quadrilateralized spherical cube (0,E,G)
 c         Hybrid:
 c           HPX  HEALPix (2,E,G)
+c
 c       The number of projection parameters is indicated in parentheses.
-c       An asterisk indicates that there is a non-defaulting parameter.
-c       NOTE: As yet, there is no way to specify projection parameters
-c       ~~~~  (thus ZPN, COP, COE, COD, COO, and BON cannot be used).
-c       The letters in parentheses are
+c       These may be set in the pv array (below).  An asterisk indicates
+c       that the projection has at least one non-defaulting parameter.
+c       Refer to WCS Paper II for the mathematical definition of the
+c       projection parameters and their default values.
+c
+c       The letters in parentheses provide a terse summary of the
+c       projection's special properties:
 c         - C  conformal
 c         - C? conformal for particular projection parameters
 c         - D  divergent
@@ -136,218 +176,324 @@ c         - d  degenerate (parts of the sphere overlap in the map plane)
 c         - E  equi-areal
 c         - G  global (capable of mapping the whole sphere)
 c       Some projections may be divergent, degenerate, or global
-c       depending on the projection parameters.  Refer to Calabretta &
-c       Greisen (2002), A&A 395, 1077.
-c@ rotate
-c       Set the rotation between the sky and the image to be this angle,
-c       in degrees.  A positive value of the angle gives an eastward
-c       rotation of the sky grid relative to the pixel grid.  The
-c       default is not to change the rotation from that of the template,
-c       or to have no rotation when there is no template.
+c       depending on the projection parameters.
+c
+c       The default is taken from CTYPE in the template image if given,
+c       else from the input image.
+c
+c       NOTE that if any value is specified for project, even if the
+c       same as in the template or input image, then defaults for
+c       lonpole, latpole, phi0, theta0, and pv will not be taken from
+c       the template or input image.
+c@ pv
+c       Array of up to 30 projection parameters as per the above.  Set
+c       by the PVi_ma keywords in FITS, where i is the latitude axis
+c       number.  Note that at least one non-zero parameter must be given
+c       for ZPN, COP, COE, COD, COO, and BON.
+c
+c       If no parameters are given, defaults are taken from the template
+c       image if the projection (see above) defaulted from CTYPE in the
+c       template image.  Else from the input image if the projection
+c       defaulted from that.  Else default values, where applicable,
+c       depend on the projection as per WCS Paper II.
+c@ options
+c       Extra processing options that alter the axis description defined
+c       by the template image, axis descriptors, or input image.
+c       Several can be given, separated by commas, with minimum-match.
+c         altprj    Interpret a CAR (plate carée) projection in the
+c                   input ot template image as a simple linear
+c                   coordinate system with an additional 1/cos(lat0)
+c                   scaling factor applied when computing the longitude,
+c                   e.g.
+c                      RA = (p1 - CRPIX1)*CDELT1/cos(CRVAL2).
+c                   This interpretation differs significantly from the
+c                   FITS standard when lat0 (i.e. CRVAL2) is non-zero.
+c         noscale   Produce a cube where the RA/DEC cell size does not
+c                   scale with frequency/velocity.
+c         offset    The coordinate system described by the template or
+c                   descriptors is modified (shift and expansion or
+c                   contraction) by an integral number of pixels so that
+c                   it completely encloses the input.
+c         equisw    Switch the output coordinate system between J2000
+c                   and B1950 equatorial.
+c         galeqsw   Switch the output coordinate system between galactic
+c                   and equatorial.  Galactic switches implicitly to
+c                   equatorial J2000.
+c         nearest   Use nearest neighbour interpolation rather than the
+c                   default cubic interpolation.
+c       If the equatorial coordinate system is not specified in the
+c       header (via the 'epoch' item), then J2000 is assumed.
 c@ tol
 c       Interpolation tolerance.  Tolerate an error of the specified
 c       amount in converting pixel locations in the input to the output.
 c       Must be less that 0.5.  The default is 0.05.
 c
-c$Id: regrid.for,v 1.5 2010/11/30 05:17:19 cal103 Exp $
+c$Id: regrid.for,v 1.6 2010/12/07 05:27:42 cal103 Exp $
 c--
 c
 c  History:
-c     7jul92 pjt   Written to keep Neil quiet (not an easy thing to do)
-c    23nov92 nebk  CHange to include all three regridding input styles
-c                  (template, axis descriptors and start/end/inc).
-c                  Deal with blanking, and generally tidy up.  Attempt
-c                  to add new code in yucky pjt style.
-c    01dec92 nebk  More sig figs in printout
-c      jan93 nebk  Rewrite to implement regridding of upto 3 axes in one
-c                  pass. All good fun. NEBK becomes owner.
-c     2feb93 pjt   extracted spline.for to MIRSUBS
-c    10feb93 rjs   redefined double precision dynamic memory array to
-c                  size MAXBUF/2.
-c    12mar93 mjs   Use maxnax.h file instead of its own set value.
-c    22jun93 nebk  Take cos(DEC) into account for RA/DEC axes
-c    15apr94 nebk  Keyword range input was failing.
-c    03jan95 nebk  REGZ was failing if output longer than input
-c    26jun95 nebk  Warning instead of fatal if ungridded axes
-c                  have silly axis descriptors. options=quiet
-c    16nov96 nebk  AXFNDCG -> AXFNDCO and new call sequence
-c    24mar97 rjs   At least warn people when it may screw up because of
-c                  blanked pixels.
-c    07jul97 rjs   Gone back to the drawing board and rewrite program.
-c    22jul97 rjs   Fix bug when subimaging grossly.
-c    22jul97 rjs   Support epoch,projection and galactic/equatorial
-c                  axis conversion.
-c    23jul97 rjs   Add warning about blanked pixels. Add pbtype
-c    05aug97 rjs   Messages about equinox fiddles.
-c    20nov98 rjs   Handle and eliminate sky rotation.
-c    25nov98 rjs   Better handling of sky rotation parameter.
-c    18may99 rjs   Handle wrap arounds in the offsets.
-c    10jul00 rjs   Add "rotate" keyword, and get rid of "norotate"
-c                  option.
-c    27jun02 rjs   An arg to mkeyd was single precision.
-c    31may06 rjs   Changes to use new calling sequence to pCvt.
-c                  Generally make more robust to regridding where a
-c                  significant fraction of the sky is involved.
+c    Refer to the RCS log, v1.1 includes prior revision information.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
       include 'mem.h'
       include 'mirconst.h'
 
-      integer NPCODE
+      integer    NPCODE
       parameter (NPCODE = 29)
 
-      logical   altPrj, doDesc, doEqEq, doGalEq, doNear, doOff, doRot,
-     *          noScale
-      integer   axes(MAXNAX), BufSize, cOut, gnx, gny, GridSize, i,
-     *          ilat, k, lBuf, lIn, lOut, lTem, maxc(3), maxv(3),
-     *          minc(3), minv(3), n, nax, naxis, nblank, nBuf(3),
-     *          ndesc, nin(MAXNAX), nout(MAXNAX), ntin(MAXNAX), nxy,
-     *          off(3), offset, order(3), rBuf, valid, Xv, Yv, Zv
+      double precision UNDEF
+      parameter (UNDEF = 999d0)
+
+      logical   altPrj, doDesc, doEqEq, doGalEq, doNear, doOff, noScale,
+     *          doTCel, doZero
+      integer   axMap(MAXNAX), BufSize, cOut, gnx, gny, GridSize, i,
+     *          ilat, ilng, k, lBuf, lDef, lIn, lOut, lTem, m, maxc(3),
+     *          maxv(3), minc(3), minv(3), n, naxes, nAxIn(MAXNAX),
+     *          nAxOut(MAXNAX), nAxTem(MAXNAX), nblank, nBuf(3), ndesc,
+     *          nIAxes, npv, nTAxes, nxy, off(3), offset, order(3),
+     *          rBuf, valid, xv, xyzero, yv, zv
       real      tol
       double precision cdelt, crpix, crval, desc(4,MAXNAX), eqnox,
-     *          llrot, rot
-      character cellscal*12, ctype*16, in*64, line*64, out*64, pcode*3,
-     *          pcodes(NPCODE)*3, tin*64, version*80
+     *          latpol, llrot, lonpol, phi0, pv(0:29), theta0
+      character cellscal*12, ctype*16, in*64, keyw*8, line*64, out*64,
+     *          pcode*3, pcodes(NPCODE)*3, tin*64, version*80
 
-      external  keyprsnt, versan
-      logical   keyprsnt
-      character versan*80
+      external  hdprsnt, itoaf, keyprsnt, versan
+      logical   hdprsnt, keyprsnt
+      character itoaf*2, versan*80
 
-c     Projection codes (those in upper-case require non-defaulting
-c     projection parameters and are not currently supported).
+c     Projection codes.
       data pcodes /
-     *  'azp', 'szp', 'tan', 'stg', 'sin', 'ncp', 'arc', 'ZPN',
-     *  'zea', 'air', 'cyp', 'cea', 'car', 'mer', 'COP', 'COE',
-     *  'COD', 'COO', 'sfl', 'gls', 'par', 'mol', 'ait', 'BON',
+     *  'azp', 'szp', 'tan', 'stg', 'sin', 'ncp', 'arc', 'zpn',
+     *  'zea', 'air', 'cyp', 'cea', 'car', 'mer', 'cop', 'coe',
+     *  'cod', 'coo', 'sfl', 'gls', 'par', 'mol', 'ait', 'bon',
      *  'pco', 'tsc', 'csc', 'qsc', 'hpx'/
 c-----------------------------------------------------------------------
       version = versan ('regrid',
-     *                  '$Revision: 1.5 $',
-     *                  '$Date: 2010/11/30 05:17:19 $')
+     *                  '$Revision: 1.6 $',
+     *                  '$Date: 2010/12/07 05:27:42 $')
 
 c     Get the input parameters.
       call keyini
       call keya('in',in,' ')
       if (in.eq.' ') call bug('f','An input must be given')
+
       call keya('out',out,' ')
       if (out.eq.' ') call bug('f','An output must be given')
-      call mkeyi('axes',axes,MAXNAX,nax)
+
+      call mkeyi('axes',axMap,MAXNAX,naxes)
+
       call keya('tin',tin,' ')
+
       call mkeyd('desc',desc,4*MAXNAX,ndesc)
       if (mod(ndesc,4).ne.0)
      *  call bug('f','Invalid number of axis descriptors')
       ndesc = ndesc/4
+
+      call keyd('rotate', llrot, UNDEF)
+
+      call keyd('lonpole', lonpol, UNDEF)
+      call keyd('latpole', latpol, UNDEF)
+      call keyd('phi0',    phi0,   UNDEF)
+      call keyd('theta0',  theta0, UNDEF)
+      xyzero = -1
+      if (keyprsnt('xyzero')) then
+        call keyl('xyzero', doZero, .false.)
+        if (doZero) then
+          xyzero = 1
+        else
+          xyzero = 0
+        endif
+      endif
+
+      call keymatch('project',NPCODE,pcodes,1,pcode,n)
+      if (n.eq.0) pcode = ' '
+      call mkeyd('pv',pv,30,npv)
+
+      call getopt(altPrj,noScale,doOff,doEqEq,doGalEq,doNear)
+
       call keyr('tol',tol,0.05)
       if (tol.lt.0.0 .or. tol.ge.0.5)
      *  call bug('f','Invalid value for the tol parameter')
-      call getopt(altPrj,noScale,doOff,doEqEq,doGalEq,doNear)
-      call keymatch('project',NPCODE,pcodes,1,pcode,n)
-      if (n.eq.0) pcode = ' '
-      doRot = keyprsnt('rotate')
-      call keyd('rotate',rot,0d0)
-      rot = DPI/180d0 * rot
+
       call keyfin
 
 c     Open the input dataset.
-      call xyopen(lIn,in,'old',MAXNAX,nin)
-      call rdhdi(lIn,'naxis',naxis,0)
-      naxis = min(naxis,MAXNAX)
-      do i = 1, naxis
-        nout(i) = nin(i)
+      call xyopen(lIn,in,'old',MAXNAX,nAxIn)
+      call rdhdi(lIn,'naxis',nIAxes,0)
+      nIAxes = min(nIAxes,MAXNAX)
+      do i = 1, nIAxes
+        nAxOut(i) = nAxIn(i)
       enddo
-      do i = naxis+1, MAXNAX
-        nout(i) = 1
+      do i = nIAxes+1, MAXNAX
+        nAxOut(i) = 1
       enddo
 
-c     Check the users "axes" specification.
-      if (nax.gt.0) then
-        do i = 1, nax
-          if (axes(i).lt.1 .or. axes(i).gt.naxis)
+c     Check the user's 'axes' specification.
+      if (naxes.gt.0) then
+        do i = 1, naxes
+          if (axMap(i).lt.1 .or. axMap(i).gt.nIAxes)
      *      call bug('f','Invalid "axes" value')
         enddo
       else
-        nax = naxis
-        do i = 1, nax
-          axes(i) = i
+        naxes = nIAxes
+        do i = 1, naxes
+          axMap(i) = i
         enddo
       endif
 
-c     Set up the output size/coordinate system given template or
-c     descriptors.
+c     Descriptors, if given, must match the number in 'axes'.
+      doDesc = ndesc.ne.0
+      if (doDesc .and. ndesc.ne.naxes) call bug('f',
+     *  'Inconsistent number of axis descriptors given.')
+
+
+c     Set up the output coordinate system.  Defaults come initially from
+c     the input image.
       call coInit(lIn)
       if (altPrj) call coAltPrj(lIn)
-      call coDup(lIn,cOut)
+      call coCreate(cOut)
 
-      doDesc = .false.
+      call coFindAx(lIn, 'longitude', ilng)
+      call coFindAx(lIn, 'latitude',  ilat)
+
+      doTCel = .false.
+      do i = 1, nIAxes
+        if (axMap(i).eq.ilng .or. axMap(i).eq.ilat) then
+c         Flag that celestial axes are being regridded.
+          doTCel = .true.
+        endif
+
+c       Set descriptors for the axes that will remain unchanged.
+        call coAxGet(lIn,  i, ctype, crpix, crval, cdelt)
+        call coAxSet(cOut, i, ctype, crpix, crval, cdelt)
+      enddo
+
+      lDef = lIn
+
+c     Reset descriptors for the axes specified by 'axes' if need be.
       if (tin.ne.' ') then
+c       Reset descriptors from the template image.
         if (ndesc.ne.0) then
           call bug('w','Using template, ignoring descriptors.')
         endif
 
-        call xyopen(lTem,tin,'old',MAXNAX,ntin)
-        call rdhdi(lTem,'naxis',n,0)
-        n = min(n,MAXNAX)
-        call coInit(lTem)
-        call coFindAx(lTem,'latitude',ilat)
+        call xyopen(lTem, tin, 'old', MAXNAX, nAxTem)
+        call rdhdi(lTem, 'naxis', nTAxes, 0)
+        nTAxes = min(nTAxes, MAXNAX)
 
-        do i = 1, nax
-          if (axes(i).gt.n) call bug('f',
-     *        'Requested axis does not exist in the template')
-          nout(axes(i)) = ntin(axes(i))
-          call coAxGet(lTem,axes(i),ctype,crpix,crval,cdelt)
-          call coAxSet(cOut,axes(i),ctype,crpix,crval,cdelt)
-          if (axes(i).eq.ilat) then
-            call coGetD(lTem,'llrot',llrot)
-            call coSetD(cOut,'llrot',llrot)
-          endif
+        call coInit(lTem)
+        if (altPrj) call coAltPrj(lTem)
+
+c       Reset descriptors from the template.
+        do i = 1, naxes
+          if (axMap(i).gt.nTAxes) call bug('f',
+     *      'Requested axis does not exist in the template')
+
+          nAxOut(axMap(i)) = nAxTem(axMap(i))
+          call coAxGet(lTem, axMap(i), ctype, crpix, crval, cdelt)
+          call coAxSet(cOut, axMap(i), ctype, crpix, crval, cdelt)
         enddo
 
-        call coGetD(lTem,'epoch',eqnox)
-        call coSetD(cOut,'epoch',eqnox)
-        call coGetA(lTem,'cellscal',cellscal)
-        call coSetA(cOut,'cellscal',cellscal)
-        call xyclose(lTem)
+c       Celestial parameters should default from the template iff
+c       celestial axes are being regridded.
+        if (doTCel) lDef = lTem
 
-      else if (ndesc.ne.0) then
-        if (ndesc.ne.nax) call bug('f',
-     *    'Inconsistent number of axis descriptors given.')
-
-        do i = 1, nax
-          nout(axes(i)) = nint(desc(4,i))
-          if (nout(axes(i)).lt.1 .or. nout(axes(i)).gt.MAXDIM) then
+      else if (doDesc) then
+c       Reset descriptors from 'desc'.
+        do i = 1, naxes
+          nAxOut(axMap(i)) = nint(desc(4,i))
+          if (nAxOut(i).lt.1 .or. nAxOut(i).gt.MAXDIM) then
             call bug('f','Invalid axis size in axis descriptor')
           endif
 
-          call coAxGet(lIn, axes(i),ctype,crpix,crval,cdelt)
-          call coAxSet(cOut,axes(i),ctype,desc(2,i),desc(1,i),desc(3,i))
+          call coAxGet(lIn,  axMap(i), ctype, crpix, crval, cdelt)
+          call coAxSet(cOut, axMap(i), ctype, desc(2,i), desc(1,i),
+     *                 desc(3,i))
         enddo
-
-        doDesc = .true.
-
-      else
-        doOff = .true.
       endif
 
-c     Process options.
-      if (noScale) call coSetA(cOut,'cellscal','CONSTANT')
-      if (doRot)   call coSetD(cOut,'llrot',rot)
-      if (pcode.ne.' ') call coPrjSet(cOut,pcode)
+c     Map rotation.
+      if (llrot.eq.UNDEF) then
+        call coGetD(lDef, 'llrot', llrot)
+      else
+c       Given by user.
+        llrot = llrot * DD2R
+      endif
+      call coSetD(cOut, 'llrot', llrot)
+
+c     Set celestial parameters.
+      if (pcode.eq.' ') then
+c       Parameters relating to the fiducial point.
+        if (lonpol.eq.UNDEF) call coGetD(lDef, 'lonpole', lonpol)
+        if (latpol.eq.UNDEF) call coGetD(lDef, 'latpole', latpol)
+        if (phi0  .eq.UNDEF) call coGetD(lDef, 'phi0',    phi0)
+        if (theta0.eq.UNDEF) call coGetD(lDef, 'theta0',  theta0)
+        if (xyzero.eq.-1)    call coGetI(lDef, 'xyzero',  xyzero)
+      endif
+
+      if (lonpol.ne.UNDEF) call coSetD(cOut, 'lonpole', lonpol)
+      if (latpol.ne.UNDEF) call coSetD(cOut, 'latpole', latpol)
+      if (phi0  .ne.UNDEF) call coSetD(cOut, 'phi0',    phi0)
+      if (theta0.ne.UNDEF) call coSetD(cOut, 'theta0',  theta0)
+      if (xyzero.ne.-1)    call coSetI(cOut, 'xyzero',  xyzero)
+
+      call coGetD(lDef, 'epoch', eqnox)
+      call coSetD(cOut, 'epoch', eqnox)
+
+c     Projection parameters.
+      if (pcode.eq.' ') then
+        if (npv.eq.0) then
+c         Copy them from the template or input image.
+          do m = 0, 29
+            keyw = 'pv'//itoaf(m)
+            if (hdprsnt(lDef, keyw)) then
+              call coGetD(lDef, keyw, pv(m))
+              call coSetD(cOut, keyw, pv(m))
+            endif
+          enddo
+        else
+c         'pv' was set but 'project' wasn't.  Presumably the user only
+c         wants to tweak the projection parameters.
+          call coPrjSet(cOut, '-', npv, pv)
+        endif
+      else
+c       Have the required projection parameters been provided?
+        if (index(pcode,'zpn,cop,coe,cod,coo,bon').gt.0 .and. npv.lt.1)
+     *    call bug('f',
+     *      'A projection parameter must be provided for '//pcode)
+
+        call coPrjSet(cOut, pcode, npv, pv)
+      endif
+
+c     Options.
+      if (noScale) then
+        call coSetA(cOut, 'cellscal', 'CONSTANT')
+      else
+        call coGetA(lDef, 'cellscal', cellscal)
+        call coSetA(cOut, 'cellscal', cellscal)
+      endif
+
+c     Finished with the template image.
+      if (tin.ne.' ') call xyclose(lTem)
+ 
 
 c     Set up output celestial coordinates.
       call setCel(lIn, cOut, doDesc, doEqEq, doGalEq)
 
 c     Set up offset coordinates.
-      if (doOff) call doOffset(lIn,nIn,cOut,nOut)
+      if (doOff) call doOffset(lIn,nAxIn,cOut,nAxOut)
 
-c     Create the output.  Do basic checks.
-      if (nout(1).gt.MAXDIM) call bug('f','Output too big for me')
-      do k = 4, naxis
-        if (nOut(k).gt.1) call bug('f','Cannot handle hypercubes')
+c     Check the output image dimensions.
+      if (nAxOut(1).gt.MAXDIM) call bug('f','Output too big for me')
+      do k = 4, nIAxes
+        if (nAxOut(k).gt.1) call bug('f','Cannot handle hypercubes')
       enddo
 
-      call xyopen(lOut,out,'new',naxis,nout)
-      call MkHeader(lIn,lOut,cOut,version)
+c     Create the output.
+      call xyopen(lOut,out,'new',nIAxes,nAxOut)
+      call mkHead(lIn,lOut,cOut,version)
 
 c     Initialise.
       GridSize = 0
@@ -355,63 +501,63 @@ c     Initialise.
       call BufIni(nBuf,off,minc,maxc,BufSize)
 
       nblank = 0
-      do k = 1, nOut(3)
+      do k = 1, nAxOut(3)
         call xysetpl(lOut,1,k)
 
 c       Determine the size of the coordinate translation grid.
         if (tol.eq.0) then
-          gnx = nOut(1)
-          gny = nOut(2)
+          gnx = nAxOut(1)
+          gny = nAxOut(2)
         else
-          call GridEst(nOut(1),nOut(2),k,gnx,gny,tol)
+          call GridEst(nAxOut(1),nAxOut(2),k,gnx,gny,tol)
         endif
 
 c       Allocate space used for the coordinate translation grid.
         if (gnx*gny.gt.GridSize) then
           if (GridSize.gt.0) then
-            call memFree(Xv,GridSize,'r')
-            call memFree(Yv,GridSize,'r')
-            call memFree(Zv,GridSize,'r')
+            call memFree(xv,GridSize,'r')
+            call memFree(yv,GridSize,'r')
+            call memFree(zv,GridSize,'r')
             call memFree(valid,GridSize,'l')
           endif
           GridSize = gnx*gny
-          call memAlloc(Xv,GridSize,'r')
-          call memAlloc(Yv,GridSize,'r')
-          call memAlloc(Zv,GridSize,'r')
+          call memAlloc(xv,GridSize,'r')
+          call memAlloc(yv,GridSize,'r')
+          call memAlloc(zv,GridSize,'r')
           call memAlloc(valid,GridSize,'l')
         endif
 
 c       Calculate the coordinates translation grid, and work out some
 c       statistics about it.
-        call GridGen(nOut(1),nOut(2),k,
-     *        memr(Xv),memr(Yv),memr(Zv),meml(Valid),gnx,gny)
-        call GridStat(doNear,memr(Xv),memr(Yv),memr(Zv),meml(valid),
-     *        gnx,gny,nin(1),nin(2),nin(3),tol,minv,maxv,order)
+        call GridGen(nAxOut(1),nAxOut(2),k,
+     *        memr(xv),memr(yv),memr(zv),meml(Valid),gnx,gny)
+        call GridStat(doNear,memr(xv),memr(yv),memr(zv),meml(valid),
+     *        gnx,gny,nAxIn(1),nAxIn(2),nAxIn(3),tol,minv,maxv,order)
 
         if (minv(1).gt.maxv(1) .or.
      *      minv(2).gt.maxv(2) .or.
      *      minv(3).gt.maxv(3)) then
-          nblank = nblank + nOut(1)*nOut(2)
-          call BadPlane(lOut,nOut(1),nOut(2))
+          nblank = nblank + nAxOut(1)*nAxOut(2)
+          call BadPlane(lOut,nAxOut(1),nAxOut(2))
 
         else
 c         Get the required data.
-          call BufGet(lIn,minv,maxv,nIn,nBuf,off,minc,maxc,
+          call BufGet(lIn,minv,maxv,nAxIn,nBuf,off,minc,maxc,
      *                                        rBuf,lBuf,BufSize)
           offset = minc(3) - off(3) - 1
           nxy = nBuf(1)*nBuf(2)
 
 c         Finally to the interpolation.
-          call Intp(lOut,order,nOut(1),nOut(2),
+          call Intp(lOut,order,nAxOut(1),nAxOut(2),
      *      memr(rBuf+offset*nxy),meml(lBuf+offset*nxy),
      *      nBuf(1),nBuf(2),maxc(3)-minc(3)+1,
      *      off(1),off(2),minc(3)-1,
-     *      memr(Xv),memr(Yv),memr(Zv),meml(valid),gnx,gny,nblank)
+     *      memr(xv),memr(yv),memr(zv),meml(valid),gnx,gny,nblank)
         endif
       enddo
 
 c     Warn about the number of blanked pixels.
-      nblank = (100*nblank)/(nOut(1)*nOut(2)*nOut(3))
+      nblank = (100*nblank)/(nAxOut(1)*nAxOut(2)*nAxOut(3))
       write(line,'(a,i3,a)')
      *  'Overall fraction of blanked pixels: ',nblank,'%'
       if (nblank.ge.50) then
@@ -426,9 +572,9 @@ c     All done. Tidy up.
         call memFree(lBuf,BufSize,'l')
       endif
       if (GridSize.gt.0) then
-        call memFree(Xv,GridSize,'r')
-        call memFree(Yv,GridSize,'r')
-        call memFree(Zv,GridSize,'r')
+        call memFree(xv,GridSize,'r')
+        call memFree(yv,GridSize,'r')
+        call memFree(zv,GridSize,'r')
         call memFree(valid,GridSize,'l')
       endif
 
@@ -674,9 +820,9 @@ c     Switch equatorial coordinates?
 
 c***********************************************************************
 
-      subroutine doOffset(lIn,nIn,lOut,nOut)
+      subroutine doOffset(lIn,nAxIn,lOut,nAxOut)
 
-      integer lIn,lOut,nIn(3),nOut(3)
+      integer lIn,lOut,nAxIn(3),nAxOut(3)
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       integer NV
@@ -691,17 +837,17 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
       call pCvtInit(lIn,lOut)
 
-      nv3 = min(max(3,nIn(3)),NV)
-      nv2 = min(max(3,nIn(2)),NV)
-      nv1 = min(max(3,nIn(1)),NV)
+      nv1 = min(max(3,nAxIn(1)),NV)
+      nv2 = min(max(3,nAxIn(2)),NV)
+      nv3 = min(max(3,nAxIn(3)),NV)
 
       first = .true.
       do k = 1, nv3
         do j = 1, nv2
           do i = 1, nv1
-            in(1) = 1 + (i-1)*(nIn(1)-1)/real(nv1-1)
-            in(2) = 1 + (j-1)*(nIn(2)-1)/real(nv2-1)
-            in(3) = 1 + (k-1)*(nIn(3)-1)/real(nv3-1)
+            in(1) = 1 + (i-1)*(nAxIn(1)-1)/real(nv1-1)
+            in(2) = 1 + (j-1)*(nAxIn(2)-1)/real(nv2-1)
+            in(3) = 1 + (k-1)*(nAxIn(3)-1)/real(nv3-1)
             call pCvt(in,out(1,i,j,k),3,valid(i,j,k))
 
             if (valid(i,j,k) .and. first) then
@@ -781,12 +927,12 @@ c     range and the max and min of mapped pixels.
       do i = 1, 3
         if (weird(i)) then
           minv(i) = min(1,minv(i))
-          maxv(i) = max(nOut(i),maxv(i))
+          maxv(i) = max(nAxOut(i),maxv(i))
         endif
 
-        nOut(i) = maxv(i) - minv(i) + 1
-        if (nout(i).gt.MAXDIM) then
-          nout(i) = MAXDIM
+        nAxOut(i) = maxv(i) - minv(i) + 1
+        if (nAxOut(i).gt.MAXDIM) then
+          nAxOut(i) = MAXDIM
           if (.not.warned) call bug('w',
      *      'Output image too large -- being truncated')
           warned = .true.
@@ -803,28 +949,34 @@ c     range and the max and min of mapped pixels.
 
 c***********************************************************************
 
-      subroutine MkHeader(lIn,lOut,cOut,version)
+      subroutine mkHead(lIn,lOut,cOut,version)
 
-      integer lIn,lOut,cOut
+      integer   lIn,  lOut,  cOut
       character version*(*)
 c-----------------------------------------------------------------------
-      integer i
+      integer   i
       character line*64
 
-      integer nkeys
-      parameter (nkeys=21)
-      character key(nkeys)*8
-      data key /   'bmaj    ','bmin    ','bpa     ','bunit   ',
-     *  'history ','instrume','niters  ',
-     *  'object  ','observer','obsra   ','obsdec  ','pbfwhm  ',
-     *  'telescop','btype   ','rms     ','pbtype  ',
-     *  'ltype   ','lstart  ','lwidth  ','lstep   ','mostable'/
+c     Follows the list of keywords in HEADCP (headcopy.for) with the
+c     omission of coordinate keywords, which are handled by coWrite,
+c     and the addition of rms (but not datamin or datamax).
+      integer   NKEYS
+      parameter (NKEYS=27)
+      character keyw(NKEYS)*8
+      data keyw /
+     *                            'bmaj    ', 'bmin    ', 'bpa     ',
+     *    'btype   ', 'bunit   ', 'cellscal', 'date-obs', 'epoch   ',
+     *    'instrume', 'ltype   ', 'lstart  ', 'lstep   ', 'lwidth  ', 
+     *    'mostable', 'niters  ', 'object  ', 'observer', 'obsra   ', 
+     *    'obsdec  ', 'obstime ', 'pbfwhm  ', 'pbtype  ', 'restfreq', 
+     *    'telescop', 'vobs    ', 'history ', 'rms     '/
 c-----------------------------------------------------------------------
-      do i = 1, nkeys
-        call hdcopy(lIn,lOut,key(i))
+      call coWrite(cOut,lOut)
+
+      do i = 1, NKEYS
+        call hdcopy(lIn,lOut,keyw(i))
       enddo
 
-      call coWrite(cOut,lOut)
       call hisOpen(lOut,'append')
       line = 'REGRID: Miriad '//version
       call hisWrite(lOut,line)
@@ -944,10 +1096,10 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine GridGen(nx,ny,plane,Xv,Yv,Zv,valid,gnx,gny)
+      subroutine GridGen(nx,ny,plane,xv,yv,zv,valid,gnx,gny)
 
       integer nx,ny,plane,gnx,gny
-      real Xv(gnx,gny),Yv(gnx,gny),Zv(gnx,gny)
+      real xv(gnx,gny),yv(gnx,gny),zv(gnx,gny)
       logical valid(gnx,gny)
 c-----------------------------------------------------------------------
 c  Determine the translation between the output and input pixel
@@ -958,7 +1110,7 @@ c    nx,ny
 c    plane
 c    gnx,gny
 c  Output:
-c    Xv,Yv,Zv,valid
+c    xv,yv,zv,valid
 c-----------------------------------------------------------------------
       include 'maxdim.h'
 
@@ -973,9 +1125,9 @@ c-----------------------------------------------------------------------
           in(1) = dble(nx-1)/dble(gnx-1) * (i-1) + 1
           call pCvt(in,out,3,valid(i,j))
           if (valid(i,j)) then
-            Xv(i,j) = out(1)
-            Yv(i,j) = out(2)
-            Zv(i,j) = out(3)
+            xv(i,j) = out(1)
+            yv(i,j) = out(2)
+            zv(i,j) = out(3)
           endif
         enddo
       enddo
@@ -984,12 +1136,12 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine GridStat(doNear,Xv,Yv,Zv,valid,gnx,gny,n1,n2,n3,
+      subroutine GridStat(doNear,xv,yv,zv,valid,gnx,gny,n1,n2,n3,
      *    tol,minv,maxv,order)
 
       logical doNear
       integer gnx,gny,n1,n2,n3,minv(3),maxv(3),order(3)
-      real Xv(gnx,gny),Yv(gnx,gny),Zv(gnx,gny),tol
+      real xv(gnx,gny),yv(gnx,gny),zv(gnx,gny),tol
       logical valid(gnx,gny)
 c-----------------------------------------------------------------------
       integer i,j,n(3)
@@ -1002,19 +1154,19 @@ c-----------------------------------------------------------------------
           if (valid(i,j)) then
             if (first) then
               first = .false.
-              minr(1) = Xv(i,j)
+              minr(1) = xv(i,j)
               maxr(1) = minr(1)
-              minr(2) = Yv(i,j)
+              minr(2) = yv(i,j)
               maxr(2) = minr(2)
-              minr(3) = Zv(i,j)
+              minr(3) = zv(i,j)
               maxr(3) = minr(3)
             else
-              minr(1) = min(Xv(i,j),minr(1))
-              maxr(1) = max(Xv(i,j),maxr(1))
-              minr(2) = min(Yv(i,j),minr(2))
-              maxr(2) = max(Yv(i,j),maxr(2))
-              minr(3) = min(Zv(i,j),minr(3))
-              maxr(3) = max(Zv(i,j),maxr(3))
+              minr(1) = min(xv(i,j),minr(1))
+              maxr(1) = max(xv(i,j),maxr(1))
+              minr(2) = min(yv(i,j),minr(2))
+              maxr(2) = max(yv(i,j),maxr(2))
+              minr(3) = min(zv(i,j),minr(3))
+              maxr(3) = max(zv(i,j),maxr(3))
             endif
           endif
         enddo
@@ -1253,11 +1405,11 @@ c-----------------------------------------------------------------------
 c***********************************************************************
 
       subroutine Intp(lOut,order,nx,ny,in,flagIn,nix,niy,niz,
-     *        xoff,yoff,zoff,Xv,Yv,Zv,valid,gnx,gny,nblank)
+     *        xoff,yoff,zoff,xv,yv,zv,valid,gnx,gny,nblank)
 
       integer nx,ny,nix,niy,niz,gnx,gny,order(3),lOut,xoff,yoff,zoff
       integer nblank
-      real in(nix,niy,niz),Xv(gnx,gny),Yv(gnx,gny),Zv(gnx,gny)
+      real in(nix,niy,niz),xv(gnx,gny),yv(gnx,gny),zv(gnx,gny)
       logical flagIn(nix,niy,niz),valid(gnx,gny)
 c-----------------------------------------------------------------------
       include 'maxdim.h'
@@ -1283,17 +1435,17 @@ c-----------------------------------------------------------------------
           if (fx.eq.0d0) then
             if (fy.eq.0d0) then
               if (valid(jx,jy)) then
-                x = Xv(jx,jy)
-                y = Yv(jx,jy)
-                z = Zv(jx,jy)
+                x = xv(jx,jy)
+                y = yv(jx,jy)
+                z = zv(jx,jy)
               else
                 cok = .false.
               endif
             else
               if (valid(jx,jy) .and. valid(jx,jy+1)) then
-                x = (1d0-fy) * Xv(jx,jy) + fy * Xv(jx,jy+1)
-                y = (1d0-fy) * Yv(jx,jy) + fy * Yv(jx,jy+1)
-                z = (1d0-fy) * Zv(jx,jy) + fy * Zv(jx,jy+1)
+                x = (1d0-fy) * xv(jx,jy) + fy * xv(jx,jy+1)
+                y = (1d0-fy) * yv(jx,jy) + fy * yv(jx,jy+1)
+                z = (1d0-fy) * zv(jx,jy) + fy * zv(jx,jy+1)
               else
                 cok = .false.
               endif
@@ -1301,21 +1453,21 @@ c-----------------------------------------------------------------------
           else
             if (fy.eq.0d0) then
               if (valid(jx,jy) .and. valid(jx+1,jy)) then
-                x = (1d0-fx) * Xv(jx,jy) + fx * Xv(jx+1,jy)
-                y = (1d0-fx) * Yv(jx,jy) + fx * Yv(jx+1,jy)
-                z = (1d0-fx) * Zv(jx,jy) + fx * Zv(jx+1,jy)
+                x = (1d0-fx) * xv(jx,jy) + fx * xv(jx+1,jy)
+                y = (1d0-fx) * yv(jx,jy) + fx * yv(jx+1,jy)
+                z = (1d0-fx) * zv(jx,jy) + fx * zv(jx+1,jy)
               else
                 cok = .false.
               endif
             else
               if (valid(jx,jy) .and. valid(jx+1,jy) .and.
      *           valid(jx,jy+1) .and. valid(jx+1,jy+1)) then
-                x = (1d0-fy)*((1d0-fx)*Xv(jx,jy)   + fx*Xv(jx+1,jy)) +
-     *                   fy *((1d0-fx)*Xv(jx,jy+1) + fx*Xv(jx+1,jy+1))
-                y = (1d0-fy)*((1d0-fx)*Yv(jx,jy)   + fx*Yv(jx+1,jy)) +
-     *                   fy *((1d0-fx)*Yv(jx,jy+1) + fx*Yv(jx+1,jy+1))
-                z = (1d0-fy)*((1d0-fx)*Zv(jx,jy)   + fx*Zv(jx+1,jy)) +
-     *                   fy *((1d0-fx)*Zv(jx,jy+1) + fx*Zv(jx+1,jy+1))
+                x = (1d0-fy)*((1d0-fx)*xv(jx,jy)   + fx*xv(jx+1,jy)) +
+     *                   fy *((1d0-fx)*xv(jx,jy+1) + fx*xv(jx+1,jy+1))
+                y = (1d0-fy)*((1d0-fx)*yv(jx,jy)   + fx*yv(jx+1,jy)) +
+     *                   fy *((1d0-fx)*yv(jx,jy+1) + fx*yv(jx+1,jy+1))
+                z = (1d0-fy)*((1d0-fx)*zv(jx,jy)   + fx*zv(jx+1,jy)) +
+     *                   fy *((1d0-fx)*zv(jx,jy+1) + fx*zv(jx+1,jy+1))
               else
                 cok = .false.
               endif
