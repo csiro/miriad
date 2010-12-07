@@ -21,8 +21,10 @@ c    subroutine coPrjSet(lu,proj)
 c    subroutine coAxGet(lu,iax,ctype,crpix,crval,cdelt)
 c    subroutine coAxSet(lu,iax,ctype,crpix,crval,cdelt)
 c    subroutine coGetD(lu,object,value)
+c    subroutine coGetI(lu,object,value)
 c    subroutine coGetA(lu,object,value)
 c    subroutine coSetD(lu,object,value)
+c    subroutine coSetI(lu,object,value)
 c    subroutine coSetA(lu,object,value)
 c    subroutine coGauCvt(lu,in,x1,io,bmaj1,bmin1,bpa1,bmaj2,bmin2,bpa2)
 c    logical function coCompar(lu1,lu2,match)
@@ -34,7 +36,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: co.for,v 1.15 2010/11/30 00:54:25 cal103 Exp $
+c $Id: co.for,v 1.16 2010/12/07 05:15:49 cal103 Exp $
 c***********************************************************************
 
 c* coInit -- Initialise coordinate conversion routines.
@@ -133,6 +135,12 @@ c-----------------------------------------------------------------------
       vobs(icrd2)    = vobs(icrd1)
       eqnox(icrd2)   = eqnox(icrd1)
       obstime(icrd2) = obstime(icrd1)
+
+      defs(1,icrd2)  = defs(1,icrd1)
+      defs(2,icrd2)  = defs(3,icrd1)
+      defs(3,icrd2)  = defs(3,icrd1)
+      defs(4,icrd2)  = defs(4,icrd1)
+
       frqscl(icrd2)  = frqscl(icrd1)
 
       do j = 1, CELLEN
@@ -237,8 +245,8 @@ c  Set basic coordinate parameters (crpix, cdelt, crval, and ctype) for
 c  the specified image axis.  Updates naxis, and initializes parameters
 c  for any axes between the old value of naxis and the new.
 c
-c  This is a convenience routine.  See also coSetD and coSetA for
-c  setting other parameters one at a time.
+c  This is a convenience routine.  See also coSetD, coSetI, and coSetA
+c  for setting other parameters one at a time.
 c
 c  Input:
 c    lu         Handle of the coordinate object.
@@ -335,14 +343,18 @@ c     Parse parameterized keywords.
         cosrot(icrd) = cos(value)
         sinrot(icrd) = sin(value)
 
-      else if (obj.eq.'phi0') then
-        status = celptd(cel(1,icrd), CEL_PHI0, value, 0)
-      else if (obj.eq.'theta0') then
-        status = celptd(cel(1,icrd), CEL_THETA0, value, 0)
       else if (obj.eq.'lonpole') then
         status = celptd(cel(1,icrd), CEL_REF, value, 3)
+        defs(1,icrd) = .true.
       else if (obj.eq.'latpole') then
         status = celptd(cel(1,icrd), CEL_REF, value, 4)
+        defs(2,icrd) = .true.
+      else if (obj.eq.'phi0') then
+        status = celptd(cel(1,icrd), CEL_PHI0, value, 0)
+        defs(3,icrd) = .true.
+      else if (obj.eq.'theta0') then
+        status = celptd(cel(1,icrd), CEL_THETA0, value, 0)
+        defs(4,icrd) = .true.
       else if (obj.eq.'pv' .and. m.ge.0) then
         status = celgti(cel(1,icrd), CEL_PRJ, prj)
         status = prjptd(prj, PRJ_PV, value, m)
@@ -358,6 +370,42 @@ c     Parse parameterized keywords.
         obstime(icrd) = value
       else
         call bug('f','Unrecognised object in coSetD: '//obj)
+      endif
+
+      end
+
+c***********************************************************************
+
+c* coSetI -- Set a value in the guts of the coordinate routines.
+c& mrc
+c: coordinates
+c+
+      subroutine coSetI(lu,object,value)
+
+      integer lu
+      character object*(*)
+      integer value
+c  ---------------------------------------------------------------------
+c  Set a value in the guts of the coordinate routines.
+c
+c  Input:
+c    lu         Handle of the coordinate object.
+c    object     Name of the thing to set.
+c    value      Value to use.
+c-----------------------------------------------------------------------
+      include 'co.h'
+
+      integer   icrd, status
+
+      external  coLoc
+      integer   coLoc
+c-----------------------------------------------------------------------
+      icrd = coLoc(lu,.false.)
+
+      if (object.eq.'xyzero') then
+        status = celpti(cel(1,icrd), CEL_OFFSET, value, 0)
+      else
+        call bug('f','Unrecognised object in coSetI: '//object(:8))
       endif
 
       end
@@ -490,16 +538,16 @@ c     Parse parameterized keywords.
           value = atan2(sinrot(icrd),cosrot(icrd))
         endif
 
-      else if (obj.eq.'phi0') then
-        status = celgtd(cel(1,icrd), CEL_PHI0, value)
-      else if (obj.eq.'theta0') then
-        status = celgtd(cel(1,icrd), CEL_THETA0, value)
       else if (obj.eq.'lonpole') then
         status = celgtd(cel(1,icrd), CEL_REF, ref)
         value = ref(3)
       else if (obj.eq.'latpole') then
         status = celgtd(cel(1,icrd), CEL_REF, ref)
         value = ref(4)
+      else if (obj.eq.'phi0') then
+        status = celgtd(cel(1,icrd), CEL_PHI0, value)
+      else if (obj.eq.'theta0') then
+        status = celgtd(cel(1,icrd), CEL_THETA0, value)
       else if (obj.eq.'pv' .and. m.ge.0) then
         status = celgti(cel(1,icrd), CEL_PRJ, prj)
         status = prjgtd(prj, PRJ_PV, pv)
@@ -515,6 +563,44 @@ c     Parse parameterized keywords.
         value = obstime(icrd)
       else
         call bug('f','Unrecognised object in coGetD'//obj)
+      endif
+
+      end
+
+c***********************************************************************
+
+c* coGetI -- Get a value from the guts of the coordinate routines.
+c& mrc
+c: coordinates
+c+
+      subroutine coGetI(lu,object,value)
+
+      integer lu
+      character object*(*)
+      integer value
+c  ---------------------------------------------------------------------
+c  Get a value from the guts of the coordinate routines.
+c
+c  Input:
+c    lu         Handle of the coordinate object.
+c    object     Name of the thing to set.
+c  Output:
+c    value      Value to use.
+c-----------------------------------------------------------------------
+      include 'co.h'
+
+      integer   icrd, status
+
+      external  coLoc
+      integer   coLoc
+c-----------------------------------------------------------------------
+      icrd = coLoc(lu,.false.)
+
+c     Parse parameterized keywords.
+      if (object.eq.'xyzero') then
+        status = celgti(cel(1,icrd), CEL_OFFSET, value)
+      else
+        call bug('f','Unrecognised object in coGetI'//object(:8))
       endif
 
       end
@@ -748,7 +834,7 @@ c               Do something tricky.
 
             call ucase(pcode1)
             if (pcode1.eq.'NCP') then
-c             Convert NCP to SIN.
+c             Convert NCP to SIN for WCSLIB.
               if (lat0.eq.0d0) then
                 call bug('f', 'Invalid NCP projection')
               endif
@@ -759,7 +845,7 @@ c             Convert NCP to SIN.
               status = prjptd(prj, PRJ_PV, cos(lat0)/sin(lat0), 2)
 
             else if (pcode1.eq.'GLS') then
-c             Convert GLS to SFL.
+c             Convert GLS to SFL for WCSLIB.
               status = celpti(cel(1,icrd), CEL_OFFSET, 1, 0)
               status = celptd(cel(1,icrd), CEL_PHI0,   0d0,  0)
               status = celptd(cel(1,icrd), CEL_THETA0, lat0, 0)
@@ -770,6 +856,7 @@ c             Convert GLS to SFL.
             endif
 
             status = celpti(cel(1,icrd), CEL_PRJ, prj, 0)
+            status = celset(cel(1,icrd))
           endif
 
         else if (ilng.ne.0 .or. ilat.ne.0) then
@@ -1382,7 +1469,7 @@ c-----------------------------------------------------------------------
 
       logical   x1off(MAXNAX), x1pix(MAXNAX)
       integer   icrd, ifrq, n
-      real      cdelt1, cdelt2, cospa, crota, crota1, crota2, sinpa
+      real      cdelt1, cdelt2, cospa, rotn, rotn1, rotn2, sinpa
       double precision alpha, beta, gamma, s, scale, t
 
       external  coLoc
@@ -1420,18 +1507,18 @@ c     Get the factors to scale cdelt1 and cdelt2 for this coordinate.
 
 c     Get coordinate grid rotation angle.
       if (abs(sinrot(icrd)).ne.0d0) then
-        crota = atan2(sinrot(icrd),cosrot(icrd))
+        rotn = atan2(sinrot(icrd),cosrot(icrd))
       else
-        crota = 0.0
+        rotn = 0.0
       endif
-      crota1 = 0.0
-      crota2 = 0.0
-      if (ing.eq.'w')  crota1 = crota
-      if (outg.eq.'w') crota2 = crota
+      rotn1 = 0.0
+      rotn2 = 0.0
+      if (ing.eq.'w')  rotn1 = rotn
+      if (outg.eq.'w') rotn2 = rotn
 
 c     Get the increments in a standard form.
-      cospa = cos(bpa1+crota1)
-      sinpa = sin(bpa1+crota1)
+      cospa = cos(bpa1+rotn1)
+      sinpa = sin(bpa1+rotn1)
 
       alpha = (cospa/bmin1)**2 + (sinpa/bmaj1)**2
       beta =  (sinpa/bmin1)**2 + (cospa/bmaj1)**2
@@ -1460,7 +1547,7 @@ c     Do the conversion.
       else
         bpa2 = 0.5*atan2(gamma,alpha-beta)
       endif
-      bpa2 = bpa2 - crota2
+      bpa2 = bpa2 - rotn2
 
       end
 
@@ -2076,9 +2163,10 @@ c* coPrjSet -- Set celestial projection type.
 c& rjs
 c: coordinates
 c+
-      subroutine coPrjSet(lu, code)
+      subroutine coPrjSet(lu, code, npv, pv)
 
-      integer lu
+      integer lu, npv
+      double precision pv(30)
       character code*(*)
 c  ---------------------------------------------------------------------
 c  Set the coordinate system celestial projection type.
@@ -2086,11 +2174,16 @@ c
 c  Input:
 c    lu         Handle of the coordinate system.
 c    code       Projection code: NCP, SIN, etc. or blank, which on
-c               interpretation will be translated to CAR.
+c               interpretation will be translated to CAR.  Can also be
+c               '-' to leave it alone in case all you want to do is set
+c               projection parameters.
+c    npv        Number of elements in pv.
+c    pv         Array of projection parameters.
 c-----------------------------------------------------------------------
       include 'co.h'
+      include 'wcslib/prj.inc'
 
-      integer   iax, icrd
+      integer   iax, icrd, ipv, m, prj(PRJLEN), status
       character ctypei*16, pcode*3
 
       external  coLoc
@@ -2101,26 +2194,7 @@ c-----------------------------------------------------------------------
       pcode = code
       call ucase(pcode)
 
-      if (pcode.ne.' ') then
-        do iax = 1, naxis(icrd)
-          ctypei = ctype(iax,icrd)
-
-          if (ctypei(3:).eq.' ') then
-            ctypei(3:) = '---'
-          else if (ctypei(4:).eq.' ') then
-            ctypei(4:) = '--'
-          else if (ctypei(5:).eq.' ') then
-            ctypei(5:) = '-'
-          endif
-
-          if (ctypei(:5).eq.'RA---' .or. ctypei(:5).eq.'DEC--' .or.
-     *        ctypei(:5).eq.'ELON-' .or. ctypei(:5).eq.'ELAT-' .or.
-     *        ctypei(:5).eq.'GLON-' .or. ctypei(:5).eq.'GLAT-') then
-            ctype(iax,icrd) = ctypei(:5) // pcode
-          endif
-        enddo
-
-      else
+      if (pcode.eq.' ') then
         do iax = 1, naxis(icrd)
           ctypei = ctype(iax,icrd)(:5)
 
@@ -2139,6 +2213,50 @@ c-----------------------------------------------------------------------
             ctype(iax,icrd) = ctypei
           endif
         enddo
+
+      else if (pcode.ne.'-') then
+        do iax = 1, naxis(icrd)
+          ctypei = ctype(iax,icrd)
+
+          if (ctypei(3:).eq.' ') then
+            ctypei(3:) = '---'
+          else if (ctypei(4:).eq.' ') then
+            ctypei(4:) = '--'
+          else if (ctypei(5:).eq.' ') then
+            ctypei(5:) = '-'
+          endif
+
+          if (ctypei(:5).eq.'RA---' .or. ctypei(:5).eq.'DEC--' .or.
+     *        ctypei(:5).eq.'ELON-' .or. ctypei(:5).eq.'ELAT-' .or.
+     *        ctypei(:5).eq.'GLON-' .or. ctypei(:5).eq.'GLAT-') then
+            ctype(iax,icrd) = ctypei(:5) // pcode
+          endif
+        enddo
+
+      endif
+
+c     Projection parameters.
+      if (npv.gt.0) then
+        status = celgti(cel(1,icrd), CEL_PRJ, prj)
+
+c       Reset them all.
+        do m = 0, 29
+          status = prjptd(prj, PRJ_PV, 0d0, m)
+        end do
+
+        do ipv = 1, npv
+          if (pcode.eq.'ZPN') then
+c           ZPN's first parameter has m == 0.
+            m = ipv - 1
+          else
+c           The others start with m == 1.
+            m = ipv
+          endif
+
+          status = prjptd(prj, PRJ_PV, pv(ipv), m)
+        enddo
+
+        status = celpti(cel(1,icrd), CEL_PRJ, prj, 0)
       endif
 
       end
@@ -2154,16 +2272,20 @@ c+
       integer lu,tno
 c  ---------------------------------------------------------------------
 c  Write a coordinate system description to an image dataset header.
+c  The coordinate object is expected to have been initialised by
+c  coReinit prior to calling this.
 c
 c  Input:
 c    lu         Handle of the coordinate object.
 c    tno        Handle of the output dataset.
 c-----------------------------------------------------------------------
       include 'co.h'
+      include 'wcslib/prj.inc'
 
-      integer   iax, icrd
-      double precision dtemp
-      character num*2
+      integer   iax, icrd, ilat, ilng, ival, m, prj(PRJLEN), pvrng,
+     *          status
+      double precision dval, pv(0:29), ref(4)
+      character dummy*8, num*2, pcode*4
 
       external  coLoc, itoaf
       integer   coLoc
@@ -2171,36 +2293,98 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
       icrd = coLoc(lu,.false.)
 
+c     Basic coordinate parameters.
       do iax = 1, naxis(icrd)
         num = itoaf(iax)
-        call wrhdd(tno,'crval'//num,crval(iax,icrd))
-        call wrhdd(tno,'crpix'//num,crpix(iax,icrd))
-        call wrhdd(tno,'cdelt'//num,cdelt(iax,icrd))
-        call wrhda(tno,'ctype'//num,ctype(iax,icrd))
+        call wrhdd(tno, 'crval'//num, crval(iax,icrd))
+        call wrhdd(tno, 'crpix'//num, crpix(iax,icrd))
+        call wrhdd(tno, 'cdelt'//num, cdelt(iax,icrd))
+        call wrhda(tno, 'ctype'//num, ctype(iax,icrd))
       enddo
 
-      if (restfrq(icrd).ne.0d0) then
-        call wrhdd(tno,'restfreq',restfrq(icrd))
+c     Coordinate rotation; only written if non-zero.
+      if (sinrot(icrd).ne.0d0) then
+        dval = atan2(sinrot(icrd), cosrot(icrd))
+        call wrhdd(tno, 'llrot', dval)
       endif
 
-      call wrhdd(tno,'vobs',vobs(icrd))
+c     Celestial coordinates.
+      ilng = lngax(icrd)
+      ilat = latax(icrd)
+      if (ilng.ne.0 .and. ilat.ne.0) then
+        call coExt(ctype(ilng,icrd), dummy, pcode)
+
+c       lonpole and latpole; only written if they were set explicitly.
+        status = celgtd(cel(1,icrd), CEL_REF, ref)
+        if (defs(1,icrd)) call wrhdd(tno, 'lonpole', ref(3))
+        if (defs(2,icrd)) call wrhdd(tno, 'latpole', ref(4))
+
+c       Projection parameters.
+        if (index(pcode, 'NCP,GLS').gt.0) then
+c         NCP was translated to SIN for WCSLIB in coReinit, don't record
+c         parameters for it.  GLS (-> SFL) doesn't have any anyway.
+        else
+c         phi0, theta0, and offset; only written if set explicitly.
+          if (defs(3,icrd) .or. defs(4,icrd)) then
+            status = celgtd(cel(1,icrd), CEL_PHI0,   dval)
+            status = celgtd(cel(1,icrd), CEL_THETA0, dval)
+            status = celgti(cel(1,icrd), CEL_OFFSET, ival)
+            if (defs(3,icrd)) call wrhdd(tno, 'phi0',   dval)
+            if (defs(4,icrd)) call wrhdd(tno, 'theta0', dval)
+            if (ival.ne.0)    call wrhdi(tno, 'xyzero', 1)
+          endif
+
+          status = celgti(cel(1,icrd), CEL_PRJ, prj)
+          status = prjgtd(prj, PRJ_PV, pv)
+
+          if (pcode.eq.'SIN') then
+c           Don't frighten the users!
+            if (pv(1).ne.0d0 .or. pv(2).ne.0d0) then
+c             Only record parameters for SIN if either is non-zero.
+              call wrhdd(tno, 'pv1', pv(1))
+              call wrhdd(tno, 'pv2', pv(2))
+            endif
+
+          else if (pcode.eq.'ZPN') then
+c           Only write non-zero parameters for ZPN.
+            do m = 0, 29
+              if (pv(m).ne.0d0) then
+c               There must be at least one.
+                call wrhdd(tno, 'pv'//itoaf(m), pv(m))
+              endif
+            enddo
+
+          else
+c           The remaining projections.
+            status = prjgti(prj, PRJ_PVRANGE, pvrng)
+            do m = 1, mod(pvrng,100)
+c             Record all parameters, including zero-valued ones.
+              call wrhdd(tno, 'pv'//itoaf(m), pv(m))
+            enddo
+          endif
+        endif
+
+        status = celpti(cel(1,icrd), CEL_PRJ, prj, 0)
+      endif
+
+c     The remaining parameters.
+      if (restfrq(icrd).ne.0d0) then
+        call wrhdd(tno, 'restfreq', restfrq(icrd))
+      endif
+
+      call wrhdd(tno, 'vobs', vobs(icrd))
       if (eqnox(icrd).gt.1800d0) then
-        call wrhdr(tno,'epoch',real(eqnox(icrd)))
+        call wrhdr(tno, 'epoch', real(eqnox(icrd)))
       endif
 
       if (obstime(icrd).gt.0d0) then
-        call wrhdd(tno,'obstime',obstime(icrd))
-      endif
-
-      if (sinrot(icrd).ne.0d0) then
-        dtemp = atan2(sinrot(icrd),cosrot(icrd))
-        call wrhdd(tno,'llrot',dtemp)
+        call wrhdd(tno, 'obstime', obstime(icrd))
       endif
 
       if (frqscl(icrd)) then
-        call wrhda(tno,'cellscal','1/F')
+        call wrhda(tno, 'cellscal', '1/F')
       else
-        call wrhda(tno,'cellscal','CONSTANT')
+        call wrhda(tno, 'cellscal', 'CONSTANT')
       endif
 
       end
@@ -2218,7 +2402,7 @@ c-----------------------------------------------------------------------
       include 'wcslib/prj.inc'
 
       integer   iax, lu, m, n, prj(PRJLEN), status
-      double precision dval, dtemp
+      double precision dval
       character cscal*16, key*8, num*2
 
       logical   hdprsnt
@@ -2249,32 +2433,36 @@ c-----------------------------------------------------------------------
         endif
       enddo
 
-      call rdhdd(lu,'llrot',dtemp,0d0)
-      cosrot(icrd) = cos(dtemp)
-      sinrot(icrd) = sin(dtemp)
+      call rdhdd(lu, 'llrot', dval, 0d0)
+      cosrot(icrd) = cos(dval)
+      sinrot(icrd) = sin(dval)
 
 
-c     Fill in the celprm struct.
-      if (hdprsnt(lu, 'phi0')) then
-        call rdhdd(lu, 'phi0', dval, 0d0)
-        status = celptd(cel(1,icrd), CEL_PHI0, dval, 0)
-      endif
-
-      if (hdprsnt(lu, 'theta0')) then
-        call rdhdd(lu, 'theta0', dval, 0d0)
-        status = celptd(cel(1,icrd), CEL_THETA0, dval, 0)
-      endif
-
-c     Currently we don't know which are the celestial axes so CEL_REF 1
-c     and 2 (i.e. CRVAL) are deferred till coReinit.
+c     Fill in the celprm struct.  Currently we don't know which are the
+c     celestial axes so CEL_REF 1 and 2 (i.e. CRVAL) are deferred till
+c     coReinit.
       if (hdprsnt(lu, 'lonpole')) then
         call rdhdd(lu, 'lonpole', dval, 0d0)
         status = celptd(cel(1,icrd), CEL_REF, dval, 3)
+        defs(1,icrd) = .true.
       endif
 
       if (hdprsnt(lu, 'latpole')) then
         call rdhdd(lu, 'latpole', dval, 0d0)
         status = celptd(cel(1,icrd), CEL_REF, dval, 4)
+        defs(2,icrd) = .true.
+      endif
+
+      if (hdprsnt(lu, 'phi0')) then
+        call rdhdd(lu, 'phi0', dval, 0d0)
+        status = celptd(cel(1,icrd), CEL_PHI0, dval, 0)
+        defs(3,icrd) = .true.
+      endif
+
+      if (hdprsnt(lu, 'theta0')) then
+        call rdhdd(lu, 'theta0', dval, 0d0)
+        status = celptd(cel(1,icrd), CEL_THETA0, dval, 0)
+        defs(4,icrd) = .true.
       endif
 
 c     Projection parameters.
