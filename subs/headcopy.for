@@ -51,7 +51,7 @@ c    trc        List of top-right-corners of input image region.
 c               Can be specified as 0 (scalar) meaning
 c               (naxis1,naxis2,...) for the input image.
 c
-c $Id: headcopy.for,v 1.9 2010/12/07 04:56:16 cal103 Exp $
+c $Id: headcopy.for,v 1.10 2010/12/08 00:33:27 cal103 Exp $
 c-----------------------------------------------------------------------
       integer   CRPIX, CDELT, CRVAL, CTYPE
       parameter (CRPIX = 1, CDELT = 2, CRVAL = 3, CTYPE = 4)
@@ -62,17 +62,18 @@ c-----------------------------------------------------------------------
       logical   noPerm, verbtm
       integer   axLen, iAxIn, iAxOut, jAxIn, jAxOut, nAxOut, k, m
       double precision defVal(4), dval
-      character cval*80, keyIn*8, keyOut*8, keyw(NKEYW)*8
+      character cval*80, cwrd(4)*8, keyIn*8, keyOut*8, keyw(NKEYW)*8
 
       logical   hdprsnt
       character itoaf*1
       external  hdprsnt, itoaf
 
-      data defVal /0d0, 1d0, 0d0, 0d0/
-
 c     The following coordinate keywords are handled individually below:
-c       crpix, cdelt, crval, ctype, llrot, pc,
-c       lonpole, latpole, phi0, theta0, xyzero, pv.
+c       crpix, cdelt, crval, ctype,
+c       llrot, pc, lonpole, latpole, phi0, theta0, xyzero, pv.
+      data cwrd   /'crpix   ', 'cdelt   ', 'crval   ', 'ctype  '/
+      data defVal / 0d0,        1d0,        0d0,        0d0/
+
 c     The remainder are copied verbatim in the order defined here if
 c     present in the input image.
       data keyw /
@@ -95,7 +96,7 @@ c       Set default values.
         dval = defVal(k)
 
         do iAxOut = 1, nAxOut
-          keyOut = keyw(k)(1:5) // itoaf(iAxOut)
+          keyOut = cwrd(k)(1:5) // itoaf(iAxOut)
 
           if (verbtm .and. hdprsnt(lIn, keyOut)) then
 c           Copy verbatim.
@@ -113,7 +114,7 @@ c             Use default values.
             endif
 
             if (iAxIn.ne.0) then
-              keyIn = keyw(k)(1:5) // itoaf(abs(iAxIn))
+              keyIn = cwrd(k)(1:5) // itoaf(abs(iAxIn))
 
               if (hdprsnt(lIn, keyIn)) then
 c               Read it from the input image.
