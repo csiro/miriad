@@ -164,7 +164,7 @@ c       skip, followed by the number of scans to process.  NOTE: This
 c       applies to all files read.  The default is to skip none and
 c       process all scans.
 c
-c$Id: atlod.for,v 1.33 2010/11/23 01:52:40 wie017 Exp $
+c$Id: atlod.for,v 1.34 2010/12/08 00:59:40 wie017 Exp $
 c--
 c
 c  Program Structure:
@@ -322,11 +322,11 @@ c    mhw  26oct10 Fix birdie flagging in 20/13 cm band
 c    mhw  11nov10 Record scan direction for otfmos scans
 c    mhw  23nov10 Fix for CABB 33 channel (64MHz) mode
 c
-c $Id: atlod.for,v 1.33 2010/11/23 01:52:40 wie017 Exp $
+c $Id: atlod.for,v 1.34 2010/12/08 00:59:40 wie017 Exp $
 c-----------------------------------------------------------------------
 
         integer MAXFILES,MAXTIMES,MAXSIM
-        parameter(MAXFILES=128,MAXTIMES=32,MAXSIM=16)
+        parameter(MAXFILES=128,MAXTIMES=32,MAXSIM=34)
 c
         character in(MAXFILES)*128,line*64,out*64,t1*18,t2*18,version*80
         integer tno,ntimes
@@ -342,8 +342,8 @@ c
         character itoaf*8, rperr*32, versan*80
 c-----------------------------------------------------------------------
       version = versan ('atlod',
-     :                  '$Revision: 1.33 $',
-     :                  '$Date: 2010/11/23 01:52:40 $')
+     :                  '$Revision: 1.34 $',
+     :                  '$Date: 2010/12/08 00:59:40 $')
 c
 c  Get the input parameters.
 c
@@ -2406,7 +2406,7 @@ c-----------------------------------------------------------------------
         include 'maxdim.h'
         include 'mirconst.h'
         integer MAXPOL,MAXSIM,MAXXYP,NDATA
-        parameter(MAXPOL=4,MAXSIM=16,MAXXYP=5,NDATA=MAXCHAN*MAXPOL)
+        parameter(MAXPOL=4,MAXSIM=34,MAXXYP=5,NDATA=MAXCHAN*MAXPOL)
         double precision J01Jul04,J18Oct07
         parameter(J01Jul04=2453187.5d0,J18Oct07=2454390.5d0)
         include 'rpfits.inc'
