@@ -15,7 +15,7 @@ c       Extra processing options.  Possible values are:
 c         brief   Give one line description of each file.
 c         full    Several line description of each file (default).
 c
-c$Id: prthd.for,v 1.4 2010/12/07 04:46:30 cal103 Exp $
+c$Id: prthd.for,v 1.5 2010/12/10 13:24:38 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -35,8 +35,8 @@ c-----------------------------------------------------------------------
       character versan*80
 c-----------------------------------------------------------------------
       version = versan('prthd',
-     *                 '$Revision: 1.4 $',
-     *                 '$Date: 2010/12/07 04:46:30 $')
+     *                 '$Revision: 1.5 $',
+     *                 '$Date: 2010/12/10 13:24:38 $')
 
 c     Get input parameters.
       call keyini
@@ -184,7 +184,7 @@ c     Min, max values and units.
       call rdhdr(tno,'datamin',rval2,rval1+1.0)
       call rdhda(tno,'bunit',aval1, ' ')
       if (rval1.ge.rval2) then
-        write(line, 10) rval1, rval2, aval1
+        write(line, 10) rval1, rval2, aval1(:16)
  10     format('Maximum: ',1pe15.8,4x,'Minimum: ',1pe15.8,2x,a)
         call logwrite(line,more)
       else
