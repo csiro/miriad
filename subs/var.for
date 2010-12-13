@@ -97,7 +97,7 @@ c
 	integer i
 c
 	integer nvar,nline,nwide,nvelo
-	parameter(nvar=95,nline=8,nwide=3,nvelo=4)
+	parameter(nvar=96,nline=8,nwide=3,nvelo=4)
         character var(nvar)*8,line(nline)*8,wide(nwide)*8,velo(nvelo)*8
 c
 c  Variables to check for a change, for line=channel.
@@ -116,25 +116,25 @@ c
 c  Variables to copy whenever they change.
 c
 	data var/     'airtemp ','antaz   ','antdiam ','antel   ',
-     *	   'antpos  ','atten   ','axisrms ','axismax', 'bin     ',
-     *	   'cable   ','calcode ','chi     ','corbit  ','corbw   ',
-     *	   'corfin  ','cormode ','coropt  ','cortaper','ddec    ',
-     *	   'dec     ','deldec  ','delra   ','dewpoint','dra     ',
-     *	   'epoch   ','evector ','focus   ','freq    ','freqif  ',
-     *	   'inttime ','ivalued ','jyperk  ','jyperka ','latitud ',
-     *	   'longitu ','lo1     ','lo2     ','lst     ','mount   ',
-     *	   'name    ','nants   ','nbin    ','ntemp   ','ntpower ',
-     *	   'obsdec  ','observer','obsline ','obsra   ','on      ',
-     *	   'operator','pbfwhm  ','phaselo1','phaselo2','pntdec  ',
-     *	   'pntra   ','phasem1 ','plangle ','plmaj   ','plmin   ',
-     *	   'pltb    ','precipmm','pressmb ','project ','ra      ',
-     *	   'refpnt  ','relhumid','source  ','telescop','temp    ',
-     *	   'themt   ','tif2    ','tpower  ','tsis    ','ut      ',
-     *	   'veldop  ','veltype ','version ','vsource ','wind    ',
-     *	   'winddir ','windmph ','delay   ','delay0  ','xtsys   ',
-     *	   'ytsys   ','xsampler','ysampler','xyamp   ','pbtype  ',
-     *     'tau230  ','rmspath ','smonrms ','rain    ','sctype  ',
-     *	   'chi2    '/
+     *     'antpos  ','atten   ','axismax ','axisrms ','bin     ',
+     *     'cable   ','calcode ','chi     ','chi2    ','corbit  ',
+     *     'corbw   ','corfin  ','cormode ','coropt  ','cortaper',
+     *     'ddec    ','dec     ','delay   ','delay0  ','deldec  ',
+     *     'delra   ','dewpoint','dra     ','epoch   ','evector ',
+     *     'focus   ','freq    ','freqif  ','ifchain ','inttime ',
+     *     'ivalued ','jyperk  ','jyperka ','latitud ','longitu ',
+     *     'lo1     ','lo2     ','lst     ','mount   ','name    ',
+     *     'nants   ','nbin    ','ntemp   ','ntpower ','obsdec  ',
+     *     'observer','obsline ','obsra   ','on      ','operator',
+     *     'pbfwhm  ','pbtype  ','phaselo1','phaselo2','phasem1 ',
+     *     'plangle ','plmaj   ','plmin   ','pltb    ','pntdec  ',
+     *     'pntra   ','precipmm','pressmb ','project ','ra      ',
+     *     'rain    ','refpnt  ','relhumid','rmspath ','sctype  ',
+     *     'smonrms ','source  ','tau230  ','telescop','temp    ',
+     *     'themt   ','tif2    ','tpower  ','tsis    ','ut      ',
+     *     'veldop  ','veltype ','version ','vsource ','wind    ',
+     *     'winddir ','windmph ','xtsys   ','ytsys   ','xsampler',
+     *     'ysampler','xyamp   '/
 c------------------------------------------------------------------------
 	avall = .false.
 c
