@@ -775,26 +775,29 @@ c------------------------------------------------------------------------
 	character line*64
 c
 	integer NCOPY,NSCHECK,NWCHECK
-	parameter(NCOPY=85,NSCHECK=8,NWCHECK=3)
+	parameter(NCOPY=98,NSCHECK=8,NWCHECK=3)
 	character copy(NCOPY)*8,scheck(NSCHECK)*8,wcheck(NWCHECK)*8
-        data copy/    'airtemp ','antdiam ','antpos  ','atten   ',
-     *     'axisrms ','chi     ','corbit  ','corbw   ','corfin  ',
-     *     'cormode ','coropt  ','cortaper','ddec    ','dec     ',
-     *     'dewpoint','dra     ','epoch   ','evector ','focus   ',
-     *     'freq    ','freqif  ','inttime ','ivalued ','jyperk  ',
-     *     'latitud ','longitu ','lo1     ','lo2     ','lst     ',
-     *     'mount   ','nants   ','ntemp   ','ntpower ','obsdec  ',
-     *     'observer','obsra   ','on      ','operator','pbfwhm  ',
-     *     'phaselo1','phaselo2','phasem1 ','plangle ','plmaj   ',
-     *     'plmin   ','pltb    ','precipmm','ra      ','relhumid',
-     *     'source  ','telescop','temp    ','tpower  ','ut      ',
-     *     'veldop  ','veltype ','version ','vsource ','winddir ',
-     *     'windmph ','delay0  ','npol    ','pol     ','bin     ',
-     *	   'nbin    ','pbtype  ','xtsys   ','ytsys   ','xsampler',
-     *	   'ysampler','xyamp   ','antaz   ','antel   ','axismax ',
-     *	   'calcode ','name    ','pntra   ','pntdec  ','pressmb ',
-     *	   'project ','wind    ','rain    ','smonrms ','refpnt  ',
-     *	   'sctype  '/
+        data copy/    'airtemp ','antaz   ','antdiam ','antel   ',
+     *     'antpos  ','atten   ','axismax ','axisrms ','bin     ',
+     *     'cable   ','calcode ','chi     ','chi2    ','corbit  ',
+     *     'corbw   ','corfin  ','cormode ','coropt  ','cortaper',
+     *     'ddec    ','dec     ','delay   ','delay0  ','deldec  ',
+     *     'delra   ','dewpoint','dra     ','epoch   ','evector ',
+     *     'focus   ','freq    ','freqif  ','ifchain ','inttime ',
+     *     'ivalued ','jyperk  ','jyperka ','latitud ','longitu ',
+     *     'lo1     ','lo2     ','lst     ','mount   ','name    ',
+     *     'nants   ','nbin    ','ntemp   ','ntpower ','obsdec  ',
+     *     'observer','obsline ','obsra   ','on      ','operator',
+     *     'pbfwhm  ','pbtype  ','phaselo1','phaselo2','phasem1 ',
+     *     'plangle ','plmaj   ','plmin   ','pltb    ','pntdec  ',
+     *     'pntra   ','precipmm','pressmb ','project ','ra      ',
+     *     'rain    ','refpnt  ','relhumid','rmspath ','sctype  ',
+     *     'smonrms ','source  ','tau230  ','telescop','temp    ',
+     *     'themt   ','tif2    ','tpower  ','tsis    ','ut      ',
+     *     'veldop  ','veltype ','version ','vsource ','wind    ',
+     *     'winddir ','windmph ','xtsys   ','ytsys   ','xsampler',
+     *     'ysampler','xyamp   ',
+     *     'npol    ','pol     '/
 c
 	data SCheck/  'nspect  ','restfreq','ischan  ','nschan  ',
      *     'sfreq   ','sdf     ','systemp ','xyphase '/
