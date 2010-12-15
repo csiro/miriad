@@ -103,7 +103,7 @@ c       make this bias plot without actually working on any data if you
 c       wish. See also VLA memo no. 161 by Patrick Leahy.
 c       Default is no plot.
 c
-c$Id: impol.for,v 1.14 2010/11/22 05:44:36 cal103 Exp $
+c$Id: impol.for,v 1.15 2010/12/15 23:35:49 cal103 Exp $
 c--
 c  History:
 c    nebk 21may92 Original version.
@@ -157,8 +157,8 @@ c-----------------------------------------------------------------------
       data tIn, lpout, lmout, lpaout /3*0, 2*0, 2*0, 2*0/
 c-----------------------------------------------------------------------
       version = versan ('impol',
-     *                  '$Revision: 1.14 $',
-     *                  '$Date: 2010/11/22 05:44:36 $')
+     *                  '$Revision: 1.15 $',
+     *                  '$Date: 2010/12/15 23:35:49 $')
 
 c     Get user inputs.
       call keyini
@@ -315,27 +315,30 @@ c       Open output images starting with polarized intensity...
         if (npout.gt.0) then
           call openout(tIn, naxes, naxis, axmap, pout(1),
      *      'polarized_intensity', version, lpout(1))
-        else if (npout.eq.2) then
-          call openout(tIn, naxes, naxis, axmap, pout(2),
-     *      'polarized_intensity', version, lpout(2))
+          if (npout.eq.2) then
+            call openout(tIn, naxes, naxis, axmap, pout(2),
+     *        'polarized_intensity', version, lpout(2))
+          endif
         endif
 
 c       ...fractional polarization...
         if (nmout.gt.0) then
           call openout(tIn, naxes, naxis, axmap, mout(1),
      *      'fractional_polarization', version, lmout(1))
-        else if (nmout.eq.2) then
-          call openout(tIn, naxes, naxis, axmap, mout(2),
-     *      'fractional_polarization', version, lmout(2))
+          if (nmout.eq.2) then
+            call openout(tIn, naxes, naxis, axmap, mout(2),
+     *        'fractional_polarization', version, lmout(2))
+          endif
         endif
 
 c       ...position angle.
         if (npaout.gt.0) then
           call openout(tIn, naxes, naxis, axmap, paout(1),
      *      'position_angle', version, lpaout(1))
-        else if (npaout.eq.2) then
-          call openout(tIn, naxes, naxis, axmap, paout(2),
-     *      'position_angle', version, lpaout(2))
+          if (npaout.eq.2) then
+            call openout(tIn, naxes, naxis, axmap, paout(2),
+     *        'position_angle', version, lpaout(2))
+          endif
         endif
 
 c       Compute and write out the output image(s).
