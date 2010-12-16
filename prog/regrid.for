@@ -228,7 +228,7 @@ c       Interpolation tolerance.  Tolerate an error of the specified
 c       amount in converting pixel locations in the input to the output.
 c       Must be less that 0.5.  The default is 0.05.
 c
-c$Id: regrid.for,v 1.6 2010/12/07 05:27:42 cal103 Exp $
+c$Id: regrid.for,v 1.7 2010/12/16 07:12:01 cal103 Exp $
 c--
 c
 c  History:
@@ -271,8 +271,8 @@ c     Projection codes.
      *  'pco', 'tsc', 'csc', 'qsc', 'hpx'/
 c-----------------------------------------------------------------------
       version = versan ('regrid',
-     *                  '$Revision: 1.6 $',
-     *                  '$Date: 2010/12/07 05:27:42 $')
+     *                  '$Revision: 1.7 $',
+     *                  '$Date: 2010/12/16 07:12:01 $')
 
 c     Get the input parameters.
       call keyini
@@ -425,14 +425,26 @@ c       Given by user.
 
 c     Set celestial parameters.
       if (pcode.eq.' ') then
-c       Parameters relating to the fiducial point.
-        if (lonpol.eq.UNDEF) call coGetD(lDef, 'lonpole', lonpol)
-        if (latpol.eq.UNDEF) call coGetD(lDef, 'latpole', latpol)
-        if (phi0  .eq.UNDEF) call coGetD(lDef, 'phi0',    phi0)
-        if (theta0.eq.UNDEF) call coGetD(lDef, 'theta0',  theta0)
-        if (xyzero.eq.-1)    call coGetI(lDef, 'xyzero',  xyzero)
+c       pcode not set; copy parameters relating to the fiducial point
+c       only if present in the template header.
+        if (lonpol.eq.UNDEF .and. hdprsnt(lDef, 'lonpole')) then
+          call coGetD(lDef, 'lonpole', lonpol)
+        endif
+        if (latpol.eq.UNDEF .and. hdprsnt(lDef, 'latpole')) then
+          call coGetD(lDef, 'latpole', latpol)
+        endif
+        if (phi0  .eq.UNDEF .and. hdprsnt(lDef, 'phi0')) then
+          call coGetD(lDef, 'phi0',    phi0)
+        endif
+        if (theta0.eq.UNDEF .and. hdprsnt(lDef, 'theta0')) then
+          call coGetD(lDef, 'theta0',  theta0)
+        endif
+        if (xyzero.eq.-1    .and. hdprsnt(lDef, 'xyzero')) then
+          call coGetI(lDef, 'xyzero',  xyzero)
+        endif
       endif
 
+c     WCSLIB will provide the defaults if these are still undefined.
       if (lonpol.ne.UNDEF) call coSetD(cOut, 'lonpole', lonpol)
       if (latpol.ne.UNDEF) call coSetD(cOut, 'latpole', latpol)
       if (phi0  .ne.UNDEF) call coSetD(cOut, 'phi0',    phi0)
