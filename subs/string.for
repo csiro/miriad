@@ -2,10 +2,10 @@ c***********************************************************************
 c  History
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: string.for,v 1.5 2010/12/16 01:59:21 cal103 Exp $
+c $Id: string.for,v 1.6 2010/12/16 07:09:30 cal103 Exp $
 c***********************************************************************
 
-c* stcat - Concatenate two strings avoiding blank pads.
+c* stcat - Concatenate two strings avoiding blank padding.
 c& rjs
 c: string
 c+
@@ -13,12 +13,12 @@ c+
 
       character a*(*), b*(*)
 c  ---------------------------------------------------------------------
-c  Concatenate two strings together, ignoring blank padding.
+c  Concatenate two strings ignoring blank padding.
 c
 c  Inputs:
-c    a,b  The strings to be concatenated.
+c    a,b        The strings to be concatenated.
 c  Output:
-c    stcat The concatenated strings a//b.
+c    stcat      The concatenated strings a//b.
 c-----------------------------------------------------------------------
       integer length
 
@@ -27,6 +27,55 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
       length = len1(a)
       stcat = a(1:length)//b
+
+      end
+
+c***********************************************************************
+
+      character*(*) function spaste (str1, sep, str2, str3)
+
+      character sep*(*), str1*(*), str2*(*), str3*(*)
+c-----------------------------------------------------------------------
+c  Paste strings together: trailing blanks are stripped from the first
+c  and leading and trailing blanks from the second, with sep sandwiched
+c  between them and str3 appended (as is).
+c
+c  Inputs:
+c    str1       First string to be concatenated, trailing blanks are
+c               removed.  If str1 is blank it is ignored.
+c    sep        Separator inserted (as is) between str1 and str2.  Use
+c               sep = '//' to denote an empty separator (since Fortran
+c               doesn't allow empty strings).
+c    str2       Second string to be concatenated, leading and trailing
+c               blanks are removed.  If str2 is blank it is ignored.
+c    str3       Third string to be concatenated as is.
+c  Output:
+c    spaste     The concatenated strings.
+c-----------------------------------------------------------------------
+      integer   j, k
+
+      external  len1
+      integer   len1
+c-----------------------------------------------------------------------
+      j = len1(str1)
+      if (j.gt.0) spaste = str1(1:j)
+      k = 1 + j
+
+      if (sep.ne.'//') then
+        spaste(k:) = sep
+        k = k + len(sep)
+      endif
+
+      do j = 1, len(str2)
+        if (str2(j:j).gt.' ' .and. str2(j:j).le.'~') goto 10
+      enddo
+
+ 10   if (j.le.len(str2)) then
+        spaste(k:) = str2(j:)
+        k = k + (len1(str2) - j + 1)
+      endif
+
+      spaste(k:) = str3
 
       end
 
@@ -51,7 +100,7 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-c* atoif -- Convert a string into an integer.
+c* atoif -- Decode a string as an integer.
 c& rjs
 c: strings
 c+
@@ -61,10 +110,9 @@ c+
       integer result
       logical ok
 c  ---------------------------------------------------------------------
-c  Convert a string into its corresponding integer.
-c  The string can be input as a hex, octal or decimal number using a
-c  prefix 0x, %x or h for hex, o or %o for octal, and +, - or nothing
-c  for decimal. Either case is ok.
+c  Decode string as an integer.  The string can be input as a hex, octal
+c  or decimal number using a prefix 0x, %x or h for hex, o or %o for
+c  octal, and +, - or nothing for decimal.
 c
 c  Input:
 c    string     The ascii string, containing the integer.
@@ -76,7 +124,7 @@ c-----------------------------------------------------------------------
       character ch*1, ch2*2
 
       external len1
-      integer len1
+      integer  len1
 c-----------------------------------------------------------------------
 c     Ignore leading blanks.
       do i = 1, len(string)
@@ -145,7 +193,7 @@ c     Decode value.
 
 c***********************************************************************
 
-c* atorf -- Convert a string into a real.
+c* atorf -- Decode a string as a real.
 c& rjs
 c: strings
 c+
@@ -155,7 +203,7 @@ c+
       real result
       logical ok
 c  ---------------------------------------------------------------------
-c  Convert a string into its corresponding real.
+c  Decode a string as a real value.
 c
 c  Input:
 c    string     The ascii string, containing the real.
@@ -172,7 +220,52 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-c* atodf -- Convert a string into a double precision.
+c* matorf - Decode a string as many real values.
+c& rjs
+c: strings
+c+
+      subroutine matorf(string, array, n, ok)
+
+      character*(*)    string
+      integer          n
+      real             array(n)
+      logical          ok
+c  ---------------------------------------------------------------------
+c  Decode a string as many real values.
+c
+c Input:
+c   string      The ascii string containing the numbers
+c   n           The number of values wanted
+c Output:
+c   array       The real numbers in the string
+c   ok          True if the decoding succeeded
+c-----------------------------------------------------------------------
+      character*30     substr
+      double precision dval
+      integer          tlen,k,k1,k2
+
+      external len1
+      integer  len1
+c-----------------------------------------------------------------------
+      k1 = 1
+      k2 = len1(string)
+      k  = 0
+      do while (k1.le.k2 .and. k.lt.n)
+        call getfield(string, k1, k2, substr, tlen)
+        call atodf(substr,dval,ok)
+        if (ok) then
+          k = k+1
+          array(k) = dval
+        else
+          return
+        endif
+      enddo
+
+      end
+
+c***********************************************************************
+
+c* atodf -- Decode a string as a double precision value.
 c& rjs
 c: strings
 c+
@@ -182,7 +275,7 @@ c+
       double precision d
       logical ok
 c  ---------------------------------------------------------------------
-c  Convert a string into its corresponding double precision.
+c  Decode a string as a double precision value.
 c
 c  Input:
 c    string     The ascii string, containing the double precision.
@@ -275,7 +368,7 @@ c     Finish up.
 
 c***********************************************************************
 
-c* matodf - Convert a string to many double precision numbers.
+c* matodf - Decode a string as many double precision values.
 c& rjs
 c: strings
 c+
@@ -286,58 +379,13 @@ c+
       double precision array(n)
       logical          ok
 c  ---------------------------------------------------------------------
-c Convert a string to many double precision numbers.
+c  Decode a string as many double precision values.
 c
 c Input:
 c   string      The ascii string containing the numbers
 c   n           The number of values wanted
 c Output:
 c   array       The double precision numbers in the string
-c   ok          True if the decoding succeeded
-c-----------------------------------------------------------------------
-      character*30     substr
-      double precision dval
-      integer          tlen,k,k1,k2
-
-      external len1
-      integer  len1
-c-----------------------------------------------------------------------
-      k1 = 1
-      k2 = len1(string)
-      k  = 0
-      do while (k1.le.k2 .and. k.lt.n)
-        call getfield(string, k1, k2, substr, tlen)
-        call atodf(substr,dval,ok)
-        if (ok) then
-          k = k+1
-          array(k) = dval
-        else
-          return
-        endif
-      enddo
-
-      end
-
-c***********************************************************************
-
-c* matorf - Convert a string to many real numbers.
-c& rjs
-c: strings
-c+
-      subroutine matorf(string, array, n, ok)
-
-      character*(*)    string
-      integer          n
-      real             array(n)
-      logical          ok
-c  ---------------------------------------------------------------------
-c Convert a string to many real numbers.
-c
-c Input:
-c   string      The ascii string containing the numbers
-c   n           The number of values wanted
-c Output:
-c   array       The real numbers in the string
 c   ok          True if the decoding succeeded
 c-----------------------------------------------------------------------
       character*30     substr
@@ -420,7 +468,6 @@ c
 c  Input:
 c    array      Array of integers to be converted to a string.
 c    n          Number of integers.
-c
 c  Output:
 c    line       The formatted string. Integers are separated by
 c               commas (no blanks).
@@ -451,44 +498,6 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-c* dtoaf -- Convert a double precision value into a string.
-c& rjs
-c: strings
-c+
-      character*(*) function dtoaf(value, form, nsf)
-
-      double precision value
-      integer form, nsf
-c  ---------------------------------------------------------------------
-c  Format a double precision value into a string using miriad's numbpg.
-c
-c  Inputs:
-c    value         The value (double precision)
-c    form          How the number is formatted:
-c                    form = 0 - uses either decimal or
-c                               exponential notation
-c                    form = 1 - uses decimal notation
-c                    form = 2 - uses exponential notation
-c    nsf           Number of significant figures for output
-c                    (best range is between 1 and 6)
-c-----------------------------------------------------------------------
-      integer ns, np, nv
-      character tmpstr*25
-c-----------------------------------------------------------------------
-      if (value.eq.0.0D0) then
-        np = 0
-        nv = 0
-      else
-        np = log10(abs(value)) - nsf
-        nv = nint(value * (10.0 ** (-np)))
-      endif
-      call numbpg(nv, np, form, tmpstr, ns)
-      dtoaf = tmpstr(1:ns)
-
-      end
-
-c***********************************************************************
-
 c* rtoaf -- Convert a real value into a string.
 c& rjs
 c: strings
@@ -513,6 +522,91 @@ c-----------------------------------------------------------------------
       character dtoaf*25
 c-----------------------------------------------------------------------
       rtoaf = dtoaf(dble(value), form, nsf)
+
+      end
+
+c***********************************************************************
+
+c* dtoaf -- Convert a double precision value into a string.
+c& rjs
+c: strings
+c+
+      character*(*) function dtoaf(value, form, nsf)
+
+      double precision value
+      integer form, nsf
+c  ---------------------------------------------------------------------
+c  Format a double precision value into a string using miriad's numbpg.
+c
+c  Inputs:
+c    value         The value (double precision)
+c    form          How the number is formatted:
+c                    form = 0 - uses either decimal or
+c                               exponential notation
+c                    form = 1 - uses decimal notation
+c                    form = 2 - uses exponential notation
+c    nsf           Number of significant figures for output
+c                    (best range is between 1 and 6)
+c-----------------------------------------------------------------------
+      integer   np, ns, nv
+      character tmpstr*25
+c-----------------------------------------------------------------------
+      if (value.eq.0d0) then
+        np = 0
+        nv = 0
+      else
+        np = log10(abs(value)) - nsf
+        nv = nint(value * (10.0**(-np)))
+      endif
+
+      call numbpg(nv, np, form, tmpstr, ns)
+      dtoaf = tmpstr(1:ns)
+
+      end
+
+c***********************************************************************
+
+      character*(*) function hfff (dval, rng1, rng2, clean, ffmt, efmt)
+
+      integer   clean
+      double precision dval, rng1, rng2
+      character efmt*(*), ffmt*(*)
+c-----------------------------------------------------------------------
+c  Human-friendly floating format.  If rng1 <= abs(dval) < rng2 and ffmt
+c  is not blank, write dval using (fixed) floating point format, ffmt.
+c  If clean is non-zero, strip trailing zeroes.  Use (exponential)
+c  format, efmt, otherwise.
+c
+c  The Fortran formats are specified without enclosing parentheses.
+c-----------------------------------------------------------------------
+      integer   k
+      character fmt*16
+
+      external  spaste
+      character spaste*16
+c-----------------------------------------------------------------------
+      if (ffmt.ne.' ' .and.
+     *    rng1.le.abs(dval) .and. abs(dval).lt.rng2) then
+        fmt = spaste('(', '//', ffmt, ')')
+        write(hfff,fmt) dval
+
+        if (clean.ne.0) then
+          do k = len(hfff), 1, -1
+            if (hfff(k:k).eq.'0') hfff(k:k) = ' '
+            if (hfff(k:k).ne.' ') then
+              if (hfff(k:k).eq.'.') hfff(k:k) = ' '
+              return
+            endif
+          enddo
+        endif
+      else
+        if (efmt.ne.' ') then
+          fmt = spaste('(', '//', efmt, ')')
+        else
+          fmt = '(1pe15.6)'
+        endif
+        write(hfff,fmt) dval
+      endif
 
       end
 
@@ -558,9 +652,9 @@ c     Go over ths string.
       more = .true.
       do while (k1.le.k2 .and. more)
         if ((string(k1:k1).ge.'0' .and. string(k1:k1).le.'9') .or.
-     *       (string(k1:k1).ge.'a' .and. string(k1:k1).le.'z') .or.
-     *       (string(k1:k1).ge.'A' .and. string(k1:k1).le.'Z') .or.
-     *        string(k1:k1).eq.'$') then
+     *      (string(k1:k1).ge.'a' .and. string(k1:k1).le.'z') .or.
+     *      (string(k1:k1).ge.'A' .and. string(k1:k1).le.'Z') .or.
+     *       string(k1:k1).eq.'$') then
           k1 = k1 + 1
         else
           more = .false.
@@ -731,27 +825,17 @@ c+
 
       character string*(*)
 c  ---------------------------------------------------------------------
-c  This determines the unblanked length of a character string.
+c  Determine the unblanked length of a character string.
 c
 c  Input:
 c    string     The character string that we are interested in.
 c  Output:
-c    len1       The unpadded length of the character string.
+c    len1       The unpadded length of the character string.  May be 0.
 c-----------------------------------------------------------------------
-      integer l
-      logical more
-c-----------------------------------------------------------------------
-      l = len(string)
-      more = .true.
-      do while (l.gt.0 .and. more)
-        if (string(l:l).le.' ' .or. string(l:l).gt.'~') then
-          l = l - 1
-        else
-          more = .false.
-        endif
+      do len1 = len(string), 1, -1
+        if (string(len1:len1).gt.' ' .and.
+     *      string(len1:len1).le.'~') return
       enddo
-
-      len1 = l
 
       end
 
