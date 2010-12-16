@@ -15,7 +15,7 @@ c       Extra processing options.  Possible values are:
 c         brief   Give one line description of each file.
 c         full    Several line description of each file (default).
 c
-c$Id: prthd.for,v 1.5 2010/12/10 13:24:38 cal103 Exp $
+c$Id: prthd.for,v 1.6 2010/12/16 07:10:51 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -35,8 +35,8 @@ c-----------------------------------------------------------------------
       character versan*80
 c-----------------------------------------------------------------------
       version = versan('prthd',
-     *                 '$Revision: 1.5 $',
-     *                 '$Date: 2010/12/10 13:24:38 $')
+     *                 '$Revision: 1.6 $',
+     *                 '$Date: 2010/12/16 07:10:51 $')
 
 c     Get input parameters.
       call keyini
@@ -358,88 +358,6 @@ c     Check for extra tables, etc.
      *  'Mosaicing information table is present',more)
 
       end
-
-c***********************************************************************
-
-      character*(*) function spaste (str1, sep, str2, str3)
-
-      character sep*(*), str1*(*), str2*(*), str3*(*)
-c-----------------------------------------------------------------------
-c  Paste strings together: trailing blanks are stripped from the first
-c  and leading and trailing blanks from the second, with sep sandwiched
-c  between them and str3 appended (as is).
-c
-c  Use sep = '//' to denote an empty separator (since Fortran doesn't
-c  allow empty strings).
-c-----------------------------------------------------------------------
-      integer k1, k2, k3
-c-----------------------------------------------------------------------
-      do k1 = len(str1), 1, -1
-        if (str1(k1:k1).ne.' ') goto 10
-      enddo
-
- 10   do k2 = 1, len(str2)
-        if (str2(k2:k2).ne.' ') goto 20
-      enddo
-
- 20   do k3 = len(str2), k2, -1
-        if (str2(k3:k3).ne.' ') goto 30
-      enddo
-
- 30   if (sep.eq.'//') then
-        spaste = str1(:k1) // str2(k2:k3) // str3
-      else
-        spaste = str1(:k1) // sep // str2(k2:k3) // str3
-      endif
-
-      end
-
-c***********************************************************************
-
-      character*(*) function hfff (dval, rng1, rng2, clean, ffmt, efmt)
-
-      integer   clean
-      double precision dval, rng1, rng2
-      character efmt*(*), ffmt*(*)
-c-----------------------------------------------------------------------
-c  Human-friendly floating format.  If rng1 <= abs(dval) < rng2 and ffmt
-c  is not blank, write dval using (fixed) floating point format, ffmt.
-c  If clean is non-zero, strip trailing zeroes.  Use (exponential)
-c  format, efmt, otherwise.
-c
-c  The Fortran formats are specified without enclosing parentheses.
-c-----------------------------------------------------------------------
-      integer   k
-      character fmt*16
-
-      external  spaste
-      character spaste*16
-c-----------------------------------------------------------------------
-      if (ffmt.ne.' ' .and.
-     *    rng1.le.abs(dval) .and. abs(dval).lt.rng2) then
-        fmt = spaste('(', '//', ffmt, ')')
-        write(hfff,fmt) dval
-
-        if (clean.ne.0) then
-          do k = len(hfff), 1, -1
-            if (hfff(k:k).eq.'0') hfff(k:k) = ' '
-            if (hfff(k:k).ne.' ') then
-              if (hfff(k:k).eq.'.') hfff(k:k) = ' '
-              goto 999
-            endif
-          enddo
-        endif
-      else
-        if (efmt.ne.' ') then
-          fmt = spaste('(', '//', efmt, ')')
-        else
-          fmt = '(1pe15.6)'
-        endif
-        write(hfff,fmt) dval
-      endif
-
- 999  end
-
 
 c***********************************************************************
 
