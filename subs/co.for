@@ -36,7 +36,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: co.for,v 1.16 2010/12/07 05:15:49 cal103 Exp $
+c $Id: co.for,v 1.17 2010/12/16 07:06:34 cal103 Exp $
 c***********************************************************************
 
 c* coInit -- Initialise coordinate conversion routines.
@@ -2403,7 +2403,7 @@ c-----------------------------------------------------------------------
 
       integer   iax, lu, m, n, prj(PRJLEN), status
       double precision dval
-      character cscal*16, key*8, num*2
+      character cscal*16, keywrd*8, num*2
 
       logical   hdprsnt
       character itoaf*2
@@ -2469,8 +2469,9 @@ c     Projection parameters.
       status = celgti(cel(1,icrd), CEL_PRJ, prj)
 
       do m = 0, 29
-        key = 'pv' // itoaf(m)
-        if (hdprsnt(lu, key)) then
+        keywrd = 'pv' // itoaf(m)
+        if (hdprsnt(lu, keywrd)) then
+          call rdhdd(lu, keywrd, dval, 0d0)
           status = prjptd(prj, PRJ_PV, dval, m)
         endif
       enddo
