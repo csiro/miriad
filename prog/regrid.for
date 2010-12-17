@@ -228,7 +228,7 @@ c       Interpolation tolerance.  Tolerate an error of the specified
 c       amount in converting pixel locations in the input to the output.
 c       Must be less that 0.5.  The default is 0.05.
 c
-c$Id: regrid.for,v 1.7 2010/12/16 07:12:01 cal103 Exp $
+c$Id: regrid.for,v 1.8 2010/12/17 07:48:47 cal103 Exp $
 c--
 c
 c  History:
@@ -271,8 +271,8 @@ c     Projection codes.
      *  'pco', 'tsc', 'csc', 'qsc', 'hpx'/
 c-----------------------------------------------------------------------
       version = versan ('regrid',
-     *                  '$Revision: 1.7 $',
-     *                  '$Date: 2010/12/16 07:12:01 $')
+     *                  '$Revision: 1.8 $',
+     *                  '$Date: 2010/12/17 07:48:47 $')
 
 c     Get the input parameters.
       call keyini
@@ -619,9 +619,9 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine setCel(lIn, lOut, doDesc, doEqEq, doGalEq)
+      subroutine setCel(lIn, cOut, doDesc, doEqEq, doGalEq)
 
-      integer lIn, lOut
+      integer lIn, cOut
       logical doDesc, doEqEq, doGalEq
 c-----------------------------------------------------------------------
 c  Set up output celestial coordinates.
@@ -637,17 +637,17 @@ c-----------------------------------------------------------------------
       external  epo2jul
       double precision epo2jul
 c-----------------------------------------------------------------------
-      call coReInit(lOut)
+      call coReInit(cOut)
       if (.not.(doDesc .or. doEqEq .or. doGalEq)) return
 
 c     Look for a celestial axis pair.
-      call coFindAx(lOut,'longitude',ilng)
-      call coFindAx(lOut,'latitude',ilat)
+      call coFindAx(cOut,'longitude',ilng)
+      call coFindAx(cOut,'latitude',ilat)
       if (ilng.eq.0 .or. ilat.eq.0)
      *  call bug('f','Cannot find RA/DEC or GLON/GLAT axes')
 
-      call coAxGet(lOut,ilng,ctype1,crpix1,crval1,cdelt1)
-      call coAxGet(lOut,ilat,ctype2,crpix2,crval2,cdelt2)
+      call coAxGet(cOut,ilng,ctype1,crpix1,crval1,cdelt1)
+      call coAxGet(cOut,ilat,ctype2,crpix2,crval2,cdelt2)
 
       if (doDesc) then
 c       Convert to radians.
@@ -657,9 +657,9 @@ c       Convert to radians.
         cdelt2 = cdelt2 * DD2R
 
         if (.not.(doEqEq .or. doGalEq)) then
-          call coAxSet(lOut,ilng,ctype1,crpix1,crval1,cdelt1)
-          call coAxSet(lOut,ilat,ctype2,crpix2,crval2,cdelt2)
-          call coReInit(lOut)
+          call coAxSet(cOut,ilng,ctype1,crpix1,crval1,cdelt1)
+          call coAxSet(cOut,ilat,ctype2,crpix2,crval2,cdelt2)
+          call coReInit(cOut)
           return
         endif
       endif
@@ -683,7 +683,7 @@ c     Extract the basic coordinate types, RA/DEC or GLON/GLAT.
       endif
 
 c     Get the equinox and the epoch of observation.
-      call coGetD(lOut,'epoch',eqnox)
+      call coGetD(cOut,'epoch',eqnox)
       call coGetD(lIn,'obstime',obstime)
 
       doeqnx = doEqEq
@@ -811,7 +811,7 @@ c     Switch equatorial coordinates?
 
         else
           call bug('f',
-     *        'Cannot convert other than B1950/J2000 equatorial')
+     *      'Cannot convert other than B1950/J2000 equatorial')
         endif
 
         gotone = .true.
@@ -820,12 +820,12 @@ c     Switch equatorial coordinates?
       if (gotone) then
         call coSetD(lIn,'obstime',obstime)
 
-        call coAxSet(lOut,ilng,ctype1,crpix1,crval1,cdelt1)
-        call coAxSet(lOut,ilat,ctype2,crpix2,crval2,cdelt2)
-        call coSetD(lOut,'epoch',eqnox)
-        call coSetD(lOut,'obstime',obstime)
+        call coAxSet(cOut,ilng,ctype1,crpix1,crval1,cdelt1)
+        call coAxSet(cOut,ilat,ctype2,crpix2,crval2,cdelt2)
+        call coSetD(cOut,'epoch',eqnox)
+        call coSetD(cOut,'obstime',obstime)
 
-        call coReinit(lOut)
+        call coReinit(cOut)
       endif
 
       end
@@ -970,18 +970,18 @@ c-----------------------------------------------------------------------
       character line*64
 
 c     Follows the list of keywords in HEADCP (headcopy.for) with the
-c     omission of coordinate keywords, which are handled by coWrite,
-c     and the addition of rms (but not datamin or datamax).
+c     omission of coordinate keywords, cellscal, epoch, and vobs, which
+c     are handled by coWrite, and the addition of rms (but not datamin
+c     or datamax).
       integer   NKEYS
-      parameter (NKEYS=27)
+      parameter (NKEYS=24)
       character keyw(NKEYS)*8
       data keyw /
-     *                            'bmaj    ', 'bmin    ', 'bpa     ',
-     *    'btype   ', 'bunit   ', 'cellscal', 'date-obs', 'epoch   ',
-     *    'instrume', 'ltype   ', 'lstart  ', 'lstep   ', 'lwidth  ', 
-     *    'mostable', 'niters  ', 'object  ', 'observer', 'obsra   ', 
-     *    'obsdec  ', 'obstime ', 'pbfwhm  ', 'pbtype  ', 'restfreq', 
-     *    'telescop', 'vobs    ', 'history ', 'rms     '/
+     *    'bmaj    ', 'bmin    ', 'bpa     ', 'btype   ', 'bunit   ',
+     *    'date-obs', 'instrume', 'ltype   ', 'lstart  ', 'lstep   ',
+     *    'lwidth  ', 'mostable', 'niters  ', 'object  ', 'observer',
+     *    'obsra   ', 'obsdec  ', 'obstime ', 'pbfwhm  ', 'pbtype  ',
+     *    'restfreq', 'telescop', 'history ', 'rms     '/
 c-----------------------------------------------------------------------
       call coWrite(cOut,lOut)
 
