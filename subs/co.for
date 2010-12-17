@@ -36,7 +36,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: co.for,v 1.17 2010/12/16 07:06:34 cal103 Exp $
+c $Id: co.for,v 1.18 2010/12/17 07:31:36 cal103 Exp $
 c***********************************************************************
 
 c* coInit -- Initialise coordinate conversion routines.
@@ -2368,11 +2368,12 @@ c             Record all parameters, including zero-valued ones.
       endif
 
 c     The remaining parameters.
-      if (restfrq(icrd).ne.0d0) then
-        call wrhdd(tno, 'restfreq', restfrq(icrd))
+      if (frqscl(icrd)) then
+        call wrhda(tno, 'cellscal', '1/F')
+      else
+        call wrhda(tno, 'cellscal', 'CONSTANT')
       endif
 
-      call wrhdd(tno, 'vobs', vobs(icrd))
       if (eqnox(icrd).gt.1800d0) then
         call wrhdr(tno, 'epoch', real(eqnox(icrd)))
       endif
@@ -2381,10 +2382,12 @@ c     The remaining parameters.
         call wrhdd(tno, 'obstime', obstime(icrd))
       endif
 
-      if (frqscl(icrd)) then
-        call wrhda(tno, 'cellscal', '1/F')
-      else
-        call wrhda(tno, 'cellscal', 'CONSTANT')
+      if (restfrq(icrd).ne.0d0) then
+        call wrhdd(tno, 'restfreq', restfrq(icrd))
+      endif
+
+      if (vobs(icrd).ne.0d0) then
+        call wrhdd(tno, 'vobs', vobs(icrd))
       endif
 
       end
@@ -2480,8 +2483,8 @@ c     Projection parameters.
 
 
       call rdhdd(lu, 'restfreq', restfrq(icrd), 0d0)
-      call rdhdd(lu, 'vobs',     vobs(icrd), 0d0)
-      call rdhdd(lu, 'epoch',    eqnox(icrd), 0d0)
+      call rdhdd(lu, 'vobs',     vobs(icrd),    0d0)
+      call rdhdd(lu, 'epoch',    eqnox(icrd),   0d0)
       call rdhdd(lu, 'obstime',  obstime(icrd), 0d0)
       call rdhda(lu, 'cellscal', cscal, '1/F')
       frqscl(icrd) = cscal.eq.'1/F'
