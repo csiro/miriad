@@ -2,7 +2,7 @@ c***********************************************************************
 c  History
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: string.for,v 1.6 2010/12/16 07:09:30 cal103 Exp $
+c $Id: string.for,v 1.7 2010/12/17 01:34:18 cal103 Exp $
 c***********************************************************************
 
 c* stcat - Concatenate two strings avoiding blank padding.
@@ -572,10 +572,10 @@ c***********************************************************************
       double precision dval, rng1, rng2
       character efmt*(*), ffmt*(*)
 c-----------------------------------------------------------------------
-c  Human-friendly floating format.  If rng1 <= abs(dval) < rng2 and ffmt
-c  is not blank, write dval using (fixed) floating point format, ffmt.
-c  If clean is non-zero, strip trailing zeroes.  Use (exponential)
-c  format, efmt, otherwise.
+c  Human-friendly floating format.  If ffmt is not blank and dval == 0d0
+c  or rng1 <= abs(dval) < rng2, write dval using (fixed) floating point
+c  format, ffmt.  If clean is non-zero, strip trailing zeroes.  Use
+c  (exponential) format, efmt, otherwise.
 c
 c  The Fortran formats are specified without enclosing parentheses.
 c-----------------------------------------------------------------------
@@ -585,8 +585,8 @@ c-----------------------------------------------------------------------
       external  spaste
       character spaste*16
 c-----------------------------------------------------------------------
-      if (ffmt.ne.' ' .and.
-     *    rng1.le.abs(dval) .and. abs(dval).lt.rng2) then
+      if (ffmt.ne.' ' .and. (dval.eq.0d0 .or.
+     *   (rng1.le.abs(dval) .and. abs(dval).lt.rng2))) then
         fmt = spaste('(', '//', ffmt, ')')
         write(hfff,fmt) dval
 
