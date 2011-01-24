@@ -90,7 +90,7 @@ c       the linetype parameters used to construct the map.  If you wish
 c       to override this, or if the info is not in the header, or if you
 c       are using a point source model, this parameter can be useful.
 c
-c$Id: selfcal.for,v 1.6 2010/10/07 01:00:50 cal103 Exp $
+c$Id: selfcal.for,v 1.7 2011/01/24 02:57:12 wie017 Exp $
 c--
 c
 c  History:
@@ -155,7 +155,7 @@ c   * It would be desirable to apply bandpasses, and merge gain tables,
 c     apply polarisation calibration, etc.
 c-----------------------------------------------------------------------
       integer   MAXMOD, MAXSELS, NHEAD
-      parameter (MAXMOD=128, MAXSELS=1024, NHEAD=3)
+      parameter (MAXMOD=1024, MAXSELS=1024, NHEAD=3)
 
       logical   amp, doim, doline, mfs, noscale, phase, relax, selradec
       integer   i, minants, nModel, nchan, nvis, refant, tmod, tscr,
@@ -171,8 +171,8 @@ c     Externals.
       external  hdprsnt, header, versan
 c-----------------------------------------------------------------------
       version = versan('selfcal',
-     *                 '$Revision: 1.6 $',
-     *                 '$Date: 2010/10/07 01:00:50 $')
+     *                 '$Revision: 1.7 $',
+     *                 '$Date: 2011/01/24 02:57:12 $')
 c
 c  Get the input parameters.
 c
