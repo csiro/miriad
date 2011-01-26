@@ -72,7 +72,6 @@ c-----------------------------------------------------------------------
        integer      axlen(MAXNAX), taxlen(MAXNAX)
        integer      iblc(MAXNAX),  itrc(MAXNAX)
        integer      viraxlen(MAXNAX), vircsz(MAXNAX)
-       integer      i
 
        character    velaxis, msg*132, opts(NOPTS)*8
        integer      vaxnr, len1
