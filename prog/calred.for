@@ -31,7 +31,7 @@ c	  nopass    Do not perform bandpass calibration on the data.
 c	  norm      Divide the noise estimates by the square root of the
 c	            number of points.
 c
-c$Id: calred.for,v 1.5 2010/04/30 08:12:27 cal103 Exp $
+c$Id: calred.for,v 1.6 2011/01/26 22:00:08 wie017 Exp $
 c--
 c  History:
 c    rjs  23feb00 Original version.
@@ -87,8 +87,8 @@ c
 	character versan*80
 c-----------------------------------------------------------------------
       version = versan ('calred',
-     :                  '$Revision: 1.5 $',
-     :                  '$Date: 2010/04/30 08:12:27 $')
+     :                  '$Revision: 1.6 $',
+     :                  '$Date: 2011/01/26 22:00:08 $')
 c
 c Lets go! Get user inputs.
 c
@@ -287,11 +287,11 @@ c
 	      con = '     -'
 	    endif
 	    scat2 = scat2/sqrt(norm)
-	    write(line,10)sources(j),nint(1000*flux2),
-     *			nint(1000*flux),con,
+	    write(line,10)sources(j),1000*flux2,
+     *			1000*flux,con,
      *			nint(1000*SSms),nint(1000*scat2),
      *			ncorr
-  10	    format(a14,i7,i9,a6,i6,i6,i9)
+  10	    format(a14,F9.1,F10.1,a6,i6,i6,i9)
 	    call output(line)
 	  endif
 	enddo
