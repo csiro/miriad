@@ -26,7 +26,7 @@ c
 	integer nused,tno,nants,mcount
 	logical dosam,dohann,birdie,doif,dobary,newfreq,newsc,newpnt
 	logical dowt,dopmps,doxyp,opcorr,hires,cabb,dopack,dotsys
-	real wts(2*ATCONT-2)
+	real wts(2*ATCONT-2),edgepc
 	real axisrms(ATANT),axismax(ATANT),mdata(9)
 	double precision obsra,obsdec,lat,long,ra,dec
 	character sname*64
@@ -45,4 +45,4 @@ c
      *	    edge,bchan,tcorr,mcount,refnant,
      *	  flag,dosw,dosam,dohann,birdie,dowt,dopmps,doxyp,opcorr,
      *	    doif,dobary,newfreq,hires,cabb,dopack,dotsys,
-     *	  newsc,newpnt
+     *	  newsc,newpnt,edgepc

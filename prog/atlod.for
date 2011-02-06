@@ -144,7 +144,6 @@ c                   XX and YY will contain GTP and SDO data in the real
 c                   and imaginary part; XY will contain the OFF data and
 c                   YX will contain the ON-OFF data (for XY). This will
 c                   allow recalculation of the Tsys and xyphase later.
-
 c@ nfiles
 c       This gives one or two numbers, being the number of files to
 c       skip, followed by the number of files to process.  This is only
@@ -163,8 +162,16 @@ c       This gives one or two numbers, being the number of scans to
 c       skip, followed by the number of scans to process.  NOTE: This
 c       applies to all files read.  The default is to skip none and
 c       process all scans.
+c@ edge
+c       Specify the percentage of edge channels the birdie option will
+c       flag out. The default is 9.8 which will flag about 100 channels 
+c       from the bottom and top of a 2049 channel spectrum. This 
+c       parameter is only used if the birdie option is specified.
+c       For concatenated spectra the width of a single zoom is used.
+c       Note that noise and artefacts go up quickly towards the band 
+c       edge so making this much smaller will not gain you much.
 c
-c$Id: atlod.for,v 1.34 2010/12/08 00:59:40 wie017 Exp $
+c$Id: atlod.for,v 1.35 2011/02/06 22:46:40 wie017 Exp $
 c--
 c
 c  Program Structure:
@@ -322,7 +329,7 @@ c    mhw  26oct10 Fix birdie flagging in 20/13 cm band
 c    mhw  11nov10 Record scan direction for otfmos scans
 c    mhw  23nov10 Fix for CABB 33 channel (64MHz) mode
 c
-c $Id: atlod.for,v 1.34 2010/12/08 00:59:40 wie017 Exp $
+c $Id: atlod.for,v 1.35 2011/02/06 22:46:40 wie017 Exp $
 c-----------------------------------------------------------------------
 
         integer MAXFILES,MAXTIMES,MAXSIM
@@ -336,14 +343,15 @@ c
         logical dobary,doif,birdie,dowt,dopmps,doxyp,doop,dopack,dotsys
         logical polflag,hires,sing,docaldat,nocacal,nopol,rfiflag
         integer fileskip,fileproc,scanskip,scanproc
+        real edge
 c
 c  Externals.
 c
         character itoaf*8, rperr*32, versan*80
 c-----------------------------------------------------------------------
       version = versan ('atlod',
-     :                  '$Revision: 1.34 $',
-     :                  '$Date: 2010/12/08 00:59:40 $')
+     :                  '$Revision: 1.35 $',
+     :                  '$Date: 2011/02/06 22:46:40 $')
 c
 c  Get the input parameters.
 c
@@ -373,6 +381,7 @@ c
         call keyi('nscans',scanproc,0)
         if(scanskip.lt.0.or.scanproc.lt.0)
      *    call bug('f','Invalid NSCANS parameter')
+        call keyr('edge',edge,9.8)
         call keyfin
 c
         call cacalIni
@@ -407,8 +416,8 @@ c
             endif
             if(iostat.ne.0)call bug('f','Error skipping RPFITS file')
           else
-            call PokeIni(tno,dosam,doxyp,doop,dohann,birdie,dowt,
-     *          dopmps,dobary,doif,hires,dopack,dotsys)
+            call PokeIni(tno,dosam,doxyp,doop,dohann,birdie,edge,
+     *          dowt,dopmps,dobary,doif,hires,dopack,dotsys)
             if(nfiles.eq.1)then
               i = 1
             else
@@ -614,12 +623,13 @@ c
 c***********************************************************************
 c***********************************************************************
         subroutine PokeIni(tno1,dosam1,doxyp1,doop1,
-     *          dohann1,birdie1,dowt1,dopmps1,dobary1,doif1,hires1,
-     *          dopack1,dotsys1)
+     *          dohann1,birdie1,edge1,dowt1,dopmps1,dobary1,doif1,
+     *          hires1,dopack1,dotsys1)
 c
         integer tno1
         logical dosam1,doxyp1,dohann1,doif1,dobary1,birdie1,dowt1
         logical dopmps1,hires1,doop1,dopack1,dotsys1
+        real    edge1
 c
 c  Initialise the Poke routines.
 c-----------------------------------------------------------------------
@@ -641,6 +651,7 @@ c
         hires  = hires1
         dopack = dopack1
         dotsys = dotsys1
+        edgepc = edge1
 c
         if(dowt)call LagWt(wts,2*ATCONT-2,0.04)
 c
@@ -1763,7 +1774,7 @@ c
      *                                            bchan(if),flags)
                         call FlagNaN(data(ipnt),flags,nfreq(if))
                         call rfiFlag(flags,NDATA,1,nfreq(if),
-     *                             sfreq(if),sdf(if),birdie,tdash)
+     *                            sfreq(if),sdf(if),birdie,edgepc,tdash)
                         if(.not.hires)call uvputvri(tno,'bin',bin,1)
                         call uvputvrr(tno,'inttime',inttime(bl),1)
                         if(doopcorr)
@@ -1827,7 +1838,7 @@ c
      *                  vis,flags,NDATA,nchan)
                       if(nchan.gt.0)then
                         call rfiFlag(flags,NDATA,nifs,nfreq,sfreq,
-     *                             sdf,birdie,tdash)
+     *                             sdf,birdie,edgepc,tdash)
                         if(.not.hires)call uvputvri(tno,'bin',bin,1)
                         call uvputvri(tno,'pol',polcode(1,p),1)
                         call uvputvrr(tno,'inttime',inttime(bl),1)
@@ -3652,12 +3663,14 @@ c
         end
 
 c***********************************************************************
-        subroutine rfiFlag(flags,NDATA,nifs,nfreq,sfreq,sdf,birdie,time)
+        subroutine rfiFlag(flags,NDATA,nifs,nfreq,sfreq,sdf,birdie,
+     *                     edge,time)
 c
 c-----------------------------------------------------------------------
         integer NDATA,nifs,nfreq(nifs)
         logical flags(NDATA),birdie
         double precision sfreq(nifs),sdf(nifs),time
+        real edge
 c
         double precision c1,c2,tmp,cfreq,J17AUG10
         integer MAXRFI, NBIRDIE1, nrfi,ch1,ch2,i,j,k,offset
@@ -3673,24 +3686,31 @@ c
         if (nrfi.gt.0) then
           offset=1
           do i=1,nifs
-            do j=1,nrfi
-              c1=(rfifreq(1,j)-sfreq(i))/sdf(i)
-              c2=(rfifreq(2,j)-sfreq(i))/sdf(i)
-              if (c1.gt.c2) then
-                tmp=c1
-                c1=c2
-                c2=tmp
-              endif
-
-              ch1 = min(nfreq(i), nint(max(0.0d0,c1)))
-              ch2 = max(-1, min(nfreq(i)-1, nint(c2)))
-              do k=ch1,ch2
-                flags(offset+k)=.false.
+c
+c  Flag rfi in continuum bands
+c
+            if (abs(sdf(i)).gt.0.5e-3) then
+              do j=1,nrfi
+                c1=(rfifreq(1,j)-sfreq(i))/sdf(i)
+                c2=(rfifreq(2,j)-sfreq(i))/sdf(i)
+                if (c1.gt.c2) then
+                  tmp=c1
+                  c1=c2
+                  c2=tmp
+                endif
+                ch1 = min(nfreq(i), nint(max(0.0d0,c1)))
+                ch2 = max(-1, min(nfreq(i)-1, nint(c2)))
+                do k=ch1,ch2
+                  flags(offset+k)=.false.
+                enddo
               enddo
-            enddo
+            endif
             offset=offset+nfreq(i)
           enddo
         endif
+c
+c  Flag birdies and edge channels
+c        
         if (birdie) then
           offset=1
           do i=1,nifs
@@ -3702,10 +3722,11 @@ c
               do j=1,NBIRDIE1
                 flags(offset+b1(j))=.false.
               enddo
-              ch1=99
-              ch2=nfreq(i)-100
+              ch1=2049*edge/200
+              ch2=2049*(1.0-edge/200)
 c
 c             20cm band range 1131-1875, 13cm band range 1975-2675
+c             new 16cm band: 1050-3150
 c
               cfreq=sfreq(i)+(nfreq(i)/2)*sdf(i)
               if (cfreq.gt.1.d0.and.cfreq.lt.3.0d0) then
@@ -3717,9 +3738,12 @@ c
                     c1=(1.975-sfreq(i))/sdf(i)
                     c2=(2.675-sfreq(i))/sdf(i)
                   endif
-                  ch1=min(nint(c1),nint(c2))
-                  ch2=max(nint(c1),nint(c2))
+                else
+                  c1=(1.05-sfreq(i))/sdf(i)
+                  c2=(3.15-sfreq(i))/sdf(i)
                 endif
+                ch1=min(nint(c1),nint(c2))
+                ch2=max(nint(c1),nint(c2))
               endif
               do j=0,ch1
                 flags(offset+j)=.false.
@@ -3728,12 +3752,12 @@ c
                   flags(offset+j)=.false.
               enddo
             else if (nfreq(i).ge.2049.and.
-     *          abs(abs(sdf(i))-0.5e-6).lt.1.e-7) then
+     *          abs(sdf(i)).lt.4.e-5) then
 c
-c             CABB zoom mode 2049*0.5kHz, or >2049 (blended zooms)
+c             CABB zoom mode 2049 channels or more (blended zooms)
 c  
-              ch1=99
-              ch2=nfreq(i)-100
+              ch1=2049*edge/200
+              ch2=nfreq(i)-2049*edge/200
               do j=0,ch1
                 flags(offset+j)=.false.
               enddo
