@@ -11,6 +11,16 @@ c       MOPFIX can also be used to resample in frequency (by spline
 c       interpolation), flag data over a certain time range, and convert
 c       BUNIT to 'K' (it does the last of these automatically).
 c
+c       Addendum Feb 9 2011 / ind006: Spoke with Tony Wong about the 
+c       purpose of this program in MOPS years. There appears to be no
+c       practical reason why this should be used by any observers to 
+c       reduce their data from 2007 onwards. Originally, it changed 
+c       position timestamps in OTF mapping to correspond to the
+c       spectral timestamps. Latency used to be too large for livedata
+c       to handle this properly in one pass. This however was fixed
+c       many years ago. The other functions as described above
+c       might still potentially be beneficial hence this remains
+c       included in miriad.
 c@ in
 c       Input RPFITS file.  No default.
 c@ out
@@ -49,7 +59,7 @@ c       'doextrap'  Use linear extrapolation if gap between flanking
 c                   position stamps exceeds maxgap.
 c       'noref'     Eliminate the reference scans from the file.
 c
-c$Id: mopfix.for,v 1.11 2010/09/21 05:13:26 cal103 Exp $
+c$Id: mopfix.for,v 1.12 2011/02/09 03:36:20 wie017 Exp $
 c--
 c 28jun04 - tw - created from rpfread and mapread
 c 13jul04 - tw - write OBSTYPE card for LiveData
@@ -67,6 +77,7 @@ c 21jul06 - tw - fixed subtle error in cos(dc) correction
 c 16may07 - tw - detab; change label 900 from GOTO to CONTINUE
 c 29aug09 - tw - resample option; convert bunit to 'K'
 c 16dec09 - tw - additional time ranges in flagtime; flagscan parameter
+c 09feb11 - ind006 - added comments about what this is/was for
 c-----------------------------------------------------------------------
       include 'rpfits.inc'
 
@@ -105,8 +116,8 @@ c-----------------------------------------------------------------------
       external  hangle, len1, rangle, versan
 c-----------------------------------------------------------------------
       versn = versan ('mopfix',
-     *                '$Revision: 1.11 $',
-     *                '$Date: 2010/09/21 05:13:26 $')
+     *                '$Revision: 1.12 $',
+     *                '$Date: 2011/02/09 03:36:20 $')
 
 c Get input parameters
       call keyini ()
