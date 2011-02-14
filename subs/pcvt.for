@@ -9,17 +9,15 @@ c  J2000/FK5 (~250My period -> 0.5 arcsec/century).  For accuracy,
 c  equatorial/Galactic coordinate conversion is always via B1950/FK4.
 c
 c  History:
-c    21jul97 rjs  Stripped out of regrid.
-c    22jul97 rjs  Support galactic/equatorial and epoch conversion
-c    23jul97 rjs  Correct order of doing epoch/coordinate conversion.
-c    31may06 rjs  Adapt to use coCvtv (validate coordinate).
+c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: pcvt.for,v 1.4 2010/07/28 06:51:20 cal103 Exp $
+c $Id: pcvt.for,v 1.5 2011/02/14 06:35:55 cal103 Exp $
 c***********************************************************************
+
       subroutine pCvtInit(coObj1d,coObj2d)
 
       integer coObj1d,coObj2d
-
+c-----------------------------------------------------------------------
 c  Initialise the coordinate system conversion routines.
 c-----------------------------------------------------------------------
       include 'pcvt.h'
@@ -30,8 +28,8 @@ c-----------------------------------------------------------------------
      *          dtemp, eqnox1, eqnox2
       character ctype1*16, ctype2*16, type1*4, type2*4
 
-c     Externals.
-      integer len1
+      external  epo2jul, len1
+      integer   len1
       double precision epo2jul
 c-----------------------------------------------------------------------
       coObj1 = coObj1d
@@ -174,13 +172,15 @@ c       Get the epoch for equatorial conversion.
       endif
 
       end
+
 c***********************************************************************
+
       subroutine pCvt(x1,x2,n,valid)
 
       integer n
       double precision x1(n),x2(n)
       logical valid
-
+c-----------------------------------------------------------------------
 c  Perform a coordinate system conversion.
 c-----------------------------------------------------------------------
       include 'pcvt.h'
