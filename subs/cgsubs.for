@@ -35,125 +35,21 @@ c  wedgincg :  Work out if greys cale wedges inside ro outside subplots
 c  windfidcg:  Adjust window size to fit an integral number of bins
 c
 c  History:
-c     nebk   20sep91     Created from PGDISP/PGCURS
-c     nebk   08nov91     Use local blc,trc in call to BOXRUNS in
-c                        CHNSELPG, because they may get modified
-c                        if blanked pixels exist
-c     nebk   28apr92     "g" format seems to behave capriciously
-c                        Try to do something better in VCLABPG
-c                        Renamed subroutines to *cg from *pg
-c                        as pgdisp etc -> cgdisp etc
-c     nebk   12may92     Return actual scales in VPADJCG
-c     nebk   14may92     Add  LIMTRCG. Add a couple more
-c                        parameters to HEDINFCG
-c     nebk   18may92     Add AXFNDCG
-c     nebk   04jul92     Don't modify variable (PLAV) in READIMCG. Add
-c                        O2PIXCG, SETTRCG, CONLINCG, STRERSCG, DEGHSMCG,
-c                        ANN*CG, CHKDESCG, CHKDIMCG,  add argument
-c                        MIRROR to CONLEVCG
-c     nebk   08jul82     Add OPTCG and INIT/NORM to READIMCG call. FIx
-c                        bug in CHNSELCG causing groups to be specified
-c                        redundantly under some circumstances
-c     nebk   14jul92     Add POSOFF to O2PIXCG. Type CDELT and CRVAL
-c                        as DOUBLE PRECISION
-c     nebk   07aug92     Try to instill some more modularity into all
-c                        coordinate conversions with PIX2WCG and
-c                        W2PIXCG, removing SETTRCG along the way.
-c     nebk   22oct92     Add units to velocity and frequency axes
-c                        in LIMTRCG.  SETLABCG was not correctly
-c                        setting the dms,hms PGTBOX strings.
-c     nebk   28nov92     Add 'abs/relkms' and 'abs/relghz' label types
-c                        Change "linear" to "abslin"
-c     nebk   02dec92     Add pix2wfcg, sunitcg
-c     nebk   24dec92     Split cgpgsubs.for off.
-c     rjs    04jan93     Make def. args in rdhdd double in HEDINFCG
-c     nebk   27feb93     Earn brownie points with Mr. T by reformatting
-c                        subroutine call sequence variables.
-c     nebk   21apr93     Add AXTYPCG
-c     nebk   27may93     Add 0.5 pixel to blc,trc in LIMTRCG so that
-c                        image edges are at n.5,m.5 not n,m
-c     nebk   29may93     Remove CHTONVCG as now there is PGQCS
-c     nebk   02jun93     Move ANNDEFCG, VPASPCG and VPADJCG to
-c                        CGPGSUBS.FOR as they now call PGQVSZ
-c     nebk   22jun93     Change PIX2WCG, W2PIXCG, LIMTRCG for RA axes to
-c                        return abslin/rellin in rads of polar rotation
-c                        Add COSDECCG and use it.
-c     nebk   05jul93     MAXDIM-> MAXNAX in W2PIXCG.  Whoops !
-c     nebk   25aug93     Remove DEGHMSCG in favour of new DANGLEH
-c                        Add "absdeg" and "reldeg" axis label types
-c                        Add PIXI2WCG.   Add DOEPOCH to LIMTRCG
-c     nebk   15sep93     Format change in OPTCG
-c     nebk   14nov93     Add 'O' to x-axis options for PGTBOX in SETLAB
-c                        Add labtyp=none
-c     nebk   07dec93     Add 'V' to y-axis for new PGTBOX in SETLABCG &
-c                        modify slightly blanking in READIMCG & TAKLOGCG
-c     nebk   10dec93     Add MASKORCG and READBCG
-c     nebk   14dec93     Add AXABSCG and LIMITSCG
-c     nebk   03jan94     Add new argument to OMATCHCG and rename MATCHCG
-c                        Add SETCOLCG
-c     nebk   09jan94     Convert CRPIX -> double precision.
-c                        Add W2WCG, W2WFCG
-c     nebk   27jan94     Add square root transfer function to GRFIXCG
-c                        Rename TAKLOG to APPTRF and include h.e., log,
-c                        and square root transfer functions. Add HEQCG
-c     nebk   15feb94     Add WEDGINCG and WEDGECG
-c     nebk   02mar94     SETLABCG -> cgpgsubs.for
-c     nebk   08mar94     Move WEDGECG to CGPGSUBS.FOR, add WINDFIDCG
-c                        Implement spatial binning in READBCG, READIMCG,
-c                        LIMITSCG and LIMTRCG. Add COPYIMCG, PPCONCG
-c     nebk   09jun94     Recognize UU and VV image axes
-c     nebk   21jun94     Add OPIMCG
-c     nebk   12jul94     Fix dimensioning bug in SETDESCG
-c     nebk   19jul94     Allow roundoff tolerance in CHKDESCG
-c     nebk   27aug94     Convert OL2PIXCG to use correct coordinate
-c                        conversion routines via COSUBS.FOR
-c     nebk   15jan95     Add SAVDESCG
-c     nebk   14apr95     Add HARD and DOFID arguments to WEDGINCCG
-c     nebk   11aug95     Add arcmin labels
-c     nebk   03sep95     Add STROPTCG, ANGCONCG, SETCCSCG
-c     rjs    26sep95     Always label epoch with 'B' or 'J'.
-c     nebk   19oct95     Bias images by pixr(1) rather than image min
-c                        when log or square root transfer function
-c     nebk   14nov95     Remove a number of subroutines whose use is
-c                        no longer required becuase of internal changes
-c                        to the cg* programs and use of cosubs.for;
-c                        AXABSCG, AXFNDCG, AXTYPCG, COSDECCG, PIX2WCG,
-c                        PIX2WFCG, SAVDESCG, SETDESCG, SUNITCG, W2PIXCG,
-c                        W2WCG, W2WFCG
-c     nebk   29nov95     New call for CTYPECO, new ANGCONCG internals,
-c                        new routine RAZEROCG
-c     nebk   04dec95     DOLABCG was forgetting some right hand labels
-c     nebk   30jan96     In CHNSELCG remove the restictions on channel
-c                        averaging and incrementing which previously
-c                        groups of channels could not overlap
-c     rjs     8mar96     Change ctype*9 to ctype*32
-c     nebk   26apr96     Km -> km is setlabcg.  rats.
-c     nebk   02may96     COmments in ANGCONCG were no longer the truth
-c     nebk   16oct96     Make sure all LONG axes are trapped for zero
-c                        crossing too in RAZEROCG
-c     nebk   16jul98     CHNSELCG was messing up regions like image(3),
-c                        image(7)
-c     nebk   09sep98     RAZEROCG only got it right if the ref value was
-c                        close to zero.  Failed if close to 2pi
-c    nebk    30nov98     Finally make a decent algorithm for RAZEROCG
-c     rjs    15dec98     Some tidying.
-c     rjs    06jan99     Yet another go at a decent algorithm for
-c                        RAZEROCG
-c    nebk    14nov01     Add abs max to min/max vector returned by
-c                        readimcg
+c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: cgsubs.for,v 1.6 2010/04/19 02:47:31 cal103 Exp $
+c $Id: cgsubs.for,v 1.7 2011/02/14 06:09:58 cal103 Exp $
 c***********************************************************************
-c
+
 c* angconCG -- Convert radians to and from seconds of time/arc
 c& nebk
 c: plotting
 c+
       subroutine angconcg (id, labtyp, w)
+
       character*(*) labtyp
       double precision w
       integer id
-c
+c  ---------------------------------------------------------------------
 c  Convert RA/DEC axis world coordinates between seconds (arc/time)
 c  and radians.
 c
@@ -166,11 +62,10 @@ c                dms    arc seconds
 c  Input/Ouput
 c    w        world coordinate. SHould be radians (id=1), or
 c             (id=1) seconds of arc ('dms') or time ('hms')
-c--
 c-----------------------------------------------------------------------
       include 'mirconst.h'
       double precision st2r
-      parameter (st2r=dpi/3600.d0/12.0d0)
+      parameter (st2r=dpi/3600d0/12d0)
 c-----------------------------------------------------------------------
       if (id.eq.1) then
 c
@@ -180,7 +75,7 @@ c
           w = w / st2r
         else if (labtyp.eq.'dms') then
           w = w / AS2R
-        end if
+        endif
       else if (id.eq.2) then
 c
 c To radians
@@ -189,24 +84,26 @@ c
           w = w * st2r
         else if (labtyp.eq.'dms') then
           w = w * AS2R
-        end if
+        endif
       else
-        call bug ('f', 'ANGCONCG: unrecognized conversion code')
-      end if
-c
+        call bug('f', 'ANGCONCG: unrecognized conversion code')
+      endif
+
       end
-c
+
+c**********************************************************************
+
 c* apptrfCG -- Apply transfer function to image
 c& nebk
 c: plotting
 c+
       subroutine apptrfcg (pixr, trfun, groff, size, nimage, image,
-     +                     nbins, his, cumhis)
-c
+     *                     nbins, his, cumhis)
+
       integer nimage(*), size, nbins, his(nbins)
       real groff, image(*), pixr(2), cumhis(*)
       character trfun*3
-c
+c  ---------------------------------------------------------------------
 c  Apply the desired transfer function to the image
 c
 c  Input:
@@ -224,8 +121,6 @@ c   cumhis   Cumulative histogram for histogram equalization
 c            Values for each bin are the intensities assigned to
 c            the image.  Thus if an image pixel ended up in
 c            cumhis bin idx, then its new value is cumhis(idx)
-c
-c--
 c-----------------------------------------------------------------------
       integer i
 c-----------------------------------------------------------------------
@@ -234,33 +129,34 @@ c-----------------------------------------------------------------------
           if (nimage(i).ne.0) then
             if (image(i).lt.pixr(1)) image(i) = pixr(1)
             image(i) = log10(image(i)-groff)
-          end if
-        end do
+          endif
+        enddo
       else if (trfun.eq.'sqr') then
         do i = 1, size
           if (nimage(i).ne.0) then
             if (image(i).lt.pixr(1)) image(i) = pixr(1)
             image(i) = sqrt(image(i)-groff)
-          end if
-        end do
+          endif
+        enddo
       else if (trfun.eq.'heq') then
-        call heqcg (pixr, size, nimage, image, nbins, his, cumhis)
-      end if
-c
+        call heqcg(pixr, size, nimage, image, nbins, his, cumhis)
+      endif
+
       end
-c
-c
+
+c**********************************************************************
+
 c* chkdesCG -- Compare double precision axis descriptor from two images
 c& nebk
 c: plotting
 c+
       subroutine chkdescg (relax, type, iaxis, im1, im2, des1, des2)
-c
+
       character type*(*), im1*(*), im2*(*)
       integer iaxis
       double precision des1, des2
       logical relax
-c
+c  ---------------------------------------------------------------------
 c  Compare a double precision axis descriptor from two images
 c
 c  Input:
@@ -268,40 +164,40 @@ c    type    Type of descriptor
 c    iaxis   Axis number
 c    im1,2   Images
 c    des1,2  Descriptors
-c--
 c-----------------------------------------------------------------------
       double precision desmax
       character line*130
       integer len1
 c-----------------------------------------------------------------------
       desmax = max(abs(des1),abs(des2))
-      if (abs(des1-des2).gt.desmax*1.0d-6 .or. des1*des2.lt.0.0d0) then
-        write (line, 10) type, im1(1:len1(im1)), im2(1:len1(im2)),
-     +                   iaxis
-10      format ('CHKDESCG: Unequal ', a, ' for images ', a, ' & ', a,
-     +          ' on axis ', i1)
+      if (abs(des1-des2).gt.desmax*1d-6 .or. des1*des2.lt.0d0) then
+        write(line, 10) type, im1(1:len1(im1)), im2(1:len1(im2)),
+     *                   iaxis
+10      format('CHKDESCG: Unequal ', a, ' for images ', a, ' & ', a,
+     *          ' on axis ', i1)
         if (relax) then
-          call bug ('w', line)
+          call bug('w', line)
         else
-          call bug ('i',
-     +       'CHKDESCG: You might consider, with care, OPTIONS=RELAX')
-          call bug ('f', line)
-        end if
-      end if
-c
+          call bug('i',
+     *       'CHKDESCG: You might consider, with care, OPTIONS=RELAX')
+          call bug('f', line)
+        endif
+      endif
+
       end
-c
-c
+
+c**********************************************************************
+
 c* chnselCG -- Make list of CHAN and REGION selected channel groups
 c& nebk
 c: plotting
 c+
       subroutine chnselcg (blc, trc, kbin, maxbox, boxes, ngrps,
-     +                     grpbeg, ngrp)
-c
+     *                     grpbeg, ngrp)
+
       integer maxbox, boxes(maxbox), grpbeg(*), ngrp(*), ngrps, kbin(2),
-     +  blc(3), trc(3)
-c
+     *  blc(3), trc(3)
+c  ---------------------------------------------------------------------
 c  Find the channels designated by the CHAN and REGION specifiations
 c  via the RUNS arrays.    Note that currently, none of the
 c  CG programs call BOXMASK so that all planes offered by the
@@ -324,33 +220,31 @@ c    grpbeg     Array of start channels for each group of selected
 c               channels.  Each group will be averaged together to
 c               make one sub-plot
 c    ngrp       Number of channels in each group
-c
-c--
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       integer maxruns
       parameter (maxruns = 10*maxdim)
-c
+
       integer runs(3,maxruns), nruns, i, j, k, xmin, xmax, ymin,
-     +ymax, inc, ave, last, jend, start(maxchan), end(maxchan)
+     *        ymax, inc, ave, last, jend, start(maxchan), end(maxchan)
 c-----------------------------------------------------------------------
       inc = kbin(1)
       ave = kbin(2)
-      if ((inc.eq.0 .and. ave.ne.0) .or. (inc.ne.0 .and.ave.eq.0))
-     +  call bug ('f', 'CHNSELCG: invalid channel inc/ave values')
+      if ((inc.eq.0 .and. ave.ne.0) .or. (inc.ne.0 .and. ave.eq.0))
+     *  call bug('f', 'CHNSELCG: invalid channel inc/ave values')
 c
 c Find first good plane
 c
       start(1) = 0
       j = blc(3)
       do while (start(1).eq.0 .and. j.le.trc(3))
-        call boxruns (1, j, ' ', boxes, runs, maxruns,
-     +                nruns, xmin, xmax, ymin, ymax)
-c
+        call boxruns(1, j, ' ', boxes, runs, maxruns,
+     *                nruns, xmin, xmax, ymin, ymax)
+
         if (nruns.gt.0) start(1) = j
-      end do
-      if (start(1).eq.0) call bug ('f',
-     +  'CHNSELCG: There were no valid pixels in the region')
+      enddo
+      if (start(1).eq.0) call bug('f',
+     *  'CHNSELCG: There were no valid pixels in the region')
 c
 c Loop over remaining planes, and accumulate start and end channels
 c for each run of contiguous channels
@@ -365,8 +259,8 @@ c
         k = 1
         last = start(1)
         do j = start(1)+1, trc(3)
-          call boxruns (1, j, ' ', boxes, runs, maxruns,
-     +                  nruns, xmin, xmax, ymin, ymax)
+          call boxruns(1, j, ' ', boxes, runs, maxruns,
+     *                  nruns, xmin, xmax, ymin, ymax)
 
           if (nruns.eq.0) then
 c
@@ -384,16 +278,16 @@ c
             if (last.eq.0) then
                k = k + 1
                start(k) = j
-            end if
+            endif
             last = j
-          end if
-        end do
+          endif
+        enddo
 c
 c Assign the end channel to the last group if need be
 c
         if (last.ne.0) end(k) = last
         ngrps = k
-      end if
+      endif
 c
 c Special case now if kbin(1) = kbin(2) = 0  Just return
 c the contiguous groups
@@ -402,7 +296,7 @@ c
         do k = 1, ngrps
           grpbeg(k) = start(k)
           ngrp(k) = end(k) - start(k) + 1
-        end do
+        enddo
       else
 c
 c Now loop over the number of groups of contiguous channels
@@ -416,8 +310,8 @@ c Loop over the channels in this group
 c
           do j = start(k), end(k), inc
             i = i + 1
-            if (i.gt.maxchan) call bug ('f',
-     +        'CHNSELCG: You have selected too many groups of channels')
+            if (i.gt.maxchan) call bug('f',
+     *        'CHNSELCG: You have selected too many groups of channels')
             jend = min(j+ave-1,end(k))
 c
 c Assign start and end channels for this group. These channels
@@ -425,25 +319,27 @@ c will be averaged together to make one subplot
 c
             grpbeg(i) = j
             ngrp(i) = jend - j + 1
-          end do
-        end do
+          enddo
+        enddo
         ngrps = i
-      end if
-c
+      endif
+
       end
-c
+
+c**********************************************************************
+
 c* conlevCG -- Compute contour levels
 c& nebk
 c: plotting
 c+
       subroutine conlevcg (mirror, maxlev, lcin, levtyp, slev, nlevs,
-     +                     levs, srtlev)
-c
+     *                     levs, srtlev)
+
       integer lcin, nlevs, maxlev, srtlev(maxlev)
       real slev, levs(maxlev)
       character*1 levtyp
       logical mirror
-c
+c  ---------------------------------------------------------------------
 c  Compute contour levels
 c
 c  Input:
@@ -457,41 +353,40 @@ c    nlevs    Number of contour levels
 c  Output:
 c    levs     Contour levels
 c    srtlev   Indexes of array giving levels in increasing order
-c--
 c-----------------------------------------------------------------------
       include 'maxnax.h'
       integer i, ilev, mlevs, cnaxis, csize(maxnax)
       real cdmin, cdmax, off, inc
       character*1 itoaf
 c-----------------------------------------------------------------------
-      call rdhdi (lcin, 'naxis', cnaxis, 0)
+      call rdhdi(lcin, 'naxis', cnaxis, 0)
       do i = 1, cnaxis
-        call rdhdi (lcin, 'naxis'//itoaf(i), csize(i), 0)
-      end do
-c
+        call rdhdi(lcin, 'naxis'//itoaf(i), csize(i), 0)
+      enddo
+
       mlevs = nlevs
       if (nlevs.eq.0) then
 c
 c Set default contours
 c
-        call imminmax (lcin, cnaxis, csize, cdmin, cdmax)
-c
+        call imminmax(lcin, cnaxis, csize, cdmin, cdmax)
+
         if (cdmax.gt.0.0 .and. cdmin.lt.0.0) then
            slev = max(abs(cdmax), abs(cdmin)) / 8
-c
+
            nlevs = abs(cdmin) / slev
            ilev = 1
            do i = -nlevs, -1, 1
              levs(ilev) = i * slev
              ilev = ilev + 1
-           end do
-c
+           enddo
+
            nlevs = cdmax / slev
            do i = 1, nlevs, 1
              levs(ilev) = i * slev
              ilev = ilev + 1
-           end do
-c
+           enddo
+
            nlevs = ilev - 1
            slev = 1.0
            levtyp = 'a'
@@ -501,24 +396,24 @@ c
            inc = ((cdmax-off) - (cdmin+off)) / (nlevs - 1)
            do i = 1, nlevs
               levs(i) = cdmin+off + (i-1)*inc
-           end do
-c
+           enddo
+
            slev = 1.0
            levtyp = 'a'
-        end if
+        endif
       else if (levtyp.eq.'p')  then
 c
 c Set percentage contours
 c
         if (slev.eq.0.0) slev = 1.0
-        call imminmax (lcin, cnaxis, csize, cdmin, cdmax)
+        call imminmax(lcin, cnaxis, csize, cdmin, cdmax)
         slev = slev * cdmax / 100.0
       else if (levtyp.eq.'a') then
 c
 c Absolute contours
 c
         if (slev.eq.0.0) slev = 1.0
-      end if
+      endif
 c
 c Set mirrored contours only for user specified contours
 c
@@ -530,36 +425,37 @@ c
               nlevs = nlevs + 1
               levs(nlevs) = -1.0*levs(i)
             else
-              call bug ('w',
-     +        'CONLEVCG: Max. no. of contours reached during mirroring')
+              call bug('w',
+     *        'CONLEVCG: Max. no. of contours reached during mirroring')
               goto 100
-            end if
-          end if
-        end do
-      end if
+            endif
+          endif
+        enddo
+      endif
 c
 c Scale levels
 c
 100   do i = 1, nlevs
         levs(i) = levs(i) * slev
-      end do
+      enddo
 c
 c Sort in increasing order
 c
-      call sortidxr (nlevs, levs, srtlev)
-c
+      call sortidxr(nlevs, levs, srtlev)
+
       end
-c
-c
+
+c**********************************************************************
+
 c* copyimCG -- Copy image
 c& nebk
 c: plotting
 c+
       subroutine copyimcg (n, in, copy)
-c
+
       integer n
       real in(n), copy(n)
-c
+c  ---------------------------------------------------------------------
 c  Copy an image for safe keeping
 c
 c Input
@@ -567,26 +463,26 @@ c     n       Size of image
 c     image   Image
 c Output
 c     copy    Copy of image
-c-
 c-----------------------------------------------------------------------
       integer i
 c-----------------------------------------------------------------------
       do i = 1, n
         copy(i) = in(i)
-      end do
-c
+      enddo
+
       end
-c
-c
+
+c**********************************************************************
+
 c* defchrCG -- Give a default char. height for axis & velocity labels
 c& nebk
 c: plotting
 c+
       subroutine defchrcg (nx, ny, cs)
-c
+
       real cs(*)
       integer nx, ny
-c
+c  ---------------------------------------------------------------------
 c  Work out default character size for axis labels and for velocity
 c  label.  Add a linear ramp otherwise they come out too big for
 c  single plots per page, and too small for multiple plots per page
@@ -595,7 +491,6 @@ c  Input:
 c    nx,ny     Number of sub-plots in x and y directions
 c  Input/output:
 c    cs        PGPLOT character sizes for axis labels and velocity label
-c--
 c-----------------------------------------------------------------------
 c
 c Axis labels
@@ -603,28 +498,30 @@ c
       if (cs(1).le.0.0) then
         cs(1) = 1.2 / max(nx,ny)
         cs(1) = (0.13*max(nx,ny) + 0.67) * cs(1)
-      end if
+      endif
 c
 c Velocity/frequency/channel labels
 c
       if (cs(2).le.0.0) then
         cs(2) = 1.2 / max(nx,ny)
         cs(2) = (0.13*max(nx,ny) + 0.67) * cs(2)
-      end if
-c
+      endif
+
       end
-c
+
+c**********************************************************************
+
 c* dolabCG -- See if axis needs a character and/or numeric label
 c& nebk
 c: plotting
 c+
       subroutine dolabcg (gaps, dotr, nx, ny, nz, nlast, iplot, labtyp,
-     +                    doaxlab, doaylab, donxlab, donylab)
-c
+     *                    doaxlab, doaylab, donxlab, donylab)
+
       integer nx, ny, nz, nlast, iplot
       logical gaps, dotr, doaxlab, doaylab, donxlab(2), donylab(2)
       character labtyp(2)*(*)
-c
+c  ---------------------------------------------------------------------
 c  Label axes and prepare options strings for PGTBOX according to
 c  whether the sub-plots abut each other or not.
 c
@@ -641,7 +538,6 @@ c    doaxlab True to draw character label for x axis
 c    doaylab True to draw character label for y axis
 c    donxlab True to draw x numeric label; (1) for bottom, (2) for top
 c    donylab True to draw y numeric label; (1) for left, (2) for right
-c--
 c-----------------------------------------------------------------------
       integer jplot
 c-----------------------------------------------------------------------
@@ -650,14 +546,14 @@ c Number if subplot on current page
 c
       jplot = mod(iplot,nx*ny)
       if (jplot.eq.0) jplot = nx*ny
-c
+
       doaxlab = .false.
       doaylab = .false.
       donxlab(1) = .false.
       donxlab(2) = .false.
       donylab(1) = .false.
       donylab(2) = .false.
-c
+
       if (.not.gaps) then
 c
 c Only put character and numeric labels along the bottom for the bottom
@@ -665,15 +561,15 @@ c row
 c
         if (labtyp(1).ne.'none') then
           if (jplot.ge.nx*ny-nx+1 .or. iplot.ge.nz-nlast+1 .or.
-     +      iplot+nx.gt.nz) then
+     *      iplot+nx.gt.nz) then
             doaxlab = .true.
             donxlab(1) = .true.
-          end if
+          endif
 c
 c Only put top numeric labels on top row of subplots
 c
           if (dotr .and. jplot.le.nx) donxlab(2) = .true.
-        end if
+        endif
 c
 c Now y axis
 c
@@ -685,13 +581,13 @@ c
           if (mod(jplot,nx).eq.1 .or. nx.eq.1) then
             doaylab = .true.
             donylab(1) = .true.
-          end if
+          endif
 c
 c Only write right axis label if rightmost subplot
 c
           if (dotr .and. (mod(jplot,nx).eq.0 .or. iplot.eq.nz))
-     +       donylab(2) = .true.
-        end if
+     *       donylab(2) = .true.
+        endif
       else
 c
 c Each subplot separated by gaps, always write labels
@@ -700,27 +596,29 @@ c
           doaxlab = .true.
           donxlab(1) = .true.
           if (dotr) donxlab(2) = .true.
-        end if
+        endif
         if (labtyp(2).ne.'none') then
           doaylab = .true.
           donylab(1) = .true.
           if (dotr) donylab(2) = .true.
-        end if
-      end if
-c
+        endif
+      endif
+
       end
-c
+
+c**********************************************************************
+
 c* grfixCG -- Fix grey scale range with optional bias for taking logs
 c& nebk
 c: plotting
 c+
       subroutine grfixcg (pixr, lgin, gnaxis, gsize, trfun,
-     +                    pixr2, groff, blankg)
-c
+     *                    pixr2, groff, blankg)
+
       real pixr(2), pixr2(2), groff, blankg
       integer lgin, gnaxis, gsize(*)
       character trfun*(*)
-c
+c  ---------------------------------------------------------------------
 c  Make sure the grey scale range is valid, and take logs if desired.
 c  This may require a DC bias to avoid negative numbers in the image.
 c
@@ -737,7 +635,6 @@ c    pixr2    Grey scale range with bias and logs/sqrt taken if
 c             necessary
 c    groff    DC bias to avoid negatives in image if logs taken
 c    blankg   Value to use for blanked pixels
-c--
 c-----------------------------------------------------------------------
       real fac
 c-----------------------------------------------------------------------
@@ -745,12 +642,12 @@ c
 c Set default range to data min to max
 c
       if (pixr(1).eq.0.0 .and. pixr(2).eq.0.0) then
-        call imminmax (lgin, gnaxis, gsize, pixr(1), pixr(2))
+        call imminmax(lgin, gnaxis, gsize, pixr(1), pixr(2))
       else if (pixr(1).eq.pixr(2)) then
-        call bug ('w',
-     +  'GRFIXCG: Zero pixel map range, reset to image intensity range')
-        call imminmax (lgin, gnaxis, gsize, pixr(1), pixr(2))
-      end if
+        call bug('w',
+     *  'GRFIXCG: Zero pixel map range, reset to image intensity range')
+        call imminmax(lgin, gnaxis, gsize, pixr(1), pixr(2))
+      endif
 c
 c Work out offset if log or square root transfer function requested
 c
@@ -759,33 +656,36 @@ c
       groff = 0.0
       fac = 100.0
       if (trfun.eq.'log' .or. trfun.eq.'sqr') then
-        if (pixr(1).eq.0.0 .and. pixr(2).eq.0.0) call imminmax (lgin,
-     +      gnaxis, gsize, pixr(1), pixr(2))
+        if (pixr(1).eq.0.0 .and. pixr(2).eq.0.0) call imminmax(lgin,
+     *      gnaxis, gsize, pixr(1), pixr(2))
         if (pixr(1).le.0.0) groff = pixr(1) - (pixr(2)-pixr(1))/fac
-c
+
         if (trfun.eq.'log') then
           pixr2(1) = log10(pixr(1)-groff)
           pixr2(2) = log10(pixr(2)-groff)
         else
           pixr2(1) = sqrt(pixr(1)-groff)
           pixr2(2) = sqrt(pixr(2)-groff)
-        end if
-      end if
+        endif
+      endif
 c
 c Set blanked pixel value to background colour
 c
       blankg = pixr2(1) - (0.0001*(pixr2(2)-pixr2(1)))
-c
+
       end
-c
+
+c**********************************************************************
+
 c* heqCG -- Histogram equalize an image
 c& nebk
 c: plotting
 c+
       subroutine heqcg (pixr, n, nimage, image, nbins, his, cumhis)
+
       integer nbins, n, nimage(n), his(nbins)
       real image(n), pixr(2), cumhis(nbins)
-c
+c  ---------------------------------------------------------------------
 c  Apply histogram equalization to an image directly.  128 bins
 c  are used in the histogram.
 c
@@ -801,8 +701,6 @@ c   cumhis Cumulative histogram.  Values for each bin are
 c          the intensities assigned to the image.  Thus
 c          if an image pixel ended up in cumhis bin idx, then
 c          its new value is cumhis(idx)
-c
-c--
 c-----------------------------------------------------------------------
       integer idx, i
       real fac, bmin, bmax, cum
@@ -815,7 +713,7 @@ c
       do i = 1, nbins
         his(i) = 0
         cumhis(i) = 0.0
-      end do
+      enddo
 c
 c Generate image histogram
 c
@@ -824,8 +722,8 @@ c
         if (nimage(i).gt.0.0) then
           idx = max(1,min(nbins,nint((image(i)-bmin)*fac)+1))
           his(idx) = his(idx) + 1
-        end if
-      end do
+        endif
+      enddo
 c
 c Generate cumulative histogram.
 c
@@ -833,7 +731,7 @@ c
       do i = 1, nbins
         cum = cum + his(i)
         cumhis(i) = cum
-      end do
+      enddo
 c
 c Now discretize the cumulative histogram values as well
 c
@@ -848,7 +746,7 @@ c
 c Convert this bin back to an intensity and reuse CUMHIS array
 c
         cumhis(i) = real(idx)/real(nbins)*(bmax-bmin) + bmin
-      end do
+      enddo
 c
 c Now fix the image pixels (including masked ones)
 c
@@ -862,19 +760,21 @@ c
 c Replace by discretized cumulative histogram intensity
 c
         image(i) = cumhis(idx)
-      end do
-c
+      enddo
+
       end
-c
+
+c**********************************************************************
+
 c* limitsCG -- Work out limits and transformation matrix for both axes
 c& nebk
 c: plotting
 c+
       subroutine limitscg (blc, ibin, jbin, tr)
-c
+
       integer blc(*), ibin, jbin
       real tr(6)
-c
+c  ---------------------------------------------------------------------
 c   Work out window world coordinate limits and PGPLOT
 c   transformation matrix
 c
@@ -887,7 +787,6 @@ c                    coordinates.  Note this accounts for the fact that
 c                    only the desired window is read into the data
 c                    arrays, so there is a blc offset included in tr.
 c                    It also accounts for any spatial binning.
-c
 c-----------------------------------------------------------------------
 c
 c No cross terms in transformation
@@ -903,19 +802,21 @@ c y axis
 c
       tr(4) = blc(2) - 1.0 - (jbin-1)*0.5
       tr(6) = jbin
-c
+
       end
-c
+
+c**********************************************************************
+
 c* maskorCG -- OR mask image mask with data image mask
 c& nebk
 c: plotting
 c+
       subroutine maskorcg (blank, win, bimage, nimage, image)
-c
+
       integer nimage(*), win(2)
       real image(*), blank
       logical bimage(*)
-c
+c  ---------------------------------------------------------------------
 c  OR the mask image mask and the grey/contour/vector image mask
 c
 c  Input:
@@ -925,7 +826,6 @@ c    bimage      The mask image mask.True is unflagged, false is flagged
 c  Input/Output
 c    nimage      The normalization image.  0-> blanked
 c    image       The image.  New blanks may be set
-c--
 c-----------------------------------------------------------------------
       integer i, imsize
 c-----------------------------------------------------------------------
@@ -934,20 +834,21 @@ c-----------------------------------------------------------------------
         if (.not.bimage(i)) then
           nimage(i) = 0
           image(i)  = blank
-        end if
-      end do
-c
+        endif
+      enddo
+
       end
-c
-c
+
+c**********************************************************************
+
 c*matchCG -- Match fields with allowed types and die if no good
 c:plotting
 c+
       subroutine matchcg (n, field, string, struct, ntype, types)
-c
+
       integer ntype, n
       character*(*) types(ntype), string, field, struct
-c
+c  ---------------------------------------------------------------------
 c  Look for string in list of allowed ones.  If not found die with
 c  fatal error.  Expand string for minimum match.  Extra variables
 c  can be used to provide error messages.  These messages expect
@@ -983,53 +884,51 @@ c
 c   "rel" is ambiguous for overlay # 14 field "xotype". Choose from: ...
 c
 c  Got it ??
-c
-c--
 c-----------------------------------------------------------------------
       integer l, i, iopt, j, il, il2
       integer len1
       character*130 umsg, str*10
 c-----------------------------------------------------------------------
       l = len1(string)
-c
+
       iopt = 0
       do i = 1, ntype
         if (string(1:l).eq.types(i)(1:l)) then
           if (iopt.ne.0) then
             umsg = '"'//string(1:l)//'" is ambiguous'
             il = len1(umsg) + 1
-c
+
             if (struct.ne.' ' .and. n.gt.0) then
               umsg(il:) = ' for '//struct(1:len1(struct))
               il = len1(umsg) + 1
-c
-              call strfi (n, '(i4)', str, il2)
+
+              call strfi(n, '(i4)', str, il2)
               umsg(il:) = ' (# '//str(1:il2)//')'
               il = len1(umsg) + 1
-            end if
-c
+            endif
+
             if (field.ne.' ') then
               if (struct.eq.' ' .or. n.eq.0) then
                 umsg(il:) =  ' for field "'//field(1:len1(field))//
-     +                       '".  Choose from'
+     *                       '".  Choose from'
               else
                 umsg(il:) =  ' field "'//field(1:len1(field))//
-     +                       '".  Choose from'
-              end if
+     *                       '".  Choose from'
+              endif
             else
               umsg(il:) =  '. Choose from'
-            end if
-c
-            call output (umsg)
+            endif
+
+            call output(umsg)
             do j = 1, ntype
               umsg = '   '//types(j)
-              call output (umsg)
-            end do
+              call output(umsg)
+            enddo
             call bug('f', 'MATCHCG:')
-          end if
+          endif
           iopt = i
         endif
-      end do
+      enddo
 c
 c Set expanded string
 c
@@ -1037,50 +936,51 @@ c
 c
 c Didn't find nuttin
 c
-      if(iopt.eq.0) then
+      if (iopt.eq.0) then
         umsg = '"'//string(1:l)//'" is unrecognized'
         il = len1(umsg) + 1
-c
+
         if (struct.ne.' ' .and. n.gt.0) then
           umsg(il:) = ' for '//struct(1:len1(struct))
           il = len1(umsg) + 1
-c
-          call strfi (n, '(i4)', str, il2)
+
+          call strfi(n, '(i4)', str, il2)
           umsg(il:) = ' (# '//str(1:il2)//')'
           il = len1(umsg) + 1
-        end if
-c
+        endif
+
         if (field.ne.' ') then
           if (struct.eq.' ' .or. n.eq.0) then
             umsg(il:) =  ' for field "'//field(1:len1(field))//
-     +                   '".  Choose from'
+     *                   '".  Choose from'
           else
             umsg(il:) =  ' field "'//field(1:len1(field))//
-     +                   '".  Choose from'
-          end if
+     *                   '".  Choose from'
+          endif
         else
           umsg(il:) =  '. Choose from'
-        end if
-c
-        call output (umsg)
+        endif
+
+        call output(umsg)
         do j = 1, ntype
           umsg = '   '//types(j)
-          call output (umsg)
-        end do
+          call output(umsg)
+        enddo
         call bug('f', 'MATCHCG:')
-      end if
-c
+      endif
+
       end
-c
-c
+
+c**********************************************************************
+
 c* nxnyCG -- Work out number of sub-plots per page
 c& nebk
 c: plotting
 c+
       subroutine nxnycg (nxdef, nydef, nz, nx, ny, nlast)
-c
+
       integer nxdef, nydef, nx, ny, nz, nlast
-c
+c  ---------------------------------------------------------------------
 c  Work out number of plots in the x and y directions and the
 c  total number of plots
 c
@@ -1090,7 +990,6 @@ c    nz        Total number of sub-plots
 c  Outputs
 c    nx,ny     Number of sub-plots in x and y directions per page
 c    nlast     Number of sub-plots on the last row of the last page
-c--
 c-----------------------------------------------------------------------
       if (nx.le.0 .or. ny.le.0) then
         if (nz.lt.nxdef*nydef) then
@@ -1101,28 +1000,29 @@ c-----------------------------------------------------------------------
               nx = nx + 1
             else
               ny = ny + 1
-            end if
-          end do
+            endif
+          enddo
         else
           nx = nxdef
           ny = nydef
-        end if
-      end if
-c
+        endif
+      endif
+
       nlast = mod(nz,nx)
       if (nlast.eq.0) nlast = nx
-c
+
       end
-c
+
+c**********************************************************************
+
 c*OpImCG -- Open an image and return axis descriptors
 c:plotting
 c+
       subroutine opimcg (maxnax, in, lin, size, naxis)
-c
-c
+
       integer maxnax, lin, size(maxnax), naxis
       character*(*) in
-c
+c  ---------------------------------------------------------------------
 c     Open an image and return some header descriptors
 c
 c   Input:
@@ -1132,44 +1032,44 @@ c   Output:
 c     lin        Handle for image
 c     size       SIze of each dimension of image
 c     naxis      Number of dimensions
-c--
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       integer len1
       character msg*132
 c-----------------------------------------------------------------------
-      call xyopen (lin, in, 'old', maxnax, size)
-      call rdhdi (lin, 'naxis', naxis, 0)
+      call xyopen(lin, in, 'old', maxnax, size)
+      call rdhdi(lin, 'naxis', naxis, 0)
       if (naxis.eq.0) then
         msg = in(1:len1(in))//' has zero dimensions !!'
-        call bug ('f', msg)
-      end if
-c
+        call bug('f', msg)
+      endif
+
       if (naxis.gt.maxnax) then
         msg = 'OPIMCG: '//in(1:len1(in))//
-     +        ' has too many dimensions'
-        call bug ('f', msg)
-      end if
-c
+     *        ' has too many dimensions'
+        call bug('f', msg)
+      endif
+
       if (size(1).gt.maxdim) then
         msg = 'OPIMCG: '//in(1:len1(in))//
-     +        ' first dimension too large'
-        call bug ('f', msg)
-      end if
-c
+     *        ' first dimension too large'
+        call bug('f', msg)
+      endif
+
       end
-c
-c
+
+c**********************************************************************
+
 c*OptCG -- Get command line options but only warn if unrecognized.
 c:plotting
 c+
       subroutine optcg (key, opts, present, nopt)
-c
+
       character key*(*)
       integer nopt
       character opts(nopt)*(*)
       logical present(nopt)
-c
+c  ---------------------------------------------------------------------
 c  Get options from the command line, and return to the caller those
 c  options that are present.
 c
@@ -1183,61 +1083,60 @@ c               lower case.
 c    nopt       The number of possible options.
 c  Output:
 c    present    This indicates whether the option was present.
-c--
 c-----------------------------------------------------------------------
-      character string*16
       integer l,i,iopt
-c
-c  Externals.
-c
-      integer len1
-      character*80 umsg
+      character string*16, umsg*80
+
+      external  len1
+      integer   len1
 c-----------------------------------------------------------------------
 c
 c  Initialise the options to indicate that none are present.
 c
       do i = 1, nopt
         present(i) = .false.
-      end do
+      enddo
 c
 c  Search the task parameters.
 c
-      call keya (key, string, ' ')
+      call keya(key, string, ' ')
       do while (string.ne.' ')
         l = len1(string)
-        call lcase (string(1:l))
+        call lcase(string(1:l))
         umsg = 'OPTCG: Unrecognised option "'//string(1:l)//'"'
-        if (l.gt.len(opts(1))) call bug ('f', umsg)
+        if (l.gt.len(opts(1))) call bug('f', umsg)
         iopt = 0
         do i = 1, nopt
           if (string(1:l).eq.opts(i)(1:l)) then
             umsg = 'OPTCG: Ambiguous option "'//string(1:l)//'"'
-            if (iopt.ne.0) call bug ('f', umsg)
+            if (iopt.ne.0) call bug('f', umsg)
             iopt = i
-          end if
-        end do
-c
+          endif
+        enddo
+
         if (iopt.eq.0) then
           umsg = 'OPTCG: Unrecognised option "'//string(1:l)//'"'
-          call bug ('w', umsg)
+          call bug('w', umsg)
         else
           present(iopt) = .true.
-        end if
-        call keya (key, string, ' ')
-      end do
-c
+        endif
+        call keya(key, string, ' ')
+      enddo
+
       end
-c
+
+c**********************************************************************
+
 c* ol2pixCG -- Convert overlay location in given coordinates to pixels
 c& nebk
 c: plotting
 c+
       subroutine ol2pixcg (lun, pix3, otype, off, dsign, nums, opos, np)
-c
+
       double precision off(*), nums(*), opos(*), pix3
       integer lun, dsign(2), np
       character*(*) otype(2)
-c
+c  ---------------------------------------------------------------------
 c Convert overlay location from OTYPE units to pixels.  This is
 c a conversion from true world coordinates to image pixels
 c
@@ -1257,8 +1156,6 @@ c             for RA and DEC because I am too lazy.
 c Output
 c   opos      Output location in pixels for x and y
 c   np        This is the number of locations of the NUMS array used
-c
-c--
 c-----------------------------------------------------------------------
       include 'mirconst.h'
       double precision win(3), wout(3)
@@ -1271,49 +1168,49 @@ c
       ip = 1
       do i = 1, 2
         if (otype(i).eq.'hms') then
-          win(i) = nums(ip) + nums(ip+1)/60.0d0 + nums(ip+2)/3600.0d0
-          win(i) = win(i) * dpi / 12.0d0
+          win(i) = nums(ip) + nums(ip+1)/60d0 + nums(ip+2)/3600d0
+          win(i) = win(i) * dpi / 12d0
           ip = ip + 3
         else if (otype(i).eq.'dms') then
-          win(i) = abs(nums(ip)) + nums(ip+1)/60.d0 +
-     +             nums(ip+2)/3600.0d0
-          win(i) = dsign(i) * abs(win(i)) * dpi / 180.0d0
+          win(i) = abs(nums(ip)) + nums(ip+1)/60d0 +
+     *             nums(ip+2)/3600d0
+          win(i) = dsign(i) * abs(win(i)) * dpi / 180d0
           ip = ip + 3
         else
           win(i) = nums(ip) + off(i)
           ip = ip + 1
-        end if
-c
+        endif
+
         typei(i) = otype(i)
         typeo(i) = 'abspix'
-      end do
+      enddo
       typei(3) = 'abspix'
       typeo(3) = 'abspix'
       win(3) = pix3
 c
 c Convert location to absolute pixels
 c
-      call rdhdi (lun, 'naxis', naxis, 0)
+      call rdhdi(lun, 'naxis', naxis, 0)
       naxis = min(3,naxis)
-      call w2wco (lun, naxis, typei, ' ', win, typeo, ' ', wout)
+      call w2wco(lun, naxis, typei, ' ', win, typeo, ' ', wout)
       opos(1) = wout(1)
       opos(2) = wout(2)
-c
+
       np = ip - 1
-c
+
       end
-c
-c
+
+c**********************************************************************
+
 c* ppconCG -- Convert full image pixels to binned subimage pixels
 c& nebk
 c: plotting
 c+
-c
       subroutine ppconcg (id, blc, bin, p)
-c
+
       integer id, blc, bin
       double precision p
-c
+c  ---------------------------------------------------------------------
 c  Convert pixel values from a full image unbinned pixel to
 c  a subimage binned pixel, and vice versa
 c
@@ -1346,18 +1243,21 @@ c
 c Convert to full image unbinned pixel
 c
         p = p + blc - 1
-      end if
-c
+      endif
+
       end
-c
+
+c**********************************************************************
+
 c* razerocg - see if RA axis crosses RA=0
 c& nebk
 c: plotting
 c+
       subroutine razerocg (lun, blc, trc, zero)
+
       integer lun, blc(2), trc(2)
       logical zero(2)
-c
+c  ---------------------------------------------------------------------
 c     See if an RA axis crosses RA=0. Only looks at
 c     first two axes
 c
@@ -1367,16 +1267,15 @@ c       blc,trc Window being displayed in absolute
 c               unbinned full image pixels
 c     Output
 c       zero   True if that axis is a) RA and b) crosses 0
-c--
 c-----------------------------------------------------------------------
       integer i1,i2
       double precision x(2),ya(2),yb(2),yc(2)
-c
+c-----------------------------------------------------------------------
       zero(1) = .false.
       zero(2) = .false.
       call coInit(lun)
       call coFindAx(lun,'longitude',i1)
-      if(i1.eq.1.or.i1.eq.2)then
+      if (i1.eq.1 .or. i1.eq.2) then
         i2 = 3 - i1
         x(i1) = blc(i1)
         x(i2) = blc(i2)
@@ -1387,22 +1286,24 @@ c
         call coCvt(lun,'ap/ap',x,'aw/aw',yc)
         zero(i1) = (yc(i1)-yb(i1))*(yb(i1)-ya(i1)).lt.0
       endif
-c
+
       call coFin(lun)
+
       end
-c
+
+c**********************************************************************
+
 c* readbCG -- Read in mask image mask
 c& nebk
 c: plotting
 c+
-c
       subroutine readbcg (init, lun, ibin, jbin, krng, blc, trc,
-     +                    bimage, blanks)
-c
+     *                    bimage, blanks)
+
       logical bimage(*)
       integer lun, blc(*), trc(*), ibin(2), jbin(2), krng(2)
       logical blanks, init
-c
+c  ---------------------------------------------------------------------
 c  Read in the blanking mask from the specified window from the image
 c  When reading more than one plane, the mask image pixel is considered
 c  blanked if any of the planes are blanked at that pixel.  When
@@ -1423,12 +1324,10 @@ c  Output
 c    bimage      Masking image.  True means a good pixel (unflagged) and
 c                false means bad (flagged pixel).  Will be bad if any
 c                pixel in spectral range is bad for each spatial pixel
-c
-c--
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       integer i, j, k, ii, jj, pi, po, kst, kav, kend, io, jo,
-     +  nii, nji, nio, njo, no
+     *  nii, nji, nio, njo, no
       logical good(maxdim)
 c-----------------------------------------------------------------------
 c
@@ -1440,12 +1339,12 @@ c
         nio = nii / ibin(1)
       else
         nio = (nii-1)/ibin(1) + 1
-      end if
+      endif
       if (jbin(2).ne.1) then
         njo = nji / jbin(1)
       else
         njo = (nji-1)/jbin(1) + 1
-      end if
+      endif
 c
 c Initialize
 c
@@ -1453,32 +1352,32 @@ c
       if (init) then
         do i = 1, no
           bimage(i) = .true.
-        end do
+        enddo
         blanks = .false.
-      end if
+      endif
       do i = 1, maxdim
         good(i) = .true.
-      end do
+      enddo
 c
 c Read in plane(s)
 c
       kst = krng(1)
       kav = krng(2)
       kend = min(trc(3),kst+kav-1)
-c
+
       do k = kst, kend
-        call xysetpl (lun, 1, k)
+        call xysetpl(lun, 1, k)
 c
 c Step through rows
 c
         jo = 1
         do j = 1, nji, jbin(1)
-          call xyflgrd (lun, j, good)
+          call xyflgrd(lun, j, good)
 c
 c Accumulate desired rows
 c
           do jj = j, j+jbin(2)-1
-            call xyflgrd (lun, jj+blc(2)-1, good)
+            call xyflgrd(lun, jj+blc(2)-1, good)
 c
 c Step through row
 c
@@ -1499,30 +1398,31 @@ c
                 if (.not.good(pi)) then
                   bimage(po) = .false.
                   blanks = .true.
-                end if
-              end do
+                endif
+              enddo
               io = io + 1
-            end do
-          end do
+            enddo
+          enddo
           jo = jo + 1
-        end do
-      end do
-c
+        enddo
+      enddo
+
       end
-c
-c
+
+c**********************************************************************
+
 c* readimCG -- Read in image dealing with averaging and blanking
 c& nebk
 c: plotting
 c+
       subroutine readimcg (init, blank, lun, ibin, jbin, krng, blc,
-     +                     trc, norm, nimage, image, blanks, dmm)
-c
+     *                     trc, norm, nimage, image, blanks, dmm)
+
       real blank, image(*), dmm(3)
       integer nimage(*), lun, ibin(2), jbin(2), krng(2), blc(3),
-     +  trc(3)
+     *  trc(3)
       logical blanks, init, norm
-c
+c  ---------------------------------------------------------------------
 c  Read in the specified window from the image and apply spatial
 c  and spectral binning as desired
 c
@@ -1547,14 +1447,12 @@ c    image       Output image (binned, normalized)
 c    blanks      True if blanks in output image
 c  Input/output
 c    dmm         Data min, max, abs max so far
-c
-c--
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       real row(maxdim)
       logical good(maxdim), mask, hdprsnt
       integer i, j, k, ii, jj, pi, po, kst, kav, kend, io, jo,
-     +  nii, nji, nio, njo, no
+     *  nii, nji, nio, njo, no
 c-----------------------------------------------------------------------
 c
 c Does image have a mask
@@ -1569,12 +1467,12 @@ c
         nio = nii / ibin(1)
       else
         nio = (nii-1)/ibin(1) + 1
-      end if
+      endif
       if (jbin(2).ne.1) then
         njo = nji / jbin(1)
       else
         njo = (nji-1)/jbin(1) + 1
-      end if
+      endif
 c
 c Initialize
 c
@@ -1583,21 +1481,21 @@ c
         do i = 1, no
           image(i) = 0.0
           nimage(i) = 0
-        end do
+        enddo
         blanks = .false.
-      end if
+      endif
       do i = 1, maxdim
         good(i) = .true.
-      end do
+      enddo
 c
 c Loop over planes
 c
       kst = krng(1)
       kav = krng(2)
       kend = min(trc(3),kst+kav-1)
-c
+
       do k = kst, kend
-        call xysetpl (lun, 1, k)
+        call xysetpl(lun, 1, k)
 c
 c Step through rows
 c
@@ -1607,8 +1505,8 @@ c
 c Accumulate desired rows
 c
           do jj = j, j+jbin(2)-1
-            call xyread (lun, jj+blc(2)-1, row)
-            if (mask) call xyflgrd (lun, jj+blc(2)-1, good)
+            call xyread(lun, jj+blc(2)-1, row)
+            if (mask) call xyflgrd(lun, jj+blc(2)-1, good)
 c
 c Step through row
 c
@@ -1623,13 +1521,13 @@ c Input row and output image pointers
 c
                 pi = i + blc(1) - 1
                 po = (jo-1)*nio + io
-c
+
                 if (good(pi)) then
                   nimage(po) = nimage(po) + 1
                   image(po) = image(po) + row(pi)
-                end if
+                endif
                 io = io + 1
-              end do
+              enddo
             else
               do i = 1, nii, ibin(1)
 c
@@ -1641,19 +1539,19 @@ c Input row and output image pointers
 c
                   pi = ii + blc(1) - 1
                   po = (jo-1)*nio + io
-c
+
                   if (good(pi)) then
                     nimage(po) = nimage(po) + 1
                     image(po) = image(po) + row(pi)
-                  end if
-                end do
+                  endif
+                enddo
                 io = io + 1
-              end do
-            end if
-          end do
+              enddo
+            endif
+          enddo
           jo = jo + 1
-        end do
-      end do
+        enddo
+      enddo
 c
 c Normalize and blank
 c
@@ -1666,18 +1564,21 @@ c
         else
           blanks = .true.
           image(i) = blank
-        end if
-      end do
-c
+        endif
+      enddo
+
       end
-c
+
+c**********************************************************************
+
 c* setccsCG -- Set rjs coordinate conversion strings for ticking
 c& nebk
 c: plotting
 c+
       subroutine setccscg (labtyp, ccstr)
+
       character*(*) labtyp(2), ccstr
-c
+c  ---------------------------------------------------------------------
 c  For the non-linear tick labelling, we need to convert from world
 c  coordinates to absolute pixels.  Depending upon the axis label
 c  type, we set an rjs style conversion string indicating what type
@@ -1688,7 +1589,6 @@ c  Input
 c    labtyp  Axis label types
 c  Output
 c    ccstr   String appropriate for rjs style coordinate transformation
-c--
 c-----------------------------------------------------------------------
       integer i, ip
 c-----------------------------------------------------------------------
@@ -1696,36 +1596,38 @@ c
 c Loop over first two axes
 c
       ip = 1
-      do i =1, 2
+      do i = 1, 2
         if (labtyp(i).eq.'hms' .or. labtyp(i).eq.'dms' .or.
-     +      labtyp(i).eq.'absdeg' .or. labtyp(i).eq.'abskms' .or.
-     +      labtyp(i).eq.'absghz' .or. labtyp(i).eq.'absnat') then
+     *      labtyp(i).eq.'absdeg' .or. labtyp(i).eq.'abskms' .or.
+     *      labtyp(i).eq.'absghz' .or. labtyp(i).eq.'absnat') then
           ccstr(ip:ip+2) = 'aw/'
         else if (labtyp(i).eq.'arcsec' .or. labtyp(i).eq.'arcmin' .or.
-     +           labtyp(i).eq.'arcmas' .or.
-     +           labtyp(i).eq.'reldeg' .or. labtyp(i).eq.'relkms' .or.
-     +           labtyp(i).eq.'relghz' .or. labtyp(i).eq.'relnat') then
+     *           labtyp(i).eq.'arcmas' .or.
+     *           labtyp(i).eq.'reldeg' .or. labtyp(i).eq.'relkms' .or.
+     *           labtyp(i).eq.'relghz' .or. labtyp(i).eq.'relnat') then
           ccstr(ip:ip+2) = 'ow/'
         else if (labtyp(i).eq.'abspix' .or. labtyp(i).eq.'none') then
           ccstr(ip:ip+2) = 'ap/'
         else if (labtyp(i).eq.'relpix') then
           ccstr(ip:ip+2) = 'op/'
-        end if
+        endif
         ip = ip + 3
-      end do
-c
+      enddo
+
       ccstr(6:) = '/ap'
-c
+
       end
-c
+
+c**********************************************************************
+
 c* setcolCG --  Set multiple line graphics PGPLOT colours
 c& nebk
 c: plotting
 c+
       subroutine setcolcg (i, icol)
-c
+
       integer i, icol
-c
+c  ---------------------------------------------------------------------
 c  Return a PGPLOT colour index given a graph number, where you plan
 c  to put many graphs with different colours on the one plot.  The
 c  colours are chosen so that similar colours are not consecutive
@@ -1735,32 +1637,32 @@ c   i      Graph number in the range 1 -> NGRAPH, where NGRAPH is the
 c          number of graphs that will be drawn on the one plot
 c Output:
 c   icol   The colour index to set with PGSCI (ICOL)
-c
-c--
 c-----------------------------------------------------------------------
       integer maxcol
       parameter (maxcol = 13)
       integer lcols(maxcol), ip
-c
+
       save lcols
       data lcols /2, 7, 5, 3, 1, 6, 8, 12, 4, 10, 11, 9, 13/
 c-----------------------------------------------------------------------
       ip = mod(i,maxcol)
       if (ip.eq.0) ip = maxcol
       icol = lcols(ip)
-c
+
       end
-c
+
+c**********************************************************************
+
 c* setlabCG -- Set axis labels
 c& nebk
 c: plotting
 c+
       subroutine setlabCG (lh, labtyp, doepoch, xlabel, ylabel)
-c
+
       integer lh
       character*(*) labtyp(2), xlabel, ylabel
       logical doepoch
-c
+c  ---------------------------------------------------------------------
 c  Set the axis labels
 c
 c  Input:
@@ -1769,7 +1671,6 @@ c    labtyp   Axis label types
 c    doepoch  DO we want epoch in string ?
 c  Output
 c    x,ylabel Labels
-c--
 c-----------------------------------------------------------------------
       real epoch
       character estr*5, ctype*32, str*20, label*100
@@ -1778,38 +1679,38 @@ c-----------------------------------------------------------------------
 c
 c Write epoch string for label
 c
-      call rdhdr (lh, 'epoch', epoch, 0.0)
+      call rdhdr(lh, 'epoch', epoch, 0.0)
       if (doepoch .and. epoch.gt.0.0) then
-        write (estr(2:), 100) nint(epoch)
-100     format (i4)
+        write(estr(2:), 100) nint(epoch)
+100     format(i4)
         if (epoch.gt.1984) then
           estr(1:1) = 'J'
         else
           estr(1:1) = 'B'
-        end if
+        endif
       else
         estr = ' '
-      end if
+      endif
 c
 c Loop over axes
 c
       do iax = 1, 2
-        call ctypeco (lh, iax, ctype, ipos)
+        call ctypeco(lh, iax, ctype, ipos)
         str = ctype(1:ipos)
         l2 = len1(str)
 
 c       Don't qualify galactic coordinates with an equinox.
         if (str(1:l2).eq.'GLON' .or. str(1:l2).eq.'GLAT') then
           estr = ' '
-        end if
+        endif
 c
 c Set the axis label depending on label type
 c
-        call axfndco (lh, 'RAD',  0, iax, irad)
-        call axfndco (lh, 'FREQ', 0, iax, ifrq)
-        call axfndco (lh, 'VELO', 0, iax, ivel)
-        call axfndco (lh, 'UV',   0, iax, iuv)
-c
+        call axfndco(lh, 'RAD',  0, iax, irad)
+        call axfndco(lh, 'FREQ', 0, iax, ifrq)
+        call axfndco(lh, 'VELO', 0, iax, ivel)
+        call axfndco(lh, 'UV',   0, iax, iuv)
+
         if (labtyp(iax).eq.'abspix') then
           label = str(1:l2)//' (pixels; '//estr//')'
           if (estr.eq.' ') label = str(1:l2)//' (pixels)'
@@ -1856,7 +1757,7 @@ c
             label = str(1:l2)//' offset (\gl)'
           else
             label = str(1:l2)//' offset '
-          end if
+          endif
         else if (labtyp(iax).eq.'absnat') then
           if (irad.eq.1) then
             label = str(1:l2)//' (radians)'
@@ -1868,29 +1769,31 @@ c
             label = str(1:l2)//' (\gl)'
           else
             label = str(1:l2)
-          end if
+          endif
         else if (labtyp(iax).eq.'none') then
           label = ' '
-        end if
-c
+        endif
+
         if (iax.eq.1) then
           xlabel = label
         else if (iax.eq.2) then
           ylabel = label
-        end if
-      end do
-c
+        endif
+      enddo
+
       end
-c
+
+c**********************************************************************
+
 c* strprpCG -- Strip extra white space from string & delimit with commas
 c& nebk
 c: plotting
 c+
       subroutine strprpcg (maxloc, aline, comloc, nfield, lena)
-c
+
       character*(*) aline
       integer nfield, maxloc, comloc(maxloc), lena
-c
+c  ---------------------------------------------------------------------
 c     Take a string with a number of mixed ascii/numeric fields in it
 c     and prepare it for use by stripping out extra white space and
 c     replacing the space delimiters by commas (matod needs this).
@@ -1905,11 +1808,10 @@ c               each field.  comloc(1) is the comma between the
 c               first and second fields etc
 c       nfield  Number of fields in string
 c       lena    Length of output string after massaging
-c--
 c-----------------------------------------------------------------------
       integer i, j, lenb, idx
       character bline*132
-c
+
       integer len1
 c-----------------------------------------------------------------------
 c
@@ -1918,7 +1820,7 @@ c
       idx = 1
       do while (aline(idx:idx).eq.' ')
         idx = idx + 1
-      end do
+      enddo
       bline = aline(idx:)
       aline = ' '
       aline = bline
@@ -1932,13 +1834,13 @@ c
       j = 2
       do i = 2, lena
         if ((aline(i:i).eq.' ' .and. aline(i-1:i-1).eq.' ') .or.
-     +      (aline(i:i).eq.' ' .and. aline(i-1:i-1).eq.',')) then
+     *      (aline(i:i).eq.' ' .and. aline(i-1:i-1).eq.',')) then
           continue
         else
           bline(j:j) = aline(i:i)
           j = j + 1
-        end if
-      end do
+        endif
+      enddo
 c
 c Replace spaces and colons (which may come from RA or DEC formatted
 c strings) by commas (for matodf) and count how many fields there are
@@ -1947,34 +1849,36 @@ c
       nfield = 0
       do i = 1, lenb
         if (bline(i:i).eq.' ' .or. bline(i:i).eq.':' .or.
-     +      bline(i:i).eq.',') then
+     *      bline(i:i).eq.',') then
           bline(i:i) = ','
           nfield = nfield  + 1
-          if (nfield.gt.maxloc) call bug ('f',
-     +      'STRPRPCG: Too many fields for internal storage')
+          if (nfield.gt.maxloc) call bug('f',
+     *      'STRPRPCG: Too many fields for internal storage')
           comloc(nfield) = i
-        end if
-      end do
+        endif
+      enddo
       nfield = nfield + 1
       if (bline(lenb:lenb).eq.',') then
         nfield = nfield - 1
         lenb = lenb - 1
-      end if
+      endif
       aline = bline
       lena = lenb
-c
+
       end
-c
+
+c**********************************************************************
+
 c* subincCG -- Step to next sub-plot
 c& nebk
 c: plotting
 c+
       subroutine subinccg (iplot, nx, ny, vxmin, vymax, vxsize, vysize,
-     +                     vxgap, vygap, vx, vy)
-c
+     *                     vxgap, vygap, vx, vy)
+
       real vxmin, vymax, vxsize, vysize, vxgap, vygap, vx, vy
       integer iplot, nx, ny
-c
+c  ---------------------------------------------------------------------
 c  Increment view port locations ready for next sub-plot
 c
 c  Input
@@ -1986,7 +1890,6 @@ c    vx,ysize Size of sub-plots on view-surface (ndc)
 c    vx,ygap  Gap between sub-plots on the view-surface (ndc)
 c  Input/output
 c    vx,vy    Location of blc of next sub-plot on view-surface
-c--
 c-----------------------------------------------------------------------
       if (mod(iplot,nx*ny).eq.0) then
         vx = vxmin
@@ -1996,37 +1899,38 @@ c-----------------------------------------------------------------------
         vy = vy - vygap - vysize
       else
         vx = vx + vxgap + vxsize
-      end if
-c
+      endif
+
       end
-c
+
+c**********************************************************************
+
 c* wedginCG -- See if grey scale wedges are inside or outside subplots
 c& nebk
 c: plotting
 c+
       subroutine wedgincg (hard, dofid, dowedge, nx, ny, npixr,
-     +                     trfun, wedcod)
-c
+     *                     trfun, wedcod)
+
       logical dowedge, dofid
       integer nx, ny, npixr, wedcod
       character trfun*3, hard*3
+c  ---------------------------------------------------------------------
+c  Work out whether the grey scale wedges are to be drawn inside
+c  or outside the subplots, and whether there will be one or many
 c
-c Work out whether the grey scale wedges are to be drawn inside
-c or outside the subplots, and whether there will be one or many
-c
-c Input
-c  hard      'YES' if writing to hardcopy PGPLOT device
-c  dofid     True if user has requested OFM fiddle option
-c  dowedge   True if user requests wedge
-c  nx,ny     Number of subplots in x and y directions
-c  npixr     NUmber of grey scale "range" groups given by user
-c  trfun     Transfer function type of first "range" group
-c Output
-c wedcod     0 -> No wedges
-c            1 -> one wedge to right of all subplots
-c            2 -> one wedge to right per subplot
-c            3 -> one wedge per subplot inside subplot
-c--
+c  Input
+c    hard     'YES' if writing to hardcopy PGPLOT device
+c    dofid    True if user has requested OFM fiddle option
+c    dowedge  True if user requests wedge
+c    nx,ny    Number of subplots in x and y directions
+c    npixr    NUmber of grey scale "range" groups given by user
+c    trfun    Transfer function type of first "range" group
+c  Output
+c    wedcod   0 -> No wedges
+c             1 -> one wedge to right of all subplots
+c             2 -> one wedge to right per subplot
+c             3 -> one wedge per subplot inside subplot
 c-----------------------------------------------------------------------
       if (.not.dowedge) then
         wedcod = 0
@@ -2040,35 +1944,38 @@ c-----------------------------------------------------------------------
             else
               if (npixr.eq.1 .and. trfun.ne.'heq') then
                 wedcod = 1
-              else if (ny.gt.1.and.nx.eq.1 .and. ((npixr.eq.1 .and.
-     +                 trfun.eq.'heq') .or. npixr.gt.1)) then
+              else if (ny.gt.1 .and. nx.eq.1 .and. ((npixr.eq.1 .and.
+     *                 trfun.eq.'heq') .or. npixr.gt.1)) then
                 wedcod = 2
               else
                 wedcod = 3
-              end if
-            end if
-          end if
+              endif
+            endif
+          endif
         else
           if (nx*ny.eq.1 .or. (npixr.eq.1 .and. trfun.ne.'heq')) then
               wedcod = 1
-          else if (ny.gt.1.and.nx.eq.1 .and. ((npixr.eq.1 .and.
-     +             trfun.eq.'heq') .or. npixr.gt.1)) then
+          else if (ny.gt.1 .and. nx.eq.1 .and. ((npixr.eq.1 .and.
+     *             trfun.eq.'heq') .or. npixr.gt.1)) then
             wedcod = 2
           else
             wedcod = 3
-          end if
-        end if
-      end if
-c
+          endif
+        endif
+      endif
+
       end
-c
+
+c**********************************************************************
+
 c* winfidcg - adjust window size to fit integral number of bins
 c& nebk
 c: plotting
 c+
       subroutine winfidcg (size, axis, bin, blc, trc, win)
+
       integer axis, bin(2), blc, trc, size, win
-c
+c  ---------------------------------------------------------------------
 c     Adjust the size of the window so that the bin width fits
 c     an integer number of times
 c
@@ -2081,8 +1988,6 @@ c        blc,trc Window in pixels, adjusted if necessary to fit
 c                an integral number of bins
 c     Output
 c        win     Size of binned window
-c
-c--
 c-----------------------------------------------------------------------
       integer lo, hi, rem, size2, bin2
       logical new, fail
@@ -2094,7 +1999,7 @@ c     Don't fiddle width if no binning, READIMCG and READBCG will cope.
       if (bin2.eq.1) then
         win = (size2 - 1) / bin(1) + 1
         return
-      end if
+      endif
 
 c     If the binning width is not unity, the increment must already have
 c     been set to the same number.
@@ -2104,7 +2009,7 @@ c     Return early if no adjustement needed.
       if (rem.eq.0) then
         win = size2 / bin2
         return
-      end if
+      endif
 
 c     Adjust window to fit integral number of bins.  Increment TRC by 1
 c     and decrement BLC by 1 until ok.
@@ -2127,8 +2032,8 @@ c     and decrement BLC by 1 until ok.
           endif
 
           new = .true.
-        end if
-      end do
+        endif
+      enddo
 
       if (fail) then
 c       Failed in making the window bigger, try making it smaller.
@@ -2151,22 +2056,22 @@ c       Failed in making the window bigger, try making it smaller.
             endif
 
             new = .true.
-          end if
-        end do
-      end if
+          endif
+        enddo
+      endif
 
 c     Report what happened.
       if (fail) then
-        write (aline, 50) axis
-50      format ('Can''t adjust window to contain',
-     +          ' integral no. of bins on axis ', i1)
-        call bug ('f', aline)
+        write(aline, 50) axis
+50      format('Can''t adjust window to contain',
+     *          ' integral no. of bins on axis ', i1)
+        call bug('f', aline)
       else if (new) then
-        write (aline, 100) axis, lo, hi, blc, trc, bin(2)
-100     format ('Adjusted axis ', i1, ' window from ', i4, ',', i4,
-     +          ' to ', i4, ',', i4, ' to fit bin width ',i4)
-        call output (aline)
-      end if
+        write(aline, 100) axis, lo, hi, blc, trc, bin(2)
+100     format('Adjusted axis ', i1, ' window from ', i4, ',', i4,
+     *          ' to ', i4, ',', i4, ' to fit bin width ',i4)
+        call output(aline)
+      endif
 
 c     Size of binned window.
       win = size2 / bin2
