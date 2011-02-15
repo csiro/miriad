@@ -220,7 +220,7 @@ c@ log
 c If the name of a file is given, the results of the fitting are written
 c to this file instead of to the terminal
 c
-c$Id: gaufit.for,v 1.8 2010/11/22 06:13:36 cal103 Exp $
+c$Id: gaufit.for,v 1.9 2011/02/15 05:33:57 cal103 Exp $
 c--
 c
 c  History
@@ -311,29 +311,28 @@ c              el 4=max # gaussians, used when sorting a range
 
       program gaufit
 
-      integer      units(   6)
+      integer      units(6)
       integer      prfinfo(10)
       integer      MAXRUNS
-      parameter    ( MAXRUNS = 1024 )
+      parameter    (MAXRUNS = 1024)
       integer      runs(3,MAXRUNS)
-      integer      ngauss(  6)
+      integer      ngauss(6)
       real         limlist(25)
-      real         cmpsort( 4)
+      real         cmpsort(4)
       character*80 prnm
 
       character versan*80, version*80
 c-----------------------------------------------------------------------
       version = versan ('gaufit',
-     :                  '$Revision: 1.8 $',
-     :                  '$Date: 2010/11/22 06:13:36 $')
+     *                  '$Revision: 1.9 $',
+     *                  '$Date: 2011/02/15 05:33:57 $')
 
       call inputs(units,prfinfo,runs,ngauss,limlist,cmpsort,prnm)
-      call work(  units,prfinfo,runs,ngauss,limlist,cmpsort,prnm)
+      call work(units,prfinfo,runs,ngauss,limlist,cmpsort,prnm)
       call finish(units,version)
       call keyfin
 
       end
-
 
 c***********************************************************************
 
@@ -343,7 +342,7 @@ c usable in work.
       subroutine inputs(units,prfinfo,runs,ngauss,limlist,cmpsort,prnm)
 
       integer        MAXBOXES, MAXRUNS
-      parameter      ( MAXBOXES = 128, MAXRUNS=1024 )
+      parameter      (MAXBOXES = 128, MAXRUNS=1024)
       integer        units(*)
       integer        prfinfo(*)
       integer        runs(3,MAXRUNS)
@@ -368,28 +367,28 @@ c Initialize keyword routines
       call keyini
 
 c Read names of datasets
-      call keya( 'in',       inp, ' ' )
-      call keya( 'model',    mdl, ' ' )
-      call keya( 'residual', res, ' ' )
-      call keya( 'parinp',   pin, ' ' )
-      call keya( 'params',   par, ' ' )
-      call assertl( inp.ne.' ' .or. pin.ne.' ',
-     *              'You must specify an input file' )
+      call keya('in',       inp, ' ')
+      call keya('model',    mdl, ' ')
+      call keya('residual', res, ' ')
+      call keya('parinp',   pin, ' ')
+      call keya('params',   par, ' ')
+      call assertl(inp.ne.' ' .or. pin.ne.' ',
+     *              'You must specify an input file')
 
 c Output profiles prefix
-      call keya( 'prof',     prnm, 'profile_at' )
+      call keya('prof',     prnm, 'profile_at')
 
 c Decode options keyword
       call inpopts()
 
 c Write to a log file?
-      call keya( 'log', logfile, ' ' )
-      if( logfile.ne.' ' ) then
+      call keya('log', logfile, ' ')
+      if (logfile.ne.' ') then
          call opttrue('logf')
-         call logopen( logfile, ' ' )
+         call logopen(logfile, ' ')
       endif
 
-      do i=1,6
+      do i = 1, 6
          units(i)=0
       enddo
 c Open input dataset (spectra or previous parameters)
@@ -397,34 +396,34 @@ c Get info about it: fitax, # of profiles to do, # of pixels in profile
 c call to setopen with 'old' and fitax=0 will find fitax
 c Call to cooinfo with fitax=0 will read fitax info from crval(naxis+1)
       fitax = 0
-      if( inp.ne.' ' ) then
-         call setopen( inp,'old',units(1), naxis,axleni, prfinfo,fitax )
+      if (inp.ne.' ') then
+         call setopen(inp,'old',units(1), naxis,axleni, prfinfo,fitax)
          cin = inp
-         if( hdprsnt(units(1),'mask') ) call opttrue('inmask')
+         if (hdprsnt(units(1),'mask')) call opttrue('inmask')
       else
-         call setopen( pin,'old',units(1), naxis,axleni, prfinfo,naxis )
+         call setopen(pin,'old',units(1), naxis,axleni, prfinfo,naxis)
          cin = pin
       endif
-      call cooinfo( 1, units(1), fitax, dummy )
+      call cooinfo(1, units(1), fitax, dummy)
 
-      do i=1,MAXNAX
+      do i = 1, MAXNAX
       plane(i)=1
       enddo
-      call boxinput( 'region', cin, boxes,MAXBOXES )
-      call boxset(   boxes, naxis, axleni, ' ' )
-      call boxinfo(  boxes, naxis, blc, trc )
-      prfinfo( 5) = blc(1)
-      prfinfo( 6) = blc(2)
-      prfinfo( 7) = blc(3)
-      prfinfo( 8) = trc(1)
-      prfinfo( 9) = trc(2)
+      call boxinput('region', cin, boxes,MAXBOXES)
+      call boxset(boxes, naxis, axleni, ' ')
+      call boxinfo(boxes, naxis, blc, trc)
+      prfinfo(5) = blc(1)
+      prfinfo(6) = blc(2)
+      prfinfo(7) = blc(3)
+      prfinfo(8) = trc(1)
+      prfinfo(9) = trc(2)
       prfinfo(10) = trc(3)
-      call boxruns(  naxis, plane, 'r', boxes, runs,MAXRUNS,nruns,
-     *               blc(1),trc(1),blc(2),trc(2) )
+      call boxruns(naxis, plane, 'r', boxes, runs,MAXRUNS,nruns,
+     *               blc(1),trc(1),blc(2),trc(2))
 c Bug in boxes: whatever the input for the last 4 args is, it is always
 c changed to blc,trc on the first pass. So: since here coordinates relative
 c to 1,1 are needed: fix all runs
-      do i=1,nruns
+      do i = 1, nruns
       runs(1,i) = runs(1,i) + prfinfo(6) -1
       runs(2,i) = runs(2,i) + prfinfo(5) -1
       runs(3,i) = runs(3,i) + prfinfo(5) -1
@@ -432,27 +431,28 @@ c to 1,1 are needed: fix all runs
 
 c Only if input dataset given: open model and residual dataset, if required.
 c dumprf(1) is unit to copy header from
-      if( inp.ne.' ' ) then
-         dumprf(1) = units(1)
-         if( mdl.ne.' ' )
-     *   call setopen( mdl,'new',units(3), naxis,axleni, dumprf,fitax)
-         dumprf(1) = units(1)
-         if( res.ne.' ' )
-     *   call setopen( res,'new',units(4), naxis,axleni, dumprf,fitax)
+      if (inp.ne.' ') then
+        dumprf(1) = units(1)
+        if (mdl.ne.' ')
+     *    call setopen(mdl,'new',units(3), naxis,axleni, dumprf,fitax)
+        dumprf(1) = units(1)
+        if (res.ne.' ')
+     *    call setopen(res,'new',units(4), naxis,axleni, dumprf,fitax)
       endif
 
 
 c Open dataset with previous fits, if wanted
 c axlen and naxis will define parameter output set
-      if( pin.ne.' ' ) then
-         if( inp.eq.' ' ) call xyzclose(units(1))
-         if( inp.eq.' ' ) units(1) = 0
-         call setopen( pin,'old',units(2), naxis,axlenp, dumprf,naxis)
-         call assertl( 6*((axlenp(naxis)-1)/6)+1 .eq. axlenp(naxis),
-     *        'Input parameter dataset has wrong number of channels' )
-         call assertl(axleni(1).eq.axlenp(1).and.axleni(2).eq.axlenp(2),
-     *        'length of x and y axes of in= and parinp= incompatible' )
-         prfinfo(3) = axlenp(naxis)
+      if (pin.ne.' ') then
+        if (inp.eq.' ') call xyzclose(units(1))
+        if (inp.eq.' ') units(1) = 0
+        call setopen(pin,'old',units(2), naxis,axlenp, dumprf,naxis)
+        call assertl(6*((axlenp(naxis)-1)/6)+1.eq.axlenp(naxis),
+     *       'Input parameter dataset has wrong number of channels')
+        call assertl(axleni(1).eq.axlenp(1) .and.
+     *               axleni(2).eq.axlenp(2),
+     *       'length of x and y axes of in= and parinp= incompatible')
+        prfinfo(3) = axlenp(naxis)
       endif
 
 c Get gaussian related input: number, parameters to fit, interpretation
@@ -466,44 +466,45 @@ c and a parameter axis is added.
 c Also added is a dummy last axis description to save the fitax coordinates
 c If parinp given, use its axes, except for the last, which can change if
 c ngauss increased.
-      if( par.ne.' ' ) then
-         if( pin.eq.' ' ) then
-            do i = 1, naxis
-               if( i.lt.fitax ) axlenp(i) = axleni(i)
-               if( i.gt.fitax ) axlenp(i) = axleni(i+1)
-            enddo
-            dumprf(1) = units(1)
-            ngauss(5) = 0
-            ngauss(6) = ngauss(1)
-         else
-            fitax = naxis
-            dumprf(1) = units(2)
-            ngauss(5) = (axlenp(fitax)-1)/6
-            ngauss(6) = max( ngauss(1), ngauss(5) )
-         endif
-         axlenp(naxis) = 6*ngauss(6) + 1
-         prfinfo(3)    = axlenp(naxis)
+      if (par.ne.' ') then
+        if (pin.eq.' ') then
+          do i = 1, naxis
+            if (i.lt.fitax) axlenp(i) = axleni(i)
+            if (i.gt.fitax) axlenp(i) = axleni(i+1)
+          enddo
+          dumprf(1) = units(1)
+          ngauss(5) = 0
+          ngauss(6) = ngauss(1)
+        else
+          fitax = naxis
+          dumprf(1) = units(2)
+          ngauss(5) = (axlenp(fitax)-1)/6
+          ngauss(6) = max(ngauss(1), ngauss(5))
+        endif
+        axlenp(naxis) = 6*ngauss(6) + 1
+        prfinfo(3)    = axlenp(naxis)
 
-         call setopen(par,'new',units(5), naxis,axlenp,dumprf,naxis)
+        call setopen(par,'new',units(5), naxis,axlenp,dumprf,naxis)
 
 c create parameter axis on axis naxis
 c copy velocity description from axis fitax to axis naxis+1
-         if( inp.ne.' ' ) naxesgp = real(naxis)
-         if( inp.eq.' ' ) naxesgp = real(naxis) + 100
-         call cooinfo( 2, units(5), fitax, naxesgp )
+        if (inp.ne.' ') naxesgp = real(naxis)
+        if (inp.eq.' ') naxesgp = real(naxis) + 100
+        call cooinfo(2, units(5), fitax, naxesgp)
       else
-         units(5) = 0
+        units(5) = 0
       endif
 
 c Open rms dataset
-      if( rms .ne. ' ' ) then
-c        fitax=8 selects ' ' as subcube for xyzsetup
-         call setopen( rms,'old',units(6), naxis,axlenp, dumprf,8 )
-         call assertl( axlenp(3).eq.1, 'rms dataset has >1 channel' )
-         call assertl(axleni(1).eq.axlenp(1).and.axleni(2).eq.axlenp(2),
-     *        'length of x and y axes of in= and rmsest= incompatible' )
+      if (rms.ne.' ') then
+c       fitax=8 selects ' ' as subcube for xyzsetup
+        call setopen(rms,'old',units(6), naxis,axlenp, dumprf,8)
+        call assertl(axlenp(3).eq.1, 'rms dataset has >1 channel')
+        call assertl(axleni(1).eq.axlenp(1) .and.
+     *               axleni(2).eq.axlenp(2),
+     *       'length of x and y axes of in= and rmsest= incompatible')
       else
-         units(6) = 0
+        units(6) = 0
       endif
 
       return
@@ -514,7 +515,7 @@ c***********************************************************************
 c Open input dataset and get information on it.
 c Or create output dataset.
 
-      subroutine setopen( name,status,unit, naxis,axlen,prfinfo,fitax)
+      subroutine setopen(name,status,unit, naxis,axlen,prfinfo,fitax)
 
       character*(*) name
       character*(*) status
@@ -532,26 +533,26 @@ c Or create output dataset.
       data          axnames / 'xyzabcd ' /
 
 c Open and get dimension of input dataset: naxis.
-      if( status.eq.'old' ) then
+      if (status.eq.'old') then
          naxis = MAXNAX
-         call xyzopen( unit, name, 'old', naxis, axlen )
+         call xyzopen(unit, name, 'old', naxis, axlen)
       endif
-      if( status.eq.'new' ) then
+      if (status.eq.'new') then
          call xyzopen(unit, name, 'new', naxis, axlen)
          call headcp(prfinfo(1), unit, 0, 0, 0, 0)
       endif
 
 c Find out which axis is to be fit. First read keyword, then call fndaxnum
 c which reads the header and sets the value of fitaxis if not given in keyword.
-      if( status.eq.'old' .and. fitax.eq.0 ) then
-         call keya( 'fitaxis', type, 'freq' )
-         if( type(1:2).eq.'ra'  ) type = 'lon'
-         if( type(1:3).eq.'dec' ) type = 'lat'
-         if( type(1:3).eq.'vel' ) type = 'freq'
+      if (status.eq.'old' .and. fitax.eq.0) then
+         call keya('fitaxis', type, 'freq')
+         if (type(1:2).eq.'ra') type = 'lon'
+         if (type(1:3).eq.'dec') type = 'lat'
+         if (type(1:3).eq.'vel') type = 'freq'
          axis = ' '
-         call fndaxnum( unit, type, axis, fitax )
-         call assertl( axis.ne.' ',
-     *                 'Specified fit axis not found in dataset' )
+         call fndaxnum(unit, type, axis, fitax)
+         call assertl(axis.ne.' ',
+     *                 'Specified fit axis not found in dataset')
       else
          axis = axnames(fitax:fitax)
       endif
@@ -564,7 +565,7 @@ c and figure out number of profiles to do and their length
          trc(i) = axlen(i)
       enddo
 
-      call xyzsetup( unit, axis, blc, trc, viraxl, vircsz )
+      call xyzsetup(unit, axis, blc, trc, viraxl, vircsz)
 
 c Store some parameters in array prfinfo, for easier transfering
 c prfinfo(1)=# profiles, prfinfo(2)=nchan
@@ -574,7 +575,6 @@ c prfinfo(1)=# profiles, prfinfo(2)=nchan
       return
       end
 
-
 c***********************************************************************
 
 c Get parameters controlling type of fit made and interpretation of
@@ -582,7 +582,7 @@ c parameters for the user.
 
       subroutine inpopts()
       integer      NOPTS
-      parameter    ( NOPTS = 19 )
+      parameter    (NOPTS = 19)
       character*10 optns(NOPTS)
       logical      optvals(NOPTS)
       integer      optindex
@@ -611,7 +611,7 @@ c Get options list.
       do i = 1, NOPTS
          optvals(i) = .FALSE.
       enddo
-      call options( 'options', optns, optvals, NOPTS )
+      call options('options', optns, optvals, NOPTS)
 
 c Convert to hashtable based on chars 1 and 4
       do i = 1, NOPTS
@@ -619,6 +619,8 @@ c Convert to hashtable based on chars 1 and 4
       enddo
       return
       end
+
+c***********************************************************************
 
 c Set an option to true
       subroutine opttrue(opt)
@@ -629,6 +631,8 @@ c Set an option to true
       opttab(optindex(opt)) = .TRUE.
       return
       end
+
+c***********************************************************************
 
 c Ask for the value of an option
       subroutine optlist(opt,optval)
@@ -641,6 +645,8 @@ c Ask for the value of an option
       return
       end
 
+c***********************************************************************
+
 c Convert characters to an array index
       integer function optindex(s)
       character*(*) s
@@ -650,7 +656,7 @@ c Convert characters to an array index
       call lcase(s)
       i = index(letters,s(1:1))
       j = index(letters,s(4:4))
-      if( s(1:1).eq.'i' ) j = index(letters,s(5:5))
+      if (s(1:1).eq.'i') j = index(letters,s(5:5))
       optindex = 26*i + j
       return
       end
@@ -685,22 +691,22 @@ c parameters for the user.
       data          a0/0/, a1/1/, am1/-1/
 c     a0,a1,am1 keep flint quiet
 
-      if( spectra ) then
+      if (spectra) then
 
 c        Get maximum number of gaussian components from keyword
          nchan = prfinfo(2)
-         call keyi( 'ngauss', ngauss(1), 1 )
-         call assertl( nchan.gt.3*ngauss(1),
-     *             'Not enough datapoints to fit this many parameters' )
+         call keyi('ngauss', ngauss(1), 1)
+         call assertl(nchan.gt.3*ngauss(1),
+     *             'Not enough datapoints to fit this many parameters')
 
 c        Ask for expected rms; check if filename given
-         call assertl( keyprsnt('rmsest'),
-     *                 'It is necessary to use the rmsest keyword' )
-         rmsest = -1.
-         call keya( 'rmsest', rms, ' ' )
-         call hopen( i, rms, 'old', iostat )
-         if( iostat.ne.0 ) then
-            call atorf( rms, rmsest, ok )
+         call assertl(keyprsnt('rmsest'),
+     *                 'It is necessary to use the rmsest keyword')
+         rmsest = -1.0
+         call keya('rmsest', rms, ' ')
+         call hopen(i, rms, 'old', iostat)
+         if (iostat.ne.0) then
+            call atorf(rms, rmsest, ok)
             call assertl(ok,
      *           'rms dataset does not exist, or other error in rms')
             rms = ' '
@@ -715,35 +721,35 @@ c        Number of channels given by length of fitaxis
 c        Maximum number of gaussians from GPAR axis
          nchan = prfinfo(3)
          ngauss(1) = (nchan-1)/6
-         call assertl( 6*ngauss(1)+1.eq.nchan,
-     *                 'Input dataset has wrong number of channels' )
+         call assertl(6*ngauss(1)+1.eq.nchan,
+     *                 'Input dataset has wrong number of channels')
 c        Number of channels found from crval(naxis+1)
-         call cooinfo( 4,a0,a1,nch )
+         call cooinfo(4,a0,a1,nch)
 
       endif
 
 c get smoothing factor
-      call keyr( 'smooth', limlist(14), 1.0 )
+      call keyr('smooth', limlist(14), 1.0)
 
 c # initial estimates to make is ngauss from keyword
       ngauss(2) = ngauss(1)
 
 
 c Find out what to sort on
-      call keya( 'cmpsort', sort, 'velocity' )
-      if( sort(1:2).eq.'ve' ) cmpsort(1) = 2.
-      if( sort(1:2).eq.'in' ) cmpsort(1) = 3.
-      if( sort(1:2).eq.'am' ) cmpsort(1) = 4.
-      if( sort(1:2).eq.'wi' ) cmpsort(1) = 5.
-      if( sort(1:2).eq.'vd' ) cmpsort(1) = 6.
-      if( sort(1:2).eq.'vd' ) call keyr( 'cmpsort', cmpsort(2), 0. )
-      if( sort(1:2).eq.'vr' ) cmpsort(1) = 7.
-      if( sort(1:2).eq.'vr' ) call keyr( 'cmpsort', cmpsort(2), 0. )
-      if( sort(1:2).eq.'vr' ) call keyr( 'cmpsort', cmpsort(3), 0. )
-      call assertl(cmpsort(1).ne.0.,'Error in name of sort parameter')
+      call keya('cmpsort', sort, 'velocity')
+      if (sort(1:2).eq.'ve') cmpsort(1) = 2.0
+      if (sort(1:2).eq.'in') cmpsort(1) = 3.0
+      if (sort(1:2).eq.'am') cmpsort(1) = 4.0
+      if (sort(1:2).eq.'wi') cmpsort(1) = 5.0
+      if (sort(1:2).eq.'vd') cmpsort(1) = 6.0
+      if (sort(1:2).eq.'vd') call keyr('cmpsort', cmpsort(2), 0.0)
+      if (sort(1:2).eq.'vr') cmpsort(1) = 7.0
+      if (sort(1:2).eq.'vr') call keyr('cmpsort', cmpsort(2), 0.0)
+      if (sort(1:2).eq.'vr') call keyr('cmpsort', cmpsort(3), 0.0)
+      call assertl(cmpsort(1).ne.0.0,'Error in name of sort parameter')
 c     convert center to pixels
-      call cooinfo( 8, a1,a0, cmpsort(2) )
-      call cooinfo( 8, a1,a0, cmpsort(3) )
+      call cooinfo(8, a1,a0, cmpsort(2))
+      call cooinfo(8, a1,a0, cmpsort(3))
 
 
 c Get allowed parameter ranges
@@ -753,48 +759,48 @@ c limlist( 7: 9)=error cutoff
 c limlist(10:12)=flag if limit used
 
 c min/max amplitude set using cutoff keyword or lower=3*rms
-      limlist( 1) = -1.E30
-      limlist( 4) =  1.E30
-      limlist( 7) =  3.
-      limlist(10) =  1.
+      limlist(1) = -1.E30
+      limlist(4) =  1.E30
+      limlist(7) =  3.0
+      limlist(10) =  1.0
 c min/max velocity = channel range
 c maximum velocity error is 1/2 fwhm
-      limlist( 2)  = 1.
-      call cooinfo( 8, am1,a0, limlist(2) )
-      limlist( 5)  = nch
-      call cooinfo( 8, am1,a0, limlist(5) )
-      limlist( 8) = 0.5 * 2.35482004503094930
-      limlist(11) = 1.
+      limlist(2)  = 1.0
+      call cooinfo(8, am1,a0, limlist(2))
+      limlist(5)  = nch
+      call cooinfo(8, am1,a0, limlist(5))
+      limlist(8) = 0.5 * 2.35482004503094930
+      limlist(11) = 1.0
 c min/max width = 0.85 to half # channels
-      call cooinfo( 3, a0,a0, dv )
-      limlist( 3) =     0.85 * dv
-      limlist( 6) = nch / 2. * dv
-      limlist( 9) = 1.
-      limlist(12) = 1.
+      call cooinfo(3, a0,a0, dv)
+      limlist(3) =     0.85 * dv
+      limlist(6) = nch / 2.0 * dv
+      limlist(9) = 1.0
+      limlist(12) = 1.0
 
 c check keyword values
       do i = 1, 3
-         if( i.eq.1 ) key = 'cutoff'
-         if( i.eq.2 ) key = 'crange'
-         if( i.eq.3 ) key = 'wrange'
-         if( keyprsnt(key) ) then
-            limlist(i+9) = 1.
-            call keyr( key, limlist(i),   limlist(i)   )
-            call keyr( key, limlist(i+3), limlist(i+3) )
-            call keyr( key, limlist(i+6), limlist(i+6) )
-            call assertl( limlist(i+3).ge.limlist(i),
-     *                    'Upper cutoff must be above lower cutoff' )
+         if (i.eq.1) key = 'cutoff'
+         if (i.eq.2) key = 'crange'
+         if (i.eq.3) key = 'wrange'
+         if (keyprsnt(key)) then
+            limlist(i+9) = 1.0
+            call keyr(key, limlist(i),   limlist(i))
+            call keyr(key, limlist(i+3), limlist(i+3))
+            call keyr(key, limlist(i+6), limlist(i+6))
+            call assertl(limlist(i+3).ge.limlist(i),
+     *                    'Upper cutoff must be above lower cutoff')
          endif
       enddo
 
 
 c set default cutoff if not given
-      if( limlist(10).eq.0. ) then
-         limlist( 1) = 3.0
-         limlist(10) = 1.
+      if (limlist(10).eq.0.0) then
+         limlist(1) = 3.0
+         limlist(10) = 1.0
       endif
       call optlist('negative',optval)
-      if( optval ) limlist(10) = 2.
+      if (optval) limlist(10) = 2.0
 
 c limlist(2,5) corresponds to velocity; sometimes cdelt3<0, and the
 c pixel order of lower and upper limit is reversed
@@ -810,14 +816,14 @@ c extract from 'call parconv( limlist, -2, .true. )'
 c don't call, as parconv also changes errors, and those elements have
 c higher indices than the length of limlist
       call optlist('dispersion',disper)
-      call optlist('pixel',     pixel )
-      if(.not.disper) then
+      call optlist('pixel',     pixel)
+      if (.not.disper) then
          limlist(3) = limlist(3)/2.35482004503094930
          limlist(6) = limlist(6)/2.35482004503094930
       endif
-      if(.not.pixel ) then
-         call cooinfo( 8, a1,a0, limlist(2) )
-         call cooinfo( 8, a1,a0, limlist(5) )
+      if (.not.pixel) then
+         call cooinfo(8, a1,a0, limlist(2))
+         call cooinfo(8, a1,a0, limlist(5))
          limlist(3) = limlist(3)/dv
          limlist(6) = limlist(6)/dv
       endif
@@ -825,7 +831,7 @@ c higher indices than the length of limlist
       limlist(6) = 1/limlist(6)
 
 c limlist(13) gives cutoff in intensity when summing/averaging
-      call keyr( 'cutval', limlist(13), -1.E30 )
+      call keyr('cutval', limlist(13), -1.E30)
 
 c limlist(21) gives factor by which amplitude of initial estimate may be
 c lower than amplitude cutoff
@@ -846,18 +852,14 @@ c             is the only reason that a fit failed
       end
 
 c***********************************************************************
-c***********************************************************************
-c***********************************************************************
-c***********************************************************************
-c***********************************************************************
 
 c work loops over all profiles, reads each profile, applies the
 c gaussfitting algorithm, and writes the results.
 
-      subroutine work( units,prfinfo,runs,ngauss,limlist,cmpsort,prnm )
+      subroutine work(units,prfinfo,runs,ngauss,limlist,cmpsort,prnm)
 
       integer   MAXRUNS
-      parameter ( MAXRUNS = 1024 )
+      parameter (MAXRUNS = 1024)
       integer   units(*)
       integer   prfinfo(*)
       integer   runs(3,MAXRUNS)
@@ -870,7 +872,7 @@ c gaussfitting algorithm, and writes the results.
       integer   gssfit, gssset
       include   'maxdim.h'
       integer   MAXCMP, ARRSIZ
-      parameter ( MAXCMP=10, ARRSIZ=7*MAXCMP+1 )
+      parameter (MAXCMP=10, ARRSIZ=7*MAXCMP+1)
 
       real      gausspar(ARRSIZ)
       real      gaussest(ARRSIZ)
@@ -901,76 +903,76 @@ c one-step check on summing, instead of two function calls
 
 c call setrms first time to set limlst; called for each pixel if varrms true
       varrms = units(6).ne.0
-      call setrms( 0,profnr,limlist,limlst,rmsest )
+      call setrms(0,profnr,limlist,limlst,rmsest)
 
 c print output header
       call optlist('estimout', optval1)
       call optlist('intermout',optval2)
       call optlist('noprt',    optval3)
-      if( optval1 .or. optval2 .or. .not.optval3 ) call header(units(1))
+      if (optval1 .or. optval2 .or. .not.optval3) call header(units(1))
 
 c loop over all profiles
       do profnr = 1, prfinfo(1)
 
 c which position?
          rprofnr = real(profnr)
-         call cooinfo( 6, units(1), units(2), rprofnr )
-         flag=0.
-         call cooinfo( 7, coords(1), coords(2), flag )
+         call cooinfo(6, units(1), units(2), rprofnr)
+         flag=0.0
+         call cooinfo(7, coords(1), coords(2), flag)
 c is this inside the selected region?
-         inbox = ( coords(2).eq.runs(1,runnr) .and.
+         inbox = (coords(2).eq.runs(1,runnr) .and.
      *             coords(1).ge.runs(2,runnr) .and.
-     *             coords(1).le.runs(3,runnr)     ) .or. runs(1,1).eq.0
+     *             coords(1).le.runs(3,runnr)  ) .or. runs(1,1).eq.0
 
-         if( inbox .and. coords(1).eq.runs(3,runnr) ) runnr = runnr+1
+         if (inbox .and. coords(1).eq.runs(3,runnr)) runnr = runnr+1
 c inside region and in= given => read spectrum
 c    and unselect channels outside region=image range
-         if(      units(1).ne.0 .and. inbox ) then
-            call xyzprfrd( units(1), profnr, data,mask, prfinfo(2) )
+         if (   units(1).ne.0 .and. inbox) then
+            call xyzprfrd(units(1), profnr, data,mask, prfinfo(2))
             do i = 1, prfinfo(7)-1
                mask(i) = .false.
             enddo
             do i = prfinfo(10)+1, nchan
                mask(i) = .false.
             enddo
-            if( sumit ) then
+            if (sumit) then
             do i = 1, nchan
-               mask(i) = data(i) .gt. limlist(13)
+               mask(i) = data(i).gt.limlist(13)
             enddo
             endif
 c outside region or no in=, but parinp= given => read gaussians
-         else if( units(2).ne.0 ) then
-            call xyzprfrd( units(2), profnr, data,mask, prfinfo(3) )
+         else if (units(2).ne.0) then
+            call xyzprfrd(units(2), profnr, data,mask, prfinfo(3))
 
 c set inbox false if all read-in comps are zero to avoid doing too much
-            if( inbox ) then
+            if (inbox) then
                somecmp = .false.
                do i = 1, 3*ngauss(5), 3
-                  if( data(i).ne.0. ) somecmp = .true.
+                  if (data(i).ne.0.0) somecmp = .true.
                enddo
-               if( .not.somecmp ) inbox = .false.
+               if (.not.somecmp) inbox = .false.
             endif
          endif
 
 c rms from dataset or single value?
-         if(varrms) call setrms( units(6),profnr,limlist,limlst,rmsest )
+         if (varrms) call setrms(units(6),profnr,limlist,limlst,rmsest)
 
 c add profiles together if options=summed or average used.
 c inbox comes out false, except on very last profile
-         if(sumit) call avgsum(data,mask,profnr,prfinfo,inbox)
+         if (sumit) call avgsum(data,mask,profnr,prfinfo,inbox)
 
 c smooth profile if wanted
-         if( limlist(14) .ne. 1 ) then
-            
+         if (limlist(14).ne.1) then
+
          endif
 
 c call gssout with type=-1 to initialize
 c some fake variables and arrays in call, so that the compiler is not confused
          ier=0
-         if(inbox) call gssout( -1,  ier,data,nchan,data )
+         if (inbox) call gssout(-1,  ier,data,nchan,data)
 
          pass=1
-         do while( pass.le.2 )
+         do while (pass.le.2)
 
 c obtain gaussian parameters at this position
 c    spectrum read and in region => make initial estimate and fit
@@ -984,39 +986,39 @@ c    fit failed completely -> if first pass, redo initial estimates
 c    ok if failure because parameter outside limits or second pass or sucess
 
             ier=0
-            if(      units(1).ne.0 .and. inbox ) then
+            if (   units(1).ne.0 .and. inbox) then
                call gssest(data,mask,nchan, gaussest,         ngauss,
-     *                                      limlst,  cmpsort,  pass   )
+     *                                      limlst,  cmpsort,  pass)
                ier= gssfit(data,mask,nchan, gaussest,gausspar,ngauss,
-     *                                      limlst,  cmpsort          )
-            else if( units(2).ne.0 ) then
+     *                                      limlst,  cmpsort       )
+            else if (units(2).ne.0) then
                ier= gssset(data,                     gausspar,ngauss,
-     *                                      limlst,  cmpsort, inbox   )
+     *                                      limlst,  cmpsort, inbox)
             endif
 
-            if(inbox) call gssout( 3, ier, gausspar,ngauss, cmpsort )
+            if (inbox) call gssout(3, ier, gausspar,ngauss, cmpsort)
 
-            if(     pass.eq.1 ) then
+            if (  pass.eq.1) then
                pass=3
                call optlist('findestim',optval1)
-               if( ier.gt.0 .and. optval1 ) pass=2
-            else if( pass.eq.2 ) then
+               if (ier.gt.0 .and. optval1) pass=2
+            else if (pass.eq.2) then
                pass=3
-               if( ier.gt.0 ) then
+               if (ier.gt.0) then
                   call wrtout('Really cannot fit this one',1)
                   ngauss(4)=0
                endif
             endif
          enddo
-         call writfile( units, profnr, inbox,cmpsort,
-     *                  data,mask,nchan,gaussest,gausspar,ngauss,prnm )
+         call writfile(units, profnr, inbox,cmpsort,
+     *                  data,mask,nchan,gaussest,gausspar,ngauss,prnm)
       enddo
       return
       end
 
 c***********************************************************************
 
-      subroutine setrms( units, profnr, limlist, limlst, rmsest )
+      subroutine setrms(units, profnr, limlist, limlst, rmsest)
       integer units, profnr
       real    limlist(*), limlst(*)
       real    rmsest
@@ -1025,12 +1027,12 @@ c***********************************************************************
       save    first
       data    first / .true. /
 
-      if( units.ne.0 ) then
-         call xyzpixrd( units, profnr, rmsest, rmsmsk )
+      if (units.ne.0) then
+         call xyzpixrd(units, profnr, rmsest, rmsmsk)
       else
          rmsest = limlist(20)
       endif
-      if( first ) then
+      if (first) then
 c 1,2,3 = minimum amp/vel/disp
 c 4,5,6 = maximum amp/vel/disp
 c 7,8,9 = error cutoff amp/vel/disp
@@ -1047,15 +1049,15 @@ c 23    = factor to multiply initial estimates by if a second try is made
 c 24    = factor by which rms may be higher than rmsest after fit
 c 25    = factor by which rms may be higher than rmsest when that is the
 c         only reason that a fit failed
-         limlst( 1) = limlist( 1) * rmsest
-         limlst( 2) = limlist( 2)
-         limlst( 3) = limlist( 3)
-         limlst( 4) = limlist( 4)
-         limlst( 5) = limlist( 5)
-         limlst( 6) = limlist( 6)
-         limlst( 7) = limlist( 7)
-         limlst( 8) = limlist( 8)
-         limlst( 9) = limlist( 9)
+         limlst(1) = limlist(1) * rmsest
+         limlst(2) = limlist(2)
+         limlst(3) = limlist(3)
+         limlst(4) = limlist(4)
+         limlst(5) = limlist(5)
+         limlst(6) = limlist(6)
+         limlst(7) = limlist(7)
+         limlst(8) = limlist(8)
+         limlst(9) = limlist(9)
          limlst(10) = limlist(10)
          limlst(11) = limlist(11)
          limlst(12) = limlist(12)
@@ -1073,8 +1075,8 @@ c         only reason that a fit failed
 
 c***********************************************************************
 
-      subroutine writfile( units, profnr,  inbox,cmpsort,
-     *               data,mask,nchan, gaussest,gausspar,ngauss, prnm )
+      subroutine writfile(units, profnr,  inbox,cmpsort,
+     *               data,mask,nchan, gaussest,gausspar,ngauss, prnm)
       integer   units(*)
       integer   profnr
       logical   inbox
@@ -1097,19 +1099,19 @@ c***********************************************************************
 
 c write profile, model, residual and estimatemodel to an ASCII file
       call optlist('wrprof',optval)
-      if( optval .and. inbox ) then
+      if (optval .and. inbox) then
          stil2clc = .false.
          call gaussmod(estim,nchan,gaussest,ngauss(3))
          call gaussmod(model,nchan,gausspar,ngauss(4))
          call optlist('pixel',optval)
-         call writprof(  data,model,estim,nchan,optval,
-     *                   gausspar,ngauss(4), prnm )
+         call writprof(data,model,estim,nchan,optval,
+     *                   gausspar,ngauss(4), prnm)
       endif
 
 c write model, residual to output datasets
-      if( units(3).ne.0 .or. units(4).ne.0 ) then
-         if( inbox ) then
-            if( stil2clc )
+      if (units(3).ne.0 .or. units(4).ne.0) then
+         if (inbox) then
+            if (stil2clc)
      *        call gaussmod(model,nchan,gausspar,ngauss(4))
             do i = 1, nchan
                residual(i) = data(i) - model(i)
@@ -1117,39 +1119,39 @@ c write model, residual to output datasets
             enddo
          else
             do i = 1, nchan
-               model(i)    = 0.
-               residual(i) = 0.
+               model(i)    = 0.0
+               residual(i) = 0.0
                mask(i)     = .false.
             enddo
          endif
-         if( units(3).ne.0 )
-     *      call xyzprfwr( units(3),profnr,model,   mask,nchan )
-         if( units(4).ne.0 )
-     *      call xyzprfwr( units(4),profnr,residual,mask,nchan )
+         if (units(3).ne.0)
+     *      call xyzprfwr(units(3),profnr,model,   mask,nchan)
+         if (units(4).ne.0)
+     *      call xyzprfwr(units(4),profnr,residual,mask,nchan)
       endif
 
 c write result to parameter file
-      if( units(5).ne.0 ) then
+      if (units(5).ne.0) then
 
 c possibilities:
 c no components present => zero all
 c inside box            => ngauss(4) = # comps from gssfit or gssset
 c outside box           => ngauss(5) = # comps read in (0 if no parinp=)
-         if(      inbox ) ngss = ngauss(4)
-         if( .not.inbox ) ngss = ngauss(5)
+         if (   inbox) ngss = ngauss(4)
+         if (.not.inbox) ngss = ngauss(5)
 
 c sort components, if fit are being made or (if parinp= only) if pixel was inbox
 c cmpsort(4)<0 will insert zero components if sorting so requires
-         if( units(1).ne.0 .or. inbox ) then
+         if (units(1).ne.0 .or. inbox) then
             cmpsort(4) = -real(ngauss(6))
-            call gsssrt(  data, gausspar, ngss, cmpsort )
+            call gsssrt(data, gausspar, ngss, cmpsort)
          else
-            cmpsort(4) = 0.
-            call setngsa( data, gausspar, ngss )
+            cmpsort(4) = 0.0
+            call setngsa(data, gausspar, ngss)
          endif
-         call parconv( data, ngss, .false. )
+         call parconv(data, ngss, .false.)
          do i = ngss+1, ngauss(6)
-            call setgssz( data,i )
+            call setgssz(data,i)
          enddo
 
 c move errors to proper position in array
@@ -1157,29 +1159,28 @@ c move errors to proper position in array
          do i = 1, ngauss(6)
             j    = cmpind(i)
             jerr = errind(i)
-            gausspar(  j  ) = data(j     )
-            gausspar(  j+1) = data(j   +1)
-            gausspar(  j+2) = data(j   +2)
-            gausspar(k+j  ) = data(jerr  )
+            gausspar(j) = data(j  )
+            gausspar(j+1) = data(j   +1)
+            gausspar(j+2) = data(j   +2)
+            gausspar(k+j) = data(jerr)
             gausspar(k+j+1) = data(jerr+1)
             gausspar(k+j+2) = data(jerr+2)
          enddo
 c include rms
-         if( ngss.eq.0 ) gausspar(rmsind()) = 0.
-         gausspar( 6*ngauss(6)+1 ) = gausspar(rmsind())
+         if (ngss.eq.0) gausspar(rmsind()) = 0.0
+         gausspar(6*ngauss(6)+1) = gausspar(rmsind())
 c set mask
          do i = 1, 6*ngauss(6)+1
-            mask(i) = gausspar(i) .ne. 0.
+            mask(i) = gausspar(i).ne.0.0
          enddo
 
 c at last, write it
-         call xyzprfwr( units(5),profnr,gausspar,mask,6*ngauss(6)+1)
+         call xyzprfwr(units(5),profnr,gausspar,mask,6*ngauss(6)+1)
 
       endif
 
       return
       end
-
 
 c***********************************************************************
 
@@ -1205,22 +1206,22 @@ c inbox is set to false, except for very last profile
 
       nprofs = prfinfo(1)
       nchan  = prfinfo(2)
-      if( profnr.eq.1 ) then
+      if (profnr.eq.1) then
          do i = 1, nchan
-            accum(i) = 0.
+            accum(i) = 0.0
          enddo
       endif
-      if( inbox ) then
+      if (inbox) then
          do i = 1, nchan
-            if(mask(i)) accum(i) = accum(i) + data(i)
+            if (mask(i)) accum(i) = accum(i) + data(i)
          enddo
       endif
-      if( profnr.eq.nprofs ) then
+      if (profnr.eq.nprofs) then
          call optlist('aver',  optval1)
          call optlist('summed',optval2)
          do i = 1, nchan
-            if( optval1 ) data(i) = accum(i) / nprofs
-            if( optval2 ) data(i) = accum(i)
+            if (optval1) data(i) = accum(i) / nprofs
+            if (optval2) data(i) = accum(i)
          enddo
          inbox = .true.
       else
@@ -1231,10 +1232,6 @@ c inbox is set to false, except for very last profile
       end
 
 c***********************************************************************
-c***********************************************************************
-c***********************************************************************
-c***********************************************************************
-c***********************************************************************
 
 c convert data array to gaussian parameters.
 c if also inbox=true, then apply selection criteria and sort
@@ -1243,7 +1240,7 @@ c conversion to internal pixel representation is done so that gssout
 c can produce proper output
 
       integer function gssset(
-     *        data, gausspar,ngauss,limlist,cmpsort, inbox )
+     *        data, gausspar,ngauss,limlist,cmpsort, inbox)
 
       real      data(*)
       real      gausspar(*)
@@ -1262,13 +1259,13 @@ c ngauss(5) = # gaussians in parinp dataset
       somecmp = .false.
       joff    = 3*ngauss(5)
       do i = 1, 3*ngauss(5)
-         gausspar(i         ) = data(i     )
+         gausspar(i      ) = data(i  )
          gausspar(i+erroff()) = data(i+joff)
-         if( data(i).ne.0. ) somecmp = .true.
+         if (data(i).ne.0.0) somecmp = .true.
       enddo
       gausspar(rmsind()) = data(6*ngauss(5)+1)
 c     convert to internal values
-      call parconv( gausspar,ngauss(5), .true. )
+      call parconv(gausspar,ngauss(5), .true.)
 
 c if in= given, inbox will be false here: don't do anything, just write it out
 c if in= not given, inbox may be true or false. If false: just write it,
@@ -1277,20 +1274,20 @@ c                    selection criteria and sort (in writfile)
 
       ier=0
 c if not inbox or all zeroes => no manipulations
-      if( inbox .and. somecmp ) then
+      if (inbox .and. somecmp) then
 c        set errpar flag for zero-components
          do i = 1, ngauss(5)
-            if( gausspar(cmpind(i)).ne.0. ) gausspar(errpar(i))=1.
-            if( gausspar(cmpind(i)).eq.0. ) gausspar(errpar(i))=2.
+            if (gausspar(cmpind(i)).ne.0.0) gausspar(errpar(i))=1.0
+            if (gausspar(cmpind(i)).eq.0.0) gausspar(errpar(i))=2.0
          enddo
 c        delete zero-components
          ngauss(4) = delgauss(gausspar,ngauss(5))
          ngauss(3) = ngauss(4)
          ier=0
-         call gssout( 0,ier, gausspar,ngauss, cmpsort )
+         call gssout(0,ier, gausspar,ngauss, cmpsort)
 c        apply cutoffs
-         ier = cutoffs( gausspar,ngauss(4), limlist )
-         call gssout( 2,ier, gausspar,ngauss, cmpsort )
+         ier = cutoffs(gausspar,ngauss(4), limlist)
+         call gssout(2,ier, gausspar,ngauss, cmpsort)
 c        delete components outside limits
          ngauss(4) = delgauss(gausspar,ngauss(4))
       else
@@ -1303,13 +1300,9 @@ c ngauss(4) is used to write it out
       end
 
 c***********************************************************************
-c***********************************************************************
-c***********************************************************************
-c***********************************************************************
-c***********************************************************************
 
-      subroutine gssest( data,mask,nchan, gaussest,ngauss,
-     *                   limlist, cmpsort, pass )
+      subroutine gssest(data,mask,nchan, gaussest,ngauss,
+     *                   limlist, cmpsort, pass)
 
       real      data(*)
       logical   mask(*)
@@ -1326,39 +1319,39 @@ c***********************************************************************
       real      getrms
       integer   ier
       integer   MAXCMP, ARRSIZ
-      parameter ( MAXCMP=10, ARRSIZ=7*MAXCMP+1 )
+      parameter (MAXCMP=10, ARRSIZ=7*MAXCMP+1)
       real      gpar(ARRSIZ), cs
 
 c profile fittable?
-      if( chkprof(data,mask,nchan,ngauss(1)) ) then
+      if (chkprof(data,mask,nchan,ngauss(1))) then
 
 c obtain estimate, either automatically or from keyword
          call optlist('findestim',optval)
-         if( optval) then
-            ngauss(3) = fndestim( gaussest,ngauss(2),
-     *                            data,mask,nchan, limlist, pass )
+         if (optval) then
+            ngauss(3) = fndestim(gaussest,ngauss(2),
+     *                            data,mask,nchan, limlist, pass)
          else
-            ngauss(3) = rdestim( gaussest,ngauss(2) )
+            ngauss(3) = rdestim(gaussest,ngauss(2))
          endif
          gaussest(rmsind()) =
-     *            getrms(data,mask,nchan,gaussest,ngauss(3),0.)
+     *            getrms(data,mask,nchan,gaussest,ngauss(3),0.0)
 
 c sort on amplitude, so that 'fit with one-component less' works best
          cs=cmpsort(1)
-         cmpsort(1)=4.
-         call gsssrt(  gpar, gaussest, ngauss(3), cmpsort )
+         cmpsort(1)=4.0
+         call gsssrt(gpar, gaussest, ngauss(3), cmpsort)
          cmpsort(1)=cs
-         call setngsa( gaussest, gpar, ngauss(3) )
+         call setngsa(gaussest, gpar, ngauss(3))
 
                                 ier=0
-         if( ngauss(3) .eq. 0 ) ier=7
+         if (ngauss(3).eq.0) ier=7
       else
          ngauss(3) = 0
          ier = 5
       endif
 
 c print estimates
-      call gssout( 0,ier, gaussest,ngauss, cmpsort )
+      call gssout(0,ier, gaussest,ngauss, cmpsort)
 
       return
       end
@@ -1379,16 +1372,16 @@ c***********************************************************************
 
 c Enough points to make a fit?
       call optlist('inmask',optval)
-      if( optval ) then
+      if (optval) then
          nok = 0
          do i = 1, nchan
-            if( mask(i) ) then
-               if( data(i).ne.data(1) ) nok = nok + 1
+            if (mask(i)) then
+               if (data(i).ne.data(1)) nok = nok + 1
             else
-               data(i) = 0.
+               data(i) = 0.0
             endif
          enddo
-         if( nok .lt. 5*ngauss ) chkprof=.false.
+         if (nok.lt.5*ngauss) chkprof=.false.
       endif
 
       return
@@ -1396,14 +1389,14 @@ c Enough points to make a fit?
 
 c***********************************************************************
 
-      integer function rdestim( gaussest,ngauss )
+      integer function rdestim(gaussest,ngauss)
 
       real      gaussest(*)
       integer   ngauss
 
       logical   keyprsnt
       integer   MAXCMP, ARRSIZ
-      parameter ( MAXCMP=10, ARRSIZ=7*MAXCMP+1 )
+      parameter (MAXCMP=10, ARRSIZ=7*MAXCMP+1)
 
       real      estim(ARRSIZ)
       logical   first
@@ -1411,32 +1404,32 @@ c***********************************************************************
       save      first, estim
       data      first / .TRUE. /
 
-      if( first ) then
+      if (first) then
 
          first = .false.
-         call assertl( keyprsnt('estim'),
-     *        'It is necessary to use estim= or options=findestim' )
+         call assertl(keyprsnt('estim'),
+     *        'It is necessary to use estim= or options=findestim')
          do i = 1, ngauss
             j = cmpind(i)
-            call keyr( 'estim', estim(j  ), 1. )
-            call keyr( 'estim', estim(j+1), 1. )
-            call keyr( 'estim', estim(j+2), 1. )
+            call keyr('estim', estim(j), 1.0)
+            call keyr('estim', estim(j+1), 1.0)
+            call keyr('estim', estim(j+2), 1.0)
          enddo
 
-         call parconv( estim, -ngauss, .true. )
+         call parconv(estim, -ngauss, .true.)
 
       endif
 
-      call setngsa( gaussest, estim, ngauss )
+      call setngsa(gaussest, estim, ngauss)
 
       rdestim = ngauss
       return
       end
 
+c***********************************************************************
 
-
-      integer function fndestim( gaussest,ngauss, data,mask,nchan,
-     *                           limlist, pass )
+      integer function fndestim(gaussest,ngauss, data,mask,nchan,
+     *                           limlist, pass)
 
       real      gaussest(*)
       integer   ngauss
@@ -1459,43 +1452,43 @@ c***********************************************************************
       data      test / -1, 0,0,0,0,0 /
 
 c     Second try for initial estimates.
-      if( pass.eq.2 ) call wrtout('Try different initial estimates',1)
+      if (pass.eq.2) call wrtout('Try different initial estimates',1)
 
 c     test(1)=1: follow the process
 c     test(1)=2: also print data before and after
 c     test(1)=3: also print d2data
 c     test(1)=4: make files test.wip
 c     test(2),test(3): channel range selection when printing data
-      if( test(1) .eq. -1 ) then
-         call keyi( 'test', test(1), 0 )
-         call keyi( 'test', test(2), 1 )
-         call keyi( 'test', test(3), nchan )
-         call keyi( 'test', test(5), 2 )
-         if( test(1).eq.4 ) call testprof(test,0,data,nchan)
+      if (test(1).eq.-1) then
+         call keyi('test', test(1), 0)
+         call keyi('test', test(2), 1)
+         call keyi('test', test(3), nchan)
+         call keyi('test', test(5), 2)
+         if (test(1).eq.4) call testprof(test,0,data,nchan)
       endif
-      if(test(1).gt.0)
+      if (test(1).gt.0)
      *write(*,*)'==================================',ngauss
 
 c work with dat array = data - subtracted gaussians
 c also use zdat: dat with false component regions set to zero
       do i = 1, nchan
                              dat(i) = data(i)
-         if(      mask(i) ) zdat(i) = data(i)
-         if( .not.mask(i) ) zdat(i) = 0.
+         if (   mask(i)) zdat(i) = data(i)
+         if (.not.mask(i)) zdat(i) = 0.0
       enddo
-      if(test(1).gt.1) call testprof(test,1,zdat,0)
+      if (test(1).gt.1) call testprof(test,1,zdat,0)
 
 c loop until maximum below cutoff, or max # components found
       ngss  = 0
       estok = .TRUE.
 c still more to find? (estok false if current max below limit)
-      do while( estok .and. ngss.lt.abs(ngauss) )
+      do while (estok .and. ngss.lt.abs(ngauss))
 
 c find velocity and amplitude
-         estok=estcomp( dat,zdat,nchan,limlist,test,amp,vel,wid )
-         if( estok ) then
+         estok=estcomp(dat,zdat,nchan,limlist,test,amp,vel,wid)
+         if (estok) then
 
-            if( pass.eq.2 ) then
+            if (pass.eq.2) then
                amp = limlist(23)*amp
                wid = limlist(23)*wid
             endif
@@ -1504,20 +1497,20 @@ c check if this component closer than sumdisp/2 to a previous one
             gssnum=mergecmp(gaussest,ngss, dat,nchan, amp,vel,wid,test)
 
 c subtract found gaussian from profile
-            do i = max(    1,nint(vel-3*wid)),
+            do i = max( 1,nint(vel-3*wid)),
      *             min(nchan,nint(vel+3*wid))
-                dat(i) = dat(i) - amp * exp( -0.5*( (i-vel)/wid )**2 )
-               if( mask(i) ) zdat(i) = dat(i)
+                dat(i) = dat(i) - amp * exp(-0.5*((i-vel)/wid)**2)
+               if (mask(i)) zdat(i) = dat(i)
             enddo
 
 c insert found gaussian in estimates array
-            call setgssv( gaussest,gssnum, amp, vel, 1./wid )
-            if(test(1).gt.0)
+            call setgssv(gaussest,gssnum, amp, vel, 1.0/wid)
+            if (test(1).gt.0)
        *    write(*,*)'gauss#',gssnum,amp,vel,wid,wid*2.35482
 
          endif
-         if(test(1).gt.0) write(*,*)'------------------------------'
-         if(test(1).gt.1) call testprof(test,2,zdat,gssnum)
+         if (test(1).gt.0) write(*,*)'------------------------------'
+         if (test(1).gt.1) call testprof(test,2,zdat,gssnum)
 
       enddo
       call testprof(test,3,zdat,nchan)
@@ -1526,6 +1519,7 @@ c insert found gaussian in estimates array
       return
       end
 
+c***********************************************************************
 
       subroutine testprof(test,mode,data,ival)
       integer test(*)
@@ -1536,25 +1530,25 @@ c insert found gaussian in estimates array
       integer unit, i, cnt, lcnt, nl, gssnum(20)
       save    unit, cnt, gssnum
 
-      if( test(1).eq.4 .and. mode.eq.0 ) then
+      if (test(1).eq.4 .and. mode.eq.0) then
          open(unit=unit,file='test.wip',status='new')
          cnt = 0
          write(unit,'(''define testdata'')')
-      else if( mode.eq.1 .or. mode.eq.2 ) then
-         if(mode.eq.1) write(*,'(''Original profile'')')
-         if(mode.eq.2) write(*,'(''Residual'')')
+      else if (mode.eq.1 .or. mode.eq.2) then
+         if (mode.eq.1) write(*,'(''Original profile'')')
+         if (mode.eq.2) write(*,'(''Residual'')')
          do i = test(2), test(3)
-            write(*,*)i,data(i)
-            if(test(1).eq.4)
+            write(*,*) i,data(i)
+            if (test(1).eq.4)
      *         write(unit,'(''echo '',i4,1x,1pe10.3)') i,data(i)
          enddo
          cnt = cnt + 1
          gssnum(cnt) = ival
-      else if( test(1).eq.4 .and. mode.eq.3 ) then
+      else if (test(1).eq.4 .and. mode.eq.3) then
          write(unit,'(''end'')')
          write(unit,'(''newplot 1'')')
-         if( cnt.le. 6 ) write(unit,'(''setpanel 3 2 1'')')
-         if( cnt.le.12 ) write(unit,'(''setpanel 4 3 1'')')
+         if (cnt.le.6) write(unit,'(''setpanel 3 2 1'')')
+         if (cnt.le.12) write(unit,'(''setpanel 4 3 1'')')
          write(unit,'(''setinsidelabel 00 0.05 0.90'')')
          write(unit,'(''rlimits 1 '',i4,'' -0.2 1'')') ival
          lcnt = 2
@@ -1572,6 +1566,7 @@ c insert found gaussian in estimates array
       return
       end
 
+c***********************************************************************
 
 c if maximum very high: use zeroes of 2nd deriv to determine dispersion
 c else: use estimate of integral
@@ -1593,46 +1588,45 @@ c else: use estimate of integral
       estcomp = .FALSE.
 
 c loop until good component found or max below limit
-      do while( .not. done )
+      do while (.not.done)
+c       find position of maximum, until it is a possible gaussian peak,
+c       rather than noise
+        do while (.not.done  .and.  maxdat.gt.limlist(21))
+          call getmax(zdat,nchan, maxdat, im)
+          if (test(1).gt.0)
+      *      write(*,*)'max @',im,' =',maxdat,limlist(21)
+          done=zdat(im-1)/zdat(im).gt..3 .and. zdat(im+1)/zdat(im).gt..3
+          if (.not.done) then
+            if (test(1).gt.0) write(*,*)'false maximum @',im
+            zdat(im) = 0.0
+          endif
+        enddo
 
-c        find position of maximum, until it is a possible gaussian peak,
-c        rather than noise
-         do while( .not.done  .and.  maxdat.gt.limlist(21) )
-            call getmax( zdat,nchan, maxdat, im )
-            if(test(1).gt.0)
-      *        write(*,*)'max @',im,' =',maxdat,limlist(21)
-            done=zdat(im-1)/zdat(im).gt..3.and.zdat(im+1)/zdat(im).gt..3
-            if( .not.done ) then
-               if(test(1).gt.0)write(*,*)'false maximum @',im
-               zdat(im) = 0.
-            endif
-         enddo
-
-         if( maxdat .gt. limlist(21) ) then
-c           peak OK: estimate amp and vel
-            call estmax(   data,nchan,maxdat,im,  test, amp,vel     )
-            call estwidth( data,nchan,limlist,test, amp,vel,wid )
-            done = wid.ge.0.85  .and.  wid.le.nchan
-            if( done ) then
-               estcomp = .true.
-            else
-               if(test(1).gt.0)
-      *              write(*,*)'component too narrow/wide @',im
-               zdat(im) = 0.
-            endif
-         else
-c           peak too low: quit loop with estcomp still .false.
-            done = .true.
-         endif
-
+        if (maxdat.gt.limlist(21)) then
+c         peak OK: estimate amp and vel
+          call estmax(data,nchan,maxdat,im,  test, amp,vel  )
+          call estwidth(data,nchan,limlist,test, amp,vel,wid)
+          done = wid.ge.0.85  .and.  wid.le.nchan
+          if (done) then
+            estcomp = .true.
+          else
+            if (test(1).gt.0)
+      *           write(*,*)'component too narrow/wide @',im
+            zdat(im) = 0.0
+          endif
+        else
+c         peak too low: quit loop with estcomp still .false.
+          done = .true.
+        endif
       enddo
 
       return
       end
 
+c***********************************************************************
 
 c find position and amplitude of maximum
-      subroutine estmax( data,nchan, maxdat,im, test, amp,vel )
+      subroutine estmax(data,nchan, maxdat,im, test, amp,vel)
 
       real      data(*)
       integer   nchan
@@ -1652,31 +1646,32 @@ c data(j) can be >maxdat if there was an error found for the real maxdat
 c (e.g. a profile like 0.7 0.75 0.74 0.78 0.74 will lead to a deriv sign
 c change for max=0.78 at x=0, and a too-small width; then a new max is found
 c at 0.75).
-      vw = 0.
-      sv = 0.
+      vw = 0.0
+      sv = 0.0
       do j = max(1,im-2), min(nchan,im+2)
          x = min(maxdat,data(j)) / maxdat
-         if( x .gt. 0.65 ) then
-            w  = 1. - sqrt( -2. * alog(x) )
+         if (x.gt.0.65) then
+            w  = 1.0 - sqrt(-2.0 * alog(x))
             vw = vw + w *     j
             sv = sv + w
          endif
       enddo
       amp = maxdat
       vel = vw / sv
-      if(test(1).gt.0)write(*,*)'amp est=',amp
-      if(test(1).gt.0)write(*,*)'vel est=',vel,nint(vel),
+      if (test(1).gt.0) write(*,*)'amp est=',amp
+      if (test(1).gt.0) write(*,*)'vel est=',vel,nint(vel),
      *                                               '(=',vw,'/',sv,')'
-      if( vel.lt.4. .or. vel.gt.nchan-4. ) then
-         amp=0.
+      if (vel.lt.4.0 .or. vel.gt.nchan-4.0) then
+         amp=0.0
          return
       endif
 
       return
       end
 
+c***********************************************************************
 
-      subroutine estwidth( data,nchan, limlist,test,amp,vel,wid )
+      subroutine estwidth(data,nchan, limlist,test,amp,vel,wid)
 
       real      data(*)
       integer   nchan
@@ -1696,23 +1691,23 @@ c at 0.75).
       real      w1, w2, w3, w4
 
       real      Imin, Iplus
-      if( test(1).gt.2 ) write(*,*)'Find width from profile'
+      if (test(1).gt.2) write(*,*)'Find width from profile'
 
       im = nint(vel)
       derivat = amp.ge.limlist(22)
 
-      if( derivat ) then
+      if (derivat) then
          ddata(2) = data(2) - data(1)
          do i = 2, nchan-1
-             ddata(i) =  data(i+1) -  data(i  )
-            d2data(i) = ddata(i  ) - ddata(i-1)
-            if(test(1).gt.2.and.i.gt.test(2).and.i.lt.test(3))
-     *            write(*,*)i,data(i),ddata(i),d2data(i)
+             ddata(i) =  data(i+1) -  data(i)
+            d2data(i) = ddata(i) - ddata(i-1)
+            if (test(1).gt.2 .and. i.gt.test(2) .and. i.lt.test(3))
+     *            write(*,*) i,data(i),ddata(i),d2data(i)
          enddo
       else
-         if( test(1).gt.2 ) then
+         if (test(1).gt.2) then
             do i = 2, nchan-1
-               if(i.gt.test(2).and.i.lt.test(3)) write(*,*)i,data(i)
+               if (i.gt.test(2) .and. i.lt.test(3)) write(*,*) i,data(i)
             enddo
          endif
       endif
@@ -1723,28 +1718,28 @@ c at 0.75).
       a2    = -1
       i1    = -1
       i2    = -1
-      Imin  =  0.
-      Iplus =  0.
+      Imin  =  0.0
+      Iplus =  0.0
       i     =  0
       done = .false.
-      do while( i.lt.min(im-1,nchan-im-1) .and. .not.done )
-         if( derivat ) then
-         if( d1.lt.0 .and. tekenr(d2data(im-i)) .gt. 0.      ) d1=i-1
-         if( d2.lt.0 .and. tekenr(d2data(im+i)) .gt. 0.      ) d2=i-1
-         if( a1.lt.0 .and.          data(im-i)  .lt. 0.5*amp ) a1=i-1
-         if( a2.lt.0 .and.          data(im+i)  .lt. 0.5*amp ) a2=i-1
+      do while (i.lt.min(im-1, nchan-im-1) .and. .not.done)
+         if (derivat) then
+         if (d1.lt.0 .and. tekenr(d2data(im-i)).gt.0.0   ) d1=i-1
+         if (d2.lt.0 .and. tekenr(d2data(im+i)).gt.0.0   ) d2=i-1
+         if (a1.lt.0 .and.          data(im-i).lt.0.5*amp) a1=i-1
+         if (a2.lt.0 .and.          data(im+i).lt.0.5*amp) a2=i-1
          done = d1.ge.0 .and. d2.ge.0 .and. a1.ge.0 .and. a2.ge.0
          else
-         if( i1.lt.0 .and. tekenr(  data(im-i)) .ne. tekenr(amp))i1=i
-         if( i1.lt.0 ) Imin  = Imin  + data(im-i)
-         if( i2.lt.0 .and. tekenr(  data(im+i)) .ne. tekenr(amp))i2=i
-         if( i2.lt.0 ) Iplus = Iplus + data(im+i)
+         if (i1.lt.0 .and. tekenr(data(im-i)).ne.tekenr(amp)) i1=i
+         if (i1.lt.0) Imin  = Imin  + data(im-i)
+         if (i2.lt.0 .and. tekenr(data(im+i)).ne.tekenr(amp)) i2=i
+         if (i2.lt.0) Iplus = Iplus + data(im+i)
          done = i1.ge.0 .and. i2.ge.0
          endif
          i = i + 1
       enddo
 
-      if( derivat ) then
+      if (derivat) then
 c        find fractional pixel width for dispersion; correct for center shift
          w1 = d1+ d2data(im-d1)/(d2data(im-d1)-d2data(im-d1-1)) + vel-im
          w2 = d2+ d2data(im+d2)/(d2data(im+d2)-d2data(im+d2+1)) + im-vel
@@ -1757,40 +1752,42 @@ c        left  consistent -> left  derivat
 c        right consistent -> right derivat
 c        a's   consistent -> average from max/2
 c        other            -> average of most consistent side
-         if(      2*a1.eq.int(w1) .and. 2*a2.eq.int(w2) ) then
-            wid = (w1+w2)/2.
-         else if( 2*a1.eq.int(w1) ) then
+         if (   2*a1.eq.int(w1) .and. 2*a2.eq.int(w2)) then
+            wid = (w1+w2)/2.0
+         else if (2*a1.eq.int(w1)) then
             wid = w1
-         else if( 2*a2.eq.int(w2) ) then
+         else if (2*a2.eq.int(w2)) then
             wid = w2
          else
             w3 = a1 + (data(im-a1)-0.5*amp)/(data(im-a1)-data(im-a1-1))
             w4 = a2 + (data(im+a2)-0.5*amp)/(data(im+a2)-data(im+a2+1))
-            w3 = (w3+vel-im)*2.
-            w4 = (w4+im-vel)*2.
+            w3 = (w3+vel-im)*2.0
+            w4 = (w4+im-vel)*2.0
 c            if( a1.eq.a2 ) then
-                wid = (w3+w4)/2.
+                wid = (w3+w4)/2.0
 c            else if(  abs(w1-w3) .lt. abs(w2-w4)  ) then
 c               wid = (w1+w3)/2.
 c            else
 c               wid = (w2+w4)/2.
 c            endif
          endif
-         if(test(1).gt.0)
+         if (test(1).gt.0)
      *   write(*,'('' wid est='',f7.2,
      *             ''  lft d,a'',i2,i2,''-> '',f7.2,f7.2,
-     *             ''  rht d,a'',i2,i2,''-> '',f7.2,f7.2  )')
+     *             ''  rht d,a'',i2,i2,''-> '',f7.2,f7.2)')
      *             wid,  d1,a1,w1,w3,  d2,a2,w2,w4
          wid = wid / 2.35482
       else
 c dispersion found from sigma=fwhm/2.35; fwhm=(2*half-integral)/amp/1.064
-         wid = 2. * min(Imin,Iplus) / amp / 1.064 / 2.35482
-         if(test(1).gt.0)
+         wid = 2.0 * min(Imin,Iplus) / amp / 1.064 / 2.35482
+         if (test(1).gt.0)
      *   write(*,*)'wid est=',wid,wid*2.35482,' I-/+=',Imin,Iplus
       endif
 
       return
       end
+
+c***********************************************************************
 
 c is component less than sumfwhm/2 = sumdisp*2.35/2 from another one?
 c if so: merge the two components, don't add one to ngss
@@ -1799,7 +1796,7 @@ c an infinite loop if the profile is difficult in just the right way
 c (first add the old component back in)
 c return the component number of the resulting gaussian
       integer function mergecmp(
-     *        gaussest,ngauss, data,nchan, amp,vel,wid, test )
+     *        gaussest,ngauss, data,nchan, amp,vel,wid, test)
 
       real      gaussest(*)
       integer   ngauss
@@ -1809,14 +1806,14 @@ c return the component number of the resulting gaussian
       integer   test(*)
 
       integer   MAXCMP, ARRSIZ
-      parameter ( MAXCMP=10, ARRSIZ=7*MAXCMP+1 )
+      parameter (MAXCMP=10, ARRSIZ=7*MAXCMP+1)
 
       integer   nmerge(MAXCMP), mergenum
       save      nmerge
       real      ampO, velO, widO
       integer   i, j
 
-      if( ngauss.eq.0 ) then
+      if (ngauss.eq.0) then
          do i = 1, MAXCMP
             nmerge(i)=0
          enddo
@@ -1824,30 +1821,33 @@ c return the component number of the resulting gaussian
 
       mergenum = 0
       do j = 1, ngauss
-      if( mergenum.eq.0 ) then
-         ampO =    gaussest(3*j-2)
-         velO =    gaussest(3*j-1)
-         widO = 1./gaussest(3*j-0)
-         if(test(1).gt.0)write(*,*)abs(vel-velO),'<',(wid+widO)*1.00,'?'
-         if( (abs(vel-velO) .lt. ((wid+widO)*1.00) ) .and.
-     *       (abs(ampO/amp) .lt. 6.                ) .and.
-     *       (nmerge(j)     .lt. 3                 )        ) then
-            if(test(1).gt.0)write(*,*)'merge',amp,vel,wid
-            if(test(1).gt.0)write(*,*)'     ',ampO,velO,widO
-            do i = max(    1,nint(velO-3*widO)),
+        if (mergenum.eq.0) then
+          ampO =    gaussest(3*j-2)
+          velO =    gaussest(3*j-1)
+          widO = 1.0/gaussest(3*j-0)
+          if (test(1).gt.0) write(*,*) abs(vel-velO), '<',
+     *                                 (wid+widO)*1.00, '?'
+          if ((abs(vel-velO).lt.((wid+widO)*1.00)) .and.
+     *        (abs(ampO/amp).lt.6.0             ) .and.
+     *        (nmerge(j)  .lt.3              )     ) then
+            if (test(1).gt.0) write(*,*)'merge',amp,vel,wid
+            if (test(1).gt.0) write(*,*)'     ',ampO,velO,widO
+
+            do i = max( 1,nint(velO-3*widO)),
      *             min(nchan,nint(velO+3*widO))
-               data(i) = data(i) + ampO*exp( -0.5*((i-velO)/widO )**2 )
+              data(i) = data(i) + ampO*exp(-0.5*((i-velO)/widO)**2)
             enddo
-            vel = ( ampO*velO + amp*vel ) / ( ampO + amp  )
+
+            vel = (ampO*velO + amp*vel) / (ampO + amp)
             wid = widO + abs(vel-velO)/2.35482
-            amp = max( ampO, amp )
+            amp = max(ampO, amp)
             mergenum=j
             nmerge(j) = nmerge(j) + 1
-         endif
-      endif
+          endif
+        endif
       enddo
 
-      if( mergenum.eq.0 ) then
+      if (mergenum.eq.0) then
          ngauss   = ngauss + 1
          mergecmp = ngauss
       else
@@ -1858,16 +1858,12 @@ c return the component number of the resulting gaussian
       end
 
 c***********************************************************************
-c***********************************************************************
-c***********************************************************************
-c***********************************************************************
-c***********************************************************************
 
 c make gaussian fit, unless not asked for or not possible
 
-      integer function gssfit( data,mask,nchan,
+      integer function gssfit(data,mask,nchan,
      *                         gaussest,gausspar,ngauss,
-     *                         limlist,cmpsort )
+     *                         limlist,cmpsort)
 
       real      data(*)
       logical   mask(*)
@@ -1882,30 +1878,29 @@ c make gaussian fit, unless not asked for or not possible
 
       gssfit = 0
       call optlist('nofit',optval)
-      if( optval ) then
+      if (optval) then
 c     Result = initial estimate
-         call setngsa( gausspar, gaussest, ngauss(3) )
+         call setngsa(gausspar, gaussest, ngauss(3))
          ngauss(4) = ngauss(3)
 
-      else if( ngauss(3).eq.0 ) then
+      else if (ngauss(3).eq.0) then
 c     No initial estimate present
          ngauss(4) = ngauss(3)
 
       else
 c     Make a fit
-      gssfit = fitloop( data,mask, nchan, gausspar,gaussest,ngauss,
-     *                  limlist, cmpsort )
+      gssfit = fitloop(data,mask, nchan, gausspar,gaussest,ngauss,
+     *                  limlist, cmpsort)
       endif
 
       return
       end
 
-
 c***********************************************************************
 
-      integer function fitloop( data,mask,nchan,
+      integer function fitloop(data,mask,nchan,
      *                          gausspar,gaussest,ngauss,
-     *                          limlist, cmpsort )
+     *                          limlist, cmpsort)
 
       real      data(*)
       logical   mask(*)
@@ -1922,7 +1917,7 @@ c***********************************************************************
       integer   dogssfit, cutoffs
 
       integer   MAXFIT
-      parameter ( MAXFIT = 30 )
+      parameter (MAXFIT = 30)
       integer   fitnum, nfit(MAXFIT)
       integer   ier(MAXFIT)
       real      rms(MAXFIT)
@@ -1931,41 +1926,41 @@ c***********************************************************************
       fitnum    = 0
       dofit     = .true.
 
-      do while( dofit )
+      do while (dofit)
 c
          fitnum    = fitnum + 1
          ngauss(4) = nfit(fitnum)
 
 c        do the actual fit, ier comes out >= 0
-         ier(fitnum)=dogssfit( data,mask,nchan,
-     *                         gaussest,gausspar,ngauss, limlist(20) )
+         ier(fitnum)=dogssfit(data,mask,nchan,
+     *                         gaussest,gausspar,ngauss, limlist(20))
 
 c        fit converges, i.e. ier=0
-         if( ier(fitnum) .eq. 0 ) then
+         if (ier(fitnum).eq.0) then
 
 c           apply cutoffs, if outside range, ier=-12 (only low-amp err) or -13
-            ier(fitnum) = cutoffs( gausspar,ngauss(4), limlist )
+            ier(fitnum) = cutoffs(gausspar,ngauss(4), limlist)
 
 c           subtract gaussian and find rms; give too-high-rms an ier value
             rms(fitnum)=getrms(data,mask,nchan,gausspar,ngauss(4),0.0)
             rms(MAXFIT)=getrms(data,mask,nchan,gausspar,ngauss(4),0.1)
             gausspar(rmsind()) = rms(fitnum)
-            if( rms(fitnum) .gt. limlist(24) ) ier(fitnum)=-8
+            if (rms(fitnum).gt.limlist(24)) ier(fitnum)=-8
 
          endif
 
 c print intermediate result
-         call gssout( 2,ier(fitnum),gausspar,ngauss,cmpsort )
+         call gssout(2,ier(fitnum),gausspar,ngauss,cmpsort)
 
 c do we have to and can we try again?
-         dofit = tryagain( gaussest,gausspar,ngauss,
-     *                     fitnum,nfit,ier,rms, limlist )
+         dofit = tryagain(gaussest,gausspar,ngauss,
+     *                     fitnum,nfit,ier,rms, limlist)
 
 c redo fit -> have fiddled initial estimates
-         if(dofit) then
+         if (dofit) then
             gaussest(rmsind())=
-     *              getrms(data,mask,nchan,gaussest,ngauss(3),0.)
-            call gssout( 1,0,gaussest,ngauss,cmpsort )
+     *              getrms(data,mask,nchan,gaussest,ngauss(3),0.0)
+            call gssout(1,0,gaussest,ngauss,cmpsort)
          endif
 
       enddo
@@ -1973,7 +1968,7 @@ c redo fit -> have fiddled initial estimates
 c Warning if fit results very different from initial estimate
       call optlist('findestim',optval1)
       call optlist('intermout',optval2)
-      if( optval1 .and. optval2 )
+      if (optval1 .and. optval2)
      *    call checkres(gausspar,gaussest,ngauss(4))
 
       fitloop = ier(fitnum)
@@ -1986,7 +1981,7 @@ c***********************************************************************
 c dogssfit does the actual fitting, i.e. creates call to drvmrq
 
       integer function dogssfit(
-     *        data,mask,nchan, gaussest,gausspar,ngauss, rmsest )
+     *        data,mask,nchan, gaussest,gausspar,ngauss, rmsest)
 
       real      data(*)
       logical   mask(*)
@@ -2000,7 +1995,7 @@ c dogssfit does the actual fitting, i.e. creates call to drvmrq
       external  gaussfun
       include   'maxdim.h'
       integer   MAXCMP, ARRSIZ
-      parameter ( MAXCMP=10, ARRSIZ=7*MAXCMP+1 )
+      parameter (MAXCMP=10, ARRSIZ=7*MAXCMP+1)
 
       logical   first
       integer   fitlist(3*MAXCMP), svfitlst(3*MAXCMP)
@@ -2015,15 +2010,15 @@ c dogssfit does the actual fitting, i.e. creates call to drvmrq
       real      chisq
       integer   ier
       integer   MAXITER
-      parameter ( FTOL=0.5, MAXITER=30 )
+      parameter (FTOL=0.5, MAXITER=30)
 
       save      first, svfitlst, x, sig
       data      first / .true. /
 
 c Fill x and sig arrays, as drvmrq requires them
 c Find and make copy of fitlist, which is changed deep down if not all are fit
-      if( first ) then
-         call initfit( fitlist,svfitlst,ngauss(1), mask,x,nchan )
+      if (first) then
+         call initfit(fitlist,svfitlst,ngauss(1), mask,x,nchan)
          first = .false.
       endif
 
@@ -2038,25 +2033,25 @@ c Set list of actual parameters to fit
       nfit = 0
       do i = 1, npar
          fitlist(i)  = svfitlst(i)
-         if( fitlist(i).ne.0 ) nfit = nfit + 1
+         if (fitlist(i).ne.0) nfit = nfit + 1
       enddo
 
 c Copy initial estimate to fit array
-      call setngsa( gausspar, gaussest, ngauss(4) )
+      call setngsa(gausspar, gaussest, ngauss(4))
 
 c Copy selected channels
       nfitchan = 0
       do i = 1, nchan
-         if( mask(i) ) then
+         if (mask(i)) then
             nfitchan = nfitchan + 1
             fitdata(nfitchan) = data(i)
          endif
       enddo
 
 c Fit the gaussian
-      call drvmrq( x, fitdata, sig, nfitchan,
+      call drvmrq(x, fitdata, sig, nfitchan,
      *             gausspar,npar, fitlist,nfit, FTOL, MAXITER,
-     *             chisq, ier, gaussfun )
+     *             chisq, ier, gaussfun)
 
 c Change convention for organization of gausspar by moving errors
       k = 3*ngauss(4)
@@ -2072,9 +2067,9 @@ c Take absolute value of sigma, because drvmrq only cares about sigma^2
       return
       end
 
+c***********************************************************************
 
-
-      subroutine initfit( fitlist,svfitlst,ngauss, mask,x,nchan )
+      subroutine initfit(fitlist,svfitlst,ngauss, mask,x,nchan)
 
       integer    fitlist(*), svfitlst(*)
       integer    ngauss
@@ -2090,17 +2085,17 @@ c Take absolute value of sigma, because drvmrq only cares about sigma^2
       call optlist('fixwidth',optval2)
 
 c     Fill fitlist array with parameters to fit
-      if( optval1 .or. optval2 ) then
+      if (optval1 .or. optval2) then
          do i = 1, ngauss
                           fitlist(2*i-1) = cmpind(i)
-            if( optval1 ) fitlist(2*i  ) = cmpind(i)+2
-            if( optval2 ) fitlist(2*i  ) = cmpind(i)+1
+            if (optval1) fitlist(2*i) = cmpind(i)+2
+            if (optval2) fitlist(2*i) = cmpind(i)+1
          enddo
          do i = 2*ngauss+1, 3*ngauss
             fitlist(i) = 0
          enddo
       endif
-      if( optval1 .and. optval2 ) then
+      if (optval1 .and. optval2) then
          do i = 1, ngauss
             fitlist(i) = cmpind(i)
          enddo
@@ -2108,7 +2103,7 @@ c     Fill fitlist array with parameters to fit
             fitlist(i) = 0
          enddo
       endif
-      if( .not.optval1 .and. .not.optval2 ) then
+      if (.not.optval1 .and. .not.optval2) then
          do i = 1, 3*ngauss
             fitlist(i) = i
          enddo
@@ -2120,7 +2115,7 @@ c     Fill fitlist array with parameters to fit
 
       j = 1
       do i = 1, nchan
-         if( mask(i) ) then
+         if (mask(i)) then
             x(j) = real(i)
             j = j + 1
          endif
@@ -2133,7 +2128,7 @@ c***********************************************************************
 
 c Form gaussian model spectrum and residual, calculate rms of residual
 
-      subroutine gaussmod( model,nchan,gausspar,ngauss )
+      subroutine gaussmod(model,nchan,gausspar,ngauss)
 
       real    model(*)
       integer nchan
@@ -2145,13 +2140,13 @@ c Form gaussian model spectrum and residual, calculate rms of residual
       integer i, j, k
 
       do i = 1, nchan
-         model(i)    = 0.
+         model(i)    = 0.0
       enddo
       do k = 1, ngauss
          j = cmpind(k)
          do i = 1, nchan
-            expon = 0.5*( (i-gausspar(j+1))*gausspar(j+2) )**2
-            if( expon.lt.40. ) then
+            expon = 0.5*((i-gausspar(j+1))*gausspar(j+2))**2
+            if (expon.lt.40.0) then
                model(i) = model(i) + gausspar(j) * exp(-expon)
             endif
          enddo
@@ -2159,7 +2154,9 @@ c Form gaussian model spectrum and residual, calculate rms of residual
       return
       end
 
-      real function getrms( data,mask,nchan, gausspar,ngauss, cut )
+c***********************************************************************
+
+      real function getrms(data,mask,nchan, gausspar,ngauss, cut)
 
       real    data(*)
       logical mask(*)
@@ -2172,26 +2169,26 @@ c Form gaussian model spectrum and residual, calculate rms of residual
       real    model(MAXDIM)
       integer i, j, n
       real    mmax, rms
-      if( ngauss.eq.0 ) return
+      if (ngauss.eq.0) return
 
-      call gaussmod( model,nchan, gausspar,ngauss )
+      call gaussmod(model,nchan, gausspar,ngauss)
 
-      call getmax( model,nchan, mmax, j )
+      call getmax(model,nchan, mmax, j)
       mmax = cut * mmax
 
       rms = 0.0
       n   = 0
       do i = 1, nchan
-         if( mask(i) .and. (cut.eq.0.0  .or. model(i).ge.mmax) ) then
-            rms = rms + ( data(i) - model(i) ) ** 2
+         if (mask(i) .and. (cut.eq.0.0  .or. model(i).ge.mmax)) then
+            rms = rms + (data(i) - model(i)) ** 2
             n   = n   + 1
          endif
       enddo
 
-      if( n .le. 3*ngauss ) then
+      if (n.le.3*ngauss) then
          getrms = 1.E30
       else
-         getrms = sqrt( rms / (n - 3*ngauss) )
+         getrms = sqrt(rms / (n - 3*ngauss))
       endif
 
       return
@@ -2205,7 +2202,7 @@ c Velocity should be inside range; default: within profile.
 c Width should be inside range; default: more than 0.5 pixel and
 c less than length dispersion.; fitted 1/width^2 -> abs & reverse lt, gt
 
-      integer function cutoffs( gausspar,ngauss, limlist )
+      integer function cutoffs(gausspar,ngauss, limlist)
 
       real      gausspar(*)
       integer   ngauss
@@ -2223,33 +2220,33 @@ c less than length dispersion.; fitted 1/width^2 -> abs & reverse lt, gt
 
          j = cmpind(i)
          k = errind(i)
-         if( limlist(10).eq.1. ) a =     gausspar(j)
-         if( limlist(10).eq.2. ) a = abs(gausspar(j))
+         if (limlist(10).eq.1.0) a =     gausspar(j)
+         if (limlist(10).eq.2.0) a = abs(gausspar(j))
 
                                                  eflag =          1
 c        amp/rms<max
-         if( gausspar(j  )/gausspar(k  ).lt.limlist(7) ) eflag=eflag*2
+         if (gausspar(j)/gausspar(k).lt.limlist(7)) eflag=eflag*2
 c        err(vel) * width > max verror
-         if( gausspar(k+1)*gausspar(j+2).gt.limlist(8) ) eflag=eflag*3
-         if( gausspar(k+1)*gausspar(j+2).gt.limlist(8) ) eflag=eflag*3
+         if (gausspar(k+1)*gausspar(j+2).gt.limlist(8)) eflag=eflag*3
+         if (gausspar(k+1)*gausspar(j+2).gt.limlist(8)) eflag=eflag*3
 c width variable = 1/width here; call it s1
 c        ds = ds1 / s1^2 => s/ds = 1/s1  * s1^2 / ds1 = s1/ds1
 c        dwidth/width > max width error
-         if( gausspar(k+2)/gausspar(j+2).gt.limlist(9) ) eflag=eflag*5
+         if (gausspar(k+2)/gausspar(j+2).gt.limlist(9)) eflag=eflag*5
 c        vel outside range
-         if( gausspar(j+1)   .lt. limlist(2) .or.
-     *       gausspar(j+1)   .gt. limlist(5)   ) eflag = eflag *  7
+         if (gausspar(j+1).lt.limlist(2) .or.
+     *       gausspar(j+1).gt.limlist(5)) eflag = eflag *  7
 c        width outside range
-         if( gausspar(j+2)   .gt. limlist(3)   ) eflag = eflag * 11
-         if( gausspar(j+2)   .lt. limlist(6) .and.
-     *       gausspar(j+2)   .ne. 0.           ) eflag = eflag * 13
+         if (gausspar(j+2).gt.limlist(3)) eflag = eflag * 11
+         if (gausspar(j+2).lt.limlist(6) .and.
+     *       gausspar(j+2).ne.0.0        ) eflag = eflag * 13
 c        amplitude too high
-         if(        a        .gt. limlist(4)   ) eflag = eflag * 17
+         if (     a     .gt.limlist(4)) eflag = eflag * 17
 c        amplitude too low
-         if(        a        .lt. limlist(1)   ) then
-            if( limlist(10).eq.1. .and. a.ge.0 ) eflag = eflag * 19
-            if( limlist(10).eq.1. .and. a.lt.0 ) eflag = eflag * 23
-            if( limlist(10).eq.2.              ) eflag = eflag * 19
+         if (     a     .lt.limlist(1)) then
+            if (limlist(10).eq.1.0 .and. a.ge.0) eflag = eflag * 19
+            if (limlist(10).eq.1.0 .and. a.lt.0) eflag = eflag * 23
+            if (limlist(10).eq.2.0           ) eflag = eflag * 19
          endif
 
 c        low amplitude components still ok if width reasonable
@@ -2258,12 +2255,12 @@ c        set eflag to -13 and cutoffs to -12; then
 c        a) component gets counted as OK one by tryagain
 c        b) component gets accepted near end of tryagain
 c        c) errout is called to print message # |-13| = 13
-         if( eflag.eq.19 .or. eflag.eq.23 ) then
+         if (eflag.eq.19 .or. eflag.eq.23) then
             err09 = .true.
-            w = 1. / gausspar(j+2) * 2.35482
-            if( a*w.gt.limlist(1)*5. .and. w.lt.15. ) eflag = -13
+            w = 1.0 / gausspar(j+2) * 2.35482
+            if (a*w.gt.limlist(1)*5.0 .and. w.lt.15.0) eflag = -13
          else
-            if( eflag.ne.1 ) err10=.true.
+            if (eflag.ne.1) err10=.true.
          endif
 
          gausspar(errpar(i)) = eflag
@@ -2272,8 +2269,8 @@ c        c) errout is called to print message # |-13| = 13
 c If err09 true: only error is that low-amplitude components occurred
 c If err10 true: some other error (also) occurred
                   cutoffs=  0
-      if( err09 ) cutoffs=-12
-      if( err10 ) cutoffs=-13
+      if (err09) cutoffs=-12
+      if (err10) cutoffs=-13
       return
       end
 
@@ -2283,8 +2280,8 @@ c Figure out if the fit was ok. If not, determine if another fit should
 c be tried with different initial estimates or a different number of
 c components.
 
-      logical function tryagain( gaussest,gausspar,ngauss,
-     *                           fitnum,nfit,ier,rms, limlist )
+      logical function tryagain(gaussest,gausspar,ngauss,
+     *                           fitnum,nfit,ier,rms, limlist)
 
       real      gaussest(*), gausspar(*)
       integer   ngauss(*)
@@ -2319,35 +2316,34 @@ c                      0.8  1.2  0.6  1.8  1.0
 
       call optlist('intermout',interout)
 
-      if( fitnum.eq.1 ) try=1
+      if (fitnum.eq.1) try=1
       fiddlenm(fitnum)=0
 
 c ier 0 and rms low enough -> done
-      if( ier(fitnum) .eq. 0 ) then
-          tryagain = .false.
+      if (ier(fitnum).eq.0) then
+        tryagain = .false.
 
 c ier<0 -> fit converged, but some problem occured.
 c If this is not the redone fit, try again with 1 less component
-      else if( ier(fitnum).lt.0 ) then
+      else if (ier(fitnum).lt.0) then
+c       determine how many OK components there are
+        nOK(fitnum) = 0
+        do i = 1, ngauss(4)
+          if (gausspar(errpar(i)).le.1.0) nOK(fitnum)=nOK(fitnum)+1
+        enddo
 
-c        determine how many OK components there are
-         nOK(fitnum) = 0
-         do i = 1, ngauss(4)
-            if( gausspar(errpar(i)).le.1. ) nOK(fitnum)=nOK(fitnum)+1
-         enddo
-
-         if( try. le. 99 ) then
-            nfit(fitnum+1) = nfit(fitnum) - 1
-            tryagain       = nfit(fitnum+1) .gt. 0
-            if( tryagain ) then
-               ngauss(3) = ngauss(3) - 1
-               if(interout)call wrtout('Fit with one component less',1)
-               try=1
-            endif
-         else
-c           come here after redoing best fit that gave ier<0
-            tryagain = .false.
-         endif
+        if (try. le. 99) then
+          nfit(fitnum+1) = nfit(fitnum) - 1
+          tryagain       = nfit(fitnum+1).gt.0
+          if (tryagain) then
+            ngauss(3) = ngauss(3) - 1
+            if (interout) call wrtout('Fit with one component less',1)
+            try=1
+          endif
+        else
+c         come here after redoing best fit that gave ier<0
+          tryagain = .false.
+        endif
 
 c ier >0 -> no convergence; if this is first or second time, fit again with
 c slightly different initial estimates because sometimes the reason is a
@@ -2356,38 +2352,37 @@ c On third try, make new initial estimates because now the suspicion is
 c that there are two components close together which were merged, but not
 c nice enough to fit as two, and assuming they are one makes the initial
 c estimate bad.
-      else if( ier(fitnum) .gt. 0 ) then
-         nOK(fitnum) = 0
+      else if (ier(fitnum).gt.0) then
+        nOK(fitnum) = 0
 
-         if( try.le.8 ) then
-            if(interout) call wrtout('Fiddle initial estimates',1)
-            fiddlenm(fitnum)=try
-            do n = 1, ngauss(2)
-               j = cmpind(n)
-               gaussest(j  )=gaussest(j  ) * fac1(try)
-               gaussest(j+1)=gaussest(j+1) + fac2(try)*gaussest(3*n)
-               gaussest(j+2)=gaussest(j+2) / fac3(try)
-            enddo
+        if (try.le.8) then
+          if (interout) call wrtout('Fiddle initial estimates',1)
+          fiddlenm(fitnum)=try
+          do n = 1, ngauss(2)
+            j = cmpind(n)
+            gaussest(j)=gaussest(j) * fac1(try)
+            gaussest(j+1)=gaussest(j+1) + fac2(try)*gaussest(3*n)
+            gaussest(j+2)=gaussest(j+2) / fac3(try)
+          enddo
 
-            nfit(fitnum+1) = nfit(fitnum)
-            tryagain = .true.
-            try=try+1
-         else if( try.le.99 ) then
-            nfit(fitnum+1) = nfit(fitnum) - 1
-            tryagain       = nfit(fitnum+1) .gt. 0
-            if( tryagain ) then
-               ngauss(3) = ngauss(3) - 1
-               if(interout)call wrtout('Fit with one component less',1)
-            endif
-            try=1
-         else
-            tryagain=.false.
-            if(interout) call wrtout('Redoing best fit failed!',1)
-         endif
-
+          nfit(fitnum+1) = nfit(fitnum)
+          tryagain = .true.
+          try=try+1
+        else if (try.le.99) then
+          nfit(fitnum+1) = nfit(fitnum) - 1
+          tryagain       = nfit(fitnum+1).gt.0
+          if (tryagain) then
+            ngauss(3) = ngauss(3) - 1
+            if (interout) call wrtout('Fit with one component less',1)
+          endif
+          try=1
+        else
+          tryagain=.false.
+          if (interout) call wrtout('Redoing best fit failed!',1)
+        endif
       endif
 
-      if( .not.tryagain  .and.  ier(fitnum).ne.0 .and. try.lt.100 ) then
+      if (.not.tryagain  .and.  ier(fitnum).ne.0 .and. try.lt.100) then
 c exhausted all options: tryagain was set to false, but ier!=0
 c Then find the best fit: the one with the lowest rms that also had ier=-8.
 c If no such fit is found, there is one more possibility: the culprit is a
@@ -2407,18 +2402,18 @@ c        also find fit with highest # components that has just low amp
          j = 0
          minrms = 1.E30
          do n = fitnum, 1, -1
-            if( ier(n).eq. -8 .and. rms(n).lt.minrms ) j=n
-            if( ier(n).eq. -8 .and. rms(n).lt.minrms ) minrms=rms(n)
-            if( ier(n).eq.-12 .and. nOK(n).ne.0      ) i=n
+            if (ier(n).eq.-8 .and. rms(n).lt.minrms) j=n
+            if (ier(n).eq.-8 .and. rms(n).lt.minrms) minrms=rms(n)
+            if (ier(n).eq.-12 .and. nOK(n).ne.0   ) i=n
          enddo
-         if(      j.ne.0 ) then
+         if (   j.ne.0) then
 c           fit j has lowest rms and ier=-8, redo it
-            tryagain = fitnum .ne. j
+            tryagain = fitnum.ne.j
             fitnum   = j
             nfit(fitnum+1) = nfit(j)
-         else if( i.ne.0 ) then
+         else if (i.ne.0) then
 c           fit i has low-amplitude, but sufficient integral component
-            tryagain = fitnum .ne. i
+            tryagain = fitnum.ne.i
             fitnum   = i
             nfit(fitnum+1) = nfit(i)
          else
@@ -2426,17 +2421,17 @@ c           nothing found that works, quit it with ier<0
             tryagain = .false.
          endif
 
-         if(tryagain) then
-            if(interout) call wrtout('Redo best fit',1)
+         if (tryagain) then
+            if (interout) call wrtout('Redo best fit',1)
 c           undo possible changes to initial estimates, since otherwise
 c           they could be wrong and the previous best fit may not converge
 c           (fn is fitnum as it was on call to tryagain)
-            do i=fn, fitnum, -1
-               if( fiddlenm(i).ne.0 .and. nfit(i).eq.nfit(fitnum) )then
+            do i = fn, fitnum, -1
+               if (fiddlenm(i).ne.0 .and. nfit(i).eq.nfit(fitnum)) then
                   try=fiddlenm(i)
                   do n = 1, ngauss(2)
                      j = cmpind(n)
-                     gaussest(j  )=gaussest(j  ) / fac1(try)
+                     gaussest(j)=gaussest(j) / fac1(try)
                      gaussest(j+2)=gaussest(j+2) * fac3(try)
                      gaussest(j+1)=gaussest(j+1) - fac2(try)
      *                                                    *gaussest(j+2)
@@ -2450,38 +2445,38 @@ c           (fn is fitnum as it was on call to tryagain)
 
 c it was determined that we have to try again; check if there is room in the
 c ier and rms arrays.
-      if( tryagain ) tryagain = fitnum.lt.MAXFIT-1
+      if (tryagain) tryagain = fitnum.lt.MAXFIT-1
 
-      if( .not. tryagain ) then
+      if (.not.tryagain) then
 c        relax criteria if rms is the only culprit
-         if( ier(fitnum).eq.-8 ) then
-            if(      rms(MAXFIT) .lt. limlist(24) ) then
-               if( interout )
+         if (ier(fitnum).eq.-8) then
+            if (   rms(MAXFIT).lt.limlist(24)) then
+               if (interout)
      *             call wrtout('rms fine where model is significant',1)
                ier(fitnum)=0
-            else if( rms(fitnum) .lt. limlist(25) ) then
-               if( interout )
+            else if (rms(fitnum).lt.limlist(25)) then
+               if (interout)
      *             call wrtout('Decide rms is acceptable anyway',1)
                ier(fitnum)=0
             endif
          endif
 c        if low-amplitude component is the culprit, remove it
 c        if low-amplitude component is wide enough, but not too wide, ok it
-         if( ier(fitnum).eq.-12 ) then
+         if (ier(fitnum).eq.-12) then
             acclow = .FALSE.
             dellow = .FALSE.
-            do i=1, ngauss(4)
-               dellow = dellow .or. gausspar(errpar(i)).eq. 19.
-     *                         .or. gausspar(errpar(i)).eq. 23.
-               acclow = acclow .or. gausspar(errpar(i)).eq.-13.
+            do i = 1, ngauss(4)
+               dellow = dellow .or. gausspar(errpar(i)).eq.19.0
+     *                         .or. gausspar(errpar(i)).eq.23.0
+               acclow = acclow .or. gausspar(errpar(i)).eq.-13.0
             enddo
             ngauss(4) = delgauss(gausspar,ngauss(4))
-            if( ngauss(4).gt.0 ) ier(fitnum)=0
-            if( acclow .and. interout )
+            if (ngauss(4).gt.0) ier(fitnum)=0
+            if (acclow .and. interout)
      *      call wrtout('Accept low amplitude cmps with OK integral',1)
-            if( dellow .and. interout .and. ier(fitnum).eq.0 )
+            if (dellow .and. interout .and. ier(fitnum).eq.0)
      *      call wrtout('Delete weak components and accept fit',1)
-         else if( ier(fitnum).eq.-13 ) then
+         else if (ier(fitnum).eq.-13) then
             ngauss(4)=0
          endif
       endif
@@ -2490,12 +2485,8 @@ c        if low-amplitude component is wide enough, but not too wide, ok it
       end
 
 c***********************************************************************
-c***********************************************************************
-c***********************************************************************
-c***********************************************************************
-c***********************************************************************
 
-      subroutine gssout( mode, ier, gausspar,ngauss,cmpsort )
+      subroutine gssout(mode, ier, gausspar,ngauss,cmpsort)
 c mode=-1 -> init (if ier>0 profile fitting is not possible for some reason)
 c mode= 0 -> print estimates         (optlist('estimout'))
 c mode= 1 -> print fiddled estimates (optlist('estimout'))
@@ -2511,7 +2502,7 @@ c mode= 3 -> print final fit
       logical      interout, estimout, optval, optval2
       integer      cmpind, errind, erroff, errpar, rmsind, len1
       integer      MAXCMP, ARRSIZ
-      parameter    ( MAXCMP=10, ARRSIZ=7*MAXCMP+1 )
+      parameter    (MAXCMP=10, ARRSIZ=7*MAXCMP+1)
 
       integer      coords(2)
       real         flag
@@ -2526,117 +2517,115 @@ c mode= 3 -> print final fit
       save         first, first1
 
       call optlist('noprt',optval)
-      if( optval ) return
+      if (optval) return
       call optlist('supbad',optval)
-      ok = (optval.and.ier.eq.0) .or. .not.optval
+      ok = (optval .and. ier.eq.0) .or. .not.optval
       call optlist('intermout',interout)
       call optlist('estimout', estimout)
 
-      if(     mode.eq.-1 ) then
+      if (  mode.eq.-1) then
          ok = ok .and. ier.gt.0
          first=.true.
-      elseif( mode.eq.0 ) then
+      else if (mode.eq.0) then
          ok = ok .and. estimout
          first1=.true.
-      elseif( mode.eq.1 ) then
+      else if (mode.eq.1) then
          ok = ok .and. estimout
-      elseif( mode.eq.2 ) then
+      else if (mode.eq.2) then
          ok = ok .and. interout
-         if( ok.and.first1)   call wrtout('  ----Fitting--',0)
+         if (ok .and. first1)   call wrtout('  ----Fitting--',0)
          first1=.false.
-      elseif( mode.eq.3 ) then
+      else if (mode.eq.3) then
          ok = ok .and. ngauss(4).gt.0
-         if(ok.and.interout) call wrtout('  -----Done----',0)
+         if (ok .and. interout) call wrtout('  -----Done----',0)
       endif
-      if( .not.ok ) return
+      if (.not.ok) return
 
 c include pixel position on line for very first output
       line = ' '
-      if( first ) then
+      if (first) then
          first = .false.
          call optlist('abspix',optval)
-         if(     optval) flag=0.
-         if(.not.optval) flag=1.
-         call cooinfo( 7, coords(1), coords(2), flag )
+         if (  optval) flag=0.0
+         if (.not.optval) flag=1.0
+         call cooinfo(7, coords(1), coords(2), flag)
          call optlist('aver',  optval)
          call optlist('summed',optval2)
-         if( .not.(optval.or.optval2) )
-     *      write( line(1:8), '(i4,i4)' ) coords(1), coords(2)
-      else if( mode.eq.3 ) then
+         if (.not.(optval .or. optval2))
+     *      write(line(1:8), '(i4,i4)') coords(1), coords(2)
+      else if (mode.eq.3) then
          call optlist('aver',  optval)
          call optlist('summed',optval2)
-         if( optval  ) line(1:8) = 'average '
-         if( optval2 ) line(1:8) = 'summed  '
+         if (optval) line(1:8) = 'average '
+         if (optval2) line(1:8) = 'summed  '
       endif
 
-      if( ier.le.0 ) then
-
+      if (ier.le.0) then
 c include rms on first line of list of gaussians
-         n1 = 2*4+2 + 1+1+1 + 3*(11+9)
-         n2 = n1 + 6
-         form = 'f7.3'
-         if( gausspar(rmsind()).gt.999.999  .or.
-     *       gausspar(rmsind()).lt.000.001)       form = '1pe7.1'
-         write( fmt, '( ''('',a,'')'' )' ) form
-         write( line(n1:n2), fmt ) gausspar(rmsind())
+        n1 = 2*4+2 + 1+1+1 + 3*(11+9)
+        n2 = n1 + 6
+        form = 'f7.3'
+        if (gausspar(rmsind()).gt.999.999  .or.
+     *      gausspar(rmsind()).lt.000.001)       form = '1pe7.1'
+        write(fmt, '(''('',a,'')'')') form
+        write(line(n1:n2), fmt) gausspar(rmsind())
 
 c mode=0/1: ngauss(3) components were estimated
 c mode=2/3: ngauss(4) components were fit, unless ier>0, in which
 c           case the reason why is written
-         if( mode.le.1 ) ngss = ngauss(3)
-         if( mode.ge.2 ) ngss = ngauss(4)
+        if (mode.le.1) ngss = ngauss(3)
+        if (mode.ge.2) ngss = ngauss(4)
 
 c sort gaussians
-         cmpsort(4) = real(ngauss(6))
-         call gsssrt( gpar, gausspar, ngss, cmpsort )
+        cmpsort(4) = real(ngauss(6))
+        call gsssrt(gpar, gausspar, ngss, cmpsort)
 c convert sorted values to physical coordinates
-         call parconv( gpar, ngss, .false. )
+        call parconv(gpar, ngss, .false.)
 
 c if gssrt determined that a zero component is inserted, reflect that in output
 c (can happen when keyword cmpsort=vrange,.,. is given)
-         if( cmpsort(4).ge.0 ) cnt1 = 0
-         if( cmpsort(4).lt.0 ) cnt1 = 1
+        if (cmpsort(4).ge.0) cnt1 = 0
+        if (cmpsort(4).lt.0) cnt1 = 1
 
-         do i = 1, ngss
-            form = 'f'
-            do j = cmpind(i), cmpind(i)+2
-              if(gpar(j).ge.1.e6.or.gpar(j+erroff()).ge.1.e6)form='1pe'
-            enddo
-            write( fmt, '(   ''(a'',a,a,a,a,a,'')''   )' )
-     *             ',i1,1x, 3(',form,'10.4,1x), 3(',form,'8.4,1x)'
+        do i = 1, ngss
+          form = 'f'
+          do j = cmpind(i), cmpind(i)+2
+            if (gpar(j).ge.1e6 .or. gpar(j+erroff()).ge.1e6) form='1pe'
+          enddo
+          write(fmt, '(''(a'',a,a,a,a,a,'')'')')
+     *          ',i1,1x, 3(',form,'10.4,1x), 3(',form,'8.4,1x)'
 
-            n1 = 2*4 + 2
-            n2 = n1  + 1+1+1 + 3*(11+9)
-            if( mode.le.1 ) c='e'
-            if( mode.ge.2 ) c=' '
-            j    = cmpind(i)
-            jerr = errind(i)
-            write( line(n1:n2), fmt )  c, i+cnt1,
-     *         gpar(j   ), gpar(j   +1), gpar(j   +2),
-     *         gpar(jerr), gpar(jerr+1), gpar(jerr+2)
-            call wrtout( line, 0 )
-            line = ' '
-         enddo
+          n1 = 2*4 + 2
+          n2 = n1  + 1+1+1 + 3*(11+9)
+          if (mode.le.1) c='e'
+          if (mode.ge.2) c=' '
+          j    = cmpind(i)
+          jerr = errind(i)
+          write(line(n1:n2), fmt) c, i+cnt1, gpar(j), gpar(j+1),
+     *       gpar(j+2), gpar(jerr), gpar(jerr+1), gpar(jerr+2)
+          call wrtout(line, 0)
+          line = ' '
+        enddo
       endif
 
 c error messages
 c if ier=-12/-13, multiple msg for all gaussians, else just one message
-      if( ier.ne.0 ) then
+      if (ier.ne.0) then
          n1 = 2*4 + 2
-         if( mode.eq.-1               ) line(n1:) = 'No fit;     '
-         if( mode.eq.0                ) line(n1:) = 'Bad estim;  '
-         if( mode.eq.1 .or. mode.eq.2 ) line(n1:) = 'Bad fit;    '
-         if( mode.eq.3 .and. ier.lt.0 ) line(n1:) = 'Fit not accepted; '
-         if( mode.eq.3 .and. ier.gt.0 ) line(n1:) = 'Fit failed; '
+         if (mode.eq.-1            ) line(n1:) = 'No fit;     '
+         if (mode.eq.0             ) line(n1:) = 'Bad estim;  '
+         if (mode.eq.1 .or. mode.eq.2) line(n1:) = 'Bad fit;    '
+         if (mode.eq.3 .and. ier.lt.0) line(n1:) = 'Fit not accepted; '
+         if (mode.eq.3 .and. ier.gt.0) line(n1:) = 'Fit failed; '
 
-         if( ier.gt.-12 ) then
-           call errout( line, len1(line)+2, iabs(ier) )
+         if (ier.gt.-12) then
+           call errout(line, len1(line)+2, iabs(ier))
          else
             n1 = len1(line)+2
             do i = 1, ngauss(4)
-               write( line(n1:), '( ''cmp '',i1,'': '' )' ) i
+               write(line(n1:), '(''cmp '',i1,'': '')') i
                n2 = len1(line)+2
-               call errout( line, n2, -nint(gpar(errpar(i))) )
+               call errout(line, n2, -nint(gpar(errpar(i))))
             enddo
          endif
       endif
@@ -2646,7 +2635,7 @@ c if ier=-12/-13, multiple msg for all gaussians, else just one message
 
 c***********************************************************************
 
-      subroutine checkres( gausspar, gaussest, ngauss )
+      subroutine checkres(gausspar, gaussest, ngauss)
       real         gausspar(*), gaussest(*)
       integer      ngauss
 
@@ -2657,16 +2646,16 @@ c***********************************************************************
       character*80 line
 
       do i = 1, ngauss
-         if( gausspar(errpar(i)) .eq. 1. ) then
+         if (gausspar(errpar(i)).eq.1.0) then
          j = cmpind(i)
-         aratio =  gausspar(j  ) / gaussest(j  )
+         aratio =  gausspar(j) / gaussest(j)
          vdiff  = (gausspar(j+1) - gaussest(j+1)) * gaussest(j+2)
          wratio =  gausspar(j+2) / gaussest(j+2)
-         write( line, '( ''         NOTE: cmp '',i1,'':'' )' ) i
+         write(line, '(''         NOTE: cmp '',i1,'':'')') i
          l = len1(line)+2
-         if(aratio.lt.0.4 .or. aratio.gt.2.5) call errout(line,l, 9)
-         if(vdiff .gt.1.0                   ) call errout(line,l,10)
-         if(wratio.lt.0.5 .or. wratio.gt.2.0) call errout(line,l,11)
+         if (aratio.lt.0.4 .or. aratio.gt.2.5) call errout(line,l, 9)
+         if (vdiff.gt.1.0                ) call errout(line,l,10)
+         if (wratio.lt.0.5 .or. wratio.gt.2.0) call errout(line,l,11)
          endif
       enddo
       return
@@ -2674,7 +2663,7 @@ c***********************************************************************
 
 c***********************************************************************
 
-      subroutine errout( line, n1, ier )
+      subroutine errout(line, n1, ier)
       character*(*) line
       integer       n1, ier
 
@@ -2715,18 +2704,18 @@ c mod(-ier,[23,19,17,13,11, 7, 5, 3, 2]) gives message #
 c           12,13,14,15,16,17,18,19,20
 
       ierr = ier
-      if(      ierr.gt.100 ) then
-         write( messages(1)(30:31), '( i2 )' ) ierr-100
+      if (   ierr.gt.100) then
+         write(messages(1)(30:31), '(i2)') ierr-100
          ierr = 1
          line(n1:) = messages(ierr)
          call wrtout(line,0)
-      else if( ierr.gt.0 ) then
+      else if (ierr.gt.0) then
          line(n1:) = messages(ierr)
          call wrtout(line,0)
-      else if( ierr.lt.-1 ) then
+      else if (ierr.lt.-1) then
          i = iabs(ierr)
          do j = 1, 9
-            if( mod(i,primes(j)) .eq. 0 ) then
+            if (mod(i,primes(j)).eq.0) then
                line(n1:) = messages(j+11)
                call wrtout(line,0)
                i = i / primes(j)
@@ -2736,10 +2725,6 @@ c           12,13,14,15,16,17,18,19,20
       return
       end
 
-c***********************************************************************
-c***********************************************************************
-c***********************************************************************
-c***********************************************************************
 c***********************************************************************
 
 c If topix is .true.: convert
@@ -2751,7 +2736,7 @@ c   to     integral or amplitude, center, dispersion or fwhm
 c
 c If ngss is <0, ignore the INTG flag, input is always amplitude
 
-      subroutine parconv( gausspar, ngss, topix )
+      subroutine parconv(gausspar, ngss, topix)
 
       real      gausspar(*)
       integer   ngss
@@ -2776,30 +2761,30 @@ c     a0,a1,am1 keep flint quiet
       am1=-1
       call optlist('dispersion',disper)
       call optlist('integral',  integr)
-      call optlist('pixel',     pixel )
+      call optlist('pixel',     pixel)
       ngauss = iabs(ngss)
       do i = 1, ngauss
          j    = cmpind(i)
          jerr = errind(i)
-         if( gausspar(j).ne.0. ) then
+         if (gausspar(j).ne.0.0) then
 
 c CONVERT PHYSICAL TO PIXEL
-         if( topix ) then
+         if (topix) then
 c  ---      Input FWHM -> convert to dispersion
-            if( .not.disper ) then
+            if (.not.disper) then
                gausspar(j   +2) = gausspar(j   +2) / sqrt8ln2
                gausspar(jerr+2) = gausspar(jerr+2) / sqrt8ln2
             endif
 c           Input integral -> convert to amplitude
-            if( integr .and. ngss.gt.0 ) then
+            if (integr .and. ngss.gt.0) then
                scale = sqrt(twopi)*gausspar(j+2)
-               gausspar(j   ) = gausspar(j   ) / scale
+               gausspar(j) = gausspar(j) / scale
                gausspar(jerr) = gausspar(jerr) / scale
             endif
 c  ---      Convert units of dispersion and central velocity to pixels
-            if( .not.pixel ) then
-               call cooinfo( 3,a0,a0,dv )
-               call cooinfo( 8,a1,a0, gausspar(j+1) )
+            if (.not.pixel) then
+               call cooinfo(3,a0,a0,dv)
+               call cooinfo(8,a1,a0, gausspar(j+1))
                gausspar(jerr+1) = gausspar(jerr+1) / dv
                gausspar(j   +2) = gausspar(j   +2) / dv
                gausspar(jerr+2) = gausspar(jerr+2) / dv
@@ -2807,30 +2792,30 @@ c  ---      Convert units of dispersion and central velocity to pixels
 c  ---      Convert to inverse dispersion
 c           d(1/s) = d(s) / s^2
             gausspar(jerr+2) = gausspar(jerr+2) / gausspar(j+2)**2
-            gausspar(j   +2) =               1. / gausspar(j+2)
+            gausspar(j   +2) =               1.0 / gausspar(j+2)
          else
 
 c CONVERT PIXEL TO PHYSICAL
 c  ---      Convert inverse to dispersion
 c           d(s) = d(1/s) / (1/s)^2
             gausspar(jerr+2) = gausspar(jerr+2) / gausspar(j+2)**2
-            gausspar(j   +2) = 1. / gausspar(j+2)
+            gausspar(j   +2) = 1.0 / gausspar(j+2)
 c  ---      Convert units of dispersion and velocity to physical
-            if( .not.pixel ) then
-               call cooinfo( 3,a0,a0,dv )
-               call cooinfo( 8,am1,a0,gausspar(j+1) )
+            if (.not.pixel) then
+               call cooinfo(3,a0,a0,dv)
+               call cooinfo(8,am1,a0,gausspar(j+1))
                gausspar(jerr+1) = gausspar(jerr+1) * abs(dv)
                gausspar(j   +2) = abs(gausspar(j   +2) * dv)
                gausspar(jerr+2) = abs(gausspar(jerr+2) * abs(dv))
             endif
 c  ---      Output Integral -> convert to amplitude
-            if( integr .and. ngss.gt.0 ) then
+            if (integr .and. ngss.gt.0) then
                scale = sqrt(twopi)*gausspar(j+2)
-               gausspar(j   ) = gausspar(j   ) * scale
+               gausspar(j) = gausspar(j) * scale
                gausspar(jerr) = gausspar(jerr) * scale
             endif
 c           Output FWHM -> convert dispersion
-            if( .not.disper ) then
+            if (.not.disper) then
                gausspar(j   +2) = gausspar(j   +2) * sqrt8ln2
                gausspar(jerr+2) = gausspar(jerr+2) * sqrt8ln2
             endif
@@ -2845,7 +2830,7 @@ c***********************************************************************
 
 c sort the gaussians and insert them in proper place
 
-      subroutine gsssrt( gausrt, gauin, ngauss, cmpsort )
+      subroutine gsssrt(gausrt, gauin, ngauss, cmpsort)
 
       real      gausrt(*)
       real      gauin(*)
@@ -2853,7 +2838,7 @@ c sort the gaussians and insert them in proper place
       real      cmpsort(*)
 
       integer   MAXCMP, ARRSIZ
-      parameter ( MAXCMP=10, ARRSIZ=7*MAXCMP+1 )
+      parameter (MAXCMP=10, ARRSIZ=7*MAXCMP+1)
 
       real      svals(MAXCMP)
       integer   sind(MAXCMP), off, order, i, j
@@ -2865,33 +2850,33 @@ c 1=none 2=velocity, 3=integral, 4=amplitude, 5=fwhm, 6=vdiff, 7=vrange
       integer   offs(7), orders(7)
       data      offs   / 1, 1,  2,  2,  0,  1,  2 /
       data      orders / 1, 1, -1, -1,  1,  1, -1 /
-      if( ngauss.eq.0 ) return
+      if (ngauss.eq.0) return
 
-      off   = offs(   int(cmpsort(1)) )
-      order = orders( int(cmpsort(1)) )
+      off   = offs(int(cmpsort(1)))
+      order = orders(int(cmpsort(1)))
 c sort is before conversion, i.e. on pixels => reverse if dv < 0
       a0=0
-      call cooinfo( 3,a0,a0,dv )
-      if( off.eq.1 .and. dv.lt.0 ) order=-1
+      call cooinfo(3,a0,a0,dv)
+      if (off.eq.1 .and. dv.lt.0) order=-1
 
 c make array containing the sorting parameter
       do i = 1, ngauss
                                 svals(i) = gauin(3*i-off)
-         if( cmpsort(1).eq.1. ) svals(i) = real(i)
-         if( cmpsort(1).eq.5. ) svals(i) = abs( cmpsort(2) - svals(i) )
+         if (cmpsort(1).eq.1.0) svals(i) = real(i)
+         if (cmpsort(1).eq.5.0) svals(i) = abs(cmpsort(2) - svals(i))
       enddo
 
 c find list of sorted indices
-      call sortidxr( ngauss, svals, sind )
+      call sortidxr(ngauss, svals, sind)
 
 c copy to output in sorted order (ascending for order=1, descending for order-1)
       do i = 1, ngauss
-         if( order.eq. 1 ) j = sind(         i)
-         if( order.eq.-1 ) j = sind(ngauss+1-i)
-         call setgssa( gausrt,i, gauin,j )
+         if (order.eq.1) j = sind(      i)
+         if (order.eq.-1) j = sind(ngauss+1-i)
+         call setgssa(gausrt,i, gauin,j)
       enddo
 
-      if( cmpsort(1).eq.7. ) then
+      if (cmpsort(1).eq.7.0) then
 c Sort components on velocity range: all components within the given range
 c come first.
 c If the maximum number of components was fitted, then the following
@@ -2912,21 +2897,21 @@ c ngauss is # components actually fit
 c ngss   is maximum # components to fit
          ngss = nint(abs(cmpsort(4)))
 
-         call setngsa( gauin, gausrt, ngauss )
+         call setngsa(gauin, gausrt, ngauss)
          k=0
          do i = 1, ngauss
-            if( cmpsort(2).le.gauin(3*i-1) .and.
-     *          cmpsort(3).ge.gauin(3*i-1)       ) then
+            if (cmpsort(2).le.gauin(3*i-1) .and.
+     *          cmpsort(3).ge.gauin(3*i-1)    ) then
                k=k+1
                iinrange = i
             endif
             sind(i) = i
          enddo
-         if(      k.eq.0 ) then
-            if( ngauss.lt.ngss ) then
-               if( cmpsort(4).lt.0. ) then
+         if (   k.eq.0) then
+            if (ngauss.lt.ngss) then
+               if (cmpsort(4).lt.0.0) then
                   ngauss = ngauss+1
-                  call setgssz( gauin,ngauss )
+                  call setgssz(gauin,ngauss)
                   sind(1) = ngauss
                   do i = 2, ngauss
                      sind(i) = i-1
@@ -2935,10 +2920,10 @@ c ngss   is maximum # components to fit
                   cmpsort(4) = -1
                endif
             endif
-         else if( k.eq.1 ) then
+         else if (k.eq.1) then
             k=2
             do i = 1, ngauss
-               if( i .eq. iinrange ) then
+               if (i.eq.iinrange) then
                   sind(1) = i
                else
                   sind(k) = i
@@ -2947,23 +2932,18 @@ c ngss   is maximum # components to fit
             enddo
          endif
          do i = 1, ngauss
-            call setgssa( gausrt,i, gauin,sind(i) )
+            call setgssa(gausrt,i, gauin,sind(i))
          enddo
       endif
 
       return
       end
 
-
-c***********************************************************************
-c***********************************************************************
-c***********************************************************************
-c***********************************************************************
 c***********************************************************************
 
 c coordinate info and conversions
 
-      subroutine cooinfo( mode, intpar1, intpar2, realpar )
+      subroutine cooinfo(mode, intpar1, intpar2, realpar)
       integer     mode
       integer     intpar1, intpar2
       real        realpar
@@ -2996,22 +2976,22 @@ c cooinfo( 8, flag,0,xval )              convert x from pix to phys and vv
       integer     coo(MAXNAX)
       save        naxis, crval, cdelt, crpix, ctype, x,y,v,nvel, coo
 
-      if ( mode .eq. 1 ) then
+      if (mode.eq.1) then
          unit  = intpar1
          fitax = intpar2
 
-         call rdhdi( unit, 'naxis', naxis, 0 )
+         call rdhdi(unit, 'naxis', naxis, 0)
 
 c        x, y, v tell which axis number is x,y,v axis
 c        read # channels of parinp dataset => nvel
 c        fitax.ne.0 => input spectra
 c        fitax.eq.0 => parinp only => fitax description in naxis+1
-         if( fitax .ne. 0 ) then
+         if (fitax.ne.0) then
             v = fitax
-            call rdhdi( unit, keyw('naxis',v), nvel,1 )
+            call rdhdi(unit, keyw('naxis',v), nvel,1)
          else
             v = naxis + 1
-            call rdhdd( unit, keyw('crval',v+1), crval(v+1), 1.d0 )
+            call rdhdd(unit, keyw('crval',v+1), crval(v+1), 1d0)
             nvel = nint(crval(v+1))
          endif
 
@@ -3019,71 +2999,71 @@ c        fitax.eq.0 => parinp only => fitax description in naxis+1
          x = 0
          y = 0
          do i = 1, max(naxis,v)
-            call rdhdd( unit, keyw('crval',i), crval(i), 1.d0 )
-            call rdhdd( unit, keyw('crpix',i), crpix(i), 1.d0 )
-            call rdhdd( unit, keyw('cdelt',i), cdelt(i), 1.d0 )
-            call rdhda( unit, keyw('ctype',i), ctype(i), ' '  )
-            if( i.ne.fitax ) then
-               if( x.ne.0 .and. y.eq.0 ) y=j
-               if( x.eq.0              ) x=j
+            call rdhdd(unit, keyw('crval',i), crval(i), 1d0)
+            call rdhdd(unit, keyw('crpix',i), crpix(i), 1d0)
+            call rdhdd(unit, keyw('cdelt',i), cdelt(i), 1d0)
+            call rdhda(unit, keyw('ctype',i), ctype(i), ' ')
+            if (i.ne.fitax) then
+               if (x.ne.0 .and. y.eq.0) y=j
+               if (x.eq.0           ) x=j
                j = j + 1
             endif
          enddo
 c        crpix(naxis+1) is not written (why, BobS?)
 c        saved it in cdelt(naxis+2) instead
-         if( fitax.eq.0 )
-     *      call rdhdd( unit, keyw('cdelt',v+1), crpix(v), 1.d0 )
+         if (fitax.eq.0)
+     *      call rdhdd(unit, keyw('cdelt',v+1), crpix(v), 1d0)
 
 c        if options=arcsec, arcmin, deg
-         if( ctype(v)(1:2).eq.'RA' .or. ctype(v)(1:3).eq.'DEC' ) then
-            crval(v) = crval(v) * 3600.d0 * 180.d0/acos(-1.)
-            cdelt(v) = cdelt(v) * 3600.d0 * 180.d0/acos(-1.)
+         if (ctype(v)(1:2).eq.'RA' .or. ctype(v)(1:3).eq.'DEC') then
+            crval(v) = crval(v) * 3600d0 * 180d0/acos(-1.0)
+            cdelt(v) = cdelt(v) * 3600d0 * 180d0/acos(-1.0)
          endif
 
-      else if ( mode .eq. 2 ) then
+      else if (mode.eq.2) then
          unit  = intpar1
          fitax = intpar2
 c        naxg coded two things, to avoid extra input variable in call
          naxg  = nint(realpar)
-         nogpinp = naxg .gt. 100
-         if( naxg .gt. 100 ) naxg = naxg - 100
+         nogpinp = naxg.gt.100
+         if (naxg.gt.100) naxg = naxg - 100
 
 c        create description of parameter axis
-         call wrhdd( unit, keyw('crval',naxg),  1.d0  )
-         call wrhdd( unit, keyw('crpix',naxg),  1.d0  )
-         call wrhdd( unit, keyw('cdelt',naxg),  1.d0  )
-         call wrhda( unit, keyw('ctype',naxg), 'GPAR' )
+         call wrhdd(unit, keyw('crval',naxg),  1d0)
+         call wrhdd(unit, keyw('crpix',naxg),  1d0)
+         call wrhdd(unit, keyw('cdelt',naxg),  1d0)
+         call wrhda(unit, keyw('ctype',naxg), 'GPAR')
 c        copy fitaxis parameters to axis naxes+1
 c        if noinp, copy fitax description from naxes+1 instead
-         if( nogpinp ) fitax=naxg+1
-         call wrhdd( unit, keyw('crval',naxg+1), crval(fitax) )
-         call wrhdd( unit, keyw('cdelt',naxg+1), cdelt(fitax) )
-         call wrhdd( unit, keyw('cdelt',naxg+2), crpix(fitax) )
-         call wrhda( unit, keyw('ctype',naxg+1), ctype(fitax) )
+         if (nogpinp) fitax=naxg+1
+         call wrhdd(unit, keyw('crval',naxg+1), crval(fitax))
+         call wrhdd(unit, keyw('cdelt',naxg+1), cdelt(fitax))
+         call wrhdd(unit, keyw('cdelt',naxg+2), crpix(fitax))
+         call wrhda(unit, keyw('ctype',naxg+1), ctype(fitax))
 c        copy # channels to crval(naxg+2)
-         call wrhdi( unit, keyw('crval',naxg+2), nvel         )
+         call wrhdi(unit, keyw('crval',naxg+2), nvel      )
 
-      else if( mode .eq. 3 ) then
+      else if (mode.eq.3) then
          realpar = cdelt(v)
 
-      else if( mode .eq. 4 ) then
+      else if (mode.eq.4) then
          realpar = real(nvel)
 
-      else if( mode .eq. 5 ) then
-         if( ctype(v)(1:2).eq.'RA'   ) intpar1=1
-         if( ctype(v)(1:3).eq.'DEC'  ) intpar1=2
-         if( ctype(v)(1:4).eq.'VELO' ) intpar1=3
-         if( ctype(v)(1:4).eq.'FREQ' ) intpar1=4
+      else if (mode.eq.5) then
+         if (ctype(v)(1:2).eq.'RA') intpar1=1
+         if (ctype(v)(1:3).eq.'DEC') intpar1=2
+         if (ctype(v)(1:4).eq.'VELO') intpar1=3
+         if (ctype(v)(1:4).eq.'FREQ') intpar1=4
 
-      else if( mode .eq. 6 ) then
+      else if (mode.eq.6) then
          unit1  = intpar1
          unit2  = intpar2
          profnr = nint(realpar)
-         if( unit1.ne.0 ) call xyzs2c( unit1, profnr, coo )
-         if( unit1.eq.0 ) call xyzs2c( unit2, profnr, coo )
+         if (unit1.ne.0) call xyzs2c(unit1, profnr, coo)
+         if (unit1.eq.0) call xyzs2c(unit2, profnr, coo)
 
-      else if( mode .eq. 7 ) then
-         if( realpar.eq.0. ) then
+      else if (mode.eq.7) then
+         if (realpar.eq.0.0) then
             intpar1 = coo(1)
             intpar2 = coo(2)
          else
@@ -3091,11 +3071,11 @@ c        copy # channels to crval(naxg+2)
             intpar2 = coo(2) - nint(crpix(y))
          endif
 
-      else if( mode .eq. 8 ) then
+      else if (mode.eq.8) then
          coord = realpar
 c        intpar1>0 => phys2pix
 c        intpar1<0 => 2pix2phys
-         if( intpar1.gt.0 ) then
+         if (intpar1.gt.0) then
             realpar = (coord-crval(v))/cdelt(v) + crpix(v)
          else
             realpar = (coord-crpix(v))*cdelt(v) + crval(v)
@@ -3105,18 +3085,20 @@ c        intpar1<0 => 2pix2phys
       return
       end
 
-      character*8 function keyw( key, i )
+c***********************************************************************
+
+      character*8 function keyw(key, i)
       character*(*) key
       integer     i
       integer     len1
       character*1 itoaf
-      keyw = key( :len1(key) ) // itoaf(i)
+      keyw = key(:len1(key)) // itoaf(i)
       return
       end
 
 c***********************************************************************
 
-      subroutine header( unit )
+      subroutine header(unit)
 
       integer            unit
 
@@ -3126,67 +3108,63 @@ c***********************************************************************
       character*9        key
       integer            len1, n, type
       integer            LABLEN
-      parameter          ( LABLEN = 11 )
+      parameter          (LABLEN = 11)
       character*(LABLEN+1) dataunit, profunit, lab
       integer            a0
       real               r0
 
       call optlist('dispersion',disper)
       call optlist('integral',  integr)
-      call optlist('pixel',     pixel )
+      call optlist('pixel',     pixel)
 
-      if( pixel ) then
+      if (pixel) then
          profunit = 'pixels'
       else
 c        next three statements keep flint quiet
          a0=0
-         r0=0.
+         r0=0.0
          type=0
-         call cooinfo( 5,type,a0,r0 )
+         call cooinfo(5,type,a0,r0)
 c        1=RA, 2=DEC, 3=VELO, 4=FREG
-         if( type.eq.1 ) profunit =  'arcsec'
-         if( type.eq.2 ) profunit =  'arcsec'
-         if( type.eq.3 ) profunit =  'km/s'
-         if( type.eq.4 ) profunit =  'GHz'
+         if (type.eq.1) profunit =  'arcsec'
+         if (type.eq.2) profunit =  'arcsec'
+         if (type.eq.3) profunit =  'km/s'
+         if (type.eq.4) profunit =  'GHz'
       endif
 
-      call rdhda( unit, 'bunit', key, ' ' )
+      call rdhda(unit, 'bunit', key, ' ')
       dataunit = key
-      if(integr) dataunit = key(:len1(key)) // ' ' // profunit
+      if (integr) dataunit = key(:len1(key)) // ' ' // profunit
 
       line1 = '   x   y # |'
       line2 = ' '
       n = len1(line1)
-      if(      integr ) lab = 'integral'
-      if( .not.integr ) lab = 'amplitude'
-      line1( n  +  LABLEN-len1(lab)+1        : ) = lab
-      line2( n  +  LABLEN-len1(dataunit)+1   : ) = dataunit
+      if (   integr) lab = 'integral'
+      if (.not.integr) lab = 'amplitude'
+      line1(n  +  LABLEN-len1(lab)+1        :) = lab
+      line2(n  +  LABLEN-len1(dataunit)+1   :) = dataunit
       n = n + LABLEN
-      if(      pixel ) lab = 'position '
-      if( .not.pixel ) lab = 'velocity '
-      line1( n  +  LABLEN-len1(lab)+1        : ) = lab
-      line2( n  +  LABLEN-len1(profunit)+1   : ) = profunit
+      if (   pixel) lab = 'position '
+      if (.not.pixel) lab = 'velocity '
+      line1(n  +  LABLEN-len1(lab)+1        :) = lab
+      line2(n  +  LABLEN-len1(profunit)+1   :) = profunit
       n = n + LABLEN
-      if(      disper ) lab = 'dispersion  '
-      if( .not.disper ) lab = 'fwhm  '
-      line1( n  +  LABLEN-len1(lab)+1        : ) = lab
-      line2( n  +  LABLEN-len1(profunit)+1   : ) = profunit
+      if (   disper) lab = 'dispersion  '
+      if (.not.disper) lab = 'fwhm  '
+      line1(n  +  LABLEN-len1(lab)+1        :) = lab
+      line2(n  +  LABLEN-len1(profunit)+1   :) = profunit
       n = n + LABLEN
       line1(n+1:) = '|          errors           | rms'
-      call wrtout( line1, 0 )
-      call wrtout( line2, 0 )
+      call wrtout(line1, 0)
+      call wrtout(line2, 0)
 
       return
       end
 
 c***********************************************************************
-c***********************************************************************
-c***********************************************************************
-c***********************************************************************
-c***********************************************************************
 
-      subroutine writprof( data, model, estimate, nchan, pixels,
-     *                     gausspar, ngauss, prnm )
+      subroutine writprof(data, model, estimate, nchan, pixels,
+     *                     gausspar, ngauss, prnm)
 
       real          data(*)
       real          model(*), estimate(*)
@@ -3219,59 +3197,58 @@ c     next statement to keep flint quiet
       a0=0
       a1=1
       am1=-1
-      r1=0.
+      r1=0.0
 
-      call cooinfo( 7, coords(1), coords(2), r1 )
-      nf(1) = nfigi( coords(1) )
-      nf(2) = nfigi( coords(2) )
+      call cooinfo(7, coords(1), coords(2), r1)
+      nf(1) = nfigi(coords(1))
+      nf(2) = nfigi(coords(2))
       i = len1(prnm)
       file(:i) = prnm(:i)
-      write( file(i+1:), rtfmt( 'i<>,''_'',i<>',nf,2 ) )
+      write(file(i+1:), rtfmt('i<>,''_'',i<>',nf,2))
      *                   coords(1), coords(2)
-      call txtopen( unit, file, 'new', iostat )
-      if ( iostat.ne.0 ) then
-         call bug( 'w', 'error opening file to write profile on' )
+      call txtopen(unit, file, 'new', iostat)
+      if (iostat.ne.0) then
+        call bug('w', 'error opening file to write profile on')
       else
+        frmt(1:27) = '(i4, f10.4,  4(1x,1pg11.4))'
+        if (ngauss.gt.0) then
+          frmt(13:13)=nums(ngauss:ngauss)
+          frmt(14:14)=nums(ngauss+10:ngauss+10)
+        endif
 
-         frmt(1:27) = '(i4, f10.4,  4(1x,1pg11.4))'
-         if( ngauss.gt.0 ) then
-            frmt(13:13)=nums(ngauss:ngauss)
-            frmt(14:14)=nums(ngauss+10:ngauss+10)
-         endif
+        do i = 1, nchan
+          if (ngauss.gt.0) then
+            do n = 1, ngauss
+              j = cmpind(n)
+              expon = 0.5*((i-gausspar(j+1))*gausspar(j+2))**2
+              if (expon.lt.40.0) cmpmodel(n) = gausspar(j)*exp(-expon)
+              if (expon.ge.40.0) cmpmodel(n) = 0.0
+            enddo
 
-         do i = 1, nchan
-            if( ngauss.gt.0 ) then
-               do n = 1, ngauss
-                  j = cmpind(n)
-                  expon = 0.5*( (i-gausspar(j+1))*gausspar(j+2) )**2
-                  if(expon.lt.40.) cmpmodel(n) = gausspar(j)*exp(-expon)
-                  if(expon.ge.40.) cmpmodel(n) = 0.
-               enddo
-               x=real(i)
-               if(     pixels) call cooinfo( 8,a1, a0,x )
-               if(.not.pixels) call cooinfo( 8,am1,a0,x )
-               write( line, frmt )
-     *         i, x, data(i), model(i), data(i)-model(i), estimate(i),
-     *         (cmpmodel(n),n=1,ngauss)
-            else
-               x=real(i)
-               if(     pixels) call cooinfo( 8, a1,a0,x )
-               if(.not.pixels) call cooinfo( 8,am1,a0,x )
-               write( line, frmt )
-     *         i, x, data(i), model(i), data(i)-model(i), estimate(i)
-            endif
-            call txtwrite( unit, line, len1(line), iostat )
-          enddo
-       endif
-       call txtclose( unit )
+            x=real(i)
+            if (  pixels) call cooinfo(8,a1, a0,x)
+            if (.not.pixels) call cooinfo(8,am1,a0,x)
+            write(line, frmt) i, x, data(i), model(i), data(i)-model(i),
+     *                        estimate(i), (cmpmodel(n),n=1,ngauss)
+          else
+            x=real(i)
+            if (pixels) call cooinfo(8, a1,a0,x)
+            if (.not.pixels) call cooinfo(8,am1,a0,x)
+            write(line, frmt) i, x, data(i), model(i), data(i)-model(i),
+     *                        estimate(i)
+          endif
+          call txtwrite(unit, line, len1(line), iostat)
+        enddo
+      endif
+      call txtclose(unit)
 
-       return
-       end
+      return
+      end
 
 c***********************************************************************
 
 c Finish up
-      subroutine finish( units, version )
+      subroutine finish(units, version)
 
       integer       units(*)
       character*(*) version
@@ -3282,50 +3259,55 @@ c Finish up
       character*80  line
 
       do i = 1, 6
-         if( units(i).ne.0 ) then
-            if( i.gt.3 ) then
-               call hisopen(  units(i), 'append'  )
+         if (units(i).ne.0) then
+            if (i.gt.3) then
+               call hisopen(units(i), 'append')
                line = 'GAUFIT: ' // version
-               call hiswrite( units(i), line )
-               call hisinput( units(i), 'gaufit'  )
-               call hisclose( units(i) )
+               call hiswrite(units(i), line)
+               call hisinput(units(i), 'gaufit')
+               call hisclose(units(i))
             endif
-            call xyzclose( units(i) )
+            call xyzclose(units(i))
          endif
       enddo
       call optlist('logf',optval)
-      if(optval) call logclose
+      if (optval) call logclose
 
       return
       end
 
 c***********************************************************************
 
-      subroutine setgssz( gauss,n )
+      subroutine setgssz(gauss,n)
       real      gauss(*)
       integer   n
       integer   j, jerr, cmpind, errind, errpar
       j    = cmpind(n)
       jerr = errind(n)
-      gauss(j     ) = 0.
-      gauss(j   +1) = 0.
-      gauss(j   +2) = 0.
-      gauss(jerr  ) = 0.
-      gauss(jerr+1) = 0.
-      gauss(jerr+2) = 0.
-      gauss(errpar(n)) = 0.
+      gauss(j)   = 0.0
+      gauss(j+1) = 0.0
+      gauss(j+2) = 0.0
+      gauss(jerr)   = 0.0
+      gauss(jerr+1) = 0.0
+      gauss(jerr+2) = 0.0
+      gauss(errpar(n)) = 0.0
       return
       end
-      subroutine setngsz( gauss, ngauss )
+
+c***********************************************************************
+
+      subroutine setngsz(gauss, ngauss)
       real      gauss(*)
       integer   ngauss, i
       do i = 1, ngauss
-         call setgssz( gauss, i )
+         call setgssz(gauss, i)
       enddo
       return
       end
 
-      subroutine setgssa( gauss,n, ingauss,m )
+c***********************************************************************
+
+      subroutine setgssa(gauss,n, ingauss,m)
       real      gauss(*), ingauss(*)
       integer   n, m
       integer   j, jerr, k, kerr, cmpind, errind, errpar
@@ -3333,55 +3315,64 @@ c***********************************************************************
       jerr = errind(n)
       k    = cmpind(m)
       kerr = errind(m)
-      gauss(j     ) = ingauss(k     )
+      gauss(j  ) = ingauss(k  )
       gauss(j   +1) = ingauss(k   +1)
       gauss(j   +2) = ingauss(k   +2)
-      gauss(jerr  ) = ingauss(kerr  )
+      gauss(jerr) = ingauss(kerr)
       gauss(jerr+1) = ingauss(kerr+1)
       gauss(jerr+2) = ingauss(kerr+2)
       gauss(errpar(n)) = ingauss(errpar(m))
       return
       end
-      subroutine setngsa( gauss, ingauss, ngauss )
+
+c***********************************************************************
+
+      subroutine setngsa(gauss, ingauss, ngauss)
       real      gauss(*), ingauss(*)
       integer   ngauss, i
       do i = 1, ngauss
-         call setgssa( gauss,i, ingauss,i )
+         call setgssa(gauss,i, ingauss,i)
       enddo
       return
       end
 
-      subroutine setgssv( gauss,n, amp, vel, wid )
+c***********************************************************************
+
+      subroutine setgssv(gauss,n, amp, vel, wid)
       real      gauss(*), amp,vel,wid
       integer   n
       integer   j, jerr, cmpind, errind, errpar
       j    = cmpind(n)
       jerr = errind(n)
-      gauss(j     ) = amp
+      gauss(j  ) = amp
       gauss(j   +1) = vel
       gauss(j   +2) = wid
-      gauss(jerr  ) = 0.
-      gauss(jerr+1) = 0.
-      gauss(jerr+2) = 0.
-      gauss(errpar(n)) = 0.
+      gauss(jerr) = 0.0
+      gauss(jerr+1) = 0.0
+      gauss(jerr+2) = 0.0
+      gauss(errpar(n)) = 0.0
       return
       end
 
-      integer function delgauss( gausspar,ngauss )
+c***********************************************************************
+
+      integer function delgauss(gausspar,ngauss)
       real      gausspar(*)
       integer   ngauss
       integer   i, j
       integer   errpar, rmsind
       j=0
       do i = 1, ngauss
-         if( gausspar(errpar(i)).le.1. ) then
+         if (gausspar(errpar(i)).le.1.0) then
             j = j + 1
-            call setgssa( gausspar,j, gausspar,i )
+            call setgssa(gausspar,j, gausspar,i)
          endif
       enddo
-      if( j.eq.0 ) gausspar(rmsind())=0.
+      if (j.eq.0) gausspar(rmsind())=0.0
       delgauss = j
       end
+
+c***********************************************************************
 
       integer function cmpind(i)
       integer          i
@@ -3389,74 +3380,82 @@ c***********************************************************************
       return
       end
 
+c***********************************************************************
+
       integer function errind(i)
       integer i
       integer   MAXCMP
-      parameter ( MAXCMP=10 )
+      parameter (MAXCMP=10)
       errind = 3*MAXCMP + 3*i-2
       return
       end
 
+c***********************************************************************
+
       integer function erroff()
       integer   MAXCMP
-      parameter ( MAXCMP=10 )
+      parameter (MAXCMP=10)
       erroff = 3*MAXCMP
       return
       end
 
+c***********************************************************************
+
       integer function errpar(i)
       integer i
       integer   MAXCMP
-      parameter ( MAXCMP=10 )
+      parameter (MAXCMP=10)
       errpar = 6*MAXCMP + i
       return
       end
 
+c***********************************************************************
+
       integer function rmsind()
       integer   MAXCMP
-      parameter ( MAXCMP=10 )
+      parameter (MAXCMP=10)
       rmsind = 7*MAXCMP + 1
       return
       end
 
 c***********************************************************************
 
-      subroutine wrtout( line, n1 )
+      subroutine wrtout(line, n1)
       character*(*) line
       integer       n1
       logical       optval
       character*80  line1
                     line1(1:9) = ' '
-      if( n1.eq.0 ) line1( 1:) = line
-      if( n1.ne.0 ) line1(10:) = line
+      if (n1.eq.0) line1(1:) = line
+      if (n1.ne.0) line1(10:) = line
       call optlist('logf',optval)
-      if( optval ) then
-         call logwrit( line1 )
+      if (optval) then
+         call logwrit(line1)
       else
-         call output(  line1 )
+         call output(line1)
       endif
       end
 
 c***********************************************************************
 
-      subroutine gaussfun( x, pars, y, dydpar, npars, compgrad )
+      subroutine gaussfun(x, pars, y, dydpar, npars, compgrad)
       integer npars
       real    x, pars(npars)
       real    y, dydpar(npars)
       logical compgrad
       integer i
       real    arg, expon, fac
-      y = 0.
+      y = 0.0
       do i = 1, npars-1, 3
         arg   =  (x-pars(i+1)) * pars(i+2)
         expon = 0.5*arg**2
-        if( expon.gt.40. ) then
-           expon = 0.
+        if (expon.gt.40.0) then
+           expon = 0.0
         else
            expon = exp(-expon)
         endif
         y = y + pars(i)*expon
-        if( compgrad ) then
+        if (compgrad) then
            fac         = pars(i) * expon * arg
            dydpar(i)   = expon
            dydpar(i+1) =  fac * pars(i+2)
@@ -3466,14 +3465,14 @@ c***********************************************************************
       return
       end
 
-      subroutine getmax( data,nchan, maxdat, im )
+      subroutine getmax(data,nchan, maxdat, im)
       real    data(*), maxdat
       integer nchan, im
       integer i
       maxdat = data(1)
       im     =  1
       do i = 1, nchan
-         if( data(i).gt.maxdat ) then
+         if (data(i).gt.maxdat) then
             maxdat = data(i)
             im     = i
          endif
@@ -3481,10 +3480,8 @@ c***********************************************************************
       return
       end
 
+c***********************************************************************
 
-c-----------------------------------------------------------------------
-c23456789012345678901234567890123456789012345678901234567890123456789012
-c
 c       DRVMRQ is a driver for MRQMIN that sets up a few needed vectors
 c       and calls MRQMIN as needed. MRQMIN and the subroutines it calls
 c       are based on the code presented in Numerical Recipes. Some
@@ -3553,8 +3550,8 @@ c       This is achieved by renumbering the parameters via a permutation
 c       vector FITLIST (1,NPARS) such that the first NTOFIT parameters
 c       are to be fitted, the remaining NPARS-NTOFIT are left unchanged.
 
-       subroutine DRVMRQ( x,y, sig, ndata, xpar,npars, fitlist,ntofit,
-     *                    FTOL, MAXITER, fret, ier, funcs )
+       subroutine DRVMRQ(x,y, sig, ndata, xpar,npars, fitlist,ntofit,
+     *                    FTOL, MAXITER, fret, ier, funcs)
 
        real      x(*), y(*), sig(*)
        integer   ndata, npars, ntofit
@@ -3566,7 +3563,7 @@ c       are to be fitted, the remaining NPARS-NTOFIT are left unchanged.
        external  funcs
 
        integer   NPARMAX
-       parameter ( NPARMAX = 100 )
+       parameter (NPARMAX = 100)
        real      covar(NPARMAX,NPARMAX)
        real      ahess(NPARMAX,NPARMAX)
        real      oldxpar(NPARMAX)
@@ -3581,7 +3578,7 @@ c       are to be fitted, the remaining NPARS-NTOFIT are left unchanged.
 
 c record the initial point - useful to keep track of progress
 c (nonfunctional - can be commented out together with stuff at the end)
-       if( test ) then
+       if (test) then
           do ipar = 1, npars
              oldxpar(ipar) = xpar(ipar)
           enddo
@@ -3589,15 +3586,15 @@ c (nonfunctional - can be commented out together with stuff at the end)
 
 c Initializing call - if ALAMDA is negative, MRQMIN will set it to be
 c positive and small and then return the initial value of CHI SQUARED
-       alamda = -1.
-       call MRQMIN( x, y, sig, ndata, xpar, npars,
+       alamda = -1.0
+       call MRQMIN(x, y, sig, ndata, xpar, npars,
      *              fitlist, ntofit, covar, ahess, npmax, chisq,
-     *              funcs, alamda, ntries, ier )
-       if( test ) then
+     *              funcs, alamda, ntries, ier)
+       if (test) then
           write(line,'(''MRQMIN: setup call; chisq, xpar = '',1pe10.4)')
      *          chisq
           call output(line)
-          write(line,'(10(f8.4,1x))') ( xpar(i), i = 1, npars )
+          write(line,'(10(f8.4,1x))') (xpar(i), i = 1, npars)
           call output(line)
        endif
 
@@ -3608,102 +3605,101 @@ c Keep track of how many negligible improvements have been achieved
 c Loop over major iterations
        iter = 0
        loop = .true.
-       do while( iter.lt.MAXITER .and. loop )
+       do while (iter.lt.MAXITER .and. loop)
           iter = iter + 1
           ochisq = chisq
-          call MRQMIN( x, y, sig, ndata, xpar, npars,
+          call MRQMIN(x, y, sig, ndata, xpar, npars,
      *                 fitlist, ntofit, covar, ahess, npmax, chisq,
-     *                 funcs, alamda, ntries, ier )
+     *                 funcs, alamda, ntries, ier)
 
-          if(test)then
-          write(line,'(''New chisq, ier: '',1pe10.4,1x,i1)')chisq,ier
+          if (test) then
+          write(line,'(''New chisq, ier: '',1pe10.4,1x,i1)') chisq,ier
           call output(line)
           endif
 
-          if( ier.eq.0 ) then
-             if( (ochisq-chisq) .gt. FTOL ) then
+          if (ier.eq.0) then
+             if ((ochisq-chisq).gt.FTOL) then
                 loop  = .true.
                 inegl = 0
-                if( test ) call output(
-     *          'DRVMRQ: Chi squared decrease significant' )
+                if (test) call output(
+     *          'DRVMRQ: Chi squared decrease significant')
              else
                 inegl = inegl + 1
-                if( inegl .lt. maxnegl ) then
+                if (inegl.lt.maxnegl) then
                    loop = .true.
-                   if( test ) call output(
-     *             'DRVMRQ: Insignificant decrease in chisq' )
+                   if (test) call output(
+     *             'DRVMRQ: Insignificant decrease in chisq')
                 else
                    loop = .false.
-                   if( test ) then
-                   write( line, '( ''DRVMRQ quits at iteration '',i2,
+                   if (test) then
+                   write(line, '(''DRVMRQ quits at iteration '',i2,
      *                          '': negligible decrease number '',i2)')
      *                          iter, inegl
                    call output(line)
                    endif
                 endif
              endif
-          elseif( ier.eq.1 ) then
+          else if (ier.eq.1) then
              loop = .false.
-             if( test ) then
-             write( line, '( ''MRQMIN: gives up after '',i2,'' tries'',
-     *                  '' with alamda = '',e10.4 )' ) ntries, alamda
+             if (test) then
+             write(line, '(''MRQMIN: gives up after '',i2,'' tries'',
+     *                  '' with alamda = '',e10.4)') ntries, alamda
              call output(line)
              endif
              ier = 100 + iter
-          elseif( ier.eq.2 ) then
+          else if (ier.eq.2) then
              loop = .false.
           endif
 
 c The next few lines are non-functional - they are just used to
 c print out information about the progress of the fit. They can
 c all be commented out to the end of the do loop.
-          if( test ) then
+          if (test) then
              dxpar = 0.0
              do ipar = 1, npars
                 dxpar = dxpar + (xpar (ipar) - oldxpar(ipar))**2
                 oldxpar (ipar) = xpar (ipar)
              enddo
              dxpar = sqrt(dxpar)
-             write( line, '( a, 2i4, f24.8, 2d14.4 )' )
+             write(line, '(a, 2i4, f24.8, 2d14.4)')
      *       'MRQMIN: ', iter, ntries, chisq, dxpar, alamda
              call output(line)
-             write( line, '(10(f8.4,1x))') ( xpar(j), j=1,npars )
+             write(line, '(10(f8.4,1x))') (xpar(j), j=1,npars)
              call output(line)
           endif
 
        enddo
 c MAXITER exceeded?
-       if( iter.eq.MAXITER ) ier = 3
+       if (iter.eq.MAXITER) ier = 3
 
 c MRQMIN called with zero ALAMDA will return covariance matrix
        alamda = 0.0
-       call MRQMIN( x, y, sig, ndata, xpar, npars, fitlist,
+       call MRQMIN(x, y, sig, ndata, xpar, npars, fitlist,
      *              ntofit, covar, ahess, npmax, chisq, funcs, alamda,
-     *              ntries, ier )
+     *              ntries, ier)
        fret = chisq
 
 c Calculate fit errors: and copy to output array
        do i = 1, npars
-          xpar(i+npars) = 0.
+          xpar(i+npars) = 0.0
        enddo
        do i = 1, ntofit
           j = fitlist(i)
-          if( covar(j,j).lt.0. ) then
+          if (covar(j,j).lt.0.0) then
              ier = 4
           else
-             xpar(j+npars) = sqrt( covar(j,j) )
+             xpar(j+npars) = sqrt(covar(j,j))
           endif
        enddo
 
        return
        end
 
+c***********************************************************************
 
-c-----------------------------------------------------------------------
-
-      SUBROUTINE MRQMIN( X,Y,SIG,NDATA, XPAR,NPARS, FITLIST,NTOFIT,
+      SUBROUTINE MRQMIN(X,Y,SIG,NDATA, XPAR,NPARS, FITLIST,NTOFIT,
      *                   COVAR,ALPHA,NPMAX, CHISQ, FUNCS, ALAMDA,
-     *                   NTRIES, IER )
+     *                   NTRIES, IER)
 c
 c     The original Numerical Recipes version of this routine fits a model
 c     function YF of one variable X(I) with parameters XPAR to the data
@@ -3752,14 +3748,15 @@ c        ALAMDA iterations performed.
 c
 c     3) Singular Value Decomposition is used instead of Gauss-Jordan,
 c        and the additional arrays VMAT, WVEC needed by SVD are defined
-c        and dimensioned. In the original version this subroutine produced
-c        a direct error message if the number of iterations exceeded 30.
-c        Now it returns it, and this is detected, and IER is set to 2.
+c        and dimensioned.  In the original version this subroutine
+c        produced a direct error message if the number of iterations
+c        exceeded 30.  Now it returns it, and this is detected, and IER
+c        is set to 2.
 c
       INTEGER    MMAX, ITMAX, ALAMFAC
-      PARAMETER  ( MMAX    =100  )
-      PARAMETER  ( ITMAX   = 20  )
-      PARAMETER  ( ALAMFAC = 10. )
+      PARAMETER  (MMAX    =100)
+      PARAMETER  (ITMAX   = 20)
+      PARAMETER  (ALAMFAC = 10.0)
 
       INTEGER    NDATA, NPARS
       REAL       X(NDATA),Y(NDATA)
@@ -3779,51 +3776,52 @@ c
       LOGICAL    COMPGRAD
       SAVE
 
-c Initializing call. Set ALAMBDA to positive and return initial chi squared
-      IF( ALAMDA.LT.0. ) THEN
+c Initializing call.  Set ALAMBDA to positive and return initial chi
+c squared.
+      IF(ALAMDA.LT.0.0) THEN
 
          I = NTOFIT+1
          DO J = 1, NPARS
             IHIT = 0
             DO K = 1, NTOFIT
-               IF( FITLIST(K).EQ.J ) IHIT=IHIT+1
+               IF(FITLIST(K).EQ.J) IHIT=IHIT+1
             ENDDO
-            IF( IHIT.EQ.0 ) THEN
+            IF(IHIT.EQ.0) THEN
                FITLIST(I) = J
                I = I+1
-            ELSEIF( IHIT.GT.1 ) THEN
-               CALL BUG( 'f', 'Improper permutation in FITLIST' )
+            ELSEIF(IHIT.GT.1) THEN
+               CALL BUG('f', 'Improper permutation in FITLIST')
             ENDIF
          ENDDO
 
-         IF( I.NE.NPARS+1 )
-     *       CALL BUG( 'f', 'Improper permutation in FITLIST' )
+         IF(I.NE.NPARS+1)
+     *       CALL BUG('f', 'Improper permutation in FITLIST')
 
          ALAMDA = 0.001
          COMPGRAD = .FALSE.
 
-         CALL MRQCOF( X,Y,SIG,NDATA, XPAR,NPARS, FITLIST,NTOFIT,
-     *                ALPHA,BETA, NPMAX, CHISQ, FUNCS, COMPGRAD )
+         CALL MRQCOF(X,Y,SIG,NDATA, XPAR,NPARS, FITLIST,NTOFIT,
+     *                ALPHA,BETA, NPMAX, CHISQ, FUNCS, COMPGRAD)
          OCHISQ = CHISQ
          RETURN
 
 c Finishing call. Return covariance matrix.
-      ELSE IF( ALAMDA.EQ.0.) THEN
+      ELSE IF(ALAMDA.EQ.0.0) THEN
 
          COMPGRAD = .TRUE.
-         CALL MRQCOF( X,Y,SIG,NDATA, XPAR,NPARS, FITLIST,NTOFIT,
-     *                ALPHA,BETA, NPMAX, CHISQ, FUNCS, COMPGRAD )
-         CALL SVDCMP( ALPHA,NTOFIT,NTOFIT, NPMAX,NPMAX, WVEC,VMAT,ITS )
+         CALL MRQCOF(X,Y,SIG,NDATA, XPAR,NPARS, FITLIST,NTOFIT,
+     *                ALPHA,BETA, NPMAX, CHISQ, FUNCS, COMPGRAD)
+         CALL SVDCMP(ALPHA,NTOFIT,NTOFIT, NPMAX,NPMAX, WVEC,VMAT,ITS)
          DO I = 1, NPARS
             DO J = 1, NPARS
-               COVAR(I,J) = 0.
+               COVAR(I,J) = 0.0
                DO K = 1, NPARS
-                  IF( WVEC(K).NE.0. )
+                  IF(WVEC(K).NE.0.0)
      *            COVAR(I,J) = COVAR(I,J)+ALPHA(J,K)*VMAT(I,K)/WVEC(K)
                ENDDO
             ENDDO
          ENDDO
-         CALL COVSRT( COVAR,NPMAX,NPARS, FITLIST,NTOFIT )
+         CALL COVSRT(COVAR,NPMAX,NPARS, FITLIST,NTOFIT)
          RETURN
 
       ENDIF
@@ -3832,8 +3830,8 @@ c Regular step. First compute gradient and `hessian' (remains the same
 c throughout this iteration)
 
       COMPGRAD = .TRUE.
-      CALL MRQCOF( X,Y,SIG,NDATA, XPAR,NPARS, FITLIST,NTOFIT,
-     *             ALPHA,BETA, NPMAX, CHISQ, FUNCS, COMPGRAD )
+      CALL MRQCOF(X,Y,SIG,NDATA, XPAR,NPARS, FITLIST,NTOFIT,
+     *             ALPHA,BETA, NPMAX, CHISQ, FUNCS, COMPGRAD)
       OCHISQ = CHISQ
 
 c Now iterate on ALAMDA until a good step is found
@@ -3844,35 +3842,35 @@ c Compute augmented matrix
             DO K = 1, NTOFIT
                COVAR(J,K) = ALPHA(J,K)
             ENDDO
-            COVAR(J,J) = ALPHA(J,J) * (1.+ALAMDA)
+            COVAR(J,J) = ALPHA(J,J) * (1.0+ALAMDA)
             DXPAR(J)   = BETA(J)
          ENDDO
 
 c Solve for increment DXPAR
-         CALL SVDCMP( COVAR, NTOFIT,NTOFIT,NPMAX,NPMAX, WVEC,VMAT,ITS )
-         IF( ITS.EQ.30 ) THEN
+         CALL SVDCMP(COVAR, NTOFIT,NTOFIT,NPMAX,NPMAX, WVEC,VMAT,ITS)
+         IF(ITS.EQ.30) THEN
             IER = 2
             RETURN
          ENDIF
-         CALL SVBKSB( COVAR, WVEC,VMAT, NTOFIT,NPARS,
-     *                NPMAX,NPMAX, BETA, DXPAR )
+         CALL SVBKSB(COVAR, WVEC,VMAT, NTOFIT,NPARS,
+     *                NPMAX,NPMAX, BETA, DXPAR)
 
 c Increment accepted solution (the commented-out line was the original
-c one, and is WRONG because it incremented the last try, even if rejected,
-c rather than the last ACCEPTED try)
+c one, and is WRONG because it incremented the last try, even if
+c rejected, rather than the last ACCEPTED try)
          DO J = 1, NPARS
 c           ATRY(FITLIST(J)) = ATRY(FITLIST(J)) + DXPAR(J)
             ATRY(FITLIST(J)) = XPAR(FITLIST(J)) + DXPAR(J)
          ENDDO
 
          COMPGRAD = .FALSE.
-         CALL MRQCOF( X,Y,SIG,NDATA, ATRY,NPARS, FITLIST,NTOFIT,
-     *                COVAR, DXPAR, NPMAX, CHISQ, FUNCS, COMPGRAD )
+         CALL MRQCOF(X,Y,SIG,NDATA, ATRY,NPARS, FITLIST,NTOFIT,
+     *                COVAR, DXPAR, NPMAX, CHISQ, FUNCS, COMPGRAD)
 
 c Try is successful. Reduce ALAMDA (could be reduced more in the
 c interest of efficiency) so next step will start closer to quadratic;
 c update XPAR and CHISQ; and return
-         IF( CHISQ.LT.OCHISQ ) THEN
+         IF(CHISQ.LT.OCHISQ) THEN
             ALAMDA = ALAMDA / ALAMFAC
             OCHISQ = CHISQ
             DO J = 1, NTOFIT
@@ -3912,7 +3910,7 @@ c-----------------------------------------------------------------------
 c Routine to resort out the matrix so that it conforms to the original
 c definition again, if a list of fixed parameters (FITLIST) was given.
 
-      SUBROUTINE COVSRT( COVAR,NPMAX, NPARS,FITLIST,NTOFIT )
+      SUBROUTINE COVSRT(COVAR,NPMAX, NPARS,FITLIST,NTOFIT)
 
       INTEGER NPARS
       INTEGER NPMAX, NTOFIT
@@ -3924,12 +3922,12 @@ c definition again, if a list of fixed parameters (FITLIST) was given.
 
       DO J = 1, NPARS-1
          DO I = J+1, NPARS
-            COVAR(I,J) = 0.
+            COVAR(I,J) = 0.0
          ENDDO
       ENDDO
       DO I = 1, NTOFIT-1
          DO J = I+1, NTOFIT
-            IF( FITLIST(J).GT.FITLIST(I) ) THEN
+            IF(FITLIST(J).GT.FITLIST(I)) THEN
                COVAR(FITLIST(J),FITLIST(I)) = COVAR(I,J)
             ELSE
                COVAR(FITLIST(I),FITLIST(J)) = COVAR(I,J)
@@ -3939,7 +3937,7 @@ c definition again, if a list of fixed parameters (FITLIST) was given.
       SWAP = COVAR(1,1)
       DO J = 1, NPARS
          COVAR(1,J) = COVAR(J,J)
-         COVAR(J,J) = 0.
+         COVAR(J,J) = 0.0
       ENDDO
       COVAR(FITLIST(1),FITLIST(1)) = SWAP
       DO J = 2, NTOFIT
@@ -3953,18 +3951,19 @@ c definition again, if a list of fixed parameters (FITLIST) was given.
       RETURN
       END
 
-c-----------------------------------------------------------------------
+c***********************************************************************
 
-      SUBROUTINE MRQCOF( X,Y,SIG,NDATA, XPAR,NPARS, FITLIST,NTOFIT,
-     *                   ALPHA,BETA, NALP, CHISQ, FUNCS, COMPGRAD )
+      SUBROUTINE MRQCOF(X,Y,SIG,NDATA, XPAR,NPARS, FITLIST,NTOFIT,
+     *                   ALPHA,BETA, NALP, CHISQ, FUNCS, COMPGRAD)
 c
 c     This is the original Numerical Recipes MRQCOF, except for the
-c     introduction of the logical variable COMPGRAD. If COMPGRAD is .TRUE.,
-c     the function and its derivative are computed, and the gradient
-c     and Hessian are updated. If not, only the new CHISQ is computed.
-c     COMPGRAD must be passed to FUNCS. Use of COMPGRAD makes sense if gradients
-c     and derivatives are expensive to compute. Otherwise, all references
-c     to COMPGRAD can be deleted and all IF(COMPGRAD) made true.
+c     introduction of the logical variable COMPGRAD.  If COMPGRAD is
+c     .TRUE., the function and its derivative are computed, and the
+c     gradient and Hessian are updated.  If not, only the new CHISQ is
+c     computed.  COMPGRAD must be passed to FUNCS.  Use of COMPGRAD
+c     makes sense if gradients and derivatives are expensive to compute.
+c     Otherwise, all references to COMPGRAD can be deleted and all
+c     IF(COMPGRAD) made true.
 
       INTEGER   NDATA
       REAL      X(NDATA),Y(NDATA),SIG(NDATA)
@@ -3979,23 +3978,23 @@ c     to COMPGRAD can be deleted and all IF(COMPGRAD) made true.
       LOGICAL   COMPGRAD
 
       INTEGER   MMAX
-      PARAMETER ( MMAX=100)
+      PARAMETER (MMAX=100)
       REAL      YMOD, DYDXPAR(MMAX)
       INTEGER   I, J, K
       REAL      SIG2I, DY, WT
 
       DO J = 1, NTOFIT
          DO K = 1, J
-            ALPHA(J,K) = 0.
+            ALPHA(J,K) = 0.0
          ENDDO
-         BETA(J) = 0.
+         BETA(J) = 0.0
       ENDDO
-      CHISQ = 0.
+      CHISQ = 0.0
       DO I = 1, NDATA
-         CALL FUNCS( X(I),XPAR, YMOD,DYDXPAR, NPARS, COMPGRAD )
-         SIG2I = 1. / (SIG(I)*SIG(I))
+         CALL FUNCS(X(I),XPAR, YMOD,DYDXPAR, NPARS, COMPGRAD)
+         SIG2I = 1.0 / (SIG(I)*SIG(I))
          DY    = Y(I) - YMOD
-         IF( COMPGRAD ) THEN
+         IF(COMPGRAD) THEN
             DO J = 1, NTOFIT
                WT = DYDXPAR(FITLIST(J)) * SIG2I
                DO K = 1, J
@@ -4006,7 +4005,7 @@ c     to COMPGRAD can be deleted and all IF(COMPGRAD) made true.
          ENDIF
          CHISQ = CHISQ + DY*DY*SIG2I
       ENDDO
-      IF( COMPGRAD ) THEN
+      IF(COMPGRAD) THEN
          DO J = 2, NTOFIT
             DO K = 1, J-1
                ALPHA(K,J) = ALPHA(J,K)
@@ -4019,10 +4018,10 @@ c     to COMPGRAD can be deleted and all IF(COMPGRAD) made true.
 c
 c-----------------------------------------------------------------------
 c
-      SUBROUTINE SVDCMP( MATX,M,N, MPMAX,NPMAX, WVEC,VMAT, ITS )
+      SUBROUTINE SVDCMP(MATX,M,N, MPMAX,NPMAX, WVEC,VMAT, ITS)
 
       INTEGER    NMAX
-      PARAMETER ( NMAX=101 )
+      PARAMETER (NMAX=101)
       INTEGER    M,N, MPMAX,NPMAX
       REAL       MATX(MPMAX,NPMAX)
       REAL       WVEC(NPMAX), VMAT(NPMAX,NPMAX)
@@ -4041,20 +4040,20 @@ c
          G      = 0.0
          S      = 0.0
          SCALE  = 0.0
-         IF( I.LE.M ) THEN
+         IF(I.LE.M) THEN
             DO K = I, M
                SCALE = SCALE + ABS(MATX(K,I))
             ENDDO
-            IF( SCALE.NE.0.0 ) THEN
+            IF(SCALE.NE.0.0) THEN
                DO K = I, M
                   MATX(K,I) = MATX(K,I)/SCALE
                   S         = S + MATX(K,I)*MATX(K,I)
                ENDDO
                F         = MATX(I,I)
-               G         = -SIGN( SQRT(S),F )
+               G         = -SIGN(SQRT(S),F)
                H         = F*G-S
                MATX(I,I) = F-G
-               IF( I.NE.N ) THEN
+               IF(I.NE.N) THEN
                   DO J = L, N
                      S = 0.0
                      DO K = I, M
@@ -4075,11 +4074,11 @@ c
          G    = 0.0
          S    = 0.0
          SCALE= 0.0
-         IF( (I.LE.M).AND.(I.NE.N) ) THEN
+         IF((I.LE.M).AND.(I.NE.N)) THEN
             DO K = L, N
                SCALE = SCALE + ABS(MATX(I,K))
             ENDDO
-            IF( SCALE.NE.0.0 ) THEN
+            IF(SCALE.NE.0.0) THEN
                DO K = L, N
                   MATX(I,K) = MATX(I,K) / SCALE
                   S         = S + MATX(I,K)*MATX(I,K)
@@ -4091,7 +4090,7 @@ c
                DO K = L, N
                   RV1(K) = MATX(I,K) / H
                ENDDO
-               IF( I.NE.M ) THEN
+               IF(I.NE.M) THEN
                   DO J = L, M
                      S = 0.0
                      DO K = L, N
@@ -4107,11 +4106,11 @@ c
                ENDDO
             ENDIF
          ENDIF
-         ANORM = MAX( ANORM, (ABS(WVEC(I))+ABS(RV1(I))) )
+         ANORM = MAX(ANORM, (ABS(WVEC(I))+ABS(RV1(I))))
       ENDDO
       DO I = N, 1, -1
-         IF( I.LT.N ) THEN
-            IF( G.NE.0.0 ) THEN
+         IF(I.LT.N) THEN
+            IF(G.NE.0.0) THEN
                DO J = L, N
                   VMAT(J,I) = (MATX(I,J)/MATX(I,L)) / G
                ENDDO
@@ -4137,14 +4136,14 @@ c
       DO I = N, 1, -1
          L = I+1
          G = WVEC(I)
-         IF( I.LT.N ) THEN
+         IF(I.LT.N) THEN
             DO J = L, N
                MATX(I,J) = 0.0
             ENDDO
          ENDIF
-         IF( G.NE.0.0 ) THEN
+         IF(G.NE.0.0) THEN
             G = 1.0/G
-            IF( I.NE.N ) THEN
+            IF(I.NE.N) THEN
                DO J = L, N
                   S = 0.0
                   DO K = L, M
@@ -4170,14 +4169,14 @@ c
          DO ITS = 1, 30
             DO L = K, 1, -1
                NM = L-1
-               IF( (ABS(RV1(L))  +ANORM) .EQ. ANORM ) GOTO 2
-               IF( (ABS(WVEC(NM))+ANORM) .EQ. ANORM ) GOTO 1
+               IF((ABS(RV1(L))  +ANORM) .EQ. ANORM) GOTO 2
+               IF((ABS(WVEC(NM))+ANORM) .EQ. ANORM) GOTO 1
             ENDDO
     1       C = 0.0
             S = 1.0
             DO I = L, K
                F = S*RV1(I)
-               IF( (ABS(F)+ANORM) .NE. ANORM ) THEN
+               IF((ABS(F)+ANORM) .NE. ANORM) THEN
                   G       = WVEC(I)
                   H       = SQRT(F*F+G*G)
                   WVEC(I) = H
@@ -4193,8 +4192,8 @@ c
                ENDIF
             ENDDO
     2       Z = WVEC(K)
-            IF( L.EQ.K ) THEN
-               IF( Z.LT.0.0 ) THEN
+            IF(L.EQ.K) THEN
+               IF(Z.LT.0.0) THEN
                   WVEC(K) = -Z
                   DO J = 1, N
                      VMAT(J,K) = -VMAT(J,K)
@@ -4202,15 +4201,15 @@ c
                ENDIF
                GOTO 3
             ENDIF
-            IF( ITS.EQ.30 ) RETURN
+            IF(ITS.EQ.30) RETURN
             X  = WVEC(L)
             NM = K-1
             Y  = WVEC(NM)
             G  = RV1(NM)
             H  = RV1(K)
-            F  = ( (Y-Z)*(Y+Z) + (G-H)*(G+H) ) / (2.0*H*Y)
-            G  = SQRT( F*F+1.0 )
-            F  = ( (X-Z)*(X+Z) + H*( (Y/(F+SIGN(G,F))) - H)  ) / X
+            F  = ((Y-Z)*(Y+Z) + (G-H)*(G+H)) / (2.0*H*Y)
+            G  = SQRT(F*F+1.0)
+            F  = ((X-Z)*(X+Z) + H*((Y/(F+SIGN(G,F))) - H)) / X
             C  = 1.0
             S  = 1.0
             DO J = L, NM
@@ -4235,7 +4234,7 @@ c
                ENDDO
                Z       = SQRT(F*F+H*H)
                WVEC(J) = Z
-               IF( Z.NE.0.0 ) THEN
+               IF(Z.NE.0.0) THEN
                   Z = 1.0/Z
                   C = F*Z
                   S = H*Z
@@ -4258,13 +4257,12 @@ c
       RETURN
       END
 
-c
-c-----------------------------------------------------------------------
-c
-      SUBROUTINE SVBKSB( U,W,V, NTOFIT,N, MP,NP, BETA,DX )
+c***********************************************************************
+
+      SUBROUTINE SVBKSB(U,W,V, NTOFIT,N, MP,NP, BETA,DX)
 
       INTEGER     NMAX
-      PARAMETER ( NMAX=101 )
+      PARAMETER (NMAX=101)
 
       INTEGER     NTOFIT, N, MP,NP
       REAL        U(MP,NP), W(NP), V(NP,NP)
@@ -4274,8 +4272,8 @@ c
       INTEGER     I, J
 
       DO J = 1, N
-         S = 0.
-         IF( W(J).NE.0. ) THEN
+         S = 0.0
+         IF(W(J).NE.0.0) THEN
             DO I = 1, NTOFIT
                S = S + U(I,J) * BETA(I)
             ENDDO
@@ -4284,7 +4282,7 @@ c
          TMP(J) = S
       ENDDO
       DO J = 1, N
-         S = 0.
+         S = 0.0
          DO I = 1, N
             S = S + V(J,I) * TMP(I)
          ENDDO
@@ -4293,6 +4291,7 @@ c
       RETURN
       END
 
+c***********************************************************************
 
       subroutine prg(g)
       real g(*)
