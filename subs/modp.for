@@ -1,4 +1,15 @@
 c***********************************************************************
+c
+c  Routines used by subroutine MODMAP (in model.for) and nothing else:
+c    subroutine modpini(tvis,tmod)
+c    subroutine modpcomp(uvw,nchan,sfreq,vis)
+c
+c  Used internally (only):
+c    subroutine modpDeco(uvw,freq0,ucoeff,vcoeff,wcoeff,lmn,factor,nsrc,
+c                        inttime,wts,nwts,cosd,sind)
+c    subroutine modprd(tvis,line,k1,k2,lmn)
+c
+c***********************************************************************
 
       subroutine modpcomp(uvw,nchan,sfreq,vis)
 
@@ -97,10 +108,10 @@ c  Load the point source file form a image dataset.
 c-----------------------------------------------------------------------
       include 'modp.h'
 
-      logical ok
-      integer tcmp,iostat,k1,k2,i,length,iax,coObj
-      double precision dtemp,radel,decdel,x1(2),radec(2)
-      character fluxst*32,line*132
+      logical   ok
+      integer   coObj, i, ifrq, iostat, k1, k2, length, tcmp
+      double precision decdel, dtemp, radec(2), radel, x1(2)
+      character algo*3, fluxst*32, line*132
 
       external  dsinc, len1
       integer   len1
@@ -108,12 +119,11 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 c     Determine the reference frequency.
       call coInit(tmod)
-      call coFindAx(tmod,'frequency',iax)
-      if (iax.gt.0) then
-        call coVelSet(tmod,'frequency')
-        call coCvt1(tmod,iax,'op',0d0,'aw',freq0)
+      call coSpcSet(tmod, 'FREQ', ifrq, algo)
+      if (ifrq.ne.0) then
+        call coCvt1(tmod, ifrq, 'op', 0d0, 'aw', freq0)
       else
-        freq0 = 0
+        freq0 = 0d0
       endif
       call coFin(tmod)
 
