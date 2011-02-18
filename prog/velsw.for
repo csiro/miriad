@@ -22,17 +22,17 @@ c@ in
 c       Name of the input image data set.  No default.
 c
 c@ axis
-c       This determines what the labelling on the 'velocity' axis will
-c       be changed to.  Possible values are "frequency", "optical" (for
-c       velocity using the optical convention), or "radio" (for velocity
-c       using the radio convention).  No default.
+c       This determines what the labelling on the spectral axis will
+c       be changed to.  Possible values are 'frequency', 'radio' (for
+c       velocity using the radio convention), or 'optical' (for velocity
+c       using the optical convention).  No default.
 c
 c       Optionally you can give a second value to define the rest frame.
 c       This can be "barycentre" (solar system barycentre), "lsr" (Local
 c       Standard of Rest) or "observatory" (topocentric).  The default
 c       is not to change this.
 c
-c$Id: velsw.for,v 1.2 2011/02/17 03:16:52 cal103 Exp $
+c$Id: velsw.for,v 1.3 2011/02/18 05:16:10 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -42,29 +42,29 @@ c-----------------------------------------------------------------------
       integer   NFRAME, NSWITCH
       parameter (NFRAME=3, NSWITCH=3)
 
-      integer   if, is, lIn, nf, ns, nsize(MAXNAX)
-      character ctype*8, frame*12, frames(NFRAME)*12, ftypes(NFRAME)*3,
-     *          in*64, switch*9, switches(NSWITCH)*12, version*72,
-     *          vtypes(NSWITCH)*4
+      integer   iframe, ifrq, isw, lIn, nf, nsw, nsize(MAXNAX)
+      character algo*3, ctype*8, frame*12, frames(NFRAME)*12,
+     *          ftypes(NFRAME)*3, in*64, switch*9, switches(NSWITCH)*12,
+     *          version*72, vtypes(NSWITCH)*4
 
       external  binsrcha, versan
       integer   binsrcha
       character versan*72
 
-      data switches/'frequency   ','optical     ','radio       '/
-      data vtypes  /'FREQ',        'FELO',        'VELO'        /
-      data frames  /'barycentre  ','lsr         ','observatory '/
-      data ftypes  /'HEL',         'LSR',         'OBS'         /
+      data switches/'frequency',  'radio', 'optical'/
+      data vtypes  /'FREQ',       'VELO',  'FELO'/
+      data frames  /'barycentre', 'lsr',   'observatory'/
+      data ftypes  /'HEL',        'LSR',   'OBS'/
 c-----------------------------------------------------------------------
       version = versan('velsw',
-     *                 '$Revision: 1.2 $',
-     *                 '$Date: 2011/02/17 03:16:52 $')
+     *                 '$Revision: 1.3 $',
+     *                 '$Date: 2011/02/18 05:16:10 $')
 
 c     Get input parameters.
       call keyini
       call keya('in',in,' ')
-      call keymatch('axis',NSWITCH,switches,1,switch,ns)
-      if (ns.eq.0) call bug('f',
+      call keymatch('axis',NSWITCH,switches,1,switch,nsw)
+      if (nsw.eq.0) call bug('f',
      *  'An axis type for the output must be given')
       call keymatch('axis',NFRAME, frames,1,frame,nf)
       call keyfin
@@ -75,19 +75,20 @@ c     Check inputs.
 c     Open the input, and find the velocity axis.
       call xyopen(lIn,in,'old',MAXNAX,nsize)
 
-      is = binsrcha(switch,switches,NSWITCH)
+      isw = binsrcha(switch,switches,NSWITCH)
       if (nf.eq.1) then
-        if = binsrcha(frame,frames,NFRAME)
-        ctype = vtypes(is)//'-'//ftypes(if)
+        iframe = binsrcha(frame,frames,NFRAME)
+        ctype = vtypes(isw)//'-'//ftypes(iframe)
       else
-        ctype = vtypes(is)
+        ctype = vtypes(isw)
       endif
 
-c     Perform the transformation
-      call coinit(lIn)
-      call covelset(lIn,ctype)
-      call cowrite(lIn,lIn)
-      call cofin(lIn)
+c     Perform the transformation.
+      call coInit(lIn)
+      call coSpcSet(lIn, ctype, ifrq, algo)
+      if (ifrq.eq.0) call bug('f','No spectral axis in input image')
+      call coWrite(lIn, lIn)
+      call coFin(lIn)
 
 c     Write out some history.
       call hisopen(lIn,'append')
