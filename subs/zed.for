@@ -23,7 +23,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: zed.for,v 1.2 2011/02/14 07:12:23 cal103 Exp $
+c $Id: zed.for,v 1.3 2011/02/18 04:40:51 cal103 Exp $
 c***********************************************************************
 
 c* ZedScale -- Determine conv. factor from channels to magnetic field.
@@ -32,9 +32,9 @@ c: Zeeman
 c+
       subroutine ZedScale (lunI, freq, scale, noline)
 
-      integer lunI
-      real scale, freq
-      logical noline
+      integer   lunI
+      real      scale, freq
+      logical   noline
 c  ---------------------------------------------------------------------
 c  Depending on the first axis type, set the scale to convert from a
 c  channel increment to a frequency increment (Hz) and then if possible,
@@ -50,34 +50,32 @@ c               magnetic field strength (G), else scale converts one
 c               channel to Hz
 c    noline  l  If .false. the user specified FREQ was matched
 c-----------------------------------------------------------------------
-      real light
-      parameter (light = 2.9979e5)
-      integer nfreq
-      parameter (nfreq = 4)
+      integer   NFREQ
+      parameter (NFREQ = 4)
 
-      double precision cdelt, crval, crpix
-      integer j, ifreq, imch, ifax
-      character ctype*9
-
-      integer cfreq(nfreq)
-      real zsplit(nfreq)
+      integer   cfreq(NFREQ), ifreq, imch, ifrq, j
+      real      zsplit(NFREQ)
+      double precision cdelt, crpix, crval
+      character algo*3, ctype*9
 
 c     Splitting in Hz/G for various lines
       data cfreq  /1420,   1665,     1667,     1720  /
-      data zsplit /2.80E6, 3.2787E6, 1.9608E6, 0.6536E6/
+      data zsplit /2.80e6, 3.2787e6, 1.9608e6, 0.6536e6/
 c-----------------------------------------------------------------------
 c     Get frequency increment in Hz.
-      call coinit(lunI)
-      call covelset(lunI, 'freq')
-      call cofindax(lunI, 'spectral', ifax)
-      call coaxget(lunI, ifax, ctype, crpix, crval, cdelt)
-      call cofin(lunI)
-      cdelt = cdelt * 1e9
+      call coInit(lunI)
+      call coSpcSet(lunI, 'FREQ', ifrq, algo)
+      if (ifrq.eq.0) call bug('f','No spectral axis')
+      if (algo.ne.' ') call bug('f',
+     *  'Can''t handle non-linear frequency axes')
+      call coAxGet(lunI, ifrq, ctype, crpix, crval, cdelt)
+      call coFin(lunI)
+      cdelt = cdelt * 1d9
 
 c     Integer frequency in MHz; try and match it.
       ifreq = nint(1000*freq)
       noline = .true.
-      do j = 1, nfreq
+      do j = 1, NFREQ
         if (ifreq.eq.cfreq(j)) then
           imch = j
           noline = .false.
@@ -85,11 +83,10 @@ c     Integer frequency in MHz; try and match it.
         endif
       enddo
 
-10    if (noline) then
+ 10   if (noline) then
 c       No match, scale just converts channels to Hz.
         scale = cdelt
       else
-
 c       Convert channels to Gauss.
         scale = cdelt / zsplit(imch)
       endif
