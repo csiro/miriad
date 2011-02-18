@@ -23,7 +23,7 @@ c@ select
 c       Visibility data selection - only 'uvrange' selection is
 c       supported.  See the help on "select" for more information.
 c
-c$Id: im2uv.for,v 1.2 2011/02/15 06:39:59 cal103 Exp $
+c$Id: im2uv.for,v 1.3 2011/02/18 04:42:25 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -47,8 +47,8 @@ c-----------------------------------------------------------------------
       character versan*72
 c-----------------------------------------------------------------------
       version = versan('im2uv',
-     *                 '$Revision: 1.2 $',
-     *                 '$Date: 2011/02/15 06:39:59 $')
+     *                 '$Revision: 1.3 $',
+     *                 '$Date: 2011/02/18 04:42:25 $')
 
 c     Get the input parameters.
       call keyini
@@ -266,7 +266,8 @@ c-----------------------------------------------------------------------
       real      epoch, vobs
       double precision cdelt, crpix, dec, f0, obsdec, obsra, ra,
      *          restfreq, sdf, sfreq, t
-      character ctype*32, line*80, object*32, observer*32, telescop*32
+      character algo*3, ctype*32, line*80, object*32, observer*32,
+     *          telescop*32
 c-----------------------------------------------------------------------
 c     Set up the output dataset.
       call uvset(tOut,'data','wide',0,1.0,1.0,1.0)
@@ -277,14 +278,13 @@ c     Set up the output dataset.
       call coInit(tIn)
 
 c     Frequency info.
-      call coFindAx(tIn,'frequency',iax)
+      call coSpcSet(tIn, 'FREQ', iax, algo)
       if (iax.eq.0) then
         ctype = 'FREQ-OBS'
         sfreq = 1.4
         sdf = 0.1
         f0 = sfreq
       else
-        call coVelSet(tIn,'freq')
         call coAxGet(tIn,iax,ctype,crpix,f0,sdf)
         call coCvt1(tIn,iax,'ap',1d0,'aw',sfreq)
       endif
