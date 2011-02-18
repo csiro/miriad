@@ -64,7 +64,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: boxes.for,v 1.3 2011/02/14 05:48:11 cal103 Exp $
+c $Id: boxes.for,v 1.4 2011/02/18 04:22:44 cal103 Exp $
 c--
 c***********************************************************************
 
@@ -72,10 +72,10 @@ c* BoxInput -- Read command line box specification.
 c& mjs
 c: region-of-interest
 c+
-      subroutine BoxInput(key,file,boxes,maxboxes)
+      subroutine BoxInput(key, file, boxes, maxboxes)
 
       character key*(*),file*(*)
-      integer maxboxes,boxes(maxboxes)
+      integer   maxboxes, boxes(maxboxes)
 c  ---------------------------------------------------------------------
 c  Read the box specification from the command line.
 c
@@ -85,11 +85,12 @@ c               "region". If this is a blank string, then the user
 c               input routines are not called, and the default region
 c               of interest is used.
 c    file       Name of the Miriad data-set used to extrac coordinate
-c               transformation info (in particular crval,crpix and cdelt).
+c               transformation info (in particular crpix, cdelt, and
+c               crval).
 c    maxboxes   The size of the boxes array.
 c  Output:
-c    boxes      An intermediate form of the boxes specification. This is
-c               used by subsequent BOX routines to
+c    boxes      An intermediate form of the boxes specification.  This
+c               is used by subsequent BOX routines to
 c--
 c  The variables xytype and ztype give the units that are currently
 c  expected for specifying coordinates in x and y, and z. Possible
@@ -101,14 +102,15 @@ c-----------------------------------------------------------------------
       include 'boxes.h'
       include 'maxnax.h'
 
-      integer ntypes
-      parameter (ntypes=10)
-      integer nshape,length,k1,k2,n,spare,offset,i,boxtype,lu(3)
-      character types(ntypes)*9,type*9,spec*4096,xytype*6,ztype*6
-      character line*64
-      integer iax,iax1,iax2,tmp(4),nsize(MAXNAX)
-      double precision t1,t2,t3
-      logical more,coordini,units
+      integer   NTYPES
+      parameter (NTYPES=10)
+
+      logical   coordini, more, units
+      integer   boxtype, i, iax, iax1, iax2, k2, length,k1, lu(3), n,
+     *          nshape, nsize(MAXNAX), offset, spare, tmp(4)
+      double precision cdelt, crpix, crval
+      character algo*3, ctype*9, spec*4096, type*9, types(NTYPES)*9,
+     *          xytype*6, ztype*6
 
       external  keyprsnt, len1
       logical   keyprsnt
@@ -142,19 +144,17 @@ c-----------------------------------------------------------------------
         spare = maxboxes - offset - HDR
         if (spare.lt.0)
      *    call BoxBug(spec,'Region too complex')
-c
-c  Determine the subcommand type.
-c
+
+c       Determine the subcommand type.
         call GetTok(spec,k1,k2,type,length)
         boxtype = 0
         if (length.le.len(types(1)) .and. length.gt.0) then
-          do i = 1, ntypes
+          do i = 1, NTYPES
             if (type(1:length).eq.types(i)(1:length)) boxtype = i
           enddo
         endif
-c
-c  Process unit specification subcommands.
-c
+
+c       Process unit specification subcommands.
         units = .false.
         if (boxtype.eq.ABSPIX) then
           xytype = 'abspix'
@@ -171,10 +171,9 @@ c
         else if (boxtype.eq.KMS) then
           ztype = 'kms'
           units = .true.
-c
-c  Process region specification subcommands.
-c
+
         else if (boxtype.eq.IMAGE .or. boxtype.eq.QUART) then
+c         Process region specification subcommands.
           boxes(offset+XMIN) = 0
           boxes(offset+XMAX) = 0
           boxes(offset+YMIN) = 0
@@ -204,11 +203,11 @@ c
         else
           call BoxBug(spec,'Unrecognised subregion command')
         endif
-c
-c  Finish up with this subcommand.
-c
+
+c       Finish up with this subcommand.
         if (boxtype.eq.ABSPIX) then
           continue
+
         else if (units) then
           if (.not.coordini) then
             coordini = .true.
@@ -220,40 +219,41 @@ c
             call rdhdi(lu,'naxis2',lu(3),1)
             call xyclose(lu)
           endif
+
           if (boxtype.eq.ARCSEC) then
             call coFindAx(lu,'longitude',iax1)
             call coFindAx(lu,'latitude',iax2)
             if (min(iax1,iax2).ne.1 .or. max(iax1,iax2).ne.2)
      *        call BoxBug(spec,'First two axes are not in arcsec')
           else if (boxtype.eq.KMS) then
-            call coFindAx(lu,'spectral',iax)
+            call coFindAx(lu, 'spectral', iax)
             if (iax.ne.3) call BoxBug(spec,'No spectral axis present')
-            call coAxGet(lu,iax,line,t1,t2,t3)
-            if (line(1:4).ne.'FELO' .and. line(1:4).ne.'VELO')
-     *        call coVelSet(lu,'VELO')
+            call coAxGet(lu, iax, ctype, crpix, crval, cdelt)
+            if (ctype(1:4).ne.'VRAD' .and.
+     *          ctype(1:4).ne.'VOPT' .and.
+     *          ctype(1:4).ne.'VELO' .and.
+     *          ctype(1:4).ne.'FELO') then
+              call coSpcSet(lu, 'VRAD', iax, algo)
+            endif
           endif
         else
           boxes(offset+ITYPE) = boxtype
           offset = offset + boxes(offset+SIZE) + HDR
           nshape = nshape + 1
         endif
-c
-c  Check that we have finished this command.
-c
+
+c       Check that we have finished this command.
         if (k1.le.k2) call BoxBug(spec,'Unexpected trailing characters')
-c
-c  Get the next subcommand.
-c
+
+c       Get the next subcommand.
         more = keyprsnt(key)
         if (more) call keya(key,spec,' ')
       enddo
-c
-c  Release the coordinate system, if one has been allocated.
-c
+
+c     Release the coordinate system if one has been allocated.
       if (coordini) call coFin(lu)
-c
-c  Fill in a default object if none was given.
-c
+
+c     Fill in a default object if none was given.
       if (nshape.eq.0) then
         boxes(offset+ITYPE) = IMAGE
         boxes(offset+XMIN)  = 0
@@ -790,9 +790,9 @@ c
 c  Input:
 c    naxis      The dimension of nsize, minv and maxv.
 c    nsize      The dimensions of the data set.
-c    flags      Character string giving some extra options. Flags are:
-c                 's'   Give warning if region-of-interest is not a regular
-c                       shape.
+c    flags      Character string giving some extra options.  Flags are:
+c                 's'   Give warning if region-of-interest is not a
+c                       regular shape.
 c  Input/Output:
 c    boxes      This contains an intermediate form of the subregion
 c               specified by the user. On output, certain defaults are
@@ -902,7 +902,8 @@ c    boxes      This contains an intermediate form of the subregion
 c               specified by the user.
 c
 c  Output:
-c    blc,trc    Min and max values of the region selected along each axis.
+c    blc,trc    Min and max values of the region selected along each
+c               axis.
 c
 c-----------------------------------------------------------------------
       include 'boxes.h'
@@ -1139,10 +1140,11 @@ c  Input:
 c    naxis      The dimension of "plane".
 c    plane      The index, along the third, fourth, etc dimension of the
 c               cube to be accessed.
-c    flags      A string. Each character indicates an extra step to perform.
-c               Currently there is only one possibility:
+c    flags      A string. Each character indicates an extra step to
+c               perform.  Currently there is only one possibility:
 c                 'r' Make runs specification relative to xminv,yminv.
-c    boxes      Some intermediate form of the boxes specified by the user.
+c    boxes      Some intermediate form of the boxes specified by the
+c               user.
 c    maxruns    Max number of runs that this program can cope with.
 c
 c  Output:
@@ -1520,11 +1522,11 @@ c    \          /     \         /
 c
 c  Input:
 c    nverts     Number of veritces of the polygon.
-c    verts      The vertices of the polygon. The vertices are assumes to have
-c               no redundancies (i.e. all vertices are distinct), and to
-c               trace out a anti-clockwise path.
-c    j0         The value of y for which we want to determine the runs inside
-c               the polygon.
+c    verts      The vertices of the polygon. The vertices are assumes to
+c               have no redundancies (i.e. all vertices are distinct),
+c               and to trace out a anti-clockwise path.
+c    j0         The value of y for which we want to determine the runs
+c               inside the polygon.
 c    maxgoes    Max number of runs is maxgoes/2.
 c  Output:
 c    goes       The runs for this value of y.
@@ -1610,15 +1612,13 @@ c***********************************************************************
 
       subroutine BoxBug(spec,message)
 
-      character message*(*),spec*(*)
+      character message*(*), spec*(*)
 c-----------------------------------------------------------------------
-c  This generates an error message when a subregion command appears
-c  no good. This never returns.
+c  Generate an error message and die.
 c
 c  Input:
 c    spec       The subregion command.
 c    message    The error message.
-c
 c-----------------------------------------------------------------------
       integer   l
       character line*80
