@@ -4,9 +4,9 @@ c= immerge -- Linear merging of images.
 c& rjs
 c: map combination
 c+
-c       IMMERGE is a Miriad task to linearly merge together two images
-c       with different resolutions.  The two images must be of the same
-c       field and use the same coordinate system.
+c       IMMERGE is a Miriad task to merge linearly two images with
+c       different resolutions.  The two images must be of the same field
+c       and use the same coordinate system.
 c
 c       In combining the data, it is assumed that the low resolution
 c       image better represents the short spacing data, whereas the
@@ -86,10 +86,9 @@ c                    images are really zero beyond the edges of the two
 c                    input images, then padding with zeros might be
 c                    preferable.  This is particularly so if IMMERGE is
 c                    deducing the flux calibration scale factor.
-c         feather    This merges the two images together in a fashion
-c                    similar to AIPS IMERG.  This method is generally
-c                    less desirable than the default scheme used by
-c                    IMMERGE.
+c         feather    This merges the two images in a fashion similar to
+c                    AIPS IMERG.  This method is generally less
+c                    desirable than the default scheme used by IMMERGE.
 c         shift      Determine the optimum shift to apply to the low
 c                    resolution image to make it align with the high
 c                    resolution one.
@@ -98,21 +97,10 @@ c                    match any residual primary beam response in the
 c                    high-resolution image.  This option causes this
 c                    step to be skipped.
 c
-c$Id: immerge.for,v 1.4 2010/11/22 05:45:47 cal103 Exp $
+c$Id: immerge.for,v 1.5 2011/02/18 04:50:21 cal103 Exp $
 c--
-c
 c  History:
-c    rjs  12jul97 Original version.
-c    rjs  16mar98 Added region parameter.
-c    rjs  19aug98 Fix bug introduced on 16 March where the first plane
-c                 in the output was the last plane in the selected
-c                 region for factor determination.
-c    rjs  02sep98 Subroutine name change only to avoid a LINUX conflict.
-c    rjs  23jul99 Taper down the low resolution image to make it
-c                 compatible with the high resolution one.  Added shift
-c                 option.
-c    rjs  29mar00 Added options=notaper.
-c  Bugs:
+c    Refer to the RCS log, v1.1 includes prior revision information.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -131,8 +119,8 @@ c-----------------------------------------------------------------------
      *          bpa, bpa1, bpa2, bpat, du, dv, fac, freq, lambda, norm,
      *          pfac, sfac, sxx, sxy, syy, temp, uvhi, uvlo, xs, ys
       double precision cdelt1, cdelt2, freq1, freq2, x1(2), x2(2)
-      character device*64, in1*80, in2*80, line*80, mess1*64, mess2*64,
-     *          out*80, unit*12, units(NUNITS)*12, version*72
+      character algo*3, device*64, in1*80, in2*80, line*80, mess1*64,
+     *          mess2*64, out*80, unit*12, units(NUNITS)*12, version*72
 
       logical   keyprsnt
       integer   nextpow2
@@ -143,8 +131,8 @@ c-----------------------------------------------------------------------
      *           'feet        '/
 c-----------------------------------------------------------------------
       version = versan('immerge',
-     *                 '$Revision: 1.4 $',
-     *                 '$Date: 2010/11/22 05:45:47 $')
+     *                 '$Revision: 1.5 $',
+     *                 '$Date: 2011/02/18 04:50:21 $')
 
       call keyini
       call GetOpt(domerge,dozero,dofeath,doshift,notaper)
@@ -179,21 +167,19 @@ c-----------------------------------------------------------------------
      *  call bug('f','Inputs do not require any work')
       call keyfin
       dotaper = (domerge .or. dofac) .and. .not.notaper
-c
-c  Open the input datasets, and get their beam parameters.
-c
+
+c     Open the input datasets, and get their beam parameters.
       call xyopen(lIn1,in1,'old',3,nIn)
       call coInit(lIn1)
       call GetBeam(lIn1,in1,bmaj1,bmin1,bpa1,mess1)
-      call coGetd(lIn1,'cdelt1',cdelt1)
-      call coGetd(lIn1,'cdelt2',cdelt2)
+      call coGetD(lIn1,'cdelt1',cdelt1)
+      call coGetD(lIn1,'cdelt2',cdelt2)
 
       call xyopen(lIn2,in2,'old',3,ntemp)
       call coInit(lIn2)
       call GetBeam(lIn2,in2,bmaj2,bmin2,bpa2,mess2)
-c
-c  Check that the two images are compatible.
-c
+
+c     Check that the two images are compatible.
       do i = 1, 3
         if (nIn(i).ne.nTemp(i)) call bug('f','Incompatible image sizes')
       enddo
@@ -203,18 +189,16 @@ c
 
       call rdhdi(lIn1,'naxis',naxis,1)
       naxis = min(naxis,MAXNAX)
-c
-c  Round up the total sizes to the next power of two.
-c
+
+c     Round up the total sizes to the next power of two.
       ngx = nextpow2(nIn(1)+ngx)
       ngy = nextpow2(nIn(2)+ngy)
       if (max(ngx,ngy).gt.MAXDIM)
      *  call bug('f','Image+guard size too big for me')
-c
-c  Determine which of the two images has the coarser resolution, and
-c  determine the gaussian to convolve with to bring one to the same
-c  resolution as the other.
-c
+
+c     Determine which of the two images has the coarser resolution, and
+c     determine the gaussian to convolve with to bring one to the same
+c     resolution as the other.
       if (bmaj1*bmin1.gt.bmaj2*bmin2) call bug('f',
      *  'The first input image must be the high resolution')
       call GauDFac(bmaj2,bmin2,bpa2,bmaj1,bmin1,bpa1,
@@ -226,14 +210,12 @@ c
 c       write(line,'(a,1pe10.3)')'Flux unit conversion factor:',
 c     *                                 abs(cdelt1*cdelt2/norm)
 c       call trimout(line)
-c
-c  Convert the gaussian parameters to the Fourier domain.
-c
+
+c     Convert the gaussian parameters to the Fourier domain.
       call CvtParam(norm,bmaj,bmin,bpa,cdelt1,cdelt2,ngx,ngy,
      *                                        sfac,sxx,sxy,syy)
-c
-c  Determine the scaling factor to convert uvlo and uvhi to lambda.
-c
+
+c     Determine the scaling factor to convert uvlo and uvhi to lambda.
       if (dofeath .or. dofac) then
         if (unit.eq.'nanoseconds') then
           temp = 1e-9*CMKS
@@ -246,15 +228,19 @@ c
         else
           call bug('f','Unrecognised units')
         endif
+
         if (unit.ne.'klambda') then
-          call coVelSet(lIn1,'freq')
-          call coFindAx(lIn1,'freq',iax)
-          call coCvt1(lIn1,iax,'op',0d0,'aw',freq1)
-          call coVelSet(lIn2,'freq')
-          call coFindAx(lIn2,'freq',iax)
-          call coCvt1(lIn2,iax,'op',0d0,'aw',freq2)
-          if (min(freq1,freq2).le.0.0)
+          call coSpcSet(lIn1, 'FREQ', iax, algo)
+          if (iax.eq.0) call bug('f','No spectral axis in image 1')
+          call coCvt1(lIn1, iax, 'op', 0d0, 'aw', freq1)
+
+          call coSpcSet(lIn2, 'FREQ', iax, algo)
+          if (iax.eq.0) call bug('f','No spectral axis in image 2')
+          call coCvt1(lIn2, iax, 'op', 0d0, 'aw', freq2)
+
+          if (min(freq1,freq2).le.0d0)
      *      call bug('f','Could not determine observing frequency')
+
           freq = sqrt(freq1*freq2)
           write(line,'(a,f8.3,a)')'Using a frequency of ',freq,
      *        ' GHz, to convert annulus to wavelengths'
@@ -267,9 +253,8 @@ c
       endif
       du = 1/(ngx*cdelt1)
       dv = 1/(ngy*cdelt2)
-c
-c  Allocate memory, if needed.
-c
+
+c     Allocate memory if needed.
       if (dofac .or. domerge) then
         call memAlloc(pIn1,(ngx+2)*ngy,'r')
         call memAlloc(pIn2,(ngx+2)*ngy,'r')
@@ -282,9 +267,8 @@ c
           pWt2 = pIn2
         endif
       endif
-c
-c  Determine the scale factor.
-c
+
+c     Determine the scale factor.
       if (dofac) then
         call boxSet(box,3,nIn,' ')
         pfac = (4.0*log(2.0))/PI*abs(cdelt1*cdelt2)/(bmaj2*bmin2)
@@ -305,9 +289,8 @@ c
           call trimout(line)
         endif
       endif
-c
-c  Open the output.
-c
+
+c     Open the output.
       if (doOut) then
         nOut(1) = nIn(1)
         nOut(2) = nIn(2)
@@ -361,7 +344,9 @@ c
       endif
 
       end
+
 c***********************************************************************
+
       subroutine CvtParam(norm,bmaj,bmin,bpa,cdelt1,cdelt2,ngx,ngy,
      *                                        sfac,sxx,sxy,syy)
 
@@ -369,7 +354,6 @@ c***********************************************************************
       double precision cdelt1,cdelt2
       integer ngx,ngy
       real sfac,sxx,syy,sxy
-c
 c-----------------------------------------------------------------------
       include 'mirconst.h'
       real theta,bmajf,bminf,c2,s2,a,b,dx,dy
@@ -390,7 +374,9 @@ c-----------------------------------------------------------------------
       sxy = -(b-a)*s2 * dx*dy
 
       end
+
 c***********************************************************************
+
       subroutine Normalis(lIn,lOut,nx,ny,fac)
 
       integer lIn,lOut,nx,ny
@@ -409,12 +395,13 @@ c-----------------------------------------------------------------------
       enddo
 
       end
+
 c***********************************************************************
+
       subroutine WriteOut(lOut,Data,ngx,ny)
 
       integer ngx,ny,lOut
       real Data(ngx+2,ny)
-c
 c-----------------------------------------------------------------------
       integer j
 c-----------------------------------------------------------------------
@@ -423,11 +410,13 @@ c-----------------------------------------------------------------------
       enddo
 
       end
+
 c***********************************************************************
+
       subroutine GetOpt(domerge,dozero,dofeath,doshift,notaper)
 
       logical domerge,dozero,dofeath,doshift,notaper
-
+c-----------------------------------------------------------------------
 c  Get extra processing parameters.
 c-----------------------------------------------------------------------
       integer NOPTS
@@ -448,13 +437,15 @@ c-----------------------------------------------------------------------
       notaper =      present(5)
 
       end
+
 c***********************************************************************
+
       subroutine MkHead(lIn,lOut,version,fac,mess1,mess2)
 
       integer   lIn, lOut
       character version*(*), mess1*(*), mess2*(*)
       real      fac
-c
+c-----------------------------------------------------------------------
 c  Make the output dataset header.
 c-----------------------------------------------------------------------
       character line*64
@@ -482,9 +473,10 @@ c     Create the output history.
       call hisclose(lOut)
 
       end
+
 c***********************************************************************
-      subroutine GetDat(lIn,In,nx,ny,ngx,ngy,dozero,
-     *  dotaper,Wt1,Wt2)
+
+      subroutine GetDat(lIn,In,nx,ny,ngx,ngy,dozero,dotaper,Wt1,Wt2)
 
       integer lIn,nx,ny,ngx,ngy
       logical dozero,dotaper
@@ -496,17 +488,13 @@ c-----------------------------------------------------------------------
       logical flags(MAXDIM)
       character ctaper*4
 c-----------------------------------------------------------------------
-c
-c  Get the weight image
-c
+c     Get the weight image
       ntaper = 0
       staper = 0
       if (dotaper) call mosWts(Wt1,Wt2,nx,ny,0,0)
 
       do j = 1, ny
-c
-c  Get pixels and flags. Set bad pixels to zero.
-c
+c       Get pixels and flags and set bad pixels to zero.
         call xyRead(lIn,j,In(1,j))
         call xyflgrd(lIn,j,flags)
         do i = 1, nx
@@ -525,15 +513,12 @@ c
           enddo
         endif
 
-c
-c  Zero extend the image.
-c
+c       Zero extend the image.
         do i = nx+1, ngx
           In(i,j) = 0
         enddo
-c
-c  Reflect the image in a bizzar fashion, if needed.
-c
+
+c       Reflect the image in a bizzar fashion, if needed.
         if (.not.dozero) then
           if (nx+1.eq.ngx) then
             In(nx+1,j) = 0.5*(In(nx,j) + In(1,j))
@@ -549,17 +534,15 @@ c
           endif
         endif
       enddo
-c
-c  Zero the rest of the guard band.
-c
+
+c     Zero the rest of the guard band.
       do j = ny+1, ngy
         do i = 1, ngx
           In(i,j) = 0
         enddo
       enddo
-c
-c  Reflect the image into the guard band if needed.
-c
+
+c     Reflect the image into the guard band if needed.
       if (.not.dozero) then
         if (ny+1.eq.ngy) then
           do i = 1, ngx
@@ -578,9 +561,8 @@ c
           enddo
         endif
       endif
-c
-c  Report on the tapering.
-c
+
+c     Report on the tapering.
       if (ntaper.gt.0) then
         staper = staper/ntaper
         write(ctaper,'(f4.2)') staper
@@ -588,21 +570,21 @@ c
      *    'resolution image is small (mean='//ctaper//')')
         if (staper.lt.0.1) call bug('f','This is too small')
       endif
-c
-c  Fourier transform the image.
-c
+
+c     Fourier transform the image.
       call FFFT(In,ngx,ngy)
 
       end
+
 c***********************************************************************
+
       subroutine GetBeam(lIn,in,bmaj,bmin,bpa,message)
 
       integer lIn
       character in*(*),message*(*)
       real bmaj,bmin,bpa
-
+c-----------------------------------------------------------------------
 c  Get the gaussian beam parameters corresponding to this observation.
-c
 c-----------------------------------------------------------------------
       include 'mirconst.h'
       character line*80,pbtype*16,label*18
@@ -616,10 +598,9 @@ c-----------------------------------------------------------------------
       call rdhdr(lIn,'bmaj',bmaj,0.0)
       call rdhdr(lIn,'bmin',bmin,0.0)
       call rdhdr(lIn,'bpa',bpa,0.0)
-c
-c  If the gaussian parameters were not in the header, assume its
-c  a single dish, and try to get the primary beam size.
-c
+
+c     If the Gaussian parameters were not in the header, assume its
+c     a single dish, and try to get the primary beam size.
       if (bmaj*bmin.le.0) then
         call mosLoad(lIn,npnt)
         line = 'Cannot determine gaussian beam '//
@@ -646,7 +627,9 @@ c
       message = line
 
       end
+
 c***********************************************************************
+
       subroutine GetFac(lIn1,lIn2,box,In1,In2,nx,ny,ngx,ngy,
      *  dozero,device,sfac,sxx,sxy,syy,uvlo,uvhi,du,dv,fac,pfac,
      *  dotaper,Wt1,Wt2,xs,ys,doshift)
@@ -658,7 +641,7 @@ c***********************************************************************
       real sfac,sxx,sxy,syy,uvlo,uvhi,fac,du,dv,pfac,xs,ys
       character device*(*)
       real Wt1(nx,ny),Wt2(nx,ny)
-
+c-----------------------------------------------------------------------
 c  Determine the scale factor to normalise everything.
 c
 c  Inputs:
@@ -686,15 +669,12 @@ c-----------------------------------------------------------------------
       character itoaf*8
       external  itoaf
 c-----------------------------------------------------------------------
-c
-c  Determine the range of planes to process.
-c
+c     Determine the range of planes to process.
       call boxInfo(box,3,blc,trc)
       kmin = blc(3)
       kmax = trc(3)
-c
-c  Determine the number of pixels which are in the overlap annulus.
-c
+
+c     Determine the number of pixels which are in the overlap annulus.
       nul = nint(abs(uvlo/du)-0.5)
       nuh = nint(abs(uvhi/du)+0.5)
       nvl = nint(abs(uvlo/dv)-0.5)
@@ -705,9 +685,8 @@ c
       call memAlloc(pY,n,'c')
       call memAlloc(pUU,n,'i')
       call memAlloc(pVV,n,'i')
-c
-c  Get all the data in the annuli.
-c
+
+c     Get all the data in the annuli.
       np = 0
       do k = kmin, kmax
         call boxRuns(1,k,' ',box,runs,MAXRUNS,nruns,
@@ -738,9 +717,8 @@ c
       call trimout('Number of data points in the annulus: '
      *                                        //itoaf(np))
       if (np.eq.0) call bug('f','No Data points found in annulus')
-c
-c  Determine the offset.
-c
+
+c     Determine the offset.
       if (doshift) then
         call GetShift(np,memi(pUU),memi(pVV),memc(pX),memc(pY),
      *                                        In1,ngx,ngy,xs,ys)
@@ -749,41 +727,38 @@ c
         xs = 0
         ys = 0
       endif
-c
-c  Fit for the scale factor.
-c
+
+c     Fit for the scale factor.
       call DetFac(memc(pX),memc(pY),2*np,fac)
-c
-c  Plot the scale factor, if the user wanted this.
-c
+
+c     Plot the scale factor, if the user wanted this.
       if (device.ne.' ') call PlotFac(device,memc(pX),memc(pY),
      *                                2*np,fac,pfac,doshift)
-c
-c  Free the allocated memory.
-c
+
+c     Free the allocated memory.
       call memFree(pX,n,'c')
       call memFree(pY,n,'c')
       call memFree(pUU,n,'i')
       call memFree(pVV,n,'i')
-c
-c  Reset to select the first plane.
-c
+
+c     Reset to select the first plane.
       if (kmax.ne.1) then
         call xysetpl(lIn1,1,1)
         call xysetpl(lIn2,1,1)
       endif
 
       end
+
 c***********************************************************************
+
       subroutine GetShift(np,uu,vv,x,y,data,ngx,ngy,xs,ys)
 
       integer np,ngx,ngy
       integer uu(np),vv(np)
       complex x(np),y(np),data(ngx/2+1,ngy)
       real xs,ys
-
+c-----------------------------------------------------------------------
 c  Determine the required shift to optimally align the X and Y data.
-c
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       integer i,j,k,l
@@ -793,9 +768,8 @@ c-----------------------------------------------------------------------
           data(i,j) = (0.0,0.0)
         enddo
       enddo
-c
-c  Accumulate the cross correlation between X and Y.
-c
+
+c     Accumulate the cross correlation between X and Y.
       do k = 1, np
         l = uu(k) + vv(k)
         if (2*(l/2).eq.l) then
@@ -804,17 +778,17 @@ c
           data(uu(k),vv(k)) = data(uu(k),vv(k)) - x(k)*conjg(y(k))
         endif
       enddo
-c
-c  Fourier transform it now.
-c
+
+c     Fourier transform it now.
       call IFFT(data,ngx,ngy)
-c
-c  Find the peak of the data.
-c
+
+c     Find the peak of the data.
       call findpk(data,ngx,ngy,xs,ys)
 
       end
+
 c***********************************************************************
+
       subroutine Shiftit2(np,uu,vv,y,xs,ys,ngx,ngy)
 
       integer np,ngx,ngy
@@ -834,7 +808,9 @@ c-----------------------------------------------------------------------
       enddo
 
       end
+
 c***********************************************************************
+
       subroutine shiftit1(data,ngx,ngy,xs,ys)
 
       integer ngx,ngy
@@ -855,12 +831,14 @@ c-----------------------------------------------------------------------
       enddo
 
       end
+
 c***********************************************************************
+
       subroutine findpk(data,ngx,ngy,xs,ys)
 
       integer ngx,ngy
       real data(ngx+2,ngy),xs,ys
-
+c-----------------------------------------------------------------------
 c  Find the position, to a fraction of a pixel of the maximum pixel.
 c-----------------------------------------------------------------------
       integer i,j,k,imax,jmax
@@ -889,22 +867,22 @@ c-----------------------------------------------------------------------
           fit(k) = data(i,j)
         enddo
       enddo
-c
-c  Locate the peak.
-c
+
+c     Locate the peak.
       call pkfit(fit,3,fmax,pixmax,coeffs)
       xs = imax + pixmax(1) - (ngx/2+1)
       ys = jmax + pixmax(2) - (ngy/2+1)
 
       end
+
 c***********************************************************************
+
       subroutine PlotFac(device,X,Y,n,a,pfac,doshift)
 
       integer n
       character device*(*)
       real X(n),Y(n),a,pfac
       logical doshift
-c
 c-----------------------------------------------------------------------
       real xmin,xmax,xlo,xhi,xp(2)
       integer i
@@ -912,9 +890,7 @@ c-----------------------------------------------------------------------
       integer  pgbeg
       external pgbeg
 c-----------------------------------------------------------------------
-c
-c  Find the min and max.
-c
+c     Find the min and max.
       xmin = pfac*x(1)
       xmax = xmin
       do i = 1, n
@@ -923,9 +899,8 @@ c
         xmin = min(xmin,x(i),y(i))
         xmax = max(xmax,x(i),y(i))
       enddo
-c
-c  Create the plot of the normal data.
-c
+
+c     Create the plot of the normal data.
       if (pgbeg(0,device,1,1).ne.1) then
         call pgldev
         call bug('f','Error opening graphics device')
@@ -941,16 +916,14 @@ c
       else
         call pgpt(n,x,y,1)
       endif
-c
-c  Plot the y = x line.
-c
+
+c     Plot the y = x line.
       call pgsci(2)
       xp(1) = xlo
       xp(2) = xhi
       call pgline(2,xp,xp)
-c
-c  Label it
-c
+
+c     Label it.
       call pgsci(1)
       if (doshift) then
         call pglab('High Resolution Data (Jy)',
@@ -964,12 +937,14 @@ c
       call pgend
 
       end
+
 c***********************************************************************
+
       subroutine DetFac(X,Y,n,a)
 
       integer n
       real X(n),Y(n),a
-
+c-----------------------------------------------------------------------
 c  Determine "a" such that
 c    X \approx a * Y
 c
@@ -986,12 +961,10 @@ c-----------------------------------------------------------------------
       real     medfunc
       external medfunc
 c-----------------------------------------------------------------------
-c
-c  Determine the least squares fit first.
-c
-      SumXX = 0
-      SumYY = 0
-      SumXY = 0
+c     Determine the least squares fit first.
+      SumXX = 0d0
+      SumYY = 0d0
+      SumXY = 0d0
       do i = 1, n
         SumXX = SumXX + X(i)*X(i)
         SumYY = SumYY + Y(i)*Y(i)
@@ -1030,14 +1003,15 @@ c
       enddo
 
       end
+
 c***********************************************************************
+
       real function medfunc(a,X,Y,n)
 
       integer n
       real a,X(n),Y(n)
-
+c-----------------------------------------------------------------------
 c  Determine the function needed to solve for the median.
-c
 c-----------------------------------------------------------------------
       integer i
 c-----------------------------------------------------------------------
@@ -1048,7 +1022,9 @@ c-----------------------------------------------------------------------
       enddo
 
       end
+
 c***********************************************************************
+
       subroutine AnnExt(In1,In2,ngx,ngy,X,Y,UU,VV,nmax,np,
      *  sfac,sxx,sxy,syy,uvlo,uvhi,du,dv)
 
@@ -1057,7 +1033,7 @@ c***********************************************************************
       integer UU(nmax),VV(nmax)
       complex In1(ngx/2+1,ngy),In2(ngx/2+1,ngy)
       real sfac,sxx,sxy,syy,uvlo,uvhi,du,dv
-
+c-----------------------------------------------------------------------
 c  Extract the pixels from the annulus of overlap of the coarse and
 c  fine resolution images.
 c
@@ -1066,15 +1042,13 @@ c    X,Y        Pixels from the low and high resolution data, that we
 c               are scaling to equalize.
 c    R          Radius in wavelengths
 c    np         Number of pixels extracted.
-c
 c-----------------------------------------------------------------------
       integer i,j,ic,jc
       real uv2,t
 c-----------------------------------------------------------------------
       np = 0
-c
-c  Do the top half,
-c
+
+c     Do the top half,
       ic = 1
       jc = 1
       do j = 1, ngy/2+1
@@ -1093,9 +1067,8 @@ c
           endif
         enddo
       enddo
-c
-c  Do the bottom half.
-c
+
+c     Do the bottom half.
       ic = 1
       jc = ngy+1
       do j = ngy/2+2, ngy
@@ -1116,7 +1089,9 @@ c
       enddo
 
       end
+
 c***********************************************************************
+
       subroutine Mergeit(dofeath,In1,In2,ngx,ngy,uvlo,uvhi,du,dv,
      *                                        fac,sxx,sxy,syy)
 
@@ -1124,8 +1099,8 @@ c***********************************************************************
       complex In1(ngx/2+1,ngy),In2(ngx/2+1,ngy)
       real fac,sxx,sxy,syy,uvlo,uvhi,du,dv
       logical dofeath
-
-c  Merge together two Fourier transforms.
+c-----------------------------------------------------------------------
+c  Merge two Fourier transforms.
 c
 c  Input/Output:
 c    In1        On input,  the transform of the finer-resolution data.
@@ -1136,14 +1111,11 @@ c    ngx,ngy
 c    uvlo,uvhi
 c    fac,sxx,sxy,syy Gaussian parameters.
 c    du,dv      Cell increments in u and v.
-c
 c-----------------------------------------------------------------------
       integer i,j,ic,jc
       real uv2,t,x,y
 c-----------------------------------------------------------------------
-c
-c  Do the top half,
-c
+c     Do the top half.
       ic = 1
       jc = 1
       do j = 1, ngy/2+1
@@ -1166,9 +1138,8 @@ c
           endif
         enddo
       enddo
-c
-c  Do the bottom half.
-c
+
+c     Do the bottom half.
       ic = 1
       jc = ngy+1
       do j = ngy/2+2, ngy
@@ -1191,18 +1162,18 @@ c
           endif
         enddo
       enddo
-c
-c  Fourier transform back to the image domain.
-c
+
+c     Fourier transform back to the image domain.
       call IFFT(In1,ngx,ngy)
 
       end
+
 c***********************************************************************
+
       subroutine IFFT(In,ngx,ngy)
 
       integer ngx,ngy
       complex In(ngx/2+1,ngy)
-c
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       integer i,j
@@ -1228,7 +1199,9 @@ c-----------------------------------------------------------------------
       enddo
 
       end
+
 c***********************************************************************
+
       subroutine FFFT(In,ngx,ngy)
 
       integer ngx,ngy
@@ -1238,18 +1211,15 @@ c-----------------------------------------------------------------------
       integer i,j
       complex Temp1(MAXDIM),Temp2(MAXDIM)
 c-----------------------------------------------------------------------
-c
-c  Do the first pass of the FFT.
-c
+c     First pass of the FFT.
       do j = 1, ngy
         call fftrc(In(1,j),Temp1,1,ngx)
         do i = 1, ngx/2+1
           In(i,j) = Temp1(i)
         enddo
       enddo
-c
-c  Do the second pass of the FFT.
-c
+
+c     Second pass of the FFT.
       do i = 1, ngx/2+1
         do j = 1, ngy
           Temp1(j) = In(i,j)
@@ -1261,11 +1231,12 @@ c
       enddo
 
       end
+
 c***********************************************************************
+
       subroutine trimout(line)
 
       character line*(*)
-c
 c-----------------------------------------------------------------------
       integer i,l
       logical blank,add
