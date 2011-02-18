@@ -35,7 +35,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: cosubs.for,v 1.8 2011/02/14 06:23:10 cal103 Exp $
+c $Id: cosubs.for,v 1.9 2011/02/18 04:33:10 cal103 Exp $
 c***********************************************************************
 
 c* axfndCO -- Find a specified generic axis in an image
@@ -392,7 +392,7 @@ c
 c  Input
 c    lun    Handle of image
 c-----------------------------------------------------------------------
-      call cofin(lun)
+      call coFin(lun)
 
       end
 
@@ -410,7 +410,7 @@ c
 c  Input
 c    lun    Handle of image
 c-----------------------------------------------------------------------
-      call coinit(lun)
+      call coInit(lun)
 
       end
 
@@ -614,12 +614,12 @@ c* specCO -- See if this axis is spectral and what type it is
 c& nebk
 c: coordinates
 c+
-      subroutine specco (lun, iax, stype)
+      subroutine specCo (lun, iax, stype)
 
       integer lun, iax
       character*(*) stype
 c  ---------------------------------------------------------------------
-c     See if this axis is a spectral one and what type if it is
+c  Is this a spectral axis and if so what type is it?
 c
 c  Input
 c    lun    Handle of image
@@ -627,8 +627,8 @@ c    iax    Axis number
 c  Output:
 c    stype  ' ' if not spectral, else 'radio', 'optical', 'frequency'
 c-----------------------------------------------------------------------
-      character*9 ctype
-      integer il
+      integer   il
+      character ctype*9 
 c-----------------------------------------------------------------------
       call ctypeco(lun, iax, ctype, il)
 
@@ -750,29 +750,29 @@ c* w2wCOv -- Convert an array of coordinates, with validation.
 c& nebk
 c: coordinates
 c+
-      subroutine w2wcov (lun, n, typei, stypei, win, typeo, stypeo,
+      subroutine w2wcov (lun, naxis, typei, stypei, win, typeo, stypeo,
      *  wout, valid)
 
-      logical valid
-      integer lun, n
-      double precision win(n), wout(n)
-      character*(*) typei(n), typeo(n), stypei, stypeo
+      logical   valid
+      integer   lun, naxis
+      double precision win(naxis), wout(naxis)
+      character typei(naxis)*(*), stypei*(*), typeo(naxis)*(*),
+     *          stypeo*(*)
 c  ---------------------------------------------------------------------
 c  Convert an NEBK-style coordinate vector using the CO routines.
 c
 c  Input
 c    lun     Handle of open file
-c    n       Number of axes to convert
+c    naxis   Number of axes to convert
 c    typei   Array of input coordinate types, Should be from list
 c               'hms',    'dms',    'arcsec', 'arcmin', 'absdeg',
 c               'reldeg', 'abspix', 'relpix', 'absghz', 'relghz',
 c               'abskms', 'relkms', 'absnat', 'relnat', 'none'
-c    stypei  'radio', 'optical', 'frequency'.  If a spectral coordinate
-c            is given, this indicates what convention it is in,
-c            regardless of what the header initially defines. If ' ',
-c            then it assumed to be as the header defines unless
-c            there is a mismatch between TYPEI and CTYPE for that axis
-c            (e.g. absghz/VELO-LSR) wherupon a fatal error will result
+c    stypei  Indicates the convention for a spectral coordinate,
+c            regardless of what the header initially defines: 'radio',
+c            'optical', 'frequency'.  If ' ', the header prevails,
+c            though a mismatch between TYPEI and CTYPE (e.g.
+c            absghz/VELO-LSR) would then result in a fatal error.
 c    win     Array of coordinates to be converted
 c               'hms', 'dms' in radians
 c               '*  deg'     in degrees
@@ -796,140 +796,116 @@ c    wout    Array of converted output coordinates in same units
 c            as described above
 c-----------------------------------------------------------------------
       include 'maxnax.h'
-      integer i, ip
-      character cti*21, cto*21, str*2
-      character*9 sstype, lstype
-      double precision wloc(maxnax), xdum
-      logical done, nix(maxnax), none
-c-----------------------------------------------------------------------
-c
-c There maybe nothing to do for some axes.  Make sure we just
-c copy the coordinates in these cases, rather than converting
-c to and from pixels, thus losing precision. Save initial spectral
-c convention while we are it.
-c
-      none = .true.
-      sstype = ' '
-      do i = 1, n
-        nix(i) = .false.
-        call specco(lun, i, lstype)
-        if (lstype.ne.' ') sstype = lstype
 
-        if (typei(i).eq.typeo(i)) then
+      logical   done, nix(maxnax), none
+      integer   iax, ifrq, ip
+      double precision wloc(maxnax), xdum
+      character algo*3, cti*21, cto*21, lstype*9, str*2
+c-----------------------------------------------------------------------
+c     There may be nothing to do for some axes.  Make sure we just copy
+c     the coordinates in these cases, rather than converting to and from
+c     pixels, thus losing precision.  Save initial spectral convention
+c     while we are it.
+      none = .true.
+      do iax = 1, naxis
+        nix(iax) = .false.
+
+        if (typei(iax).eq.typeo(iax)) then
           if (lstype.ne.' ') then
-            if (stypei.eq.stypeo .or. typei(i)(4:6).eq.'pix')
-     *        nix(i) = .true.
+            if (stypei.eq.stypeo .or. typei(iax)(4:6).eq.'pix')
+     *        nix(iax) = .true.
           else
-            nix(i) = .true.
+            nix(iax) = .true.
           endif
         endif
 
-        if (.not.nix(i)) none = .false.
+        if (.not.nix(iax)) none = .false.
       enddo
 
       if (none) then
-        do i = 1, n
-          wout(i) = win(i)
+        do iax = 1, naxis
+          wout(iax) = win(iax)
         enddo
 
         valid = .true.
         return
       endif
-c
-c Switch spectral axis if required to type of input coordinate and
-c fish out the CTYPES
-c
-      if (sstype.ne.' ' .and. stypei.ne.' ')
-     *  call covelset(lun, stypei)
-c
-c Convert coordinates to absolute pixels first; loop over axes
-c
+
+c     Switch spectral axis to type of input coordinate.
+      if (stypei.ne.' ') call coSpcSet(lun, stypei, ifrq, algo)
+
+c     Convert coordinates to absolute pixels first; loop over axes.
       cti = '  '
       cto = '  '
       ip = 1
-      do i = 1, n
-c
-c Check input coordinate type consistent with actual axis type
-c
-        call chkaxco(lun, typei(i), i, stypei)
-c
-c Set coordinate transformation strings and convert angular
-c units if required to radians
-c
-        wloc(i) = win(i)
-        call sctico(typei(i), wloc(i),  str)
+      do iax = 1, naxis
+c       Check input coordinate type consistent with actual axis type.
+        call chkaxco(lun, typei(iax), iax, stypei)
+
+c       Set coordinate transformation strings and convert angular
+c       units if required to radians.
+        wloc(iax) = win(iax)
+        call sctico(typei(iax), wloc(iax),  str)
         cti(ip:ip+2) = str//'/'
         cto(ip:ip+2) = 'ap/'
         ip = ip + 3
       enddo
-c
-c Now convert to pixels (pixels being converted to pixels here
-c will be done with no loss of precision so don't bother with
-c extra code to trap it
-c
-      call cocvtv(lun, cti, wloc, cto, wout, valid)
+
+c     Convert to pixels (pixels being converted to pixels here will be
+c     done with no loss of precision so don't bother with extra code to
+c     trap it.
+      call coCvtV(lun, cti, wloc, cto, wout, valid)
       if (.not.valid) return
-c
-c Now check that we need to go on.  The user may want absolute
-c pixels whereupon we are done.  Note that absolute pixels
-c are the same regardless of the spectral convention !
-c
+
+c     Check that we need to go on.  The user may want absolute pixels
+c     whereupon we are done.  Note that absolute pixels are the same
+c     regardless of the spectral convention!
       done = .true.
-      do i = 1, n
-        if (typeo(i).ne.'abspix') done = .false.
+      do iax = 1, naxis
+        if (typeo(iax).ne.'abspix') done = .false.
       enddo
 
       if (.not.done) then
-c
-c Having turned the coordinate into a pixel, we can now convert
-c it to the desired output coordinate type.  First, once again
-c switch the spectral axis if needed.
-c
-        if (sstype.ne.' ' .and. stypeo.ne.' ')
-     *    call covelset(lun, stypeo)
-c
-c Loop over axes
-c
+c       Having turned the coordinate into a pixel, we can now convert
+c       it to the desired output coordinate type.
+
+c       Switch spectral axis to type of output coordinate.
+        if (stypeo.ne.' ') call coSpcSet(lun, stypeo, ifrq, algo)
+
+c       Loop over axes
         cti = '  '
         cto = '  '
         ip = 1
-        do i = 1, n
-c
-c Check output coordinate type consistent with actual axis type
-c
-          call chkaxco(lun, typeo(i), i, stypeo)
-c
-c Set coordinate transformation strings
-c
-          wloc(i) = wout(i)
-          call sctico(typeo(i), xdum, str)
+        do iax = 1, naxis
+c         Check output coordinate type consistent with actual axis type.
+          call chkaxco(lun, typeo(iax), iax, stypeo)
+
+c         Set coordinate transformation strings.
+          wloc(iax) = wout(iax)
+          call sctico(typeo(iax), xdum, str)
           cti(ip:ip+2) = 'ap/'
           cto(ip:ip+2) = str//'/'
           ip = ip + 3
         enddo
-c
-c Now convert the absolute pixels to the desired coordinate type
-c
-        call cocvt(lun, cti, wloc, cto, wout)
-c
-c Now we must convert (some of the) coordinates given in radians to the
-c appropriate output units (degrees, arcsec etc)
-c
-        do i = 1, n
-          call sctoco(typeo(i), wout(i))
+
+c       Now convert the absolute pixels to the desired coordinate type.
+        call coCvt(lun, cti, wloc, cto, wout)
+
+c       Convert coordinates given in radians to the appropriate output
+c       units (degrees, arcsec etc).
+        do iax = 1, naxis
+          call sctoco(typeo(iax), wout(iax))
         enddo
       endif
-c
-c Overwrite any coordinates that did not really need converting
-c by the input values to improve precision
-c
-      do i = 1, n
-        if (nix(i)) wout(i) = win(i)
+
+c     Overwrite any coordinates that did not really need converting by
+c     the input values to improve precision.
+      do iax = 1, naxis
+        if (nix(iax)) wout(iax) = win(iax)
       enddo
-c
-c Restore initial spectral axis convention to common held header
-c
-      if (sstype.ne.' ') call covelset(lun, sstype)
+
+c     Restore spectral axis type from header.
+      call coSpcSet(lun, ' ', ifrq, algo)
 
       end
 
@@ -1049,9 +1025,9 @@ c+
       subroutine w2wsco (lun, iax, typei, stypei, win, typeo, stypeo,
      *                   wout)
 
-      integer lun, iax
+      integer   lun, iax
       double precision win, wout
-      character*(*) typei, typeo, stypei, stypeo
+      character typei*(*), stypei*(*), typeo*(*), stypeo*(*)
 c  ---------------------------------------------------------------------
 c  Convert one NEBK style coordinate with the COCVT routines.
 c  Coordinates for the other axes are assumed to be at the
@@ -1093,14 +1069,11 @@ c-----------------------------------------------------------------------
       include 'maxnax.h'
 
       integer   i, naxis
-      double precision dtemp, lwin(MAXNAX), lwout(MAXNAX)
+      double precision lwin(MAXNAX), lwout(MAXNAX)
       character ltypei(MAXNAX)*6, ltypeo(MAXNAX)*6
 c-----------------------------------------------------------------------
-c
-c Load reference pixel for dummy locations
-c
-      call cogetd(lun,'naxis',dtemp)
-      naxis = nint(dtemp)
+c     Load reference pixel for dummy locations.
+      call coGetI(lun, 'naxis', naxis)
       if (iax.le.0 .or. iax.gt.naxis)
      *  call bug('f', 'W2WSCO: invalid axis number')
       do i = 1, naxis
@@ -1108,20 +1081,17 @@ c
         lwin(i) = 0d0
         ltypeo(i) = 'relpix'
       enddo
-c
-c Load axis of interest
-c
+
+c     Load axis of interest.
       ltypei(iax) = typei
       lwin(iax) = win
       ltypeo(iax) = typeo
-c
-c Convert
-c
-      call w2wco(lun, naxis, ltypei, stypei, lwin, ltypeo,
-     *            stypeo, lwout)
-c
-c Fish out axis
-c
+
+c     Convert.
+      call w2wco(lun, naxis, ltypei, stypei, lwin, ltypeo, stypeo,
+     *           lwout)
+
+c     Fish out axis.
       wout = lwout(iax)
 
       end
@@ -1135,10 +1105,10 @@ c+
       subroutine w2wsfco (lun, iax, typei, stypei, win, typeo, stypeo,
      *                    nounit, strout, strlen)
 
-      integer lun, iax, strlen
+      integer   lun, iax, strlen
       double precision win
       character*(*) typei, typeo, strout, stypei, stypeo
-      logical nounit
+      logical   nounit
 c  ---------------------------------------------------------------------
 c  Convert one NEBK style coordinate with the COCVT routines and format
 c  into a string.  Coordinates for the other axes are assumed to be at
@@ -1177,32 +1147,29 @@ c-----------------------------------------------------------------------
       include 'maxnax.h'
 
       integer   i, lstrlen(MAXNAX), naxis
-      double precision dtemp, lwin(MAXNAX)
+      double precision lwin(MAXNAX)
       character lstrout(MAXNAX)*50, ltypei(MAXNAX)*6, ltypeo(MAXNAX)*6
 c-----------------------------------------------------------------------
-c
-c Load dummy array values and actual value into conversion arrays
-c
-      call cogetd(lun,'naxis',dtemp)
-      naxis = nint(dtemp)
+c     Load dummy array values and actual value into conversion arrays.
+      call coGetI(lun, 'naxis', naxis)
       if (iax.le.0 .or. iax.gt.naxis)
      *  call bug('f', 'W2WSFCO: invalid axis number')
+
       do i = 1, naxis
         lwin(i) = 0.0
         ltypei(i) = 'relpix'
         ltypeo(i) = 'relpix'
       enddo
+
       lwin(iax) = win
       ltypei(iax) = typei
       ltypeo(iax) = typeo
-c
-c Convert and format
-c
+
+c     Convert and format.
       call w2wfco(lun, iax, ltypei, stypei, lwin, ltypeo, stypeo,
-     *             nounit, lstrout, lstrlen)
+     *            nounit, lstrout, lstrlen)
 c
-c Return formatted string
-c
+c     Return formatted string.
       strout = lstrout(iax)
       strlen = lstrlen(iax)
 
