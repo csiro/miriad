@@ -11,22 +11,22 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: pcvt.for,v 1.5 2011/02/14 06:35:55 cal103 Exp $
+c $Id: pcvt.for,v 1.6 2011/02/18 04:37:37 cal103 Exp $
 c***********************************************************************
 
-      subroutine pCvtInit(coObj1d,coObj2d)
+      subroutine pCvtInit(coObj1d, coObj2d)
 
-      integer coObj1d,coObj2d
+      integer   coObj1d, coObj2d
 c-----------------------------------------------------------------------
 c  Initialise the coordinate system conversion routines.
 c-----------------------------------------------------------------------
       include 'pcvt.h'
 
       logical   chkeqx
-      integer   i, j, k
+      integer   iax, ifrq, j, k
       double precision cdelt1, cdelt2, crpix1, crpix2, crval1, crval2,
-     *          dtemp, eqnox1, eqnox2
-      character ctype1*16, ctype2*16, type1*4, type2*4
+     *          eqnox1, eqnox2
+      character algo*3, ctype1*16, ctype2*16, type1*4, type2*4
 
       external  epo2jul, len1
       integer   len1
@@ -35,10 +35,9 @@ c-----------------------------------------------------------------------
       coObj1 = coObj1d
       coObj2 = coObj2d
 
-      call coGetD(coObj1,'naxis',dtemp)
-      naxis = nint(dtemp)
-      call coGetD(coObj2,'naxis',dtemp)
-      if (naxis.ne.nint(dtemp)) call bug('f','Differing number of axes')
+      call coGetI(coObj1, 'naxis', naxis)
+      call coGetI(coObj2, 'naxis', iax)
+      if (iax.ne.naxis) call bug('f','Differing number of axes')
 
       ilng  = 0
       ilat  = 0
@@ -50,9 +49,13 @@ c-----------------------------------------------------------------------
       call coGetD(coObj1,'epoch',eqnox1)
       call coGetD(coObj2,'epoch',eqnox2)
 
-      do i = 1, naxis
-        call coAxGet(coObj1,i,ctype1,crpix1,crval1,cdelt1)
-        call coAxGet(coObj2,i,ctype2,crpix2,crval2,cdelt2)
+      call coFindAx(coObj1, 'spectral', ifrq)
+      call coFindAx(coObj2, 'spectral', iax)
+      if (iax.ne.ifrq) call bug('f','Incompatible spectral axes')
+
+      do iax = 1, naxis
+        call coAxGet(coObj1, iax, ctype1, crpix1, crval1, cdelt1)
+        call coAxGet(coObj2, iax, ctype2, crpix2, crval2, cdelt2)
 
 c       Get the coordinate type for non-linear axes.
         type1 = ' '
@@ -72,18 +75,14 @@ c       Get the coordinate type for non-linear axes.
           endif
         endif
 
-        if (type2.eq.'VELO' .or. type2.eq.'FELO') then
-c         Velocity axes.
-          call coVelSet(coObj1,type2)
-
-        else if (type2.eq.'FREQ' .and. type1.ne.'FREQ') then
-c         Frequency axes.
-          call coVelSet(coObj1,'FREQ')
+        if (iax.eq.ifrq .and. type1.ne.type2) then
+c         Spectral axes.
+          call coSpcSet(coObj1, type2, ifrq, algo)
 
         else if ((type1.eq.'RA' .or. type1.eq.'GLON') .and.
      *           (type2.eq.'RA' .or. type2.eq.'GLON')) then
 c         RA/GLON axes.
-          ilng = i
+          ilng = iax
           if (type1.ne.type2) then
             if (type1.eq.'RA') then
               galeq = -1
@@ -100,7 +99,7 @@ c         Galactic/equatorial conversion is via B1950/FK4.
         else if ((type1.eq.'DEC' .or. type1.eq.'GLAT') .and.
      *           (type2.eq.'DEC' .or. type2.eq.'GLAT')) then
 c         DEC/GLAT axes.
-          ilat = i
+          ilat = iax
           if (type1.ne.type2) then
             if (type1.eq.'DEC') then
               galeq = -1
@@ -162,8 +161,8 @@ c     Is precession needed?
 
 c       Get the epoch for equatorial conversion.
         if (dofk45z .or. dofk54z) then
-          if (dofk45z) call coGetD(coObj1,'obstime',obstime)
-          if (dofk54z) call coGetD(coObj2,'obstime',obstime)
+          if (dofk45z) call coGetD(coObj1, 'obstime', obstime)
+          if (dofk54z) call coGetD(coObj2, 'obstime', obstime)
           if (obstime.eq.0d0) then
             obstime = epo2jul(2000d0,'J')
             call bug('w','Assuming observation at epoch J2000.0.')
@@ -175,11 +174,11 @@ c       Get the epoch for equatorial conversion.
 
 c***********************************************************************
 
-      subroutine pCvt(x1,x2,n,valid)
+      subroutine pCvt(x1, x2, nax, valid)
 
-      integer n
-      double precision x1(n),x2(n)
-      logical valid
+      integer   nax
+      double precision x1(nax), x2(nax)
+      logical   valid
 c-----------------------------------------------------------------------
 c  Perform a coordinate system conversion.
 c-----------------------------------------------------------------------
@@ -189,29 +188,30 @@ c-----------------------------------------------------------------------
       double precision ddec, dec1950, dec2000, dra, ra1950, ra2000,
      *          xa(MAXNAX)
 c-----------------------------------------------------------------------
-      if (n.ne.3) call bug('f','Can only handle converting with n=3')
+      if (nax.ne.3) call bug('f',
+     *  'Can only handle converting with naxis=3')
 
-      call coCvtv(coObj1,'ap/ap/ap',x1,'aw/aw/aw',xa,valid)
+      call coCvtv(coObj1, 'ap/ap/ap', x1,'aw/aw/aw', xa, valid)
       if (.not.valid) return
 
       if (dofk54z) then
-        call fk54z(xa(ilng),xa(ilat),obstime,ra1950,dec1950,dra,ddec)
+        call fk54z(xa(ilng),xa(ilat), obstime, ra1950,dec1950, dra,ddec)
         xa(ilng) = ra1950
         xa(ilat) = dec1950
       endif
 
       if (galeq.lt.0) then
-        call dsfetra(xa(ilng),xa(ilat),.false.,-galeq)
+        call dsfetra(xa(ilng), xa(ilat), .false., -galeq)
       else if (galeq.gt.0) then
-        call dsfetra(xa(ilng),xa(ilat),.true.,  galeq)
+        call dsfetra(xa(ilng), xa(ilat), .true.,   galeq)
       endif
 
       if (dofk45z) then
-        call fk45z(xa(ilng),xa(ilat),obstime,ra2000,dec2000)
+        call fk45z(xa(ilng), xa(ilat), obstime, ra2000, dec2000)
         xa(ilng) = ra2000
         xa(ilat) = dec2000
       endif
 
-      call coCvtv(coObj2,'aw/aw/aw',xa,'ap/ap/ap',x2,valid)
+      call coCvtv(coObj2, 'aw/aw/aw', xa, 'ap/ap/ap', x2, valid)
 
       end
