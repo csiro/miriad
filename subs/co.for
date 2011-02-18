@@ -16,7 +16,7 @@ c    subroutine coLMN(lu,in,x1,lmn)
 c    subroutine coGeom(lu,in,x1,ucoeff,vcoeff)
 c    subroutine coFindAx(lu,axis,iax)
 c    subroutine coFreq(lu,in,x1,freq)
-c    subroutine coVelSet(lu,axis)
+c    subroutine coSpcSet(lu,axis,iax,algo)
 c    subroutine coPrjSet(lu,proj)
 c    subroutine coAxGet(lu,iax,ctype,crpix,crval,cdelt)
 c    subroutine coAxSet(lu,iax,ctype,crpix,crval,cdelt)
@@ -36,7 +36,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: co.for,v 1.18 2010/12/17 07:31:36 cal103 Exp $
+c $Id: co.for,v 1.19 2011/02/18 04:28:10 cal103 Exp $
 c***********************************************************************
 
 c* coInit -- Initialise coordinate conversion routines.
@@ -473,19 +473,19 @@ c* coGetD -- Get a value from the guts of the coordinate routines.
 c& rjs
 c: coordinates
 c+
-      subroutine coGetD(lu,object,value)
+      subroutine coGetD(lu,object,dVal)
 
       integer lu
       character object*(*)
-      double precision value
+      double precision dVal
 c  ---------------------------------------------------------------------
-c  Get a value from the guts of the coordinate routines.
+c  Get a floating value from the guts of the coordinate routines.
 c
 c  Input:
 c    lu         Handle of the coordinate object.
 c    object     Name of the thing to set.
 c  Output:
-c    value      Value to use.
+c    dVal       The value.
 c-----------------------------------------------------------------------
       include 'co.h'
       include 'wcslib/prj.inc'
@@ -521,46 +521,43 @@ c     Parse parameterized keywords.
         endif
       endif
 
-      if (obj.eq.'naxis') then
-        value = naxis(icrd)
-
-      else if (obj(1:5).eq.'crpix' .and. iax.gt.0) then
-        value = crpix(iax,icrd)
+      if (obj(1:5).eq.'crpix' .and. iax.gt.0) then
+        dVal = crpix(iax,icrd)
       else if (obj(1:5).eq.'cdelt' .and. iax.gt.0) then
-        value = cdelt(iax,icrd)
+        dVal = cdelt(iax,icrd)
       else if (obj(1:5).eq.'crval' .and. iax.gt.0) then
-        value = crval(iax,icrd)
+        dVal = crval(iax,icrd)
 
       else if (obj.eq.'llrot') then
         if (sinrot(icrd).eq.0d0) then
-          value = 0d0
+          dVal = 0d0
         else
-          value = atan2(sinrot(icrd),cosrot(icrd))
+          dVal = atan2(sinrot(icrd),cosrot(icrd))
         endif
 
       else if (obj.eq.'lonpole') then
         status = celgtd(cel(1,icrd), CEL_REF, ref)
-        value = ref(3)
+        dVal = ref(3)
       else if (obj.eq.'latpole') then
         status = celgtd(cel(1,icrd), CEL_REF, ref)
-        value = ref(4)
+        dVal = ref(4)
       else if (obj.eq.'phi0') then
-        status = celgtd(cel(1,icrd), CEL_PHI0, value)
+        status = celgtd(cel(1,icrd), CEL_PHI0, dVal)
       else if (obj.eq.'theta0') then
-        status = celgtd(cel(1,icrd), CEL_THETA0, value)
+        status = celgtd(cel(1,icrd), CEL_THETA0, dVal)
       else if (obj.eq.'pv' .and. m.ge.0) then
         status = celgti(cel(1,icrd), CEL_PRJ, prj)
         status = prjgtd(prj, PRJ_PV, pv)
-        value = pv(m)
+        dVal = pv(m)
 
       else if (obj.eq.'restfreq') then
-        value = restfrq(icrd)
+        dVal = restfrq(icrd)
       else if (obj.eq.'vobs') then
-        value = vobs(icrd)
+        dVal = vobs(icrd)
       else if (obj.eq.'epoch') then
-        value = eqnox(icrd)
+        dVal = eqnox(icrd)
       else if (obj.eq.'obstime') then
-        value = obstime(icrd)
+        dVal = obstime(icrd)
       else
         call bug('f','Unrecognised object in coGetD'//obj)
       endif
@@ -573,19 +570,19 @@ c* coGetI -- Get a value from the guts of the coordinate routines.
 c& mrc
 c: coordinates
 c+
-      subroutine coGetI(lu,object,value)
+      subroutine coGetI(lu, object, iVal)
 
-      integer lu
+      integer   lu
       character object*(*)
-      integer value
+      integer    iVal
 c  ---------------------------------------------------------------------
-c  Get a value from the guts of the coordinate routines.
+c  Get an integer value from the guts of the coordinate routines.
 c
 c  Input:
 c    lu         Handle of the coordinate object.
 c    object     Name of the thing to set.
 c  Output:
-c    value      Value to use.
+c     iVal      The value.
 c-----------------------------------------------------------------------
       include 'co.h'
 
@@ -597,8 +594,10 @@ c-----------------------------------------------------------------------
       icrd = coLoc(lu,.false.)
 
 c     Parse parameterized keywords.
-      if (object.eq.'xyzero') then
-        status = celgti(cel(1,icrd), CEL_OFFSET, value)
+      if (object.eq.'naxis') then
+        iVal = naxis(icrd)
+      else if (object.eq.'xyzero') then
+        status = celgti(cel(1,icrd), CEL_OFFSET, iVal)
       else
         call bug('f','Unrecognised object in coGetI'//object(:8))
       endif
@@ -611,18 +610,18 @@ c* coGetA -- Get a value from the guts of the coordinate routines.
 c& rjs
 c: coordinates
 c+
-      subroutine coGetA(lu,object,value)
+      subroutine coGetA(lu,object,cVal)
 
-      integer lu
-      character object*(*),value*(*)
+      integer   lu
+      character object*(*), cVal*(*)
 c  ---------------------------------------------------------------------
-c  Get a value from the guts of the coordinate routines.
+c  Get a character value from the guts of the coordinate routines.
 c
 c  Input:
 c    lu         Handle of the coordinate object.
 c    object     Name of the thing to set.
 c  Output:
-c    value      Value to use.
+c    cVal       The value.
 c-----------------------------------------------------------------------
       include 'co.h'
 
@@ -647,12 +646,12 @@ c     Parse parameterized keywords.
       endif
 
       if (obj.eq.'ctype' .and. iax.gt.0) then
-        value = ctype(iax,icrd)
+        cVal = ctype(iax,icrd)
       else if (obj.eq.'cellscal') then
         if (frqscl(icrd)) then
-          value = '1/F'
+          cVal = '1/F'
         else
-          value = 'CONSTANT'
+          cVal = 'CONSTANT'
         endif
       else
         call bug('f','Unrecognised object in coGetA'//obj)
@@ -1553,25 +1552,61 @@ c     Do the conversion.
 
 c***********************************************************************
 
-c* coVelSet -- Change the velocity axis between freq/velo/felo formats.
+      subroutine coVelSet(lu, type)
+      integer   lu
+      character type*(*)
+c-----------------------------------------------------------------------
+c  Maintained for backwards compatibility only, do not use it.
+c-----------------------------------------------------------------------
+      integer   ifrq
+      character algo*3
+c-----------------------------------------------------------------------
+      call coSpcSet(lu, type, ifrq, algo)
+
+      if (ifrq.eq.0) then
+        call bug('f','Call to coVelSet for non-velocity axis')
+      endif
+
+      end
+
+c***********************************************************************
+
+c* coSpcSet -- Change the spectral axis to the specified type.
 c& rjs
 c: coordinates
 c+
-      subroutine coVelSet(lu,type)
 
-      integer lu
-      character type*(*)
+c WARNING, THIS SUBROUTINE IS UNDER DEVELOPMENT, THE API MAY CHANGE!
+      subroutine coSpcSet(lu, type, ifrq, algo)
+c WARNING, THIS SUBROUTINE IS UNDER DEVELOPMENT, THE API MAY CHANGE!
+
+      integer   lu, ifrq
+      character type*(*), algo*3
 c  ---------------------------------------------------------------------
-c  Switch a spectral axis type between frequency, radio velocity, and
-c  optical velocity.
+c  Switch the spectral axis from its current type to another spectral
+c  type.
 c
 c  Input:
 c    lu         Handle of the coordinate system.
-c    type       Something combination of 'FREQ','VELO' and 'FELO'
-c               with '   ','-OBS','-HEL','-LSR.
-c               For compatibility with the old calling sequence,
-c               "type" can also be 'radio', 'optical' and 'frequency',
-c               which are equivalent to 'VELO', 'FELO' and 'FREQ'.
+c    type       Spectral type to switch to (case-insensitive):
+c                 FREQ: frequency
+c                 VRAD: radio velocity (frequency-like)
+c                 VOPT: optical velocity (wavelength-like)
+c               These may be suffixed with '-' and a spectral algorithm
+c               code (see below) which is ignored.
+c
+c               type may also be blank to revert to the spectral type
+c               specified in the image header.
+c
+c               For backwards compatibility, the following are also
+c               recognised: '{FREQ,VELO,FELO}{,-{OBS,HEL,LSR}}' meaning
+c               'FREQ', 'VRAD', and 'VOPT'.  Likewise, 'FREQUENCY',
+c               'RADIO', and 'OPTICAL'.
+c
+c  Output:
+c    ifrq       Spectral axis number.
+c    algo       Three-letter spectral algorithm code.  Currently only
+c               returned as blank which means linear.
 c-----------------------------------------------------------------------
       include 'co.h'
       include 'mirconst.h'
@@ -1579,31 +1614,35 @@ c-----------------------------------------------------------------------
       double precision ckms
       parameter (ckms = 1d-3*DCMKS)
 
-      integer   icrd, ifrq, ilat, ilng, itype, otype
+      integer   icrd, ilat, ilng, itype, otype
       double precision df, frq, vel
       character ctype1*8, ctype2*8, iframe*4, oframe*4, ttype*16
 
       external  coLoc
       integer   coLoc
 c-----------------------------------------------------------------------
-c     Standardise. For compatibility with old interface, use
+c     Compatibility between the old and new API.  As an interim measure
+c     we continue to do it the old way.
       ttype = type
       call ucase(ttype)
-      if (ttype.eq.'RADIO') then
-        ttype = 'VELO'
-      else if (ttype.eq.'OPTICAL') then
-        ttype = 'FELO'
-      else if (ttype.eq.'FREQUENCY') then
+      if (ttype.eq.'FREQUENCY') then
         ttype = 'FREQ'
+      else if (ttype(:4).eq.'VRAD' .or. ttype.eq.'RADIO') then
+        ttype = 'VELO'
+      else if (ttype(:4).eq.'VOPT' .or. ttype.eq.'OPTICAL') then
+        ttype = 'FELO'
       endif
 
+c     Identify the spectral axis.
       icrd = coLoc(lu,.false.)
       ifrq = frqax(icrd)
-      if (ifrq.eq.0)
-     *  call bug('f','Call to coVelSet for non-velocity axis')
-      itype = cotype(ifrq,icrd)
+      if (ifrq.eq.0) return
+
+c     Reset to header type?
+      if (ttype.eq.' ') ttype = ctype(ifrq,icrd)
 
 c     Determine the type.
+      itype = cotype(ifrq,icrd)
       if (ttype(1:4).eq.'FREQ') then
         otype = FRQTYP
       else if (ttype(1:4).eq.'VELO') then
@@ -1611,7 +1650,7 @@ c     Determine the type.
       else if (ttype(1:4).eq.'FELO') then
         otype = FELTYP
       else
-        call bug('f','Unrecognised conversion type, in coVelSet')
+        call bug('f','Unrecognised conversion type, in coSpcSet')
       endif
 
 c     Determine the reference frame conversion.
@@ -1624,7 +1663,11 @@ c     Determine the reference frame conversion.
       if (oframe.eq.' ') oframe = iframe
       if (iframe.eq.' ') iframe = oframe
 
-      if (otype.eq.itype .and. oframe.eq.iframe) return
+      if (otype.eq.itype .and. oframe.eq.iframe) then
+c       Nothing to do.
+        return
+      endif
+
       if (restfrq(icrd).le.0d0)
      *  call bug('f','Unable to do axis conversion as restfreq==0')
 
