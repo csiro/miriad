@@ -31,7 +31,7 @@ c       and DEC) within which the spectrum is averaged (or integrated).
 c       Must be odd numbers.  Default is 1,1.
 c@ xaxis
 c       The x-axis can be plotted as 'channel', 'frequency' ('FREQ'),
-c       'optical' velocity ('FELO'), 'radio' velocity ('VELO'), or the
+c       'radio' velocity ('VELO'), 'optical' velocity ('FELO'), or the
 c       units in the image.  The default is whatever units are in the
 c       header.
 c@ yaxis
@@ -141,26 +141,11 @@ c@ comment
 c       A one-line comment which is written into the logfile and any
 c       plot.
 c
-c$Id: mbspect.for,v 1.10 2010/11/22 05:40:24 cal103 Exp $
+c$Id: mbspect.for,v 1.11 2011/02/18 05:13:19 cal103 Exp $
 c--
 c
 c  History:
-c    lss  26jul99  Copied "imspect" to "mbspect" for HIPASS-specific
-c                  chores.
-c    rjs  29aug99  Some FORTRAN standardization.
-c    rjs   3sep99  Change pgpt1 to pgpt calls.
-c    lss   3sep99  pgpt bug when order negative; added rms output line
-c    pjt  20sep99  fixed obvious syntax error - does anybody use flint
-c                  anymore.
-c    lss  18apr02  Added axis label scaling (csize)
-c    lss   8may02  Added alternative axis labelling, lengthened in,out,
-c                  log strings
-c    lss   3jun02  coordinate now has a default, subroutines vaxis1 and
-c                  vaxis3 replaced by vaxis13
-c    lss  14jun02  added a position-fitting option
-c    nebk 12nov03  in subroutine pfit, declare xmom and coord to be of
-c                  size maxnax, not of passed in naxis (illegal fortran)
-c    lss  28apr09  minicube option
+c    Refer to the RCS log, v1.1 includes prior revision information.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
 
@@ -170,10 +155,10 @@ c-----------------------------------------------------------------------
 
       logical   deriv1, deriv2, histo, measure, minicube, none, posfit,
      *          pstyle1, pstyle2, subpoly
-      integer   blc(MAXNAX), daxis, i, ierr, imax, iostat, j, jmax, k,
-     *          lIn, lOut, naxis, nchan, nmask, nsize(MAXNAX), nsmth,
-     *          pblc(MAXNAX), poly, ptrc(MAXNAX), raxis, trc(MAXNAX),
-     *          vaxis, width(2)
+      integer   blc(MAXNAX), daxis, i, ierr, ifrq, imax, iostat, j,
+     *          jmax, k, lIn, lOut, naxis, nchan, nmask, nsize(MAXNAX),
+     *          nsmth, pblc(MAXNAX), poly, ptrc(MAXNAX), raxis,
+     *          trc(MAXNAX), vaxis, width(2)
       real      bmaj, bmin, bpa, cdelt1, cdelt2, cdelt3, cdeltd, cdeltr,
      *          chan(maxdim), clip(2), coeffs(MAXCO), csize(2), epoch,
      *          fac, fit(maxdim), hwork(MAXCO), lab1, lab2,
@@ -183,9 +168,9 @@ c-----------------------------------------------------------------------
      *          xdmax, xdmin, xrange(2), xv(2), xw(2), ybox(4), ydmax,
      *          ydmin, yrange(2), yv(2), yw(2)
       double precision coord(2), pixcen(3), pixcrd(3), world(3)
-      character comment*80, cpoly*64, dec1*13, dec2*13, device*64,
-     *          in*132, logf*132, object*9, out*132, ra1*13, ra2*13,
-     *          str*3, txt*72, unit0*16, vctype*9, version*80,
+      character algo*3, comment*80, cpoly*64, dec1*13, dec2*13,
+     *          device*64, in*132, logf*132, object*9, out*132, ra1*13,
+     *          ra2*13, str*3, txt*72, unit0*16, vctype*9, version*80,
      *          xaxis*64, xlabel*64, yaxis*64, ylabel*64
 
       external  hangle, itoaf, keyprsnt, len1, pgbeg, rangle, versan
@@ -195,8 +180,8 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 c     Don't report the ID so that gif and ps output can be piped.
       version = versan ('-mbspect',
-     *                  '$Revision: 1.10 $',
-     *                  '$Date: 2010/11/22 05:40:24 $')
+     *                  '$Revision: 1.11 $',
+     *                  '$Date: 2011/02/18 05:13:19 $')
 
 c     Get inputs.
       call keyini
@@ -369,9 +354,9 @@ c     Set spatial and spectral range.
 
       blc(vaxis) = 1
       trc(vaxis) = nsize(vaxis)
-      if (xaxis.ne.'channel') call coVelSet(lIn, xaxis)
+      if (xaxis.ne.'channel') call coSpcSet(lIn, xaxis, ifrq, algo)
       if (xrange(1).ne.0.0 .or. xrange(2).ne.0.0) then
-        if (xaxis.eq.'frequency' .or. xaxis.eq.'FREQ') then
+        if (xaxis.eq.'FREQ' .or. xaxis.eq.'frequency') then
           fac = 1000.0
         else
           fac = 1.0
@@ -1187,83 +1172,95 @@ c***********************************************************************
       subroutine axes(lIn,vaxis,xaxis,yaxis,nchan,naxis,wpix,
      *                xlabel,ylabel,chan,value,spec,unit0)
 
-      integer lIn,vaxis,naxis,nchan
-      character*(*) xaxis,yaxis,xlabel,ylabel,unit0
-      real chan(nchan),spec(nchan),value(nchan)
-      real wpix(nchan)
+      integer   lIn, vaxis
+      character xaxis*(*), yaxis*(*)
+      integer   nchan, naxis
+      real      wpix(nchan)
+      character xlabel*(*), ylabel*(*)
+      real      chan(nchan), value(nchan), spec(nchan)
+      character unit0*(*)
 c-----------------------------------------------------------------------
 c  Get plot axes and write labels.
+c
 c  Inputs:
 c    lIn        The handle of the image.
 c    vaxis      The velocity or frequency axis.
-c    naxis      Number of image axes.
-c    xaxis      Units for xaxis. Can be 'channel','frequency','optical',
-c               'radio' or (default) units in image.
+c    xaxis      X-axis type.  Can be 'channel', 'frequency', 'radio',
+c               'optical', or (default) units in image.
 c    yaxis      Units for yaxis.  Can be 'average' (default), 'sum', or
 c               'point'.
+c    nchan      Number of channels.
+c    naxis      Number of image axes.
 c    wpix       Number or weight of good pixels in integrated spectrum
 c               for each channel.
-c    nchan      Number of channels.
 c    chan       Array of channel numbers
 c  Output:
-c    value      Array of xaxis values.
-c    spec       Spectrum (with converted units).
 c    xlabel     Label for xaxis.
 c    ylabel     Label for yaxis.
+c    value      Array of xaxis values.
+c    spec       Spectrum (with converted units).
 c    unit0      yaxis units
 c
 c    - Could be much fancier by converting internal units 'JY' 'JY/BEAM'
 c    etc. to requested units 'JY' 'JY/BEAM' 'K' etc. calling GetBeam
 c    to get beam oversampling factor.
-c
 c-----------------------------------------------------------------------
-      integer i
-      character ctype*16,bunit*16
-      real bmaj,bmin,omega,cbof
+      integer   i, ifrq
+      real      bmaj, bmin,cbof, omega
       double precision dtemp
+      character algo*3, bunit*16, ctype*16
 
       external  itoaf, len1
       integer   len1
       character itoaf*1
 c-----------------------------------------------------------------------
-c  Get xlabel.
-c
+c     Construct x-axis label.
       call rdhda(lIn,'ctype'//itoaf(vaxis),ctype,' ')
       if (xaxis.eq.'channel') then
         xlabel = 'Channel'
-      else if (xaxis.eq.'FREQ' .or. xaxis.eq.'frequency') then
+      else if (xaxis.eq.'FREQ' .or.
+     *         xaxis.eq.'frequency') then
         xlabel = 'Frequency (MHz)'
-      else if (xaxis.eq.'VELO' .or. xaxis.eq.'radio') then
-        xlabel = 'Radio Velocity, \ficz(1+z)\u-1\d\fr'
-     *           //'(km s\u-1\d)'
-      else if (xaxis.eq.'FELO' .or. xaxis.eq.'optical') then
-        xlabel = 'Velocity, \ficz\fr (km s\u-1\d)'
+      else if (xaxis.eq.'VRAD' .or.
+     *         xaxis.eq.'VELO' .or.
+     *         xaxis.eq.'radio') then
+        xlabel = 'Radio velocity, ' //
+     *           '\ficz(1+z)\u-1\d\fr (km s\u-1\d)'
+      else if (xaxis.eq.'VOPT' .or.
+     *         xaxis.eq.'FELO' .or.
+     *         xaxis.eq.'optical') then
+        xlabel = 'Optical velocity, \ficz\fr (km s\u-1\d)'
       else
         xlabel = ctype(1:len1(ctype))
       endif
-c
-c  Convert xaxis units.
-c
-      call coInit(lIn)
-      if (xaxis.ne.'channel') call coVelSet(lIn, xaxis)
-      do i = 1, nchan
-        call coCvt1(lIn,vaxis,'ap',dble(chan(i)),'aw',dtemp)
+
+c     Convert x-axis units.
+      if (xaxis.eq.'channel') then
+        do i = 1, nchan
+          value(i) = chan(i)
+        enddo
+
+      else
+        call coInit(lIn)
+        call coSpcSet(lIn, xaxis, ifrq, algo)
+        do i = 1, nchan
+          call coCvt1(lIn, vaxis, 'ap', dble(chan(i)), 'aw', dtemp)
+          value(i) = dtemp
+        enddo
+        call coFin(lIn)
+
         if (xaxis.eq.'FREQ' .or. xaxis.eq.'frequency') then
-           value(i) = 1000.0*dtemp
-        elseif(xaxis.eq.'channel') then
-           value(i) = chan(i)
-        else
-           value(i) = dtemp
+c         Convert frequency to MHz.
+          do i = 1, nchan
+            value(i) = 1000.0*value(i)
+          enddo
         endif
-      enddo
-      call coFin(lIn)
-c
-c  Get units and beam oversampling factor from image header.
-c
+      endif
+
+c     Get units and beam oversampling factor from image header.
       call GetBeam(lIn,naxis,bunit,bmaj,bmin,omega,cbof)
-c
-c  Normalize the spectra and get the yaxis.
-c
+
+c     Normalize the spectra and get the yaxis.
       if (yaxis.eq.'average' .or. yaxis.eq.'point') then
         do i = 1, nchan
           if (wpix(i).gt.0.0) then
@@ -1284,19 +1281,20 @@ c
            unit0=bunit(1:len1(bunit))
            ylabel = 'Average Intensity ('//unit0(1:len1(unit0))//')'
         endif
+
       else if (bunit.eq.'JY/PIXEL') then
         unit0='Jy'
         ylabel = 'Total Intensity (Jy)'
+
       else if (bunit(1:7).eq.'JY/BEAM' .and. bmaj*bmin*omega.ne.0) then
         do i = 1, nchan
           spec(i) = spec(i)/cbof
         enddo
         unit0='Jy'
         ylabel = 'Total Flux Density (Jy)'
+
       else
-
-c  Shouldn't get here now - disallowed
-
+c       Shouldn't get here now - disallowed.
         unit0=bunit(1:len1(bunit))//'*pix'
         ylabel = 'Total Intensity ('//unit0//' x pixels)'
       endif
@@ -1423,17 +1421,13 @@ c-----------------------------------------------------------------------
       real coef(11),serr,test2,work3(24)
       character*80 line
 c-----------------------------------------------------------------------
-
 c  Number of clipping iterations
-
       niter=5
 
 c  Clip level (sigma)
-
       clip=2.0
 
 c  Apply mask
-
       do i = 1, nchan
          weight(i)=1.0
          if (nmask.gt.0) then
@@ -1447,11 +1441,9 @@ c  Apply mask
       enddo
 
 c  Iterate
-
  100  if (niter.eq.0) goto 1000
 
 c  Initialize
-
       serr=0.0
       do i = 1, nchan
          fit(i)=0.0
@@ -1462,14 +1454,12 @@ c  Initialize
       enddo
 
 c  Count unclipped values
-
       npts=0
       do i = 1, nchan
          if (weight(i).gt.0.0)  npts=npts+1
       enddo
 
 c  Polynomial fit
-
       ifail=1
       if (npts.gt.poly+1) then
         if (poly.gt.0) then
