@@ -214,7 +214,7 @@ c       nocal   Do not apply antenna gain calibration.
 c       nopass  Do not apply bandpass correction.
 c       nopol   Do not apply polarisation leakage correction.
 c
-c$Id: pgflag.for,v 1.7 2010/10/11 05:18:49 ste616 Exp $
+c$Id: pgflag.for,v 1.8 2011/02/21 01:54:42 ste616 Exp $
 c--
 c
 c  History:
@@ -287,6 +287,9 @@ c                 it works, but looks stupid - can make it look better
 c                 by using 'options=nosrc'. Made a number of changes
 c                 to allow selection of the first and last channels and
 c                 times.
+c    jbs 21Feb11  Fix bug that wouldn't allow user to make measurements
+c                 of, or flag, visibilities that were from the day
+c                 after the starting date of the plot.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mirconst.h'
@@ -334,8 +337,8 @@ c
       logical uvDatOpn
 
       version = versan ('pgflag',
-     :                  '$Revision: 1.7 $',
-     :                  '$Date: 2010/10/11 05:18:49 $')
+     :                  '$Revision: 1.8 $',
+     :                  '$Date: 2011/02/21 01:54:42 $')
 
 c
 c Get user inputs
@@ -1472,11 +1475,13 @@ c     check that we have a full selection box
             chans(2,nflags)=maxx
             isave(3)=minx
             isave(4)=maxx
-            do while ((t1(miny+1).lt.0.0).or.(t1(miny+1).gt.1.0))
+c            do while ((t1(miny+1).lt.0.0).or.(t1(miny+1).gt.1.0))
+            do while (t1(miny+1).lt.0.0)
                miny=miny+1
             enddo
             times(1,nflags)=miny
-            do while ((t1(maxy+1).lt.0.0).or.(t1(maxy+1).gt.1.0))
+c            do while ((t1(maxy+1).lt.0.0).or.(t1(maxy+1).gt.1.0))
+            do while (t1(maxy+1).lt.0.0)
                maxy=maxy-1
             enddo
             times(2,nflags)=maxy
@@ -1579,9 +1584,9 @@ c***********************************************************************
 c
       integer nchan,ntime,chanoff,chanw,meastype
       real curs_x,curs_y
-      real t1(ntime),array(nchan,ntime,2),thist
+      real t1(ntime),array(nchan,ntime,2),thist,zerot
       integer iflag(nchan,ntime,2)
-      double precision day0,cfreq(nchan)
+      double precision day0,cfreq(nchan),zeroday
       integer meas_channel
       real meas_frequency,meas_amplitude
       character meas_time*(*),mon*3
@@ -1619,7 +1624,13 @@ c-----------------------------------------------------------------------
       include 'maxdim.h'
 c
 c     check we have a valid time
-      if ((t1(int(curs_y)).ge.0.0).and.(t1(int(curs_y)).le.1.0)) then
+      zeroday=day0
+      zerot=t1(int(curs_y))
+      do while (zerot.ge.1.0)
+         zeroday=zeroday+1
+         zerot=zerot-1
+      enddo
+      if ((zerot.ge.0.0).and.(zerot.le.1.0)) then
          meas_channel=chanoff+int(curs_x)*chanw
          meas_frequency=cfreq(int(curs_x))*1000.0
          if (iflag(int(curs_x),int(curs_y),2).ge.1) then
@@ -1631,9 +1642,10 @@ c     check we have a valid time
          else
             meas_amplitude=0.0
          endif
-         startday=int(day0+real(int(t1(int(curs_y)))))+1
+c         startday=int(day0+real(int(t1(int(curs_y)))))+1
+         startday=zeroday
          call julian_to_date(startday,day,month,year,ierr)
-         thist=t1(int(curs_y))*24.0
+         thist=zerot*24.0
          hour=int(thist)
          thist=(thist-int(hour))*60.0
          minute=int(thist)
@@ -2215,7 +2227,7 @@ c
       integer xdim,ydim,curr_zooms(2,2)
       real maxval,minval,tr(6)
       real valarray(xdim,ydim,2)
-      character status*60
+c      character status*60
 c
 c  Draw the main waterfall plot, after masking the data with the
 c  current user-specified flags.
@@ -2530,7 +2542,7 @@ c
       include 'maxdim.h'
       integer i,j,k,offset,length,pnt,bl,i0
       real buf(2*MAXCHAN+3),t
-      character status*60
+c      character status*60
 
       some_unflagged=.false.
       if (firstread) then
@@ -2853,7 +2865,7 @@ c  Externals.
 c
       logical uvvarupd
       real ctoapri
-      character status*60
+c      character status*60
 c
 c  Initialise the array to keep track of what baselines are present.
 c
@@ -3037,7 +3049,7 @@ c***********************************************************************
 c
       character string*(*),selectline*(*)
       integer isave(5),chanoff,chanw
-      real t1,t2
+      real t1,t2,onet,twot
       double precision day0
 c
 c  Nicely format an editting instruction.
@@ -3104,7 +3116,15 @@ c
          year=year-100
       endif
       call monthstring(month,mon)
-      tet=t1*24.0
+      onet=t1
+      do while (onet.ge.1.0)
+         onet=onet-1
+      enddo
+      twot=t2
+      do while (twot.ge.1.0)
+         twot=twot-1
+      enddo
+      tet=onet*24.0
       hour=int(tet)
       tet=(tet-real(hour))*60.0
       minute=int(tet)
@@ -3112,14 +3132,14 @@ c
       second=tet
       write(time1,'(I2.2,A3,I2.2,A1,I2.2,A1,I2.2,A1,F4.1)')
      *  year,mon,day,':',hour,':',minute,':',second
-      startday=int(day0+real(int(t1)))+1
+      startday=int(day0+real(int(t2)))+1
       call julian_to_date(startday,day,month,year,ierr)
       year=year-1900
       if (year.gt.100) then
          year=year-100
       endif
       call monthstring(month,mon)
-      tet=t2*24.0
+      tet=twot*24.0
       hour=int(tet)
       tet=(tet-real(hour))*60.0
       minute=int(tet)
