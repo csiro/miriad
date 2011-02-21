@@ -75,6 +75,14 @@ c                        displayed antenna B.
 c       @                Unflag the selected range of data on all
 c                        baselines n-B formed with the currently
 c                        displayed antenna B.
+c       v                Flag all visibilities that have values
+c                        greater than the current maximum on the
+c                        scale on the displayed baseline, for this
+c                        baseline only.
+c       V                Flag all visibilities that have values
+c                        greater than the current maximum on the
+c                        scale on the displayed baseline, for all
+c                        baselines.
 c       rr               Remove all current user-specified flags
 c                        on this baseline; r must be pressed twice
 c                        in a row for safety as this procedure
@@ -214,7 +222,7 @@ c       nocal   Do not apply antenna gain calibration.
 c       nopass  Do not apply bandpass correction.
 c       nopol   Do not apply polarisation leakage correction.
 c
-c$Id: pgflag.for,v 1.8 2011/02/21 01:54:42 ste616 Exp $
+c$Id: pgflag.for,v 1.9 2011/02/21 04:45:18 ste616 Exp $
 c--
 c
 c  History:
@@ -289,7 +297,8 @@ c                 to allow selection of the first and last channels and
 c                 times.
 c    jbs 21Feb11  Fix bug that wouldn't allow user to make measurements
 c                 of, or flag, visibilities that were from the day
-c                 after the starting date of the plot.
+c                 after the starting date of the plot. Added the 'V' and
+c                 'v' commands to flag bright pixels.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mirconst.h'
@@ -317,7 +326,7 @@ c
       integer min_x_zoom,max_x_zoom,min_y_zoom,max_y_zoom
       character pressed*2,previous_pressed*2
       integer meas_channel,shift_x,shift_y,f_a1,f_a2,f_mode
-      real meas_freq,meas_amp
+      real meas_freq,meas_amp,meas_maxval
       character meas_time*20,yn*20,status*60
       logical plot_top,plot_average,plot_main,plot_points
       logical do_flag,do_unflag,do_undoflag,subavgc,subavgt
@@ -337,8 +346,8 @@ c
       logical uvDatOpn
 
       version = versan ('pgflag',
-     :                  '$Revision: 1.8 $',
-     :                  '$Date: 2011/02/21 01:54:42 $')
+     :                  '$Revision: 1.9 $',
+     :                  '$Date: 2011/02/21 04:45:18 $')
 
 c
 c Get user inputs
@@ -812,11 +821,55 @@ c     locate the maximum value - an expert option
                max_makeregion=.true.
             endif
             call LocateMax(memi(iFlg),nchan,ntime,memr(iDat),chanoff,
-     *           chanw,region_width,max_makeregion,points,day0,t1)
+     *           chanw,region_width,max_makeregion,points,day0,t1,
+     *           meas_maxval)
             if (max_makeregion) then
                needplot=.true.
                plot_points=.true.
             endif
+         elseif ((pressed(1:1).eq.'v').or.(pressed(1:1).eq.'V')) then
+c     flag out all regions brighter than the currently set maximum
+c     plot value, on this baseline, or on all baselines
+            max_makeregion=.true.
+            region_width=0
+c     we select only the regions that are brighter on this baseline
+            call LocateMax(memi(iFlg),nchan,ntime,memr(iDat),chanoff,
+     *           chanw,region_width,max_makeregion,points,day0,t1,
+     *           meas_maxval)
+            do_flag=.true.
+            if (pressed(1:1).eq.'v') then
+               f_mode=1
+            else
+               f_mode=4
+            endif
+            do i=1,MAXANT
+               do j=i,MAXANT
+                  tbl=((j-1)*j)/2+i
+                  if (cbl.eq.tbl) then
+                     f_a1=i
+                     f_a2=j
+                     goto 60
+                  endif
+               enddo
+ 60         enddo
+            do while (meas_maxval.gt.datamax)
+               call FlagData(points,f_a1,f_a2,f_mode,
+     *              do_flag,do_unflag,do_undoflag,chans,times,
+     *              bases,flagval,MAXEDIT,nflags,day0,t1,ntime,chanoff,
+     *              chanw)
+               call ApplyFlags(memI(iFlg),nchan,ntime,chans,times,
+     *              bases,flagval,MAXEDIT,nflags,cbl,some_unflagged)
+               call LocateMax(memi(iFlg),nchan,ntime,memr(iDat),chanoff,
+     *              chanw,region_width,max_makeregion,points,day0,t1,
+     *              meas_maxval)
+            enddo
+            needplot=.true.
+            plot_top=.true.
+            plot_average=.true.
+            plot_main=.true.
+c     clear the selection
+            call reset_points(points)
+            plot_points=.true.
          elseif (pressed(1:1).eq.'x') then
             subavgc=.not.subavgc
             subavgt=.false.
@@ -1253,11 +1306,11 @@ c
       end
 c***********************************************************************
       subroutine LocateMax(iflag,nchan,ntime,valarray,chanoff,chanw,
-     *     regwidth,makesel,points,day0,t1)
+     *     regwidth,makesel,points,day0,t1,maxval)
 c
       integer nchan,ntime,chanoff,chanw,regwidth
       integer iflag(nchan,ntime,2),points(2,2)
-      real valarray(nchan,ntime,2),t1(ntime)
+      real valarray(nchan,ntime,2),t1(ntime),maxval
       logical makesel
       double precision day0
 c
@@ -1280,9 +1333,10 @@ c              time sample.
 c  Output:
 c    points    A selection centred on the maximum value, with as many
 c              as regwidth channels/time samples on each side.
+c    maxval    The maximum value found.
 c-----------------------------------------------------------------------
       integer i,j,xloc,yloc
-      real maxval
+c      real maxval
       logical setval
       character maxstatus*256,maxtime*20,mon*3
       integer day,month,year,ierr,hour,minute,startday
@@ -1313,7 +1367,11 @@ c
       if (.not.makesel) then
          startday=int(day0+real(int(t1(int(yloc)))))+1
          call julian_to_date(startday,day,month,year,ierr)
-         thist=t1(int(yloc))*24.0
+         thist=t1(int(yloc))
+         do while (thist.ge.1.0)
+            thist=thist-1
+         enddo
+         thist=thist*24.0
          hour=int(thist)
          thist=(thist-int(hour))*60.0
          minute=int(thist)
