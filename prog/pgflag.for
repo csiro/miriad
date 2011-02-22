@@ -181,6 +181,9 @@ c                        information about it into the controlling
 c                        terminal. Pressing it twice in succession will
 c                        make PGFLAG create a selection region of 20
 c                        chans and 20 times centred on this sample.
+c       P                Display the current selection on the secondary
+c                        plot device as a spectrum. This command will
+c                        work only if device2 is specified.
 c
 c@ vis
 c     Input visibility dataset to be flagged. No default.
@@ -199,6 +202,10 @@ c       rr, ll, rl, lr
 c     Default is all polarizations or Stokes parameters present
 c@ device
 c     PGPLOT plot device/type, which must be interactive. No default.
+c@ device2
+c     PGPLOT plot device/type, which must be interactive. This optional
+c     plot device will be used to display spectra from the selected
+c     region, if requested.
 c@ mode
 c     Display ``amplitude'' or ``phase''. By default, ``amplitude''
 c     is selected. For mode=``phase'', the phase is in degrees.
@@ -222,7 +229,7 @@ c       nocal   Do not apply antenna gain calibration.
 c       nopass  Do not apply bandpass correction.
 c       nopol   Do not apply polarisation leakage correction.
 c
-c$Id: pgflag.for,v 1.9 2011/02/21 04:45:18 ste616 Exp $
+c$Id: pgflag.for,v 1.10 2011/02/22 04:26:39 ste616 Exp $
 c--
 c
 c  History:
@@ -299,6 +306,11 @@ c    jbs 21Feb11  Fix bug that wouldn't allow user to make measurements
 c                 of, or flag, visibilities that were from the day
 c                 after the starting date of the plot. Added the 'V' and
 c                 'v' commands to flag bright pixels.
+c    jbs 22Feb11  Fix bug in the way flagging regions were extended near
+c                 time break boundaries. Made a common task to handle
+c                 conversion to a string representation of the time.
+c                 Now possible to plot an average spectrum of the
+c                 selected region on another specified PGPLOT device.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mirconst.h'
@@ -310,6 +322,8 @@ c
 c
       character versan*80, version*80
       character device*80,xaxis*12,yaxis*12,uvflags*12,val*16
+      character device2*80
+      integer devicenum,device2num
       logical selgen,noapply
       integer npol,tno,i,j,length
 c
@@ -346,14 +360,15 @@ c
       logical uvDatOpn
 
       version = versan ('pgflag',
-     :                  '$Revision: 1.9 $',
-     :                  '$Date: 2011/02/21 04:45:18 $')
+     :                  '$Revision: 1.10 $',
+     :                  '$Date: 2011/02/22 04:26:39 $')
 
 c
 c Get user inputs
 c
       call keyini
       call keya('device',device,' ')
+      call keya('device2',device2,' ')
       if (device.eq.' ') call bug('f','A PGPLOT device must be given')
       call GetAxis(xaxis,yaxis)
       call GetOpt(selgen,noapply,nosrc,uvflags)
@@ -369,15 +384,30 @@ c     Open the input data.
 c
       if(.not.uvDatOpn(tno))call bug('f','Error opening input')
 c
-c     Open the plot device.
+c     Open the plot device(s).
 c
-      if(pgopen(device).ne.1)then
+      devicenum=pgopen(device)
+      if(devicenum.le.0)then
          call pgldev
          call bug('f','Unable to open PGPLOT device')
       endif
+      device2num=0
+      if (device2.ne.' ') then
+         device2num=pgopen(device2)
+         if (device2num.le.0) then
+            call pgldev
+            call bug('f','Unable to open PGPLOT device')
+         endif
+      endif
+      call pgslct(devicenum)
       call pgqinf('CURSOR',val,length)
       if(val.eq.'NO')call bug('f','PGPLOT device is not interactive')
       call pgask(.false.)
+      if (device2num.gt.0) then
+         call pgslct(device2num)
+         call pgask(.false.)
+         call pgslct(devicenum)
+      endif
 c
 c     Use a scratch file for the data.
 c
@@ -1033,6 +1063,16 @@ c     print some info on the flagging done so far
      *               nthis,' flags'
                call output(status)
             endif
+         elseif (pressed(1:1).eq.'P') then
+c     plot the selection as a spectrum in the secondary device, if
+c     available
+            meastype=0
+            if (device2num.gt.0) then
+               call pgslct(device2num)
+               call PlotSpectrum(memI(iFlg),memR(iDat),nchan,ntime,
+     *              points,day0,t1,chanoff,chanw,cfreq,meastype,yaxis)
+               call pgslct(devicenum)
+            endif
          endif
          previous_pressed=pressed
       enddo
@@ -1054,9 +1094,13 @@ c
       call memfree(iFlg,2*nchan*ntime,'i')
       call memfree(iDat,2*nchan*ntime,'r')
 c
-c Close the PGPLOT device.
+c Close the PGPLOT device(s).
 c
       call pgclos()
+      if (device2num.gt.0) then
+         call pgslct(device2num)
+         call pgclos()
+      endif
 c
 c     Close the file
 c
@@ -1338,9 +1382,7 @@ c-----------------------------------------------------------------------
       integer i,j,xloc,yloc
 c      real maxval
       logical setval
-      character maxstatus*256,maxtime*20,mon*3
-      integer day,month,year,ierr,hour,minute,startday
-      real second,thist
+      character maxstatus*256,maxtime*20
 c
 c     first find the maximum value
 c
@@ -1365,22 +1407,7 @@ c
       enddo
 c
       if (.not.makesel) then
-         startday=int(day0+real(int(t1(int(yloc)))))+1
-         call julian_to_date(startday,day,month,year,ierr)
-         thist=t1(int(yloc))
-         do while (thist.ge.1.0)
-            thist=thist-1
-         enddo
-         thist=thist*24.0
-         hour=int(thist)
-         thist=(thist-int(hour))*60.0
-         minute=int(thist)
-         thist=(thist-int(minute))*60.0
-         second=thist
-         call monthstring(month,mon)
-         write(maxtime,'(I2.2,A3,I4.4,A1,I2.2,A1,I2.2,A1,F4.1)')
-     *     day,mon,year,'-',hour,':',minute,':',second
-         if (maxtime(17:17).eq.' ') maxtime(17:17)='0'
+         call TimeToString(day0,t1(int(yloc)),1,maxtime)
          write(maxstatus,'(A,F10.4,A,I6,A,A)') 'maximum value ',
      *        valarray(xloc,yloc,1),' at chan = ',chanoff+xloc*chanw,
      *        ' time = ',maxtime
@@ -1533,13 +1560,11 @@ c     check that we have a full selection box
             chans(2,nflags)=maxx
             isave(3)=minx
             isave(4)=maxx
-c            do while ((t1(miny+1).lt.0.0).or.(t1(miny+1).gt.1.0))
-            do while (t1(miny+1).lt.0.0)
+            do while (t1(miny).lt.0.0)
                miny=miny+1
             enddo
             times(1,nflags)=miny
-c            do while ((t1(maxy+1).lt.0.0).or.(t1(maxy+1).gt.1.0))
-            do while (t1(maxy+1).lt.0.0)
+            do while (t1(maxy).lt.0.0)
                maxy=maxy-1
             enddo
             times(2,nflags)=maxy
@@ -1636,20 +1661,177 @@ c-----------------------------------------------------------------------
 c
       end
 c***********************************************************************
+      subroutine PlotSpectrum(iflag,array,nchan,ntime,points,day0,t1,
+     *     chanoff,chanw,cfreq,meastype,yaxis)
+c
+      integer nchan,ntime,chanoff,chanw,meastype,points(2,2)
+      real t1(ntime),array(nchan,ntime,2)
+      integer iflag(nchan,ntime,2)
+      double precision day0,cfreq(nchan)
+      character yaxis*(*)
+c
+c  Make a spectral plot using the data in the currently selected region.
+c
+c  Input:
+c    iflag           Array of flags for the currently displayed
+c                    baseline.
+c    array           The real values of the data (either amplitude
+c                    or phase) for the currently displayed baseline.
+c    nchan           The number of channels present in the data.
+c    ntime           The number of time samples present in the data.
+c    points          The bounding points of the selection region.
+c    day0            The Julian date at midnight UT on the day of the
+c                    first time sample.
+c    t1              Array of times.
+c    chanoff         The channel offset as specified by the line
+c                    parameter.
+c    chanw           The channel width as specified by the line
+c                    parameter.
+c    cfreq           Array that specifies each channel's centre
+c                    frequency.
+c    meastype        Whether to display the original value (set to 0)
+c                    or the currently displayed value (set to 1)
+c-----------------------------------------------------------------------
+      include 'maxdim.h'
+      real spectrum(nchan),minval,maxval,channels(nchan)
+      integer i,j,nspectrum(nchan),chanmin,chanmax,mintime,maxtime
+      real minfreq,maxfreq
+      character status*60,xtitle*60,ytitle*60,ptitle*60
+      character time1*18,time2*18
+c
+c     check that we have a full selection box
+      if ((points(1,1).eq.-1).or.(points(1,2).eq.-1).or.
+     *    (points(2,1).eq.-1).or.(points(2,2).eq.-1)) then
+         return
+      endif
+c     zero our spectrum
+      do i=1,nchan
+         spectrum(i)=0.0
+         nspectrum(i)=0
+         channels(i)=real(chanoff+i*chanw)
+      enddo
+c     build up the average spectrum
+      chanmin=min(points(1,1),points(2,1))
+      chanmax=max(points(1,1),points(2,1))
+      mintime=min(points(1,2),points(2,2))
+      maxtime=max(points(1,2),points(2,2))
+      do i=chanmin,chanmax
+         do j=mintime,maxtime
+            if (iflag(i,j,2).ge.1) then
+               if (meastype.eq.0) then
+                  spectrum(i)=spectrum(i)+array(i,j,1)
+                  nspectrum(i)=nspectrum(i)+1
+               else
+                  spectrum(i)=spectrum(i)+array(i,j,2)
+                  nspectrum(i)=nspectrum(i)+1
+               endif
+            endif
+         enddo
+      enddo
+      
+      do i=chanmin,chanmax
+         if (nspectrum(i).gt.0) then
+            spectrum(i)=spectrum(i)/real(nspectrum(i))
+         endif
+         if (i.eq.chanmin) then
+            minval=spectrum(i)
+            maxval=spectrum(i)
+         else
+            minval=min(spectrum(i),minval)
+            maxval=max(spectrum(i),maxval)
+         endif
+      enddo
+c     make the plot now
+      call pgeras()
+c      write(status,'(A,I6,I6,F8.3,F8.3)') 'range:',chanmin,
+c     *     chanmax,minval,maxval
+c      call output(status)
+      minfreq=real(cfreq(chanmin)*1000.0)
+      maxfreq=real(cfreq(chanmax)*1000.0)
+      call pgswin(minfreq,maxfreq,minval,maxval)
+      call pgbox('CMTS',0.0,0,'',0.0,0);
+      call pgswin(channels(chanmin),channels(chanmax),minval,maxval)
+      call pgbox('BNTS',0.0,0,'BCNTS',0.0,0)
+      xtitle='channel'
+      if (yaxis(1:1).eq.'a') then
+         ytitle='amplitude'
+      elseif (yaxis(1:1).eq.'p') then
+         ytitle='phase'
+      endif
+      call TimeToString(day0,t1(mintime),0,time1)
+      call TimeToString(day0,t1(maxtime),0,time2)
+      ptitle='Average '//time1//' to '//time2
+      call pglab(xtitle,ytitle,ptitle)
+      call pgline(nchan,channels,spectrum)
+c
+      end
+c***********************************************************************
+      subroutine TimeToString(day0,dtime,type,stime)
+c
+      double precision day0
+      real dtime
+      character stime*(*)
+      integer type
+c
+c  Convert a Miriad time into a string representation.
+c
+c  Input:
+c    day0            The Julian date at midnight UT on the day of the
+c                    first time sample.
+c    dtime           The real representation of the time.
+c    type            The format of the string to return
+c                    0 = yymmmdd:HH:MM:SS.S
+c                    1 = ddmmmyyyy-HH:MM:SS.S
+c  Output:
+c    stime           A string representation of the time given in dtime.
+c-----------------------------------------------------------------------
+      integer startday,day,month,year,ierr,hour,minute
+      real onet,second
+      character mon*3
+c
+      startday=int(day0+real(int(dtime)))+1
+      call julian_to_date(startday,day,month,year,ierr)
+      if (type.eq.0) then
+         year=year-1900
+         if (year.gt.100) then
+            year=year-100
+         endif
+      endif
+      call monthstring(month,mon)
+      onet=dtime
+      do while (onet.ge.1.0)
+         onet=onet-1.0
+      enddo
+      onet=onet*24.0
+      hour=int(onet)
+      onet=(onet-real(hour))*60.0
+      minute=int(onet)
+      onet=(onet-real(minute))*60.0
+      second=onet
+      if (type.eq.0) then
+         write(stime,'(I2.2,A3,I2.2,A1,I2.2,A1,I2.2,A1,F4.1)')
+     *        year,mon,day,':',hour,':',minute,':',second
+         if (stime(15:15).eq.' ') stime(15:15)='0'
+      elseif (type.eq.1) then
+         write(stime,'(I2.2,A3,I4.4,A1,I2.2,A1,I2.2,A1,F4.1)')
+     *        day,mon,year,'-',hour,':',minute,':',second
+         if (stime(17:17).eq.' ') stime(17:17)='0'
+      endif
+c
+      end
+c***********************************************************************
       subroutine MakeMeasurement(iflag,array,nchan,ntime,curs_x,curs_y,
      *  day0,t1,meas_channel,meas_frequency,meas_time,meas_amplitude,
      *  chanoff,chanw,cfreq,meastype)
 c
       integer nchan,ntime,chanoff,chanw,meastype
       real curs_x,curs_y
-      real t1(ntime),array(nchan,ntime,2),thist,zerot
+      real t1(ntime),array(nchan,ntime,2),zerot
       integer iflag(nchan,ntime,2)
       double precision day0,cfreq(nchan),zeroday
       integer meas_channel
       real meas_frequency,meas_amplitude
-      character meas_time*(*),mon*3
-      integer day,month,year,ierr,hour,minute,startday
-      real second
+      character meas_time*(*)
 c
 c  Make a measurement of the sample under the cursor.
 c
@@ -1700,19 +1882,7 @@ c     check we have a valid time
          else
             meas_amplitude=0.0
          endif
-c         startday=int(day0+real(int(t1(int(curs_y)))))+1
-         startday=zeroday
-         call julian_to_date(startday,day,month,year,ierr)
-         thist=zerot*24.0
-         hour=int(thist)
-         thist=(thist-int(hour))*60.0
-         minute=int(thist)
-         thist=(thist-int(minute))*60.0
-         second=thist
-         call monthstring(month,mon)
-         write(meas_time,'(I2.2,A3,I4.4,A1,I2.2,A1,I2.2,A1,F4.1)')
-     *     day,mon,year,'-',hour,':',minute,':',second
-         if (meas_time(17:17).eq.' ') meas_time(17:17)='0'
+         call TimeToString(day0,t1(curs_y),1,meas_time)
       endif
 c
       end
@@ -3107,7 +3277,7 @@ c***********************************************************************
 c
       character string*(*),selectline*(*)
       integer isave(5),chanoff,chanw
-      real t1,t2,onet,twot
+      real t1,t2
       double precision day0
 c
 c  Nicely format an editting instruction.
@@ -3130,10 +3300,8 @@ c    selectline The formatted command in select keyword format
 c-----------------------------------------------------------------------
       include 'mirconst.h'
       include 'maxdim.h'
-      integer chan1,chan2,l,hour,minute,i,j,tbl,ls
-      integer day,month,year,ierr,startday
-      real second,tet
-      character time1*18,time2*18,mon*3
+      integer chan1,chan2,l,i,j,tbl,ls
+      character time1*18,time2*18
       character flagval*4,baseflag*30,selectant*13
 c
 c  Externals.
@@ -3167,46 +3335,8 @@ c
       else
          flagval='BAD'
       endif
-      startday=int(day0+real(int(t1)))+1
-      call julian_to_date(startday,day,month,year,ierr)
-      year=year-1900
-      if (year.gt.100) then
-         year=year-100
-      endif
-      call monthstring(month,mon)
-      onet=t1
-      do while (onet.ge.1.0)
-         onet=onet-1
-      enddo
-      twot=t2
-      do while (twot.ge.1.0)
-         twot=twot-1
-      enddo
-      tet=onet*24.0
-      hour=int(tet)
-      tet=(tet-real(hour))*60.0
-      minute=int(tet)
-      tet=(tet-real(minute))*60.0
-      second=tet
-      write(time1,'(I2.2,A3,I2.2,A1,I2.2,A1,I2.2,A1,F4.1)')
-     *  year,mon,day,':',hour,':',minute,':',second
-      startday=int(day0+real(int(t2)))+1
-      call julian_to_date(startday,day,month,year,ierr)
-      year=year-1900
-      if (year.gt.100) then
-         year=year-100
-      endif
-      call monthstring(month,mon)
-      tet=twot*24.0
-      hour=int(tet)
-      tet=(tet-real(hour))*60.0
-      minute=int(tet)
-      tet=(tet-real(minute))*60.0
-      second=tet
-      write(time2,'(I2.2,A3,I2.2,A1,I2.2,A1,I2.2,A1,F4.1)')
-     *  year,mon,day,':',hour,':',minute,':',second
-      if (time1(15:15).eq.' ') time1(15:15)='0'
-      if (time2(15:15).eq.' ') time2(15:15)='0'
+      call TimeToString(day0,t1,0,time1)
+      call TimeToString(day0,t2,0,time2)
       selectline='time('//time1
       ls=len1(selectline)
       selectline(ls+1:)=','//time2
