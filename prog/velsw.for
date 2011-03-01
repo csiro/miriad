@@ -32,7 +32,7 @@ c       This can be "barycentre" (solar system barycentre), "lsr" (Local
 c       Standard of Rest) or "observatory" (topocentric).  The default
 c       is not to change this.
 c
-c$Id: velsw.for,v 1.3 2011/02/18 05:16:10 cal103 Exp $
+c$Id: velsw.for,v 1.4 2011/03/01 03:03:27 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -51,14 +51,15 @@ c-----------------------------------------------------------------------
       integer   binsrcha
       character versan*72
 
-      data switches/'frequency',  'radio', 'optical'/
-      data vtypes  /'FREQ',       'VELO',  'FELO'/
-      data frames  /'barycentre', 'lsr',   'observatory'/
-      data ftypes  /'HEL',        'LSR',   'OBS'/
+c     N.B. switches and frames must be in alphabetical order.
+      data switches/'frequency',  'optical', 'radio'/
+      data vtypes  /'FREQ',       'FELO',    'VELO'/
+      data frames  /'barycentre', 'lsr',     'observatory'/
+      data ftypes  /'HEL',        'LSR',     'OBS'/
 c-----------------------------------------------------------------------
       version = versan('velsw',
-     *                 '$Revision: 1.3 $',
-     *                 '$Date: 2011/02/18 05:16:10 $')
+     *                 '$Revision: 1.4 $',
+     *                 '$Date: 2011/03/01 03:03:27 $')
 
 c     Get input parameters.
       call keyini
@@ -69,10 +70,8 @@ c     Get input parameters.
       call keymatch('axis',NFRAME, frames,1,frame,nf)
       call keyfin
 
-c     Check inputs.
+c     Open the input map.
       if (in.eq.' ') call bug('f','An input must be given')
-
-c     Open the input, and find the velocity axis.
       call xyopen(lIn,in,'old',MAXNAX,nsize)
 
       isw = binsrcha(switch,switches,NSWITCH)
