@@ -41,6 +41,9 @@ c	  scale     The phase of the gains is multiplied by the factor
 c	            given by the `gain' keyword. 
 c	  dup       Convert a single-polarization gain table into a dual
 c	            polarization table.
+c         invert    The existing gains are inverted (1/gain, phase negated)
+c                   to allow undoing calibration that has been applied to
+c                   the uvdata with uvaver.
 c
 c	The following option operates on the polarization leakages:
 c	  reflect   The existing leakages are made to possess a
@@ -62,6 +65,7 @@ c    mchw  18nov98 Added options=scale.
 c    rjs   01dec98 Added options=dup.
 c    tw    16aug03 Allow gain amplitude selection
 c    rjs   02jan05 Correct gain selection.
+c    mhw   01mar11 Added options=invert
 c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
@@ -73,7 +77,7 @@ c-----------------------------------------------------------------------
 c
 	character vis*64
 	logical domult,dorep,doflag,doamp,dophas,dorefl,dozm,doscal
-	logical dogain,doleak,dup
+	logical dogain,doleak,dup,doinv
 	integer iostat,tVis,itGain,itLeak,nants,nfeeds,nsols,ntau,i
 	integer numfeed,feeds(MAXFEED),nleaks
 	complex gain,Leaks(2,MAXANT)
@@ -85,7 +89,7 @@ c  Externals.
 c
 	integer hsize
 	logical hdprsnt
-	external MultOp,RepOp,FlagOp,AmpOp,PhasOp,ScalOp
+	external MultOp,RepOp,FlagOp,AmpOp,PhasOp,ScalOp,InvOp
 c
 c  Get the input parameters.
 c
@@ -98,9 +102,9 @@ c
 	call keyr('gain',phi,0.)
 	call mkeyfd('feeds',feeds,MAXFEED,numfeed)
         call GetOpt(dorep,domult,doflag,doamp,dophas,dorefl,dozm,
-     *	  doscal,dup)
+     *	  doscal,dup,doinv)
 	dogain = dorep.or.domult.or.doflag.or.doamp.or.
-     *				    dophas.or.doscal.or.dup
+     *				 dophas.or.doscal.or.dup.or.doinv
 	doleak = dorefl.or.dozm
 	call keyfin
 c
@@ -185,6 +189,9 @@ c
      *	    memd(pTimes),memc(pGains),mask,sels,gain,PhasOp)
 	  if(doscal)call GainEdt(nsols,nants*nfeeds,
      *	    memd(pTimes),memc(pGains),mask,sels,gain,ScalOp)
+	  if(doinv) call GainEdt(nsols,nants*nfeeds,
+     *	    memd(pTimes),memc(pGains),mask,sels,gain,InvOp)
+     
 c
 c  Write out the gains.
 c
@@ -437,6 +444,18 @@ c
 	real phase
 	Gain = abs(Gain)*expi(real(fac)*phase(Gain))
 	end
+c
+	subroutine InvOp(Gain,fac)
+c
+	implicit none
+	complex Gain,fac
+c
+        real t
+        t = abs(Gain)
+	if (t.gt.0) Gain = 1 / Gain
+	end
+        
+        
 c********1*********2*********3*********4*********5*********6*********7*c
 	subroutine GainWr(itGain,dup,nsols,nants,nfeeds,times,Gains)
 c
@@ -549,22 +568,23 @@ c-----------------------------------------------------------------------
 	end
 c********1*********2*********3*********4*********5*********6*********7*c
         subroutine GetOpt(dorep,domult,doflag,doamp,dophas,dorefl,dozm,
-     *		doscal,dup)
+     *		doscal,dup,doinv)
 c       
         implicit none
 	logical dorep,domult,doflag,doamp,dophas,dorefl,dozm,doscal
-	logical dup
+	logical dup, doinv
 c
 c  Get the various processing options.
 c
 c-----------------------------------------------------------------------
         integer NOPTS
-        parameter(NOPTS=9)
-        character opts(NOPTS)*9
+        parameter(NOPTS=10)
+        character opts(NOPTS)*10
         logical present(NOPTS)
         data opts/'replace  ','multiply ','flag     ',
      *		  'amplitude','phase    ','reflect  ',
-     *		  'zmean    ','scale    ','dup      '/
+     *		  'zmean    ','scale    ','dup      ',
+     *            'invert   '/
 c
         call options('options',opts,present,NOPTS)
 c
@@ -577,7 +597,8 @@ c
 	dozm   = present(7)
 	doscal = present(8)
 	dup    = present(9)
+        doinv  = present(10)
 	if(.not.(domult.or.dorep.or.doflag.or.doamp.or.dophas.or.
-     *	  dorefl.or.dozm.or.doscal.or.dup)) dorep = .true.
+     *	  dorefl.or.dozm.or.doscal.or.dup.or.doinv)) dorep = .true.
 c
 	end
