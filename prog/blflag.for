@@ -786,7 +786,7 @@ c  The default MAXCHAN makes blflag fail to link, use one that will
 c  fit a single spectrum
 c
         integer maxchan1
-        parameter (MAXCHAN1=5200)
+        parameter (MAXCHAN1=15000)
 c
 	logical flags(MAXCHAN1),ok
 	complex data(MAXCHAN1)
