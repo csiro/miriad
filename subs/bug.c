@@ -6,11 +6,11 @@
 *    rjs,mjs ????    Very mixed history. Created, destroyed, rewritten.
 *    rjs     26aug93 Call habort_c.
 *    rjs     14jul98 Add a caste operation in errmsg_c, to attempt
-*		     to appease some compilers.
+*                    to appease some compilers.
 *    rjs      9aug02 Support for "darwin" OS.
 *    rjs      3jul04 Use strerror routine.
 *
-*  $Id: bug.c,v 1.3 2006/10/23 07:50:32 cal103 Exp $
+*  $Id: bug.c,v 1.4 2011/03/23 01:48:39 cal103 Exp $
 *===========================================================================*/
 
 #include <string.h>
@@ -23,16 +23,16 @@ private char *errmsg_c();
 
 char *Name = NULL;
 int reentrant=0;
+
 /************************************************************************/
+
 void buglabel_c(Const char *name)
 /** buglabel -- Give the "program name" to be used as a label in messages. */
 /*& mjs									*/
 /*: error-handling							*/
 /*+ FORTRAN call sequence:
-	subroutine buglabel(name)
-
-	implicit none
-	character name*(*)
+      subroutine buglabel(name)
+      character name*(*)
 
   Give the name that is to be used as a label in error messages.
 
@@ -45,17 +45,17 @@ void buglabel_c(Const char *name)
   Name = malloc(strlen(name)+1);
   strcpy(Name,name);
 }
+
 /************************************************************************/
+
 void bugno_c(char s,int n)
 /** bugno -- Issue an error message, given a system error number.	*/
 /*& mjs									*/
 /*: error-handling							*/
 /*+ FORTRAN call sequence:
-	subroutine bugno(severity,errno)
-
-	implicit none
-	character severity*1
-	integer errno
+      subroutine bugno(severity,errno)
+      character severity*1
+      integer errno
 
   Output the error message associated with a particular error number.
 
@@ -66,20 +66,23 @@ void bugno_c(char s,int n)
 /*--									*/
 /*----------------------------------------------------------------------*/
 {
-  if (n == -1)bug_c(s,"End of file detected");
-  else bug_c(s,errmsg_c(n));
+  if (n == -1) {
+    bug_c(s,"End of file detected");
+  } else {
+    bug_c(s,errmsg_c(n));
+  }
 }
+
 /************************************************************************/
+
 void bug_c(char s,Const char *m)
 /** bug -- Issue an error message, given by the caller.			*/
 /*& mjs									*/
 /*: error-handling							*/
 /*+ FORTRAN call sequence:
-	subroutine bug(severity,message)
-
-	implicit none
-	character severity*1
-	character message*(*)
+      subroutine bug(severity,message)
+      character severity*1
+      character message*(*)
 
   Output the error message given by the caller, and abort if needed.
 
@@ -94,55 +97,46 @@ void bug_c(char s,Const char *m)
   int doabort;
 
   doabort = 0;
-  if      (s == 'i' || s == 'I') p = "Informational";
-  else if (s == 'w' || s == 'W') p = "Warning";
-  else if (s == 'e' || s == 'E') p = "Error";
-  else {doabort = 1;		 p = "Fatal Error"; }
+  if (s == 'i' || s == 'I') {
+    p = "Informational";
+  } else if (s == 'w' || s == 'W') {
+    p = "Warning";
+  } else if (s == 'e' || s == 'E') {
+    p = "Error";
+  } else {
+    p = "Fatal Error";
+    doabort = 1;
+  }
 
   fprintf(stderr,"### %s:  %s\n",p,m);
-  if(doabort){
+  if (doabort) {
     reentrant = !reentrant;
-    if(reentrant)habort_c();
-#ifdef vms
-# include ssdef
-    lib$stop(SS$_ABORT);
-#else
-/*    fprintf(stderr,"### Program exiting with return code = 1 ###\n"); */
-    exit (1);
-#endif
+    if (reentrant) habort_c();
+    exit(1);
   }
 }
+
 /************************************************************************/
+
 private char *errmsg_c(n)
 int n;
 /*
   Return the error message associated with some error number.
 ------------------------------------------------------------------------*/
 {
-  static char string[128];
-#ifdef vms
-#include <descrip.h>
-  $DESCRIPTOR(string_descriptor,string);
-  short int len0;
-  int one;
-
-  one = 1;
-  lib$sys_getmsg(&n,&len0,&string_descriptor,&one);
-  string[len0] = 0;
-  return(string);
-#else
-# ifdef HAS_STRERROR
+#ifdef HAS_STRERROR
   return(strerror(n));
-# else
-#  if !defined(linux) && !defined(darwin_ppc) && !defined(darwin_x86)
+#else
+  static char string[128];
+# if !defined(linux) && !defined(linux64) && !defined(darwin_ppc) && !defined(darwin_x86) && !defined(darwin_x86_64)
   extern int sys_nerr;
   extern char *sys_errlist[];
-#  endif
-  if(n > 0 && n <= sys_nerr)return((char *)sys_errlist[n]);
-  else{
-    sprintf(string,"Unknown error with number %d detected.",n);
-    return(string);
-  }
 # endif
+  if (n > 0 && n <= sys_nerr) {
+    return (char *)sys_errlist[n];
+  } else {
+    sprintf(string,"Unknown error with number %d detected.",n);
+    return string;
+  }
 #endif
 }
