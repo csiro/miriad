@@ -14,9 +14,9 @@
 #
 # With a few exceptions (see below) mirsync only updates files or subdirectory
 # hierarchies that are already present in the local installation, i.e. it
-# wouldn't create or update $MIR/darwin_x86/ if it didn't already exist.  To
-# fetch a file or subdirectory that does not already exist within $MIR simply
-# create an empty version (e.g. mkdir $MIR/darwin_x86) before running mirsync.
+# wouldn't create or update $MIR/linux/ if it didn't already exist.  To fetch
+# a file or subdirectory that does not already exist within $MIR simply create
+# an empty version (e.g. mkdir $MIR/linux) before running mirsync.
 #
 # Options:
 #   -c     Fetch code and compiled documentation only, no binaries.  File
@@ -52,7 +52,7 @@
 #   $MIR/specdoc/	...always updated.
 #
 # Original: 2006/11/28 Mark Calabretta, ATNF
-# $Id: mirsync,v 1.9 2010/09/29 02:04:40 cal103 Exp $
+# $Id: mirsync,v 1.10 2011/03/23 01:24:48 cal103 Exp $
 #-----------------------------------------------------------------------------
 
   trap 'exit 1' 1 2 3 15
@@ -178,7 +178,7 @@
   FILES="$FILES userguide.ps userguide_US.ps.gz"
 
   DIRS="config etc guides inc linpack prog scripts spec subs tests tools"
-  [ "$DOBIN" = 1 ] && DIRS="$DIRS darwin_x86 linux linux64 sun4sol"
+  [ "$DOBIN" = 1 ] && DIRS="$DIRS darwin_x86_64 linux linux64 sun4sol"
 
 # Files that must be present.
   SRC="$ATMIR/DISCLAIMER"
