@@ -229,7 +229,7 @@ c       nocal   Do not apply antenna gain calibration.
 c       nopass  Do not apply bandpass correction.
 c       nopol   Do not apply polarisation leakage correction.
 c
-c$Id: pgflag.for,v 1.10 2011/02/22 04:26:39 ste616 Exp $
+c$Id: pgflag.for,v 1.11 2011/03/23 02:33:28 ste616 Exp $
 c--
 c
 c  History:
@@ -360,8 +360,8 @@ c
       logical uvDatOpn
 
       version = versan ('pgflag',
-     :                  '$Revision: 1.10 $',
-     :                  '$Date: 2011/02/22 04:26:39 $')
+     :                  '$Revision: 1.11 $',
+     :                  '$Date: 2011/03/23 02:33:28 $')
 
 c
 c Get user inputs
@@ -1696,7 +1696,7 @@ c-----------------------------------------------------------------------
       real spectrum(nchan),minval,maxval,channels(nchan)
       integer i,j,nspectrum(nchan),chanmin,chanmax,mintime,maxtime
       real minfreq,maxfreq
-      character status*60,xtitle*60,ytitle*60,ptitle*60
+      character xtitle*60,ytitle*60,ptitle*60
       character time1*18,time2*18
 c
 c     check that we have a full selection box
@@ -1749,7 +1749,7 @@ c      call output(status)
       minfreq=real(cfreq(chanmin)*1000.0)
       maxfreq=real(cfreq(chanmax)*1000.0)
       call pgswin(minfreq,maxfreq,minval,maxval)
-      call pgbox('CMTS',0.0,0,'',0.0,0);
+      call pgbox('CMTS',0.0,0,'',0.0,0)
       call pgswin(channels(chanmin),channels(chanmax),minval,maxval)
       call pgbox('BNTS',0.0,0,'BCNTS',0.0,0)
       xtitle='channel'
