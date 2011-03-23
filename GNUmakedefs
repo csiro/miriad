@@ -25,7 +25,7 @@
 # target names by running 'gmake help'
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakedefs,v 1.34 2010/10/12 01:32:18 cal103 Exp $
+# $Id: GNUmakedefs,v 1.35 2011/03/23 01:26:25 cal103 Exp $
 #-----------------------------------------------------------------------------
 # We rely only on the MIR environment variable.
 MIRROOT  := $(MIR)
@@ -150,21 +150,22 @@ TIMER     := date +"%a %Y/%m/%d %X %z, executing on $(HOST)"
 # it is used for DEC alphas and a variety of Intel-based platforms apart from
 # linux.
 
-SUBSalpha      := alpha_linux
-SUBSconvex     := convex
-SUBScygwin     := alpha_linux
-SUBSdarwin_ppc :=
-SUBSdarwin_x86 := alpha_linux
-SUBShpux       := hpux
-SUBSi86sol     := alpha_linux
-SUBSirix       :=
-SUBSirix64     := irix64
-SUBSlinux      := alpha_linux
-SUBSlinux-ia64 := alpha_linux
-SUBSlinux64    := alpha_linux
-SUBSsun4       :=
-SUBSsun4sol    :=
-SUBSunicos     := unicos
+SUBSalpha         := alpha_linux
+SUBSconvex        := convex
+SUBScygwin        := alpha_linux
+SUBSdarwin_ppc    :=
+SUBSdarwin_x86    := alpha_linux
+SUBSdarwin_x86_64 := alpha_linux
+SUBShpux          := hpux
+SUBSi86sol        := alpha_linux
+SUBSirix          :=
+SUBSirix64        := irix64
+SUBSlinux         := alpha_linux
+SUBSlinux-ia64    := alpha_linux
+SUBSlinux64       := alpha_linux
+SUBSsun4          :=
+SUBSsun4sol       :=
+SUBSunicos        := unicos
 
 #-----------------------------------------------------------------------------
 # Linker options for external libraries.
@@ -225,18 +226,20 @@ READLINELIB := -lreadline -ltermcap
 # define symbols needed by an executable.  It is mainly intended for Miriad
 # systems where the library is under development, to save having to recompile
 # every Miriad task if just one object module changes.  Appropriate commands
-# are pre-defined for linux, linux64, darwin_ppc, darwin_x86, and sun4sol.
+# are pre-defined for linux, linux64, darwin_x86, darwin_x86_64, darwin_ppc,
+# and sun4sol.
 #
 # If you don't know how to set this for your platform (or don't want this
 # dependency analysis) then simply leave nm-syms undefined (or undefine it in
 # your GNUmakedefs), each executable will then depend on the library as a
 # whole.  The name of the object module is $$OBJ.
 
-nm-syms.linux      := nm -g $$OBJ | awk '/ T [a-z]/ {print $$3}'
-nm-syms.linux64    := $(nm-syms.linux)
-nm-syms.darwin_x86 := nm -g $$OBJ | awk '/ T _[a-z]/ {print $$3}'
-nm-syms.darwin_ppc := $(nm-syms.darwin_x86)
-nm-syms.sun4sol    := nm -g -p $$OBJ | awk '/ T / {print $$3}'
+nm-syms.linux         := nm -g $$OBJ | awk '/ T [a-z]/ {print $$3}'
+nm-syms.linux64       := $(nm-syms.linux)
+nm-syms.darwin_x86    := nm -g $$OBJ | awk '/ T _[a-z]/ {print $$3}'
+nm-syms.darwin_x86_64 := $(nm-syms.darwin_x86)
+nm-syms.darwin_ppc    := $(nm-syms.darwin_x86)
+nm-syms.sun4sol       := nm -g -p $$OBJ | awk '/ T / {print $$3}'
 
 #=============================================================================
 #                         END OF DEFAULT DEFINITIONS
