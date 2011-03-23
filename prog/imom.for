@@ -72,7 +72,7 @@ c@ log
 c       The output log file. The default is the terminal. Output to
 c       the terminal is paged.
 c
-c$Id: imom.for,v 1.2 2011/03/23 05:35:09 cal103 Exp $
+c$Id: imom.for,v 1.3 2011/03/23 05:39:37 cal103 Exp $
 c--
 c  vjm  20aug99  Cannibalise imlist
 c  vjm  23aug99  Revise & expand
@@ -96,8 +96,8 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 c     Get input parameters.
       version = versan('imom',
-     *                 '$Revision: 1.2 $',
-     *                 '$Date: 2011/03/23 05:35:09 $')
+     *                 '$Revision: 1.3 $',
+     *                 '$Date: 2011/03/23 05:39:37 $')
 
       call keyini
       call keya('in', In, ' ')
@@ -257,45 +257,51 @@ c         Do a separate estimate for each hyperplane.
             call momit(lin,naxis,imlo,imhi,blc,trc,rlo,rhi,
      *                 getmin,getmax,doskew,clipmean,clip1sig,
      *                 momx,momy,stats)
-            write(line,
-     *          '(a,x,i4,2x,a10,x,1pe12.5,1p2(x,a,x,e12.5))')
-     *          'Plane:',plane,'Npix:',stats(1),
-     *                  'good, range',stats(2),'to',stats(3)
+
+            write(line,'(a,x,i4,2x,a10,x,1pe12.5,1p,2(x,a,x,e12.5))')
+     *        'Plane:',plane,'Npix:',stats(1),'good, range',stats(2),
+     *        'to',stats(3)
             call LogWrit(line(1:80))
-            write(line,'(a,x,i4,2x,a10,1p2(x,e12.5),x,a)')
-     *            'Plane:',plane,'Centroid:',momx(1),momy(1),'pixels'
+
+            write(line,'(a,x,i4,2x,a10,1p,2(x,e12.5),x,a)')
+     *        'Plane:',plane,'Centroid:',momx(1),momy(1),'pixels'
             call LogWrit(line(1:80))
-            write(line,'(a,x,i4,2x,a10,1p2(x,e12.5),x,a)')
-     *           'Plane:',plane,'Spread:',momx(2),momy(2),'pixels'
+
+            write(line,'(a,x,i4,2x,a10,1p,2(x,e12.5),x,a)')
+     *        'Plane:',plane,'Spread:',momx(2),momy(2),'pixels'
             call LogWrit(line(1:80))
+
             if (doskew) then
-               write(line,'(a,x,i4,2x,a10,1p2(x,e12.5),x,a)')
-     *              'Plane:',plane,'Skew:',momx(3),momy(3),' '
+               write(line,'(a,x,i4,2x,a10,1p,2(x,e12.5),x,a)')
+     *           'Plane:',plane,'Skew:',momx(3),momy(3),' '
                call LogWrit(line(1:80))
             endif
             plane = plane + 1
           enddo
+
           axis = axis + 1
         enddo
 
       else if (naxis.eq.2) then
-        call momit(lin,naxis,imlo,imhi,blc,trc,rlo,rhi,
-     *             getmin,getmax,doskew,clipmean,clip1sig,
-     *             momx,momy,stats)
+        call momit(lin,naxis,imlo,imhi,blc,trc,rlo,rhi,getmin,getmax,
+     *             doskew,clipmean,clip1sig,momx,momy,stats)
+
         write(line,'(x,a10,x,1pe12.5,2x,a,x,1pe12.5,x,a,x,1pe12.5))')
-     *            'Npix:',stats(1),
-     *            'good, range',stats(2),'to',stats(3)
+     *    'Npix:',stats(1),'good, range',stats(2),'to',stats(3)
         call LogWrit(line(1:80))
+
         write(line,'(x,a10,1p,2(x,e12.5),x,a)')
-     *       'Centroid:',momx(1),momy(1),' pixels'
+     *    'Centroid:',momx(1),momy(1),' pixels'
         call LogWrit(line(1:80))
+
         write(line,'(x,a10,1p,2(x,e12.5),x,a)')
-     *         'Spread:',momx(2),momy(2),' pixels'
+     *    'Spread:',momx(2),momy(2),' pixels'
         call LogWrit(line(1:80))
+
         if (doskew) then
-           write(line,'(x,a10,1p,2(x,e12.5),x,a)')
-     *          'Skew:',momx(3),momy(3),' '
-           call LogWrit(line(1:80))
+          write(line,'(x,a10,1p,2(x,e12.5),x,a)')
+     *      'Skew:',momx(3),momy(3),' '
+          call LogWrit(line(1:80))
         endif
       endif
 
