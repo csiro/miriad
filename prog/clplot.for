@@ -54,7 +54,7 @@ c@ log
 c       The output log file. The default filename is clplot.log
 c       Results from image analysis are written into the log file.
 c
-c$Id: clplot.for,v 1.10 2010/11/22 07:04:47 cal103 Exp $
+c$Id: clplot.for,v 1.11 2011/03/28 05:17:26 cal103 Exp $
 c--
 c  History:
 c    20jan94 jpw   Copied from MIRIAD program velplot
@@ -91,8 +91,8 @@ c  real ary(128*128*64)=1048576 reals = 4 MBytes
 c  real ary(256*256*128)=8388608 reals = 32 MBytes
 c-----------------------------------------------------------------------
       version = versan ('clplot',
-     *                  '$Revision: 1.10 $',
-     *                  '$Date: 2010/11/22 07:04:47 $')
+     *                  '$Revision: 1.11 $',
+     *                  '$Date: 2011/03/28 05:17:26 $')
 c
 c  Get the input parameters.
 c
@@ -133,7 +133,7 @@ c
         if (words(2)(1:2).eq.'DT') read(words(3),*) dt
       enddo
       call hisclose(lIn2)
-      call readmap(lIn,lIn2,ary,vlsr,nx,ny,nc)
+      call readmap(lIn,lIn2,nx,ny,nc,ary,vlsr)
 c
 c  Tell user how to exit from xwindow.
 c
@@ -260,7 +260,7 @@ c-----------------------------------------------------------------------
         endif
       enddo
 
-129   call readmap(lIn,lIn2,ary,vlsr,nx,ny,nc)
+129   call readmap(lIn,lIn2,nx,ny,nc,ary,vlsr)
 
       end
 
@@ -2699,22 +2699,22 @@ c
 
 c***********************************************************************
 
-      subroutine readmap(lIn,lIn2,ary,vlsr,nx,ny,nc)
+      subroutine readmap(lIn,lIn2,nx,ny,nc,ary,vlsr)
 
       integer   lIn, lIn2, nx, ny, nc
-      real      ary(1), vlsr(1)
+      real      ary(nx*ny*nc), vlsr(nc)
 c-----------------------------------------------------------------------
 c  Read portion of Miriad image and assignment data cube.
 c
 c  Inputs:
 c    lIn        Handle of input Image.
-c    lIn2       Handle of clump assignment cube
+c    lIn2       Handle of clump assignment cube.
+c    nx,ny,nc   Dimensions of cube.
 c
 c  Outputs:
 c    ary(nx,ny,nc)
-c               intersection of spectral line image and assignment array
-c    vlsr(nc)   velocity array
-c    nx ny nc   dimensions of images
+c               Intersection of spectral line image and assignment array
+c    vlsr(nc)   Velocity array.
 c-----------------------------------------------------------------------
       include 'clplot.h'
       include 'mirconst.h'
@@ -2722,19 +2722,17 @@ c-----------------------------------------------------------------------
       double precision CKMS
       parameter (CKMS = DCMKS*1d-3)
 
-      integer   i, ipt, j, k, n
-      real      ass(MAXDIM), cdelt1, cdelt2, cdelt3, crpix1, crpix2,
-     *          crpix3, crval3, row(MAXDIM)
+      integer   i, ifrq, ipt, j, k, n
+      real      ass(MAXDIM), cdelt1, cdelt2, crpix1, crpix2, row(MAXDIM)
+      double precision dtemp
+      character algo*3
 c-----------------------------------------------------------------------
       call rdhdr(lIn, 'crpix1', crpix1, real(nx/2+1))
       call rdhdr(lIn, 'crpix2', crpix2, real(ny/2+1))
-      call rdhdr(lIn, 'crpix3', crpix3, 1.0)
       call rdhdr(lIn, 'cdelt1', cdelt1, 0.0)
       call rdhdr(lIn, 'cdelt2', cdelt2, 0.0)
-      call rdhdr(lIn, 'cdelt3', cdelt3, 1.0)
       call rdhdr(lIn, 'crval1', crval(1), 0.0)
       call rdhdr(lIn, 'crval2', crval(2), 0.0)
-      call rdhdr(lIn, 'crval3', crval3,   1.0)
       call rdhda(lIn, 'ctype1', ctype(1), ' ')
       call rdhda(lIn, 'ctype2', ctype(2), ' ')
       call rdhda(lIn, 'ctype3', ctype(3), ' ')
@@ -2763,19 +2761,22 @@ c     Reference pixel in box coordinates.
       call rdhda(lIn, 'object', object, ' ')
       call rdhdr(lIn, 'restfreq', restfreq, 0.0)
 
-      if (ctype(3)(1:4).eq.'FREQ' .and. restfreq.ne.0.0) then
-        call output('Convert frequency axis to velocity')
-        cdelt3 = (cdelt3/restfreq)*CKMS
-        crval3 = (crval3/restfreq)*CKMS
-      endif
-
-      vel  = (blc(3)-crpix3)*cdelt3 + crval3
-      delv = cdelt3
+c     Compute the radio velocity of each spectral channel.
+      call coInit(lIn)
+      call coSpcSet(lIn, 'VRAD', ifrq, algo)
+      if (ifrq.eq.0) call bug('f','No spectral axis in input image')
+      if (algo.ne.' ') call bug('f','Non-linear radio velocity axis')
       do i = 1, nc
-        vlsr(i) = crval3 + (blc(3)-crpix3 +i-1)*cdelt3
+        call coCvt1(lIn, ifrq, 'ap', dble(blc(3)+i-1), 'aw', dtemp)
+        vlsr(i) = real(dtemp)
       enddo
+      call coFin(lIn)
 
+c     Save values in clhead COMMON.
+      vel  = vlsr(1)
+      delv = vlsr(2) - vlsr(1)
 
+c     Read the image data.
       call output('Reading data cubes...')
       ipt = 1
       if (nclumps.gt.0) then
