@@ -178,26 +178,10 @@ c                    same Y-axis scale, that embraces all sub-plots.
 c                    This option forces each sub-plot to be scaled
 c                    independently.
 c
-c$Id: imrm.for,v 1.7 2010/11/22 05:43:11 cal103 Exp $
+c$Id: imrm.for,v 1.8 2011/03/28 07:02:50 cal103 Exp $
 c--
 c  History:
-c    nebk 22may92   Original version.
-c    nebk 26may92   Try to deal with ambiguities.
-c    nebk 27may92   Improve warnings to users
-c    nebk 04nov92   Reorganize and improve blanking, add output error
-c                   images, rewrite lsf to include goodness of fit
-c    mjs  12mar93   Use maxnax.h file instead of setting own value.
-c    nebk 11nov93   Add options=ambiguous and output blanking info
-c    nebk 30jan95   Work on ambiguity algorithm, add keywords "rmi",
-c                   "device", "nxy", "csize", "options=acc,gues,yind"
-c    nebk 28mar95   Trying to plot nowhere if device blank
-c    nebk 21jun97   Was plotting garbage on some platforms if
-c                   some output points were blanked.  Also in hedinfo
-c                   rdhdd was being called with default real arg.
-c    rjs  02jul97   cellscal change.
-c    rjs  23jul97   added pbtype.
-c    nebk 25aug00   bump to 20 image.  subroutine chkdes should not
-c                   be checking cdelt/crpix on frequency axis
+c    Refer to the RCS log, v1.1 includes prior revision information.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -222,15 +206,15 @@ c-----------------------------------------------------------------------
       character bflag, device*32, inE(MAXIM)*64, in(MAXIM)*64, outRM*64,
      *          outRMe*64, outPA*64, outPAe*64, text*100, version*72
 
-      character versan*80
+      character versan*72
       external  versan
 
       data nbl /6*0/
       data padummy /-100000.0/
 c-----------------------------------------------------------------------
       version = versan ('imrm',
-     *                  '$Revision: 1.7 $',
-     *                  '$Date: 2010/11/22 05:43:11 $')
+     *                  '$Revision: 1.8 $',
+     *                  '$Date: 2011/03/28 07:02:50 $')
 
 c     Get the inputs.
       call keyini
@@ -383,7 +367,7 @@ c     Warn user if degenerate frequencies.
 c        call output (text)
       endif
 
-c     Use first 2 images given by user so they have control.  Using
+c     Use first two images given by user so they have control.  Using
 c     closest frequencies is a lousy algorithm.
       imin = 1
       jmin = 2
@@ -600,7 +584,7 @@ c     Plots.
 
 c***********************************************************************
 
-      subroutine blnkall (flag, rm, pa, erm, epa)
+      subroutine blnkall(flag, rm, pa, erm, epa)
 
       real rm, pa, erm, epa
       logical flag
@@ -629,6 +613,7 @@ c  Input:
 c    lIn        Handle of input image.
 c    inName     Image name for reporting
 c    bflag      Error handling flag, either 'f' (fatal) or 'w' (warn).
+c
 c  Ouput:
 c    freq       Frequency of first pixel.
 c-----------------------------------------------------------------------
@@ -636,24 +621,23 @@ c-----------------------------------------------------------------------
       include 'maxnax.h'
 
       logical   doInit
-      integer   axLen(2,MAXNAX), fqax(2), frqax, iax, k, l1, l2, len1,
-     *          naxis(2)
+      integer   axLen(2,MAXNAX), ifrq(2), iax, k, l1, l2, len1, naxis(2)
       double precision cdelt(2,MAXNAX), crpix(2,MAXNAX),
-     *          crval(2,MAXNAX), epoch(2)
-      character cax*1, ctype(2,MAXNAX)*16, name1*80, text*130
+     *          crval(2,MAXNAX), dtemp, epoch(2)
+      character algo*3, cax*1, ctype(2,MAXNAX)*16, name1*80, text*130
 
-      character itoaf*1
       external  itoaf
+      character itoaf*1
 
-      save doInit, axLen, fqax, naxis, cdelt, crpix, crval, epoch,
+      save doInit, axLen, ifrq, naxis, cdelt, crpix, crval, epoch,
      *     ctype
 
-      data doInit /.true./
+      data doInit, l1 /.true., 0/
 c-----------------------------------------------------------------------
       if (doInit) then
         k = 1
+        l1 = len1(inName)
         name1 = inName
-        l1 = len1(name1)
       else
         k = 2
       endif
@@ -683,28 +667,28 @@ c     Read all required descriptors.
         call bug('f', text)
       endif
 
-c     Find the frequency axis and do basic checks.
-      fqax(k) = 0
-      do iax = 1, naxis(k)
-        if (index(ctype(k,iax),'FREQ').ne.0) fqax(k) = iax
-      enddo
+c     Find the spectral axis and compute the frequency.
+      call coInit(lIn)
+      call coSpcSet(lIn, 'FREQ', ifrq(k), algo)
 
-      if (fqax(k).eq.0) then
+      if (ifrq(k).eq.0) then
         text = inName(:l2) // ' has no frequency axis'
         call bug('f', text)
       endif
 
-      if (fqax(k).le.2) then
+      if (ifrq(k).le.2) then
         text = 'Frequency axis for ' // inName(:l2) //
      *         ' is < 3; should be > 2.'
         call bug('f', text)
       endif
 
-      if (axLen(k,fqax(k)).gt.1) call bug('f',
+      if (axLen(k,ifrq(k)).gt.1) call bug('f',
      *  'Frequency axis must be of length 1 only.')
 
-      frqax = fqax(k)
-      freq  = (1d0 - crpix(k,frqax))*cdelt(k,frqax) + crval(k,frqax)
+      call coCvt1(lIn, ifrq(k), 'ap', 1d0, 'aw', dtemp)
+      freq = dtemp
+
+      call coFin(lIn)
 
 
 c     Compare descriptors.
@@ -719,7 +703,7 @@ c     Compare descriptors.
         call bug(bflag, text)
       endif
 
-      if (fqax(2).ne.fqax(1)) then
+      if (ifrq(2).ne.ifrq(1)) then
         text = 'Frequency axis differs for ' //
      *          inName(:l2) // ' & ' // name1(:l1)
         call bug('f', text)
@@ -732,7 +716,7 @@ c     Compare descriptors.
           call bug(bflag, text)
         endif
 
-        if (iax.ne.fqax(1)) then
+        if (iax.ne.ifrq(1)) then
           if (crpix(2,iax).ne.crpix(1,iax)) then
             write(text,20) 'crpix', iax, inName(:l2),' & ',name1(:l1)
             call bug(bflag, text)
@@ -766,7 +750,7 @@ c     Compare descriptors.
 
 c***********************************************************************
 
-      subroutine extreme (n, d1, d2, dmin, dmax, padummy)
+      subroutine extreme(n, d1, d2, dmin, dmax, padummy)
 
       integer   n
       real      d1(n), d2(n), dmin, dmax, padummy
@@ -797,7 +781,7 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine getopt (relax, ambig, accum, yind, guess)
+      subroutine getopt(relax, ambig, accum, yind, guess)
 
       logical   relax, ambig, accum, yind, guess
 c-----------------------------------------------------------------------
@@ -830,7 +814,7 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine openin (in, bflag, lIn, axLen)
+      subroutine openin(in, bflag, lIn, axLen)
 
       character bflag*1, in*(*)
       integer   lIn, axLen(*)
@@ -887,13 +871,14 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine plotit (device, nx, ny, accum, yind, npx, npy, nf,
-     *                   x, yd, yf, cs, padummy)
+      subroutine plotit(device, nx, ny, accum, yind, npx, npy, nf, x,
+     *  yd, yf, cs, padummy)
 
-      integer npx, npy, nx, ny, nf
-      real x(nf), yd(npx*npy*nf), yf(npx*npy*nf), cs, padummy
-      logical accum, yind
-      character*(*) device
+      character device*(*)
+      integer   nx, ny
+      logical   accum, yind
+      integer   npx, npy, nf
+      real      x(nf), yd(npx*npy*nf), yf(npx*npy*nf), cs, padummy
 c-----------------------------------------------------------------------
 c  Plot data and fits.
 c
@@ -974,7 +959,7 @@ c           Draw plot.
 
 c***********************************************************************
 
-      subroutine pm90 (pa)
+      subroutine pm90(pa)
 
       real pa
 c-----------------------------------------------------------------------
@@ -997,7 +982,7 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine rempi (pa1, pa2)
+      subroutine rempi(pa1, pa2)
 
       real     pa1, pa2
 c-----------------------------------------------------------------------
@@ -1015,12 +1000,14 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine rfit (guess, c1, c2, noerr, n, lmbdsq, pa, wt, rmi,
-     *                 rm, pa0, erm, epa0, q)
+      subroutine rfit(guess, c1, c2, noerr, n, lmbdsq, pa, wt, rmi, rm,
+     *  pa0, erm, epa0, q)
 
-      integer n, c1, c2
-      real    lmbdsq(n), pa(n), wt(n), rm, pa0, erm, epa0, q, chisq, rmi
-      logical noerr, guess
+      logical guess
+      integer c1, c2
+      logical noerr
+      integer n
+      real    lmbdsq(n), pa(n), wt(n), rmi, rm, pa0, erm, epa0, q
 c-----------------------------------------------------------------------
 c  Low level least squares fit PA versus LAMBDA**2, with optional
 c  ambiguity removal.
@@ -1044,8 +1031,9 @@ c    epa0       Error in PA0.
 c    q          Goodness of fit.
 c-----------------------------------------------------------------------
       include 'mirconst.h'
-      real rmg, pag, yp
-      integer i, nturns
+
+      integer   i, nturns
+      real      chisq, pag, rmg, yp
 c-----------------------------------------------------------------------
 c     Remove initial guess for RM.
       if (.not.guess .and. rmi.ne.0.0) call rmsub(n, lmbdsq, pa, rmi)
@@ -1084,7 +1072,7 @@ c     Do the fit.
 
 c***********************************************************************
 
-      subroutine rmsub (n, lmbdsq, pa, rmi)
+      subroutine rmsub(n, lmbdsq, pa, rmi)
 
       integer n
       real    rmi, pa(n), lmbdsq(n)
@@ -1099,13 +1087,15 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine rotfit (c1, c2, noerr, n, lmbdsq, pa, pa2, wt, guess,
-     *                   ambig, rm0, rmf, pa0f, erm, epa0, q, ypl)
+      subroutine rotfit(c1, c2, noerr, n, lmbdsq, pa, pa2, wt, guess,
+     *  ambig, rm0, rmf, pa0f, erm, epa0, q, ypl)
 
-      integer n, c1, c2
-      real    lmbdsq(n), pa(n), pa2(n), wt(n), rm0, rmf, pa0f, erm,
-     *        epa0, q, chisq, ypl(n)
-      logical noerr, ambig, guess
+      integer c1, c2
+      logical noerr
+      integer n
+      real    lmbdsq(n), pa(n), pa2(n), wt(n)
+      logical guess, ambig
+      real    rm0, rmf, pa0f, erm, epa0, q, ypl(n)
 c-----------------------------------------------------------------------
 c  High level least squares fit PA versus LAMBDA**2.
 c
@@ -1133,7 +1123,7 @@ c-----------------------------------------------------------------------
       include 'mirconst.h'
 
       integer   i
-      real      rmi
+      real      chisq, rmi
 c-----------------------------------------------------------------------
       if (ambig) then
 c       Remove initial angle for initial estimate of RM.
