@@ -103,7 +103,7 @@ c       make this bias plot without actually working on any data if you
 c       wish. See also VLA memo no. 161 by Patrick Leahy.
 c       Default is no plot.
 c
-c$Id: impol.for,v 1.16 2011/03/28 06:26:00 cal103 Exp $
+c$Id: impol.for,v 1.17 2011/03/28 07:08:43 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -128,16 +128,17 @@ c-----------------------------------------------------------------------
       double precision cdelt(MAXNAX,3), crpix(MAXNAX,3), crval(MAXNAX,3)
       character bflag, blstr*7, device*80, ctype(MAXNAX,3)*9, in(3)*64,
      *          ins(3)*64, line*80, mout(2)*64, paout(2)*64, pout(2)*64,
-     *          ustr*8, versan*80, version*80
+     *          ustr*8, version*72
 
-      integer  len1
-      external len1
+      external  len1, versan
+      integer   len1
+      character versan*72
 
       data tIn, lpout, lmout, lpaout /3*0, 2*0, 2*0, 2*0/
 c-----------------------------------------------------------------------
-      version = versan ('impol',
-     *                  '$Revision: 1.16 $',
-     *                  '$Date: 2011/03/28 06:26:00 $')
+      version = versan('impol',
+     *                 '$Revision: 1.17 $',
+     *                 '$Date: 2011/03/28 07:08:43 $')
 
 c     Get user inputs.
       call keyini
@@ -692,6 +693,7 @@ c-----------------------------------------------------------------------
       endif
 
 c     Find frequency axis if rotating position angles back.
+      parot = 0.0
       if (rm.ne.0.0) then
         call coInit(lq)
         call coSpcSet(lq, 'FREQ', ifrq, algo)
@@ -706,12 +708,11 @@ c         Find frequency of pixel one.
           call coCvt1(lq, ifrq, 'ap', 1d0, 'aw', dtemp)
           freq  = real(dtemp) * 1e9
           parot = rm * (dcmks / freq)**2
+
           write(aline, 10) parot*fac, ustr
-10        format('Rotating position angles back by ', 1pe11.4, a)
+ 10       format('Rotating position angles back by ', 1pe11.4, a)
           call output(aline)
         endif
-      else
-        parot = 0.0
       endif
 
       sigsq = sigmaqu * sigmaqu
