@@ -103,36 +103,16 @@ c       make this bias plot without actually working on any data if you
 c       wish. See also VLA memo no. 161 by Patrick Leahy.
 c       Default is no plot.
 c
-c$Id: impol.for,v 1.15 2010/12/15 23:35:49 cal103 Exp $
+c$Id: impol.for,v 1.16 2011/03/28 06:26:00 cal103 Exp $
 c--
 c  History:
-c    nebk 21may92 Original version.
-c    nebk 18aug92 Add options=zero and keyword device.
-c    nebk 04nov92 Better blanking
-c    mjs  12mar93 Use maxnax.h file instead of setting own value.
-c    mjs  13mar93 pgplot subr names have less than 7 chars.
-c    nebk 14nov93 Keyword pacut called paclip in code and doc changes.
-c    rjs  19jan94 Relax alignment requirements in chkdes2 so that values
-c                 need only align to 1%.
-c    nebk 28feb94 Default values to RDHDD must be double precision
-c    nebk 29mar95 Add fractional polarization images to output
-c    nebk 25may95 Ref. pix. of output stuffed because of type mismatch
-c    nebk 09jun95 Add I/sigma_I blanking
-c    nebk 22aug96 Check for I=0
-c    nebk 18dec96 Error for fractional polarization was wrong.  It
-c                 needed to be multipled by the fractional polarization.
-c    rjs  02jul97 cellscal change.
-c    rjs  23jul97 added pbtype.
-c    nebk 13mar98 position angle error was factor of 2 too big
-c    nebk 27jul00 as above but in another location.  thanks Bryan
-c    mchw 14may02 added bunit to polarized intensity.
+c    Refer to the RCS log, v1.1 includes prior revision information.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
 
       integer   I, Q, U
       parameter (Q = 1, U = 2, I = 3)
-
 
       logical   debias, doimage, emflags(MAXDIM), epaflags(MAXDIM),
      *          epflags(MAXDIM), iflags(MAXDIM), mflags(MAXDIM),
@@ -145,8 +125,7 @@ c-----------------------------------------------------------------------
      *          epoch(3), iline(MAXDIM), mline(MAXDIM), paclip,
      *          paline(MAXDIM), pline(MAXDIM), qline(MAXDIM),
      *          rm, sigmai, sigmaqu, snclip(2), uline(MAXDIM)
-      double precision cdelt(MAXNAX,3), crpix(MAXNAX,3),
-     *          crval(MAXNAX,3)
+      double precision cdelt(MAXNAX,3), crpix(MAXNAX,3), crval(MAXNAX,3)
       character bflag, blstr*7, device*80, ctype(MAXNAX,3)*9, in(3)*64,
      *          ins(3)*64, line*80, mout(2)*64, paout(2)*64, pout(2)*64,
      *          ustr*8, versan*80, version*80
@@ -157,8 +136,8 @@ c-----------------------------------------------------------------------
       data tIn, lpout, lmout, lpaout /3*0, 2*0, 2*0, 2*0/
 c-----------------------------------------------------------------------
       version = versan ('impol',
-     *                  '$Revision: 1.15 $',
-     *                  '$Date: 2010/12/15 23:35:49 $')
+     *                  '$Revision: 1.16 $',
+     *                  '$Date: 2011/03/28 06:26:00 $')
 
 c     Get user inputs.
       call keyini
@@ -343,11 +322,10 @@ c       ...position angle.
 
 c       Compute and write out the output image(s).
         call polout(tIn(Q), tIn(U), tIn(I), lpout, lmout, lpaout,
-     *   naxes, naxis, crpix, crval, cdelt, ctype, debias, radians,
-     *   snclip, paclip, sigmai, sigmaqu, rm, iline, qline, uline,
-     *   pline, mline, paline, epline, emline, epaline, iflags, qflags,
-     *   uflags, pflags, mflags, paflags, epflags, emflags, epaflags,
-     *   zero)
+     *    naxes, naxis, debias, radians, snclip, paclip, sigmai,
+     *    sigmaqu, rm, iline, qline, uline, pline, mline, paline,
+     *    epline, emline, epaline, iflags, qflags, uflags, pflags,
+     *    mflags, paflags, epflags, emflags, epaflags, zero)
 
 c       Close down.
         call xyclose(tIn(Q))
@@ -367,8 +345,9 @@ c     Draw plot
 
       end
 
+c***********************************************************************
 
-      subroutine getopt (debias, radians, relax, zero)
+      subroutine getopt(debias, radians, relax, zero)
 
       logical debias, radians, relax, zero
 c-----------------------------------------------------------------------
@@ -396,9 +375,10 @@ c-----------------------------------------------------------------------
 
       end
 
+c***********************************************************************
 
-      subroutine openin (bflag, maxdim, maxnax, in, lun, naxes, naxis,
-     *                   epoch, crpix, cdelt, crval, ctype, stkax)
+      subroutine openin(bflag, maxdim, maxnax, in, lun, naxes, naxis,
+     *                  epoch, crpix, cdelt, crval, ctype, stkax)
 
       integer maxdim, maxnax, lun, naxes, naxis(maxnax), stkax
       double precision cdelt(maxnax), crval(maxnax), crpix(maxnax)
@@ -451,14 +431,15 @@ c-----------------------------------------------------------------------
 
       end
 
+c***********************************************************************
 
-      subroutine hedinf (lun, naxes, naxis, epoch, crpix, cdelt,
-     *                   crval, ctype)
+      subroutine hedinf(lun, naxes, naxis, epoch, crpix, cdelt, crval,
+     *                  ctype)
 
-      integer lun, naxes, naxis(naxes)
-      real epoch
+      integer   lun, naxes, naxis(naxes)
+      real      epoch
       double precision cdelt(naxes), crval(naxes), crpix(naxes)
-      character*(*) ctype(naxes)
+      character ctype(naxes)*(*)
 c-----------------------------------------------------------------------
 c     Get some header keywords from the image associated with LUN
 c
@@ -488,16 +469,17 @@ c-----------------------------------------------------------------------
 
       end
 
+c***********************************************************************
 
-      subroutine chkdes (bflag, maxnax, i1, i2, im, naxes, naxis,
-     *   epoch, crpix, cdelt, crval, ctype, stkax)
+      subroutine chkdes(bflag, maxnax, i1, i2, im, naxes, naxis, epoch,
+     *  crpix, cdelt, crval, ctype, stkax)
 
       integer   i1, i2, maxnax, naxes(3), naxis(maxnax,3), stkax(3)
       real      epoch(3)
       double precision cdelt(maxnax,3), crpix(maxnax,3), crval(maxnax,3)
       character bflag, ctype(maxnax,3)*(*), im(3)*(*)
 c-----------------------------------------------------------------------
-c     Compare axis descriptors
+c  Check axis descriptors for consistency.
 c
 c  Input:
 c   im     Images
@@ -556,8 +538,9 @@ c-----------------------------------------------------------------------
 
       end
 
+c***********************************************************************
 
-      subroutine chkds2 (bflag, type, iaxis, im1, im2, des1, des2)
+      subroutine chkds2(bflag, type, iaxis, im1, im2, des1, des2)
 
       character*(*) type, im1, im2, bflag
       integer iaxis
@@ -583,9 +566,10 @@ c-----------------------------------------------------------------------
 
       end
 
+c***********************************************************************
 
-      subroutine axstrip (iax, naxes, naxis, axmap, crval, crpix, cdelt,
-     *                    ctype)
+      subroutine axstrip(iax, naxes, naxis, axmap, crval, crpix, cdelt,
+     *                   ctype)
 
       integer iax, naxes, axmap(naxes), naxis(naxes)
       double precision crval(naxes), cdelt(naxes), crpix(naxes)
@@ -629,8 +613,9 @@ c-----------------------------------------------------------------------
 
       end
 
+c***********************************************************************
 
-      subroutine openout (lin, naxes, naxis, axmap, out, btype, version,
+      subroutine openout(lin, naxes, naxis, axmap, out, btype, version,
      *  lout)
 
       integer   lin, naxes, naxis(naxes), axmap(naxes), lout
@@ -671,59 +656,55 @@ c     Create the output image and copy header from input.
 
       end
 
+c***********************************************************************
 
-      subroutine polout (lq, lu, li, lpout, lmout, lpaout, naxes,
-     *   naxis, crpix, crval, cdelt, ctype, debias, radians, snclip,
-     *   paclip, sigmai, sigmaqu, rm, iline, qline, uline, pline,
-     *   mline, paline, epline, emline, epaline, iflags, qflags,
-     *   uflags, pflags, mflags, paflags, epflags, emflags,
-     *   epaflags, zero)
+      subroutine polout(lq, lu, li, lpout, lmout, lpaout, naxes,
+     *   naxis, debias, radians, snclip, paclip, sigmai, sigmaqu, rm,
+     *   iline, qline, uline, pline, mline, paline, epline, emline,
+     *   epaline, iflags, qflags, uflags, pflags, mflags, paflags,
+     *   epflags, emflags, epaflags, zero)
 
-      integer li, lq, lu, lpout(2), lmout(2), lpaout(2), naxes,
-     *  naxis(naxes)
-      real iline(*), qline(*), uline(*), pline(*), mline(*), paline(*),
-     *  epline(*), emline(*), epaline(*), snclip(2), paclip, sigmai,
-     *  sigmaqu, rm
-      double precision crval(naxes), cdelt(naxes), crpix(naxes)
-      logical iflags(*), qflags(*), uflags(*), pflags(*), mflags(*),
-     *  paflags(*), epflags(*), emflags(*), epaflags(*), radians,
-     *  debias, zero
-      character*(*) ctype(naxes)
+      integer   lq, lu, li, lpout(2), lmout(2), lpaout(2), naxes,
+     *          naxis(naxes)
+      logical   debias, radians
+      real      snclip(2), paclip, sigmai, sigmaqu, rm, iline(*),
+     *          qline(*), uline(*), pline(*), mline(*), paline(*),
+     *          epline(*), emline(*), epaline(*)
+      logical   iflags(*), qflags(*), uflags(*), pflags(*), mflags(*),
+     *          paflags(*), epflags(*), emflags(*), epaflags(*), zero
 c-----------------------------------------------------------------------
 c     Compute some combination of polarized intensity, position angle
 c     image and associated error images
-c
 c-----------------------------------------------------------------------
       include 'mirconst.h'
 
-      integer i, j, k, frqax
-      double precision fac
-      real psq, sigsq, snclipsq, freq, psnr, isnr, parot, paerr
-      character ustr*8, aline*80
+      integer   i, ifrq, j, k
+      real      fac, freq, isnr, paerr, parot, psnr, psq, sigsq,
+     *          snclipsq
+      double precision dtemp
+      character algo*3, aline*80, ustr*8
 c-----------------------------------------------------------------------
-      fac = 1.0
+      fac  = 1.0
       ustr = ' radians'
       if (.not.radians) then
-        fac = DR2D
+        fac  = R2D
         ustr = ' degrees'
       endif
 
 c     Find frequency axis if rotating position angles back.
       if (rm.ne.0.0) then
-        frqax = 0
-        do i = 1, naxes
-          if (index(ctype(i),'FREQ').ne.0) frqax = i
-        enddo
+        call coInit(lq)
+        call coSpcSet(lq, 'FREQ', ifrq, algo)
 
-        if (frqax.eq.0) call bug('f',
-     *    'Could not find frequency axis with which to apply RM')
-        if (frqax.le.2) call bug('f',
-     *    'Frequency axis is either 1 or 2.  These should be spatial')
+        if (ifrq.eq.0) call bug('f',
+     *    'Could not find frequency axis for applying RM')
+        if (ifrq.le.2) call bug('f',
+     *    'Frequency axis is either 1 or 2.0  These should be spatial')
 
-        if (frqax.gt.3 .or. naxis(frqax).eq.1) then
+        if (ifrq.gt.3 .or. naxis(ifrq).eq.1) then
 c         Find frequency of pixel one.
-          freq = (1.0 - crpix(frqax))*cdelt(frqax) + crval(frqax)
-          freq = freq * 1e9
+          call coCvt1(lq, ifrq, 'ap', 1d0, 'aw', dtemp)
+          freq  = real(dtemp) * 1e9
           parot = rm * (dcmks / freq)**2
           write(aline, 10) parot*fac, ustr
 10        format('Rotating position angles back by ', 1pe11.4, a)
@@ -738,8 +719,9 @@ c         Find frequency of pixel one.
 
 c     Loop over planes.
       do k = 1, naxis(3)
-        if (rm.ne.0.0 .and. frqax.eq.3 .and. naxis(frqax).gt.1) then
-          freq = 1e9 * ((real(k)-crpix(3))*cdelt(3) + crval(3))
+        if (rm.ne.0.0 .and. ifrq.eq.3 .and. naxis(ifrq).gt.1) then
+          call coCvt1(lq, ifrq, 'ap', dble(k), 'aw', dtemp)
+          freq  = real(dtemp) * 1e9
           parot = rm * (dcmks / freq)**2
         endif
 
@@ -871,12 +853,15 @@ c         Write out position angle and error.
         enddo
       enddo
 
+      if (rm.ne.0.0) call coFin(lq)
+
       if (lpout(1).ne.0) then
         call wrhda(lpout(1), 'bunit', 'JY/BEAM')
       endif
       if (lpout(2).ne.0) then
         call wrhda(lpout(2), 'bunit', 'JY/BEAM')
       endif
+
       if (lpaout(1).ne.0) then
         if (radians) then
           call wrhda(lpaout(1), 'bunit', 'RADIANS')
@@ -889,52 +874,53 @@ c         Write out position angle and error.
 
       end
 
+c***********************************************************************
 
-      subroutine allblnk (p, pf, ep, epf, m, mf, em, emf, pa, paf,
-     *                    epa, epaf)
+      subroutine allblnk(p, pf, ep, epf, m, mf, em, emf, pa, paf, epa,
+     *  epaf)
 
       real p, ep, m, em, pa, epa
       logical pf, epf, mf, emf, paf, epaf
-
-      p = 0.0
-      pf = .false.
-      ep = 0.0
+c-----------------------------------------------------------------------
+      p   = 0.0
+      pf  = .false.
+      ep  = 0.0
       epf = .false.
 
-      m = 0.0
-      mf = .false.
-      em = 0.0
+      m   = 0.0
+      mf  = .false.
+      em  = 0.0
       emf = .false.
 
-      pa = 0.0
+      pa  = 0.0
       paf = .false.
       epa = 0.0
       epaf = .false.
 
       end
 
+c***********************************************************************
 
-      subroutine pltbias (device)
+      subroutine pltbias(device)
 
-      character*(*) device
+      character device*(*)
 c-----------------------------------------------------------------------
 c     Make a plot of the biases  in different estimators
-c
 c-----------------------------------------------------------------------
       integer maxrun, maxpol
       parameter (maxrun = 15000, maxpol = 1000)
 
-      real qumax, quinc, qu, pmlsum, pml, pp0, pfo, pfosum,
-     *pobssum
+      real qumax, quinc, qu, pmlsum, pml, pp0, pfo, pfosum, pobssum
 
       real pmldi(maxpol), pfodi(maxpol), pobsdi(maxpol), ptrue(maxpol),
-     *qunoise(2*maxrun), pobs(maxrun)
+     *     qunoise(2*maxrun), pobs(maxrun)
       integer nruns, i, j, nrml
 
       integer pgbeg, ierr, hlen
       logical conv
       character hard*3, aline*80
       real xmin, xmax, ymin, ymax
+
       data ymin, ymax /1e30, -1e30/
 c-----------------------------------------------------------------------
       call output(' ')
@@ -1046,8 +1032,9 @@ c
 
       end
 
+c***********************************************************************
 
-      subroutine noisy (nruns, qu, qunoise, pobs)
+      subroutine noisy(nruns, qu, qunoise, pobs)
 
       integer nruns
       real qu, qunoise(*), pobs(*)
@@ -1064,8 +1051,9 @@ c-----------------------------------------------------------------------
 
       end
 
+c***********************************************************************
 
-      subroutine ml (ppobs, ppml, conv)
+      subroutine ml(ppobs, ppml, conv)
 
       real ppobs, ppml
       logical conv
@@ -1103,8 +1091,9 @@ c
 
       end
 
+c***********************************************************************
 
-      subroutine firstord (pobs, pfo)
+      subroutine firstord(pobs, pfo)
 c-----------------------------------------------------------------------
 c     First order
 c     P = sqrt(P'**2 - sigma**2)
@@ -1123,8 +1112,9 @@ c-----------------------------------------------------------------------
 
       end
 
+c***********************************************************************
 
-      subroutine limstr (dmin, dmax)
+      subroutine limstr(dmin, dmax)
 
       real dmin, dmax
 c-----------------------------------------------------------------------
