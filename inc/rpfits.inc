@@ -9,7 +9,7 @@ C
 C     DOUBLE PRECISION variables were also segregated into a separate
 C     COMMON block for reasons long forgotten.
 C
-C $Id: rpfits.inc,v 1.3 2010/12/08 03:28:02 mirmgr Exp $
+C $Id: rpfits.inc,v 1.4 2011/03/30 07:37:48 mirmgr Exp $
 C-----------------------------------------------------------------------
 
 C     Maximum numbers that we can handle: antenna table (ant), RPFITS
@@ -19,7 +19,7 @@ C     source table (su), and polarizations (pol).
       INTEGER   ant_max, max_card, max_cu, max_fg, max_if, max_mt,
      :          max_nx, max_sc, max_su, pol_max
       PARAMETER (ant_max  =   16,
-     :           max_card =  650,
+     :           max_card = 2240,
      :           max_cu   =   32,
      :           max_fg   =   32,
      :           max_if   =   48,
