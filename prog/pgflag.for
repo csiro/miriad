@@ -229,7 +229,7 @@ c       nocal   Do not apply antenna gain calibration.
 c       nopass  Do not apply bandpass correction.
 c       nopol   Do not apply polarisation leakage correction.
 c
-c$Id: pgflag.for,v 1.11 2011/03/23 02:33:28 ste616 Exp $
+c$Id: pgflag.for,v 1.12 2011/03/30 00:47:30 ste616 Exp $
 c--
 c
 c  History:
@@ -360,8 +360,8 @@ c
       logical uvDatOpn
 
       version = versan ('pgflag',
-     :                  '$Revision: 1.11 $',
-     :                  '$Date: 2011/03/23 02:33:28 $')
+     :                  '$Revision: 1.12 $',
+     :                  '$Date: 2011/03/30 00:47:30 $')
 
 c
 c Get user inputs
@@ -792,8 +792,8 @@ c     flag the data in the selection box
                      goto 40
                   endif
                enddo
- 40         enddo
-            if ((pressed(1:1).eq.'f').or.(pressed(1:1).eq.'F')) then
+            enddo
+ 40         if ((pressed(1:1).eq.'f').or.(pressed(1:1).eq.'F')) then
                do_flag=.true.
                if (pressed(1:1).eq.'f') then
                   f_mode=1
@@ -881,8 +881,8 @@ c     we select only the regions that are brighter on this baseline
                      goto 60
                   endif
                enddo
- 60         enddo
-            do while (meas_maxval.gt.datamax)
+            enddo
+ 60         do while (meas_maxval.gt.datamax)
                call FlagData(points,f_a1,f_a2,f_mode,
      *              do_flag,do_unflag,do_undoflag,chans,times,
      *              bases,flagval,MAXEDIT,nflags,day0,t1,ntime,chanoff,
@@ -1882,7 +1882,7 @@ c     check we have a valid time
          else
             meas_amplitude=0.0
          endif
-         call TimeToString(day0,t1(curs_y),1,meas_time)
+         call TimeToString(day0,t1(int(curs_y)),1,meas_time)
       endif
 c
       end
@@ -2042,8 +2042,8 @@ c     figure out what baseline it is
                goto 10
             endif
          enddo
- 10   enddo
-      titles(2,1)=meas_baseline
+      enddo
+ 10   titles(2,1)=meas_baseline
       WRITE(titles(2,2),'(I4.4)') meas_channel
       WRITE(titles(2,3),'(F12.4)') meas_frequency
       titles(2,4)=meas_time
@@ -2821,7 +2821,8 @@ c            call output(status)
                endif
                i0=i0+2
             enddo
- 11      endif
+ 11         i0=3
+         endif
       enddo
 c
       end
@@ -3321,7 +3322,7 @@ c
                   goto 10
                endif
             enddo
- 10      enddo
+         enddo
       elseif ((isave(1).eq.2).or.(isave(1).eq.3)) then
          write(baseflag,'(A,I3)') 'all baselines with antenna',
      *        isave(2)
@@ -3330,7 +3331,7 @@ c
          baseflag='all baselines'
          selectant=' '
       endif
-      if (isave(5).eq.1) then
+ 10   if (isave(5).eq.1) then
          flagval='GOOD'
       else
          flagval='BAD'
