@@ -102,44 +102,10 @@ c                 plane.  Normally (i.e. without this option), MATHS
 c                 insists that the inputs must be identical in size.
 c         unmask  Treat all pixels as if they were valid.
 c
-c$Id: maths.for,v 1.4 2010/11/22 05:42:07 cal103 Exp $
+c$Id: maths.for,v 1.5 2011/03/30 05:34:52 cal103 Exp $
 c--
-c
 c  History:
-c    rjs   nov88 - Adapted from the Werong task, arrith.
-c    rjs  9jun89 - Added blanking and masking support.
-c    rjs 14sep89 - Check if used dimensions are only 1 pixel long.
-c    pjt   ???89 - Increased BufLen parameter.
-c    rjs 30apr90 - Changed call sequence to BoxInput.
-c    pjt 20may90 - Comments about memory allocation (maxdim.h stuff)
-c   mchw 21nov90 - Added ltype description and pbfwhm to header.
-c    pjt  4mar91 - itoa->itoaf
-c    rjs  8apr91 - Fixed bug related to outputs with few planes than the
-c                  inputs.
-c   mchw 17may91 - Added keyws 'bmaj','bmin','bpa' to header.
-c   rjs  18sep91 - Fixed bug when all the output pixels are blanked.
-c   rjs  18mar92 - Better memory allocation scheme.
-c   rjs   1may92 - Better header copy scheme. Works for 4D files.
-c                  Eliminate umsg.  Standard history.  Changes to
-c                  appease flint.
-c   nebk 26may92 - Add "btype" to header copy
-c   pjt  28jul93 - more descriptive error message in PACTION
-c                  increased stringlength for expr etc. (from 64 -> 256)
-c   rjs  21sep93 - Fiddles with the order in which things are done so
-c                  that there is a template to the Boxinp routine.
-c   pjt   8jun94 - clarified region=
-c   rjs   3dec94   Copy across mosaic table.
-c   rjs  26jan95   Eliminate non-standard string concatentation.
-c   rjs  10jan97   Handle 5th axis correctly.
-c  nebk  05jun97   Handle 6th and 7th axes correctly in oldhdr !
-c   rjs  02jul97   cellscal change.
-c   rjs  23jul97   Added pbtype.
-c   rjs  12mar98   Allow for more complex expressions.
-c   rjs  30nov98   Added options=grow
-c   rjs  02dec98   Increased BUFLEN again.
-c   rjs  17oct00   Added options=unmask
-c   rjs  27may05   Eliminate a redundant statement which was confusing
-c                  the optimiser on Solaris.
+c    Refer to the RCS log, v1.1 includes prior revision information.
 c-----------------------------------------------------------------------
       include 'maths.h'
 
@@ -149,7 +115,7 @@ c-----------------------------------------------------------------------
       parameter (BUFLEN=256, MAXBOX=2048)
 
       logical   doExp, doMask, doRuns, unmask
-      integer   boxes(MAXBOX), expbuf(BUFLEN), i, indx, k, l, lout,
+      integer   boxes(MAXBOX), expbuf(BUFLEN), i, idx, k, l, lout,
      *          maskbuf(BUFLEN), nBuf, nERB, nMRB, nout(MAXNAX),
      *          npixels, pnt, rbuflen, scratch(3,MAXRUNS), type, xblc,
      *          xtrc, yblc, ytrc
@@ -158,17 +124,15 @@ c-----------------------------------------------------------------------
 
       common    RBUF
 
-      logical   BoxRect, hdprsnt
-      integer   Fill
-      character versan*80
-      external  boxrect, fill, hdprsnt, paction, vaction, versan
+      external  boxrect, hdprsnt, PACTION, VACTION, versan
+      logical   boxRect, hdprsnt
+      character versan*72
 c-----------------------------------------------------------------------
       version = versan('maths',
-     *                 '$Revision: 1.4 $',
-     *                 '$Date: 2010/11/22 05:42:07 $')
-c
-c  Get the input parameters.
-c
+     *                 '$Revision: 1.5 $',
+     *                 '$Date: 2011/03/30 05:34:52 $')
+
+c     Get input parameters.
       call keyini
       call getopt(grow,unmask)
       call keya('exp',Expr,' ')
@@ -191,15 +155,14 @@ c
      *  'An expression (exp=) or mask (mask=) must be given')
       if (outNam.eq.' ') call bug('f',
      *  'Output file must be given (out=)')
-c
-c  Parse the expression and mask.
-c
+
+c     Parse the expression and mask.
       Xused = .false.
       Yused = .false.
       Zused = .false.
       nfiles = 0
       if (doExp) then
-        call ariComp(expr,paction,type,ExpBuf,BUFLEN,ExpRBuf,BUFLEN)
+        call ariComp(expr,PACTION,type,ExpBuf,BUFLEN,ExpRBuf,BUFLEN)
         if (type.eq.error) call bug('f',
      *       'Error parsing the expression: ' // expr)
         if (type.ne.vector) call bug('f',
@@ -208,23 +171,21 @@ c
       endif
 
       if (doMask) then
-        call ariComp(Mask,paction,type,MaskBuf,BUFLEN,MaskRBuf,BUFLEN)
+        call ariComp(Mask,PACTION,type,MaskBuf,BUFLEN,MaskRBuf,BUFLEN)
         if (type.eq.error) call bug('f',
      *        'Error parsing the mask expression: ' // mask)
         if (type.ne.vector) call bug('f',
      *        'No images in input mask expression: ' // mask)
         call ariInq(MaskBuf,MaskRBuf,nBuf,nMRB)
       endif
-c
-c  Get the region of interest, and finish with the key routines.
-c
+
+c     Get the region of interest and finish with the key routines.
       template = ' '
       if (nfiles.gt.0) template = names(offset(1)+1:offset(2))
-      call BoxInput('region',template,boxes,MAXBOX)
+      call boxInput('region',template,boxes,MAXBOX)
       call keyfin
-c
-c  If there are no input files, check that we know the image size.
-c
+
+c     If there are no input files, check that we know the image size.
       if (nfiles.eq.0) then
         naxis = 1
         do i = 1, MAXNAX
@@ -232,29 +193,26 @@ c
           if (nsize(i).gt.1) naxis = i
         enddo
       endif
-c
-c  If X, Y or Z were used, make sure that they are not dummy axes.
-c
+
+c     If X, Y or Z were used, make sure that they are not dummy axes.
       if (Xused .and. nsize(1).eq.1)
      *  call bug('f','The x dimension is 1 pixel wide')
       if (Yused .and. nsize(2).le.1)
      *  call bug('f','The y dimension is 1 pixel high')
       if (Zused .and. nsize(3).le.1)
      *  call bug('f','The z dimension is 1 image deep')
-c
-c  Bloody box information.
-c
-      call BoxSet(boxes,naxis,nsize,' ')
-      call BoxInfo(boxes,naxis,blc,trc)
-c
-c  If there are input files, "and" all there flagging masks into
-c  regions where the computation is to take place.
-c
+
+c     Bloody box information.
+      call boxSet(boxes,naxis,nsize,' ')
+      call boxInfo(boxes,naxis,blc,trc)
+
+c     If there are input files, "and" all of their flagging masks into
+c     regions where the computation is to take place.
       if (.not.unmask) then
         do i = 1, nfiles
           if (naxes(i).lt.naxes(ref) .and. hdprsnt(lIn(i),'mask'))
      *      call bug('f','Cannot handle masks with options=grow')
-          call BoxMask(lIn(i),boxes,MAXBOX)
+          call boxMask(lIn(i),boxes,MAXBOX)
         enddo
       endif
       doRuns = .not.BoxRect(boxes)
@@ -267,93 +225,89 @@ c
         blc(i) = 1
         trc(i) = 1
       enddo
-c
-c  Handle naxis > 4.
-c
+
+c     Handle naxis > 4.
       do l = 5, naxis
         if (nsize(l).gt.1) call bug('f','Too many dimensions for me')
         plane(l) = 1
       enddo
-c
-c  Allocate memory.
-c
+
+c     Allocate memory.
       rbuflen = 6*nOut(1)*nOut(2)
       call memalloc(pnt,rbuflen,'r')
-      Indx = pnt
-c
-c  Open the output and create the header.
-c
-      call xyopen(lOut,outNam,'new',naxis,nOut)
+      idx = pnt
+
+c     Open the output and create the header.
+      call xyOpen(lOut,outNam,'new',naxis,nOut)
       if (nfiles.gt.0) then
-        call OldHdr(lIn(ref),lOut,naxis,nsize,blc,trc,version)
+        call oldHdr(lIn(ref),lOut,naxis,nsize,blc,trc,version)
       else
-        call NewHdr(lOut,naxis,Range,nsize,blc,version)
+        call newHdr(lOut,naxis,Range,nsize,blc,version)
       endif
-c
-c  Let us recapitulate on what we have.
-c  The expression (if doExp) is in ExpBuf,RBuf.
-c  The mask expression (if doMask) is in MaskBuf,RBuf.
-c  The boxes specification (if doRuns) is in boxes.
-c
+
+c     To recapitulate:
+c       The expression (if doExp) is in ExpBuf,RBuf,
+c       The mask expression (if doMask) is in MaskBuf,RBuf,
+c       The boxes specification (if doRuns) is in boxes,
       do l = 1, nOut(4)
         Plane(4) = l + blc(4) - 1
         do k = 1, nOut(3)
           Plane(3) = k + blc(3) - 1
           do i = 1, nfiles
-            if (naxes(i).gt.2) call xysetpl(lIn(i),naxes(i)-2,Plane(3))
+            if (naxes(i).gt.2) call xySetPl(lIn(i),naxes(i)-2,Plane(3))
           enddo
-          call xysetpl(lOut,1,k)
+          call xySetPl(lOut,1,k)
 
-          call BoxRuns(max(naxis-2,1),Plane(3),' ',boxes,
-     *          Runs,MAXRUNS,nRuns,xblc,xtrc,yblc,ytrc)
+          call boxRuns(max(naxis-2,1),Plane(3),' ',boxes,
+     *      runs,MAXRUNS,nRuns,xblc,xtrc,yblc,ytrc)
 
           if (doMask) then
-            npixels = Fill(Runs,nRuns)
+            call boxCount(runs,nRuns,npixels)
             if (npixels.gt.0) then
-              if (nMRB.gt.0) call MoveData(nMRB,MaskRBuf,RBuf(pnt))
-              call ariExec(vaction,npixels,MaskBuf,BUFLEN,RBuf(pnt),
-     *                                  RBufLen,Indx)
-              Indx = Indx + pnt - 1
-              call CompRuns(RBuf(Indx),
-     *                          Runs,MAXRUNS,nRuns,Scratch,MAXRUNS)
+              if (nMRB.gt.0) call moveData(nMRB,MaskRBuf,RBuf(pnt))
+              call ariExec(VACTION,npixels,MaskBuf,BUFLEN,RBuf(pnt),
+     *                     RBufLen,idx)
+              idx = idx + pnt - 1
+              call compRuns(RBuf(idx),
+     *                          runs,MAXRUNS,nRuns,Scratch,MAXRUNS)
             endif
           endif
-          if (doMask .or. doRuns) call PutRuns(lOut,Runs,nRuns,
+
+          if (doMask .or. doRuns) call putRuns(lOut,runs,nRuns,
      *         1-blc(1),1-blc(2),nOut(1),nOut(2))
+
           if (doExp) then
-            npixels = Fill(Runs,nRuns)
+            call boxCount(runs,nRuns,npixels)
             if (npixels.gt.0) then
-              if (nERB.gt.0) call MoveData(nERB,ExpRBuf,RBuf(pnt))
-              call ariExec(vaction,npixels,ExpBuf,BUFLEN,RBuf(pnt),
-     *                                  RBufLen,Indx)
-              Indx = Indx + pnt - 1
+              if (nERB.gt.0) call moveData(nERB,ExpRBuf,RBuf(pnt))
+              call ariExec(VACTION,npixels,ExpBuf,BUFLEN,RBuf(pnt),
+     *                     RBufLen,idx)
+              idx = idx + pnt - 1
             endif
-            call PutPlane(lOut,Runs,nRuns,
-     *         1-blc(1),1-blc(2),nOut(1),nOut(2),RBuf(Indx),npixels)
+
+            call putPlane(lOut,runs,nRuns,
+     *         1-blc(1),1-blc(2),nOut(1),nOut(2),RBuf(idx),npixels)
           endif
         enddo
       enddo
-c
-c  Free up the allocated memory.
-c
+
+c     Free allocated memory.
       call memfree(pnt,rbuflen,'r')
-c
-c  Close all the files.
-c
-      call xyclose(lOut)
+
+c     Close files.
       do i = 1, nfiles
-        call xyclose(lIn(i))
+        call xyClose(lIn(i))
       enddo
+      call xyClose(lOut)
 
       end
 
 c***********************************************************************
 
-      subroutine MoveData(n,inMap,outMap)
+      subroutine moveData(n,inMap,outMap)
 
       integer n
       real    inMap(n),outMap(n)
-c
 c-----------------------------------------------------------------------
       integer i
 c-----------------------------------------------------------------------
@@ -365,10 +319,10 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine CompRuns(Mask,Runs,maxRuns,nRuns,Scratch,nScratch)
+      subroutine compRuns(Mask,runs,maxRuns,nRuns,Scratch,nScratch)
 
       integer nRuns,maxRuns,nScratch
-      integer Runs(3,maxRuns),Scratch(3,nScratch)
+      integer runs(3,maxRuns),Scratch(3,nScratch)
       real Mask(*)
 
 c  Combine an input runs specification and mask into an output runs
@@ -383,24 +337,21 @@ c    maxRuns    The size of the runs array.
 c    nScratch   Size of the scratch buffer.
 c
 c  Input/Output:
-c    Runs       Input runs.
-c    Nruns      Number of runs in the input.
+c    runs       Input runs.
+c    nRuns      Number of runs in the input.
 c
 c  Scratch:
 c    Scratch    An intermediate working array.
 c-----------------------------------------------------------------------
       integer i,k,l,length,nOut
 c-----------------------------------------------------------------------
-c
-c  Initialise.
-c
+c     Initialise.
       nOut = 0
       k = 1
-c
-c  Determine the output runs, and place them in the scratch buffer.
-c
-      do i = 1, NRuns
-        length = Runs(3,i) - Runs(2,i) + 1
+
+c     Determine the output runs and place them in the scratch buffer.
+      do i = 1, nRuns
+        length = runs(3,i) - runs(2,i) + 1
         l = 0
         do while (l.lt.length)
           do while (l.lt.length .and. Mask(k).le.0)
@@ -411,66 +362,42 @@ c
             if (nOut.eq.nScratch)
      *        call bug('f','Scratch buffer overflow (MAXRUNS)')
             nOut = nOut + 1
-            Scratch(1,nOut) = Runs(1,i)
-            Scratch(2,nOut) = Runs(2,i) + l
+            Scratch(1,nOut) = runs(1,i)
+            Scratch(2,nOut) = runs(2,i) + l
             do while (l.lt.length .and. Mask(k).gt.0)
               k = k + 1
               l = l + 1
             enddo
-            Scratch(3,nOut) = Runs(2,i) + l - 1
+            Scratch(3,nOut) = runs(2,i) + l - 1
           endif
         enddo
       enddo
-c
-c  Copy the output runs (in the scratch buffer) to the runs array.
-c
+
+c     Copy the output runs (in the scratch buffer) to the runs array.
       if (nOut+1.gt.maxRuns) call bug('f',
      *           'Runs buffer overflow MAXRUNS)')
       do i = 1, nOut
-        Runs(1,i) = Scratch(1,i)
-        Runs(2,i) = Scratch(2,i)
-        Runs(3,i) = Scratch(3,i)
+        runs(1,i) = Scratch(1,i)
+        runs(2,i) = Scratch(2,i)
+        runs(3,i) = Scratch(3,i)
       enddo
       nRuns = nOut
-      Runs(1,nOut+1) = 0
-      Runs(2,nOut+1) = 0
-      Runs(3,nOut+1) = 0
+      runs(1,nOut+1) = 0
+      runs(2,nOut+1) = 0
+      runs(3,nOut+1) = 0
 
       end
 
 c***********************************************************************
 
-      integer function Fill(Runs,nRuns)
-
-      integer nRuns,Runs(3,*)
-
-c  Determine the number of pixels of interest in the current plane.
-c
-c  Output:
-c    Fill       The number of pixels of interest.
-c
-c-----------------------------------------------------------------------
-      integer npixels,i
-c-----------------------------------------------------------------------
-      npixels = 0
-      do i = 1, nRuns
-        npixels = npixels + Runs(3,i) - Runs(2,i) + 1
-      enddo
-
-      Fill = npixels
-      end
-
-c***********************************************************************
-
-      subroutine OldHdr(lIn,lOut,naxis,n,blc,trc,version)
+      subroutine oldHdr(lIn,lOut,naxis,n,blc,trc,version)
 
       integer   lIn, lOut
       integer   naxis, n(naxis), blc(naxis), trc(naxis)
       character version*(*)
-
+c-----------------------------------------------------------------------
 c  Make the header of the output file.  This is a carbon copy of the
 c  input, except that a history record is added.
-c
 c-----------------------------------------------------------------------
       integer   iax, lblc, ltrc
       double precision crpix, def
@@ -511,15 +438,14 @@ c     Rewrite the reference pixel location.
 
 c***********************************************************************
 
-      subroutine NewHdr(lOut,naxis,Range,n,blc,version)
+      subroutine newHdr(lOut,naxis,Range,n,blc,version)
 
       integer   lOut, naxis, n(naxis), blc(naxis)
       real      Range(2,naxis)
       character version*(*)
-
+c-----------------------------------------------------------------------
 c  Make the header of the output file. This is a carbon copy of the
 c  input, except that a history record is added.
-c
 c-----------------------------------------------------------------------
       integer   iax
       double precision cdelt, crpix, crval
@@ -554,66 +480,63 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine PACTION(symbol,type,indx,value)
+      subroutine PACTION(symbol, dType, idx, value)
 
       character symbol*(*)
-      integer type,indx
-      real value
-
-c The parsers action routine. Open the file and make sure its the
-c  right size.
+      integer   dType, idx
+      real      value
+c-----------------------------------------------------------------------
+c The parser's action routine.  Open the file and make sure it's the
+c right size.
 c
 c  Inputs:
 c    Symbol     The file name.
 c  Outputs:
-c    type       Vector.
-c    indx       Indx into lIn array.
+c    dType      VECTOR type.
+c    idx        Index into lIn array.
 c    value      Unused.
-c
 c-----------------------------------------------------------------------
       include 'maths.h'
 
-      integer error,constant,scalar,vector
-      parameter (error=0,constant=1,scalar=2,vector=3)
-      integer i
-      integer nin(MAXNAX)
+      integer    VECTOR
+      parameter (VECTOR=3)
+
+      logical   dogrow
+      integer   i, nin(MAXNAX)
       character umsg*64
-      logical dogrow
-c
-c  Externals.
-c
-      integer len1
+
+      external  len1
+      integer   len1
 c-----------------------------------------------------------------------
       if (symbol.eq.'x') then
         Xused = .true.
-        Indx = XVAL
+        idx = XVAL
       else if (symbol.eq.'y') then
         Yused = .true.
-        Indx = YVAL
+        idx = YVAL
       else if (symbol.eq.'z') then
         Zused = .true.
-        Indx = ZVAL
-c
-c  Check if we already have this one open.
-c
+        idx = ZVAL
       else
-        Indx = 0
+c       Check if we already have this one open.
+        idx = 0
         do i = 1, nfiles
-          if (symbol.eq.Names(Offset(i)+1:Offset(i+1))) Indx = i
+          if (symbol.eq.Names(Offset(i)+1:Offset(i+1))) idx = i
         enddo
-c
-c  If it was not found, open the file.
-c
-        if (Indx.eq.0) then
+
+c       If it was not found, open the file.
+        if (idx.eq.0) then
           if (nfiles.ge.MAXFILES) call bug('f','Too many open files')
           nfiles = nfiles + 1
-          call xyopen(lIn(nfiles),Symbol,'old',MAXNAX,nin)
+          call xyOpen(lIn(nfiles),Symbol,'old',MAXNAX,nin)
           naxes(nfiles) = 1
+
           if (nfiles.eq.1) then
             do i = 1, MAXNAX
               nsize(i) = nin(i)
               if (nin(i).gt.1) naxes(nfiles) = i
             enddo
+
             call rdhdi(lIn(1),'naxis',naxis,0)
             naxis = min(naxis, MAXNAX)
             Offset(1) = 0
@@ -633,6 +556,7 @@ c
      *            Symbol(1:len1(Symbol))
                 call bug('f',umsg)
               endif
+
               if (nin(i).gt.1 .and. naxes(ref).lt.i) then
                 ref = nfiles
                 nsize(i) = nin(i)
@@ -641,79 +565,87 @@ c
               endif
             enddo
           endif
+
           Offset(nfiles+1) = Offset(nfiles) + len1(symbol)
           if (Offset(nfiles+1).gt.len(Names))
      *        call bug('f','Name buffer overflow, in PACTION')
           Names(Offset(nfiles)+1:Offset(nfiles+1)) = symbol
-          Indx = nfiles
+          idx = nfiles
         endif
       endif
 
-      type = vector
+      dType = VECTOR
+      value = 0.0
 
       end
 
 c***********************************************************************
 
-      subroutine VACTION(Indx,Type,Data,N)
+      subroutine VACTION(idx, dType, rData, n)
 
-      integer Indx,Type,N
-      real Data(*)
-
+      integer   idx, dType, n
+      real      rData(*)
+c-----------------------------------------------------------------------
 c  This routine is called by ariExec each time it wants a row of a
-c  file. Its not exactly the most complex routine in the world.
+c  file.  It's not exactly the most complex routine in the world.
 c
 c  Inputs:
-c    Indx       Indx into lIn array of file descriptors.
-c    Type       Will be vector.
-c    N          Will equal n1.
+c    idx        Index into lIn array of file descriptors.
+c    dType      Should be VECTOR.
+c    n          Should equal n1.
 c  Output:
-c    Data       The row of data.
-c
+c    rData      The row of data.
 c-----------------------------------------------------------------------
       include 'maths.h'
-      integer i,j,k,npixel
-      real cdelt,crval,temp
+
+      integer    VECTOR
+      parameter (VECTOR=3)
+
+      integer   i, j, k, npixel
+      real      cdelt, crval, temp
 c-----------------------------------------------------------------------
-c
-c  Fill in Data if it corresponds to a value of x, y or z.
-c
-      if (Indx.eq.XVAL) then
+      if (dType.ne.VECTOR) call bug('f',
+     *  'VACTION called with non-vector type')
+
+c     Fill in data if it corresponds to a value of x, y or z.
+      if (idx.eq.XVAL) then
         cdelt = (Range(2,1)-Range(1,1))/real(nsize(1)-1)
         crval = Range(1,1) - cdelt
         k = 1
         do j = 1, nRuns
-          do i = Runs(2,j), Runs(3,j)
-            Data(k) = cdelt * i + crval
+          do i = runs(2,j), runs(3,j)
+            rData(k) = cdelt * i + crval
             k = k + 1
           enddo
         enddo
-      else if (Indx.eq.YVAL) then
+
+      else if (idx.eq.YVAL) then
         cdelt = (Range(2,2)-Range(1,2))/real(nsize(2)-1)
         crval = Range(1,2) - cdelt
         k = 1
         do j = 1, nRuns
-          temp = cdelt * Runs(1,j) + crval
-          do i = Runs(2,j), Runs(3,j)
-            Data(k) = temp
+          temp = cdelt * runs(1,j) + crval
+          do i = runs(2,j), runs(3,j)
+            rData(k) = temp
             k = k + 1
           enddo
         enddo
-      else if (Indx.eq.ZVAL) then
+
+      else if (idx.eq.ZVAL) then
         cdelt = (Range(2,3)-Range(1,3))/real(nsize(3)-1)
         crval = Range(1,3) - cdelt
         temp = cdelt * Plane(3) + crval
-        do k = 1, N
-          Data(k) = temp
+        do k = 1, n
+          rData(k) = temp
         enddo
-c
-c  Otherwise read it from a file.
-c
+
       else
-        call GetPlane(lIn(Indx),Runs,nRuns,0,0,nsize(1),nsize(2),
-     *                                        Data,N,npixel)
-        if (N.ne.npixel) call bug('f','Something is screwy in VACTION')
+c       Otherwise read it from a file.
+        call getPlane(lIn(idx),runs,nRuns,0,0,nsize(1),nsize(2),
+     *    rData,n,npixel)
+        if (n.ne.npixel) call bug('f','Something is screwy in VACTION')
       endif
+
       end
 
 c***********************************************************************
