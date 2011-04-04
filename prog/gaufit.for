@@ -107,9 +107,11 @@ c       results.  A final plane which contains the rms of the residual
 c       is added.
 c
 c@ fitaxis
-c       This determines along which axis profiles are taken.  The
-c       default is the velocity ('vel') axis.  Other possible answers
-c       are 'x', 'y', 'z', 'a', 'ra', 'dec', 'lon', 'lat', 'freq'.
+c       Axis along which profiles are taken.  Provide the axis name as
+c       listed by PRTHD.  Alternatively, 'longitude' (or 'lon'),
+c       'latitude' (or 'lat'), or 'spectral'; or 'x', 'y', 'z', or 'a'.
+c       'ra', 'dec', 'freq', and 'vel' are also understood.  Default is
+c       the spectral axis.
 c
 c@ smooth
 c       First smooth the profile over 'smooth' pixels before fitting.
@@ -227,7 +229,7 @@ c@ log
 c       If the name of a file is given, the results of the fitting are
 c       written to this file instead of to the terminal
 c
-c$Id: gaufit.for,v 1.10 2011/04/04 07:03:02 cal103 Exp $
+c$Id: gaufit.for,v 1.11 2011/04/04 07:59:58 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -290,8 +292,8 @@ c-----------------------------------------------------------------------
       character versan*72
 c-----------------------------------------------------------------------
       version = versan ('gaufit',
-     *                  '$Revision: 1.10 $',
-     *                  '$Date: 2011/04/04 07:03:02 $')
+     *                  '$Revision: 1.11 $',
+     *                  '$Date: 2011/04/04 07:59:58 $')
 
       call inputs(units,prfinfo,runs,ngauss,limlist,cmpsort,prnm)
       call work(units,prfinfo,runs,ngauss,limlist,cmpsort,prnm)
@@ -479,10 +481,10 @@ c       fitax=8 selects ' ' as subcube for xyzsetup
 
 c***********************************************************************
 
-      subroutine setopen(name,status,unit, naxis,axlen,prfinfo,fitax)
+      subroutine setopen(name,status,unit, naxis,axlen,prfinfo,fitAxI)
 
       character name*(*), status*(*)
-      integer   unit, naxis, axlen(*), prfinfo(*), fitax
+      integer   unit, naxis, axlen(*), prfinfo(*), fitAxI
 c-----------------------------------------------------------------------
 c Open input dataset and get information on it.
 c Or create output dataset.
@@ -491,13 +493,14 @@ c-----------------------------------------------------------------------
 
       integer   blc(MAXNAX), i, trc(MAXNAX), viraxl(MAXNAX),
      *          vircsz(MAXNAX)
-      character axis*1, axnames*8, type*4
+      character axC*8, fitAxC*1, fitAxis*9
 
-      save  axis
+      external  len1
+      integer   len1
 
-      data  axnames /'xyzabcd'/
+      data axC /'XYZABCD '/
 c-----------------------------------------------------------------------
-c     Open and get dimension of input dataset: naxis.
+c     Open and get dimensions of input dataset: naxis.
       if (status.eq.'old') then
         naxis = MAXNAX
         call xyzopen(unit, name, 'old', naxis, axlen)
@@ -508,35 +511,46 @@ c     Open and get dimension of input dataset: naxis.
         call headcp(prfinfo(1), unit, 0, 0, 0, 0)
       endif
 
-c     Find out which axis is to be fit.  First read keyword, then call
-c     fndaxnum which reads the header and sets the value of fitaxis if
-c     not given in keyword.
-      if (status.eq.'old' .and. fitax.eq.0) then
-        call keya('fitaxis', type, 'freq')
-        if (type(1:2).eq.'ra')  type = 'lon'
-        if (type(1:3).eq.'dec') type = 'lat'
-        if (type(1:3).eq.'vel') type = 'freq'
+c     Determine the axis to fit.
+      if (status.eq.'old' .and. fitAxI.eq.0) then
+        call keya('fitaxis', fitAxis, 'SPECTRAL')
+        call ucase(fitAxis)
 
-        axis = ' '
-        call fndaxnum(unit, type, axis, fitax)
-        call assertl(axis.ne.' ',
+        if (len1(fitAxis).eq.1) then
+          fitAxI = index(axC, fitAxis)
+        else
+          if (fitAxis.eq.'LON') then
+            fitAxis = 'LONGITUDE'
+          else if (fitAxis.eq.'LAT') then
+            fitAxis = 'LATITUDE'
+          else if (fitAxis.eq.'FREQ') then
+            fitAxis = 'SPECTRAL'
+          else if (fitAxis.eq.'VEL') then
+            fitAxis = 'SPECTRAL'
+          endif
+
+          fitAxC = ' '
+          call coInit(unit)
+          call coFindAx(unit, fitAxis, fitAxI)
+          call coFin(unit)
+        endif
+
+        call assertl(fitAxI.ne.0,
      *    'Specified fit axis not found in dataset')
-      else
-        axis = axnames(fitax:fitax)
       endif
 
+      fitAxC = axC(fitAxI:fitAxI)
 
-c     Set up xyzio routines for input dataset and figure out number of
-c     profiles and their length.
+
+c     Set up xyzio routines for input dataset.
       do i = 1, naxis
         blc(i) = 1
         trc(i) = axlen(i)
       enddo
 
-      call xyzsetup(unit, axis, blc, trc, viraxl, vircsz)
+      call xyzsetup(unit, fitAxC, blc, trc, viraxl, vircsz)
 
-c     Store some parameters in array prfinfo, for easier transfering
-c     prfinfo(1)=# profiles, prfinfo(2)=nchan
+c     Number of profiles and their length.
       prfinfo(1) = vircsz(naxis) / vircsz(1)
       prfinfo(2) = viraxl(1)
 
