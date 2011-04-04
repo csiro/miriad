@@ -1,272 +1,242 @@
-c= gaufit - Fits gaussians to profile
+      program gaufit
+
+c= gaufit - Fit gaussians to profile
 c& bpw
 c: image-analysis
 c+
-ccc FIX params keyword
-ccc profile_at => profile_at_
-ccc say in doc what profile_at contains
-ccc
+c       GAUFIT fits gaussians to a profile and can write the output to
+c       a Miriad dataset, a logfile or the terminal.
 c
-cc gaufit fits gaussians to a profile and can write the output to
-c a miriad dataset, a logfile or the terminal.
+c       The fitting is done using an adapted version of fitting routines
+c       in numerical recipes.
 c
-c The fitting is done using an adapted version of fitting routines in
-c numerical recipes.
+c       Obligatory parameters are:
+c         a) either or both of 'in=' and 'parinp='
+c         b) 'rmsest='
+c         c) and either 'estim=' or 'options=findestim'
 c
-c Obligatory parameters are:
-c a) either or both of 'in=' and 'parinp='
-c b) 'rmsest='
-c c) and either 'estim=' or 'options=findestim'
+c       The ease of fitting depends strongly on the initial estimates.
+c       These can be given using the estim= keyword, or they can be
+c       automatically found (options=findestim).  The latter is usually
+c       preferable, though the former may be necessary in pathological
+c       cases.
 c
-c The ease of fitting depends strongly on the initial estimates. These
-c can be given using the estim= keyword, or they can be automatically
-c found (options=findestim). The latter is usually preferable, though
-c the former may be necessary in pathological cases.
+c       If multiple gaussians are fit but the fit is bad, another try is
+c       made with one less gaussian. This is repeated until the fit
+c       works.  A fit is considered bad if the rms of the residual is
+c       higher than 1.8 times the rms estimate, or if the parameters lie
+c       outside the range given by cutoff=, crange= and wrange=, or if
+c       the fitting routine does not converge.  If after all possible
+c       ways of retrying a fit the rms is between 1.8 and 5.4 times the
+c       rms estimate, accept the fit after all; maybe a low-level
+c       component increased the rms, or the profile is not perfectly
+c       gaussian, but the fit is somewhat reasonable.
 c
-c If multiple gaussians are fit but the fit is bad, another try is
-c made with one less gaussian. This is repeated until the fit works.
-c A fit is considered bad if the rms of the residual is higher than
-c 1.8 times the rms estimate, or if the parameters lie outside the
-c range given by cutoff=, crange= and wrange=, or if the fitting
-c routine does not converge. If after all possible ways of retrying a
-c fit the rms is between 1.8 and 5.4 times the rms estimate, accept
-c the fit after all; maybe a low-level component increased the rms, or
-c the profile is not perfectly gaussian, but the fit is somewhat
-c reasonable.
+c       Automatic initial estimates are made by first finding the
+c       velocity and amplitude of the peak.  An estimated width is found
+c       by looking to both sides of the peak for the nearest zero of the
+c       2nd derivative and at where the half-maximum lies.  The most
+c       consistent combination gives the width estimate.  For low S/N
+c       profiles the width is found from the integral out to the nearest
+c       zero.  This estimated component is then subtracted from the
+c       profile and the process is repeated until the maximum amplitude
+c       is too low, or until the maximum number of gaussians has been
+c       found.
 c
-c Automatic initial estimates are made by first finding the velocity
-c and amplitude of the peak. An estimated width is found by looking to
-c both sides of the peak for the nearest zero of the 2nd derivative and
-c at where the half-maximum lies. The most consistent combination gives
-c the width estimate. For low S/N profiles the width is found from the
-c integral out to the nearest zero. This estimated component is then
-c subtracted from the profile and the process is repeated until the
-c maximum amplitude is too low, or until the maximum number of gaussians
-c has been found.
+c       If parinp= is used gaussian parameters are taken from this
+c       dataset for all pixels outside the specified region.  Inside the
+c       region new fits are made.  All results are written to the
+c       params= dataset.  The number of fitted gaussians does not have
+c       to be the same between the parinp= and params= datasets.  This
+c       creation of an extra dataset is needed because Miriad very-deep-
+c       down disallows opening an existing dataset for writing.  So it
+c       is not possible to add new fits to an existing parameter set.
 c
-c If parinp= is used gaussian parameters are taken from this dataset
-c for all pixels outside the specified region. Inside the region new
-c fits are made. All results are written to the params= dataset. The
-c number of fitted gaussians does not have to be the same between the
-c parinp= and params= datasets.
-c This creation of an extra dataset is needed because MIRIAD
-c very-deep-down disallows opening an existing dataset for writing.
-c So it is not possible to add new fits to an existing parameter set.
-c
-c If parinp= is present, but in= is not, then no new fits are made, but
-c the gaussians in parinp are sorted as specified by the cmpsort=
-c keyword. They can also be transformed as specified by
-c options=integral,fwhm,dispersion.
+c       If parinp= is present, but in= is not, then no new fits are
+c       made, but the gaussians in parinp are sorted as specified by the
+c       cmpsort= keyword.  They can also be transformed as specified by
+c       options=integral,fwhm,dispersion.
 c
 c< in
-c Input dataset with spectra to be fit.
+c       Input dataset with spectra to be fit.
 c
 c< region
-c Note: the region=mask option is not implemented. The mask of the
-c input dataset is used however. If there is one, the profile value
-c at masked datapoints is set to zero before doing the fit.
+c       Note: the region=mask option is not implemented.  The mask of
+c       the input dataset is used however.  If there is one, the profile
+c       value at masked datapoints is set to zero before doing the fit.
 c
 c@ rmsest
-c Give a value for the rms of the profile or a dataset from which it can
-c be read. No default. Used by the fitting procedure to determine when
-c convergence occurs.
-c If a single real value is given, it is used for each profile.
-c If the name of a dataset is given, the rms at each pixel is read from
-c that dataset; this is particularly useful when fitting a dataset
-c created with linmos, for which the rms will vary across the field.
-c Create the rms dataset using 'linmos in=list options=sens out=rms'
-c followed by 'maths exp=rms*<rmsvalue>'
-c The value should be the rms of the profile as found with imstat on
-c signal-free regions.
+c       Give a value for the rms of the profile or a dataset from which
+c       it can be read.  No default.  Used by the fitting procedure to
+c       determine when convergence occurs.  If a single real value is
+c       given, it is used for each profile.  If the name of a dataset is
+c       given, the rms at each pixel is read from that dataset; this is
+c       particularly useful when fitting a dataset created with linmos,
+c       for which the rms will vary across the field.  Create the rms
+c       dataset using 'linmos in=list options=sens out=rms' followed by
+c       'maths exp=rms*<rmsvalue>'.  The value should be the rms of the
+c       profile as found with imstat on signal-free regions.
 c
 c@ estim
-c Initial estimates. Give an estimate for the amplitude, velocity and
-c fwhm for each component (if options=integral, pixels or dispersion
-c is used, give integral instead of amplitude etc.). This is quite
-c critical and should already be reasonably close. The same initial
-c estimate will be used for all profiles.
-c If options=findestim is used, the initial estimates are determined by
-c gaufit and estim= is ignored
+c       Initial estimates.  Give an estimate for the amplitude, velocity
+c       and fwhm for each component (if options=integral, pixels or
+c       dispersion is used, give integral instead of amplitude etc.).
+c       This is quite critical and should already be reasonably close.
+c       The same initial estimate will be used for all profiles.  If
+c       options=findestim is used, the initial estimates are determined
+c       by gaufit and estim= is ignored
 c
 c@ ngauss
-c Maximum number of gaussian components to fit (maximum 10, default 1).
+c       Maximum number of gaussian components to fit (maximum 10,
+c       default 1).
 c
 c@ parinp
-c Optional input parameter dataset. All fits outside the specified
-c region are read from this dataset. If in= is not present, the fits
-c in the selected region are just sorted and selected as specified by
-c cmpsort, cutoff, vrange and wrange. The fits outside the region are
-c untouched.
+c       Optional input parameter dataset.  All fits outside the
+c       specified region are read from this dataset.  If in= is not
+c       present, the fits in the selected region are just sorted and
+c       selected as specified by cmpsort, cutoff, vrange and wrange.
+c       The fits outside the region are untouched.
 c
 c@ params
-c Optional output dataset to which the fit parameters can be written.
-c For each fitted component six planes are written, one with the
-c amplitude (or integral), one with the position and one with the fwhm
-c (or dispersion), and three more with the errors. The planes with
-c errors come after the planes with all fit results. A final plane
-c which contains the rms of the residual is added.
+c       Optional output dataset to which the fit parameters can be
+c       written.  For each fitted component six planes are written, one
+c       with the amplitude (or integral), one with the position and one
+c       with the fwhm (or dispersion), and three more with the errors.
+c       The planes with errors come after the planes with all fit
+c       results.  A final plane which contains the rms of the residual
+c       is added.
 c
 c@ fitaxis
-c This determines along which axis profiles are taken. The default is
-c the velocity ('vel') axis. Other possible answers are 'x', 'y', 'z',
-c 'a', 'ra', 'dec', 'lon', 'lat', 'freq'.
+c       This determines along which axis profiles are taken.  The
+c       default is the velocity ('vel') axis.  Other possible answers
+c       are 'x', 'y', 'z', 'a', 'ra', 'dec', 'lon', 'lat', 'freq'.
 c
 c@ smooth
-c First smooth the profile over 'smooth' pixels before fitting
+c       First smooth the profile over 'smooth' pixels before fitting.
 c
 c@ options
-c Controls the output. Defaults are the opposite of the action specified
-c by an option. Possible options are:
-c   nofit:        output the initial estimates, don't make fits
-c   findestim:    let gaufit determine the initial estimates
+c       Controls the output.  Defaults are the opposite of the action
+c       specified by an option.  Possible options are:
+c         nofit:      output the initial estimates, don't make fits
+c         findestim:  let gaufit determine the initial estimates
 c
-c   noprint:      do not print the fit results on the terminal
-c   supbad:       suppress results for fits outside ranges given by
-c                 cutoff, crange and wrange and results for bad fits.
-c   estimout:     print initial estimates
-c   intermout:    print some intermediate results for multi-component fits
-c   abspix:       x, y coordinates on output are relative to lower left,
-c                 rather than relative to crpix
-c   abscoo:       x, y coordinates on output are absolute coordinates
+c         noprint:    do not print the fit results on the terminal
+c         supbad:     suppress results for fits outside ranges given
+c                     by cutoff, crange and wrange and results for bad
+c                     fits.
+c         estimout:   print initial estimates
+c         intermout:  print some intermediate results for multi-
+c                     component fits
+c         abspix:     x, y coordinates on output are relative to lower
+c                     left, rather than relative to crpix
+c         abscoo:     x, y coordinates on output are absolute
+c                     coordinates
+c         wrprof:     write out a file with the data and the fit so that
+c                     it at least is possible to use plotting programs
+c                     to compare them; a kludge until gaufit itself can
+c                     plot.  filenames will be 'profile_at_$x_$y' (or
+c                     given by prof=)
+c         integral:   write out integral of gaussian instead of
+c                     amplitude
+c         dispersion: write out dispersion of gaussian instead of fwhm
+c         pixel:      write center and width in pixels, not in axis
+c                     units (for these three: also interpret input for
+c                     cutoff, vrange, wrange and estim keywords as
+c                     int/disp/pix)
+c         average:    first make an average profile of the selected
+c                     region and then fit one single gaussian to this
+c                     profile
+c         summed:     first make a summed profile of the selected region
+c                     and then fit one single gaussian to this profile
 c
-c   wrprof:       write out a file with the data and the fit so that it
-c                 at least is possible to use plotting programs to
-c                 compare them; a kludge until gaufit itself can plot.
-c                 filenames will be 'profile_at_$x_$y' (or given by prof=)
-c
-c   integral:     write out integral of gaussian instead of amplitude
-c   dispersion:   write out dispersion of gaussian instead of fwhm
-c   pixel:        write center and width in pixels, not in axis units
-c                 (for these three: also interpret input for cutoff,
-c                 vrange, wrange and estim keywords as int/disp/pix)
-c
-c   average:      first make an average profile of the selected region
-c                 and then fit one single gaussian to this profile
-c   summed:       first make a summed profile of the selected region
-c                 and then fit one single gaussian to this profile
-c
-c   negative      amplitudes may be both positive and negative, instead
-c                 if just positive
-c   fixvelo:      fix the velocities to the initial estimate during fit
-c   fixwidth:     fix the width to the initial estimate while fitting
-c                 (fixvelo and fixwidth can be combined)
+c         negative    amplitudes may be both positive and negative,
+c                     instead if just positive
+c         fixvelo:    fix the velocities to the initial estimate during
+c                     fit
+c         fixwidth:   fix the width to the initial estimate while
+c                     fitting (fixvelo and fixwidth can be combined)
 c
 c@ cmpsort
-c This parameter specifies how to sort the resulting components
-c The following options exist
-c   velocity, amplitude, integral, width, vdiff, vrange
-c Option 'velocity' and 'fwhm' result in components sorted on increasing
-c velocity or width.
-c Option 'amplitude' and 'integral' result in components sorted on
-c decreasing amplitude or integral.
-c If vdiff is used, then a second parameter gives a center velocity;
-c components are sorted based on the difference between the fitted
-c velocity and this center velocity.
-c If vrange is used, the second and third parameter give a velocity
-c range. If one component is within this range, it becomes the first.
-c If none or more than one is within this range, they are sorted on
-c velocity.
-c Usually, cmpsort is applied for every pixel of the dataset. This is
-c wanted when originally fitting (in= used). It is also generally wanted
-c when refitting part of the dataset (in= and parinp= used), especially
-c when more gaussians are to be added in selected regions. However, when
-c only parinp= is present, the sorting is done only in the selected
-c region and everything outside is left alone.
+c       This parameter specifies how to sort the resulting components
+c       The following options exist
+c         velocity, amplitude, integral, width, vdiff, vrange
+c       Option 'velocity' and 'fwhm' result in components sorted on
+c       increasing velocity or width.
+c       Option 'amplitude' and 'integral' result in components sorted on
+c       decreasing amplitude or integral.
+c       If vdiff is used, then a second parameter gives a center
+c       velocity; components are sorted based on the difference between
+c       the fitted velocity and this center velocity.
+c       If vrange is used, the second and third parameter give a
+c       velocity range.  If one component is within this range, it
+c       becomes the first.  If none or more than one is within this
+c       range, they are sorted on velocity.
+c       Usually, cmpsort is applied for every pixel of the dataset.
+c       This is wanted when originally fitting (in= used).  It is also
+c       generally wanted when refitting part of the dataset (in= and
+c       parinp= used), especially when more gaussians are to be added in
+c       selected regions.  However, when only parinp= is present, the
+c       sorting is done only in the selected region and everything
+c       outside is left alone.
 c
 c@ model
-c Optional output dataset, to which theoretical (described by fit)
-c profiles can be written.
+c       Optional output dataset, to which theoretical (described by fit)
+c       profiles can be written.
 c
 c@ residual
-c Optional output dataset, to which the difference between the profile
-c and the fit can be written
+c       Optional output dataset, to which the difference between the
+c       profile and the fit can be written
 c
 c@ prof
-c Optional filename for use with options=wrprof
+c       Optional filename for use with options=wrprof
 c
 c@ cutoff
-c Give a cutoff for the amplitude/integral. Can be 1, 2 or 3 values, all
-c in units of the rms.
-c If one value, fits with amplitude (integral if options=integral set)
-c below the given cutoff are not written out. The absolute value of the
-c amplitude is used if options=negative was set.
-c If two values, fits with amplitude/integral in the specified range are
-c eliminated.
-c If three values, further eliminate fits for which the ratio of amplitude
-c to amplitude error is less than specified ratio (default 1).
-c Default: cut off amplitudes below 3 times the rms and with amp/err<2.
+c       Give a cutoff for the amplitude/integral.  Can be 1, 2 or 3
+c       values, all in units of the rms.
+c       If one value, fits with amplitude (integral if options=integral
+c       set) below the given cutoff are not written out.  The absolute
+c       value of the amplitude is used if options=negative was set.
+c       If two values, fits with amplitude/integral in the specified
+c       range are eliminated.
+c       If three values, further eliminate fits for which the ratio of
+c       amplitude to amplitude error is less than specified ratio
+c       (default 1).  Default: cut off amplitudes below 3 times the rms
+c       and with amp/err<2.
 c
 c@ cutval
-c When using options=average or summed, only average/sum pixels whose
-c intensity is above cutval (default: sum all)
+c       When using options=average or summed, only average/sum pixels
+c       whose intensity is above cutval (default: sum all)
 c
 c@ crange
-c Give a range (in units along profile) between which the center should
-c lie. Fits that result in centers outside this range are not written out.
-c A third value specifies to not write out fits whose center is uncertain
-c by more than that number of channels.
-c Default: cut off centers outside profile range and uncertain by more
-c than four channels.
+c       Give a range (in units along profile) between which the center
+c       should lie.  Fits that result in centers outside this range are
+c       not written out.  A third value specifies to not write out fits
+c       whose center is uncertain by more than that number of channels.
+c       Default: cut off centers outside profile range and uncertain by
+c       more than four channels.
 c
 c@ wrange
-c Give 1, 2 or 3 values: a lower limit, and/or a range, and/or a S/N ratio
-c for the width (fwhm or dispersion). Fits giving widths below the lower
-c limit, outside the range, or with too uncertain widths are not written
-c out.
-c Default: cut off fwhms less than 1 pixel and larger than the length
-c of the profile, and with value/error less than 1.
+c       Give 1, 2 or 3 values: a lower limit, and/or a range, and/or a
+c       S/N ratio for the width (fwhm or dispersion).  Fits giving
+c       widths below the lower limit, outside the range, or with too
+c       uncertain widths are not written out.
+c       Default: cut off fwhms less than 1 pixel and larger than the
+c       length of the profile, and with value/error less than 1.
 c
 c@ log
-c If the name of a file is given, the results of the fitting are written
-c to this file instead of to the terminal
+c       If the name of a file is given, the results of the fitting are
+c       written to this file instead of to the terminal
 c
-c$Id: gaufit.for,v 1.9 2011/02/15 05:33:57 cal103 Exp $
+c$Id: gaufit.for,v 1.10 2011/04/04 07:03:02 cal103 Exp $
 c--
+c  History:
+c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c  History
+c-----------------------------------------------------------------------
+c FIX params keyword
+c profile_at => profile_at_
+c say in doc what profile_at contains
 c
-c     bpw 17oct91 Created (with fitting routine from Stefano Casertano,
-c                 who used the ones in Numerical Recipes but adapted and
-c                 improved them)
-c     bpw 21jan92 Make some adaptations to get rid of Numerical Recipes
-c                 code as-is.
-c     bpw 26feb92 Corrected accidental / ipv * in exponent because
-c                 fitparameter is 1/sigma.
-c     bpw 27mar92 Changes to suppress flint warnings; Changed assert into
-c                 assertl
-c     bpw 23apr92 Add options=summed; sometimes take abs(cdelt)
-c     bpw  9jul92 Correct shift if options=pixels and not full region used
-c                 Add writing of profile
-c     bpw 15dec92 Adapt for changed fndaxnum
-c     bpw  2mar93 Adapt for masking in xyzio
-c     bpw 14dec93 Add call logclose
-c     bpw 14nov94 Fix erroneous 'Center outside range' for cdelt3<0
-c     pjt 15mar95 Add 'external rtfmt' for ANSI f2c
-c     bpw 26mar96 Fix format for writing profile with negative numbers
-c     bpw 14jul97 Fix format for writing rms
-c     bpw 10jan98 Add automatic initial estimates, some changes in handling
-c     bpw  4feb98 Made fitting much more robust, add parinp and using old
-c                 parameters.
-c     bpw 16mar98 Some simplifications and bug fixes
-c     bpw  4jun98 Added rmsest='dataset' and make full use of region keyword
-c     rjs 20oct98 Changes to avoid floating point underflow in exp() function
-c     bpw 26feb99 Make compiler more silent by avoiding warnings
-c     bpw  4mar99 Fixed fitting selected channel range, add cutval=
-c     bpw 25aug99 Fix bug with masking while finding initial estimates
-c     bpw 21oct99 Add individual gaussians to ascii output file
-c     bpw 16nov99 Fix bug in optindex calculation
-c     bpw 17dec99 Add prof=, fix bug with conversion of limlist
-c     rjs 23jan00 Change some subroutine args to real-valued to avoid
-c                 compiler complaints
-c     rjs 28jan00 Some FORTRAN standardization to get it through a
-c                 compiler.
-c     bpw 28feb01 Make it work under linux
-c     bpw 21may01 Add smooth keyword
-c     rjs 18sep05 Corrected type mismatch error.
-c     tw  21jun07 ngauss=1 default; fix seg fault when writing residual
-c                 cube; fix mask error on residual and model cubes
-c***********************************************************************
-
 c The main program first gets all inputs and then calls the workhorse.
 c The inputs are:
 c units:       dataset handles
@@ -293,8 +263,8 @@ c              4: actual number of gaussians fit on pixel
 c              5: number of gaussians in parinp dataset
 c              6: number of gaussians in output dataset
 c gausspar:    results of fitting, size 7*MAXCMP+1
-c              el 1=integral, el 2=center, el 3=dispersion; 3*MAXCMP times
-c              then follow errors, 3*MAXCMP times
+c              el 1=integral, el 2=center, el 3=dispersion; 3*MAXCMP
+c              times then follow errors, 3*MAXCMP times
 c              then error flags, one for each of MAXCMP components
 c                   (see cuttofs/errout for values)
 c              last el = rms
@@ -308,24 +278,20 @@ c cmpsort:     el 1=what to sort on
 c              el 2=center velocity for vdiff, or min. of range
 c              el 3=                              max. of range
 c              el 4=max # gaussians, used when sorting a range
+c-----------------------------------------------------------------------
+      integer    MAXRUNS
+      parameter (MAXRUNS = 1024)
 
-      program gaufit
+      integer   ngauss(6), prfinfo(10), runs(3,MAXRUNS), units(6)
+      real      cmpsort(4), limlist(25)
+      character prnm*80, version*72
 
-      integer      units(6)
-      integer      prfinfo(10)
-      integer      MAXRUNS
-      parameter    (MAXRUNS = 1024)
-      integer      runs(3,MAXRUNS)
-      integer      ngauss(6)
-      real         limlist(25)
-      real         cmpsort(4)
-      character*80 prnm
-
-      character versan*80, version*80
+      external  versan
+      character versan*72
 c-----------------------------------------------------------------------
       version = versan ('gaufit',
-     *                  '$Revision: 1.9 $',
-     *                  '$Date: 2011/02/15 05:33:57 $')
+     *                  '$Revision: 1.10 $',
+     *                  '$Date: 2011/04/04 07:03:02 $')
 
       call inputs(units,prfinfo,runs,ngauss,limlist,cmpsort,prnm)
       call work(units,prfinfo,runs,ngauss,limlist,cmpsort,prnm)
@@ -421,16 +387,16 @@ c Call to cooinfo with fitax=0 will read fitax info from crval(naxis+1)
       call boxruns(naxis, plane, 'r', boxes, runs,MAXRUNS,nruns,
      *               blc(1),trc(1),blc(2),trc(2))
 c Bug in boxes: whatever the input for the last 4 args is, it is always
-c changed to blc,trc on the first pass. So: since here coordinates relative
-c to 1,1 are needed: fix all runs
+c changed to blc,trc on the first pass. So: since here coordinates
+c relative to 1,1 are needed: fix all runs
       do i = 1, nruns
       runs(1,i) = runs(1,i) + prfinfo(6) -1
       runs(2,i) = runs(2,i) + prfinfo(5) -1
       runs(3,i) = runs(3,i) + prfinfo(5) -1
       enddo
 
-c Only if input dataset given: open model and residual dataset, if required.
-c dumprf(1) is unit to copy header from
+c Only if input dataset given: open model and residual dataset, if
+c required.  dumprf(1) is unit to copy header from
       if (inp.ne.' ') then
         dumprf(1) = units(1)
         if (mdl.ne.' ')
@@ -461,11 +427,12 @@ c of parameters
       call inpgauss(spectra,prfinfo,rms,ngauss,limlist,cmpsort)
 
 c Open parameter dataset
-c If no parinp given: use inp, but change the axes: the fitax will be missing
-c and a parameter axis is added.
-c Also added is a dummy last axis description to save the fitax coordinates
-c If parinp given, use its axes, except for the last, which can change if
-c ngauss increased.
+c If no parinp given: use inp, but change the axes: the fitax will be
+c missing and a parameter axis is added.
+c Also added is a dummy last axis description to save the fitax
+c coordinates
+c If parinp given, use its axes, except for the last, which can change
+c if ngauss increased.
       if (par.ne.' ') then
         if (pin.eq.' ') then
           do i = 1, naxis
@@ -512,67 +479,67 @@ c       fitax=8 selects ' ' as subcube for xyzsetup
 
 c***********************************************************************
 
-c Open input dataset and get information on it.
-c Or create output dataset.
-
       subroutine setopen(name,status,unit, naxis,axlen,prfinfo,fitax)
 
-      character*(*) name
-      character*(*) status
-      integer       unit
-      integer       naxis, axlen(*)
-      integer       prfinfo(*), fitax
+      character name*(*), status*(*)
+      integer   unit, naxis, axlen(*), prfinfo(*), fitax
+c-----------------------------------------------------------------------
+c Open input dataset and get information on it.
+c Or create output dataset.
+c-----------------------------------------------------------------------
+      include 'maxnax.h'
 
-      include       'maxnax.h'
-      character*1   axis
-      character*4   type
-      character*8   axnames
-      integer       blc(MAXNAX), trc(MAXNAX), i
-      integer       viraxl(MAXNAX), vircsz(MAXNAX)
-      save          axis
-      data          axnames / 'xyzabcd ' /
+      integer   blc(MAXNAX), i, trc(MAXNAX), viraxl(MAXNAX),
+     *          vircsz(MAXNAX)
+      character axis*1, axnames*8, type*4
 
-c Open and get dimension of input dataset: naxis.
+      save  axis
+
+      data  axnames /'xyzabcd'/
+c-----------------------------------------------------------------------
+c     Open and get dimension of input dataset: naxis.
       if (status.eq.'old') then
-         naxis = MAXNAX
-         call xyzopen(unit, name, 'old', naxis, axlen)
+        naxis = MAXNAX
+        call xyzopen(unit, name, 'old', naxis, axlen)
       endif
+
       if (status.eq.'new') then
-         call xyzopen(unit, name, 'new', naxis, axlen)
-         call headcp(prfinfo(1), unit, 0, 0, 0, 0)
+        call xyzopen(unit, name, 'new', naxis, axlen)
+        call headcp(prfinfo(1), unit, 0, 0, 0, 0)
       endif
 
-c Find out which axis is to be fit. First read keyword, then call fndaxnum
-c which reads the header and sets the value of fitaxis if not given in keyword.
+c     Find out which axis is to be fit.  First read keyword, then call
+c     fndaxnum which reads the header and sets the value of fitaxis if
+c     not given in keyword.
       if (status.eq.'old' .and. fitax.eq.0) then
-         call keya('fitaxis', type, 'freq')
-         if (type(1:2).eq.'ra') type = 'lon'
-         if (type(1:3).eq.'dec') type = 'lat'
-         if (type(1:3).eq.'vel') type = 'freq'
-         axis = ' '
-         call fndaxnum(unit, type, axis, fitax)
-         call assertl(axis.ne.' ',
-     *                 'Specified fit axis not found in dataset')
+        call keya('fitaxis', type, 'freq')
+        if (type(1:2).eq.'ra')  type = 'lon'
+        if (type(1:3).eq.'dec') type = 'lat'
+        if (type(1:3).eq.'vel') type = 'freq'
+
+        axis = ' '
+        call fndaxnum(unit, type, axis, fitax)
+        call assertl(axis.ne.' ',
+     *    'Specified fit axis not found in dataset')
       else
-         axis = axnames(fitax:fitax)
+        axis = axnames(fitax:fitax)
       endif
 
 
-c Set up xyzio routines for input dataset
-c and figure out number of profiles to do and their length
+c     Set up xyzio routines for input dataset and figure out number of
+c     profiles and their length.
       do i = 1, naxis
-         blc(i) = 1
-         trc(i) = axlen(i)
+        blc(i) = 1
+        trc(i) = axlen(i)
       enddo
 
       call xyzsetup(unit, axis, blc, trc, viraxl, vircsz)
 
-c Store some parameters in array prfinfo, for easier transfering
-c prfinfo(1)=# profiles, prfinfo(2)=nchan
+c     Store some parameters in array prfinfo, for easier transfering
+c     prfinfo(1)=# profiles, prfinfo(2)=nchan
       prfinfo(1) = vircsz(naxis) / vircsz(1)
       prfinfo(2) = viraxl(1)
 
-      return
       end
 
 c***********************************************************************
@@ -836,16 +803,18 @@ c limlist(13) gives cutoff in intensity when summing/averaging
 c limlist(21) gives factor by which amplitude of initial estimate may be
 c lower than amplitude cutoff
       limlist(21) = 0.9
-c limlist(22) gives factor such that if amplitude of initial estimate is that
-c many times higher than rms, the fwhm is found from the second derivative
+c limlist(22) gives factor such that if amplitude of initial estimate is
+c that many times higher than rms, the fwhm is found from the second
+c derivative
       limlist(22) = 8.0
-c limlist(23) gives factor to multiply initial estimates by if a second try
-c is made for them
+c limlist(23) gives factor to multiply initial estimates by if a second
+c try is made for them
       limlist(23) = 0.95
-c limlist(24) gives factor by which rms may be higher than rmsest after fit
+c limlist(24) gives factor by which rms may be higher than rmsest after
+c fit
       limlist(24) = 5.0
-c limlist(25) gives factor by which rms may be higher than rmsest when that
-c             is the only reason that a fit failed
+c limlist(25) gives factor by which rms may be higher than rmsest when
+c that is the only reason that a fit failed
       limlist(25) = 1.8
 
       return
@@ -901,7 +870,8 @@ c one-step check on summing, instead of two function calls
       call optlist('summed',optval2)
       sumit  = optval1 .or. optval2
 
-c call setrms first time to set limlst; called for each pixel if varrms true
+c call setrms first time to set limlst; called for each pixel if varrms
+c true
       varrms = units(6).ne.0
       call setrms(0,profnr,limlist,limlst,rmsest)
 
@@ -967,7 +937,8 @@ c smooth profile if wanted
          endif
 
 c call gssout with type=-1 to initialize
-c some fake variables and arrays in call, so that the compiler is not confused
+c some fake variables and arrays in call, so that the compiler is not
+c confused
          ier=0
          if (inbox) call gssout(-1,  ier,data,nchan,data)
 
@@ -983,7 +954,8 @@ c    ier can be >0 if automatic estimates are made and pass=1
 c    try up to 2 times to make initial estimates
 c    if pass=2, gssest will make different estimates than for pass=1
 c    fit failed completely -> if first pass, redo initial estimates
-c    ok if failure because parameter outside limits or second pass or sucess
+c    ok if failure because parameter outside limits or second pass or
+c    sucess.
 
             ier=0
             if (   units(1).ne.0 .and. inbox) then
@@ -1028,49 +1000,52 @@ c***********************************************************************
       data    first / .true. /
 
       if (units.ne.0) then
-         call xyzpixrd(units, profnr, rmsest, rmsmsk)
+        call xyzpixrd(units, profnr, rmsest, rmsmsk)
       else
-         rmsest = limlist(20)
+        rmsest = limlist(20)
       endif
+
       if (first) then
-c 1,2,3 = minimum amp/vel/disp
-c 4,5,6 = maximum amp/vel/disp
-c 7,8,9 = error cutoff amp/vel/disp
-c 10,11,12 = flag to say if limit used
-c 13    = intensity cutoff
-c 14    = smoothing
-c 20    = rms est
-c 21    = factor by which amplitude of initial estimate may be lower
-c         than cutoff
-c 22    = gives factor such that if amplitude of initial estimate is that
-c         many times higher than rms, the fwhm is found from the second
-c         derivative
-c 23    = factor to multiply initial estimates by if a second try is made
-c 24    = factor by which rms may be higher than rmsest after fit
-c 25    = factor by which rms may be higher than rmsest when that is the
-c         only reason that a fit failed
-         limlst(1) = limlist(1) * rmsest
-         limlst(2) = limlist(2)
-         limlst(3) = limlist(3)
-         limlst(4) = limlist(4)
-         limlst(5) = limlist(5)
-         limlst(6) = limlist(6)
-         limlst(7) = limlist(7)
-         limlst(8) = limlist(8)
-         limlst(9) = limlist(9)
-         limlst(10) = limlist(10)
-         limlst(11) = limlist(11)
-         limlst(12) = limlist(12)
-         limlst(14) = limlist(14)
-         limlst(23) = limlist(23)
-         first = .false.
+c       1,2,3 = minimum amp/vel/disp
+c       4,5,6 = maximum amp/vel/disp
+c       7,8,9 = error cutoff amp/vel/disp
+c       10,11,12 = flag to say if limit used
+c       13    = intensity cutoff
+c       14    = smoothing
+c       20    = rms est
+c       21    = factor by which amplitude of initial estimate may be
+c               lower than cutoff
+c       22    = gives factor such that if amplitude of initial estimate
+c               is that many times higher than rms, the fwhm is found
+c               from the second derivative
+c       23    = factor to multiply initial estimates by if a second try
+c               is made
+c       24    = factor by which rms may be higher than rmsest after fit
+c       25    = factor by which rms may be higher than rmsest when that
+c               is the only reason that a fit failed
+        limlst(1) = limlist(1) * rmsest
+        limlst(2) = limlist(2)
+        limlst(3) = limlist(3)
+        limlst(4) = limlist(4)
+        limlst(5) = limlist(5)
+        limlst(6) = limlist(6)
+        limlst(7) = limlist(7)
+        limlst(8) = limlist(8)
+        limlst(9) = limlist(9)
+        limlst(10) = limlist(10)
+        limlst(11) = limlist(11)
+        limlst(12) = limlist(12)
+        limlst(14) = limlist(14)
+        limlst(23) = limlist(23)
+        first = .false.
       endif
-         limlst(20) =               rmsest
-         limlst(21) = limlist(21) * rmsest
-         limlst(22) = limlist(22) * rmsest
-         limlst(24) = limlist(24) * rmsest
-         limlst(25) = limlist(25) * rmsest
-      return
+
+      limlst(20) =               rmsest
+      limlst(21) = limlist(21) * rmsest
+      limlst(22) = limlist(22) * rmsest
+      limlst(24) = limlist(24) * rmsest
+      limlst(25) = limlist(25) * rmsest
+
       end
 
 c***********************************************************************
@@ -1140,8 +1115,9 @@ c outside box           => ngauss(5) = # comps read in (0 if no parinp=)
          if (   inbox) ngss = ngauss(4)
          if (.not.inbox) ngss = ngauss(5)
 
-c sort components, if fit are being made or (if parinp= only) if pixel was inbox
-c cmpsort(4)<0 will insert zero components if sorting so requires
+c sort components, if fit are being made or (if parinp= only) if pixel
+c was inbox cmpsort(4)<0 will insert zero components if sorting so
+c requires.
          if (units(1).ne.0 .or. inbox) then
             cmpsort(4) = -real(ngauss(6))
             call gsssrt(data, gausspar, ngss, cmpsort)
@@ -1184,9 +1160,10 @@ c at last, write it
 
 c***********************************************************************
 
-c If average: average all profiles, and fit only last one, else do nothing.
-c If summed:  sum all profiles, and fit only last one, else do nothing.
-c inbox is set to false, except for very last profile
+c  If average: average all profiles, and fit only last one, else do
+c    nothing.
+c  If summed:  sum all profiles, and fit only last one, else do nothing.
+c  inbox is set to false, except for very last profile
 
       subroutine avgsum(data,mask,profnr,prfinfo,inbox)
 
@@ -1267,10 +1244,11 @@ c ngauss(5) = # gaussians in parinp dataset
 c     convert to internal values
       call parconv(gausspar,ngauss(5), .true.)
 
-c if in= given, inbox will be false here: don't do anything, just write it out
-c if in= not given, inbox may be true or false. If false: just write it,
-c        if true and components present: delete zero components, apply
-c                    selection criteria and sort (in writfile)
+c     if in= given, inbox will be false here: don't do anything, just
+c     write it out
+c     if in= not given, inbox may be true or false.  If false: just
+c     write it, if true and components present: delete zero components,
+c     apply selection criteria and sort (in writfile).
 
       ier=0
 c if not inbox or all zeroes => no manipulations
@@ -1639,13 +1617,13 @@ c find position and amplitude of maximum
       real      x, w, vw, sv
       integer   j
 
-c find distance-weighted position of center within +- 2 pixels of max
-c weight from [data/maxdat] x = = exp(-x^2/2s^2) -> x/s = sqrt(-2*x)
-c -> weight (1-x/s)   for velocity
-c data(j) can be >maxdat if there was an error found for the real maxdat
-c (e.g. a profile like 0.7 0.75 0.74 0.78 0.74 will lead to a deriv sign
-c change for max=0.78 at x=0, and a too-small width; then a new max is found
-c at 0.75).
+c     find distance-weighted position of center within +- 2 pixels of
+c     max weight from [data/maxdat] x = exp(-x^2/2s^2) ->
+c     x/s = sqrt(-2*x) -> weight (1-x/s)   for velocity c data(j) can be
+c     >maxdat if there was an error found for the real maxdat (e.g. a
+c     profile like 0.7 0.75 0.74 0.78 0.74 will lead to a deriv sign
+c     change for max=0.78 at x=0, and a too-small width; then a new max
+c     is found at 0.75).
       vw = 0.0
       sv = 0.0
       do j = max(1,im-2), min(nchan,im+2)
@@ -1697,19 +1675,19 @@ c***********************************************************************
       derivat = amp.ge.limlist(22)
 
       if (derivat) then
-         ddata(2) = data(2) - data(1)
-         do i = 2, nchan-1
-             ddata(i) =  data(i+1) -  data(i)
-            d2data(i) = ddata(i) - ddata(i-1)
-            if (test(1).gt.2 .and. i.gt.test(2) .and. i.lt.test(3))
-     *            write(*,*) i,data(i),ddata(i),d2data(i)
-         enddo
+        ddata(2) = data(2) - data(1)
+        do i = 2, nchan-1
+           ddata(i) =  data(i+1) -  data(i)
+          d2data(i) = ddata(i) - ddata(i-1)
+          if (test(1).gt.2 .and. i.gt.test(2) .and. i.lt.test(3))
+     *          write(*,*) i,data(i),ddata(i),d2data(i)
+        enddo
       else
-         if (test(1).gt.2) then
-            do i = 2, nchan-1
-               if (i.gt.test(2) .and. i.lt.test(3)) write(*,*) i,data(i)
-            enddo
-         endif
+        if (test(1).gt.2) then
+          do i = 2, nchan-1
+            if (i.gt.test(2) .and. i.lt.test(3)) write(*,*) i,data(i)
+          enddo
+        endif
       endif
 
       d1    = -1
@@ -1723,68 +1701,69 @@ c***********************************************************************
       i     =  0
       done = .false.
       do while (i.lt.min(im-1, nchan-im-1) .and. .not.done)
-         if (derivat) then
-         if (d1.lt.0 .and. tekenr(d2data(im-i)).gt.0.0   ) d1=i-1
-         if (d2.lt.0 .and. tekenr(d2data(im+i)).gt.0.0   ) d2=i-1
-         if (a1.lt.0 .and.          data(im-i).lt.0.5*amp) a1=i-1
-         if (a2.lt.0 .and.          data(im+i).lt.0.5*amp) a2=i-1
-         done = d1.ge.0 .and. d2.ge.0 .and. a1.ge.0 .and. a2.ge.0
-         else
-         if (i1.lt.0 .and. tekenr(data(im-i)).ne.tekenr(amp)) i1=i
-         if (i1.lt.0) Imin  = Imin  + data(im-i)
-         if (i2.lt.0 .and. tekenr(data(im+i)).ne.tekenr(amp)) i2=i
-         if (i2.lt.0) Iplus = Iplus + data(im+i)
-         done = i1.ge.0 .and. i2.ge.0
-         endif
-         i = i + 1
+        if (derivat) then
+        if (d1.lt.0 .and. tekenr(d2data(im-i)).gt.0.0   ) d1=i-1
+        if (d2.lt.0 .and. tekenr(d2data(im+i)).gt.0.0   ) d2=i-1
+        if (a1.lt.0 .and.          data(im-i).lt.0.5*amp) a1=i-1
+        if (a2.lt.0 .and.          data(im+i).lt.0.5*amp) a2=i-1
+        done = d1.ge.0 .and. d2.ge.0 .and. a1.ge.0 .and. a2.ge.0
+        else
+        if (i1.lt.0 .and. tekenr(data(im-i)).ne.tekenr(amp)) i1=i
+        if (i1.lt.0) Imin  = Imin  + data(im-i)
+        if (i2.lt.0 .and. tekenr(data(im+i)).ne.tekenr(amp)) i2=i
+        if (i2.lt.0) Iplus = Iplus + data(im+i)
+        done = i1.ge.0 .and. i2.ge.0
+        endif
+        i = i + 1
       enddo
 
       if (derivat) then
-c        find fractional pixel width for dispersion; correct for center shift
-         w1 = d1+ d2data(im-d1)/(d2data(im-d1)-d2data(im-d1-1)) + vel-im
-         w2 = d2+ d2data(im+d2)/(d2data(im+d2)-d2data(im+d2+1)) + im-vel
-         w1  = 2.35482*w1
-         w2  = 2.35482*w2
-c        d1,d2 give fwhm pixel according to change of change of 2nd deriv
-c        a1,a2 give hwhm pixel according to reaching max/2
-c        all equal        -> average from derivats
-c        left  consistent -> left  derivat
-c        right consistent -> right derivat
-c        a's   consistent -> average from max/2
-c        other            -> average of most consistent side
-         if (   2*a1.eq.int(w1) .and. 2*a2.eq.int(w2)) then
-            wid = (w1+w2)/2.0
-         else if (2*a1.eq.int(w1)) then
-            wid = w1
-         else if (2*a2.eq.int(w2)) then
-            wid = w2
-         else
-            w3 = a1 + (data(im-a1)-0.5*amp)/(data(im-a1)-data(im-a1-1))
-            w4 = a2 + (data(im+a2)-0.5*amp)/(data(im+a2)-data(im+a2+1))
-            w3 = (w3+vel-im)*2.0
-            w4 = (w4+im-vel)*2.0
-c            if( a1.eq.a2 ) then
-                wid = (w3+w4)/2.0
-c            else if(  abs(w1-w3) .lt. abs(w2-w4)  ) then
-c               wid = (w1+w3)/2.
-c            else
-c               wid = (w2+w4)/2.
-c            endif
-         endif
-         if (test(1).gt.0)
-     *   write(*,'('' wid est='',f7.2,
-     *             ''  lft d,a'',i2,i2,''-> '',f7.2,f7.2,
-     *             ''  rht d,a'',i2,i2,''-> '',f7.2,f7.2)')
-     *             wid,  d1,a1,w1,w3,  d2,a2,w2,w4
-         wid = wid / 2.35482
+c       Find fractional pixel width for dispersion; correct for center
+c       shift.
+        w1 = d1+ d2data(im-d1)/(d2data(im-d1)-d2data(im-d1-1)) + vel-im
+        w2 = d2+ d2data(im+d2)/(d2data(im+d2)-d2data(im+d2+1)) + im-vel
+        w1  = 2.35482*w1
+        w2  = 2.35482*w2
+c       d1,d2 give fwhm pixel according to change of change of 2nd deriv
+c       a1,a2 give hwhm pixel according to reaching max/2
+c       all equal        -> average from derivats
+c       left  consistent -> left  derivat
+c       right consistent -> right derivat
+c       a's   consistent -> average from max/2
+c       other            -> average of most consistent side
+        if (   2*a1.eq.int(w1) .and. 2*a2.eq.int(w2)) then
+          wid = (w1+w2)/2.0
+        else if (2*a1.eq.int(w1)) then
+          wid = w1
+        else if (2*a2.eq.int(w2)) then
+          wid = w2
+        else
+          w3 = a1 + (data(im-a1)-0.5*amp)/(data(im-a1)-data(im-a1-1))
+          w4 = a2 + (data(im+a2)-0.5*amp)/(data(im+a2)-data(im+a2+1))
+          w3 = (w3+vel-im)*2.0
+          w4 = (w4+im-vel)*2.0
+c          if( a1.eq.a2 ) then
+             wid = (w3+w4)/2.0
+c          else if(  abs(w1-w3) .lt. abs(w2-w4)  ) then
+c            wid = (w1+w3)/2.
+c          else
+c            wid = (w2+w4)/2.
+c          endif
+        endif
+        if (test(1).gt.0)
+     *  write(*,'('' wid est='',f7.2,
+     *            ''  lft d,a'',i2,i2,''-> '',f7.2,f7.2,
+     *            ''  rht d,a'',i2,i2,''-> '',f7.2,f7.2)')
+     *            wid,  d1,a1,w1,w3,  d2,a2,w2,w4
+        wid = wid / 2.35482
       else
-c dispersion found from sigma=fwhm/2.35; fwhm=(2*half-integral)/amp/1.064
-         wid = 2.0 * min(Imin,Iplus) / amp / 1.064 / 2.35482
-         if (test(1).gt.0)
-     *   write(*,*)'wid est=',wid,wid*2.35482,' I-/+=',Imin,Iplus
+c       Dispersion found from sigma=fwhm/2.35;
+c       fwhm=(2*half-integral)/amp/1.064.
+        wid = 2.0 * min(Imin,Iplus) / amp / 1.064 / 2.35482
+        if (test(1).gt.0)
+     *    write(*,*)'wid est=',wid,wid*2.35482,' I-/+=',Imin,Iplus
       endif
 
-      return
       end
 
 c***********************************************************************
@@ -1937,11 +1916,12 @@ c        do the actual fit, ier comes out >= 0
 
 c        fit converges, i.e. ier=0
          if (ier(fitnum).eq.0) then
-
-c           apply cutoffs, if outside range, ier=-12 (only low-amp err) or -13
+c           Apply cutoffs, if outside range, ier=-12 (only low-amp err)
+c           or -13.
             ier(fitnum) = cutoffs(gausspar,ngauss(4), limlist)
 
-c           subtract gaussian and find rms; give too-high-rms an ier value
+c           Subtract gaussian and find rms; give too-high-rms an ier
+c           value.
             rms(fitnum)=getrms(data,mask,nchan,gausspar,ngauss(4),0.0)
             rms(MAXFIT)=getrms(data,mask,nchan,gausspar,ngauss(4),0.1)
             gausspar(rmsind()) = rms(fitnum)
@@ -2015,8 +1995,9 @@ c dogssfit does the actual fitting, i.e. creates call to drvmrq
       save      first, svfitlst, x, sig
       data      first / .true. /
 
-c Fill x and sig arrays, as drvmrq requires them
-c Find and make copy of fitlist, which is changed deep down if not all are fit
+c     Fill x and sig arrays, as drvmrq requires them
+c     Find and make copy of fitlist, which is changed deep down if not
+c     all are fit.
       if (first) then
          call initfit(fitlist,svfitlst,ngauss(1), mask,x,nchan)
          first = .false.
@@ -2345,14 +2326,15 @@ c         come here after redoing best fit that gave ier<0
           tryagain = .false.
         endif
 
-c ier >0 -> no convergence; if this is first or second time, fit again with
-c slightly different initial estimates because sometimes the reason is a
-c sensitivity to the initial estimates; else fit with one less component
-c On third try, make new initial estimates because now the suspicion is
-c that there are two components close together which were merged, but not
-c nice enough to fit as two, and assuming they are one makes the initial
-c estimate bad.
       else if (ier(fitnum).gt.0) then
+c       ier >0 -> no convergence; if this is first or second time, fit
+c       again with slightly different initial estimates because
+c       sometimes the reason is a sensitivity to the initial estimates;
+c       else fit with one less component.  On third try, make new
+c       initial estimates because now the suspicion is that there are
+c       two components close together which were merged, but not nice
+c       enough to fit as two, and assuming they are one makes the
+c       initial estimate bad.
         nOK(fitnum) = 0
 
         if (try.le.8) then
@@ -2383,16 +2365,20 @@ c estimate bad.
       endif
 
       if (.not.tryagain  .and.  ier(fitnum).ne.0 .and. try.lt.100) then
-c exhausted all options: tryagain was set to false, but ier!=0
-c Then find the best fit: the one with the lowest rms that also had ier=-8.
-c If no such fit is found, there is one more possibility: the culprit is a
-c low-amplitude component near the cutoff. If this is indeed so, and the rms
-c is OK for that fit, use it anyway, cutting out the low-amplitude component
-c Then ier=-12.
-c If fits had ier=-13 (vel,fwhm,amp out of range), it does not work, quit.
-c Redo the 'best' bad fit, except if it was the very last one done.
-c After redoing this fit, tryagain will be set to .false. above, because
-c try will be 100.
+c       exhausted all options: tryagain was set to false, but ier!=0
+c       Then find the best fit: the one with the lowest rms that also
+c       had ier=-8.
+c       If no such fit is found, there is one more possibility: the
+c       culprit is a low-amplitude component near the cutoff.  If this
+c       is indeed so, and the rms is OK for that fit, use it anyway,
+c       cutting out the low-amplitude component
+c       Then ier=-12.
+c       If fits had ier=-13 (vel,fwhm,amp out of range), it does not
+c       work, quit.
+c       Redo the 'best' bad fit, except if it was the very last one
+c       done.
+c       After redoing this fit, tryagain will be set to .false. above,
+c       because try will be 100.
 
 c        save fitnum (for initial estimates backcorrection)
          fn = fitnum
@@ -2424,8 +2410,8 @@ c           nothing found that works, quit it with ier<0
          if (tryagain) then
             if (interout) call wrtout('Redo best fit',1)
 c           undo possible changes to initial estimates, since otherwise
-c           they could be wrong and the previous best fit may not converge
-c           (fn is fitnum as it was on call to tryagain)
+c           they could be wrong and the previous best fit may not
+c           converge (fn is fitnum as it was on call to tryagain)
             do i = fn, fitnum, -1
                if (fiddlenm(i).ne.0 .and. nfit(i).eq.nfit(fitnum)) then
                   try=fiddlenm(i)
@@ -2443,8 +2429,8 @@ c           (fn is fitnum as it was on call to tryagain)
          endif
       endif
 
-c it was determined that we have to try again; check if there is room in the
-c ier and rms arrays.
+c     it was determined that we have to try again; check if there is
+c     room in the ier and rms arrays.
       if (tryagain) tryagain = fitnum.lt.MAXFIT-1
 
       if (.not.tryagain) then
@@ -2460,8 +2446,10 @@ c        relax criteria if rms is the only culprit
                ier(fitnum)=0
             endif
          endif
+
 c        if low-amplitude component is the culprit, remove it
-c        if low-amplitude component is wide enough, but not too wide, ok it
+c        if low-amplitude component is wide enough, but not too wide,
+c        ok it
          if (ier(fitnum).eq.-12) then
             acclow = .FALSE.
             dellow = .FALSE.
@@ -2487,11 +2475,13 @@ c        if low-amplitude component is wide enough, but not too wide, ok it
 c***********************************************************************
 
       subroutine gssout(mode, ier, gausspar,ngauss,cmpsort)
-c mode=-1 -> init (if ier>0 profile fitting is not possible for some reason)
-c mode= 0 -> print estimates         (optlist('estimout'))
-c mode= 1 -> print fiddled estimates (optlist('estimout'))
-c mode= 2 -> print intermediate fits (optlist('intermout'))
-c mode= 3 -> print final fit
+
+c  mode=-1 -> init (if ier>0 profile fitting is not possible for some
+c             reason)
+c  mode= 0 -> print estimates         (optlist('estimout'))
+c  mode= 1 -> print fiddled estimates (optlist('estimout'))
+c  mode= 2 -> print intermediate fits (optlist('intermout'))
+c  mode= 3 -> print final fit
 
       integer      mode
       integer      ier
@@ -2582,8 +2572,9 @@ c sort gaussians
 c convert sorted values to physical coordinates
         call parconv(gpar, ngss, .false.)
 
-c if gssrt determined that a zero component is inserted, reflect that in output
-c (can happen when keyword cmpsort=vrange,.,. is given)
+c       If gssrt determined that a zero component is inserted, reflect
+c       that in output (can happen when keyword cmpsort=vrange,.,. is
+c       given).
         if (cmpsort(4).ge.0) cnt1 = 0
         if (cmpsort(4).lt.0) cnt1 = 1
 
@@ -2869,7 +2860,8 @@ c make array containing the sorting parameter
 c find list of sorted indices
       call sortidxr(ngauss, svals, sind)
 
-c copy to output in sorted order (ascending for order=1, descending for order-1)
+c     Copy to output in sorted order (ascending for order=1, descending
+c     for order-1).
       do i = 1, ngauss
          if (order.eq.1) j = sind(      i)
          if (order.eq.-1) j = sind(ngauss+1-i)
@@ -2877,24 +2869,24 @@ c copy to output in sorted order (ascending for order=1, descending for order-1)
       enddo
 
       if (cmpsort(1).eq.7.0) then
-c Sort components on velocity range: all components within the given range
-c come first.
-c If the maximum number of components was fitted, then the following
-c possibilities exist:
-c  1 component   is within range, that is #1, the rest is #2+
-c  0 components are within range, sort all on amplitude
-c >1 components are within range, sort all on amplitude
-c If less than the maximum number of components was fitted, then the following
-c possibilities exist:
-c  1 component   is within range, that is #1, the rest is #2+
-c  0 components are within range, sort all on amplitude, but if cmpsort(4)
-c    was negative, insert a zero component (this happens on last call)
-c    if cmpsort(4) was positive on input, set it negative to flag that the
-c    component numbering has shifted by 1
-c >1 components are within range, sort all on amplitude
+c       Sort components on velocity range: all components within the
+c       given range come first.  If the maximum number of components was
+c       fitted, then the following possibilities exist:
+c         1 component   is within range, that is #1, the rest is #2+
+c         0 components are within range, sort all on amplitude
+c        >1 components are within range, sort all on amplitude
+c       If less than the maximum number of components was fitted, then
+c       the following possibilities exist:
+c         1 component   is within range, that is #1, the rest is #2+
+c         0 components are within range, sort all on amplitude, but if
+c           cmpsort(4) was negative, insert a zero component (this
+c           happens on last call) if cmpsort(4) was positive on input,
+c           set it negative to flag that the component numbering has
+c           shifted by 1
+c        >1 components are within range, sort all on amplitude
 
-c ngauss is # components actually fit
-c ngss   is maximum # components to fit
+c       ngauss is # components actually fit
+c       ngss   is maximum # components to fit
          ngss = nint(abs(cmpsort(4)))
 
          call setngsa(gauin, gausrt, ngauss)
@@ -2944,18 +2936,20 @@ c***********************************************************************
 c coordinate info and conversions
 
       subroutine cooinfo(mode, intpar1, intpar2, realpar)
-      integer     mode
-      integer     intpar1, intpar2
+
+      integer     mode, intpar1, intpar2
       real        realpar
 
-c cooinfo( 1, units(1), fitax, 0. )      reads info for axis fitax from unit
-c cooinfo( 2, units(5), fitax, naxesgp ) creates gpar axis
-c cooinfo( 3, 0,0, dv  )                 return deltav
-c cooinfo( 4, 0,0, nch )                 return nvel
-c cooinfo( 5, type,0,0. )                return code for ctype(v)
-c cooinfo( 6, unit1,unit2,profnr )       call xyzs2c for profile, set coo
-c cooinfo( 7, coord1,coord2,flag )       return coo
-c cooinfo( 8, flag,0,xval )              convert x from pix to phys and vv
+c  cooinfo(1, units(1), fitax, 0.0)     reads info for axis fitax from
+c                                       unit
+c  cooinfo(2, units(5), fitax, naxesgp) creates gpar axis
+c  cooinfo(3, 0,0, dv)                  return deltav
+c  cooinfo(4, 0,0, nch)                 return nvel
+c  cooinfo(5, type,0,0.0)               return code for ctype(v)
+c  cooinfo(6, unit1,unit2,profnr)       call xyzs2c for profile, set coo
+c  cooinfo(7, coord1,coord2,flag)       return coo
+c  cooinfo(8, flag,0,xval)              convert x from pix to phys and
+c                                       vv
 
       integer     unit, fitax
       integer     naxg
@@ -3125,11 +3119,11 @@ c        next three statements keep flint quiet
          r0=0.0
          type=0
          call cooinfo(5,type,a0,r0)
-c        1=RA, 2=DEC, 3=VELO, 4=FREG
-         if (type.eq.1) profunit =  'arcsec'
-         if (type.eq.2) profunit =  'arcsec'
-         if (type.eq.3) profunit =  'km/s'
-         if (type.eq.4) profunit =  'GHz'
+c        1=RA, 2=DEC, 3=VELO, 4=FREQ
+         if (type.eq.1) profunit = 'arcsec'
+         if (type.eq.2) profunit = 'arcsec'
+         if (type.eq.3) profunit = 'km/s'
+         if (type.eq.4) profunit = 'GHz'
       endif
 
       call rdhda(unit, 'bunit', key, ' ')
@@ -3482,73 +3476,73 @@ c***********************************************************************
 
 c***********************************************************************
 
-c       DRVMRQ is a driver for MRQMIN that sets up a few needed vectors
-c       and calls MRQMIN as needed. MRQMIN and the subroutines it calls
-c       are based on the code presented in Numerical Recipes. Some
-c       changes made by Stefano Casertano have been included. These
-c       changes enhance the efficiency and, especially for DRVMRQ make
-c       it more compatible with MIRIAD fitting than would otherwise be
-c       the case. Also, instead of Gauss-Jordan, Singular Value Decomposition
-c       is used, courtesy SC too.
+c  DRVMRQ is a driver for MRQMIN that sets up a few needed vectors
+c  and calls MRQMIN as needed. MRQMIN and the subroutines it calls
+c  are based on the code presented in Numerical Recipes. Some
+c  changes made by Stefano Casertano have been included. These
+c  changes enhance the efficiency and, especially for DRVMRQ make
+c  it more compatible with MIRIAD fitting than would otherwise be
+c  the case. Also, instead of Gauss-Jordan, Singular Value Decomposition
+c  is used, courtesy SC too.
 c
-c       Calling arguments:
+c  Calling arguments:
 c
-c       X       Vector containing the independent variable (Input)
-c       Y       Vector containing the function values (Input)
-c       SIG     Vector containing the error values (Input)
-c       NDATA   Number of data points
-c       XPAR    Vector containing parameters (Input/Output)
-c               Input: the starting point
-c               Output: the best fit
-c       NPAR    The length of XPAR (Input)
-c       FITLIST Vector indicating which parameters must really be fit
-c               (Input)
-c       NTOFIT  The length of FITLIST (Input)
-c       FTOL    Tolerance criterion (how small a CHI SQUARED reduction
-c               is considered insignificant) (Input)
-c               Recommended value 0.5
-c       MAXITER Number of major iterations to allow
-c       FRET    Value of CHI SQUARED at minimum (Output)
-c       IER     Return value indicating if error occurred (Output)
+c  X       Vector containing the independent variable (Input)
+c  Y       Vector containing the function values (Input)
+c  SIG     Vector containing the error values (Input)
+c  NDATA   Number of data points
+c  XPAR    Vector containing parameters (Input/Output)
+c          Input: the starting point
+c          Output: the best fit
+c  NPAR    The length of XPAR (Input)
+c  FITLIST Vector indicating which parameters must really be fit
+c          (Input)
+c  NTOFIT  The length of FITLIST (Input)
+c  FTOL    Tolerance criterion (how small a CHI SQUARED reduction
+c          is considered insignificant) (Input)
+c          Recommended value 0.5
+c  MAXITER Number of major iterations to allow
+c  FRET    Value of CHI SQUARED at minimum (Output)
+c  IER     Return value indicating if error occurred (Output)
 c
-c       DRVMRQ drives a modified version of MRQMIN which allows for
-c       major and minor iterations.
+c  DRVMRQ drives a modified version of MRQMIN which allows for
+c  major and minor iterations.
 c
-c       Each call to MRQMIN (except for setup and error calculation)
-c       is a major iteration in which several minor iterations may be taken.
-c       A major iteration starts with a trial value of the parameters and
-c       with a value of the control parameter ALAMDA (see below). Several
-c       steps are taken, the length of which is controlled by ALAMDA, and
-c       ALAMDA is progressively reduced until an improvement is found.
-c       This completes the major iteration. At the end of the major
-c       iteration, control is returned to the driver which decides on further
-c       action.
+c  Each call to MRQMIN (except for setup and error calculation)
+c  is a major iteration in which several minor iterations may be taken.
+c  A major iteration starts with a trial value of the parameters and
+c  with a value of the control parameter ALAMDA (see below). Several
+c  steps are taken, the length of which is controlled by ALAMDA, and
+c  ALAMDA is progressively reduced until an improvement is found.
+c  This completes the major iteration. At the end of the major
+c  iteration, control is returned to the driver which decides on further
+c  action.
 c
-c       If the CHI SQUARED is reduced sufficiently, a new major iteration is
-c       taken. If the CHI SQUARED reduction is less than FTOL, the
-c       improvement is considered insignificant. After 3 insignificant
-c       improvements, the program considers the fit to be achieved and returns
-c       the last set of parameters. If MRQMIN is unable to find an
-c       improved step, DRVMRQ will also return with an error message.
+c  If the CHI SQUARED is reduced sufficiently, a new major iteration is
+c  taken.  If the CHI SQUARED reduction is less than FTOL, the
+c  improvement is considered insignificant. After 3 insignificant
+c  improvements, the program considers the fit to be achieved and
+c  returns the last set of parameters.  If MRQMIN is unable to find an
+c  improved step, DRVMRQ will also return with an error message.
 c
-c       The parameter ALAMDA controls whether a quadratic or a linear step is
-c       taken. For small ALAMDA the step is quadratic (good near the minimum).
-c       As ALAMDA is increased the step becomes more linear (gradient-type)
-c       and its length decreases. For sufficiently large ALAMDA the step
-c       should always succeed in obtaining a decrease of CHI SQUARED, unless
-c       the function is at a minimum.
+c  The parameter ALAMDA controls whether a quadratic or a linear step is
+c  taken.  For small ALAMDA the step is quadratic (good near the
+c  minimum).  As ALAMDA is increased the step becomes more linear
+c  (gradient-type) and its length decreases.  For sufficiently large
+c  ALAMDA the step should always succeed in obtaining a decrease of CHI
+c  SQUARED, unless the function is at a minimum.
 c
-c       In the Numerical Recipes implementation, ALAMDA is decreases
-c       slightly but not reset to a small value after a successful major
-c       iteration. This could be responsible for lower performance, since
-c       as you approach the minimum a quadratic step may work better.
-c       It might be worthwhile to try a larger decrease in ALAMDA after a
-c       successful major iteration.
+c  In the Numerical Recipes implementation, ALAMDA is decreases
+c  slightly but not reset to a small value after a successful major
+c  iteration. This could be responsible for lower performance, since
+c  as you approach the minimum a quadratic step may work better.
+c  It might be worthwhile to try a larger decrease in ALAMDA after a
+c  successful major iteration.
 c
-c       There is also the possibility to leave some of the parameters fixed.
-c       This is achieved by renumbering the parameters via a permutation
-c       vector FITLIST (1,NPARS) such that the first NTOFIT parameters
-c       are to be fitted, the remaining NPARS-NTOFIT are left unchanged.
+c  There is also the possibility to leave some of the parameters fixed.
+c  This is achieved by renumbering the parameters via a permutation
+c  vector FITLIST (1,NPARS) such that the first NTOFIT parameters
+c  are to be fitted, the remaining NPARS-NTOFIT are left unchanged.
 
        subroutine DRVMRQ(x,y, sig, ndata, xpar,npars, fitlist,ntofit,
      *                    FTOL, MAXITER, fret, ier, funcs)
@@ -3701,57 +3695,57 @@ c***********************************************************************
      *                   COVAR,ALPHA,NPMAX, CHISQ, FUNCS, ALAMDA,
      *                   NTRIES, IER)
 c
-c     The original Numerical Recipes version of this routine fits a model
-c     function YF of one variable X(I) with parameters XPAR to the data
-c     Y(I). The model function has parameters XPAR(1->NPARS) which should
-c     be optimized. It is also possible to optimize only a subset of the
-c     parameters as listed in the vector FITLIST(1->NTOFIT); so if
-c     parameters 1, 2, 4, 7 of a list of 10 have to be optimized, FITLIST
-c     would have values 1,2,4,7, NTOFIT 4 and NPARS 10.
+c  The original Numerical Recipes version of this routine fits a model
+c  function YF of one variable X(I) with parameters XPAR to the data
+c  Y(I). The model function has parameters XPAR(1->NPARS) which should
+c  be optimized. It is also possible to optimize only a subset of the
+c  parameters as listed in the vector FITLIST(1->NTOFIT); so if
+c  parameters 1, 2, 4, 7 of a list of 10 have to be optimized, FITLIST
+c  would have values 1,2,4,7, NTOFIT 4 and NPARS 10.
 c
-c     The model function and derivative are computed by a subroutine
-c     MRQCOF. The function name FUNCS is passed as argument.
+c  The model function and derivative are computed by a subroutine
+c  MRQCOF. The function name FUNCS is passed as argument.
 c
-c     Use of the subroutine is as follows. On the first call, the control
-c     parameter ALAMDA must be set to a negative number. This will
-c     initialize the routine and set ALAMDA to a positive number.
-c     Successive calls will attempt to find a new set of parameters by
-c     using a combination linear-quadratic step. If ALAMDA is large the
-c     step will be linear, if small it will be quadratic.
-c     ALAMDA will be progressively increased until the function decreases.
-c     Once a decrease is found, MRQMIN updates the vector of parameter
-c     values and returns with IER=0 and NTRIES=the number of different
-c     values of ALAMDA tried.
+c  Use of the subroutine is as follows. On the first call, the control
+c  parameter ALAMDA must be set to a negative number. This will
+c  initialize the routine and set ALAMDA to a positive number.
+c  Successive calls will attempt to find a new set of parameters by
+c  using a combination linear-quadratic step. If ALAMDA is large the
+c  step will be linear, if small it will be quadratic.
+c  ALAMDA will be progressively increased until the function decreases.
+c  Once a decrease is found, MRQMIN updates the vector of parameter
+c  values and returns with IER=0 and NTRIES=the number of different
+c  values of ALAMDA tried.
 c
-c     This logic is quite different from the original Numerical Recipes
-c     routine. The changes are described below.
+c  This logic is quite different from the original Numerical Recipes
+c  routine. The changes are described below.
 c
-c     1) The original routine computes the gradient every time a new point
-c        is TRIED. This can be quite wasteful if the gradient is expensive
-c        to compute, since if the point is not good the gradient is not
-c        needed. So we use a logical flag, COMPGRAD, to tell the function
-c        routine whether just the function itself is to be computed or
-c        the gradient as well.
+c  1) The original routine computes the gradient every time a new point
+c     is TRIED. This can be quite wasteful if the gradient is expensive
+c     to compute, since if the point is not good the gradient is not
+c     needed. So we use a logical flag, COMPGRAD, to tell the function
+c     routine whether just the function itself is to be computed or
+c     the gradient as well.
 c
-c     2) The original routine gives no information to the calling routine
-c        on whether the point has been optimized or not. The only way to
-c        find this out is by a check of the CHISQ: if that is unchanged,
-c        then the point has not been upgraded. BUT sometimes the change
-c        is small enough to underflow. The calling routine does not know
-c        about that. Underflow is common in the original version, since
-c        the main loop on alamda can be repeated MANY times.
-c        Solution: this version of MRQMIN iterates until an improvement is
-c        found or a maximum number of iterations is reached. If the latter,
-c        a new integer argument, IER, is returned with a non-zero value.
-c        Another new integer argument, NTRIES, returns the number of
-c        ALAMDA iterations performed.
+c  2) The original routine gives no information to the calling routine
+c     on whether the point has been optimized or not. The only way to
+c     find this out is by a check of the CHISQ: if that is unchanged,
+c     then the point has not been upgraded. BUT sometimes the change
+c     is small enough to underflow. The calling routine does not know
+c     about that. Underflow is common in the original version, since
+c     the main loop on alamda can be repeated MANY times.
+c     Solution: this version of MRQMIN iterates until an improvement is
+c     found or a maximum number of iterations is reached. If the latter,
+c     a new integer argument, IER, is returned with a non-zero value.
+c     Another new integer argument, NTRIES, returns the number of
+c     ALAMDA iterations performed.
 c
-c     3) Singular Value Decomposition is used instead of Gauss-Jordan,
-c        and the additional arrays VMAT, WVEC needed by SVD are defined
-c        and dimensioned.  In the original version this subroutine
-c        produced a direct error message if the number of iterations
-c        exceeded 30.  Now it returns it, and this is detected, and IER
-c        is set to 2.
+c  3) Singular Value Decomposition is used instead of Gauss-Jordan,
+c     and the additional arrays VMAT, WVEC needed by SVD are defined
+c     and dimensioned.  In the original version this subroutine
+c     produced a direct error message if the number of iterations
+c     exceeded 30.  Now it returns it, and this is detected, and IER
+c     is set to 2.
 c
       INTEGER    MMAX, ITMAX, ALAMFAC
       PARAMETER  (MMAX    =100)
