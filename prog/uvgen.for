@@ -341,6 +341,7 @@ c    08dec02 rjs   Fixed bug in determining whether source is up or not.
 c    13mar05 rjs   Add antenna azimuth and elevation to output dataset.
 c    01jan07 rjs   Parameterise number of windows than this can handle.
 c                  Tidy up messages.
+c    05apr11 mhw   Change epoch to J2000
 c
 c  Bugs/Shortcomings:
 c    * Frequency and time smearing is not simulated.
@@ -816,7 +817,7 @@ c
       call uvputvrr(unit,'inttime',inttime,1)
       call uvputvrr(unit,'vsource',0.,1)
       call uvputvrr(unit,'veldop',0.,1)
-      call uvputvrr(unit,'epoch',1950.,1)
+      call uvputvrr(unit,'epoch',2000.,1)
       call uvputvri(unit,'nants',nant,1)
       call uvputvri(unit,'ntemp',0,1)
       call uvputvri(unit,'npol',npol,1)
