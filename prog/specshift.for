@@ -46,25 +46,26 @@ c-----------------------------------------------------------------------
       logical   doblank, flags(MAXDIM), mask(MAXDIM), outrange,
      *          present(NOPTS), workmsk(MAXDIM)
       integer   axlen(MAXNAX), boxes(MAXBOXES), coords(MAXNAX), i,
-     *          iblc(MAXNAX), ictrpx, itrc(MAXNAX), ivaxnr, ivelpx, j,
-     *          jold, lIn, lOut, lTem, naxis, nchan, nprofs,
-     *          taxlen(MAXNAX), vaxnr, viraxlen(MAXNAX), vircsz(MAXNAX)
-      real      rdat(MAXDIM), fracshift, refpix, tdat(MAXDIM), vel,
+     *          iblc(MAXNAX), ictrpx, itrc(MAXNAX), ivelpx, j, jold,
+     *          lIn, lOut, lTem, naxis, nchan, nprofs, spcAxI,
+     *          taxlen(MAXNAX), viraxlen(MAXNAX), vircsz(MAXNAX)
+      real      rdat(MAXDIM), fracshift, refpix, tdat(MAXDIM),
      *          work(MAXDIM)
-      double precision b(MAXDIM), c(MAXDIM), d(MAXDIM), seval, u, velpx,
-     *          x(MAXDIM), y(MAXDIM)
-      character inp*1024, line*80, opts(NOPTS)*8, outp*1024, tmpl*1024,
-     *          velaxis, version*72
+      double precision b(MAXDIM), c(MAXDIM), d(MAXDIM), seval, u, vel,
+     *          velpx, x(MAXDIM), y(MAXDIM)
+      character algo*3, axC*7, inp*1024, line*80, opts(NOPTS)*8,
+     *          outp*1024, spcAxC, tmpl*1024, version*72
 
       external  len1, versan
       integer   len1
       character versan*72
 
-      data      opts /'doblank '/
+      data opts /'doblank'/
+      data axC  /'xyzabcd'/
 c-----------------------------------------------------------------------
       version = versan('specshift',
-     *                 '$Revision: 1.4 $',
-     *                 '$Date: 2011/04/04 04:55:51 $')
+     *                 '$Revision: 1.5 $',
+     *                 '$Date: 2011/04/04 05:17:56 $')
 
 c     Get and check the inputs.
       call keyini
@@ -99,18 +100,20 @@ c     Set regions.
       call boxinfo(boxes, naxis, iblc, itrc)
 
 c     Find the spectral axis.
-      velaxis = 'z'
-      call fndaxnum(lIn, 'freq', velaxis, vaxnr)
+      call coInit(lIn)
+      call coSpcSet(lIn, 'VRAD', spcAxI, algo)
+      if (spcAxI.eq.0) call bug('f', 'No spectral axis in input cube')
+      spcAxC = axC(spcAxI:spcAxI)
 
 c     Set up for reading the spectral axis.
-      call xyzsetup(lIn, velaxis, iblc, itrc, viraxlen, vircsz)
+      call xyzsetup(lIn, spcAxC, iblc, itrc, viraxlen, vircsz)
       nchan  = viraxlen(1)
       nprofs = vircsz(naxis) / vircsz(1)
 
 c     Open the output image and set up for writing.
       call xyzopen(lOut, outp, 'new', naxis, axlen)
       call headcp(lIn, lOut, naxis, 0, iblc, itrc)
-      call xyzsetup(lOut, velaxis, iblc, itrc, viraxlen, vircsz)
+      call xyzsetup(lOut, spcAxC, iblc, itrc, viraxlen, vircsz)
 
 c     Open the template image.
       call xyopen(lTem, tmpl, 'old', maxnax, taxlen)
@@ -131,14 +134,11 @@ c     Check image sizes for consistency.
       endif
 
 
-c     Set up cube.
-      call coInit(lIn)
-      call coFindAx(lIn,'spectral',ivaxnr)
-
+c     Set velocity reference pixel.
       if (refpix.gt.0) then
         ictrpx = nint(refpix)
       else
-        ictrpx = nint(nchan/2.0)
+        ictrpx = (nchan+1)/2
       endif
       write(line,'(a,i4)') 'Shifting template velocity to pixel',ictrpx
       call output(line)
@@ -152,11 +152,10 @@ c       Read the velocity from the image.
         call xyread(lTem, coords(2), tdat)
         call xyflgrd(lTem, coords(2), flags)
         if (flags(coords(1))) then
-          vel = tdat(coords(1))
-          call coCvt1(lIn, ivaxnr, 'aw', dble(vel), 'ap', velpx)
+          vel = dble(tdat(coords(1)))
+          call coCvt1(lIn, spcAxI, 'aw', vel, 'ap', velpx)
           ivelpx = int(velpx)
           fracshift = velpx - ivelpx
-c         write(40,*) 'vel,velpx,fracshift: ',vel,velpx,fracshift
         else
           ivelpx = 0
         endif
@@ -180,7 +179,7 @@ c       Shift if velocity is in range; otherwise do nothing.
             if (doblank .and. outrange) then
               workmsk(j) = .false.
             else
-               workmsk(j) = mask(jold)
+              workmsk(j) = mask(jold)
             endif
 
             x(j) = dble(j)
@@ -201,6 +200,7 @@ c       Shift if velocity is in range; otherwise do nothing.
 
         call xyzprfwr(lOut, i, work, workmsk, nchan)
       enddo
+      call coFin(lIn)
 
 c     Write history.
       call hisopen( lOut, 'append')
