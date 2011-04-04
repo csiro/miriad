@@ -4,10 +4,10 @@ c= CONTSUB - Subtract continuum from a datacube
 c& bpw
 c: map manipulation
 c+
-c       CONTSUB is used to subtract the continuum from a datacube, which
-c       can be arbitrarily oriented. Several subtraction algorithms are
-c       possible, selected using the mode keyword. The maximum length of
-c       the frequency axis is 8192 pixels.
+c       CONTSUB is used to subtract the continuum from a datacube which
+c       can be arbitrarily oriented.  Several subtraction algorithms are
+c       possible, selected using the mode keyword.  The maximum length
+c       of the spectral axis is 8192 pixels.
 c
 c< in
 c
@@ -36,15 +36,17 @@ c       For modes poly, mean and avgs either this keyword or out= must
 c       be specified, while for mode subtr it must always be given.
 c
 c@ contchan
-c       Select channels that supposedly contain continuum signal only. A
-c       selection is a list of ranges. A range is specified as (z1,z2),
-c       meaning channels z1 through z2, or as (z3) for a single channel.
-c       Ranges are separated by commas. E.g.: (z1,z2),(z3),(z4,z5).
+c       Select channels that supposedly contain continuum signal only.
+c       A selection is a list of ranges.  A range is specified as
+c       (z1,z2), meaning channels z1 through z2, or as (z3) for a single
+c       channel.  Ranges are separated by commas, e.g.
+c       (z1,z2),(z3),(z4,z5).
+c
 c       For options 'poly' (or 'mean'), the fit (or average), is done
-c       using all selected continuum channels. For option 'avgs', the
+c       using all selected continuum channels.  For option 'avgs', the
 c       selection of continuum channels must consist of two ranges.
-c       The 'contchan' keyword always refers to frequency channels,
-c       independent of whether the frequency axis is the 'z'-axis, the
+c       The 'contchan' keyword always refers to spectral channels,
+c       independent of whether the spectral axis is the 'z'-axis, the
 c       'x'-axis or any other axis.
 c       (Not used for mode='subtr').
 c
@@ -73,64 +75,52 @@ c
 c@ options
 c       Select which output to write with the cont keyword.  By default
 c       the continuum is written.  If options=coeff,# one of the
-c       coefficients of the polynomial fit is written instead. '#' gives
-c       the order for which the coefficient is written (e.g. if
-c       cont=a+bx: 0='a', 1='b', etc).
+c       coefficients of the polynomial fit is written instead.
+c       '#' gives the order for which the coefficient is written (e.g.
+c       if cont=a+bx: 0='a', 1='b', etc).
 c
 c@ verbose
 c       verbose=true makes contsub print out some info every now and
 c       then.
 c
 c@ velaxis
-c       For datacubes where the 'VELO' axis-identification does not
-c       occur in the header, this can be used to indicate which
-c       direction is the velocity (channel) axis.  The value given must
-c       be one of 'x', 'y', 'z', 'a', 'b', .... If velaxis is not given
-c       and the 'VELO' axis is not present, contsub assumes 'z'.
+c       For datacubes where the spectral axis cannot be determined
+c       automatically, this may be used to indicate which it is.  Must
+c       be one of 'x', 'y', 'z', 'a', 'b', 'c', or 'd'.
+c       The default is 'z'.
 c
-c$Id: contsub.for,v 1.3 2011/02/15 04:32:59 cal103 Exp $
+c$Id: contsub.for,v 1.4 2011/04/04 08:47:11 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
-c
-c The main program first gets all inputs and then calls the workhorse.
-c The inputs are:
-c unitinp:     handle of the input dataset
-c unitout:     handle of the output (continuum-subtracted) dataset
-c unitcon:     handle of the dataset that will contain the continuum
-c nprofiles:   number of spectra in cube
-c nchan:       number of channels in spectrum
-c algorithm:   string containing name of algorithm
-c contchan:    list of channel numbers to use to determine continuum
 c-----------------------------------------------------------------------
       include 'maxdim.h'
 
-      integer   contchan(0:MAXCHAN), nchan, nprofiles, opts(2),
-     *          unitcon, unitinp, unitout
+      integer   contchan(0:MAXCHAN), nChan, nSpec, opts(2),
+     *          lCon, lIn, lOut
       character algorithm*10, version*72
 
       external  versan
       character versan*72
 c-----------------------------------------------------------------------
       version = versan('contsub',
-     *                 '$Revision: 1.3 $',
-     *                 '$Date: 2011/02/15 04:32:59 $')
+     *                 '$Revision: 1.4 $',
+     *                 '$Date: 2011/04/04 08:47:11 $')
 
-      call inputs(unitinp, unitout, unitcon, nprofiles, nchan,
-     *            algorithm, opts, contchan)
-      call work(unitinp, unitout, unitcon, nprofiles, nchan,
-     *            algorithm, opts, contchan)
-      call finish(unitinp, unitout, unitcon, version,
-     *            algorithm, contchan)
+      call inputs(lIn, lOut, lCon, nSpec, nChan, algorithm, opts,
+     *  contchan)
+      call work(lIn, lOut, lCon, nSpec, nChan, algorithm, opts,
+     *  contchan)
+      call finish(lIn, lOut, lCon, version)
 
       end
 
 c***********************************************************************
 
-      subroutine inputs(unitinp, unitout, unitcon, nprofiles, nchan,
-     *                  algorithm,opts, contchan)
+      subroutine inputs(lIn, lOut, lCon, nSpec, nChan, algorithm,
+     *  opts, contchan)
 
-      integer   unitinp, unitout, unitcon, nprofiles, nchan
+      integer   lIn, lOut, lCon, nSpec, nChan
       character algorithm*(*)
       integer   opts(*), contchan(0:*)
 c-----------------------------------------------------------------------
@@ -143,32 +133,33 @@ c-----------------------------------------------------------------------
       integer   MAXBOXES
       parameter (MAXBOXES = 1024)
 
-c If MAXTERMS changes, MAXTERMS in polyfit must also change and
-c data algopts must be adapted
+c     If MAXTERMS changes, MAXTERMS in polyfit must also change and
+c     data algopts must be adapted.
       integer   NALG, MAXTERMS, NOPT, NOUT, NOPTO
       parameter (NALG  = 4, MAXTERMS = 9, NOUT = 1)
       parameter (NOPT  =  NALG + MAXTERMS)
       parameter (NOPTO =  NOUT + MAXTERMS)
 
       logical   optprsnt(NOPT), verbose
-      integer   axlen(MAXNAX), axnum(MAXNAX), blc(MAXNAX),
+      integer   axlen(MAXNAX), axMap(MAXNAX), blc(MAXNAX),
      *          boxes(MAXBOXES), i, inpblc(MAXNAX), inptrc(MAXNAX),
      *          maxranges, n, naxis, naxis1, nterms, oaxlen(MAXNAX),
-     *          trc(MAXNAX), velaxnr, viraxlen(MAXNAX),
+     *          spcAxI, trc(MAXNAX), viraxlen(MAXNAX),
      *          vircubesize(MAXNAX)
-      character algopts(NOPT)*10, con*1024, inp*1024, itoaf*1, out*1024,
-     *          outopts(NOPTO)*10, type*5, velaxis*1
+      character algopts(NOPT)*10, axC*7, con*1024, inp*1024, itoaf*1,
+     *          out*1024, outopts(NOPTO)*10, spcAxC*1
 
-      data algopts /'poly', 'mean', 'avgs', 'subtr',
+      data algopts  /'poly', 'mean', 'avgs', 'subtr',
      *               '0','1','2','3','4','5','6','7','8'/
       data optprsnt /NOPT*.FALSE./
-      data outopts /'coeff', '0','1','2','3','4','5','6','7','8'/
+      data outopts  /'coeff', '0','1','2','3','4','5','6','7','8'/
+      data axC      /'xyzabcd'/
 c-----------------------------------------------------------------------
-c Initialize keyword routines.
+c     Initialize keyword routines.
       call keyini
 
-c Figure out which continuum-determination algorithm to use, and for
-c algorithm 'poly' also what the fit order must be.
+c     Figure out which continuum-determination algorithm to use, and for
+c     algorithm 'poly' also what the fit order must be.
       call options('mode', algopts, optprsnt, NOPT)
       algorithm = ' '
       do i = 1, NALG
@@ -200,12 +191,13 @@ c algorithm 'poly' also what the fit order must be.
         if (nterms.ne.0) call bug('w', 'Polynomial order ignored')
       endif
 
-c opts(1): Check the output option.
+c     opts(1): Check the output option.
       do i = 1, NOPTO
         optprsnt(i) = .FALSE.
       enddo
-c           Careful: this routine cannot know how many elements of opts
-c           to initialize; right now only 1 needed
+
+c     Careful: this routine cannot know how many elements of opts to
+c     initialize; right now only 1 needed.
       opts(1) = 0
       call options('options', outopts, optprsnt, NOPTO)
       if (optprsnt(1)) then
@@ -221,7 +213,7 @@ c           to initialize; right now only 1 needed
         if (n.eq.0) opts(1) = -1
       endif
 
-c opts(2): Check if verbose=true
+c     opts(2): Check if verbose=true.
       call keyl('verbose', verbose, .FALSE.)
       if (verbose) then
         opts(2) = 1
@@ -229,7 +221,7 @@ c opts(2): Check if verbose=true
         opts(2) = 0
       endif
 
-c Read names of input, output and continuum dataset.
+c     Read names of input, output and continuum dataset.
       call keyf('in',   inp, ' ')
       call keya('out',  out, ' ')
       call keya('cont', con, ' ')
@@ -240,28 +232,33 @@ c Read names of input, output and continuum dataset.
      *'To subtract an existing continuum set you must give its name')
 
 
-c Open and get dimension of input dataset: naxis.
+c     Open and get dimension of input dataset: naxis.
       naxis = MAXNAX
-      call xyzopen(unitinp, inp, 'old', naxis, axlen)
+      call xyzopen(lIn, inp, 'old', naxis, axlen)
       call assertl(naxis.gt.0,
      *     'You hit the limit: cannot subtract profile in 0-dim cube')
 
 
-c Find out which axis is velocity. First read keyword, then call veldir
-c which reads the header and sets the value of velaxis if not given in
-c keyword.
-      call keya('velaxis', type, 'freq')
-      velaxis = 'z'
-      call fndaxnum(unitinp, type, velaxis, velaxnr)
+c     Determine the spectral axis.
+      call coInit(lIn)
+      call coFindAx(lIn, 'spectral', spcAxI)
+      call coFin(lIn)
 
-c Obtain the list of channels to use as continuum. The number of
-c continuum channels is stored in contchan(0). For algorithm 'avgs'
-c the input must consist of two ranges.
+      if (spcAxI.ne.0) then
+        spcAxC = axC(spcAxI:spcAxI)
+      else
+        call keya('velaxis', spcAxC, 'z')
+        spcAxI = index(axC, spcAxC)
+      endif
+
+c     Obtain the list of channels to use as continuum.  The number of
+c     continuum channels is stored in contchan(0).  For algorithm 'avgs'
+c     the input must consist of two ranges.
       if (algorithm(1:4).eq.'poly') maxranges = MAXCHAN
       if (algorithm(1:4).eq.'mean') maxranges = MAXCHAN
       if (algorithm(1:4).eq.'avgs') maxranges = 2
       if (algorithm(1:4).ne.'subt') then
-        contchan(0) = axlen(velaxnr)
+        contchan(0) = axlen(spcAxI)
         call getchans(maxranges, contchan)
         if (contchan(0).le.nterms-1) then
           call bug('w','Fit likely to be poor, because number of')
@@ -269,55 +266,56 @@ c the input must consist of two ranges.
         endif
       endif
 
-
-c Get an input region from the user
+c     Get an input region from the user.
       call boxinput('region', inp, boxes, MAXBOXES)
       call boxset(boxes, naxis, axlen, ' ')
       call boxinfo(boxes, naxis, inpblc, inptrc)
 
-c Set up xyzio routines for input dataset
-      call xyzsetup(unitinp, velaxis, inpblc,inptrc,
-     *               viraxlen,vircubesize)
-c Figure out number of profiles to do and their length
-      nprofiles = vircubesize(naxis) / vircubesize(1)
-      nchan     = viraxlen(1)
+c     Set up xyzio routines for input dataset.
+      call xyzsetup(lIn, spcAxC, inpblc, inptrc, viraxlen, vircubesize)
+
+c     Figure out number of profiles to do and their length.
+      nChan = viraxlen(1)
+      nSpec = vircubesize(naxis) / vircubesize(1)
 
 
-c Open output dataset, if required. Then copy header.
+c     Create the output image, if required.
       if (out.ne.' ') then
         do i = 1, naxis
-          axnum(i)  = i
+          axMap(i)  = i
           oaxlen(i) = inptrc(i) - inpblc(i) + 1
           blc(i)    = 1
           trc(i)    = oaxlen(i)
         enddo
-        call xyzopen(unitout, out, 'new', naxis, oaxlen)
-        call headcp(unitinp, unitout, naxis, axnum, inpblc, inptrc)
-        call xyzsetup(unitout,velaxis, blc,trc, viraxlen,vircubesize)
+
+        call xyzopen(lOut, out, 'new', naxis, oaxlen)
+        call headcp(lIn, lOut, naxis, axMap, inpblc, inptrc)
+        call xyzsetup(lOut,spcAxC, blc,trc, viraxlen,vircubesize)
       else
-        unitout = 0
+        lOut = 0
       endif
 
 
-c Open continuum dataset, if required. Then copy header, but change
-c the axes: the velocity axis will be missing from this dataset. This
-c is done using the array axnum, which contains the relation between
-c the input and output axes. The axis lenghts of the input dataset
-c on corresponding continuum set axes are stored in axlen, for use
-c by mode subtr.
+c     Open continuum dataset, if required.  Then copy header, but change
+c     the axes: the spectral axis will be omitted from this dataset.
+c     This is done using the array axMap, which contains the relation
+c     between the input and output axes.  The axis lengths of the input
+c     dataset on corresponding continuum set axes are stored in axlen,
+c     for use by mode subtr.
       if (con.ne.' ') then
         naxis1 = naxis - 1
-        if (velaxnr-1.ge.1) then
-          do i = 1, velaxnr - 1
-            axnum(i)  = i
+        if (spcAxI-1.ge.1) then
+          do i = 1, spcAxI - 1
+            axMap(i)  = i
             oaxlen(i) = inptrc(i) - inpblc(i) + 1
             blc(i)    = 1
             trc(i)    = oaxlen(i)
           enddo
         endif
-        if (naxis1.ge.velaxnr) then
-          do i = velaxnr, naxis1
-            axnum(i)  = i+1
+
+        if (naxis1.ge.spcAxI) then
+          do i = spcAxI, naxis1
+            axMap(i)  = i+1
             oaxlen(i) = inptrc(i+1) - inpblc(i+1) + 1
             axlen(i)  = axlen(i+1)
             blc(i)    = 1
@@ -326,14 +324,14 @@ c by mode subtr.
         endif
 
         if (algorithm(1:4).ne.'subt') then
-c Open new continuum set, with naxis1 axes of length oaxlen
-          call xyzopen(unitcon, con, 'new', naxis1, oaxlen)
-          call headcp(unitinp,unitcon,naxis1,axnum,inpblc,inptrc)
+c         Open new continuum set, with naxis1 axes of length oaxlen.
+          call xyzopen(lCon, con, 'new', naxis1, oaxlen)
+          call headcp(lIn,lCon,naxis1,axMap,inpblc,inptrc)
         else
-c Open old continuum set and check if it has naxis1 axes of length axlen
-c (axlen of input set, oaxlen is a temp var here)
+c         Open old continuum set and check if it has naxis1 axes of
+c         length axlen (axlen of input set, oaxlen is a temp var here).
           naxis = MAXNAX
-          call xyzopen(unitcon, con, 'old', naxis, oaxlen)
+          call xyzopen(lCon, con, 'old', naxis, oaxlen)
           call assertl(naxis.eq.naxis1,
      *    'Dim of continuum set not one less than dim of input set')
           do i = 1, naxis1
@@ -341,13 +339,13 @@ c (axlen of input set, oaxlen is a temp var here)
      *      'Axis length of continuum set incompatible with input')
           enddo
         endif
-        call xyzsetup(unitcon, ' ', blc, trc, viraxlen, vircubesize)
+        call xyzsetup(lCon, ' ', blc, trc, viraxlen, vircubesize)
       else
-        unitcon = 0
+        lCon = 0
       endif
 
 
-c Close keyword routines.
+c     Close keyword routines.
       call keyfin
 
       end
@@ -358,21 +356,21 @@ c***********************************************************************
 
       integer   maxranges, contchan(0:*)
 c-----------------------------------------------------------------------
-c Getchan decodes the contchan keyword. It makes sure the syntax is
-c right, using the routine boxint from boxes.for. Also, it takes care
-c of some limits. Further, for algorithm 'avgs', the number of ranges
+c Getchan decodes the contchan keyword.  It makes sure the syntax is
+c right, using the routine boxint from boxes.for.  Also, it takes care
+c of some limits.  Further, for algorithm 'avgs', the number of ranges
 c must be 2.
 c-----------------------------------------------------------------------
-      integer   ch(2), coords(3), i, k1, k2, len1, n, nch, nchan,
+      integer   ch(2), coords(3), i, k1, k2, len1, n, nch, nChan,
      *          nranges
       character ccinput*80
 
       data coords /3*0/
 c-----------------------------------------------------------------------
-c nranges counts number of ranges; nchan is total number of continuum
+c nranges counts number of ranges; nChan is total number of continuum
 c channels.
       nranges = 0
-      nchan   = 0
+      nChan   = 0
 
 c decode current string until keyword is exhausted.
       call keya('contchan', ccinput, ' ')
@@ -381,7 +379,7 @@ c decode current string until keyword is exhausted.
         nranges = nranges + 1
         call assertl(nranges.le.maxranges,
      *               'Too many ranges specified for contchan')
-c boxint decodes a string looking like '(1,2)'. In this case 'abspix'
+c boxint decodes a string looking like '(1,2)'.  In this case 'abspix'
 c and coords are dummy arguments.
         k1 = 1
         k2 = len1(ccinput)
@@ -393,31 +391,31 @@ c if string was '(1)', set upper end of range too for simplicity below.
         nch = ch(2) - ch(1) + 1
         call assertl(ch(1).le.ch(2),
      *       'Start channel # must be lower than end channel #')
-        call assertl(nchan+nch.le.contchan(0),
+        call assertl(nChan+nch.le.contchan(0),
      *       'Too many continuum channels specified')
 c put continuum channels in array contchan
 c for algorithm 'avgs', second range is flagged by taking negative
-c channel number. Is later decoded.
+c channel number.  Is later decoded.
         i = 1
         if (maxranges.eq.2 .and. nranges.eq.2) i = -1
         do n = 1, nch
-          contchan(nchan+n) = i*(ch(1) + n-1)
+          contchan(nChan+n) = i*(ch(1) + n-1)
         enddo
-        nchan = nchan + nch
+        nChan = nChan + nch
         call keya('contchan', ccinput, ' ')
       enddo
       if (maxranges.eq.2 .and. nranges.ne.2)
      *  call bug('f','Two channel ranges are required for mode avgs')
-      contchan(0) = nchan
+      contchan(0) = nChan
 
       end
 
 c***********************************************************************
 
-      subroutine work(unitinp, unitout, unitcon, nprofiles, nchan,
-     *                algorithm, options, contchan)
+      subroutine work(lIn, lOut, lCon, nSpec, nChan, algorithm, options,
+     *  contchan)
 
-      integer   unitinp, unitout, unitcon, nprofiles, nchan
+      integer   lIn, lOut, lCon, nSpec, nChan
       character algorithm*(*)
       integer   options(*), contchan(0:*)
 c-----------------------------------------------------------------------
@@ -436,50 +434,50 @@ c-----------------------------------------------------------------------
          call atoif(algorithm(5:), nterms, ok)
       endif
 
-      do profilenr = 1, nprofiles
+      do profilenr = 1, nSpec
         if (options(2).ne.0 .and. mod(profilenr,2500).eq.0) then
           write(string,'(''Done with '',i6,'' profiles ['',i2,''%]'')')
-     *          profilenr, 100*profilenr/nprofiles
+     *          profilenr, 100*profilenr/nSpec
           call output(string)
         endif
-        call xyzprfrd(unitinp, profilenr, data, mask, nchan)
+        call xyzprfrd(lIn, profilenr, data, mask, nChan)
         if (algorithm(1:4).eq.'poly') then
-          call polyfit(contchan, nchan, nterms, options,
+          call polyfit(contchan, nChan, nterms, options,
      *                 data, linedata, mask, continuum, cmask)
         else if (algorithm(1:4).eq.'mean') then
-          call submean(contchan, nchan,
+          call submean(contchan, nChan,
      *                 data, linedata, mask, continuum, cmask)
         else if (algorithm(1:4).eq.'avgs') then
-          call subavgs(contchan, nchan,
+          call subavgs(contchan, nChan,
      *                 data, linedata, mask, continuum, cmask)
         else if (algorithm(1:4).eq.'subt') then
-          call subtrac(unitcon, profilenr, nchan,
+          call subtrac(lCon, profilenr, nChan,
      *                 data, linedata, mask, continuum, cmask)
         endif
 
 c       if( mod(profilenr,1000).eq.0 ) print*,profilenr,continuum
-        if (unitout.ne.0)
-     *    call xyzprfwr(unitout, profilenr, linedata,  mask, nchan)
-        if (unitcon.ne.0 .and. algorithm(1:4).ne.'subt')
-     *    call xyzpixwr(unitcon, profilenr, continuum, cmask)
+        if (lOut.ne.0)
+     *    call xyzprfwr(lOut, profilenr, linedata,  mask, nChan)
+        if (lCon.ne.0 .and. algorithm(1:4).ne.'subt')
+     *    call xyzpixwr(lCon, profilenr, continuum, cmask)
       enddo
 
       end
 
 c***********************************************************************
 
-      subroutine polyfit(contchan, nchan, nterms, outopt,
+      subroutine polyfit(contchan, nChan, nterms, outopt,
      *                    data, linedata, mask, continuum, cmask)
 
-      integer   contchan(0:*), nchan, nterms, outopt(*)
+      integer   contchan(0:*), nChan, nterms, outopt(*)
       real      data(*), linedata(*), continuum
       logical   mask(*), cmask
 c-----------------------------------------------------------------------
-c This routine uses linpack to fit a polynomial through the data in
-c the continuumchannels. For each profile a matrix-equation is
-c constructed. Then linpack is used. Finally the fitvalue is subtracted
-c from all the channel data and the fitvalue in the center is used as
-c continuum.
+c  This routine uses linpack to fit a polynomial through the data in the
+c  continuum channels.  For each profile a matrix-equation is
+c  constructed.  Then linpack is used.  Finally the fitvalue is
+c  subtracted from all the channel data and the fitvalue in the center
+c  is used as continuum.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
 
@@ -534,7 +532,7 @@ c Call linpack routines to transpose and fit.
         call dgesl(matrix, MAXTERMS, nterms, pivot, rhs, 0)
 
 c Subtract the continuum from the spectrum.
-        do k = 1, nchan
+        do k = 1, nChan
           cont = 0.0
           xtothen = 1
           do i = 1, nterms
@@ -542,7 +540,7 @@ c Subtract the continuum from the spectrum.
             xtothen = xtothen * k
           enddo
           linedata(k) = data(k) - cont
-          if (k.eq.nchan/2) then
+          if (k.eq.nChan/2) then
            if (outopt(1).eq.-1) continuum = cont
            if (outopt(1).ge.0) continuum = rhs(outopt(1)+1)
           endif
@@ -552,7 +550,7 @@ c Subtract the continuum from the spectrum.
       else
         continuum = 0.0
         cmask     = .FALSE.
-        do k = 1, nchan
+        do k = 1, nChan
           linedata(k) = data(k)
           mask(k)     = .FALSE.
         enddo
@@ -562,10 +560,10 @@ c Subtract the continuum from the spectrum.
 
 c***********************************************************************
 
-      subroutine submean(contchan, nchan,
-     *                    data, linedata, mask, continuum, cmask)
+      subroutine submean(contchan, nChan, data, linedata, mask,
+     *  continuum, cmask)
 
-      integer          contchan(0:*), nchan
+      integer          contchan(0:*), nChan
       real             data(*), linedata(*), continuum
       logical          mask(*), cmask
 c-----------------------------------------------------------------------
@@ -586,13 +584,13 @@ c-----------------------------------------------------------------------
       if (n.ne.0) then
         continuum = continuum / n
         cmask     = .TRUE.
-        do k = 1, nchan
+        do k = 1, nChan
           linedata(k) = data(k) - continuum
         enddo
       else
         continuum = 0.0
         cmask     = .FALSE.
-        do k = 1, nchan
+        do k = 1, nChan
           linedata(k) = data(k)
           mask(k)     = .FALSE.
         enddo
@@ -602,16 +600,16 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine subavgs(contchan, nchan,
-     *                    data, linedata, mask, continuum, cmask)
+      subroutine subavgs(contchan, nChan, data, linedata, mask,
+     *  continuum, cmask)
 
-      integer   contchan(0:*), nchan
+      integer   contchan(0:*), nChan
       real      data(*), linedata(*), continuum
       logical   mask(*), cmask
 c-----------------------------------------------------------------------
 c Subavgs averages the channels in range 1 and range 2 (identified by
 c whether contchan is positive or negative) and puts a line through the
-c middle of the two ranges and the two averages. This 'fit' is then
+c middle of the two ranges and the two averages.  This 'fit' is then
 c subtracted from the input data.
 c-----------------------------------------------------------------------
       integer   k, mid1, mid2, n1, n2
@@ -647,25 +645,25 @@ c Find the two averages.
         slope     = (cont2 - cont1) / (mid2 - mid1)
         continuum = (cont1 + cont2) / 2
         cmask     = .TRUE.
-        do k = 1, nchan
+        do k = 1, nChan
           linedata(k) = data(k) - (slope*(k-mid1)+cont1)
         enddo
       else if (n1.ne.0 .and. n2.eq.0) then
         continuum = cont1 / n1
         cmask     = .TRUE.
-        do k = 1, nchan
+        do k = 1, nChan
           linedata(k) = data(k) - continuum
         enddo
       else if (n1.eq.0 .and. n2.ne.0) then
         continuum = cont2 / n2
         cmask     = .TRUE.
-        do k = 1, nchan
+        do k = 1, nChan
           linedata(k) = data(k) - continuum
         enddo
       else if (n1.eq.0 .and. n2.eq.0) then
         continuum = 0.0
         cmask     = .FALSE.
-        do k = 1, nchan
+        do k = 1, nChan
           linedata(k) = data(k)
           mask(k)     = .FALSE.
         enddo
@@ -675,10 +673,10 @@ c Find the two averages.
 
 c***********************************************************************
 
-      subroutine subtrac(unitcon, profilenr, nchan,
-     *                    data, linedata, mask, continuum, cmask)
+      subroutine subtrac(lCon, profilenr, nChan, data, linedata, mask,
+     *  continuum, cmask)
 
-      integer   unitcon, profilenr, nchan
+      integer   lCon, profilenr, nChan
       real      data(*), linedata(*), continuum
       logical   mask(*), cmask
 c-----------------------------------------------------------------------
@@ -687,9 +685,9 @@ c subtracts it.
 c-----------------------------------------------------------------------
       integer   k
 c-----------------------------------------------------------------------
-      call xyzpixrd(unitcon, profilenr, continuum, cmask)
+      call xyzpixrd(lCon, profilenr, continuum, cmask)
       if (.not.cmask) continuum = 0
-      do k = 1, nchan
+      do k = 1, nChan
         linedata(k) = data(k) - continuum
         mask(k)     = mask(k) .and. cmask
       enddo
@@ -697,35 +695,33 @@ c-----------------------------------------------------------------------
       end
 
 c***********************************************************************
-      subroutine finish(unitinp, unitout, unitcon, version,
-     *                   algorithm, contchan)
+      subroutine finish(lIn, lOut, lCon, version)
 
-      integer   unitinp, unitout, unitcon
-      character version*(*), algorithm*(*)
-      integer   contchan(*)
+      integer   lIn, lOut, lCon
+      character version*(*)
 c-----------------------------------------------------------------------
-c Finish up
+c  Finish up.
 c-----------------------------------------------------------------------
       character line*80
 c-----------------------------------------------------------------------
-      call xyzclose(unitinp)
+      call xyzclose(lIn)
 
-      if (unitout.ne.0) then
-        call hisopen(unitout, 'append')
+      if (lOut.ne.0) then
+        call hisopen(lOut, 'append')
         line = 'CONTSUB: ' // version
-        call hiswrite(unitout, line )
-        call hisinput(unitout, 'contsub')
-        call hisclose(unitout)
-        call xyzclose(unitout)
+        call hiswrite(lOut, line )
+        call hisinput(lOut, 'contsub')
+        call hisclose(lOut)
+        call xyzclose(lOut)
       endif
 
-      if (unitcon.ne.0) then
-        call hisopen(unitcon, 'append')
+      if (lCon.ne.0) then
+        call hisopen(lCon, 'append')
         line = 'CONTSUB: ' // version
-        call hiswrite(unitcon, line )
-        call hisinput(unitcon, 'contsub')
-        call hisclose(unitcon)
-        call xyzclose(unitcon)
+        call hiswrite(lCon, line )
+        call hisinput(lCon, 'contsub')
+        call hisclose(lCon)
+        call xyzclose(lCon)
       endif
 
       end
