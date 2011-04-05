@@ -92,10 +92,10 @@ c       Default is linear between the image minimum and maximum with
 c       a b&w lookup table.   You can default the intensity range with
 c       zeros, viz. "range=0,0,log,-2" say.
 c@ vrange
-c       2 values. The velocity range, in km/s, to plot.  If the first
-c       axis of the spectrum image(s) is not velocity (say Frequency),
-c       use the natural units of that axis.
-c       Default is min to  max from all the spectrum images.
+c       Two values, the spectral range to plot, in the natural units of
+c       the axis, e.g. km/s for velocity, or GHz for frequency.  All
+c       spectra should be of the same type, use VELSW if necessary.
+c       Default is min to max from all the spectrum images.
 c@ irange
 c       Two values, the intensity range to plot for the spectra.
 c       Default is min to max from all the spectrum images.
@@ -337,7 +337,7 @@ c       XSIZ and YSIZ are the spatial half-sizes in ARCSEC over which
 c       each spectrum is spatially averaged.  These are optional and
 c       default to 0 (no binning, just a spectrum at each spatial pixel)
 c
-c$Id: cgspec.for,v 1.9 2011/04/05 06:18:26 cal103 Exp $
+c$Id: cgspec.for,v 1.10 2011/04/05 07:37:02 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -365,45 +365,43 @@ c-----------------------------------------------------------------------
       real      WEDWID, TFDISP
       parameter (WEDWID = 0.05, TFDISP = 0.5)
 
-      integer ipim, ipnim, ipimb, ixsp, iysp, insp, ipsp, imsp, iwsp
-
-      integer csize(MAXNAX,MAXCON), gsize(MAXNAX), bsize(MAXNAX),
-     *  ssize(MAXNAX), size(MAXNAX), cnaxis(MAXCON), gnaxis, bnaxis,
-     *  snaxis, lc(MAXCON), lg, lb, ls, sgrps(2,MAXDIM),
-     *  grpbeg(maxchan), ngrp(maxchan), ibin(2), jbin(2), krng(2),
-     *  iside(MAXSPEC), lh, lgn, lcn(MAXCON)
+      logical   allblnk, allgood, allzero, blacklab, blconly, colour,
+     *          doabut, doaxes, doaxlab, doaylab, doblnkb, doblnkc,
+     *          doblnkg, doepoch, doerase, dofid, doframe, dofull,
+     *          dogrid, donxlab(2), donylab(2), dotr, dowedge, eqscale,
+     *          fits(2), gaps, grid(MAXSPEC), hdprsnt, igblank, imnorm,
+     *          init, mark, maskb, mirror, miss, naked, number, relax,
+     *          solneg(MAXCON), spnorm
+      integer   bgcol, blc(3), blines(2), bnaxis, bsize(MAXNAX),
+     *          clines(MAXCON), cnaxis(MAXCON), coltab,
+     *          csize(MAXNAX,MAXCON), defwid, gnaxis, grpbeg(MAXCHAN),
+     *          gsize(MAXNAX), his(NBINS), i, ibin(2), iblc, ierr, ilen,
+     *          imsp, insp, ipim, ipimb, ipnim, ipsp, iside(MAXSPEC),
+     *          iwsp, ixsp, iysp, j, jbin(2), krng(2), labcol, lb,
+     *          lc(MAXCON), lcn(MAXCON), lg, lgn, lh, ls, 
+     *          nblnkc(MAXCON), nblnkcs, nblnkg, ncon, ngrp(MAXCHAN),
+     *          ngrps, nlevs(MAXCON), nofile, npos, npts, nspec,
+     *          sblc(MAXNAX), sgrps(2,MAXDIM), size(MAXNAX), sizespec,
+     *          slines(2,MAXSPEC), snaxis, spcAx, srtlev(MAXLEV,MAXCON),
+     *          ssize(MAXNAX), strc(MAXNAX), tflen(0:2), trc(3),
+     *          vircsiz(MAXNAX), virsiz(MAXNAX), win(MAXNAX)
+      real      blankc, blankg, break(MAXCON), cmm(3,MAXCON), cs(2),
+     *          cumhis(NBINS), gmm(3), groff, imax, imin, irange(2),
+     *          iscale(MAXSPEC), levs(MAXLEV,MAXCON), pixr(2),
+     *          pixr2(2), scale(2), slev(MAXCON), tfvp(4), tick(2),
+     *          tr(6), vfrac(2), vmax, vmin, vpn(4), vpw(4), vrange(2),
+     *          vvmax, vvmin, vx, vxgap, vxmin, vxsize, vy, vygap,
+     *          vymax, vymin, vysize, wdgvp(4), xdispl, ydispb
       double precision opos(4,MAXPOS)
-      logical maskb, solneg(MAXCON), grid(MAXSPEC)
-      character*6 ltypes(MAXTYP)
-      character*64 cin(MAXCON), gin, bin, spin(MAXSPEC), hin
+      character ltypes(MAXTYP)*6, aline*132, axC*7, bin*64,
+     *          cin(MAXCON)*64, gin*64, hard*20, hin*64, labtyp(2)*6,
+     *          levtyp(MAXCON)*1, ofile(MAXSPEC)*64, ofile2*64, pdev*64,
+     *          spcAxC*1, spin(MAXSPEC)*64, trfun*3, txtfill(0:2)*19,
+     *          version*72, xlabel*40, ylabel*40
 
-      real levs(MAXLEV,MAXCON), pixr(2), tr(6), cs(2), pixr2(2),
-     *  slev(MAXCON), break(MAXCON), vrange(2), irange(2), tfvp(4),
-     *  iscale(MAXSPEC), scale(2), vpn(4), vpw(4), vfrac(2), tick(2),
-     *  cumhis(NBINS), wdgvp(4), gmm(3), cmm(3,MAXCON)
-      real vxmin, vymin, vymax, vx, vy, vxsize, vysize, ydispb,
-     *  xdispl, groff, blankg, blankc, vmin, vmax, vvmin, vvmax,
-     *  imin, imax, vxgap, vygap
-
-      integer blc(3), trc(3), win(MAXNAX), clines(MAXCON),
-     *  slines(2,MAXSPEC), blines(2), srtlev(MAXLEV,MAXCON),
-     *  nlevs(MAXCON), sblc(MAXNAX), strc(MAXNAX), nblnkc(3),
-     *  his(NBINS)
-      integer nofile, npos, ierr, pgbeg, ilen, ncon, i, j, nspec,
-     *  sizespec, ngrps, defwid, npts, iblc, nblnkg, nblnkcs, coltab
-      integer spcAx, virsiz(MAXNAX), vircsiz(MAXNAX)
-      integer len1, tflen(0:2), labcol, bgcol
-
-      character labtyp(2)*6, levtyp(MAXCON)*1, ofile(MAXSPEC)*64
-      character pdev*64, xlabel*40, ylabel*40, hard*20, trfun*3,
-     *  aline*132, ofile2*64, axisname*1, txtfill(0:2)*19
-      character versan*80, version*80
-
-      logical dofull, eqscale, doblnkc, doblnkg, doblnkb, relax, doaxes,
-     *  doframe, fits(2), mark, spnorm, naked, number, mirror, init,
-     *  imnorm, colour, allzero, blconly, doerase, doepoch, igblank,
-     *  allgood, allblnk, dofid, dowedge, hdprsnt, gaps, dotr, doaxlab,
-     *  doaylab, donxlab(2), donylab(2), miss, dogrid, doabut, blacklab
+      external  len1, pgbeg, versan
+      integer   len1, pgbeg
+      character versan*72
 
       data blankc /-99999999.00/
       data cin, gin, bin /MAXCON*' ', ' ', ' '/
@@ -416,10 +414,11 @@ c-----------------------------------------------------------------------
      *             'none', 'abslin', 'rellin'/
       data txtfill, tflen /'spectrum', 'derivative spectrum',
      *                     'derivative spectrum', 8, 19, 19/
+      data axC /'xyzabcd'/
 c-----------------------------------------------------------------------
       version = versan ('cgspec',
-     *                  '$Revision: 1.9 $',
-     *                  '$Date: 2011/04/05 06:18:26 $')
+     *                  '$Revision: 1.10 $',
+     *                  '$Date: 2011/04/05 07:37:02 $')
 
 c     Get user inputs.
       call inputs(MAXLEV, MAXCON, MAXSPEC, MAXTYP, ltypes, ncon, nspec,
@@ -688,8 +687,7 @@ c         Apply mask.
 c         Save normalization image if there are some blanks.
           if (.not.igblank .and. doblnkc) then
             call scropen(lcn(i))
-            call mscwrit(lcn(i), blc, trc, memi(ipnim),
-     *                    nblnkc(i))
+            call mscwrit(lcn(i), blc, trc, memi(ipnim), nblnkc(i))
             nblnkcs = nblnkcs + nblnkc(i)
           endif
         enddo
@@ -769,14 +767,13 @@ c
 c     Set spectrum plot range defaults.
       if (vrange(1).eq.0.0 .and. vrange(2).eq.0.0) then
         if (vmax.eq.vmin) call bug('f',
-     *    'Default velocity range to plot is degenerate')
+     *    'Default spectral range to plot is degenerate')
 
         vrange(1) = vmin - 0.05*(vmax-vmin)
         vrange(2) = vmax + 0.05*(vmax-vmin)
 
         write(aline, 10) vrange(1), vrange(2)
- 10     format('Default velocity range  = ',1p,e11.4,' to ',e11.4,
-     *    ' km/s')
+ 10     format('Default spectral range  = ',1p,e11.4,' to ',e11.4)
         call output(aline)
       else
         vvmin = min(vrange(1), vrange(2))
@@ -830,9 +827,11 @@ c       Open image.
         call initco(ls)
         call chkax(ls, .true., spin(i))
 
-c       Find velocity/freq axis (again; checked to exist in OPNCHK).
-        axisname = ' '
-        call fndaxnum(ls, 'freq', axisname, spcAx)
+c       Find spectral axis (again; checked to exist in OPNCHK).
+        call coInit(ls)
+        call coFindAx(ls, 'spectral', spcAx)
+        call coFin(ls)
+        spcAxC = axC(spcAx:spcAx)
 
 c       Allocate memory for binned spectrum.
         call specsiz(ls, vrange, spcAx, sizespec)
@@ -846,8 +845,8 @@ c       Allocate memory for binned spectrum.
 c       Loop over number of spectrum locations.
         do j = 1, npos
 c         Locate desired sub-cube in spectrum cube.
-          call specloc(lh, ls, snaxis, ssize, opos(1,j), vrange,
-     *                  spcAx, sblc, strc, fits)
+          call specloc(lh, ls, snaxis, ssize, opos(1,j), vrange, spcAx,
+     *      sblc, strc, fits)
 
 c         Continue if requested spectrum can be extracted from the cube.
           if (fits(1) .and. fits(2)) then
@@ -875,7 +874,7 @@ c           Spatial area not all blanked, continue.
 
             else
 c             Set up for XYZIO call.
-              call xyzsetup(ls, axisname, sblc, strc, virsiz, vircsiz)
+              call xyzsetup(ls, spcAxC, sblc, strc, virsiz, vircsiz)
 
 c             Read and spatially bin up the sub-cube producing spectrum.
               call specin(ls, snaxis, sblc, spcAx, virsiz,
@@ -977,11 +976,11 @@ c***********************************************************************
       character inp*(*)
 c-----------------------------------------------------------------------
 c  Make sure image has radian pixel increments and, optionally, a
-c  velocity axis.
+c  spectral axis.
 c
 c  Input
 c    lIn     Image handle
-c    doSpc   Look for velocity axis too
+c    doSpc   Look for spectral axis too
 c    inp     Image name
 c-----------------------------------------------------------------------
       integer   i, iax, naxis, spcAx
@@ -993,12 +992,14 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
       call rdhdi(lIn, 'naxis', naxis, 0)
       if (doSpc) then
-c       Look for velocity axis.
-        call axfndco(lIn, 'VELO', naxis, 0, spcAx)
-        if (spcAx.eq.0) call axfndco(lIn, 'FREQ', naxis, 0, spcAx)
+c       Look for spectral axis.
+        call coInit(lIn)
+        call coFindAx(lIn, 'spectral', spcAx)
+        call coFin(lIn)
+
         if (spcAx.eq.0) then
           line = 'Spectrum image '//inp(1:len1(inp))//
-     *           ' doesn''t have a velocity or frequency axis'
+     *           ' doesn''t have a spectral axis'
           call bug('f', line)
         endif
 
@@ -1502,7 +1503,7 @@ c    relax      Only issue warnings instead of fatal eror when
 c               axis descriptors don;t agree between images
 c               the direction of increasing X and Y
 c    slines     SPectrum line widths an dline styles
-c    vrange     Velocity range to plot
+c    vrange     Spectral range to plot
 c    vfrac      The fraction of the view-port that each spectrum takes up
 c    irange     Intensity range to plot
 c    tick       Ticj increments on the X and Y axes for the spectra
@@ -1705,7 +1706,7 @@ c     Get on with the rest.
       if (doframe) doaxes = .false.
       if (.not.naked) then
         if (tick(1).eq.0.0) call bug('f',
-     *    'You must specify the velocity tick increments')
+     *    'You must specify the spectral tick increments')
         if (tick(2).eq.0.0) call bug('f',
      *    'You must specify the intensity tick increments')
       endif
@@ -1828,7 +1829,7 @@ c       Read scratch files and populate.
         endif
 
         do l = 1, maxcon
-          if (lcn(l).ne.0) then
+          if (lcn(l).ge.0) then
             off = 0
             do k = 1, nblnkc(l)
               call scrread(lcn(l), data, off, 2)
@@ -2061,7 +2062,7 @@ c    nofile   No. overlay files
 c    ofile    Overlay files
 c    grid     Draw spectra at regular grtid locations as defined in
 c             OFILE
-c    vmin,max Velocity min and max from all spectrum images
+c    vmin,max Spectral min and max from all spectrum images
 c    imin,max Min and max intensities from all spectrum images
 c-----------------------------------------------------------------------
       include 'maxnax.h'
@@ -2116,12 +2117,13 @@ c-----------------------------------------------------------------------
         imin = min(imin, limin)
         imax = max(imax, limax)
 
-c       Find velocity or frequency  axis.
-        call axfndco(lh, 'VELO', naxis, 0, spcAx)
-        if (spcAx.eq.0) call axfndco(lh, 'FREQ', naxis, 0, spcAx)
+c       Find spectral axis.
+        call coInit(lh)
+        call coFindAx(lh, 'spectral', spcAx)
+        call coFin(lh)
         if (spcAx.eq.0) then
           line = 'Spectrum image '//spin(i)(1:len1(spin(i)))//
-     *           ' doesn''t have a velocity or frequency axis'
+     *           ' doesn''t have a spectral axis'
           call bug('f', line)
         endif
 
@@ -2227,7 +2229,7 @@ c    pos     Location of spectrum in contour/pixel map pixels
 c    vfrac   Width of spectrum as a fraction on the plot view-port
 c            in teh x and y directions
 c    npts    Number of points to plot in spectrum
-c    vrange  Velocity range for window (always vrange(1) <= vrange(2))
+c    vrange  Spectral range for window (always vrange(1) <= vrange(2))
 c    irange  Intensity range for window
 c    x,yspec Spectrum
 c    zspec   Normalization spectrum.  If any element is 0 it means
@@ -2776,7 +2778,7 @@ c    ls       Handle for spectrum image
 c    snaxis   Number of axes in image
 c    masks    True if there are some blanked pixels in the image
 c    sblc,trc blc and trc of sub-cube to read
-c    spcAx    Axis number of velocity axis
+c    spcAx    Axis number of spectral axis
 c    virsiz   Sizes of sub-cube axes, in order vxy
 c    norm     Normalize peak of spectrum to 1.0
 c    scale    Scale factor to apply to intensities
@@ -2874,8 +2876,8 @@ c    ssize   Size of spectrum image
 c    pos     Spectrum location, x, y (contour/pixel map spatial pixels)
 c            xsize, ysize (arcsec)  x and y are full image unbinned
 c            pixels not just the displayed region pixels
-c    vrange  Velocity range of interest
-c    spcAx   The axis corresponding to the velocity axis of the
+c    vrange  Spectral range of interest
+c    spcAx   The axis corresponding to the spectral axis of the
 c            current spectrum image
 c  Output:
 c    sblc,trc
@@ -2915,7 +2917,7 @@ c     pixels to world.
       call w2wco(lh, 2, typei, ' ', win, typeo, ' ', wout)
 
 c     Now work out the centre of the spectrum in spectrum image
-c     coordinates (linear for velocity, arcsec for spatial).
+c     coordinates (linear for spectral, arcsec for spatial).
       naxis = min(3,snaxis)
       j = 1
       do i = 1, naxis
@@ -3013,12 +3015,12 @@ c***********************************************************************
       integer   iax, size
 c-----------------------------------------------------------------------
 c  Work out how many pixels long the spectrum for this spectrum image
-c  for the desired velocity range so that we can allocate memory
+c  for the desired spectral range so that we can allocate memory
 c  dynamically.
 c
 c  Input
 c    ls        Handle of image
-c    vrange    velocity range
+c    vrange    Spectral range
 c    iax       Spectral axis
 c  Output
 c    size      SIze of spectrum
