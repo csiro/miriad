@@ -338,7 +338,7 @@ c       XSIZ and YSIZ are the spatial half-sizes in ARCSEC over which
 c       each spectrum is spatially averaged.  These are optional and
 c       default to 0 (no binning, just a spectrum at each spatial pixel)
 c
-c$Id: cgspec.for,v 1.7 2011/02/15 03:50:26 cal103 Exp $
+c$Id: cgspec.for,v 1.8 2011/04/05 05:17:03 cal103 Exp $
 c--
 c
 c  History:
@@ -414,8 +414,8 @@ c-----------------------------------------------------------------------
      *                     'derivative spectrum', 8, 19, 19/
 c-----------------------------------------------------------------------
       version = versan ('cgspec',
-     *                  '$Revision: 1.7 $',
-     *                  '$Date: 2011/02/15 03:50:26 $')
+     *                  '$Revision: 1.8 $',
+     *                  '$Date: 2011/04/05 05:17:03 $')
 c
 c Get user inputs
 c
@@ -769,7 +769,7 @@ c
       if (.not.igblank) then
         if (lgn.ge.0) call scrclose(lgn)
         do i = 1, maxcon
-          if (lcn(i).ne.0) call scrclose(lcn(i))
+          if (lcn(i).ge.0) call scrclose(lcn(i))
         enddo
       endif
       call pgupdt
