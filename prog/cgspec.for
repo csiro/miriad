@@ -10,22 +10,24 @@ c       text file) on images (displayed via a colour pixel map
 c       representation and/or contour plots) on a PGPLOT device.
 c
 c@ in
-c       You may input up to 10 images.  Some of these are used to make a
-c       2-D spatial display (up to 3 displayed via contours and 1
-c       displayed via a colour pixel map representation).  Of the rest,
-c       upto 5 may have spectra extracted from them, and 1 may be used
-c       as a mask. The pixel map, contour, and mask images must be of
-c       identical dimensions and size. Each spectrum image can be of any
-c       dimensions, size, and order. The mask image blanking mask is
+c       You may input up to 10 images.  Some of these are used to make
+c       a 2-D spatial display (one displayed via a colour pixel map
+c       representation up to three displayed via contours and).  Of the
+c       rest, up to five may have spectra extracted from them, and one
+c       may be used as a mask.
+c
+c       The pixel map, contour, and mask images must be of identical
+c       dimensions and size.  Each spectrum image can be of any
+c       dimensions, size, and order.  The mask image blanking mask is
 c       logically ORed to the pixel map and and contour plot image masks
-c       before they are displayed. The mask image is not displayed.
+c       before they are displayed.  The mask image is not displayed.
 c
 c       These images can be input in any order (see TYPE).
-c       Wild card expansion is supported.    No default.
+c       Wild card expansion is supported.  No default.
 c@ type
 c       Specifies the type of each image given, respectively, in the
-c       IN keyword. Minimum match is supported (note that "pixel" was
-c       formerly "grey" [which is still supported]).   Choose from:
+c       IN keyword.  Minimum match is supported (note that "pixel" was
+c       formerly "grey" which is still supported).  Choose from:
 c
 c       "contour"   (contour;     up to 3 of these)    xyv
 c       "pixel"     (pixel map;   up to 1 of these)    xyv
@@ -42,12 +44,12 @@ c       with channel is taken by CGSPEC before it is plotted.  This is
 c       useful for Zeeman enthusiasts.  You can have up to 5 "spectrum"
 c       and "dspectrum" images in total.
 c@ region
-c       Region of interest.   This applies only to, and equally to,
+c       Region of interest.  This applies only to, and equally to,
 c       the pixel map, contour and mask images.  All the image planes
-c       you select will be averaged before display.    Only the bounding
+c       you select will be averaged before display.  Only the bounding
 c       box of the selected region is supported.
 c@ xybin
-c       Upto 4 values.  These give the spatial increment and binning
+c       Up to four values which give the spatial increment and binning
 c       size in pixels for the x and y axes to be applied to the
 c       selected region.  If the binning size is not unity, it must
 c       equal the increment.  For example, to bin up the image by 4
@@ -55,12 +57,12 @@ c       pixels in the x direction and to pick out every third pixel in
 c       the y direction, set XYBIN=4,4,3,1
 c       Defaults are 1,XYBIN(1),XYBIN(1),XYBIN(3)
 c@ slev
-c       Up to 3 pairs of values for each contour image. First value is
-c       the type of contour level scale factor;  "p" for percentage and
-c       "a" for absolute.   Second value is the factor to scale LEVS by.
-c       Thus, SLEV=p,1  would contour levels at LEVS * 1% of the image
-c       peak intensity.  Similarly, SLEV=a,1.4e-2 would contour levels
-c       at LEVS * 1.4E-2
+c       Up to three pairs of values for each contour image. First value
+c       is the type of contour level scale factor;  "p" for percentage
+c       and "a" for absolute.   Second value is the factor to scale LEVS
+c       by.  Thus, SLEV=p,1  would contour levels at LEVS * 1% of the
+c       image peak intensity.  Similarly, SLEV=a,1.4e-2 would contour
+c       levels at LEVS * 1.4E-2
 c       Default is no additional scaling of LEVS (i.e., "a",1.0)
 c@ levs1
 c       The levels to contour for the first specified contour image are
@@ -71,17 +73,16 @@ c       LEVS for the second contour image.
 c@ levs3
 c       LEVS for the third contour image.
 c@ grange
-c       4 values. These are the image intensity range to display (min to
-c       max), the transfer function type and the colour lookup table for
-c       the displayed pixel map image.  The transfer function type can
-c       be one of "lin" (linear), "sqr" (square root), "log"
-c       (logarithmic), and "heq" (histogram equalization).  The colour
-c       lookup table is an integer from 1 to 8 specifying a lookup
-c       table.  Valid values are 1 (b&w), 2 (rainbow), 3 (linear pseudo
-c       colour), 4 (floating zero colour contours), 5 (fixed zero colour
-c       contours), 6 (rgb), 7 (background), 8 (heat), and 9 (absolute
-c       b&w).  If you enter a negative integer, then the reversed lookup
-c       table is displayed.
+c       Four values, the image intensity range to display (min to max),
+c       the transfer function type and the colour lookup table for the
+c       displayed pixel map image.  The transfer function type can be
+c       one of "lin" (linear), "sqr" (square root), "log" (logarithmic),
+c       and "heq" (histogram equalization).  The colour lookup table is
+c       an integer from 1 to 8 specifying a lookup table.  Valid values
+c       are 1 (b&w), 2 (rainbow), 3 (linear pseudo colour), 4 (floating
+c       zero colour contours), 5 (fixed zero colour contours), 6 (rgb),
+c       7 (background), 8 (heat), and 9 (absolute b&w).  Negative
+c       reverses the lookup table.
 c
 c       The transfer function changes available with OPTIONS=FIDDLE are
 c       in addition (on top of) to the selections here, but the colour
@@ -96,25 +97,25 @@ c       axis of the spectrum image(s) is not velocity (say Frequency),
 c       use the natural units of that axis.
 c       Default is min to  max from all the spectrum images.
 c@ irange
-c       2 values. The intensity range to plot for the spectra.
+c       Two values, the intensity range to plot for the spectra.
 c       Default is min to max from all the spectrum images.
 c@ iscale
-c       Up to 5 values. A factor for each spectrum image by which it is
-c       multiplied before plotting.
+c       Up to five values, a factor for each spectrum image by which it
+c       is multiplied before plotting.
 c       Defaults are all 1.
 c@ spsize
-c       2 values.   These are the sizes of the spectra, in fractions
-c       of the view-port, in the x- and y-directions.
+c       Two values, being the sizes of the spectra, in fractions of the
+c       view-port, in the x- and y-directions.
 c       Defaults are 0.1, 0.1
 c@ stick
-c       2 values.  Major tick mark increments on the spectrum axes or
+c       Two values, major tick mark increments on the spectrum axes or
 c       frame for labelling purposes.
 c       No default.
 c@ device
 c       The PGPLOT plot device, such as plot.plt/ps
 c       No default.
 c@ labtyp
-c       2 values;  the spatial label types of the x and y axes.
+c       Two values; the spatial label types of the x and y axes.
 c       Minimum match is active.  Select from:
 c
 c       "hms"     the label is in H M S.S (e.g. for RA)
@@ -255,19 +256,17 @@ c       keyword IN.
 c
 c       Wild card expansion is active and there is no default.
 c
-c       Entries in the overlay file can be white space or comma
-c       delimitered or both.
-c       All lines beginning with # are ignored.
+c       Entries in the overlay file can be white space or comma-
+c       delimited or both.  Lines beginning with # are ignored.
 c
 c                       **** DO NOT USE TABS ****
 c
 c       Double quotes " are used below to indicate a string.  The "
-c       should not be put in the file.   For all the string parameters
+c       should not be put in the file.  For all the string parameters
 c       discussed below, you can abbreviate them with minimum match.
 c
 c       Miriad task "CGCURS" with OPTIONS=LOG,CGSPEC,CURSOR can be
 c       used to prepare a file suitable as input to OLAY.
-c
 c
 c       There are two formats, depending upon the first line.
 c
@@ -286,12 +285,12 @@ c
 c       XINC and YINC are the increments across the contour/pixel map
 c       image in ARCSEC at which spectra are to be drawn starting from
 c       the bottom left corner of the display (defined by the REGION
-c       keyword)
+c       keyword).
 c
 c       XSIZ and YSIZ are the spatial half-sizes in ARCSEC over which
 c       each spectrum is spatially averaged.  These are optional and
-c       default to 0 (no binning, just a spectrum at each spatial pixel)
-c
+c       default to 0 (no binning, just a spectrum at each spatial
+c       pixel).
 c
 c       ---------------------------
 c       CASE 2; IRREGULAR LOCATIONS
@@ -338,9 +337,8 @@ c       XSIZ and YSIZ are the spatial half-sizes in ARCSEC over which
 c       each spectrum is spatially averaged.  These are optional and
 c       default to 0 (no binning, just a spectrum at each spatial pixel)
 c
-c$Id: cgspec.for,v 1.8 2011/04/05 05:17:03 cal103 Exp $
+c$Id: cgspec.for,v 1.9 2011/04/05 06:18:26 cal103 Exp $
 c--
-c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
@@ -355,42 +353,48 @@ c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
       include 'mem.h'
-      real wedwid, tfdisp
-      integer maxlev, maxpos, maxcon, maxspec, maxtyp, nbins
-      parameter (maxlev = 50, maxpos = 256*256, maxtyp = 13,
-     *   maxcon = 3, maxspec = 5, wedwid = 0.05, tfdisp = 0.5,
-     *   nbins = 128)
+
+      integer    MAXLEV, MAXPOS, MAXCON, MAXSPEC, MAXTYP, NBINS
+      parameter (MAXLEV  = 50,
+     *           MAXPOS  = 256*256,
+     *           MAXTYP  = 13,
+     *           MAXCON  = 3,
+     *           MAXSPEC = 5,
+     *           NBINS   = 128)
+
+      real      WEDWID, TFDISP
+      parameter (WEDWID = 0.05, TFDISP = 0.5)
 
       integer ipim, ipnim, ipimb, ixsp, iysp, insp, ipsp, imsp, iwsp
 
-      integer csize(maxnax,maxcon), gsize(maxnax), bsize(maxnax),
-     *  ssize(maxnax), size(maxnax), cnaxis(maxcon), gnaxis, bnaxis,
-     *  snaxis, lc(maxcon), lg, lb, ls, sgrps(2,maxdim),
+      integer csize(MAXNAX,MAXCON), gsize(MAXNAX), bsize(MAXNAX),
+     *  ssize(MAXNAX), size(MAXNAX), cnaxis(MAXCON), gnaxis, bnaxis,
+     *  snaxis, lc(MAXCON), lg, lb, ls, sgrps(2,MAXDIM),
      *  grpbeg(maxchan), ngrp(maxchan), ibin(2), jbin(2), krng(2),
-     *  iside(maxspec), lh, lgn, lcn(maxcon)
-      double precision opos(4,maxpos)
-      logical maskb, solneg(maxcon), grid(maxspec)
-      character*6 ltypes(maxtyp)
-      character*64 cin(maxcon), gin, bin, spin(maxspec), hin
+     *  iside(MAXSPEC), lh, lgn, lcn(MAXCON)
+      double precision opos(4,MAXPOS)
+      logical maskb, solneg(MAXCON), grid(MAXSPEC)
+      character*6 ltypes(MAXTYP)
+      character*64 cin(MAXCON), gin, bin, spin(MAXSPEC), hin
 
-      real levs(maxlev,maxcon), pixr(2), tr(6), cs(2), pixr2(2),
-     *  slev(maxcon), break(maxcon), vrange(2), irange(2), tfvp(4),
-     *  iscale(maxspec), scale(2), vpn(4), vpw(4), vfrac(2), tick(2),
-     *  cumhis(nbins), wdgvp(4), gmm(3), cmm(3,maxcon)
+      real levs(MAXLEV,MAXCON), pixr(2), tr(6), cs(2), pixr2(2),
+     *  slev(MAXCON), break(MAXCON), vrange(2), irange(2), tfvp(4),
+     *  iscale(MAXSPEC), scale(2), vpn(4), vpw(4), vfrac(2), tick(2),
+     *  cumhis(NBINS), wdgvp(4), gmm(3), cmm(3,MAXCON)
       real vxmin, vymin, vymax, vx, vy, vxsize, vysize, ydispb,
      *  xdispl, groff, blankg, blankc, vmin, vmax, vvmin, vvmax,
      *  imin, imax, vxgap, vygap
 
-      integer blc(3), trc(3), win(maxnax), clines(maxcon),
-     *  slines(2,maxspec), blines(2), srtlev(maxlev,maxcon),
-     *  nlevs(maxcon), sblc(maxnax), strc(maxnax), nblnkc(3),
-     *  his(nbins)
+      integer blc(3), trc(3), win(MAXNAX), clines(MAXCON),
+     *  slines(2,MAXSPEC), blines(2), srtlev(MAXLEV,MAXCON),
+     *  nlevs(MAXCON), sblc(MAXNAX), strc(MAXNAX), nblnkc(3),
+     *  his(NBINS)
       integer nofile, npos, ierr, pgbeg, ilen, ncon, i, j, nspec,
      *  sizespec, ngrps, defwid, npts, iblc, nblnkg, nblnkcs, coltab
-      integer spax, virsiz(maxnax), vircsiz(maxnax)
+      integer spcAx, virsiz(MAXNAX), vircsiz(MAXNAX)
       integer len1, tflen(0:2), labcol, bgcol
 
-      character labtyp(2)*6, levtyp(maxcon)*1, ofile(maxspec)*64
+      character labtyp(2)*6, levtyp(MAXCON)*1, ofile(MAXSPEC)*64
       character pdev*64, xlabel*40, ylabel*40, hard*20, trfun*3,
      *  aline*132, ofile2*64, axisname*1, txtfill(0:2)*19
       character versan*80, version*80
@@ -402,10 +406,10 @@ c-----------------------------------------------------------------------
      *  doaylab, donxlab(2), donylab(2), miss, dogrid, doabut, blacklab
 
       data blankc /-99999999.00/
-      data cin, gin, bin /maxcon*' ', ' ', ' '/
+      data cin, gin, bin /MAXCON*' ', ' ', ' '/
       data nblnkcs /0/
       data gaps, doabut, dotr, scale /.false., .false., .false., 2*0.0/
-      data lgn, lcn /-1, maxcon * -1/
+      data lgn, lcn /-1, MAXCON * -1/
       data vmin, vmax, imin, imax /1e30, -1e30, 1e30, -1e30/
       data ltypes /'hms   ', 'dms   ', 'arcsec', 'arcmin', 'absdeg',
      *             'reldeg', 'abspix', 'relpix', 'absnat', 'relnat',
@@ -414,36 +418,33 @@ c-----------------------------------------------------------------------
      *                     'derivative spectrum', 8, 19, 19/
 c-----------------------------------------------------------------------
       version = versan ('cgspec',
-     *                  '$Revision: 1.8 $',
-     *                  '$Date: 2011/04/05 05:17:03 $')
-c
-c Get user inputs
-c
-      call inputs(maxlev, maxcon, maxspec, maxtyp, ltypes, ncon, nspec,
+     *                  '$Revision: 1.9 $',
+     *                  '$Date: 2011/04/05 06:18:26 $')
+
+c     Get user inputs.
+      call inputs(MAXLEV, MAXCON, MAXSPEC, MAXTYP, ltypes, ncon, nspec,
      *   cin, gin, bin, spin, iside, levtyp, slev, levs, nlevs, pixr,
      *   trfun, coltab, pdev, labtyp, dofull, eqscale, solneg, clines,
      *   break, cs, ofile, nofile, relax, slines, vrange, vfrac, irange,
      *   tick, doaxes, doframe, mark, iscale, spnorm, naked, blines,
      *   number, mirror, colour, blconly, doerase, doepoch, igblank,
      *   dofid, dowedge, dogrid, blacklab, ibin, jbin)
-c
-c First verify the existence of wanted files and get some extrema
-c
+
+c     First verify the existence of wanted files and get some extrema.
       call opnchk(nspec, spin, iside, ncon, cin, gin, bin, nofile,
-     *             ofile, grid, vmin, vmax, imin, imax)
-c
+     *  ofile, grid, vmin, vmax, imin, imax)
+
 c*************************************
 c
 c Draw pixel map and contour images
 c
 c*************************************
-c
-c Open contour images as required
-c
+
+c     Open contour images as required.
       hin = ' '
       if (ncon.gt.0)  then
         do i = 1, ncon
-          call opimcg(maxnax, cin(i), lc(i), csize(1,i), cnaxis(i))
+          call opimcg(MAXNAX, cin(i), lc(i), csize(1,i), cnaxis(i))
           call initco(lc(i))
           cmm(1,i) =  1e30
           cmm(2,i) = -1e30
@@ -455,11 +456,10 @@ c
           endif
         enddo
       endif
-c
-c Open pixel map image as required
-c
+
+c     Open pixel map image as required.
       if (gin.ne.' ') then
-        call opimcg(maxnax, gin, lg, gsize, gnaxis)
+        call opimcg(MAXNAX, gin, lg, gsize, gnaxis)
         call initco(lg)
         gmm(1) =  1e30
         gmm(2) = -1e30
@@ -469,17 +469,15 @@ c
           hin = gin
           lh = lg
         endif
-c
-c Check pixel map range and deal with log transfer function
-c
-        call grfixcg(pixr, lg, gnaxis, gsize, trfun, pixr2,
-     *                groff, blankg)
+
+c       Check pixel map range and deal with log transfer function.
+        call grfixcg(pixr, lg, gnaxis, gsize, trfun, pixr2, groff,
+     *    blankg)
       endif
-c
-c Open mask image as required
-c
+
+c     Open mask image as required.
       if (bin.ne.' ') then
-        call opimcg(maxnax, bin, lb, bsize, bnaxis)
+        call opimcg(MAXNAX, bin, lb, bsize, bnaxis)
         call initco(lb)
         call chkax(lb, .false., bin)
         maskb = hdprsnt (lb, 'mask')
@@ -490,37 +488,32 @@ c
           bin = ' '
         endif
       endif
-c
-c Check consistency of input images
-c
+
+c     Check consistency of input images.
       call chkim(relax, ncon, cin, lc, gin, lg, bin, lb)
-c
-c Finish key inputs for region of interest
-c
-      call region(maxnax, cin, lc, csize, cnaxis, gin, lg, gsize,
+
+c     Finish key inputs for region of interest.
+      call region(MAXNAX, cin, lc, csize, cnaxis, gin, lg, gsize,
      *  gnaxis, ibin, jbin, blc, trc, win, ngrps, grpbeg, ngrp)
-c
-c Allocate memory for pixel map/contour and mask images
-c
+
+c     Allocate memory for pixel map/contour and mask images.
       call memalloc(ipim,  win(1)*win(2), 'r')
       call memalloc(ipnim, win(1)*win(2), 'i')
       if (bin.ne.' ') call memalloc(ipimb, win(1)*win(2), 'l')
-c
-c Compute contour levels for each contour image
-c
+
+c     Compute contour levels for each contour image.
       if (ncon.gt.0) then
         do i = 1, ncon
-          call conlevcg(mirror, maxlev, lc(i), levtyp(i), slev(i),
+          call conlevcg(mirror, MAXLEV, lc(i), levtyp(i), slev(i),
      *                   nlevs(i), levs(1,i), srtlev(1,i))
         enddo
       endif
-c
-c Work out array index limits, coordinate transformation array & labels
-c
+
+c     Work out array index limits, coordinate transformation array,
+c     and labels.
       call limitscg(blc, ibin, jbin, tr)
-c
-c Open PGPLOT device, set nice font and default line width
-c
+
+c     Open PGPLOT device, set nice font and default line width.
       ierr = pgbeg (0, pdev, 1, 1)
       if (ierr.ne.1) then
         call pgldev
@@ -543,41 +536,34 @@ c
       enddo
       if (blines(1).eq.0) blines(1) = defwid
       if (blines(2).eq.0) blines(2) = defwid
-c
-c Init OFM routines
-c
+
+c     Init OFM routines.
       if (gin.ne.' ') call ofmini
-c
-c Set axis labels
-c
+
+c     Set axis labels.
       call setlabcg(lh, labtyp, doepoch, xlabel, ylabel)
-c
-c Set label displacements from axes
-c
+
+c     Set label displacements from axes.
       call setdspcg(lh, labtyp, blc, trc, xdispl, ydispb)
-c
-c Work out view port sizes and increments.
-c
+
+c     Work out view port sizes and increments.
       call vpsizcg(dofull, dofid, ncon, gin, ' ', nspec, ' ',
-     *  maxlev, nlevs, srtlev, levs, slev, 1, 1, cs, xdispl, ydispb,
-     *  gaps, doabut, dotr, 1, wedwid, tfdisp, labtyp, vxmin, vymin,
+     *  MAXLEV, nlevs, srtlev, levs, slev, 1, 1, cs, xdispl, ydispb,
+     *  gaps, doabut, dotr, 1, WEDWID, TFDISP, labtyp, vxmin, vymin,
      *  vymax, vxgap, vygap, vxsize, vysize, tfvp, wdgvp)
-c
-c Adjust viewport increments and start locations if equal scales
-c requested or if scales provided by user
-c
+
+c     Adjust viewport increments and start locations if equal scales
+c     requested or if scales provided by user.
       call vpadjcg(lh, hard, eqscale, scale, vxmin, vymin, vymax, 1, 1,
      *              blc, trc, tfvp, wdgvp, vxsize, vysize)
-c
-c Set viewport and window (absolute pixels)
-c
+
+c     Set viewport and window (absolute pixels).
       vx = vxmin
       vy = vymax - vysize
       call pgsvp(vx, vx+vxsize, vy, vy+vysize)
       call pgswin(blc(1)-0.5, trc(1)+0.5, blc(2)-0.5, trc(2)+0.5)
-c
-c Read in mask image as required.
-c
+
+c     Read in mask image as required.
       if (bin.ne.' ') then
         init = .true.
         do i = 1, ngrps
@@ -590,9 +576,8 @@ c
         call finco(lb)
         call xyclose(lb)
       endif
-c
-c Read in pixel map image as required, averaging all selected planes.
-c
+
+c     Read pixel map image as required, averaging all selected planes.
       if (gin.ne.' ') then
         init = .true.
         imnorm = .false.
@@ -603,94 +588,78 @@ c
           krng(2) = ngrp(i)
           call readimcg(init, blankg, lg, ibin, jbin, krng,
      *       blc, trc, imnorm, memi(ipnim), memr(ipim), doblnkg, gmm)
-c
-c Apply mask image mask
-c
+
+c         Apply image mask.
           if (bin.ne.' ' .and. doblnkb) then
             call maskorcg(blankg, win, meml(ipimb), memi(ipnim),
      *                     memr(ipim))
             doblnkg = .true.
           endif
         enddo
-c
-c Apply transfer function to pixel map image if required
-c
+
+c       Apply transfer function to pixel map image if required.
         if (trfun.ne.'lin') call apptrfcg(pixr, trfun, groff,
-     *    win(1)*win(2), memi(ipnim), memr(ipim), nbins,
+     *    win(1)*win(2), memi(ipnim), memr(ipim), NBINS,
      *    his, cumhis)
-c
-c Deal with OFM modifications for harcdopy device before calling PGIMAG
-c
+
+c       Deal with OFM modifications for harcdopy device before calling
+c       PGIMAG.
         if (hard.eq.'YES') then
-c
-c Apply user given OFM or b&w as default
-c
+c         Apply user-given OFM or b&w as default.
           call ofmcol(coltab, pixr2(1), pixr2(2))
-c
-c Interactive fiddle of OFM
-c
+
+c         Interactive fiddle of OFM.
           if (dofid) call ofmmod(tfvp, win(1)*win(2), memr(ipim),
      *                            memi(ipnim), pixr2(1), pixr2(2))
-c
-c Take complement of b&w lookup tables
-c
+
+c         Take complement of b&w lookup tables.
           if (bgcol.eq.1) call ofmcmp
         endif
-c
-c Draw image and apply user given OFM to interactive PGPLOT devices
-c
+
+c       Draw image and apply user given OFM to interactive PGPLOT
+c       devices.
         call pgimag(memr(ipim), win(1), win(2), 1, win(1),
      *               1, win(2), pixr2(1), pixr2(2), tr)
         if (hard.eq.'NO') call ofmcol(coltab, pixr2(1), pixr2(2))
-c
-c Draw optional wedge
-c
+
+c       Draw optional wedge.
         call pgslw(1)
         call pgsci(labcol)
-        if (dowedge) call wedgecg(1, wedwid, 1, trfun, groff, nbins,
+        if (dowedge) call wedgecg(1, WEDWID, 1, trfun, groff, NBINS,
      *                             cumhis, wdgvp, pixr(1), pixr(2))
-c
-c Retake OFM b&w complement for hardcopy devices
-c
+
+c       Retake OFM b&w complement for hardcopy devices.
         if (hard.eq.'YES' .and. bgcol.eq.1) call ofmcmp
-c
-c Save normalization image if there are some blanks
-c
+
+c       Save normalization image if there are some blanks.
         if (.not.igblank .and. doblnkg) then
           call scropen(lgn)
           call mscwrit(lgn, blc, trc, memi(ipnim), nblnkg)
         endif
       endif
-c
-c Label and draw axes.  Forces pixel map to update on /xd as well
-c
+
+c     Label and draw axes.  Forces pixel map to update on /xd as well.
       call pgslw(blines(1))
       call pgsch(cs(1))
       call pgsci(labcol)
-c
-c Determine if the axes need ascii or numeric labelling
-c for this subplot
-c
-      call dolabcg(gaps, dotr, 1, 1, 1, 1, 1, labtyp,
-     *              doaxlab, doaylab, donxlab, donylab)
-c
-c Write on ascii axis labels
-c
+
+c     Do the axes need ascii or numeric labelling for this subplot?
+      call dolabcg(gaps, dotr, 1, 1, 1, 1, 1, labtyp, doaxlab, doaylab,
+     *  donxlab, donylab)
+
+c     Write ascii axis labels.
       call aaxlabcg(doaxlab, doaylab, xdispl, ydispb, xlabel, ylabel)
-c
-c Draw frame, write numeric labels, ticks and optional grid
-c
-       call naxlabcg(lh, .true., blc, trc, krng, labtyp,
-     *                donxlab, donylab, .false., dogrid)
-c
-c Modify OFM for interactive devices here
-c
+
+c     Draw frame, write numeric labels, ticks and optional grid.
+      call naxlabcg(lh, .true., blc, trc, krng, labtyp, donxlab,
+     *  donylab, .false., dogrid)
+
+c     Modify OFM for interactive devices here.
       if (dofid .and. hard.eq.'NO')
      *  call ofmmod(tfvp, win(1)*win(2), memr(ipim),
      *               memi(ipnim), pixr2(1), pixr2(2))
-c
-c Draw contour plots
-c
+
+c     Draw contour plots.
       if (ncon.gt.0) then
         do i = 1, ncon
           init = .true.
@@ -703,9 +672,8 @@ c
             call readimcg(init, blankc, lc(i), ibin, jbin, krng, blc,
      *         trc, imnorm, memi(ipnim), memr(ipim), doblnkc, cmm(1,i))
           enddo
-c
-c Apply mask
-c
+
+c         Apply mask.
           if (bin.ne.' ' .and. doblnkb) then
             call maskorcg(blankc, win, meml(ipimb), memi(ipnim),
      *                     memr(ipim))
@@ -716,9 +684,8 @@ c
           call pgsci(7+i-1)
           call conturcg(.false., blankc, solneg(i), win(1), win(2),
      *      doblnkc, memr(ipim), nlevs(i), levs(1,i), tr, break(i), 0,0)
-c
-c Save normalization image if there are some blanks
-c
+
+c         Save normalization image if there are some blanks.
           if (.not.igblank .and. doblnkc) then
             call scropen(lcn(i))
             call mscwrit(lcn(i), blc, trc, memi(ipnim),
@@ -727,19 +694,17 @@ c
           endif
         enddo
       endif
-c
-c Plot annotation
-c
+
+c     Plot annotation.
       if (dofull) then
         call pgslw(1)
         call pgsci(labcol)
-        call fullann(lh, ncon, cin, gin, nspec, spin, lc, lg, maxlev,
+        call fullann(lh, ncon, cin, gin, nspec, spin, lc, lg, MAXLEV,
      *       nlevs, levs, srtlev, slev, trfun, pixr, vymin, blc, trc,
      *       cs, ydispb, iscale, labtyp, ibin, jbin, gmm, cmm)
       endif
-c
-c Close files and free up memory
-c
+
+c     Close files and free memory.
       if (gin.ne.' ') then
         call finco(lg)
         call xyclose(lg)
@@ -753,71 +718,65 @@ c
       call memfree(ipim,  win(1)*win(2), 'r')
       call memfree(ipnim, win(1)*win(2), 'r')
       if (bin.ne.' ') call memfree(ipimb, win(1)*win(2), 'l')
-c
-c If there were some blanks in the displayed region merge normalization
-c images (which have already had the mask image mask applied) into a
-c mask and close scratch files
-c
+
+c     If there were blanks in the displayed region, merge normalization
+c     images (which have already had the mask image mask applied) into a
+c     mask and close scratch files.
       if (igblank .or. (nblnkcs.eq.0 .and. nblnkg.eq.0)) then
         allgood = .true.
       else
         call memalloc(ipimb, win(1)*win(2), 'i')
-        call mergn(maxcon, ncon, gin, nblnkg, nblnkc, lgn, lcn, win(1),
+        call mergn(MAXCON, ncon, gin, nblnkg, nblnkc, lgn, lcn, win(1),
      *              win(2), memi(ipimb), allgood)
         if (allgood) call memfree(ipimb, win(1)*win(2), 'i')
       endif
       if (.not.igblank) then
         if (lgn.ge.0) call scrclose(lgn)
-        do i = 1, maxcon
+        do i = 1, MAXCON
           if (lcn(i).ge.0) call scrclose(lcn(i))
         enddo
       endif
       call pgupdt
-c
-c Reset image viewport (mucked up by plot annotation) for overlays
-c
+
+c     Reset image viewport (mucked up by plot annotation) for overlays.
       call pgsvp(vx, vx+vxsize, vy, vy+vysize)
       call pgswin(blc(1)-0.5, trc(1)+0.5, blc(2)-0.5, trc(2)+0.5)
-c
-c
+
 c**************************
 c
 c Now overlay the spectra
 c
 c**************************
+c     Read overlay positions & decode positions into contour/pixel map
+c     pixels or generate an automatic list.  If only one file, then it
+c     is common to all spectrum images.  Have to open/close file whose
+c     header we use for coordinate transformations in OLAYDEC because
+c     xyz and xy can cannot exist together.
 c
-c
-c Read overlay positions & decode positions into contour/pixel map
-c pixels or generate an automatic list.  If only one file, then it is
-c common to all spectrum images.  Have to open/close file whose header
-c we use for coordinate transformations in OLAYDEC because xyz and xy
-c can cannot exist together
-c
-      call xyopen(lh, hin, 'old', maxnax, size)
+      call xyopen(lh, hin, 'old', MAXNAX, size)
       call initco(lh)
       if (nofile.eq.1) then
         if (grid(1)) then
-          call genpos(lh, ofile(1), blc, trc, maxpos, npos, opos)
+          call genpos(lh, ofile(1), blc, trc, MAXPOS, npos, opos)
           iblc = 1
         else
-          call olaydec(lh, krng(1), krng(2), maxtyp, ltypes, maxpos,
+          call olaydec(lh, krng(1), krng(2), MAXTYP, ltypes, MAXPOS,
      *                  ofile(1), npos, opos, iblc)
         endif
         ofile2 = ofile(1)
       endif
-c
-c Set spectrum plot range defaults
-c
+
+c     Set spectrum plot range defaults.
       if (vrange(1).eq.0.0 .and. vrange(2).eq.0.0) then
-        if (vmax.eq.vmin)  call bug('f',
+        if (vmax.eq.vmin) call bug('f',
      *    'Default velocity range to plot is degenerate')
 
         vrange(1) = vmin - 0.05*(vmax-vmin)
         vrange(2) = vmax + 0.05*(vmax-vmin)
 
-        write(aline, 100) vrange(1), vrange(2)
-100     format('Default velocity range  = ', 1pe11.4, ' to ',
-     *          1pe11.4, ' km/s')
+        write(aline, 10) vrange(1), vrange(2)
+ 10     format('Default velocity range  = ',1p,e11.4,' to ',e11.4,
+     *    ' km/s')
         call output(aline)
       else
         vvmin = min(vrange(1), vrange(2))
@@ -833,123 +792,104 @@ c
         irange(1) = imin - 0.05*(imax-imin)
         irange(2) = imax + 0.05*(imax-imin)
 
-        write(aline, 110) irange(1), irange(2)
-110     format('Default intensity range = ', 1pe11.4, ' to ',
-     *          1pe11.4)
+        write(aline, 20) irange(1), irange(2)
+ 20     format('Default intensity range = ',1p,e11.4,' to ',e11.4)
         call output(aline)
       endif
-c
-c Find current view-port in normalized device coordinates and
-c in world coordinates
-c
+
+c     Find current view-port in normalized device coordinates and
+c     in world coordinates.
       call pgqvp(0, vpn(1), vpn(2), vpn(3), vpn(4))
       call pgqwin(vpw(1), vpw(2), vpw(3), vpw(4))
-c
-c Set character size
-c
+
+c     Set character size.
       if (cs(2).eq.0.0) then
         cs(2) = 3*min(vfrac(1),vfrac(2))
-        write(aline, 120) cs(2)
-120     format('Default spectrum character size = ', f5.2)
+        write(aline, 30) cs(2)
+ 30     format('Default spectrum character size = ', f5.2)
         call output(aline)
       endif
       call pgsch(cs(2))
-c
-c Loop over number spectrum images
-c
+
+c     Loop over number spectrum images.
       do i = 1, nspec
-c
-c Read overlay locations if one file per spectrum image
-c
+c       Read overlay locations if one file per spectrum image.
         if (nofile.gt.1) then
           if (grid(i)) then
-            call genpos(lh, ofile(i), blc, trc, maxpos, npos, opos)
+            call genpos(lh, ofile(i), blc, trc, MAXPOS, npos, opos)
             iblc = 1
           else
-            call olaydec(lh, krng(1), krng(2), maxtyp, ltypes,
-     *        maxpos, ofile(i), npos, opos, iblc)
+            call olaydec(lh, krng(1), krng(2), MAXTYP, ltypes,
+     *        MAXPOS, ofile(i), npos, opos, iblc)
           endif
           ofile2 = ofile(i)
         endif
-c
-c Open image
-c
-        call opimxyz(maxnax, spin(i), ls, ssize, snaxis)
+
+c       Open image.
+        call opimxyz(MAXNAX, spin(i), ls, ssize, snaxis)
         call initco(ls)
         call chkax(ls, .true., spin(i))
-c
-c Find velocity/freq axis (again; checked to exist in OPNCHK)
-c
+
+c       Find velocity/freq axis (again; checked to exist in OPNCHK).
         axisname = ' '
-        call fndaxnum(ls, 'freq', axisname, spax)
-c
-c Allocate memory for binned spectrum.
-c
-        call specsiz(ls, vrange, spax, sizespec)
+        call fndaxnum(ls, 'freq', axisname, spcAx)
+
+c       Allocate memory for binned spectrum.
+        call specsiz(ls, vrange, spcAx, sizespec)
         call memalloc(ixsp, sizespec, 'r')
         call memalloc(iysp, sizespec, 'r')
         call memalloc(insp, sizespec, 'r')
         call memalloc(ipsp, sizespec, 'r')
         call memalloc(imsp, sizespec, 'l')
         if (iside(i).gt.0) call memalloc(iwsp, sizespec, 'r')
-c
-c Loop over number of spectrum locations
-c
+
+c       Loop over number of spectrum locations.
         do j = 1, npos
-c
-c Locate desired sub-cube in spectrum cube
-c
+c         Locate desired sub-cube in spectrum cube.
           call specloc(lh, ls, snaxis, ssize, opos(1,j), vrange,
-     *                  spax, sblc, strc, fits)
-c
-c Continue if requested spectrum can be extracted from the cube
-c
+     *                  spcAx, sblc, strc, fits)
+
+c         Continue if requested spectrum can be extracted from the cube.
           if (fits(1) .and. fits(2)) then
-c
-c Is this spatial area blanked in pixel map and contour images ?
-c
+c           Is this spatial area blanked in pixel map and contour
+c           images?
             allblnk  = .false.
             miss = .false.
             if (.not.igblank .and. .not.allgood)
      *        call specblnk(lh, opos(1,j), blc, trc, win(1),
      *                      win(2), memi(ipimb), allblnk, miss)
-c
-c Spatial area not all blanked, continue
-c
+
+c           Spatial area not all blanked, continue.
             if (allblnk) then
-              write(aline, 130) j, ofile2(1:len1(ofile2))
-130           format('Overlay # ', i4, ' from file ', a,
+              write(aline, 40) j, ofile2(1:len1(ofile2))
+ 40           format('Overlay # ', i4, ' from file ', a,
      *                ' is located on blanked spatial pixels')
               call bug('w', aline)
             else if (miss) then
               if ((nofile.eq.1 .and. j.eq.1) .or. nofile.gt.1) then
-                write(aline, 140) j, ofile2(1:len1(ofile2))
-140             format('Overlay # ', i4, ' from file ', a,
+                write(aline, 50) j, ofile2(1:len1(ofile2))
+ 50             format('Overlay # ', i4, ' from file ', a,
      *                  ' is not on the pixel map/contour image(s)')
                 call bug('w', aline)
               endif
+
             else
-c
-c Set up for XYZIO call
-c
+c             Set up for XYZIO call.
               call xyzsetup(ls, axisname, sblc, strc, virsiz, vircsiz)
-c
-c Read and spatially bin up the sub-cube producing spectrum
-c
-              call specin(ls, snaxis, sblc, spax, virsiz,
+
+c             Read and spatially bin up the sub-cube producing spectrum.
+              call specin(ls, snaxis, sblc, spcAx, virsiz,
      *           spnorm, iscale(i), memr(ixsp), memr(iysp),
      *           memi(insp), allzero, memr(ipsp), meml(imsp))
-c
-c Draw spectrum
-c
-              npts = strc(spax) - sblc(spax) + 1
+
+c             Draw spectrum.
+              npts = strc(spcAx) - sblc(spcAx) + 1
               if (allzero) then
-                write(aline, 150) j, ofile2(1:len1(ofile2))
-150             format('Spectrum # ', i4, ' from ', a,
-     *                  ' is all blanked')
+                write(aline, 60) j, ofile2(1:len1(ofile2))
+ 60             format('Spectrum # ',i4,' from ',a,' is all blanked')
                 call bug('w', aline)
               else
-                call pltspec(i, j, maxdim, sgrps, iside(i), opos(1,j),
+                call pltspec(i, j, MAXDIM, sgrps, iside(i), opos(1,j),
      *             vfrac, npts, vrange, memr(ixsp), memr(iysp),
      *             memi(insp), memr(iwsp), irange, vpn, vpw, tick,
      *             doaxes, doframe, slines(1,i), mark, naked,
@@ -960,26 +900,25 @@ c
             endif
           else
             if (.not.fits(1)) then
-              write(aline, 200) j, ofile2(1:len1(ofile2)),
+              write(aline, 70) j, ofile2(1:len1(ofile2)),
      *          txtfill(iside(i))(1:tflen(iside(i))),
      *          spin(i)(1:len1(spin(i)))
-200           format('Overlay # ', i4, ' (', a, ')',
-     *                ' not in spatial range of ', a, ' image ', a)
+ 70           format('Overlay # ', i4, ' (', a, ')',
+     *               ' not in spatial range of ', a, ' image ', a)
               call output(aline)
             endif
             if (.not.fits(2)) then
-              write(aline, 250) j, ofile2(1:len1(ofile2)),
+              write(aline, 80) j, ofile2(1:len1(ofile2)),
      *          txtfill(iside(i))(1:tflen(iside(i))),
      *          spin(i)(1:len1(spin(i)))
-250           format('Overlay # ', i4, ' (', a, ')',
-     *                ' not in spectral range of ', a, ' image ', a)
+ 80           format('Overlay # ', i4, ' (', a, ')',
+     *               ' not in spectral range of ', a, ' image ', a)
               call output(aline)
             endif
           endif
         enddo
-c
-c Close spectrum image and free up memory for next image
-c
+
+c       Close spectrum image and free up memory for next image.
         call memfree(ixsp, sizespec, 'r')
         call memfree(iysp, sizespec, 'r')
         call memfree(insp, sizespec, 'i')
@@ -991,9 +930,8 @@ c
       enddo
       call finco(lh)
       call xyclose(lh)
-c
-c Free up merged mask memory and close PGPLOT device
-c
+
+c     Free merged mask memory and close PGPLOT device.
       if (.not.allgood) call memfree(ipimb, win(1)*win(2), 'i')
       call pgend
 
@@ -1003,20 +941,10 @@ c***********************************************************************
 
       subroutine cgbox (xa, xb, xd, i1, i2)
 
-      real xa, xb, xd
-      integer i1, i2
+      real      xa, xb, xd
+      integer   i1, i2
 c-----------------------------------------------------------------------
-c     This routine is used to determine where to draw the tick marks on
-c     an axis. The input arguments XA and XB are the world-coordinate
-c     end points of the axis; XD is the tick interval. PGBOX1 returns
-c     two integers, I1 and I2, such that the required tick marks are
-c     to be placed at world-coordinates (I*XD), for I=I1,...,I2.
-c     Normally I2 is greater than or equal to I1, but if there are no
-c     values of I such that I*XD lies in the inclusive range (XA, XB),
-c     then I2 will be 1 less than I1.
-c
-c     This is a direct copy of PGBOX1, which is not a user called
-c     subroutine.
+c  Determine where to draw the tick marks on an axis.
 c
 c  Input
 c    xa,xb   world-coordinate end points of the axis. XA must
@@ -1025,7 +953,9 @@ c    xd      world-coordinate tick interval. XD may be positive
 c            or negative, but may not be zero.
 c  Output
 c    i1,i2   tick marks should be drawn at world coords I*XD for
-c            I in the inclusive range  I1...I2 (see above).
+c            integral I in such that I1 <= I <= I2.  Normally I1 <= I1,
+c            but if there are no values of I such that I*XD lies in the
+c            inclusive range (XA, XB), then I2 = I1-1.
 c-----------------------------------------------------------------------
       real xlo, xhi
 c-----------------------------------------------------------------------
@@ -1040,60 +970,57 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine chkax (lh, dovel, in)
+      subroutine chkax (lIn, doSpc, inp)
 
-      integer lh
-      logical dovel
-      character*(*) in
+      integer   lIn
+      logical   doSpc
+      character inp*(*)
 c-----------------------------------------------------------------------
-c     Make sure image has radian pixel increments and maybe  a
-c     velocity axis
+c  Make sure image has radian pixel increments and, optionally, a
+c  velocity axis.
 c
 c  Input
-c    lh      Image handle
-c    dovel   Look for velocity axis too
-c    in      Image name
+c    lIn     Image handle
+c    doSpc   Look for velocity axis too
+c    inp     Image name
 c-----------------------------------------------------------------------
-      include 'maxnax.h'
+      integer   i, iax, naxis, spcAx
+      character line*80
 
-      character line*80, itoaf*1
-      integer iax, len1, ivax, i, naxis
+      external  itoaf, len1
+      integer   len1
+      character itoaf*1
 c-----------------------------------------------------------------------
-      call rdhdi(lh, 'naxis', naxis, 0)
-      ivax = 0
-      if (dovel) then
-c
-c Look for velocity axis
-c
-        call axfndco(lh, 'VELO', naxis, 0, ivax)
-        if (ivax.eq.0) call axfndco(lh, 'FREQ', naxis, 0, ivax)
-        if (ivax.eq.0) then
-          line = 'Spectrum image '//in(1:len1(in))//
-     *         ' doesn''t have a velocity or frequency axis'
+      call rdhdi(lIn, 'naxis', naxis, 0)
+      if (doSpc) then
+c       Look for velocity axis.
+        call axfndco(lIn, 'VELO', naxis, 0, spcAx)
+        if (spcAx.eq.0) call axfndco(lIn, 'FREQ', naxis, 0, spcAx)
+        if (spcAx.eq.0) then
+          line = 'Spectrum image '//inp(1:len1(inp))//
+     *           ' doesn''t have a velocity or frequency axis'
           call bug('f', line)
         endif
-c
-c Look for radian axes
-c
+
+c       Look for radian axes.
         do i = 1, min(3,naxis)
-          if (i.ne.ivax) then
-            call axfndco(lh, 'RAD', 0, i, iax)
+          if (i.ne.spcAx) then
+            call axfndco(lIn, 'RAD', 0, i, iax)
             if (iax.eq.0) then
-              line = 'Spectrum image '//in(1:len1(in))//
+              line = 'Spectrum image '//inp(1:len1(inp))//
      *               ' axis '//itoaf(i)//
      *               ' doesn''t have radian pixel increments'
               call bug('f', line)
             endif
           endif
         enddo
+
       else
-c
-c Just check radian increments on first two axes
-c
+c       Just check radian increments on first two axes
         do i = 1, min(2,naxis)
-          call axfndco(lh, 'RAD', 0, i, iax)
+          call axfndco(lIn, 'RAD', 0, i, iax)
           if (iax.eq.0) then
-            line = 'Image '//in(1:len1(in))//' axis '//itoaf(i)//
+            line = 'Image '//inp(1:len1(inp))//' axis '//itoaf(i)//
      *             ' doesn''t have radian pixel increments'
             call bug('f', line)
           endif
@@ -1110,11 +1037,11 @@ c***********************************************************************
       integer l1, l2
       character*(*) im1, im2
 c-----------------------------------------------------------------------
-c     Compare axis descriptors for the first three axes
+c  Compare axis descriptors for the first three axes.
 c
 c  Input:
-c   l1,l2    Handles
-c   im1,2    Images
+c    l1,l2    Handles
+c    im1,2    Images
 c-----------------------------------------------------------------------
       double precision d1, d2
       real r1, r2
@@ -1190,22 +1117,18 @@ c***********************************************************************
       integer ncon, lc(ncon), lg, lb
       character*(*) cin(*), gin, bin
 c-----------------------------------------------------------------------
-c     Check all the images for internal consistency
+c  Check all the images for internal consistency
 c
-c   Input:
-c     l*         Handles
-c     ncon       Number of contour images
-c     relax      Only warnings instead of fatal errror for inconsistent
-c                axis descriptors
-c     *in        Input image names
+c  Input:
+c    l*         Handles
+c    ncon       Number of contour images
+c    relax      Only warnings instead of fatal errror for inconsistent
+c               axis descriptors
+c    *in        Input image names
 c-----------------------------------------------------------------------
-      include 'maxdim.h'
-
       integer i, j
 c-----------------------------------------------------------------------
-c
-c Check contour images for self consistency
-c
+c     Check contour images for self consistency.
       if (ncon.gt.1) then
         do i = 1, ncon-1
           do j = i+1, ncon
@@ -1213,23 +1136,21 @@ c
           enddo
         enddo
       endif
-c
-c Check first contour image for consistency with other images
-c
+
+c     Check first contour image for consistency with other images.
       if (ncon.gt.0) then
         if (gin.ne.' ') call chkdes(relax, lc, lg, cin, gin)
         if (bin.ne.' ') call chkdes(relax, lc, lb, cin, bin)
       endif
-c
-c Check pixel map images for consistency with other images
-c
+
+c     Check pixel map images for consistency with other images.
       if (gin.ne.' ' .and.  bin.ne.' ')
-     *   call chkdes(relax, lg, lb, gin, bin)
+     *  call chkdes(relax, lg, lb, gin, bin)
 
       end
-c
+
 c***********************************************************************
-c
+
       subroutine decopt (dofull, eqscale, solneg, relax, doaxes,
      *   doframe, mark, norm, naked, number, mirror, colour,
      *   blconly, doerase, doepoch, igblank, dofid, dowedge, dotwo,
@@ -1239,32 +1160,32 @@ c
      *  mark, norm, naked, number, mirror, colour, blconly, doerase,
      *  doepoch, igblank, dofid, dowedge, dotwo, dogrid, blacklab
 c-----------------------------------------------------------------------
-c     Decode options array into named variables.
+c  Decode options array into named variables.
 c
-c   Output:
-c     dofull    True means do full annotation of plot
-c     eqscale   True means plot with x and y scales
-c     solneg    True means plot negative contours with solid line
-c               style and positive contours with dashed line style
-c               One for each contour image
-c     relax     If true issue warnings about mismatched axis
-c               descriptors between images instead of fatal error
-c     doaxes    Draw x=y=0 axes and label then for each spectrum
-c     doframe   Put frame around each spectrum and  label it
-c     mark      Mark spectrum locations
-c     norm      Normalize spectra to peak of 1.0
-c     number    Number the overlays
-c     doerase   Erase background for number to be written on
-c     mirror    DUplicate negative of the contours
-c     colour    COlour axes
-c     blconly   Only put frame or axes on spectrum in BLC of plot
-c     doepoch   Write epoch into axis labels
-c     igblank   Ignore spatial blanks when drawing spectra
-c     dofid     Fiddle lookup table
-c     dowedge   Draw pixel map wedge
-c     dotwo     Two sided derivative for "dspectrum" else 1 sided
-c     dogrid    Draw coordinate grid
-c     blacklab  True if labels are black for white background devices
+c  Output:
+c    dofull    True means do full annotation of plot
+c    eqscale   True means plot with x and y scales
+c    solneg    True means plot negative contours with solid line
+c              style and positive contours with dashed line style
+c              One for each contour image
+c    relax     If true issue warnings about mismatched axis
+c              descriptors between images instead of fatal error
+c    doaxes    Draw x=y=0 axes and label then for each spectrum
+c    doframe   Put frame around each spectrum and  label it
+c    mark      Mark spectrum locations
+c    norm      Normalize spectra to peak of 1.0
+c    number    Number the overlays
+c    doerase   Erase background for number to be written on
+c    mirror    DUplicate negative of the contours
+c    colour    COlour axes
+c    blconly   Only put frame or axes on spectrum in BLC of plot
+c    doepoch   Write epoch into axis labels
+c    igblank   Ignore spatial blanks when drawing spectra
+c    dofid     Fiddle lookup table
+c    dowedge   Draw pixel map wedge
+c    dotwo     Two sided derivative for "dspectrum" else 1 sided
+c    dogrid    Draw coordinate grid
+c    blacklab  True if labels are black for white background devices
 c-----------------------------------------------------------------------
       integer maxopt
       parameter (maxopt = 23)
@@ -1313,14 +1234,14 @@ c***********************************************************************
       integer n, side
       real spec(n), work(n)
 c-----------------------------------------------------------------------
-c     Take derivative of spectrum
+c  Take derivative of spectrum
 c
-c   Inputs:
-c     side      1 or 2 for 1 or 2 sided derivative
-c     n         Number of channels
-c     work      Work array
-c   Input/output
-c     spec      SPectrum. On output contains derivative
+c  Inputs:
+c    side      1 or 2 for 1 or 2 sided derivative
+c    n         Number of channels
+c    work      Work array
+c  Input/output
+c    spec      SPectrum. On output contains derivative
 c-----------------------------------------------------------------------
       integer i
 c-----------------------------------------------------------------------
@@ -1332,18 +1253,15 @@ c-----------------------------------------------------------------------
         do i = 2, n-1
           work(i) = 0.5 * (spec(i+1) - spec(i-1))
         enddo
-c
-c  Fudge end
-c
+
+c       Fudge end.
         work(n) = work(n-1)
       endif
-c
-c  Fudge beginning
-c
+
+c     Fudge beginning.
       work(1) = work(2)
-c
-c  Copy
-c
+
+c     Copy.
       do i = 1, n
         spec(i) = work(i)
       enddo
@@ -1353,95 +1271,89 @@ c
 c***********************************************************************
 
       subroutine fullann (lh, ncon, cin, gin, nspec, spin, lc, lg,
-     *   maxlev, nlevs, levs, srtlev, slev, trfun, pixr, vymin, blc,
+     *   MAXLEV, nlevs, levs, srtlev, slev, trfun, pixr, vymin, blc,
      *   trc, pcs, ydispb, iscale, labtyp, ibin, jbin, gmm, cmm)
 
-      integer maxlev, ncon, nlevs(*), blc(*), trc(*), lc(*), lg, lh,
-     *  nspec, srtlev(maxlev,*), ibin(2), jbin(2)
-      real levs(maxlev,*), vymin, slev(*), pixr(2), pcs, ydispb,
+      integer MAXLEV, ncon, nlevs(*), blc(*), trc(*), lc(*), lg, lh,
+     *  nspec, srtlev(MAXLEV,*), ibin(2), jbin(2)
+      real levs(MAXLEV,*), vymin, slev(*), pixr(2), pcs, ydispb,
      *  iscale(nspec), gmm(*), cmm(3,*)
       character*(*) cin(*), gin, trfun, spin(nspec), labtyp(2)
 c-----------------------------------------------------------------------
-c     Full annotation of plot with contour levels, RA and DEC etc.
+c  Full annotation of plot with contour levels, RA and DEC etc.
 c
-c     Input
-c       ncon       Number of contour images
-c       c,gin      Image names
-c       nspec      Number of spectrum images
-c       spin       Spectrum images
-c       lc,g       Handles for images
-c       nlevs      Number of contour levels for each image
-c       levs       Contour levels for each image
-c       srtlev     Indexing arrya to order contoures in increasing order
-c       slev       Contour level scale factors for each image
-c       trfun      'log' or 'lin' transfer function
-c       pixr       pixel map intensity range
-c       vymin      y viewsurface normalized device coordinate
-c                  at which the lowest sub-plot x-axis is drawn
-c       blc,trc    Image window in pixels
-c       pcs        PGPLOT character size parameters for plot
-c       ydispb     Displacement of x-axis label in character heights
-c       iscale     Scale factors for each spectrum image
-c       labtyp     Axis label types
-c       i,jbin     Spatial inc/bin
-c       *mm        Displayed min/max
+c  Input
+c    ncon       Number of contour images
+c    c,gin      Image names
+c    nspec      Number of spectrum images
+c    spin       Spectrum images
+c    lc,g       Handles for images
+c    nlevs      Number of contour levels for each image
+c    levs       Contour levels for each image
+c    srtlev     Indexing arrya to order contoures in increasing order
+c    slev       Contour level scale factors for each image
+c    trfun      'log' or 'lin' transfer function
+c    pixr       pixel map intensity range
+c    vymin      y viewsurface normalized device coordinate
+c               at which the lowest sub-plot x-axis is drawn
+c    blc,trc    Image window in pixels
+c    pcs        PGPLOT character size parameters for plot
+c    ydispb     Displacement of x-axis label in character heights
+c    iscale     Scale factors for each spectrum image
+c    labtyp     Axis label types
+c    i,jbin     Spatial inc/bin
+c    *mm        Displayed min/max
 c-----------------------------------------------------------------------
       real xpos, ypos, yinc
       integer i, kbin(2)
       data kbin /0, 0/
 c-----------------------------------------------------------------------
-c
-c Setup chores and and annotate with reference value.
-c
+c     Setup chores and and annotate with reference value.
       call anninicg(lh, .true., vymin, pcs, ydispb, labtyp,
      *               xpos, ypos, yinc)
-c
-c Write spatial window in pixels and channel inc. if possible
-c
+
+c     Write spatial window in pixels and channel inc. if possible.
       call annwincg(lh, blc, trc, ibin, jbin, kbin, yinc, xpos, ypos)
-c
-c Write pixel map information
-c
+
+c     Write pixel map information.
       if (gin.ne.' ') call anngrscg(lg, gin, 1, pixr, trfun, gmm,
      *                               yinc, xpos, ypos)
-c
-c Write contour image information
-c
+
+c     Write contour image information.
       if (ncon.gt.0) then
         do i = 1, ncon
           call annconcg(lc(i), cin(i), slev(i), nlevs(i), levs(1,i),
      *       srtlev(1,i), cmm(1,i), yinc, xpos, ypos)
         enddo
       endif
-c
-c Write spectrum image names; there will be at least one
-c
+
+c     Write spectrum image names; there will be at least one.
       call annspccg(nspec, spin, iscale, yinc, xpos, ypos)
 
       end
 
 c***********************************************************************
 
-      subroutine genpos (lh, ofile, blc, trc, maxpos, npos, opos)
+      subroutine genpos (lh, ofile, blc, trc, MAXPOS, npos, opos)
 
-      integer maxpos, npos, blc(2), trc(2), lh
-      double precision opos(4,maxpos)
+      integer MAXPOS, npos, blc(2), trc(2), lh
+      double precision opos(4,MAXPOS)
       character*(*) ofile
 c-----------------------------------------------------------------------
-c     Generate automatic list of positions at regular intervals
-c     on the image
+c  Generate automatic list of positions at regular intervals on the
+c  image.
 c
-c   Inputs
-c     lh        Handle of generic spatial image
-c     ofile     Overlay file
-c     blc,trc   COntour/pixel map window
-c     maxpos    Max number of positions allowed
-c   Output
-c     npos      Number of positions
-c     opos      Array containing overlay
-c                 X   Y   XSIZ   YSIZ    where X and Y are in
-c              contour/pixel map unbined full image spatial pixels
-c              & XSIZ and YSIZ are in ARCSEC
+c  Inputs
+c    lh        Handle of generic spatial image
+c    ofile     Overlay file
+c    blc,trc   COntour/pixel map window
+c    MAXPOS    Max number of positions allowed
+c  Output
+c    npos      Number of positions
+c    opos      Array containing overlay
+c                X   Y   XSIZ   YSIZ    where X and Y are in
+c             contour/pixel map unbined full image spatial pixels
+c             & XSIZ and YSIZ are in ARCSEC
 c-----------------------------------------------------------------------
       double precision cdelt
       integer lpos, i, iostat, len1, ilen, lo
@@ -1459,16 +1371,14 @@ c-----------------------------------------------------------------------
       call txtopen(lpos, ofile, 'old', iostat)
       aline = 'Error opening positions file '//ofile(1:lo)
       if (iostat.ne.0) call bug('f', aline)
-c
-c Read and discard first line which was checked in OPNCHK
-c to be either IRREGULAR or GRID (in this case).
-c
+
+c     Read and discard first line which was checked in OPNCHK to be
+c     either IRREGULAR or GRID (in this case).
       call txtread(lpos, aline, ilen, iostat)
       aline = 'Error reading first line from overlay file '//ofile(1:lo)
       if (iostat.ne.0) call bug('f', aline)
-c
-c Read grid information.  # means comment
-c
+
+c     Read grid information.  # means comment.
       iostat = 0
       do while (iostat.ne.-1)
         aline = ' '
@@ -1488,10 +1398,9 @@ c
       call txtclose(lpos)
       aline = 'Invalid information in overlay file '//ofile(1:lo)
       if (inc(1)*inc(2).eq.0.0) call bug('f', aline)
-c
-c Convert increment to pixels.  Axes checked to be in radians in
-c subroutines OPNCHK
-c
+
+c     Convert increment to pixels.  Axes checked to be in radians in
+c     subroutines OPNCHK.
       do i = 1, 2
         call rdhdd(lh, 'cdelt'//itoaf(i), cdelt, 0d0)
         pinc(i) = inc(i) / abs(cdelt*rtoa)
@@ -1499,9 +1408,8 @@ c
      *           //ofile(1:lo)
         if (pinc(i).ge.trc(i)-blc(i)) call bug('f', aline)
       enddo
-c
-c Now loop over image and generate list
-c
+
+c     Loop over image and generate list.
       npos = 0
       y = blc(2) + pinc(2)/2.0
       do while (y.lt.trc(2))
@@ -1513,7 +1421,7 @@ c
           opos(3,npos) = bin(1)
           opos(4,npos) = bin(2)
 
-          if (npos.eq.maxpos) then
+          if (npos.eq.MAXPOS) then
             aline = 'Reached max. no. of allowed spectrum locations in '
      *              //ofile(1:lo)
             call bug('w', aline)
@@ -1531,7 +1439,7 @@ c
 
 c***********************************************************************
 
-      subroutine inputs (maxlev, maxcon, maxspec, maxtyp, ltypes, ncon,
+      subroutine inputs (MAXLEV, MAXCON, MAXSPEC, MAXTYP, ltypes, ncon,
      *   nspec, cin, gin, bin, spin, iside, levtyp, slev, levs, nlevs,
      *   pixr, trfun, coltab, pdev, labtyp, dofull, eqscale, solneg,
      *   clines, break, cs, ofile, nofile, relax, slines, vrange, vfrac,
@@ -1539,85 +1447,85 @@ c***********************************************************************
      *   blines, number, mirror, colour, blconly, doerase, doepoch,
      *   igblank, dofid, dowedge, dogrid, blacklab, ibin, jbin)
 
-      integer maxlev, maxcon, maxspec, maxtyp, ncon, nspec, nofile,
+      integer MAXLEV, MAXCON, MAXSPEC, MAXTYP, ncon, nspec, nofile,
      *        coltab
-      real levs(maxlev,maxcon), pixr(2), cs(2), slev(maxcon),
-     *  break(maxcon), vrange(2), vfrac(2), irange(2), tick(2),
-     *  scale(maxspec)
-      integer nlevs(maxcon), clines(maxcon), slines(2,maxspec),
-     *  blines(2), ibin(2), jbin(2), iside(maxspec)
-      character*(*) labtyp(2), cin(maxcon), gin, bin, spin(maxspec),
-     *  pdev, ofile(maxspec), trfun, levtyp(maxcon), ltypes(maxtyp)
-      logical dofull, eqscale, solneg(maxcon), relax, doframe, doaxes,
+      real levs(MAXLEV,MAXCON), pixr(2), cs(2), slev(MAXCON),
+     *  break(MAXCON), vrange(2), vfrac(2), irange(2), tick(2),
+     *  scale(MAXSPEC)
+      integer nlevs(MAXCON), clines(MAXCON), slines(2,MAXSPEC),
+     *  blines(2), ibin(2), jbin(2), iside(MAXSPEC)
+      character*(*) labtyp(2), cin(MAXCON), gin, bin, spin(MAXSPEC),
+     *  pdev, ofile(MAXSPEC), trfun, levtyp(MAXCON), ltypes(MAXTYP)
+      logical dofull, eqscale, solneg(MAXCON), relax, doframe, doaxes,
      *  mark, norm, naked, number, mirror, colour, blconly, doerase,
      *  doepoch, igblank, dofid, dowedge, dogrid, dunw, blacklab
 c-----------------------------------------------------------------------
-c     Get the unfortunate user's long list of inputs
+c  Get the unfortunate user's long list of inputs
 c
 c  Input:
-c   maxlev     Maximum number of allowed contour levels
-c   maxcon     Maximum number of contour images
-c   maxspec    Maximum number of spectrum images allowed
-c   maxtyp     Maximum number of potential label types
-c   ltypes     Potential label types
+c    MAXLEV     Maximum number of allowed contour levels
+c    MAXCON     Maximum number of contour images
+c    MAXSPEC    Maximum number of spectrum images allowed
+c    MAXTYP     Maximum number of potential label types
+c    ltypes     Potential label types
 c  Output:
-c   ncon       Number of contour images
-c   nspec      Number of spectrum images
-c   c,g,b,spin Contour, oixel map, mask, and spectrum image names
-c   iside      0 -> spectrum image, 1-> 1-sided derivative spectrum,
-c              2 -> 2-sided derivative spectrum image
-c   levtyp     Type of contour levels scale factors for each contour
-c              image:  'p'(ercentage) or 'a'(bsolute)
-c   slev       Contour levels scale factors (absolute or percentage)
-c              for each contour image
-c   levs       Contour levels for each contour image.   Will be scaled
-c              by SLEV for contouring
-c   nlevs      Number of contour levels for each contour image
-c   pixr       Pixel map intensity range
-c   trfun      Type of pixel map transfer function: log,lin,sqr,or heq
-c   coltab     Colour table to apply to device.
-c   pdev       PGPLOT plot device/type
-c   labtyp     Type of labels for x and y axes
-c   dofull     True means do full annotaiton of plot
-c   eqscale    True means plot with x and y scales
-c   solneg     True means plot negative contours with solid line
-c              style and positive contours with dashed line style
-c              One for each contour image
-c   clines     PGPLOT line widths for each contour image
-c   break      Level for break between solid and dashed contours
-c              for each contour image
-c   cs         PGPLOT character sizes for the plot axis labels and
-c              spectra
-c   ofile      Overlay  file name(s)
-c   nofile     Number of overlay files
-c   relax      Only issue warnings instead of fatal eror when
-c              axis descriptors don;t agree between images
-c              the direction of increasing X and Y
-c   slines     SPectrum line widths an dline styles
-c   vrange     Velocity range to plot
-c   vfrac      The fraction of the view-port that each spectrum takes up
-c   irange     Intesnity range to plot
-c   tick       Ticj increments on the X and Y axes for the spectra
-c   doaxes     Draw x=0 y=0 axes on spectra and label them
-c   doframe    Draw frame around each spectrum and label the frame
-c   scale      Scale factors for each spectrum image
-c   norm       Normalize all spectra to have a peak of 1.0
-c   naked      DOn't write numeric axis labels
-c   bline      Line widths for contour/gtey borders and spectra
-c   number     Number the spectra
-c   doerase    Erase rectangle for spectrum number
-c   mirror     causes all specified contour levels for all images
-c              to be multiplied by -1 and added to the list of contours
-c   colour     Colour axes
-c   blconly    Only put frame or axes on spectrum in blc of plot
-c   doepoch    Write EPoch into axis labels
-c   igblank    Ignore spatial blanks when drawing spectra
-c   dofid      Fiddle lookup table
-c   dowedge    Draw pixel map wedge
-c   dogrid     Draw overlay grid
-c   blacklab   True if labels are black for white background devices
-c   i,jbin     SPatial pixek increment and averaging in x and y
-c              directions
+c    ncon       Number of contour images
+c    nspec      Number of spectrum images
+c    c,g,b,spin Contour, oixel map, mask, and spectrum image names
+c    iside      0 -> spectrum image, 1-> 1-sided derivative spectrum,
+c               2 -> 2-sided derivative spectrum image
+c    levtyp     Type of contour levels scale factors for each contour
+c               image:  'p'(ercentage) or 'a'(bsolute)
+c    slev       Contour levels scale factors (absolute or percentage)
+c               for each contour image
+c    levs       Contour levels for each contour image.   Will be scaled
+c               by SLEV for contouring
+c    nlevs      Number of contour levels for each contour image
+c    pixr       Pixel map intensity range
+c    trfun      Type of pixel map transfer function: log,lin,sqr,or heq
+c    coltab     Colour table to apply to device.
+c    pdev       PGPLOT plot device/type
+c    labtyp     Type of labels for x and y axes
+c    dofull     True means do full annotaiton of plot
+c    eqscale    True means plot with x and y scales
+c    solneg     True means plot negative contours with solid line
+c               style and positive contours with dashed line style
+c               One for each contour image
+c    clines     PGPLOT line widths for each contour image
+c    break      Level for break between solid and dashed contours
+c               for each contour image
+c    cs         PGPLOT character sizes for the plot axis labels and
+c               spectra
+c    ofile      Overlay  file name(s)
+c    nofile     Number of overlay files
+c    relax      Only issue warnings instead of fatal eror when
+c               axis descriptors don;t agree between images
+c               the direction of increasing X and Y
+c    slines     SPectrum line widths an dline styles
+c    vrange     Velocity range to plot
+c    vfrac      The fraction of the view-port that each spectrum takes up
+c    irange     Intensity range to plot
+c    tick       Ticj increments on the X and Y axes for the spectra
+c    doaxes     Draw x=0 y=0 axes on spectra and label them
+c    doframe    Draw frame around each spectrum and label the frame
+c    scale      Scale factors for each spectrum image
+c    norm       Normalize all spectra to have a peak of 1.0
+c    naked      DOn't write numeric axis labels
+c    bline      Line widths for contour/gtey borders and spectra
+c    number     Number the spectra
+c    doerase    Erase rectangle for spectrum number
+c    mirror     causes all specified contour levels for all images
+c               to be multiplied by -1 and added to the list of contours
+c    colour     Colour axes
+c    blconly    Only put frame or axes on spectrum in blc of plot
+c    doepoch    Write EPoch into axis labels
+c    igblank    Ignore spatial blanks when drawing spectra
+c    dofid      Fiddle lookup table
+c    dowedge    Draw pixel map wedge
+c    dogrid     Draw overlay grid
+c    blacklab   True if labels are black for white background devices
+c    i,jbin     SPatial pixek increment and averaging in x and y
+c               directions
 c-----------------------------------------------------------------------
       integer nmaxim
       parameter (nmaxim = 10)
@@ -1635,16 +1543,14 @@ c-----------------------------------------------------------------------
       data dunw /.false./
 c-----------------------------------------------------------------------
       call keyini
-c
-c Get options first
-c
+
+c     Get options first.
       call decopt(dofull, eqscale, solneg, relax, doaxes, doframe,
      *   mark, norm, naked, number, mirror, colour, blconly,
      *   doerase, doepoch, igblank, dofid, dowedge, dotwo, dogrid,
      *   blacklab)
-c
-c Sort out input images
-c
+
+c     Sort out input images.
       call mkeyf('in', images, nmaxim, nim)
       if (nim.eq.0) call bug('f', 'No images given')
       call keymatch('type', ntype, type, nmaxim, imtype, nimtype)
@@ -1660,7 +1566,7 @@ c
         endif
 
         if (imtype(i).eq.'contour') then
-          if (ncon.ge.maxcon) then
+          if (ncon.ge.MAXCON) then
             call bug('f', 'Too many contour images given')
           else
             ncon = ncon + 1
@@ -1680,7 +1586,7 @@ c
           endif
         else if (imtype(i).eq.'spectrum' .or.
      *           imtype(i).eq.'dspectrum') then
-          if (nspec.ge.maxspec) then
+          if (nspec.ge.MAXSPEC) then
             call bug('f', 'Too many spectrum images given')
           else
             nspec = nspec + 1
@@ -1706,9 +1612,8 @@ c
      *       'You have given the same spectrum image twice')
         enddo
       enddo
-c
-c Get on with the rest
-c
+
+c     Get on with the rest.
       call keyi('xybin', ibin(1), 1)
       call keyi('xybin', ibin(2), ibin(1))
       if (ibin(2).ne.1 .and. ibin(2).ne.ibin(1)) call bug('f',
@@ -1739,9 +1644,9 @@ c
           call keyr('slev', slev(i), 0.0)
         enddo
       endif
-      do i = 1, maxcon
+      do i = 1, MAXCON
         str = itoaf(i)
-        call mkeyr('levs'//str,  levs(1,i), maxlev, nlevs(i))
+        call mkeyr('levs'//str,  levs(1,i), MAXLEV, nlevs(i))
       enddo
 
       call keyr('grange', pixr(1), 0.0)
@@ -1772,7 +1677,7 @@ c
 
       call keya('device', pdev, ' ')
 
-      call keymatch('labtyp', maxtyp, ltypes, 2, labtyp, nlab)
+      call keymatch('labtyp', MAXTYP, ltypes, 2, labtyp, nlab)
       if (nlab.eq.0) then
         labtyp(1) = 'relpix'
         labtyp(2) = 'relpix'
@@ -1838,7 +1743,7 @@ c
       if (cs(1).le.0.0) cs(1) = 1.3
       call keyr('csize', cs(2), 0.0)
 
-      call mkeyf('olay', ofile, maxspec, nofile)
+      call mkeyf('olay', ofile, MAXSPEC, nofile)
       if (nofile.eq.0) call bug('f', 'You must give an overlay file')
       if (nofile.gt.1 .and. nofile.lt.nspec) call bug('f',
      *  'You must specify an overlay file for each spectrum image')
@@ -1855,8 +1760,7 @@ c***********************************************************************
       character*(*) gin
       logical allgood
 c-----------------------------------------------------------------------
-c     Merge the normalization images stored in scratch files
-c     into a mask
+c  Merge the normalization images stored in scratch files into a mask.
 c
 c  Input
 c    maxcon  Max. no. of contour images allowed
@@ -1870,7 +1774,7 @@ c    lg,lc   Handles for scratch files containing the locations of
 c            flagged pixels in pixel map  and contour images  If 0 then
 c            there is no scratch file open for that image
 c    is,js   Size of displayed region
-c Output
+c  Output
 c    mask    Merged mask.  0 means that all the displayed images are
 c            blanked at that pixel. 1 means that some of them were
 c            unblanked
@@ -1881,41 +1785,36 @@ c-----------------------------------------------------------------------
       integer i, j, k, l, off, nim, nblim
       real data(2)
 c-----------------------------------------------------------------------
-c
-c How many images did we display ?
-c
+c     How many images did we display?
       nim = 0
       if (gin.ne.' ') nim = nim + 1
       nim = nim + ncon
-c
-c See how many images had blanked pixels
-c
+
+c     How many images had blanked pixels?
       nblim = 0
       if (nblnkg.gt.0) nblim = nblim + 1
       do i = 1, maxcon
         if (nblnkc(i).gt.0) nblim = nblim + 1
       enddo
-c
-c If the number of images with blanked pixels is less than the number
-c of diplayed images, we can stop straight away, as this means that
-c not all of the images can be blanked at a certain spatial pixel
-c
+
+c     If the number of images with blanked pixels is less than the
+c     number of diplayed images, we can stop straight away, as this
+c     means that not all of the images can be blanked at a certain
+c     spatial pixel.
       if (nblim.lt.nim) then
         allgood = .true.
       else
         allgood = .false.
-c
-c Initialize mask to all good (different convention to usual
-c when 0 means a bad pixel)
-c
+
+c       Initialize mask to all good (different convention to usual
+c       when 0 means a bad pixel).
         do j = 1, js
           do i = 1, is
             mask(i,j) = 0
           enddo
         enddo
-c
-c Read scratch files and populate
-c
+
+c       Read scratch files and populate.
         if (lgn.ge.0) then
           off = 0
           do k = 1, nblnkg
@@ -1941,12 +1840,11 @@ c
             enddo
           endif
         enddo
-c
-c Now, we know if that a pixel is blanked in every 2-D image
-c that was displayed, the value of mask should be NIM.  So
-c go through the mask once more and set 0 = bad if all pixels
-c were blanked, and 1 = good to put it in the usual convention
-c
+
+c       Now, we know if that a pixel is blanked in every 2-D image
+c       that was displayed, the value of mask should be NIM.  So
+c       go through the mask once more and set 0 = bad if all pixels
+c       were blanked, and 1 = good to put it in the usual convention.
         do j = 1, js
           do i = 1, is
             if (mask(i,j).eq.nim) then
@@ -2002,35 +1900,29 @@ c***********************************************************************
       real tick, range(2)
       character*1 axis
 c-----------------------------------------------------------------------
-c     Write numeric labels on spectral axis a bit lower that normal and
-c     don't write the labels at x=0 and y=0 to avoid clutter
+c  Write numeric labels on spectral axis a bit lower that normal and
+c  don't write the labels at x=0 and y=0 to avoid clutter
 c
-c     This is based on some code from PGBOX
+c  This is based on some code from PGBOX
 c-----------------------------------------------------------------------
       real tint, xlen, ylen, xloc, yloc, yh
       integer np, nv, i1, i2, ntext, i
       character text*130
 c-----------------------------------------------------------------------
-c
-c Set tick increments
-c
+c     Set tick increments.
       call cgbox(range(1), range(2), tick, i1, i2)
       tint = sign(tick,range(2)-range(1))
       np = int(log10(abs(tint)))-4
       nv = nint(tint/10.0**np)
 
       if (axis.eq.'x') then
-c
-c Find height of one character in y direction in world coordinates
-c
+c       Get height of one character in y direction in world coordinates.
         call yhtwcg(yh)
-c
-c Set y location of labels
-c
+
+c       Set y location of labels.
         yloc = -1.5*yh
-c
-c Write labels
-c
+
+c       Write labels.
         do i = i1, i2
           xloc = i*tick
           if (i.ne.0.0) then
@@ -2038,15 +1930,13 @@ c
             call pgptxt(xloc, yloc, 0.0, 0.5, text(1:ntext))
           endif
         enddo
+
       else if (axis.eq.'y') then
-c
-c Set x location of labels
-c
+c       Set x location of labels.
         call pglen(4, 'X', xlen, ylen)
         xloc = -xlen
-c
-c Write labels
-c
+
+c       Write labels.
         do i = i1, i2
           yloc = i*tick
           if (i.ne.0.0) then
@@ -2060,31 +1950,30 @@ c
 
 c***********************************************************************
 
-      subroutine olaydec (lun, pl1, npl, maxtyp, ltypes, maxpos,
+      subroutine olaydec (lun, pl1, npl, MAXTYP, ltypes, MAXPOS,
      *                    ofile, npos, opos, iblc)
 
-      integer maxpos, npos, iblc, maxtyp, lun, pl1, npl
-      double precision opos(4,maxpos)
-      character ofile*(*), ltypes(maxtyp)*6
+      integer MAXPOS, npos, iblc, MAXTYP, lun, pl1, npl
+      double precision opos(4,MAXPOS)
+      character ofile*(*), ltypes(MAXTYP)*6
 c-----------------------------------------------------------------------
-c     Read overlay positions list file and decode
+c  Read overlay positions list file and decode
 c
-c   Inputs
-c     lun      Handele of pixel map/contour image
-c     pl1,npl  Start plane and number of planes displayed
-c     maxtyp   Maximum number of potential label types
-c     ltypes   Potential label types
-c     maxpos   Maximum number of allowed overlays
-c     ofile    Overlay file name
+c  Inputs
+c    lun      Handele of pixel map/contour image
+c    pl1,npl  Start plane and number of planes displayed
+c    MAXTYP   Maximum number of potential label types
+c    ltypes   Potential label types
+c    MAXPOS   Maximum number of allowed overlays
+c    ofile    Overlay file name
 c  Outputs
-c     npos     Number of overlays
-c     opos     Array containing overlay
-c                 X   Y   XSIZ   YSIZ    where X and Y are in
-c              contour/pixel map spatial pixels & XSIZ and YSIZ
-c              are in ARCSEC
-c     iblc     Number of overlay which is the closest to the BLC
-c              of the plot
-c
+c    npos     Number of overlays
+c    opos     Array containing overlay
+c                X   Y   XSIZ   YSIZ    where X and Y are in
+c             contour/pixel map spatial pixels & XSIZ and YSIZ
+c             are in ARCSEC
+c    iblc     Number of overlay which is the closest to the BLC
+c             of the plot
 c-----------------------------------------------------------------------
       double precision pix3
       integer iostat, ilen, lpos, lo, imin, jmin
@@ -2097,16 +1986,14 @@ c-----------------------------------------------------------------------
       call txtopen(lpos, ofile, 'old', iostat)
       aline = 'Error opening positions file '//ofile(1:lo)
       if (iostat.ne.0) call bug('f', aline)
-c
-c Read and discard first line which has already been found to contain
-c GRID or IRREGULAR in subroutine OPNCHK
-c
+
+c     Read and discard first line which has already been found to
+c     contain GRID or IRREGULAR in subroutine OPNCHK.
       call txtread(lpos, aline, ilen, iostat)
       aline = 'Error reading first line from overlay file '//ofile(1:lo)
       if (iostat.ne.0) call bug('f', aline)
-c
-c Read and decode locations.  # means comment
-c
+
+c     Read and decode locations.  # means comment.
       imin = 1e5
       jmin = 1e5
       npos = 0
@@ -2118,14 +2005,14 @@ c
         call txtread(lpos, aline, ilen, iostat)
         if (iostat.eq.0) then
           if (aline(1:1).ne.'#' .and. aline.ne.' ') then
-            if (npos.eq.maxpos) then
+            if (npos.eq.MAXPOS) then
               call bug('w', 'Reducing no. overlays to max. '//
-     *                       'allowed = '//itoaf(maxpos))
+     *                       'allowed = '//itoaf(MAXPOS))
               iostat = -1
             else
               npos = npos + 1
               ilen = len1(aline)
-              call posdec(lun, pix3, maxtyp, ltypes, ofile(1:lo), npos,
+              call posdec(lun, pix3, MAXTYP, ltypes, ofile(1:lo), npos,
      *                     aline(1:ilen), opos(1,npos))
 
               if (opos(1,npos).lt.imin .and. opos(2,npos).lt.jmin) then
@@ -2157,27 +2044,29 @@ c***********************************************************************
       logical grid(*)
       real imin, imax, vmin, vmax
 c-----------------------------------------------------------------------
-c     Make check on the existence of the requested files.  ALso
-c     fish out whether we have gridded or irregular overlays while
-c     we have the file open
+c  Check for the existence of the requested files.  ALso fish out
+c  whether we have gridded or irregular overlays while we have the file
+c  open.
 c
 c  Input
-c   nspec    No. spectrum images
-c   spin     Spectrum images
-c   iside    0 -> spectrum 1-> 1-sided derivative spectrum,
-c            2-> 2-sided derivative spectrum
-c   ncon     No. contour images
-c   cin      Contour image
-c   gin      pixel map image
-c   bin      Mask image
-c   nofile   No. overlay files
-c   ofile    Overlay files
-c   grid     Draw spectra at regular grtid locations as defined in OFILE
-c   vmin,max Velocity min and max from all spectrum images
-c   imin,max Min and max intensities from all spectrum images
+c    nspec    No. spectrum images
+c    spin     Spectrum images
+c    iside    0 -> spectrum 1-> 1-sided derivative spectrum,
+c             2-> 2-sided derivative spectrum
+c    ncon     No. contour images
+c    cin      Contour image
+c    gin      pixel map image
+c    bin      Mask image
+c    nofile   No. overlay files
+c    ofile    Overlay files
+c    grid     Draw spectra at regular grtid locations as defined in
+c             OFILE
+c    vmin,max Velocity min and max from all spectrum images
+c    imin,max Min and max intensities from all spectrum images
 c-----------------------------------------------------------------------
       include 'maxnax.h'
-      integer size(maxnax), lh, i, iostat, len1, ilen, iax, naxis
+
+      integer size(MAXNAX), lh, i, iostat, len1, ilen, naxis, spcAx
       double precision v1, v2
       real limin, limax, lvmin, lvmax
       character line*80
@@ -2188,7 +2077,7 @@ c-----------------------------------------------------------------------
           line = ' Verifying contour image             : '//
      *           cin(i)(1:len1(cin(i)))
           call output(line)
-          call xyopen(lh, cin(i), 'old', maxnax, size)
+          call xyopen(lh, cin(i), 'old', MAXNAX, size)
           call xyclose(lh)
         enddo
       endif
@@ -2197,7 +2086,7 @@ c-----------------------------------------------------------------------
         line = ' Verifying pixel map image           : '//
      *         gin(1:len1(gin))
         call output(line)
-        call xyopen(lh, gin, 'old', maxnax, size)
+        call xyopen(lh, gin, 'old', MAXNAX, size)
         call xyclose(lh)
       endif
 
@@ -2205,7 +2094,7 @@ c-----------------------------------------------------------------------
         line = ' Verifying mask image                : '//
      *         bin(1:len1(bin))
         call output(line)
-        call xyopen(lh, bin, 'old', maxnax, size)
+        call xyopen(lh, bin, 'old', MAXNAX, size)
         call xyclose(lh)
       endif
 
@@ -2218,7 +2107,8 @@ c-----------------------------------------------------------------------
      *           spin(i)(1:len1(spin(i)))
         endif
         call output(line)
-        call xyopen(lh, spin(i), 'old', maxnax, size)
+
+        call xyopen(lh, spin(i), 'old', MAXNAX, size)
         call initco(lh)
         call rdhdi(lh, 'naxis', naxis, 0)
 
@@ -2226,16 +2116,17 @@ c-----------------------------------------------------------------------
         imin = min(imin, limin)
         imax = max(imax, limax)
 
-        call axfndco(lh, 'VELO', naxis, 0, iax)
-        if (iax.eq.0) call axfndco(lh, 'FREQ', naxis, 0, iax)
-        if (iax.eq.0) then
+c       Find velocity or frequency  axis.
+        call axfndco(lh, 'VELO', naxis, 0, spcAx)
+        if (spcAx.eq.0) call axfndco(lh, 'FREQ', naxis, 0, spcAx)
+        if (spcAx.eq.0) then
           line = 'Spectrum image '//spin(i)(1:len1(spin(i)))//
      *           ' doesn''t have a velocity or frequency axis'
           call bug('f', line)
         endif
 
-        call w2wsco(lh, iax, 'abspix', ' ', 1d0, 'absnat', ' ', v1)
-        call w2wsco(lh, iax, 'abspix', ' ', dble(size(iax)),
+        call w2wsco(lh, spcAx, 'abspix', ' ', 1d0, 'absnat', ' ', v1)
+        call w2wsco(lh, spcAx, 'abspix', ' ', dble(size(spcAx)),
      *              'absnat', ' ', v2)
 
         lvmin = min(v1,v2)
@@ -2252,9 +2143,8 @@ c-----------------------------------------------------------------------
         call output(line)
         call txtopen(lh, ofile(i), 'old', iostat)
         if (iostat.ne.0) call bug('f', 'Could not open overlay file')
-c
-c Gridded or irregular locations ?
-c
+
+c       Gridded or irregular locations?
         call txtread(lh, line, ilen, iostat)
         if (iostat.eq.0) then
           if (index(line,'GRID').ne.0 .or.
@@ -2275,31 +2165,32 @@ c
         endif
         call txtclose(lh)
       enddo
+
       call output(' ')
 
       end
 
 c***********************************************************************
 
-      subroutine opimxyz (maxnax, in, lin, size, naxis)
+      subroutine opimxyz (MAXNAX, in, lin, size, naxis)
 
-      integer maxnax, lin, size(maxnax), naxis
-      character*(*) in
+      integer   MAXNAX, lin, size(MAXNAX), naxis
+      character in*(*)
 c-----------------------------------------------------------------------
-c     Open an image with XYZOPEN and return some header descriptors
+c  Open an image with XYZOPEN and return some header descriptors.
 c
-c   Input:
-c     maxnax  Maximum number of allowed dimenions for image
-c     in      Image name
-c   Output:
-c     lin     Handle for image
-c     size    Size of axes
-c     naxis   Number of axes
+c  Input:
+c    MAXNAX  Maximum number of allowed dimenions for image
+c    in      Image name
+c  Output:
+c    lin     Handle for image
+c    size    Size of axes
+c    naxis   Number of axes
 c-----------------------------------------------------------------------
       character line*130
       integer len1
 c-----------------------------------------------------------------------
-      naxis = maxnax
+      naxis = MAXNAX
       call xyzopen(lin, in, 'old', naxis, size)
       if (naxis.eq.0) then
         line = in(1:len1(in))//' has zero dimensions !!'
@@ -2323,43 +2214,42 @@ c***********************************************************************
       logical doaxes, doframe, mark, naked, number, colour, blconly,
      *  doerase
 c-----------------------------------------------------------------------
-c     Plot the current spectrum at the correct location on the image
+c  Plot the current spectrum at the correct location on the image.
 c
-c   Input
-c     maxgrp  Max. number of spectrum segments
-c     sgrps   CHannel segments to plot
-c     iside   0 -> spectrum, 1-> 1-sided derivative spectrum,
-c             1-> 2-sided derivative spectrum
-c     ipos    Overlay number
-c     ispec   Spectrum image number
-c     pos     Location of spectrum in contour/pixel map pixels
-c     vfrac   Width of spectrum as a fraction on the plot view-port
-c             in teh x and y directions
-c     npts    Number of points to plot in spectrum
-c     vrange  Velocity range for window (always vrange(1) <= vrange(2))
-c     irange  Intensity range for window
-c     x,yspec Spectrum
-c     zspec   Normalization spectrum.  If any element is 0 it means
-c             there is no valid value for that element
-c             (channel/velocity)
-c     work    Work array for taking of derivatives
-c     vpn     Corners of contour/pixel map view-port in ndc
-c             (x1,x2,y1,y2)
-c     vpw     Corners of contour/pixel map view-port in world coords
-c     tick    Tick increments for spectra in x and y
-c     doaxes  Draw x=0=y and label
-c     doframe Draw frame around spectrum and label
-c     slines  Line width and line type for spectrum
-c     mark    Mark spectrum location
-c     naked   DOn't plot numeric labels
-c     bline   Axis line width
-c     number  Number the spectra
-c     doerase Erase background for number
-c     nspec   The number of spectrum images
-c     nofile  The number of overlay files
-c     colour  COlour axes same as first spectrum
-c     blconly Only label overlay spectrum in BLC of plot
-c     iblc    Number of overlay which is in the BLC
+c  Input
+c    maxgrp  Max. number of spectrum segments
+c    sgrps   CHannel segments to plot
+c    iside   0 -> spectrum, 1-> 1-sided derivative spectrum,
+c            1-> 2-sided derivative spectrum
+c    ipos    Overlay number
+c    ispec   Spectrum image number
+c    pos     Location of spectrum in contour/pixel map pixels
+c    vfrac   Width of spectrum as a fraction on the plot view-port
+c            in teh x and y directions
+c    npts    Number of points to plot in spectrum
+c    vrange  Velocity range for window (always vrange(1) <= vrange(2))
+c    irange  Intensity range for window
+c    x,yspec Spectrum
+c    zspec   Normalization spectrum.  If any element is 0 it means
+c            there is no valid value for that element.
+c    work    Work array for taking of derivatives
+c    vpn     Corners of contour/pixel map view-port in ndc
+c            (x1,x2,y1,y2)
+c    vpw     Corners of contour/pixel map view-port in world coords
+c    tick    Tick increments for spectra in x and y
+c    doaxes  Draw x=0=y and label
+c    doframe Draw frame around spectrum and label
+c    slines  Line width and line type for spectrum
+c    mark    Mark spectrum location
+c    naked   DOn't plot numeric labels
+c    bline   Axis line width
+c    number  Number the spectra
+c    doerase Erase background for number
+c    nspec   The number of spectrum images
+c    nofile  The number of overlay files
+c    colour  COlour axes same as first spectrum
+c    blconly Only label overlay spectrum in BLC of plot
+c    iblc    Number of overlay which is in the BLC
 c-----------------------------------------------------------------------
       double precision x, y
       real vpnl(4), delvx, delvy, vx, vy, frwx, frwy, xbox(4), ybox(4),
@@ -2367,9 +2257,7 @@ c-----------------------------------------------------------------------
       integer i, j, k, nsgrps, ipts, is
       character str*6, xstr*6, ystr*6
 c-----------------------------------------------------------------------
-c
-c Find location of spectrum in view-port in ndcs
-c
+c     Find location of spectrum in view-port in ndcs.
       x = pos(1)
       y = pos(2)
       frwx = (x - vpw(1)) / (vpw(2) - vpw(1))
@@ -2377,50 +2265,41 @@ c
 
       vx = vpn(1) + frwx*(vpn(2) - vpn(1))
       vy = vpn(3) + frwy*(vpn(4) - vpn(3))
-c
-c Find width and height of spectrum on view-port in ndcs
-c
+
+c     Find width and height of spectrum on view-port in ndcs.
       delvx = vfrac(1) * (vpn(2) - vpn(1))
       delvy = vfrac(2) * (vpn(4) - vpn(3))
-c
-c Find corners of local view-port for this spectrum
-c
+
+c     Find corners of local view-port for this spectrum.
       vpnl(1) = vx - 0.5*delvx
       vpnl(2) = vx + 0.5*delvx
       vpnl(3) = vy - 0.5*delvy
       vpnl(4) = vy + 0.5*delvy
-c
-c Set view-port and window
-c
+
+c     Set view-port and window.
       call pgsvp(vpnl(1), vpnl(2), vpnl(3), vpnl(4))
       call pgswin(vrange(1), vrange(2), irange(1), irange(2))
       dv = vrange(2) - vrange(1)
       di = irange(2) - irange(1)
-c
-c Write overlay number if requested.
-c
+
+c     Write overlay number if requested.
       if (number .and. (nofile.gt.1 .or.
      *    (nofile.eq.1 .and. ispec.eq.nspec))) then
         call pgsci(ispec+1)
         call strfi(ipos, '(i6)', str, is)
-c
-c Find blc location of text
-c
+
+c       Find blc location of text.
         call pgqtxt(0.0, 0.0, 0.0, 0.0, str(1:is), xbox, ybox)
         mx = vrange(2) - xbox(4) - dv/50.0
         my = irange(2) - ybox(2) - di/50.0
-c
-c Write string
-c
+
+c       Write string.
         call strerscg(doerase, 0.0, str(1:is), mx, my)
       endif
-c
-c Label spectrum as requested.
-c
+
+c     Label spectrum?
       if (nofile.gt.1 .or. (nofile.eq.1 .and. ispec.eq.1)) then
-c
-c Draw spectrum marker if requested.
-c
+c       Draw spectrum marker?
         if (mark) then
           mx = vrange(1) + dv/2.0
           my = irange(1) + di/2.0
@@ -2434,9 +2313,8 @@ c
         call pgsci(1)
         if (colour) call pgsci(ispec+1)
         call pgslw(bline)
-c
-c Draw and label box according to type requested; frame or axes
-c
+
+c       Draw and label box according to type requested; frame or axes.
         if ((blconly .and. ipos.eq.iblc) .or. .not.blconly) then
           if (doframe) then
             if (naked) then
@@ -2445,10 +2323,9 @@ c
               call pgbox('BNST', tick(1), 2, 'BNST', tick(2), 2)
             endif
           else if (doaxes) then
-c
-c If the user wants x=0 make sure it us going to appear on the plot.
-c Else, give them a DOFRAME like option
-c
+
+c           If the user wants x=0 make sure it us going to appear on the
+c           plot.  Else, give them a DOFRAME like option.
             if (vrange(1)*vrange(2).le.0.0) then
               ystr = 'AST'
               if (naked) ystr = 'AST'
@@ -2456,9 +2333,8 @@ c
               ystr = 'BNST'
               if (naked) ystr = 'BST'
             endif
-c
-c Similarly for the y=0 request.
-c
+
+c           Similarly for the y=0 request.
             if (irange(1)*irange(2).le.0.0) then
               xstr = 'AST'
               if (naked) xstr = 'AST'
@@ -2466,15 +2342,13 @@ c
               xstr = 'BNST'
               if (naked) xstr = 'BST'
             endif
-c
-c Draw the axes and maybe label numerically
-c
+
+c           Draw the axes and maybe label numerically.
             call pgbox(xstr, tick(1), 2, ystr, tick(2), 2)
-c
-c Write numeric labels for x and y axes.  If 'N' is in the
-c options string, pgbox already wrote the numeric labels.
-c Note that 'B' and 'N' will occur together.
-c
+
+c           Write numeric labels for x and y axes.  If 'N' is in the
+c           options string, pgbox already wrote the numeric labels.
+c           Note that 'B' and 'N' will occur together.
             if (index(xstr,'B').eq.0 .and. index(xstr,'N').eq.0
      *         .and. .not.naked) call nlabel('x', tick(1), vrange)
             if (index(ystr,'B').eq.0 .and. index(ystr,'N').eq.0
@@ -2483,10 +2357,9 @@ c
         endif
       endif
       call pgupdt
-c
-c Plot spectrum, but don't plot any points that have no valid
-c spectrum value.
-c
+
+c     Plot spectrum, but don't plot any points that have no valid
+c     spectrum value.
       call pgslw(slines(1))
       call pgsls(slines(2))
       call pgsci(ispec+1)
@@ -2524,9 +2397,8 @@ c
         endif
       enddo
       nsgrps = j
-c
-c Plot spectrum in chunks if necessary to avoid blanked channels
-c
+
+c     Plot spectrum in chunks if necessary to avoid blanked channels.
       call pgbbuf
       if (nsgrps.gt.0) then
         do i = 1, nsgrps
@@ -2542,30 +2414,30 @@ c
 
 c***********************************************************************
 
-      subroutine posdec (lun, pix3, maxtyp, ltypes, ofile, iline,
+      subroutine posdec (lun, pix3, MAXTYP, ltypes, ofile, iline,
      *                   aline, opos)
 
-      integer iline, maxtyp, lun
+      integer iline, MAXTYP, lun
       double precision opos(4), pix3
-      character*(*) aline, ofile, ltypes(maxtyp)
+      character*(*) aline, ofile, ltypes(MAXTYP)
 c-----------------------------------------------------------------------
-c     Decode string into positions list
+c  Decode string into positions list
 c
-c     Input
-c       lun      Handle of image for coordianet transforms
-c       pix3     Value of pixel on third axis appropriate
-c                for the displayed image
-c       maxtyp   Maximum number of potential label types
-c       ltypes   Potential label types
-c       ofile    Overlay file name
-c       tr       Transformation matrix
-c       blc      BLC of displayed window
-c       iline    Line number being decoded
-c       aline    Input string
-c     Output
-c       opos     Overlay location, list of:
-c                         X  Y     XSIZ YSIZ
-c                        PIXELS     ARCSEC
+c  Input
+c    lun      Handle of image for coordianet transforms
+c    pix3     Value of pixel on third axis appropriate
+c             for the displayed image
+c    MAXTYP   Maximum number of potential label types
+c    ltypes   Potential label types
+c    ofile    Overlay file name
+c    tr       Transformation matrix
+c    blc      BLC of displayed window
+c    iline    Line number being decoded
+c    aline    Input string
+c  Output
+c    opos     Overlay location, list of:
+c                      X  Y     XSIZ YSIZ
+c                     PIXELS     ARCSEC
 c-----------------------------------------------------------------------
       double precision off(2)
       integer i, slen, lena, ipres, npt, nuse, dsign(2), spos
@@ -2583,24 +2455,20 @@ c-----------------------------------------------------------------------
       double precision nums(maxnum)
       integer icomm(maxnum)
 c-----------------------------------------------------------------------
-c
-c Prepare string for matodf
-c
+c     Prepare string for matodf.
       str = itoaf(iline)
       slen = len1(str)
       call strprpcg(maxnum, aline, icomm, ipres, lena)
       if (ipres.lt.2) call bug('f',
      *  'Insufficient numbers in overlay file in POSDEC')
-c
-c Fish out XOTYPE and YOTYPE
-c
+
+c     Fish out XOTYPE and YOTYPE.
       otype(1) = aline(1:icomm(1)-1)
-      call matchcg(iline, 'XOTYPE', otype(1), 'overlay', maxtyp,ltypes)
+      call matchcg(iline, 'XOTYPE', otype(1), 'overlay', MAXTYP,ltypes)
       otype(2) = aline(icomm(1)+1:icomm(2)-1)
-      call matchcg(iline, 'YOTYPE', otype(2), 'overlay', maxtyp,ltypes)
-c
-c Don't lose DEC sign; DEC could be on either axis
-c
+      call matchcg(iline, 'YOTYPE', otype(2), 'overlay', MAXTYP,ltypes)
+
+c     Don't lose DEC sign; DEC could be on either axis.
       dsign(1) = 1
       dsign(2) = 1
       if (otype(1).eq.'dms') then
@@ -2615,9 +2483,8 @@ c
         endif
         if (aline(icomm(spos)+1:icomm(spos)+1).eq.'-') dsign(2) = -1
       endif
-c
-c Extract the numeric part of the line which remains
-c
+
+c     Extract the numeric part of the line which remains.
       do i = 1, maxnum
         nums(i) = 0d0
       enddo
@@ -2627,9 +2494,8 @@ c
      *         ' in file '//ofile
         call bug('f', estr)
       endif
-c
-c Convert the overlay locations in true coordinates to pixels
-c
+
+c     Convert the overlay locations in true coordinates to pixels.
       off(1) = 0d0
       off(2) = 0d0
       npt = 1
@@ -2641,9 +2507,8 @@ c
         call bug('f', estr)
       endif
       npt = npt + nuse
-c
-c Do the binning half-sizes in arcseconds.
-c
+
+c     Do the binning half-sizes in arcseconds.
       if (npt.le.ipres-2) then
         opos(3) = nums(npt)
         npt = npt + 1
@@ -2665,14 +2530,14 @@ c***********************************************************************
       real inc(2), bin(2)
       character*(*) aline
 c-----------------------------------------------------------------------
-c     Decode string into positions information
+c  Decode string into positions information
 c
-c     Input
-c       aline    Input string
-c     Output
-c       inc      Increment across image in arcsec in x and y
-c       bin      SPatial binning size for each spectrum in arcsec
-c                in x and y
+c  Input
+c    aline    Input string
+c  Output
+c    inc      Increment across image in arcsec in x and y
+c    bin      Spatial binning size for each spectrum in arcsec in x
+c             and y
 c-----------------------------------------------------------------------
       integer i, lena, ipres
       logical ok
@@ -2683,15 +2548,12 @@ c-----------------------------------------------------------------------
       double precision nums(maxnum)
       integer icomm(maxnum)
 c-----------------------------------------------------------------------
-c
-c Prepare string for matodf
-c
+c     Prepare string for matodf.
       call strprpcg(maxnum, aline, icomm, ipres, lena)
       if (ipres.lt.2) call bug('f',
      *  'Insufficient numbers in overlay file in POSDEC2')
-c
-c Now extract the numeric part of the line
-c
+
+c     Now extract the numeric part of the line.
       do i = 1, maxnum
         nums(i) = 0d0
       enddo
@@ -2702,9 +2564,8 @@ c
       inc(2) = nums(2)
       bin(1) = nums(3)
       bin(2) = nums(4)
-c
-c Bin half-size defaults to zero
-c
+
+c     Bin half-size defaults to zero.
       if (ipres.eq.2) then
         bin(1) = 0.0
         bin(2) = 0.0
@@ -2716,21 +2577,21 @@ c
 
 c***********************************************************************
 
-      subroutine region (maxnax, cin, lc, csize, cnaxis, gin, lg, gsize,
+      subroutine region (MAXNAX, cin, lc, csize, cnaxis, gin, lg, gsize,
      *  gnaxis, ibin, jbin, blc, trc, win, ngrps, grpbeg, ngrp)
 
-      integer maxnax, cnaxis, gnaxis, csize(maxnax), gsize(maxnax),
+      integer MAXNAX, cnaxis, gnaxis, csize(MAXNAX), gsize(MAXNAX),
      *  blc(*), trc(*), win(2), ngrp(*), grpbeg(*),
      *  ngrps, ibin(2), jbin(2), lc, lg
       character*(*) cin, gin
 c-----------------------------------------------------------------------
-c     Finish key routine inputs for region of interest now.    Also
-c     return the header items for all further use when computing
-c     axis value related quantities.  These are the first contour
-c     or pixel map axis descriptors encountered.
+c  Finish key routine inputs for region of interest now.  Also return
+c  the header items for all further use when computing axis value
+c  related quantities.  These are the first contour or pixel map axis
+c  descriptors encountered.
 c
 c  Input:
-c    maxnax        Maximum number of allowed dimenions for image
+c    MAXNAX        Maximum number of allowed dimenions for image
 c    l*            Image handles
 c    *in           Image names
 c    *naxis        Numbers of axes
@@ -2749,18 +2610,15 @@ c                  channel increment is reached.
 c    ngrp          Number of channels in each group of channel to
 c                  be averaged together for each sub-plot.
 c-----------------------------------------------------------------------
-      include 'maxdim.h'
       integer maxbox
       parameter (maxbox = 1024)
 
       integer boxes(maxbox), i, kbin(2), naxis, size(3), lh
       character line*80, itoaf*1
 c-----------------------------------------------------------------------
-c
-c The pixel map and contour images have all been checked to be
-c of the same dimensions.  Use any for 'region' keyword. There
-c must be a pixel map or contour image.
-c
+c     The pixel map and contour images have all been checked to be of
+c     the same dimensions.  Use any for 'region' keyword.  There must be
+c     a pixel map or contour image.
       if (cin.ne.' ') then
         call boxinput('region', cin, boxes, maxbox)
         call boxset(boxes, cnaxis, csize, ' ')
@@ -2773,41 +2631,37 @@ c
         lh = lg
       endif
       call keyfin
-c
-c Find hyper-rectangle surrounding region of interest from highest
-c dimension image involved (i.e., 2-D/3-D).
-c
+
+c     Find hyper-rectangle surrounding region of interest from highest
+c     dimension image involved (i.e., 2-D/3-D).
       call boxinfo(boxes, 3, blc, trc)
       do i = 1, min(3,naxis)
         call rdhdi(lh, 'naxis'//itoaf(i), size(i), 0)
         blc(i) = max(1,blc(i))
         trc(i) = min(size(i),trc(i))
       enddo
-c
-c Adjust spatial window to fit an integral number of bins and
-c find size of binned window
-c
+
+c     Adjust spatial window to fit an integral number of bins and find
+c     size of binned window.
       call winfidcg(size(1), 1, ibin, blc(1), trc(1), win(1))
       call winfidcg(size(2), 2, jbin, blc(2), trc(2), win(2))
-c
-c Find list of start planes and number of planes for all selected
-c image planes which are to be averaged together.  Signal to
-c CHNSELCG that we want, for each group of channels, the averaging
-c number to be equal to the number of contiguous channels available
-c in that group
-c
+
+c     Find list of start planes and number of planes for all selected
+c     image planes which are to be averaged together.  Signal to
+c     CHNSELCG that we want, for each group of channels, the averaging
+c     number to be equal to the number of contiguous channels available
+c     in that group.
       kbin(1) = 0
       kbin(2) = 0
       call chnselcg(blc, trc, kbin, maxbox, boxes, ngrps, grpbeg, ngrp)
-c
-c Tell user
-c
+
+c     Tell user.
       call output(' ')
       call output('The following planes will be averaged for the '//
      *             'contour/pixel map images')
       do i = 1, ngrps
-        write(line, 100) grpbeg(i), grpbeg(i)+ngrp(i)-1
-100     format('Planes ', i4, ' to ', i4)
+        write(line, 10) grpbeg(i), grpbeg(i)+ngrp(i)-1
+ 10     format('Planes ', i4, ' to ', i4)
         call output(line)
       enddo
       call output(' ')
@@ -2823,21 +2677,21 @@ c***********************************************************************
       double precision pos(4)
       logical allblnk, miss
 c-----------------------------------------------------------------------
-c     Find out if spatial pixels over which this spectrum is averaged
-c     are blanked or not
+c  Find out if spatial pixels over which this spectrum is averaged are
+c  blanked or not.
 c
-c Input:
-c   lh      Handle of spatial image
-c   pos     Spectrum location, x, y (contour/pixel map spatial pixels)
-c           xsize, ysize (arcsec)
-c   blc     BLC of displayed region in contour/pixel map pixels
-c   trc     TRC of displayed region in contour/pixel map pixels
-c   nx,ny   SIze of mask image
-c   mask    Mask.  0 means blanked, 1 unblanked
-c Output:
-c   allblnk All pixels in the spectrum average area are blank in the
-c           mask
-c   miss    This spectrum falls off the spatial image
+c  Input:
+c    lh      Handle of spatial image
+c    pos     Spectrum location, x, y (contour/pixel map spatial pixels)
+c            xsize, ysize (arcsec)
+c    blc     BLC of displayed region in contour/pixel map pixels
+c    trc     TRC of displayed region in contour/pixel map pixels
+c    nx,ny   SIze of mask image
+c    mask    Mask.  0 means blanked, 1 unblanked
+c  Output:
+c    allblnk All pixels in the spectrum average area are blank in the
+c            mask
+c    miss    This spectrum falls off the spatial image
 c-----------------------------------------------------------------------
       integer i1, i2, j1, j2, i, j, bblc(2), ttrc(2)
 
@@ -2845,20 +2699,17 @@ c-----------------------------------------------------------------------
       double precision  win(2), wout(2), wblc(2), wtrc(2)
       character typei(2)*6, typeo(2)*6
 c-----------------------------------------------------------------------
-c
-c Positions that are centred off the edge of the pixel map/contour
-c image are not displayed.
-c
+c     Positions that are centred off the edge of the pixel map/contour
+c     image are not displayed.
       if (pos(1).lt.blc(1) .or. pos(1).gt.trc(1) .or.
      *    pos(2).lt.blc(2) .or. pos(2).gt.trc(2)) then
         miss = .true.
         return
       endif
-c
-c Find spatial averaging region for this spectrum on pixel map or
-c contour image.   Spatial pixel increment may be different from
-c spectrum image, so this blanking check is approximate only.
-c
+
+c     Find spatial averaging region for this spectrum on pixel map or
+c     contour image.  Spatial pixel increment may be different from
+c     spectrum image, so this blanking check is approximate only.
       do i = 1, 2
         typei(i) = 'abspix'
         typeo(i) = 'arcsec'
@@ -2881,24 +2732,21 @@ c
       j1 = wblc(2)
       i2 = wtrc(1)
       j2 = wtrc(2)
-c
-c Convert to subimage pixels
-c
+
+c     Convert to subimage pixels.
       bblc(1) = min(i1,i2) - blc(1) + 1
       bblc(2) = min(j1,j2) - blc(2) + 1
       ttrc(1) = max(i1,i2) - blc(1) + 1
       ttrc(2) = max(j1,j2) - blc(2) + 1
-c
-c For regions that straddle the displayed region boundaries,
-c tuncate to boundaries.
-c
+
+c     For regions that straddle the displayed region boundaries,
+c     truncate to boundaries.
       bblc(1) = max(1,bblc(1))
       bblc(2) = max(1,bblc(2))
       ttrc(1) = min(nx,ttrc(1))
       ttrc(2) = min(ny,ttrc(2))
-c
-c Now see if region is all blanked
-c
+
+c     See if region is all blanked.
       allblnk = .true.
       do j = bblc(2), ttrc(2)
         do i = bblc(1), ttrc(1)
@@ -2914,21 +2762,21 @@ c
 
 c***********************************************************************
 
-      subroutine specin (ls, snaxis, sblc, velax, virsiz, norm, scale,
+      subroutine specin (ls, snaxis, sblc, spcAx, virsiz, norm, scale,
      *                   xspec, yspec, nspec, skip, prof, mprof)
 
-      integer ls, snaxis, sblc(snaxis), virsiz(snaxis), velax, nspec(*)
+      integer ls, snaxis, sblc(snaxis), virsiz(snaxis), spcAx, nspec(*)
       real xspec(*), yspec(*), scale, prof(*)
       logical norm, skip, mprof(*)
 c-----------------------------------------------------------------------
-c     Read in the binned spectrum.
+c  Read in the binned spectrum.
 c
 c  Input
 c    ls       Handle for spectrum image
 c    snaxis   Number of axes in image
 c    masks    True if there are some blanked pixels in the image
 c    sblc,trc blc and trc of sub-cube to read
-c    velax    Axis nuimber of velocity axis
+c    spcAx    Axis number of velocity axis
 c    virsiz   Sizes of sub-cube axes, in order vxy
 c    norm     Normalize peak of spectrum to 1.0
 c    scale    Scale factor to apply to intensities
@@ -2941,16 +2789,13 @@ c    nspec    Array containing normalization factor for spectrum
 c             0 means there were no points for that channel.
 c    skip     SKip this one because all zero.
 c-----------------------------------------------------------------------
-      include 'maxdim.h'
       double precision crval, crpix, cdelt
       real  ymax, ymin
       integer i, j, nprofs, nread
       character itoaf*1
       logical allblnk
 c-----------------------------------------------------------------------
-c
-c Initialize
-c
+c     Initialize.
       do i = 1, virsiz(1)
         nspec(i) = 0
         yspec(i) = 0.0
@@ -2959,9 +2804,8 @@ c
       skip = .false.
       nprofs = virsiz(2)*virsiz(3)
       nread = virsiz(1)
-c
-c Read and bin
-c
+
+c     Read and bin.
       do j = 1, nprofs
         call xyzprfrd(ls, j, prof, mprof, nread)
 
@@ -2972,19 +2816,17 @@ c
           endif
         enddo
       enddo
-c
-c Normalize
-c
+
+c     Normalize.
       ymin =  1e30
       ymax = -1e30
-      call rdhdd(ls, 'crpix'//itoaf(velax), crpix, 0d0)
-      call rdhdd(ls, 'crval'//itoaf(velax), crval, 0d0)
-      call rdhdd(ls, 'cdelt'//itoaf(velax), cdelt, 0d0)
+      call rdhdd(ls, 'crpix'//itoaf(spcAx), crpix, 0d0)
+      call rdhdd(ls, 'crval'//itoaf(spcAx), crval, 0d0)
+      call rdhdd(ls, 'cdelt'//itoaf(spcAx), cdelt, 0d0)
       do i = 1, virsiz(1)
-c
-c Compute abcissa array
-c
-        j = i + sblc(velax) - 1
+
+c       Compute abcissa array.
+        j = i + sblc(spcAx) - 1
         xspec(i) = (dble(j)-crpix)*cdelt + crval
 
         if (nspec(i).ne.0) then
@@ -2996,9 +2838,8 @@ c
           yspec(i) = 0.0
         endif
       enddo
-c
-c Renormalize
-c
+
+c     Renormalize.
       if (allblnk) then
         skip = .true.
       else if (norm) then
@@ -3014,47 +2855,45 @@ c
 
 c***********************************************************************
 
-      subroutine specloc (lh, ls, snaxis, ssize, pos, vrange, velax,
+      subroutine specloc (lh, ls, snaxis, ssize, pos, vrange, spcAx,
      *                    sblc, strc, fits)
 
       integer snaxis, sblc(snaxis), strc(snaxis), ssize(snaxis),
-     *  velax, lh, ls
+     *  spcAx, lh, ls
       double precision pos(4)
       real vrange(2)
       logical fits(2)
 c-----------------------------------------------------------------------
-c     Work out the bounding box in absolute pixels for the sub-cube to
-c     average for the current spectrum position.
+c  Work out the bounding box in absolute pixels for the sub-cube to
+c  average for the current spectrum position.
 c
-c Input:
-c   l*      Image handles
-c   snaxis  NUmber of axes in spectrum image
-c   ssize   Size of spectrum image
-c   pos     Spectrum location, x, y (contour/pixel map spatial pixels)
-c           xsize, ysize (arcsec)  x and y are full image unbinned
-c           pixels not just the displayed region pixels
-c   vrange  Velocity range of interest
-c   velax   The axis corresponding to the velocity axis of the
-c           current spectrum image
-c Output:
-c   sblc,trc
-c           BLC and TRC of sub-cube to read in.
-c   fits(2) True if spatial and spectral areas fit partly or wholly
-c           in spectrum image.
+c  Input:
+c    l*      Image handles
+c    snaxis  NUmber of axes in spectrum image
+c    ssize   Size of spectrum image
+c    pos     Spectrum location, x, y (contour/pixel map spatial pixels)
+c            xsize, ysize (arcsec)  x and y are full image unbinned
+c            pixels not just the displayed region pixels
+c    vrange  Velocity range of interest
+c    spcAx   The axis corresponding to the velocity axis of the
+c            current spectrum image
+c  Output:
+c    sblc,trc
+c            BLC and TRC of sub-cube to read in.
+c    fits(2) True if spatial and spectral areas fit partly or wholly
+c            in spectrum image.
 c-----------------------------------------------------------------------
       double precision win(3), wout(3), wcen(3)
       real dv
       integer i, j, pt(3), i1, i2, naxis
       character tpi(2)*4, tsi(3)*4, typei(3)*6, typeo(3)*6
 c-----------------------------------------------------------------------
-c
-c Work out order of spectrum image spatial axes with respect
-c to spatial image spatial axes
-c
+c     Work out order of spectrum image spatial axes with respect to
+c     spatial image spatial axes.
       call axtypco(lh, 2, 0, tpi)
       call axtypco(ls, 3, 0, tsi)
       do i = 1, 3
-        if (i.ne.velax) then
+        if (i.ne.spcAx) then
           if (tsi(i).eq.tpi(1)) then
             pt(i) = 1
           else if (tsi(i).eq.tpi(2)) then
@@ -3065,41 +2904,38 @@ c
           endif
         endif
       enddo
-c
-c Convert the spatial centre of the spectrum from pixel map/ contour
-c pixels to world
-c
+
+c     Convert the spatial centre of the spectrum from pixel map/ contour
+c     pixels to world.
       do i = 1, 2
         typei(i) = 'abspix'
         win(i) = pos(i)
         typeo(i) = 'absnat'
       enddo
       call w2wco(lh, 2, typei, ' ', win, typeo, ' ', wout)
-c
-c Now work out the centre of the spectrum in spectrum image
-c coordinates (linear for velocity, arcsec for spatial)
-c
+
+c     Now work out the centre of the spectrum in spectrum image
+c     coordinates (linear for velocity, arcsec for spatial).
       naxis = min(3,snaxis)
       j = 1
       do i = 1, naxis
-        if (i.eq.velax) then
-          win(i) = (vrange(1) + vrange(2)) / 2.0
+        if (i.eq.spcAx) then
+          win(i)   = (vrange(1) + vrange(2)) / 2.0
           typei(i) = 'absnat'
           typeo(i) = 'absnat'
         else
-          win(i) = wout(pt(i))
+          win(i)   = wout(pt(i))
           typei(i) = 'absnat'
           typeo(i) = 'arcsec'
           j = j + 1
         endif
       enddo
       call w2wco(ls, naxis, typei, ' ', win, typeo, ' ', wcen)
-c
-c Now offset to find the BLC of the subcube
-c
+
+c     Now offset to find the BLC of the subcube.
       dv = abs(vrange(2) - vrange(1)) / 2.0
       do i = 1, naxis
-        if (i.eq.velax) then
+        if (i.eq.spcAx) then
           typei(i) = 'absnat'
           win(i) = wcen(i) - dv
         else
@@ -3108,15 +2944,15 @@ c
         endif
         typeo(i) = 'abspix'
       enddo
+
       call w2wco(ls, naxis, typei, ' ', win, typeo, ' ', wout)
       do i = 1, 3
         sblc(i) = nint(wout(i))
       enddo
-c
-c Now offset to find the TRC of the subcube
-c
+
+c     Offset to find the TRC of the subcube.
       do i = 1, naxis
-        if (i.eq.velax) then
+        if (i.eq.spcAx) then
           typei(i) = 'absnat'
           win(i) = wcen(i) + dv
         else
@@ -3129,42 +2965,36 @@ c
       do i = 1, naxis
         strc(i) = nint(wout(i))
       enddo
-c
-c Make sure BLC and TRC in increasing order
-c
+
+c     Ensure BLC and TRC in increasing order.
       do i = 1, 3
         i1 = min(sblc(i),strc(i))
         i2 = max(sblc(i),strc(i))
         sblc(i) = i1
         strc(i) = i2
       enddo
-c
-c Make sure sub-cube fits in image
-c
+
+c     Ensure sub-cube fits in image.
       fits(1) = .true.
       fits(2) = .true.
       do i = 1, 3
-c
-c Completely missed
-c
+c       Completely missed.
         if ((sblc(i).lt.1 .and. strc(i).lt.1) .or.
      *       (sblc(i).gt.ssize(i) .and. strc(i).gt.ssize(i))) then
-          if (i.ne.velax) then
+          if (i.ne.spcAx) then
             fits(1) = .false.
           else
             fits(2) = .false.
           endif
         else
-c
-c Partly fits; show it
-c
+
+c         Partly fits; show it.
           sblc(i) = min(ssize(i), max(1,sblc(i)))
           strc(i) = max(1, min(ssize(i),strc(i)))
         endif
       enddo
-c
-c Fill in rest of subcube to keep XYZSETUP happy
-c
+
+c     Fill rest of subcube to keep XYZSETUP happy.
       if (snaxis.gt.3) then
         do i = 4, snaxis
           sblc(i) = 1
@@ -3178,16 +3008,17 @@ c***********************************************************************
 
       subroutine specsiz (ls, vrange, iax, size)
 
-      real vrange(2)
-      integer size, iax, ls
+      integer   ls
+      real      vrange(2)
+      integer   iax, size
 c-----------------------------------------------------------------------
-c     WOrk out how many pixels long the spectrum for this spectrum
-c     image for the desired velocity range so that we can allocate
-c     memory dynamically
+c  Work out how many pixels long the spectrum for this spectrum image
+c  for the desired velocity range so that we can allocate memory
+c  dynamically.
 c
 c  Input
 c    ls        Handle of image
-c    vrange    Velcoty range in km/s
+c    vrange    velocity range
 c    iax       Spectral axis
 c  Output
 c    size      SIze of spectrum
@@ -3197,9 +3028,8 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
       call rdhdd(ls, 'cdelt'//itoaf(iax), cdelt, 0d0)
       size = nint(abs((vrange(2) - vrange(1)) / cdelt) + 0.5)
-c
-c Add a couple to be sure.  This computation is not used critically
-c
+
+c     Add a couple to be sure.  This computation is not used critically.
       size = size + 2
 
       end
@@ -3208,32 +3038,30 @@ c***********************************************************************
 
       subroutine setlgc (bgcol, labcol, blacklab)
 
-      integer labcol, bgcol
+      integer bgcol, labcol
       logical blacklab
 c-----------------------------------------------------------------------
-c     Set line graphics colours
+c  Set line graphics colours.
 c
 c  Input
 c    bgcol  colour of background 0-> black, 1->white
-c  OUtput
+c  Output
 c    colour indices to use
 c-----------------------------------------------------------------------
       labcol = 7
-      if (bgcol.eq.1) then
+      if (bgcol.eq.0) then
+c       Black background
+        labcol = 7
+      else if (bgcol.eq.1) then
 c       White background
         if (blacklab) then
           labcol = 1
         else
           labcol = 2
         endif
-      else if (bgcol.eq.0) then
-c       Black background
-        labcol = 7
       else
         call bug('w', 'Non black/white background colour on device')
         labcol = 7
       endif
 
       end
-
-
