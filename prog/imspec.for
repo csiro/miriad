@@ -721,10 +721,12 @@ c Sort the axes found, to insure most efficient reading of image.
       call assertl( dim.le.2, 'A maximum of 2 axes may be given' )
       call hsorti( dim, axnum, axind )
 c Set subcube variable for xyzsetup to the selected axes list.
+c
+      subcube = ' '
       do n = 1, dim
          subcube(n:n) = axnames( axnum(axind(n)):axnum(axind(n)) )
       enddo
-
+c
 c Now read the naxis, ctype, crval, crpix and cdelt for all axes. But
 c do something with the order: el. 1 to el. dim will correspond to the
 c list given by the axes keyword, i.e. the axes over which to average.
