@@ -15,7 +15,7 @@ c
 c       Output can be written to the terminal, a log file, or a plot.
 c       The options keyword gives control over the plot.
 c
-c       The plotheader can be suppressed by using options=noheader.
+c       The plot header can be suppressed by using options=noheader.
 c       An alternative title can be put on the plot by options=title.
 c       A useful combination is 'options=noh,ti,title', to get only the
 c       string 'title', instead of the full header.
@@ -25,30 +25,37 @@ c
 c< region
 c
 c@ axes
-c       This keyword gives the axis (for profiles) or axes (for planes)
-c       along which statistics are calculated.  One or two axes may be
-c       given.  E.g 'axes=vel' gives statistics of a velocity profile at
-c       each ra and dec position in the selected region.  'axes=ra,dec'
-c       means that statistics are found for ra-dec planes (irrespective
-c       of their orientation in the dataset).
+c       One axis (for profiles) or two axes (for planes) for which
+c       statistics are to be calculated.  E.g. 'axes=spectral' computes
+c       statistics of each spectrum in the selected region - whether
+c       expressed as frequency, velocity, etc.  
+c       'axes=longitude,latitude' would compute statistics for each
+c       celestial image plane in the dataset (regardless of
+c       orientation).
 c
-c       Possible values are: 'rascension', 'declination', 'longitude',
-c       'latitude', 'glongitude', 'glatitude', 'velocity', 'frequency',
-c       'channel', 'stokes', 'x', 'y', 'z', 'a', 'b'.
-c       Upper case and capitalized versions and the string 'R.A.' are
-c       also recognized.  Minimal matching is applied.
-c       The default is to calculate statistics for each ra,dec plane as
-c       function of velocity.
+c       axes is case insensitive, and may be specified explicitly by
+c       coordinate type (ctype), as listed by PRTHD.  In this it is not
+c       necessary to specify the algorithm code, e.g. 'RA' matches both
+c       'RA---NCP' and 'RA---SIN', while 'VOPT' matches 'VOPT-F2W'.
+c
+c       Axes may also be specified via their order in the cube as
+c       'x', 'y', 'z', 'a', 'b', 'c', and 'd' for axes 1 to 7.
+c
+c       The following generic values are also understood: 'longitude'
+c       ('lng' or 'long'), 'latitude' (or 'lat'), and 'spectral' ('spc'
+c       or 'spec').
+c
+c       No default.
 c
 c@ plot
-c       Selects the statistic to be plotted, e.g. as a function of
-c       velocity.  Minimal matching is applied.  The default is 'rms'.
+c       Selects the statistic to be plotted.  Minimal matching is
+c       applied.  The default is 'rms'.
 c
-c        'sum'         Plot the sum
-c        'mean'        Plot the mean
-c        'rms'         Plot the rms
-c        'maximum'     Plot the maximum
-c        'minimum'     Plot the minimum
+c         'sum'         Plot the sum
+c         'mean'        Plot the mean
+c         'rms'         Plot the rms
+c         'maximum'     Plot the maximum
+c         'minimum'     Plot the minimum
 c
 c@ cutoff
 c       Data values below the cutoff are not used for the calculation
@@ -68,9 +75,9 @@ c                      using the input for the beam keyword
 c        'hanning,#'   Hanning smooth the data first over # pixels (must
 c                      be an odd number)
 c        'boxcar,#'    Boxcar smooth the data first over # pixels
-c        'deriv,#'     Take the derivative after smoothing. If #=1 a
+c        'deriv,#'     Take the derivative after smoothing.  If #=1 a
 c                      one-sided derivative is taken, for #=2 its
-c                      two-sided. Useful for Zeeman work.
+c                      two-sided.  Useful for Zeeman work.
 c
 c        'noheader'    Do not write the header information, just the
 c                      numbers, producing an ASCII file for a plotting
@@ -120,7 +127,7 @@ c@ log
 c       If specified, output is written to the file given by log=
 c       instead of to the terminal.
 c
-c$Id: imstat.for,v 1.3 2011/04/06 02:25:27 cal103 Exp $
+c$Id: imstat.for,v 1.4 2011/04/07 04:59:43 cal103 Exp $
 c--
 c  IMSPEC - plots spectra from image data
 c& bpw
@@ -150,58 +157,59 @@ c
 c< in
 c
 c< region
-c       For the moment imspec only recognizes rectangular boxes.  It
-c       will use the mask associated with the input image.
+c       imspec only recognizes rectangular boxes.  It will use the mask
+c       associated with the input image.
 c
 c@ axes
-c       This keyword gives the axis or axes along which data are
-c       averaged to obtain one datapoint on the profile.  Combined with
-c       the region keyword, this can be used to get a profile as
-c       function of any coordinate.  The specifications are admittedly
-c       complex, because data averaging is allowed.
+c       One or two axes along which data are averaged to obtain a data
+c       point on the profile.  Combined with the region keyword, it can
+c       be used to get a profile as function of any coordinate.  E.g.
+c       'axes=spectral' averages each spectrum in the selected region -
+c       whether expressed as frequency, velocity, etc.
+c       'axes=longitude,latitude' averages each celestial image plane
+c       in the dataset (regardless of orientation).
 c
-c       - Example 1: to get a profile along the velocity axis (a
-c         spectrum) use
-c           axes=ra,dec
+c       axes is case insensitive, and may be specified explicitly by
+c       coordinate type (ctype), as listed by PRTHD.  In this it is not
+c       necessary to specify the algorithm code, e.g. 'RA' matches both
+c       'RA---NCP' and 'RA---SIN', while 'VOPT' matches 'VOPT-F2W'.
+c
+c       Axes may also be specified via their order in the cube as
+c       'x', 'y', 'z', 'a', 'b', 'c', and 'd' for axes 1 to 7.
+c
+c       The following generic values are also understood: 'longitude'
+c       ('lng' or 'long'), 'latitude' (or 'lat'), and 'spectral' ('spc'
+c       or 'spec').
+c
+c       No default.
+c
+c       The region specifications in the following examples are relative
+c       to the reference pixel and assume an (RA,Dec,spectral) cube:
+c
+c       - Plot a spectrum with channel in the range [10:40] averaged
+c         over RA and Dec in the range RA:[-31,32] and Dec[-31,32]:
 c           region=relpix,box(-31,-31,32,32)(10,40)
-c         to average in ra from -31 to 32, in dec from -31 to 32 and
-c         plot the average as function of velocity from channel 10 to
-c         40.
+c           axes=ra,dec
 c
-c       - Example 2: to get a profile along the ra axis (at a given
-c         declination) use
-c           axes=dec,vel
+c       - Plot a profile in RA in the range RA:[-31,32], at Dec=0
+c         for spectral channel 10:
 c           region=relpix,box(-31,0,32,0)(10)
-c         to plot a profile along ra from ra=-31 to ra=32, at dec 0 and
-c         in plane 10.
+c           axes=dec,spectral
 c
-c       - Example 3: to get a set of profiles along the ra axis (at a
-c         number of declinations) use
-c           axes=vel
+c       - Plot a set of profiles in RA in the range RA:[-31,32], for
+c         each Dec in the range Dec:[-31,32], for spectral channel 10: 
 c           region=relpix,box(-31,-31,32,32)(10)
-c         to plot a profile along ra, for plane 10, one for each
-c         declination between -31 and 32.
+c           axes=spectral
 c
-c       - Example 4: to get a profile along the declination axis (at a
-c         given ra) use
-c           axes=ra,vel
+c       - Plot a profile in Dec in the range dec:[-31,32] with RA
+c         averaged from RA:[-10,10], for spectral channel 10:
 c           region=relpix,box(-10,-31,10,32)(10)
-c         to plot a profile along declination, with ra averaged from
-c         ra=-10 to ra=10, and in plane 10.
-c
-c       The default is to make a spectrum in the velocity direction
-c       (example 1).
-c       Possible values for axes are: 'rascension', 'declination',
-c       'longitude', 'latitude', 'glongitude', 'glatitude', 'velocity',
-c       'frequency', 'channel', 'stokes', 'x', 'y', 'z', 'a', 'b'. Upper
-c       case and capitalized versions and the string 'R.A.' are also
-c       recognized. Minimal matching is applied. One or two axes may be
-c       given.
+c           axes=ra,spectral
 c
 c@ plot
 c       This selects what will be plotted as function of e.g. velocity.
 c       To convert data to fluxes the input of the beam keyword is used.
-c       Minimal matching is applied. The default is 'flux'.
+c       Minimal matching is applied.  The default is 'flux'.
 c
 c        'mean'        Plot the mean
 c        'sum'         Plot the sum
@@ -269,7 +277,7 @@ c       Else, it assumes that 'beam' gives the major and minor axes of
 c       the beam in arcsec and it calculates the sum of a gaussian beam
 c       of that size.
 c       If 'beam' is omitted, but 'flux' was selected, the beam is found
-c       from the header (items bmaj and bmin). If neither is present,
+c       from the header (items bmaj and bmin).  If neither is present,
 c       the sum is assumed to be 1.
 c
 c@ log
@@ -281,9 +289,9 @@ c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
 c-----------------------------------------------------------------------
-c  Main program of imstat and imspec. Puts out the identification, where
-c  the variable NAME from the include file contains the program name.
-c  Then gets all inputs and does the work before closing up.
+c  Main program of imstat and imspec.  Puts out the identification,
+c  where the variable NAME from the include file contains the program
+c  name.  Then gets all inputs and does the work before closing up.
 c
 c  Variables:
 c    lIn        Handle of input dataset
@@ -310,8 +318,8 @@ c               el 2-naxis: names of higher axes
 c               el naxis+1: units of x-axis
 c    device     plot device, no plot if device=' '
 c
-c A number of variables and flags are made into global variables by
-c using the include file.
+c  A number of variables and flags are made into global variables by
+c  using the include file.
 c-----------------------------------------------------------------------
       include 'imstat.h'
 
@@ -319,21 +327,20 @@ c-----------------------------------------------------------------------
      *          lIn, naxis
       real      cut(2)
       double precision beaminfo(4)
-      character axlabel(MAXNAX+1)*12, device*80, version*72
+      character axlabel(MAXNAX)*32, device*80, version*72
 
       external  versan
       character versan*72
 c-----------------------------------------------------------------------
       version = versan('imstat',
-     *                 '$Revision: 1.3 $',
-     *                 '$Date: 2011/04/06 02:25:27 $')
+     *                 '$Revision: 1.4 $',
+     *                 '$Date: 2011/04/07 04:59:43 $')
 
-      call inputs(lIn,naxis,dim,corners,boxes,cut,counts,
-     *            beaminfo,axlabel,device,MAXBOXES)
+      call inputs(lIn,naxis,dim,corners,boxes,cut,counts,beaminfo,
+     *  axlabel,device,MAXBOXES)
       cin = lIn
-      call coInit(lIn)
-      call stats(lIn,naxis,dim,corners,boxes,cut,counts,
-     *           beaminfo,axlabel,device)
+      call stats(lIn,naxis,dim,corners,boxes,cut,counts,beaminfo,
+     *  axlabel,device)
       call xyzclose(lIn)
       call coFin(lIn)
       call logclose
@@ -360,7 +367,7 @@ c  optinp decodes the keywords plot and options
 c  cutinp gets the possible cutoff value
 c  axinp decodes the keyword axes and returns the subcube specification
 c        of the averaging-axes and the nice labels along the axes
-c  then initialize the input dataset. This must be done here because
+c  then initialize the input dataset.  This must be done here because
 c  beamsum opens and reads another dataset, and before reading a dataset
 c          all xyzsetups must have been done
 c          beamsum decodes the beam keyword and returns sumap and Jy->K
@@ -431,10 +438,10 @@ c***********************************************************************
 
       real          cut(*)
 c-----------------------------------------------------------------------
-c Get the cutoff value to apply.
-c cut is an array of 2 elements, the first being the cutoff, the second
-c a flag indicating if a cutoff was requested and whether or not this
-c was an absolute value cutoff.
+c  Get the cutoff value to apply.
+c  cut is an array of 2 elements, the first being the cutoff, the second
+c  a flag indicating if a cutoff was requested and whether or not this
+c  was an absolute value cutoff.
 c-----------------------------------------------------------------------
       logical    keyprsnt
       character  string*10
@@ -456,14 +463,14 @@ c***********************************************************************
       subroutine optinp
 
 c-----------------------------------------------------------------------
-c Decode the plot and options keywords.
-c The global variables plotvar, plotrnge and plotpar are filled here.
-c plotvar contains flags to indicate if (and sometimes which) options
-c were selected.
-c plotrnge gives the range of x and/or y values to plot, and also a
-c flag to indicate if a range was selected
-c Of plotpar just one element is filled here, the one containing an
-c optional user-given title.
+c  Decode the plot and options keywords.
+c  The global variables plotvar, plotrnge and plotpar are filled here.
+c  plotvar contains flags to indicate if (and sometimes which) options
+c  were selected.
+c  plotrnge gives the range of x and/or y values to plot, and also a
+c  flag to indicate if a range was selected
+c  Of plotpar just one element is filled here, the one containing an
+c  optional user-given title.
 c-----------------------------------------------------------------------
       include       'imstat.h'
 
@@ -475,36 +482,46 @@ c-----------------------------------------------------------------------
       integer       len1
       character*80  line
 c-----------------------------------------------------------------------
-c Set default values for options
-c defplt is 'rms' for IMSTAT and 'flux' for IMSPEC
-      plotvar(SEL)       = matchnr(defplt, plotopts)
-c the default is to write a header
-      plotvar(HEAD)     =  1
-c the default is to write out the spectrum for IMSTAT, not for IMSPEC
+c     Set default values for options.
+c     defplt is 'rms' for IMSTAT and 'flux' for IMSPEC
+      plotvar(SEL) = matchnr(defplt, plotopts)
+
+c     Default is to write a header.
+      plotvar(HEAD) =  1
+
+c     Default is to write out the spectrum for IMSTAT, not for IMSPEC.
       if (NAME.eq.'IMSTAT') plotvar(LIST) =  1
       if (NAME.eq.'IMSPEC') plotvar(LIST) =  0
-c the default is 'g' format
-      plotvar(EFMT)     = 0
-c the default is to give as much precision as possible
-      plotvar(GSPAC)    = 0
-c the default plot style is to connect the points
-      plotvar(STYLE)    = matchnr('connect', styles)
-c the default is not to convert the data units
-      plotvar(DUNIT)    = ORIG
-c the default is not to smooth
-      plotvar(DOSMOOTH) =  0
-c the default is not to take the derivative
-      plotvar(DERIV)    =  0
-c the default is no extra title
-      plotpar(TITLE)    = ' '
-c the default is no range selection
-      plotrnge(FLXL)    = 0.0
-      plotrnge(FLXU)    = 0.0
-      plotrnge(FLYL)    = 0.0
-      plotrnge(FLYU)    = 0.0
 
-c Loop over the plot keyword, to test if input is only one value
-c If so, plotvar(SEL) is set to the selected plot index
+c     Default is 'g' format.
+      plotvar(EFMT) = 0
+
+c     Default is to give as much precision as possible.
+      plotvar(GSPAC) = 0
+
+c     Default plot style is to connect the points.
+      plotvar(STYLE) = matchnr('connect', styles)
+
+c     Default is not to convert the data units.
+      plotvar(DUNIT) = ORIG
+
+c     Default is not to smooth.
+      plotvar(DOSMOOTH) =  0
+
+c     Default is not to take the derivative.
+      plotvar(DERIV) =  0
+
+c     Default is no extra title.
+      plotpar(TITLE) = ' '
+
+c     Default is no range selection.
+      plotrnge(FLXL) = 0.0
+      plotrnge(FLXU) = 0.0
+      plotrnge(FLYL) = 0.0
+      plotrnge(FLYU) = 0.0
+
+c     Loop over the plot keyword, to test if input is only one value.
+c     If so, plotvar(SEL) is set to the selected plot index
       call keya('plot', option, ' ')
       count = 0
       do while (option.ne.' ')
@@ -520,14 +537,15 @@ c If so, plotvar(SEL) is set to the selected plot index
         endif
         call keya('plot', option, ' ')
       enddo
-c spectrum units are Jansky if plot=flux was selected.
+
+c     Spectrum units are Jansky if plot=flux was selected.
       if (plotvar(SEL).eq.matchnr('flux',   plotopts) .or.
      *    plotvar(SEL).eq.matchnr('pbcflux',plotopts))
      *    plotvar(DUNIT) = JANSKY
 
-c Loop over the options keyword. First match the option against the full
-c list. If present decode the option, else give a warning. For options
-c with arguments, these are read and tested.
+c     Decode the options keyword.  First match the option against the
+c     full list.  If present decode the option, else give a warning.
+c     For options with arguments, these are read and tested.
       call keya('options', option, ' ')
       do while (option.ne.' ')
         call lcase(option)
@@ -609,136 +627,122 @@ c***********************************************************************
       integer   lIn, naxis, dim
       character subcube*(*), axlabel(*)*(*)
 c-----------------------------------------------------------------------
-c Here the axes keyword is decoded.
+c  Decode the axes keyword.
 c-----------------------------------------------------------------------
       include 'imstat.h'
 
-      integer    NAXOPT
-      parameter (NAXOPT = 18)
+      integer    NAXTYP
+      parameter (NAXTYP = 12)
 
-      logical   keyprsnt, match, present(3*NAXOPT)
       integer   axind(MAXNAX), axlen(MAXNAX), axnum(MAXNAX), i, indek,
      *          j, len1, n
-      character axisname*1, axnames*(MAXNAX), axopt(3*NAXOPT)*12,
-     *          axopts*512, axtype(NAXOPT)*12, axunit(NAXOPT)*12,
-     *          keyw*8, line*50, temp*9
+      character axC*7, axis*32, axtyp(NAXTYP)*4, axlab(NAXTYP)*32
 
-      data axnames / 'xyzabcd' /
-      data axopt /
-     *     'R.A.',       'Declination', 'Longitude', 'Latitude',
-     *     'Glongitude', 'Glatitude',
-     *     'Velocity',   'Felocity',    'Frequency', 'Channel',
-     *     'Stokes',     'x', 'y', 'z', 'a', 'b', 'c', 'd',
-     *     'rascension', 'declination', 'longitude', 'latitude',
-     *     'glongitude', 'glatitude',
-     *     'velocity',   'felocity',    'frequency', 'channel',
-     *     'stokes',     '1', '2', '3', '4', '5', '6', '7',
-     *     'RAscension', 'DECLINATION', 'LONGITUDE', 'LATITUDE',
-     *     'GLONGITUDE',  'GLATITUDE',
-     *     'VELOCITY',   'FELOCITY',    'FREQUENCY', 'CHANNEL',
-     *     'STOKES',     'X', 'Y', 'Z', 'A', 'B', 'C', 'D' /
-      data axunit /
-     *     '[]','[]','[deg]','[deg]','[deg]','[deg]',
-     *     '[km/s]','[km/s]','[GHz]','[]','[]', 7*'[]' /
-      data axtype /
-     *     'Lon',  'Lat',  'Lon',  'Lat',  'Lon',  'Lat',
-     *     'Freq', 'Freq','Freq', 'Freq', 'Stokes',
-     *     'x', 'y', 'z', 'a', 'b', 'c', 'd' /
+      external  itoaf, keyprsnt, match
+      logical   keyprsnt, match
+      character itoaf*1
+
+      data axC   /'xyzabcd' /
+      data axtyp /'RA',   'DEC',  'GLON', 'GLAT', 'ELON', 'ELAT',
+     *            'FREQ', 'WAVE', 'VRAD', 'VOPT', 'VELO', 'ZOPT'/
+      data axlab /'Right ascension',          'Declination',
+     *            'Galactic longitude (deg)', 'Galactic latitude (deg)',
+     *            'Ecliptic longitude (deg)', 'Ecliptic latitude (deg)',
+     *            'Frequency (GHz)',          'Wavelength (m)',
+     *            'Radio velocity (km/s)',    'Optical velocity (km/s)',
+     *            'Relativistic velocity (km/s)', 'Redshift'/
 c-----------------------------------------------------------------------
-c     Decode the axes keyword.
-      do i = 1, 3*NAXOPT
-        present(i) = .false.
-      enddo
+      call coInit(lIn)
 
+c     Decode the axes keyword.
+      dim = 0
       if (keyprsnt('axes')) then
-        call options('axes', axopt, present, 3*NAXOPT)
-      else
-c       Default is to take the first two axes.
-        present(1) = .true.
-        present(2) = .true.
+c       Locate the selected axes.
+        call keya('axes', axis, ' ')
+        do while (axis.ne.' ')
+          if (axis.eq.' ') goto 10
+
+          dim = dim + 1
+          call assertl(dim.le.2, 'A maximum of two axes may be given')
+
+          if (len1(axis).eq.1) then
+            axnum(dim) = index(axC,axis)
+          else
+            call coFindAx(lIn, axis, axnum(dim))
+
+            if (axnum(dim).eq.0) then
+c             Try harder.
+              call ucase(axis)
+              if (axis.eq.'LNG' .or. axis.eq.'LONG') then
+                axis = 'longitude'
+                call coFindAx(lIn, axis, axnum(dim))
+              else if (axis.eq.'LAT') then
+                axis = 'latitude'
+                call coFindAx(lIn, axis, axnum(dim))
+              else if (axis.eq.'SPC' .or. axis.eq.'SPEC') then
+                axis = 'spectral'
+                call coFindAx(lIn, axis, axnum(dim))
+              endif
+            endif
+          endif
+
+          call assertl(axnum(dim).ne.0,
+     *      'No '//axis(:len1(axis))//' axis found')
+
+          call keya('axes', axis, ' ')
+        enddo
       endif
 
-c     Find the axis numbers corresponding to the selected axes.
-      dim = 0
-      do i = 1, 3*NAXOPT
-        if (present(i)) then
-          j   = mod(i-1, NAXOPT) + 1
-          dim = dim + 1
-          axisname = ' '
-          call fndaxnum(lIn, axtype(j), axisname, axnum(dim))
-          line = 'No '//axtype(j)(:len1(axtype(j)))//' axis found'
-          call assertl(axisname.ne.' ', line)
-        endif
-      enddo
+ 10   call assertl(dim.ne.0, 'No valid axes specified')
 
 c     Sort the axes found to ensure most efficient reading of image.
-      call assertl(dim.le.2, 'A maximum of 2 axes may be given')
       call hsorti(dim, axnum, axind)
 
 c     Set subcube variable to the selected axes list for XYZSETUP.
       subcube = ' '
       do n = 1, dim
-        subcube(n:n) = axnames(axnum(axind(n)):axnum(axind(n)))
+        subcube(n:n) = axC(axnum(axind(n)):axnum(axind(n)))
       enddo
 
 c     Read naxis and ctype for each axis.
       do n = 1, dim
-c       Reorder so that el. 1 to el. dim corresponds to the list given
-c       by the axes keyword, i.e. the axes over which to average.  The
-c       rest will be the other axes, with the lowest numbered first.
+c       Reorder axes to match the list given by the axes keyword, i.e.
+c       the axes over which to average.  The rest will be the other
+c       axes, with the lowest numbered first.
         i = axind(n)
 
-        call rdhdi(lIn, keyw('naxis',axnum(i)), axlen(n), 0)
-        call rdhda(lIn, keyw('ctype',axnum(i)), ctype(n), 'Unknown')
+        call rdhdi(lIn, 'naxis'//itoaf(axnum(i)), axlen(n), 0)
+        call rdhda(lIn, 'ctype'//itoaf(axnum(i)), ctype(n), 'Unknown')
       enddo
 
-      if (dim+1.le.naxis) then
+      if (dim.lt.naxis) then
         n = dim
         do i = 1, naxis
-          if (index(subcube, axnames(i:i)).eq.0) then
+          if (index(subcube, axC(i:i)).eq.0) then
             n = n + 1
-            if (i.le.2) then
-              ctype(n) = 'Position'
-            else if (i.eq.3) then
-              ctype(n) = 'Channel'
-            else if (i.ge.4) then
-              ctype(n) = 'Unknown'
-            endif
-
-c           Following is workaround HP compiler bug
-            temp = ctype(n)
-            call rdhda(lIn, keyw('ctype',i), ctype(n), temp)
+            call rdhda(lIn, 'ctype'//itoaf(i), ctype(n), ' ')
             cindex(n-dim) = i
            endif
         enddo
       endif
 
-c     Create a list of axis names containing alternative spellings and
-c     character cases.
-      axopts = ' '
-      do i = 1, 3*NAXOPT
-        axopts(len1(axopts)+1:) = axopt(i)(:len1(axopt(i))) // ','
-      enddo
-
 c     Create the plot's axis labels, the first being the first non-
 c     averaged image axis (no label is needed for those averaged).
-      axlabel(naxis+1) = '[]'
       do i = 1, naxis-dim
 c       Start by setting the label to the root of the corresponding
 c       ctype variable.
         j = dim + i
         axlabel(i) = ctype(j)(:indek(ctype(j),'-')-1)
 
-c       Try to match it against a standard label.
-        if (match(axlabel(i)(:len1(axlabel(i))), axopts, n)) then
-          j = mod(n-1, NAXOPT) + 1
+c       Try to convert to a standard label.
+        do j = 1, NAXTYP
+          if (axlabel(i).eq.axtyp(j)) then
+            axlabel(i) = axlab(j)
+            goto 20
+          endif
+        enddo
 
-c         Convert to a standard label.
-          axlabel(i) = axopt(j)
-
-c         Record the units of the plot's x-axis.
-          if (i.eq.1) axlabel(naxis+1) = axunit(j)
-        endif
+ 20     continue
       enddo
 
 c     Is it necessary to read a plane profile by profile?
@@ -746,19 +750,6 @@ c     Is it necessary to read a plane profile by profile?
 c       Yes, flag this by negating dim.
         dim = -dim
       endif
-
-      end
-
-c***********************************************************************
-
-      character*8 function keyw(key, i)
-      character*(*) key
-      integer     i
-c-----------------------------------------------------------------------
-      integer     len1
-      character*1 itoaf
-c-----------------------------------------------------------------------
-      keyw = key(:len1(key)) // itoaf(i)
 
       end
 
@@ -795,41 +786,31 @@ c***********************************************************************
       double precision beaminfo(*)
       logical   toKelvin
 c-----------------------------------------------------------------------
-      include          'mirconst.h'
+      include 'maxdim.h'
+      include 'maxnax.h'
+      include 'mirconst.h'
 
-      integer          SUMBM, KPERJY, BEAMX, BEAMY
-      parameter        (SUMBM=1, KPERJY=2, BEAMX=3, BEAMY=4)
+      integer    SUMBM,   KPERJY,   BEAMX,   BEAMY
+      parameter (SUMBM=1, KPERJY=2, BEAMX=3, BEAMY=4)
 
-      character*10     units
-      logical          ok
-      logical          keyprsnt, beamprs
-      integer          tbm, iostat
+      logical   beamprs, keyprsnt, mask, ok
+      integer   axlen(MAXNAX), axlenx, axleny, bmblc(MAXNAX), bmctr(2),
+     *          bmsiz(2), bmtrc(MAXNAX), i, iostat, j, latAx, lngAx,
+     *          naxis, tbm, viraxlen(MAXNAX), vircsz(MAXNAX)
+      real      value
+      double precision frln2, grid(2), ratio(2), restfreq
+      character axC*7, plane*2, string*80, units*10
 
-      integer          i, j
-      character*2      plane
-      integer          axnumx, axnumy
-      character*8      keyw
-      double precision grid(2), ratio(2), frln2
-      double precision restfreq
-      character*80     string
+      external  itoaf
+      character itoaf*1
 
-      include          'maxdim.h'
-      include          'maxnax.h'
-      integer          naxis, axlen(MAXNAX)
-      integer          axlenx, axleny
-      integer          bmblc(MAXNAX), bmtrc(MAXNAX), bmsiz(2), bmctr(2)
-      integer          viraxlen(MAXNAX), vircsz(MAXNAX)
-      real             value
-      logical          mask
-
-      double precision radtosec
-      parameter        (radtosec = 3600d0 * 180d0 / dpi)
+      data axC /'xyzabcd'/
 c-----------------------------------------------------------------------
-c First do some tests, i.e. if the dataunits are 'per beam'. If not, the
-c data cannot be converted in this way (except if they are 'per pixel',
-c in which case the conversion factor is simply 1.
-c If Kelvin were requested for the plot, the data units must also be
-c 'per beam', and also the wavelength must be known.
+c     First do some tests, i.e. if the dataunits are 'per beam'.  If
+c     not, the data cannot be converted in this way (except if they are
+c     'per pixel', in which case the conversion factor is simply 1.
+c     If Kelvin were requested for the plot, the data units must also be
+c     'per beam', and also the wavelength must be known.
 
       ok = .true.
       beaminfo(SUMBM) = 1d0
@@ -847,6 +828,7 @@ c 'per beam', and also the wavelength must be known.
           toKelvin = .false.
           ok = .false.
         endif
+
         call rdhdd(lIn, 'restfreq', restfreq, 0d0)
         if (restfreq.eq.0d0) then
           call bug('w','Restfreq unknown, cannot calculate '//
@@ -857,17 +839,20 @@ c 'per beam', and also the wavelength must be known.
       endif
       if (.not.ok) return
 
+c     Identify the longitude (RA) and latitude (Dec) axes.
+      call coFindAx(lIn, 'longitude', lngAx)
+      call coFindAx(lIn, 'latitude',  latAx)
+      call assertl(lngAx.gt.0, 'Longitude axis not found')
+      call assertl(latAx.gt.0, 'Latitude axis not found')
+      plane(1:1) = axC(lngAx:lngAx)
+      plane(2:2) = axC(latAx:latAx)
 
-c Determine which axes are the longitude (RA) and latitude (Dec) axes
-c and set the beamarea of those equal to the map area to be integrated.
-c Also read the gridspacings.
-      plane(1:2) = 'xy'
-      call fndaxnum(lIn, 'Lon', plane(1:1), axnumx)
-      call fndaxnum(lIn, 'Lat', plane(2:2), axnumy)
-      bmsiz(1) = trc(axnumx) - blc(axnumx) + 1
-      bmsiz(2) = trc(axnumy) - blc(axnumy) + 1
-      call rdhdi(lIn, keyw('naxis',axnumx), axlenx, 0)
-      call rdhdi(lIn, keyw('naxis',axnumy), axleny, 0)
+c     Set the beamarea of those equal to the map area to be
+c     integrated.
+      bmsiz(1) = trc(lngAx) - blc(lngAx) + 1
+      bmsiz(2) = trc(latAx) - blc(latAx) + 1
+      call rdhdi(lIn, 'naxis'//itoaf(lngAx), axlenx, 0)
+      call rdhdi(lIn, 'naxis'//itoaf(latAx), axleny, 0)
       if ((bmsiz(1).ne.axlenx .and. mod(bmsiz(1),2).eq.0) .or.
      *    (bmsiz(2).ne.axleny .and. mod(bmsiz(2),2).eq.0)) then
         string = 'The region has an even number of pixels in '
@@ -880,16 +865,17 @@ c Also read the gridspacings.
         call bug('w','which means the sum is badly defined')
         call bug('f','try again, after changing the region keyword')
       endif
-      call rdhdd(lIn, keyw('cdelt',axnumx), grid(1), 0d0)
-      call rdhdd(lIn, keyw('cdelt',axnumy), grid(2), 0d0)
 
+c     Read the grid spacings.
+      call rdhdd(lIn, 'cdelt'//itoaf(lngAx), grid(1), 0d0)
+      call rdhdd(lIn, 'cdelt'//itoaf(latAx), grid(2), 0d0)
 
-c Check if 'beam' is present. If so, read it, assume it gives a dataset
-c and try to open it. If that works iostat will be 0 and a summation
-c must be done. Else the beam keyword gives the beamsize, and a second
-c number must be read. If 'beam' was not present, the items bmaj and
-c bmin are found from the header, unless they are not present, in which
-c case an error message is issued.
+c     Check if 'beam' is present.  If so, read it, assume it gives a
+c     dataset and try to open it.  If that works iostat will be 0 and a
+c     summation must be done.  Else the beam keyword gives the beamsize,
+c     and a second number must be read.  If 'beam' was not present, the
+c     items bmaj and bmin are found from the header, unless they are not
+c     present, in which case an error message is issued.
       beamprs = keyprsnt('beam')
       if (beamprs) then
         call keya('beam', string, ' ')
@@ -898,57 +884,65 @@ c case an error message is issued.
       else
         iostat = 1
       endif
+
       if (iostat.eq.0) then
-c Open beam dataset
+c       Open beam dataset.
         naxis = MAXNAX
         call xyzopen(tbm, string, 'old', naxis, axlen)
-c Get crpix, and assume this is the beam center
-        call rdhdi(tbm, keyw('crpix',axnumx), bmctr(1), 0)
-        call rdhdi(tbm, keyw('crpix',axnumy), bmctr(2), 0)
-c Set beamset region
+
+c       Get crpix, and assume this is the beam center.
+        call rdhdi(tbm, 'crpix'//itoaf(lngAx), bmctr(1), 0)
+        call rdhdi(tbm, 'crpix'//itoaf(latAx), bmctr(2), 0)
+
+c       Set beamset region.
         do i = 1, MAXNAX
           bmblc(i) = 1
           bmtrc(i) = 1
         enddo
 
-        if (bmsiz(1).gt.axlen(axnumx) .or.
-     *      bmsiz(2).gt.axlen(axnumy)) then
+        if (bmsiz(1).gt.axlen(lngAx) .or.
+     *      bmsiz(2).gt.axlen(latAx)) then
           call bug('w','Beam dataset is smaller than input dataset')
           call bug('f','therefore imspec cannot sum over enough area')
         else if (bmsiz(1).eq.axlenx .and. bmsiz(2).eq.axleny) then
-          bmtrc(axnumx) = axlenx
-          bmtrc(axnumy) = axleny
+          bmtrc(lngAx) = axlenx
+          bmtrc(latAx) = axleny
         else
-          bmblc(axnumx) = bmctr(1) - bmsiz(1)/2
-          bmtrc(axnumx) = bmctr(1) + bmsiz(1)/2
-          bmblc(axnumy) = bmctr(2) - bmsiz(2)/2
-          bmtrc(axnumy) = bmctr(2) + bmsiz(2)/2
+          bmblc(lngAx) = bmctr(1) - bmsiz(1)/2
+          bmtrc(lngAx) = bmctr(1) + bmsiz(1)/2
+          bmblc(latAx) = bmctr(2) - bmsiz(2)/2
+          bmtrc(latAx) = bmctr(2) + bmsiz(2)/2
         endif
         call xyzsetup(tbm, plane, bmblc, bmtrc, viraxlen, vircsz)
-c Integrate beam
+
+c       Integrate beam.
         beaminfo(SUMBM) = 0d0
         do i = 1, vircsz(2)
           call xyzpixrd(tbm, i, value, mask)
           if (mask) beaminfo(SUMBM) = beaminfo(SUMBM) + dble(value)
         enddo
+
         call xyzclose(tbm)
         beaminfo(BEAMX) = 0d0
         beaminfo(BEAMY) = 0d0
+
       else
-c Get beam from keyword or from header, in radians
+c       Get beam from keyword or from header, in radians.
         call assertl(grid(1).ne.0d0 .and. grid(2).ne.0d0,
-     *    'Gridspacing not present in header, cannot sum beam')
+     *    'Grid spacing not present in header, cannot sum beam')
+
         if (beamprs) then
           call matodf(string, beaminfo(BEAMX), 1, ok)
           call assertl(ok, 'Error decoding beam keyword')
           call keyd('beam', beaminfo(BEAMY), beaminfo(BEAMX))
-          beaminfo(BEAMX) = beaminfo(BEAMX) / radtosec
-          beaminfo(BEAMY) = beaminfo(BEAMY) / radtosec
+          beaminfo(BEAMX) = beaminfo(BEAMX) * DAS2R
+          beaminfo(BEAMY) = beaminfo(BEAMY) * DAS2R
         else
           call rdhdd(lIn, 'bmaj', beaminfo(BEAMX), 0d0)
           call rdhdd(lIn, 'bmin', beaminfo(BEAMY), 0d0)
         endif
-c Relate beam to gridspacing
+
+c       Relate beam to grid spacing.
         ratio(1) = beaminfo(BEAMX) / abs(grid(1))
         ratio(2) = beaminfo(BEAMY) / abs(grid(2))
         if (ratio(1).eq.0d0 .or. ratio(2).eq.0d0) then
@@ -956,13 +950,14 @@ c Relate beam to gridspacing
      *      'No beam given and no beam in header: sumbeam=1 assumed')
           beaminfo(SUMBM) = 1d0
         else
-c If area large enough integral is simple formula, else calculate it.
-c For conversion to flux only sum in equivalent region, for conversion
-c to brightness temperature sum full beam always.
-          frln2 = 4d0 * log(2.0)
+c         If area large enough integral is simple formula, else
+c         calculate it.  For conversion to flux only sum in equivalent
+c         region, for conversion to brightness temperature sum full beam
+c         always.
+          frln2 = 4d0 * log(2d0)
           if (bmsiz(1).gt.8.0*ratio(1) .and.
      *        bmsiz(2).gt.8.0*ratio(2) .or. toKelvin) then
-            beaminfo(SUMBM) = (dpi/frln2) * ratio(1)*ratio(2)
+            beaminfo(SUMBM) = (DPI/frln2) * ratio(1)*ratio(2)
           else
             beaminfo(SUMBM) = 0d0
             do i = -bmsiz(1)/2, bmsiz(1)/2
@@ -982,8 +977,8 @@ c     Conversion from Jansky to Kelvin from S = 2k/lamda^2 * omega * T.
      *       (beaminfo(SUMBM) * abs(grid(1)*grid(2))))
 
 c     Convert beam to arcseconds.
-      beaminfo(BEAMX) = beaminfo(BEAMX) * radtosec
-      beaminfo(BEAMY) = beaminfo(BEAMY) * radtosec
+      beaminfo(BEAMX) = beaminfo(BEAMX) * DR2AS
+      beaminfo(BEAMY) = beaminfo(BEAMY) * DR2AS
 
       end
 
@@ -991,11 +986,11 @@ c***********************************************************************
 
       subroutine outdev(device)
 
-      character*(*)  device
+      character  device*(*)
 c-----------------------------------------------------------------------
-c Read the device and log keyword. Possibly open the logfile.
-c Also: if no plotdevice was given and the listing was suppressed too,
-c make a listing anyway.
+c  Read the device and log keyword.  Possibly open the logfile.
+c  Also: if no plotdevice was given and the listing was suppressed too,
+c  make a listing anyway.
 c-----------------------------------------------------------------------
       include 'imstat.h'
 
@@ -1012,93 +1007,94 @@ c***********************************************************************
 
       subroutine labset(axlabel,lIn,file,blc,trc,naxis)
 
-      character*(*) axlabel(*)
-      integer       lIn
-      character*(*) file
-      integer       blc(*), trc(*), naxis
+      character axlabel(*)*(*)
+      integer   lIn
+      character file*(*)
+      integer   blc(*), trc(*), naxis
 c-----------------------------------------------------------------------
-c Make nice labels and header information, including units and so, ready
-c to be plotted.
-c All this information is stored in the global variable plotpar.
+c  Make nice labels and header information, including units and so,
+c  ready to be plotted.
+c  All this information is stored in the global variable plotpar.
 c-----------------------------------------------------------------------
-      include       'imstat.h'
+      include 'imstat.h'
 
-      integer       len1
-      character*40  string
-      character*20  units
-      character*40  ylab, substr
-      real          rdata
-      character*10  rtoaf
-      integer       i, j
-      character*40  bln, tln
+      integer   j, k
+      real      rdata
+      character bln*40, rtoaf*10, string*40, substr*40, tln*40,
+     *          units*20, ylab*40
+
+      external  len1
+      integer   len1
 c-----------------------------------------------------------------------
-c Get the data units
+c     Get the data units.
       call rdhda(lIn, 'bunit', units, 'Unknown')
       if (plotvar(DUNIT).eq.KELVIN) units = 'K'
       string = units
       call lcase(string)
 
-c Set the x-axis label, by adding units if possible
+c     Set the x-axis label.
       plotpar(XLABP) = axlabel(1)
-      if (axlabel(naxis+1).ne.'[]')
-     *   plotpar(XLABP) = plotpar(XLABP)(:len1(plotpar(XLABP))) //
-     *                    ' ' // axlabel(naxis+1)
 
-c Set the y-axis label.
-c If the y-axis was converted to flux, remove the /beam or /pixel from
-c the units.
-c If the derivative is to be taken, make it into dy/dx.
+c     Set the y-axis label.
       ylab = substr(plotopts, plotvar(SEL))
-      if (index(ylab,'flux').ne.0 .and. index(string,'jy').ne.0) then
-        if (index(string,'beam').ne.0) then
-          units = units(: index(string,'beam')-1)
-          i = len1(units)
-          if (units(i:i).eq.'/') units(i:i) = ' '
-        endif
-
-        if (index(string,'pixel').ne.0) then
-          units = units(: index(string,'pixel')-1)
-          i = len1(units)
-          if (units(i:i).eq.'/') units(i:i) = ' '
-        endif
-      endif
-
-      call ucase(ylab(1:1))
       if (plotvar(DERIV).gt.0) then
-        ylab  = 'd' // ylab(:len1(ylab)) // '/d' // axlabel(1)
-        units = units(:len1(units)) // '/(' //
-     *          axlabel(naxis+1)(2:len1(axlabel(naxis+1))-1) // ')'
+c       Derivative was taken, make it into dy/dx (without units).
+        call ucase(ylab(1:1))
+        plotpar(YLABP) = 'd' // ylab(:len1(ylab)) // '/d' // axlabel(1)
+      else
+c       Was the y-axis converted to flux?
+        if (index(ylab,'flux').ne.0 .and. index(string,'jy').ne.0) then
+c         Remove the /beam or /pixel from the units.
+          k = index(string,'beam')
+          if (k.ne.0) then
+            units = units(:k-1)
+            k = len1(units)
+            if (units(k:k).eq.'/') units(k:k) = ' '
+          endif
+
+          k = index(string,'pixel')
+          if (k.ne.0) then
+            units = units(:k-1)
+            k = len1(units)
+            if (units(k:k).eq.'/') units(k:k) = ' '
+          endif
+        endif
+
+        call ucase(ylab(1:1))
+        write(plotpar(YLABP),10) ylab(:len1(ylab)), units(:len1(units))
+ 10     format(a,' (',a,')')
       endif
 
-      write(plotpar(YLABP), '(a, '' ['', a, '']'')')
-     *      ylab(:len1(ylab)), units(:len1(units))
-
-
-c Construct a header containing the object name, the file name and
-c the frequency.
+c     Construct a header containing the object name, file name, and
+c     frequency.
       call rdhda(lIn, 'object',   string, ' ')
-      call rdhdr(lIn, 'restfreq', rdata,   0.0)
+      call rdhdr(lIn, 'restfreq', rdata,  0.0)
       if (string.ne.' ') plotpar(INFOP) = 'Source: ' // string
       if (rdata.ne.0.0) then
-        if (len1(plotpar(INFOP)).eq.0) then
-          plotpar(INFOP)                         =      rtoaf(rdata,1,6)
+        k = len1(plotpar(INFOP))
+        if (k.eq.0) then
+          plotpar(INFOP) = rtoaf(rdata,1,6)
         else
-          plotpar(INFOP)(len1(plotpar(INFOP))+1:)='; '//rtoaf(rdata,1,6)
+          plotpar(INFOP)(k+1:) = '; ' // rtoaf(rdata,1,6)
         endif
-        plotpar(INFOP)(len1(plotpar(INFOP))+1:)=' GHz'
+
+        k = len1(plotpar(INFOP))
+        plotpar(INFOP)(k+1:) = ' GHz'
       endif
+
       if (file.ne.' ') then
-        if (len1(plotpar(INFOP)).eq.0) then
-          plotpar(INFOP)                          =   'File: ' // file
+        k = len1(plotpar(INFOP))
+        if (k.eq.0) then
+          plotpar(INFOP) = 'File: ' // file
         else
-          plotpar(INFOP)(len1(plotpar(INFOP))+1:) = '; File: ' // file
+          plotpar(INFOP)(k+1:) = '; File: ' // file
         endif
       endif
 
-c Encode the selected box into a nice-looking string.
-      call mitoaf(blc, naxis, bln, i)
-      call mitoaf(trc, naxis, tln, j)
-      string = 'blc=(' // bln(:i) // '), trc=(' // tln(:j) // ')'
+c     Encode the selected box into a nice-looking string.
+      call mitoaf(blc, naxis, bln, j)
+      call mitoaf(trc, naxis, tln, k)
+      string = 'blc=(' // bln(:j) // '), trc=(' // tln(:k) // ')'
       plotpar(BOXP) = 'Bounding box: ' // string
 
       end
@@ -1112,10 +1108,10 @@ c***********************************************************************
       integer          dim
       double precision beaminfo(*)
 c-----------------------------------------------------------------------
-c Print out some information about the dataset and its units. Also the
-c beam and sumap if these are used.
-c The informational lines start in column 'offset'. In a number of cases
-c the number after a piece of text starts in column 'align'.
+c  Print out some information about the dataset and its units.  Also the
+c  beam and sumap if these are used.
+c  The informational lines start in column 'offset'.  In a number of
+c  cases the number after a piece of text starts in column 'align'.
 c-----------------------------------------------------------------------
       include          'imstat.h'
 
@@ -1203,10 +1199,10 @@ c***********************************************************************
       character*(*)    axlabel(*)
       character*(*)    device
 c-----------------------------------------------------------------------
-c Loop over all selected data and calculate the statistics.
-c These are found for different 'levels'. level 1 corresponds to the
-c statistics of the selected averaging-axes. level 2 combines these
-c statistics for a subcube with one higher dimension, etc.
+c  Loop over all selected data and calculate the statistics.
+c  These are found for different 'levels'.  level 1 corresponds to the
+c  statistics of the selected averaging-axes.  level 2 combines these
+c  statistics for a subcube with one higher dimension, etc.
 c-----------------------------------------------------------------------
       include          'imstat.h'
       integer          MAXRUNS
@@ -1236,17 +1232,16 @@ c-----------------------------------------------------------------------
       enddo
 
       doplot = device.ne.' '
-c Open the plot device
       if (doplot) then
+c       Open the plot device.
         if (pgbeg(0,device,1,1).ne.1) then
           call pgldev
           call bug('f', 'Error opening plot device')
         endif
       endif
 
-c loop over all subcubes for which statistics are to be calculated.
+c     Loop over all subcubes for which statistics are to be calculated.
       do subcube = 1, counts(nlevels)
-
         call xyzs2c(lIn, subcube, coo)
 
         if (abs(dim).eq.2) then
@@ -1259,13 +1254,13 @@ c loop over all subcubes for which statistics are to be calculated.
           enddo
         endif
 
-c        If init(i)=.true., the statistics for this level must be
-c        reinitialized.
+c       If init(i)=.true., the statistics for this level must be
+c       reinitialized.
         init(1) = .true.
         npoints(1) = 0
 
-c Read a profile or a plane
-c Unless dim was -2, in which case a plane is read profile by profile
+c       Read a profile or a plane unless dim was -2, in which case a
+c       plane is read profile by profile.
         if (dim.gt.0) nloop = 1
         if (dim.eq.-2) nloop = counts(naxis+2)
         if (dim.eq.1) call xyzprfrd(lIn,subcube,data,mask,counts(0))
@@ -1277,11 +1272,10 @@ c Unless dim was -2, in which case a plane is read profile by profile
           do i = 1, counts(0)
 c           If datapoint falls within limits as defined by cutoff and
 c           masking, use it.
-c           print*,i,data(i),mask(i)
             if (inbox(dim,i.eq.1 .and. iloop.eq.1,
      *        data(i),mask(i),runs,corners,cut)) then
-c             print*,'    used'
-c convert to Kelvin if requested.
+
+c             Convert to Kelvin if requested.
               if (plotvar(DUNIT).eq.KELVIN)
      *          data(i) = data(i) * real(beaminfo(KPERJY))
               if (init(1)) then
@@ -1303,10 +1297,11 @@ c             sumpbc(1)  = sumpbc(1) + v*pbccorr(i,coo(1))
             endif
           enddo
         enddo
-c after looping over all pixels of a selected subcube, add the results
-c to the statistics of all higher levels. These are reinitialized at
-c appropriate times, namely if all subcubes from one level lower have
-c been handled.
+
+c       After looping over all pixels of a selected subcube, add the
+c       results to the statistics of all higher levels.  These are
+c       reinitialized at appropriate times, namely if all subcubes from
+c       one level lower have been handled.
         if (nlevels.ge.2) then
           do level = 2, nlevels
             init(level) = mod(subcube-1, counts(level)).eq.0
@@ -1330,11 +1325,12 @@ c been handled.
           enddo
         endif
 
-c After treating each selected subcube, write out the results.
+c       After treating each selected subcube, write out the results.
         call results(subcube, lIn, naxis,abs(dim), counts, axlabel,
      *               doplot, npoints, maxval, minval, sum, sumpbc,
      *               beaminfo(SUMBM), sumsq)
       enddo
+
       if (doplot) call pgend
 
       end
@@ -1342,20 +1338,17 @@ c After treating each selected subcube, write out the results.
 c***********************************************************************
 
       subroutine results(subcube, lIn, naxis, dim, counts, axlabel,
-     *                   doplot, npoints, maxval, minval, sum, sumpbc,
-     *                   sumap, sumsq)
+     *  doplot, npoints, maxval, minval, sum, sumpbc, sumap, sumsq)
 
-      integer          subcube
-      integer          lIn, naxis, dim
-      integer          counts(0:*)
-      character*(*)    axlabel(*)
-      logical          doplot
-      integer          npoints(*)
-      double precision maxval(*), minval(*)
-      double precision sum(*), sumpbc(*), sumap, sumsq(*)
+      integer   subcube, lIn, naxis, dim, counts(0:*)
+      character axlabel(*)*(*)
+      logical   doplot
+      integer   npoints(*)
+      double precision maxval(*), minval(*), sum(*), sumpbc(*), sumap,
+     *          sumsq(*)
 c-----------------------------------------------------------------------
-c Routine controlling when results are written, also doing a few
-c on-the-spot conversions.
+c  Routine controlling when results are written, also doing a few
+c  on-the-spot conversions.
 c-----------------------------------------------------------------------
       include          'imstat.h'
 
@@ -1367,36 +1360,39 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
       nlevels = naxis - dim + 1
 
-c Loop over all levels
+c     Loop over all levels.
       do level = 1, nlevels
-
-c If all data for a level were treated, save the results
+c       If all data for a level were treated, save the results.
         if (mod(subcube,counts(level)).eq.0) then
-
-c Check if output must be flushed (at last subcube of level 1, and for
-c each higher-level subcube
+c         Check if output must be flushed (at last subcube of level 1,
+c         and for each higher-level subcube.
           dotail = mod(subcube, counts(2)).eq.0
 
-c Convert the subcube number to pixels numbers (coo) and then to real
-c coordinates (coords) and string-encoded coordinates (cvalues).
+c         Convert the subcube number to pixels numbers (coo) and then to
+c         real coordinates (coords) and string-encoded coordinates
+c         (cvalues).
           if (level.lt.nlevels) then
             call xyzs2c(lIn, subcube, coo)
             call getcoo(axlabel, nlevels, coo, coords, cvalues)
           endif
 
-c Add an entry to the table
-          if (dotail .or. level.eq.1)
-     *      call tabentry(coo(level),coords(level),cvalues(level),
-     *                    npoints(level),maxval(level),minval(level),
-     *                    sum(level),sumpbc(level),sumap,sumsq(level))
+c         Add an entry to the table.
+          if (dotail .or. level.eq.1) then
+            call tabentry(coo(level),coords(level),cvalues(level),
+     *        npoints(level),maxval(level),minval(level),sum(level),
+     *        sumpbc(level),sumap,sumsq(level))
+          endif
 
-c Make output for a level if all subcubes were done and added to list.
+c         Make output for a level if all subcubes were done and added to
+c         list.
           if (dotail) then
-c If a header must be written, write it.
-            if (plotvar(HEAD).eq.1 .and. plotvar(LIST).eq.1)
-     *        call tabhead(naxis,dim,nlevels,level,coo,axlabel(level))
-c Treat the arrays for hanning/derivative and print them.
-c Make the plot if all subcubes of a level were done.
+c           If a header must be written, write it.
+            if (plotvar(HEAD).eq.1 .and. plotvar(LIST).eq.1) then
+              call tabhead(naxis,dim,nlevels,level,coo,axlabel(level))
+            endif
+
+c           Treat the arrays for hanning/derivative and print them.
+c           Make the plot if all subcubes of a level were done.
             call statout(doplot,axlabel,cvalues,dim,level,nlevels)
           endif
         endif
@@ -1408,39 +1404,45 @@ c***********************************************************************
 
       subroutine getcoo(axlabel, nlevels, coo, coords, cvalues)
 
-      character*(*)    axlabel(*)
-      integer          nlevels
-      integer          coo(*)
+      character axlabel(*)*(*)
+      integer   nlevels, coo(*)
       double precision coords(*)
-      character*(*)    cvalues(*)
+      character cvalues(*)*(*)
 c-----------------------------------------------------------------------
-c Convert pixel coordinates (coo) to real coordinates (coords) and
-c string-encoded coordinates (cvalues).
-c For ra and dec axes special conversions are done.
+c  Convert pixel coordinates to world coordinates and encode as strings.
 c-----------------------------------------------------------------------
-      include          'imstat.h'
+      include 'imstat.h'
 
-      integer          len1
-      integer          i, j
-      character*24     radec
+      integer   i, j
+      character radec*24
+
+      external  len1
+      integer   len1
 c-----------------------------------------------------------------------
       do i = 1, nlevels - 1
+c       (May not be correct for celestial axes.)
         call coCvt1(cin,cindex(i),'ap',dble(coo(i)),'aw',coords(i))
+
         cvalues(i) = ' '
-        if (  axlabel(i)(:4).eq.'R.A.') then
-          coords(i)  = 180.0/dpi * coords(i)
+        if (axlabel(i).eq.'Right ascension') then
+          coords(i) = coords(i)*DR2D
           call deghms(coords(i), 0d0, radec)
           j = len1(radec(1:12))
           cvalues(i)(13-j:12) = radec(1:j)
-          coords(i) = coords(i) * 3600.0 / 15.0
-        else if (axlabel(i)(:4).eq.'Decl') then
-          coords(i)  = 180.0/dpi * coords(i)
+          coords(i) = coords(i) * 3600d0 / 15d0
+        else if (axlabel(i).eq.'Declination') then
+          coords(i)  = coords(i)*DR2D
           call deghms(0d0, coords(i), radec)
           j = len1(radec(13:24))
           cvalues(i)(13-j:12) = radec(13:12+j)
-          coords(i) = coords(i) * 3600.0
+          coords(i) = coords(i) * 3600d0
         else
-          write(cvalues(i), '(f10.1, 2x)') coords(i)
+c         Celestial axis?
+          if (index(axlabel(i),'(deg)').ne.0) then
+            coords(i) = coords(i)*R2D
+          endif
+
+          write(cvalues(i), '(f10.1,2x)') coords(i)
         endif
       enddo
 
@@ -1454,8 +1456,8 @@ c***********************************************************************
       integer            coo(*)
       character*(*)      axlabel
 c-----------------------------------------------------------------------
-c Write a table header, giving the coordinate value of all higher axes,
-c and a nice string for the x-axis.
+c  Write a table header, giving the coordinate value of all higher axes,
+c  and a nice string for the x-axis.
 c-----------------------------------------------------------------------
       include            'imstat.h'
 
@@ -1523,16 +1525,16 @@ c***********************************************************************
       integer          npoints
       double precision maxval, minval, sum, sumpbc, sumap, sumsq
 c-----------------------------------------------------------------------
-c First convert from the raw statistics to the useful statistics.
-c Then add an entry to the arrays later to be used for plotting and
-c printing.
+c  First convert from the raw statistics to the useful statistics.
+c  Then add an entry to the arrays later to be used for plotting and
+c  printing.
 c-----------------------------------------------------------------------
       include          'imstat.h'
 
       double precision rms, calcrms, stats(NSTATS)
       logical          ok
 c-----------------------------------------------------------------------
-c Convert from raw to useful statistics
+c     Convert from raw to useful statistics
       rms = calcrms(sum, sumsq, npoints, ok)
       if (plotvar(DUNIT).eq.ORIG .or. plotvar(DUNIT).eq.KELVIN) then
         stats(1) = sum
@@ -1548,7 +1550,7 @@ c Convert from raw to useful statistics
         stats(3) = npoints
       endif
 
-c Add datapoints to plotarrays
+c     Add datapoints to plotarrays
       if (.not.ok) coord = MAGICVAL
       call statsav(coo, coord, cvalue, stats)
 
@@ -1581,7 +1583,7 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
       call assertl(n.ne.0, 'All datapoints are masked')
 
-c Do possible smoothing and derivative-taking on the data,
+c     Do possible smoothing and derivative-taking on the data,
       plt = matchnr('sum',plotopts)
       do i = 1, n
         yarr(i) = statarr(plt,i)
@@ -1601,11 +1603,11 @@ c Do possible smoothing and derivative-taking on the data,
         statarr(plt,i) = yarr(i)
       enddo
 
-c Write listed output
+c     Write listed output.
       if (plotvar(HEAD).eq.1 .or. level.eq.1)
      *  call wrnums(iarr,xarr,carr, statarr, n, dim,level,nlevels)
 
-c Copy array to be plotted to array yarr and make plot
+c     Copy array to be plotted to array yarr and make plot.
       if (plotvar(SEL).eq.matchnr('flux',   plotopts)) plt=1
       if (plotvar(SEL).eq.matchnr('pbcflux',plotopts)) plt=2
       if (plotvar(SEL).eq.matchnr('sum',    plotopts)) plt=1
@@ -1620,7 +1622,6 @@ c Copy array to be plotted to array yarr and make plot
      *  call plotstat(iarr, xarr, yarr, n, axlabel,cvalues,nlevels)
 
       first = .true.
-
 
 
       entry statsav(coo, coord, cvalue, stats)
@@ -1659,12 +1660,14 @@ c-----------------------------------------------------------------------
 
       do i = 1, n
         if (xarr(i).ne.MAGICVAL) then
-c Construct the output line for the typed list
+c         Construct the output line for the typed list.
           line = ' '
           if (level.lt.nlevels)
      *      write(line, '(i6,1x, a)') nint(iarr(i)), carr(i)
-c 13 is really len(axlabel)+1, but axlabel is an unknown variable here
-c and it would be messy to transfer just to get the length of it.
+
+c         13 is really len(axlabel)+1, but axlabel is an unknown
+c         variable here and it would be messy to transfer just to get
+c         the length of it.
           if (  plotvar(EFMT).eq.1) then
             write(fmt, '(''('',i1,''(1pe10.3),i8)'')') nstat-1
           else if (plotvar(GSPAC).eq.1) then
@@ -1674,6 +1677,7 @@ c and it would be messy to transfer just to get the length of it.
           endif
           write(temp, fmt=fmt) (statarr(j,i),j=1,nstat-1),
      *      nint(statarr(nstat,i))
+
 c         The following is workaround HP compiler bug
           line(len(typ)+13 :) = temp
         else
@@ -1695,10 +1699,10 @@ c***********************************************************************
       character*(*)    axlabel(*), cvalues(*)
       integer          nlevels
 c-----------------------------------------------------------------------
-c Execute the plot:
-c open the plotfile, and make the axes (with the lower x-axis
-c in appropriate units and the upper in channels). Plot the points
-c with the selected plotstyle and then add the header/title/ids
+c  Execute the plot:
+c  open the plotfile, and make the axes (with the lower x-axis
+c  in appropriate units and the upper in channels).  Plot the points
+c  with the selected plotstyle and then add the header/title/ids
 c-----------------------------------------------------------------------
       include          'imstat.h'
 
@@ -1706,7 +1710,7 @@ c-----------------------------------------------------------------------
       character*40     pginfo
       integer          i
 c-----------------------------------------------------------------------
-c find min and max for plot
+c     Find min and max for plot.
       call mnmx(iarr,xarr,yarr,n, imin,imax, xmin,xmax, ymin,ymax)
 
       call pgpage
@@ -1719,17 +1723,18 @@ c find min and max for plot
         call pgswin(imin, imax, ymin, ymax)
         call pgbox('CMST', 0.0, 0, ' ', 0.0, 0)
       endif
+
       call pgswin(xmin, xmax, ymin, ymax)
       if (.not.(imin.ne.imax .and. plotvar(HEAD).eq.1)) then
         call pgbox('CST',  0.0, 0, ' ', 0.0, 0)
       endif
 
-      if (  axlabel(1)(:4).eq.'R.A.') then
-      call pgtbox('BNSTHYZ', 0.0, 0, 'BCNST', 0.0, 0)
-      else if (axlabel(1)(:4).eq.'Decl') then
-      call pgtbox('BNSTDYZ', 0.0, 0, 'BCNST', 0.0, 0)
+      if (axlabel(1).eq.'Right ascension') then
+        call pgtbox('BNSTHYZ', 0.0, 0, 'BCNST', 0.0, 0)
+      else if (axlabel(1).eq.'Declination') then
+        call pgtbox('BNSTDYZ', 0.0, 0, 'BCNST', 0.0, 0)
       else
-      call pgtbox('BNST',    0.0, 0, 'BCNST', 0.0, 0)
+        call pgtbox('BNST',    0.0, 0, 'BCNST', 0.0, 0)
       endif
 
       call pgpts(xarr, yarr, n, plotvar(STYLE), ymin)
@@ -1752,8 +1757,8 @@ c***********************************************************************
       integer       n
       real          imin, imax, xmin, xmax, ymin, ymax
 c-----------------------------------------------------------------------
-c Find the plotrange, extending the datarange 8% (EXTEND %) at both
-c sides and substituting user-given values if these were given.
+c  Find the plotrange, extending the datarange 8% (EXTEND %) at both
+c  sides and substituting user-given values if these were given.
 c-----------------------------------------------------------------------
       include       'imstat.h'
 
@@ -1807,7 +1812,7 @@ c***********************************************************************
       real             yarr(*)
       integer          n, mode, width
 c-----------------------------------------------------------------------
-c Hanning or boxcar smooth the data
+c  Hanning or boxcar smooth the data.
 c-----------------------------------------------------------------------
       integer          MAXWIDTH
       parameter        (MAXWIDTH = 7)
@@ -1831,7 +1836,7 @@ c***********************************************************************
       real          xarr(*), yarr(*)
       integer       n, mode
 c-----------------------------------------------------------------------
-c Take a one-sided or two-sided derivative
+c  Take a one-sided or two-sided derivative.
 c-----------------------------------------------------------------------
       integer       i
 c-----------------------------------------------------------------------
@@ -1859,9 +1864,9 @@ c***********************************************************************
       character*(*) function cubetype(arg)
       integer arg
 c-----------------------------------------------------------------------
-c Return a normal name to identify the type of the cube.
-c Do it via this function to avoid having a data statement in the
-c include file.
+c  Return a normal name to identify the type of the cube.
+c  Do it via this function to avoid having a data statement in the
+c  include file.
 c-----------------------------------------------------------------------
       character*9 types(4)
       data types / 'profile', 'plane', 'cube', 'hypercube' /
@@ -1881,7 +1886,7 @@ c***********************************************************************
       integer corners(*)
       real    cut(*)
 c-----------------------------------------------------------------------
-c Test if data are within unmasked, above the cut and inside the region
+c  Test if data are within unmasked, above the cut and inside the region
 c-----------------------------------------------------------------------
       integer runpnt, xlen, x,y
       save    runpnt, xlen, x,y
@@ -1894,10 +1899,10 @@ c-----------------------------------------------------------------------
         xlen   = corners(2) - corners(1) + 1
       endif
 
-      if (   cut(2).eq.0.0) then
+      if (cut(2).eq.0.0) then
         unmasked = mask
       else if (cut(2).eq.1.0) then
-        unmasked = mask .and.     data.ge.cut(1)
+        unmasked = mask .and. data.ge.cut(1)
       else if (cut(2).eq.2.0) then
         unmasked = mask .and. abs(data).ge.cut(1)
       else if (cut(2).eq.3.0) then
@@ -1935,12 +1940,11 @@ c***********************************************************************
       integer          npoints
       logical          ok
 c-----------------------------------------------------------------------
-c Calculate the rms from the sum and sumsquared.
+c  Calculate the rms from the sum and sum-squared.
 c-----------------------------------------------------------------------
       double precision rms
 c-----------------------------------------------------------------------
-
-      if (  npoints.ge.2) then
+      if (npoints.ge.2) then
         rms = (sumsq - sum**2/dble(npoints)) / dble(npoints-1)
         if (rms.ge.0d0) then
           rms = sqrt(rms)
@@ -1955,6 +1959,7 @@ c         ok = .false.
       else if (npoints.eq.0) then
         ok = .false.
       endif
+
       calcrms = rms
 
       end
@@ -1966,7 +1971,7 @@ c***********************************************************************
       integer    n, plotstyl
       real       ymin
 c-----------------------------------------------------------------------
-c Plot the points in three possible different styles
+c  Plot points in three possible different styles.
 c-----------------------------------------------------------------------
       if (plotstyl.eq.1) call pgline(n,xarr,yarr)
       if (plotstyl.eq.2) call pgbin(n,xarr,yarr,.true.)
@@ -1983,7 +1988,7 @@ c***********************************************************************
       logical      center
       real         ymin
 c-----------------------------------------------------------------------
-c Connect points and make bars down to the x-axis
+c  Connect points and make bars down to the x-axis.
 c-----------------------------------------------------------------------
       real         xpts(4), ypts(4)
       real         dx, xoff, x
@@ -2013,11 +2018,12 @@ c***********************************************************************
       subroutine pgident
 
 c-----------------------------------------------------------------------
-c Write out an identifying message above the plot.
+c  Write a title above the plot.
 c-----------------------------------------------------------------------
-      include          'imstat.h'
-      character*40     pginfo, ident
-      integer          i
+      include 'imstat.h'
+
+      integer   i
+      character ident*40, pginfo*40
 c-----------------------------------------------------------------------
       call pgsch(1.0)
       call pglab(plotpar(XLABP), plotpar(YLABP), ' ')
