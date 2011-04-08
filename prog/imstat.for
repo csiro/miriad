@@ -127,7 +127,7 @@ c@ log
 c       If specified, output is written to the file given by log=
 c       instead of to the terminal.
 c
-c$Id: imstat.for,v 1.4 2011/04/07 04:59:43 cal103 Exp $
+c$Id: imstat.for,v 1.5 2011/04/08 02:55:48 cal103 Exp $
 c--
 c  IMSPEC - plots spectra from image data
 c& bpw
@@ -289,38 +289,6 @@ c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
 c-----------------------------------------------------------------------
-c  Main program of imstat and imspec.  Puts out the identification,
-c  where the variable NAME from the include file contains the program
-c  name.  Then gets all inputs and does the work before closing up.
-c
-c  Variables:
-c    lIn        Handle of input dataset
-c    naxis      number of axes of dataset
-c    dim        dimension of subcube in which data are averaged
-c    cut        1st el: cutoff value
-c               2nd el: flag to indicate if cut was requested
-c                       0-> no cut, 1-> cut, 2-> cut in absolute value
-c                       3-> cut is lower bound
-c    counts     counts number of pixels/profiles/planes to handle
-c               el 0: # pixels
-c               el 1: 1
-c               el 2: loop size, i.e. #profiles if dim=1, #planes if
-c                     dim=2 etc
-c               el naxis+2: # profiles in a plane, if plane read profile
-c                  by pr (clumsy, since introduced much later as a quick
-c                  fix)
-c    beaminfo   el 1: sum of beam
-c               el 2: conversion factor from Jansky to Kelvin
-c               el 3: beamsize in x in arcsec
-c               el 4: beamsize in y in arcsec
-c    axlabel    el 1: label to put along x-axis
-c               el 2-naxis: names of higher axes
-c               el naxis+1: units of x-axis
-c    device     plot device, no plot if device=' '
-c
-c  A number of variables and flags are made into global variables by
-c  using the include file.
-c-----------------------------------------------------------------------
       include 'imstat.h'
 
       integer   boxes(MAXBOXES), corners(4), counts(0:MAXNAX+2), dim,
@@ -333,8 +301,8 @@ c-----------------------------------------------------------------------
       character versan*72
 c-----------------------------------------------------------------------
       version = versan('imstat',
-     *                 '$Revision: 1.4 $',
-     *                 '$Date: 2011/04/07 04:59:43 $')
+     *                 '$Revision: 1.5 $',
+     *                 '$Date: 2011/04/08 02:55:48 $')
 
       call inputs(lIn,naxis,dim,corners,boxes,cut,counts,beaminfo,
      *  axlabel,device,MAXBOXES)
@@ -349,15 +317,14 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine inputs(lIn, naxis, dim, corners, boxes, cut, counts,
-     *  beaminfo, axlabel, device, MAXBOXES)
+      subroutine inputs(lIn,naxis,dim,corners,boxes,cut,counts,beaminfo,
+     *  axlabel,device,MAXBOXES)
 
       integer   lIn, naxis, dim, corners(*), boxes(*)
       real      cut(*)
       integer   counts(0:*)
       double precision beaminfo(*)
-      character axlabel(*)*(*)
-      character device*(*)
+      character axlabel(*)*(*), device*(*)
       integer   MAXBOXES
 c-----------------------------------------------------------------------
 c  Get all the inputs.
@@ -644,13 +611,13 @@ c-----------------------------------------------------------------------
 
       data axC   /'xyzabcd' /
       data axtyp /'RA',   'DEC',  'GLON', 'GLAT', 'ELON', 'ELAT',
-     *            'FREQ', 'WAVE', 'VRAD', 'VOPT', 'VELO', 'ZOPT'/
+     *            'FREQ', 'WAVE', 'VRAD', 'VOPT', 'ZOPT', 'VELO'/
       data axlab /'Right ascension',          'Declination',
      *            'Galactic longitude (deg)', 'Galactic latitude (deg)',
      *            'Ecliptic longitude (deg)', 'Ecliptic latitude (deg)',
      *            'Frequency (GHz)',          'Wavelength (m)',
      *            'Radio velocity (km/s)',    'Optical velocity (km/s)',
-     *            'Relativistic velocity (km/s)', 'Redshift'/
+     *            'Redshift',            'Relativistic velocity (km/s)'/
 c-----------------------------------------------------------------------
       call coInit(lIn)
 
@@ -1162,7 +1129,7 @@ c-----------------------------------------------------------------------
       if (plotvar(DUNIT).eq.JANSKY) then
         n(1) = nfigd(beaminfo(SUMBM)) + 4
         write(line(offset:), rtfmt(
-     *    ' ''Sum of beam in equivalent region: '',f<>.3 ', n, 1))
+     *    '''Sum of beam in equivalent region: '',f<>.3', n, 1))
      *    beaminfo(SUMBM)
         call logwrit(line)
       endif
@@ -1187,17 +1154,14 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine stats(lIn,naxis,dim, corners, boxes, cut, counts,
-     *                 beaminfo, axlabel, device)
+      subroutine stats(lIn, naxis, dim, corners, boxes, cut, counts,
+     *  beaminfo, axlabel, device)
 
-      integer          lIn
-      integer          naxis, dim
-      integer          corners(*), boxes(*)
-      real             cut(*)
-      integer          counts(0:*)
+      integer   lIn, naxis, dim, corners(*), boxes(*)
+      real      cut(*)
+      integer   counts(0:*)
       double precision beaminfo(*)
-      character*(*)    axlabel(*)
-      character*(*)    device
+      character axlabel(*)*(*), device*(*)
 c-----------------------------------------------------------------------
 c  Loop over all selected data and calculate the statistics.
 c  These are found for different 'levels'.  level 1 corresponds to the
@@ -1327,8 +1291,8 @@ c       one level lower have been handled.
 
 c       After treating each selected subcube, write out the results.
         call results(subcube, lIn, naxis,abs(dim), counts, axlabel,
-     *               doplot, npoints, maxval, minval, sum, sumpbc,
-     *               beaminfo(SUMBM), sumsq)
+     *    doplot, npoints, maxval, minval, sum, sumpbc, beaminfo(SUMBM),
+     *    sumsq)
       enddo
 
       if (doplot) call pgend
@@ -1350,13 +1314,12 @@ c-----------------------------------------------------------------------
 c  Routine controlling when results are written, also doing a few
 c  on-the-spot conversions.
 c-----------------------------------------------------------------------
-      include          'imstat.h'
+      include 'imstat.h'
 
-      integer          nlevels, level
-      logical          dotail
-      integer          coo(  MAXNAX)
+      logical   dotail
+      integer   coo(MAXNAX), level, nlevels
       double precision coords(MAXNAX)
-      character*12     cvalues(MAXNAX)
+      character cvalues(MAXNAX)*12
 c-----------------------------------------------------------------------
       nlevels = naxis - dim + 1
 
@@ -1450,91 +1413,105 @@ c         Celestial axis?
 
 c***********************************************************************
 
-      subroutine tabhead(naxis,dim,nlevels,level, coo,axlabel)
+      subroutine tabhead(naxis,dim,nlevels,level,coo,axlabel)
 
-      integer            naxis, dim, nlevels, level
-      integer            coo(*)
-      character*(*)      axlabel
+      integer   naxis, dim, nlevels, level, coo(*)
+      character axlabel*(*)
 c-----------------------------------------------------------------------
 c  Write a table header, giving the coordinate value of all higher axes,
 c  and a nice string for the x-axis.
 c-----------------------------------------------------------------------
-      include            'imstat.h'
+      include 'imstat.h'
 
-      integer            i, len1
-      character*80       line
-      character*2        itoaf
-      character*9        typ, cubetype
-      character*256      rtfmt
-      integer            n(4), nn
-      external rtfmt
+      integer   i, n(4)
+      character cubetype*9, label*12, line*80, typ*9
+
+      external  itoaf, len1, rtfmt
+      integer   len1
+      character itoaf*2, rtfmt*256
 c-----------------------------------------------------------------------
       call logwrit(' ')
 
-      if (level.lt.nlevels) then
+c     Abbreviate the label to 12 chars.
+      label = axlabel(:12)
+      if (label.eq.'Right ascension') then
+        label = 'RA'
+      else if (label.eq.'Relativistic') then
+        label = 'Reltvstc vel'
+      else
+        i = index(axlabel,'longitude')
+        if (i.ne.0) label(i:) = 'lng'
 
+        i = index(axlabel,'latitude')
+        if (i.ne.0) label(i:) = 'lat'
+
+        i = index(axlabel,'velocity')
+        if (i.ne.0) label(i:) = 'vel'
+
+        i = index(label,'(')
+        if (i.ne.0) label(i:) = ' '
+      endif
+
+      if (level.lt.nlevels) then
         do i = naxis, dim+level, -1
-          line                  = 'Axis '
+          line = 'Axis'
           line(len1(line)+2:) = itoaf(i)
           line(len1(line)+2:) = '(' // ctype(i)
           line(len1(line)+1:) = ')'
           if (i.gt.dim+level) line(len1(line)+1:) = ':'
-          if (i.gt.dim+level) line(20:)           = itoaf(coo(i-dim))
+          if (i.gt.dim+level) line(20:) = itoaf(coo(i-dim))
           call logwrit(line)
         enddo
 
         typ  = cubetype(min(dim+level-1,4))
         n(1) = (len(typ) - len1(typ)) / 2
-        n(2) = len(typ) - n(1)
-        n(3) = (len(axlabel) - len1(axlabel) + 1) / 2
-        n(4) = len(axlabel) - n(3)
+        n(2) =  len(typ) - n(1)
+        n(3) = (len(label) - len1(label) + 1) / 2
+        n(4) =  len(label) - n(3)
 
       else if (level.eq.nlevels) then
-
         typ  = 'Total'
-        axlabel = ' '
+        label = ' '
         n(1) = 1
         n(2) = len(typ) - 1
-        n(3) = len(axlabel) - 1
+        n(3) = len(label) - 1
         n(4) = 1
       endif
 
       if (plotvar(DUNIT).eq.ORIG .or. plotvar(DUNIT).eq.KELVIN) then
-        write(line, rtfmt('<>x,a<>, <>x,a<>,
-     *                    ''   Sum      Mean    '',
-     *                    ''  rms     Maximum   Minimum  '',
-     *                    ''  Npoints''', n, nn)) typ, axlabel
+        write(line,rtfmt('<>x,a<>,<>x,a<>,''   Sum      Mean      ' //
+     *    'rms     Maximum   Minimum    Npoints''',n,4)) typ, label
         if (NAME.eq.'IMSPEC') line(index(line,'rms') :) = 'Npoints'
       else
-        write(line, rtfmt('<>x,a<>, <>x,a<>,
-     *                    ''   Flux     PBC Flux'',
-     *                    ''  Npoints''', n, nn)) typ, axlabel
+        write(line,rtfmt('<>x,a<>,<>x,a<>,''   Flux     PBC Flux  ' //
+     *    'Npoints''',n,4)) typ, label
       endif
+
       call logwrit(line)
 
       end
 
 c***********************************************************************
 
-      subroutine tabentry(coo, coord, cvalue,
-     *                    npoints,maxval,minval,sum,sumpbc,sumap,sumsq)
+      subroutine tabentry(coo, coord, cvalue, npoints, maxval, minval,
+     *  sum, sumpbc, sumap, sumsq)
 
-      integer          coo
+      integer   coo
       double precision coord
-      character*(*)    cvalue
-      integer          npoints
+      character cvalue*(*)
+      integer   npoints
       double precision maxval, minval, sum, sumpbc, sumap, sumsq
 c-----------------------------------------------------------------------
 c  First convert from the raw statistics to the useful statistics.
 c  Then add an entry to the arrays later to be used for plotting and
 c  printing.
 c-----------------------------------------------------------------------
-      include          'imstat.h'
+      include 'imstat.h'
 
-      double precision rms, calcrms, stats(NSTATS)
-      logical          ok
+      logical   ok
+      double precision calcrms, rms, stats(NSTATS)
 c-----------------------------------------------------------------------
-c     Convert from raw to useful statistics
+c     Convert from raw to useful statistics.
       rms = calcrms(sum, sumsq, npoints, ok)
       if (plotvar(DUNIT).eq.ORIG .or. plotvar(DUNIT).eq.KELVIN) then
         stats(1) = sum
@@ -1550,7 +1527,7 @@ c     Convert from raw to useful statistics
         stats(3) = npoints
       endif
 
-c     Add datapoints to plotarrays
+c     Add datapoints to plotarrays.
       if (.not.ok) coord = MAGICVAL
       call statsav(coo, coord, cvalue, stats)
 
@@ -1558,28 +1535,23 @@ c     Add datapoints to plotarrays
 
 c***********************************************************************
 
-      subroutine statout(doplot, axlabel,cvalues, dim,level,nlevels)
+      subroutine statout(doplot,axlabel,cvalues,dim,level,nlevels)
 
-      logical          doplot
-      character*(*)    axlabel(*), cvalues(*)
-      integer          dim, level, nlevels
+      logical   doplot
+      character axlabel(*)*(*), cvalues(*)*(*)
+      integer   dim, level, nlevels
 c-----------------------------------------------------------------------
-      include          'imstat.h'
+      include 'imstat.h'
 
-      integer          coo
-      double precision coord
-      character*(*)    cvalue
-      double precision stats(*)
+      logical   first
+      integer   coo, i, matchnr, n, plt
+      real      iarr(MAXCHAN), statarr(NSTATS,MAXCHAN), xarr(MAXCHAN),
+     *          yarr(MAXCHAN)
+      double precision coord, stats(*)
+      character carr(MAXCHAN)*12, cvalue*(*)
 
-      real             iarr(MAXCHAN), xarr(MAXCHAN)
-      character*12     carr(MAXCHAN)
-      real             statarr(NSTATS,MAXCHAN), yarr(MAXCHAN)
-      integer          n
-
-      integer          i, plt, matchnr
-      logical          first
-      save             first, iarr, xarr, carr, statarr, n
-      data             first / .true. /
+      save first, iarr, xarr, carr, statarr, n
+      data first / .true. /
 c-----------------------------------------------------------------------
       call assertl(n.ne.0, 'All datapoints are masked')
 
@@ -1588,15 +1560,18 @@ c     Do possible smoothing and derivative-taking on the data,
       do i = 1, n
         yarr(i) = statarr(plt,i)
       enddo
+
       call smooth(yarr, n, plotvar(DOSMOOTH), plotvar(SMOWID))
       call differ(xarr, yarr, n, plotvar(DERIV))
       do i = 1, n
         statarr(plt,i) = yarr(i)
       enddo
+
       plt = matchnr('mean',plotopts)
       do i = 1, n
         yarr(i) = statarr(plt,i)
       enddo
+
       call smooth(yarr, n, plotvar(DOSMOOTH), plotvar(SMOWID))
       call differ(xarr, yarr, n, plotvar(DERIV))
       do i = 1, n
@@ -1622,6 +1597,8 @@ c     Copy array to be plotted to array yarr and make plot.
      *  call plotstat(iarr, xarr, yarr, n, axlabel,cvalues,nlevels)
 
       first = .true.
+
+      return
 
 
       entry statsav(coo, coord, cvalue, stats)
@@ -1665,26 +1642,28 @@ c         Construct the output line for the typed list.
           if (level.lt.nlevels)
      *      write(line, '(i6,1x, a)') nint(iarr(i)), carr(i)
 
-c         13 is really len(axlabel)+1, but axlabel is an unknown
-c         variable here and it would be messy to transfer just to get
-c         the length of it.
-          if (  plotvar(EFMT).eq.1) then
-            write(fmt, '(''('',i1,''(1pe10.3),i8)'')') nstat-1
+          if (plotvar(EFMT).eq.1) then
+            write(fmt,10) nstat-1
+ 10         format('(',i1,'(1pe10.3),i8)')
           else if (plotvar(GSPAC).eq.1) then
-            write(fmt, '(''('',i1,''(1pg10.2),i8)'')') nstat-1
+            write(fmt,20) nstat-1
+ 20         format('(',i1,'(1pg10.2),i8)')
           else
-            write(fmt, '(''('',i1,''(1pg10.3),i8)'')') nstat-1
+            write(fmt,30) nstat-1
+ 30         format('(',i1,'(1pg10.3),i8)')
           endif
+
           write(temp, fmt=fmt) (statarr(j,i),j=1,nstat-1),
      *      nint(statarr(nstat,i))
 
 c         The following is workaround HP compiler bug
-          line(len(typ)+13 :) = temp
+          line(len(typ)+13:) = temp
         else
           typ  =  cubetype(min(dim+level-1,4))
           line = 'All points masked for ' // typ(:len1(typ)) // ' ' //
      *           itoaf(nint(iarr(i)))
         endif
+
         if (plotvar(LIST).eq.1) call logwrit(line)
       enddo
 
@@ -1692,12 +1671,12 @@ c         The following is workaround HP compiler bug
 
 c***********************************************************************
 
-      subroutine plotstat(iarr,xarr,yarr,n, axlabel,cvalues,nlevels)
+      subroutine plotstat(iarr,xarr,yarr,n,axlabel,cvalues,nlevels)
 
-      real             iarr(*), xarr(*), yarr(*)
-      integer          n
-      character*(*)    axlabel(*), cvalues(*)
-      integer          nlevels
+      real      iarr(*), xarr(*), yarr(*)
+      integer   n
+      character axlabel(*)*(*), cvalues(*)*(*)
+      integer   nlevels
 c-----------------------------------------------------------------------
 c  Execute the plot:
 c  open the plotfile, and make the axes (with the lower x-axis
@@ -1995,10 +1974,18 @@ c-----------------------------------------------------------------------
       integer      i
 c-----------------------------------------------------------------------
       do i = 1, n
-        if (i.lt.n) dx = xarr(i+1) - xarr(i)
-        if (i.eq.n) dx = xarr(n) - xarr(n-1)
-        if (   center) xoff = dx / 2.0
-        if (.not.center) xoff = 0.0
+        if (i.lt.n) then
+          dx = xarr(i+1) - xarr(i)
+        else
+          dx = xarr(n) - xarr(n-1)
+        endif
+
+        if (center) then
+          xoff = dx / 2.0
+        else
+          xoff = 0.0
+        endif
+
         x       = xarr(i) - xoff
         xpts(1) = x
         ypts(1) = ymin
@@ -2023,7 +2010,7 @@ c-----------------------------------------------------------------------
       include 'imstat.h'
 
       integer   i
-      character ident*40, pginfo*40
+      character ident*48, pginfo*40
 c-----------------------------------------------------------------------
       call pgsch(1.0)
       call pglab(plotpar(XLABP), plotpar(YLABP), ' ')
