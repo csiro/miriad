@@ -132,7 +132,7 @@ c         nocal   Do not apply antenna gain calibration.
 c         nopass  Do not apply bandpass correction.
 c         nopol   Do not apply polarisation leakage correction.
 c
-c$Id: blflag.for,v 1.10 2011/04/11 00:51:16 cal103 Exp $
+c$Id: blflag.for,v 1.11 2011/04/11 01:13:01 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -176,8 +176,8 @@ c     Editing buffer 16MiB ((2*4+8) * MEBI).
       character itoaf*10, versan*72
 c-----------------------------------------------------------------------
       version = versan('blflag',
-     *                 '$Revision: 1.10 $',
-     *                 '$Date: 2011/04/11 00:51:16 $')
+     *                 '$Revision: 1.11 $',
+     *                 '$Date: 2011/04/11 01:13:01 $')
 
 c     Get the input parameters.
       call keyini
@@ -442,10 +442,10 @@ c***********************************************************************
       integer   bledit(MAXEDIT), chedit(MAXEDIT)
       integer   nedit
 c-----------------------------------------------------------------------
+      logical   more
+      integer   i, nedit0
+      real      xmax, xmin, xs, xv, ys, yv
       character mode*1
-      integer nedit0,i
-      logical more
-      real xv,yv,xs,ys,xmin,xmax
 c-----------------------------------------------------------------------
       nedit0 = nedit
       mode = 'c'
@@ -454,14 +454,15 @@ c-----------------------------------------------------------------------
         call lcase(mode)
         if (mode.eq.'q') then
           call pgend
-          call bug('f','Aborting at users request')
+          call bug('f','Aborting as requested')
         else if (mode.eq.'c') then
           nedit = nedit0
-          xmin = 0
-          xmax = 0
+          xmin = 0.0
+          xmax = 0.0
           do i = 1, nplt
             flag(i) = .true.
           enddo
+
           call Draw(xmin,xmax,nplt,xplt,yplt,flag,xaxis,yaxis,title,
      *      xs,ys)
 
@@ -474,17 +475,17 @@ c-----------------------------------------------------------------------
           call output('Single key commands are')
           call output(' Left-button  Delete nearest point')
           call output(' Right-button Next baseline')
-          call output(' <CR>      Help')
-          call output(' ?         Help')
-          call output(' a         Delete nearest point')
-          call output(' c         Clear flagging of this baseline')
-          call output(' h         Help -- these messages')
-          call output(' p         Define and delete polygonal region')
-          call output(' q         Quit -- Abort completely')
-          call output(' r         Redraw')
-          call output(' u         Unzoom')
-          call output(' x         Next baseline')
-          call output(' z         Zoom in')
+          call output(' <CR>  Help')
+          call output(' ?     Help')
+          call output(' a     Delete nearest point')
+          call output(' c     Clear flagging of this baseline')
+          call output(' h     Help -- these messages')
+          call output(' p     Define and delete polygonal region')
+          call output(' q     Quit -- Abort completely')
+          call output(' r     Redraw')
+          call output(' u     Unzoom')
+          call output(' x     Next baseline')
+          call output(' z     Zoom in')
           call output('-------------------------------------')
         else if (mode.eq.'u') then
           xmin = 0
@@ -502,15 +503,19 @@ c-----------------------------------------------------------------------
           call pgcurs(xmax,yv,mode)
           call Draw(xmin,xmax,nplt,xplt,yplt,flag,xaxis,yaxis,title,
      *      xs,ys)
+
         else if (mode.eq.'a') then
-          call Nearest(xv,yv,xs,ys,nplt,xplt,yplt,blplt,chplt,timeplt,
+          call nearest(xv,yv,xs,ys,nplt,xplt,yplt,blplt,chplt,timeplt,
      *      flag,MAXEDIT,bledit,chedit,timeedit,nedit)
+
         else if (mode.eq.'p') then
           call Region(nplt,xplt,yplt,blplt,chplt,timeplt,flag,
      *      MAXEDIT,bledit,chedit,timeedit,nedit)
+
         else
           call bug('w','Unrecognised keystroke - use h for help')
         endif
+
         if (more) call pgcurs(xv,yv,mode)
       enddo
 
@@ -531,11 +536,12 @@ c***********************************************************************
       double precision timeedit(MAXEDIT)
       integer   nedit
 c-----------------------------------------------------------------------
-      integer MAXV
+      integer    MAXV
       parameter (MAXV=100)
-      real xv(MAXV+1),yv(MAXV+1)
-      integer nv,i,j
-      logical within
+
+      logical   within
+      integer   i, j, nv
+      real      xv(MAXV+1), yv(MAXV+1)
 c-----------------------------------------------------------------------
       call output('Define a region - exit with x')
       call pgsci(3)
@@ -603,12 +609,12 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 c     Determine the min and max values.
       call pgbbuf
-      call SetUp(NPLT,xplt,flag,xaxis,xlo,xhi,xtitle,xflags)
+      call setUp(NPLT,xplt,flag,xaxis,xlo,xhi,xtitle,xflags)
       if (xmin.lt.xmax) then
         xlo = xmin
         xhi = xmax
       endif
-      call SetUp(NPLT,yplt,flag,yaxis,ylo,yhi,ytitle,yflags)
+      call setUp(NPLT,yplt,flag,yaxis,ylo,yhi,ytitle,yflags)
 
       xs = 1/(xhi-xlo)**2
       ys = 1/(yhi-ylo)**2
@@ -650,39 +656,34 @@ c     Change the colour to red.
 
 c***********************************************************************
 
-      subroutine SetUp(NPLT,plt,flag,axis,lo,hi,title,flags)
+      subroutine setUp(NPLT,plt,flag,axis,lo,hi,title,flags)
 
       integer   NPLT
       real      plt(NPLT)
       logical   flag(NPLT)
       character axis*(*)
+
       real      lo, hi
       character title*(*), flags*(*)
 c-----------------------------------------------------------------------
-      integer i
-      logical first
-      real x1,x2,delta,absmax
+      integer   i
+      real      absmax, delta, xmin, xmax
 c-----------------------------------------------------------------------
-      first = .true.
+      xmin =  1e30
+      xmax = -1e30
       do i = 1, NPLT
         if (flag(i)) then
-          if (first) then
-            x1 = plt(i)
-            x2 = x1
-            first = .false.
-          else
-            x1 = min(x1,plt(i))
-            x2 = max(x2,plt(i))
-          endif
+          xmin = min(xmin,plt(i))
+          xmax = max(xmax,plt(i))
         endif
       enddo
 
-      delta = 0.05*(x2-x1)
-      absmax = max(abs(x2),abs(x1))
+      delta = 0.05*(xmax-xmin)
+      absmax = max(abs(xmax),abs(xmin))
       if (delta.le.1e-4*absmax) delta = 0.01*absmax
       if (delta.eq.0) delta = 1
-      lo = x1 - delta
-      hi = x2 + delta
+      lo = xmin - delta
+      hi = xmax + delta
 
       if (axis.eq.'time' .or. axis.eq.'lst' .or. axis.eq.'hangle') then
         flags = 'BCNSTHZ0'
@@ -705,46 +706,47 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine Nearest(xv,yv,xs,ys,NPLT,xplt,yplt,blplt,chplt,timeplt,
+      subroutine nearest(xv,yv,xs,ys,NPLT,xplt,yplt,blplt,chplt,timeplt,
      *  flag,MAXEDIT,bledit,chedit,timeedit,nedit)
 
-      real    xv, yv, xs, ys
-      integer NPLT
-      real    xplt(NPLT), yplt(NPLT)
-      integer blplt(NPLT),chplt(NPLT)
+c     Given.
+      real      xv, yv, xs, ys
+      integer   NPLT
+      real      xplt(NPLT), yplt(NPLT)
+      integer   blplt(NPLT), chplt(NPLT)
       double precision timeplt(NPLT)
-      logical flag(NPLT)
-      integer MAXEDIT
-      integer bledit(MAXEDIT), chedit(MAXEDIT)
-      double precision timeedit(MAXEDIT)
-      integer nedit
-c-----------------------------------------------------------------------
-      integer i,k
-      logical first
-      real r2,r2d
-c-----------------------------------------------------------------------
-      first = .true.
-      r2 = 0
+      logical   flag(NPLT)
+      integer   MAXEDIT
 
+c     Returned.
+      integer   bledit(MAXEDIT), chedit(MAXEDIT)
+      double precision timeedit(MAXEDIT)
+      integer   nedit
+c-----------------------------------------------------------------------
+      integer   i, k
+      real      dsq, dsqmin
+c-----------------------------------------------------------------------
+      k = 0
+      dsqmin = 0.0
       do i = 1, NPLT
         if (flag(i)) then
-          r2d = xs*(xplt(i)-xv)**2 + ys*(yplt(i)-yv)**2
-          if (first .or. r2d.lt.r2) then
-            r2 = r2d
+          dsq = xs*(xplt(i)-xv)**2 + ys*(yplt(i)-yv)**2
+          if (k.eq.0 .or. dsq.lt.dsqmin) then
             k = i
-            first = .false.
+            dsqmin = dsq
           endif
         endif
       enddo
 
-      if (first) then
+      if (k.eq.0) then
         call bug('w','No points left to edit')
       else
         nedit = nedit + 1
         if (nedit.gt.MAXEDIT) call bug('f','Too many ops')
+
         bledit(nedit)   = blplt(k)
+        chedit(nedit)   = chplt(k)
         timeedit(nedit) = timeplt(k)
-        chedit(nedit) = chplt(k)
         flag(k) = .false.
         call pgpt(1,xplt(k),yplt(k),1)
       endif
@@ -789,8 +791,8 @@ c-----------------------------------------------------------------------
 c***********************************************************************
 
       subroutine getDat(tno,rms,scalar,nofqaver,xaxis,yaxis,xmin,xmax,
-     *  ymin,ymax,MAXBASE1,present,MAXDAT,xdat,ydat,bldat,chdat,
-     *  timedat,ndat)
+     *  ymin,ymax,MAXBASE1,present,MAXDAT,xdat,ydat,bldat,chdat,timedat,
+     *  ndat)
 
       integer   tno
       logical   rms, scalar, nofqaver
@@ -809,115 +811,156 @@ c-----------------------------------------------------------------------
       double precision TTOL
       parameter (TTOL=1d0/86400d0)
 
-c     The default MAXCHAN makes blflag fail to link, use one that will
-c     fit a single spectrum
-      integer    MAXCHAN1
-      parameter (MAXCHAN1=15000)
+      logical   flush, flags(MAXCHAN)
+      integer   ant1, ant2, bl, bnext, chInc, ic, jc, mchan, n, nchan,
+     *          npnt(MAXCHAN)
+      real      temp, uvsq, var, x, y
+      double precision lst, preamble(4), ra, time, time0
+      complex   corr(MAXCHAN), corr1(MAXCHAN), corr2(MAXCHAN),
+     *          visDat(MAXCHAN)
 
-      logical   doFlsh, flags(MAXCHAN1)
-      integer   ant1, ant2, bl, ic, inc, jc, mbase, mchan, n, nants,
-     *          nchan, npnt(MAXBASE,MAXCHAN1)
-      real      temp, uvdist2(MAXBASE), var(MAXBASE)
-      double precision lst, preamble(4), ra, time0, tprev
-      complex   corr(MAXBASE,MAXCHAN1), corr1(MAXBASE,MAXCHAN1),
-     *          corr2(MAXBASE,MAXCHAN1), visDat(MAXCHAN1)
+      external  getVal
+      real      getVal
 c-----------------------------------------------------------------------
-c     Miscellaneous initialisation.
-      mbase = min(MAXBASE,maxbase1)
+c     Initialise accumulators.
+      uvsq = 0.0
+      var  = 0.0
+      do ic = 1, MAXCHAN
+        npnt(ic)  = 0
+        corr(ic)  = (0.0,0.0)
+        corr1(ic) = (0.0,0.0)
+        corr2(ic) = (0.0,0.0)
+      enddo
+
       do bl = 1, MAXBASE
         present(bl) = .false.
       enddo
 
-      do bl = 1, mbase
-        uvdist2(bl) = 0.0
-        var(bl) = 0.0
-        do ic = 1, MAXCHAN1
-          npnt(bl,ic)  = 0
-          corr(bl,ic)  = (0.0,0.0)
-          corr1(bl,ic) = (0.0,0.0)
-          corr2(bl,ic) = (0.0,0.0)
-        enddo
-      enddo
       ndat = 0
 
       if (nofqaver) then
-        inc = 1
+        chInc = 1
       else
-        inc = 0
+        chInc = 0
       endif
 
 c     Let's get going.
       call output('Reading the data ...')
-      call uvDatRd(preamble,visDat,flags,MAXCHAN1,nchan)
+      call uvDatRd(preamble,visDat,flags,MAXCHAN,nchan)
       if (nchan.eq.0) call bug('f','No visibility data found')
-      if (nchan.eq.MAXCHAN1) call bug('f','Too many channels for me')
+      if (nchan.eq.MAXCHAN) call bug('f','Too many channels for me')
 
       call flagchk(tno)
-      nants = 0
       mchan = 1
-      tprev = preamble(3)
-      time0 = int(preamble(3) - 0.5d0) + 0.5d0
+      time  = preamble(3)
+      time0 = int(time - 0.5d0) + 0.5d0
       call BasAnt(preamble(4),ant1,ant2)
-      bl = (ant2*(ant2-1))/2 + ant1
+      bl    = (ant2*(ant2-1))/2 + ant1
+      bnext = bl
       call uvrdvrd(tno,'lst',lst,0d0)
       call uvrdvrd(tno,'ra', ra, 0d0)
 
-      doFlsh = .false.
+      flush = .false.
       do while (.true.)
-        if (bl.lt.mbase) then
-          if (doFlsh) then
-            if (nants.gt.0) then
-              call flushInt(rms,scalar,nofqaver,nants,time0,tprev,lst,
-     *          ra,xmin,xmax,ymin,ymax,xaxis,yaxis,mbase,mchan,MAXDAT,
-     *          uvdist2,var,npnt,corr,corr1,corr2,present,ndat,bldat,
-     *          chdat,timedat,xdat,ydat)
-            endif
+c       Is the baseline within the limit that we can handle?
+        if (bl.lt.MAXBASE) then
+c         Was a new baseline read?
+          if (flush) then
+c           Yes, flush the old one.
+            do ic = 1, mchan
+              if (npnt(ic).gt.0) then
+                present(bl)  = .true.
 
+                if (nofqaver) then
+                  jc = ic
+                else
+c                 Use 0 to indicate the whole spectrum.
+                  jc = 0
+                endif
+
+c               Compute the requested x, and y values.
+                x = getVal(rms,scalar,xaxis,time0,time,lst,ra,jc,uvsq,
+     *                var,npnt(ic),corr(ic),corr1(ic),corr2(ic))
+                y = getVal(rms,scalar,yaxis,time0,time,lst,ra,jc,uvsq,
+     *                var,npnt(ic),corr(ic),corr1(ic),corr2(ic))
+
+c               Store it if within range.
+                if (x.ge.xmin .and. x.le.xmax .and.
+     *              y.ge.ymin .and. y.le.ymax) then
+                  ndat = ndat + 1
+                  if (ndat.gt.MAXDAT) call bug('f','Too many points!')
+
+                  bldat(ndat) = bl
+                  chdat(ndat) = jc
+                  timedat(ndat) = time
+                  xdat(ndat)  = x
+                  ydat(ndat)  = y
+                endif
+              endif
+            enddo
+
+c           Finished if no visibility read last time.
             if (nchan.le.0) return
 
-            nants = 0
+c           Reset the accumulators.
+            uvsq = 0.0
+            var  = 0.0
+            do ic = 1, mchan
+              npnt(ic)  = 0
+              corr(ic)  = (0.0,0.0)
+              corr1(ic) = (0.0,0.0)
+              corr2(ic) = (0.0,0.0)
+            enddo
+
             call uvrdvrd(tno,'lst',lst,0d0)
             call uvrdvrd(tno,'ra', ra, 0d0)
           endif
 
+c         Accumulate Stokes for this baseline.
           jc = 1
           n  = 0
           do ic = 1, nchan
             if (flags(ic)) then
               n = n + 1
-              npnt(bl,jc)  = npnt(bl,jc)  + 1
-              corr(bl,jc)  = corr(bl,jc)  + visDat(ic)
-              corr1(bl,jc) = corr1(bl,jc) + abs(visDat(ic))
-              corr2(bl,jc) = corr2(bl,jc) + cmplx(real(visDat(ic))**2,
-     *                                           aimag(visDat(ic))**2)
+              npnt(jc)  = npnt(jc)  + 1
+              corr(jc)  = corr(jc)  + visDat(ic)
+              corr1(jc) = corr1(jc) + abs(visDat(ic))
+              corr2(jc) = corr2(jc) + cmplx(real(visDat(ic))**2,
+     *                                     aimag(visDat(ic))**2)
             endif
 
-            jc = jc + inc
+c           chInc is set to 1 for nofqaver, otherwise 0.
+            jc = jc + chInc
           enddo
 
           if (n.gt.0) then
             call uvDatGtr('variance',temp)
-            var(bl) = var(bl) + n*temp
-            uvdist2(bl) = uvdist2(bl) +
-     *       n * (preamble(1)*preamble(1) + preamble(2)*preamble(2))
-            nants = max(nants,ant1,ant2)
+            var  = var  + n * temp
+            uvsq = uvsq + n * (preamble(1)*preamble(1) +
+     *                         preamble(2)*preamble(2))
           endif
         endif
 
+c       Finished if no visibility read last time.
         if (nchan.le.0) return
 
+c       mchan is the actual number of channels for nofqaver, else 1.
         if (nofqaver) then
           mchan = nchan
         endif
 
-        tprev = preamble(3)
+        time = preamble(3)
+        bl   = bnext
         call uvDatRd(preamble,visDat,flags,MAXCHAN,nchan)
         if (nchan.gt.0) then
-          doFlsh = abs(preamble(3)-tprev).gt.TTOL
+c         Looks like a valid visibility.
           call BasAnt(preamble(4),ant1,ant2)
-          bl = (ant2*(ant2-1))/2 + ant1
+          bnext = (ant2*(ant2-1))/2 + ant1
+
+          flush = abs(preamble(3)-time).gt.TTOL .or. bnext.ne.bl
         else
-          doFlsh = .true.
+c         Last visibility has been read, flush the accumulators.
+          flush = .true.
         endif
       enddo
 
@@ -925,95 +968,14 @@ c     Let's get going.
 
 c***********************************************************************
 
-      subroutine flushInt(rms,scalar,nofqaver,nants,time0,time,lst,ra,
-     *  xmin,xmax,ymin,ymax,xaxis,yaxis,MAXBASE,NCHAN,MAXDAT,uvdist2,
-     *  var,npnt,corr,corr1,corr2,present,ndat,bldat,chdat,timedat,xdat,
-     *  ydat)
-
-c     Given.
-      logical   rms, scalar, nofqaver
-      integer   nants
-      double precision time0, time, lst, ra
-      real      xmin, xmax, ymin, ymax
-      character xaxis*(*),yaxis*(*)
-      integer   MAXBASE, NCHAN, MAXDAT
-
-c     Given and returned.
-      real      uvdist2(MAXBASE), var(MAXBASE)
-      integer   npnt(MAXBASE,NCHAN)
-      complex   corr(MAXBASE,NCHAN), corr1(MAXBASE,NCHAN),
-     *          corr2(MAXBASE,NCHAN)
-
-c     Returned.
-      logical   present(MAXBASE)
-      integer   ndat, bldat(MAXDAT), chdat(MAXDAT)
-      double precision timedat(MAXDAT)
-      real      xdat(MAXDAT), ydat(MAXDAT)
-c-----------------------------------------------------------------------
-      integer   ant1, ant2, bl, ic, jc
-      real      x, y
-
-      external  getVal
-      real      getVal
-c-----------------------------------------------------------------------
-      bl = 0
-      do ant2 = 1, nants
-        do ant1 = 1, ant2
-          bl = bl + 1
-          do ic = 1, NCHAN
-            if (npnt(bl,ic).gt.0) then
-              present(bl)  = .true.
-
-              if (nofqaver) then
-                jc = ic
-              else
-c               Use 0 to indicate whole spectrum.
-                jc = 0
-              endif
-
-              x = getVal(rms,scalar,xaxis,time0,time,lst,ra,jc,
-     *              uvdist2(bl),var(bl),npnt(bl,ic),corr(bl,ic),
-     *              corr1(bl,ic),corr2(bl,ic))
-              y = getVal(rms,scalar,yaxis,time0,time,lst,ra,jc,
-     *              uvdist2(bl),var(bl),npnt(bl,ic),corr(bl,ic),
-     *              corr1(bl,ic),corr2(bl,ic))
-
-              if (x.ge.xmin .and. x.le.xmax .and.
-     *            y.ge.ymin .and. y.le.ymax) then
-                ndat = ndat + 1
-                if (ndat.gt.MAXDAT) call bug('f','Too many points!')
-
-                bldat(ndat) = bl
-                chdat(ndat) = jc
-                timedat(ndat) = time
-                xdat(ndat)  = x
-                ydat(ndat)  = y
-              endif
-
-              uvdist2(bl)  = 0.0
-              npnt(bl,ic)  = 0
-              corr(bl,ic)  = (0.0,0.0)
-              corr1(bl,ic) = (0.0,0.0)
-              corr2(bl,ic) = (0.0,0.0)
-            endif
-          enddo
-
-          var(bl) = 0.0
-        enddo
-      enddo
-
-      end
-
-c***********************************************************************
-
-      real function getVal(rms,scalar,axis,time0,time,lst,ra,chn,
-     *  uvdist2,var,npnt,corr,corr1,corr2)
+      real function getVal(rms,scalar,axis,time0,time,lst,ra,chan,uvsq,
+     *  var,npnt,corr,corr1,corr2)
 
       logical   rms, scalar
       character axis*(*)
       double precision time0, time, lst, ra
-      integer   chn
-      real      uvdist2, var
+      integer   chan
+      real      uvsq, var
       integer   npnt
       complex   corr, corr1, corr2
 c-----------------------------------------------------------------------
@@ -1038,26 +1000,27 @@ c-----------------------------------------------------------------------
       else if (axis.eq.'amplitude') then
         getVal = abs(visDat)
       else if (axis.eq.'phase') then
-        getVal = 180/pi * atan2(aimag(visDat),real(visDat))
+        getVal = atan2(aimag(visDat),real(visDat))*R2D
       else if (axis.eq.'uvdistance') then
-        getVal = 0.001 * sqrt(uvdist2/npnt)
+        getVal = 0.001 * sqrt(uvsq/npnt)
       else if (axis.eq.'rms') then
         getVal = sqrt(var/npnt)
       else if (axis.eq.'time') then
-        getVal = 86400*(time - time0)
+        getVal = 86400d0*(time - time0)
       else if (axis.eq.'lst') then
-        getVal = 86400*lst/(2*pi)
+        getVal = lst*86400d0/DTWOPI
       else if (axis.eq.'hangle') then
         dtemp = lst - ra
         if (dtemp.gt.DPI) then
-          dtemp = dtemp - 2*DPI
+          dtemp = dtemp - DTWOPI
         else if (dtemp.lt.-DPI) then
-          dtemp = dtemp + 2*DPI
+          dtemp = dtemp + DTWOPI
         endif
-        getVal = 86400d0*dtemp/(2*DPI)
+        getVal = dtemp*86400d0/DTWOPI
       else if (axis.eq.'channel') then
-        getVal = chn
+        getVal = chan
       else
+        getVal = 0.0
         call bug('f','I should never get here')
       endif
 
@@ -1096,10 +1059,12 @@ c***********************************************************************
 c-----------------------------------------------------------------------
 c  Get extra processing options.
 c-----------------------------------------------------------------------
-      integer NOPTS
+      integer    NOPTS
       parameter (NOPTS=9)
-      logical present(NOPTS)
+
+      logical   present(NOPTS)
       character opts(NOPTS)*8
+
       data opts/'nobase  ','nocal   ','nopass  ','nopol   ',
      *          'selgen  ','noapply ','rms     ','scalar  ',
      *          'nofqaver'/
