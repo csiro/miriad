@@ -132,7 +132,7 @@ c         nocal   Do not apply antenna gain calibration.
 c         nopass  Do not apply bandpass correction.
 c         nopol   Do not apply polarisation leakage correction.
 c
-c$Id: blflag.for,v 1.11 2011/04/11 01:13:01 cal103 Exp $
+c$Id: blflag.for,v 1.12 2011/04/11 06:53:29 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -148,9 +148,10 @@ c     it does not cause linking to fail with truncated relocations.
      *           MAXPLT  =  4*MEBI,
      *           MAXEDIT =    MEBI)
 
-      logical   noapply, nobase, nofqaver, present(MAXBASE), rms,
+      logical   havebl(MAXBASE), noapply, nobase, nofqaver, rms,
      *          scalar, selgen
-      integer   ant1, ant2, bl, length, npol, tno
+      integer   ant1, ant2, bl, length, lIn, npol, pCorr, pCorr1,
+     *          pCorr2, pFlags, pNpnt, pVis
       real      xmax, xmin, ymax, ymin
       character device*64, title*32, uvflags*12, val*16, version*72,
      *          xaxis*12, yaxis*12
@@ -176,8 +177,8 @@ c     Editing buffer 16MiB ((2*4+8) * MEBI).
       character itoaf*10, versan*72
 c-----------------------------------------------------------------------
       version = versan('blflag',
-     *                 '$Revision: 1.11 $',
-     *                 '$Date: 2011/04/11 01:13:01 $')
+     *                 '$Revision: 1.12 $',
+     *                 '$Date: 2011/04/11 06:53:29 $')
 
 c     Get the input parameters.
       call keyini
@@ -199,7 +200,7 @@ c     Set the default polarisation type if needed.
       if (npol.eq.0) call uvDatSet('stokes',0)
 
 c     Open the input data.
-      if (.not.uvDatOpn(tno)) call bug('f','Error opening input')
+      if (.not.uvDatOpn(lIn)) call bug('f','Error opening input')
 
 c     Open the plot device.
       if (pgbeg(0,device,1,1).ne.1) then
@@ -210,12 +211,29 @@ c     Open the plot device.
       if (val.eq.'NO') call bug('f','PGPLOT device is not interactive')
       call pgask(.false.)
 
+c     Allocate memory for getDat.
+      call memAlloc(pFlags, MAXCHAN, 'l')
+      call memAlloc(pNpnt,  MAXCHAN, 'i')
+      call memAlloc(pCorr,  MAXCHAN, 'c')
+      call memAlloc(pCorr1, MAXCHAN, 'c')
+      call memAlloc(pCorr2, MAXCHAN, 'c')
+      call memAlloc(pVis,   MAXCHAN, 'c')
+
 c     Get the data.
-      call getDat(tno,rms,scalar,nofqaver,xaxis,yaxis,xmin,xmax,
-     *  ymin,ymax,MAXBASE,present,MAXDAT,xdat,ydat,bldat,chdat,timedat,
-     *  ndat)
+      call getDat(lIn,rms,scalar,nofqaver,xaxis,yaxis,xmin,xmax,
+     *  ymin,ymax,MAXCHAN,memL(pFlags),memI(pNpnt),memC(pCorr),
+     *  memC(pCorr1),memC(pCorr2),memC(pVis),MAXBASE,havebl,MAXDAT,
+     *  xdat,ydat,bldat,chdat,timedat,ndat)
       call uvDatCls
       if (ndat.eq.0) call bug('f','No points to flag')
+
+c     Free memory.
+      call memFree(pVis,   MAXCHAN, 'c')
+      call memFree(pCorr2, MAXCHAN, 'c')
+      call memFree(pCorr1, MAXCHAN, 'c')
+      call memFree(pCorr,  MAXCHAN, 'c')
+      call memFree(pNpnt,  MAXCHAN, 'i')
+      call memFree(pFlags, MAXCHAN, 'l')
 
 c     Loop over the baselines.
       call output('Entering interactive mode ...')
@@ -229,7 +247,7 @@ c     Loop over the baselines.
         do ant2 = 1, MAXANT
           do ant1 = 1, ant2
             bl = bl + 1
-            if (present(bl)) then
+            if (havebl(bl)) then
               title = 'Baseline ' // itoaf(ant1)
               length = len1(title)
               title(length+1:) = '-' // itoaf(ant2)
@@ -261,8 +279,8 @@ c     Apply the changes.
         call output('Applying the flagging ...')
         call uvDatRew
         call uvDatSet('disable',0)
-        if (.not.uvDatOpn(tno)) call bug('f','Error reopening input')
-        call FlagApp(tno,nedit,timeedit,bledit,chedit,version)
+        if (.not.uvDatOpn(lIn)) call bug('f','Error reopening input')
+        call FlagApp(lIn,nedit,timeedit,bledit,chedit,version)
         call uvDatCls
       endif
 
@@ -348,9 +366,9 @@ c     antenna pairs.
 
 c***********************************************************************
 
-      subroutine FlagApp(tno,NEDIT,timeedit,bledit,chedit,version)
+      subroutine FlagApp(lIn,NEDIT,timeedit,bledit,chedit,version)
 
-      integer   tno, NEDIT
+      integer   lIn, NEDIT
       double precision timeedit(NEDIT)
       integer   bledit(NEDIT),chedit(NEDIT)
       character version*(*)
@@ -405,20 +423,20 @@ c         Flag bad channels if found.
             endif
           endif
         enddo
-        if (chflag) call uvflgwr(tno,flags)
+        if (chflag) call uvflgwr(lIn,flags)
 
 c       Go back for more.
         call uvDatRd(preamble,visDat,flags,MAXCHAN,nchan)
       enddo
 
 c     Write history.
-      call hisOpen(tno,'append')
+      call hisOpen(lIn,'append')
       line = 'BLFLAG: Miriad '//version
-      call hisWrite(tno,line)
-      call hisInput(tno,'BLFLAG')
-      call hisWrite(tno,'BLFLAG: Number of correlations flagged: '//
+      call hisWrite(lIn,line)
+      call hisInput(lIn,'BLFLAG')
+      call hisWrite(lIn,'BLFLAG: Number of correlations flagged: '//
      *                        itoaf(nflag))
-      call hisClose(tno)
+      call hisClose(lIn)
 
 c     Report how much we have done.
       call output('Total number of correlations:   '//itoaf(ncorr))
@@ -790,34 +808,37 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine getDat(tno,rms,scalar,nofqaver,xaxis,yaxis,xmin,xmax,
-     *  ymin,ymax,MAXBASE1,present,MAXDAT,xdat,ydat,bldat,chdat,timedat,
-     *  ndat)
+      subroutine getDat(lIn,rms,scalar,nofqaver,xaxis,yaxis,xmin,xmax,
+     *  ymin,ymax,MAXCHAN,flags,npnt,corr,corr1,corr2,visDat,
+     *  MAXBASE,havebl,MAXDAT,xdat,ydat,bldat,chdat,timedat,ndat)
 
-      integer   tno
+      integer   lIn
       logical   rms, scalar, nofqaver
       character xaxis*(*), yaxis*(*)
       real      xmin, xmax, ymin, ymax
-      integer   MAXBASE1
-      logical   present(MAXBASE1)
+
+      integer   MAXCHAN
+      logical   flags(MAXCHAN)
+      integer   npnt(MAXCHAN)
+      complex   corr(MAXCHAN), corr1(MAXCHAN), corr2(MAXCHAN),
+     *          visDat(MAXCHAN)
+
+      integer   MAXBASE
+      logical   havebl(MAXBASE)
+
       integer   MAXDAT
       real      xdat(MAXDAT), ydat(MAXDAT)
       integer   bldat(MAXDAT), chdat(MAXDAT)
       double precision timedat(MAXDAT)
       integer   ndat
 c-----------------------------------------------------------------------
-      include 'maxdim.h'
-
       double precision TTOL
       parameter (TTOL=1d0/86400d0)
 
-      logical   flush, flags(MAXCHAN)
-      integer   ant1, ant2, bl, bnext, chInc, ic, jc, mchan, n, nchan,
-     *          npnt(MAXCHAN)
+      logical   flush
+      integer   ant1, ant2, bl, bnext, chInc, ic, jc, mchan, n, nchan
       real      temp, uvsq, var, x, y
       double precision lst, preamble(4), ra, time, time0
-      complex   corr(MAXCHAN), corr1(MAXCHAN), corr2(MAXCHAN),
-     *          visDat(MAXCHAN)
 
       external  getVal
       real      getVal
@@ -833,7 +854,7 @@ c     Initialise accumulators.
       enddo
 
       do bl = 1, MAXBASE
-        present(bl) = .false.
+        havebl(bl) = .false.
       enddo
 
       ndat = 0
@@ -850,15 +871,15 @@ c     Let's get going.
       if (nchan.eq.0) call bug('f','No visibility data found')
       if (nchan.eq.MAXCHAN) call bug('f','Too many channels for me')
 
-      call flagchk(tno)
+      call flagchk(lIn)
       mchan = 1
       time  = preamble(3)
       time0 = int(time - 0.5d0) + 0.5d0
       call BasAnt(preamble(4),ant1,ant2)
       bl    = (ant2*(ant2-1))/2 + ant1
       bnext = bl
-      call uvrdvrd(tno,'lst',lst,0d0)
-      call uvrdvrd(tno,'ra', ra, 0d0)
+      call uvrdvrd(lIn,'lst',lst,0d0)
+      call uvrdvrd(lIn,'ra', ra, 0d0)
 
       flush = .false.
       do while (.true.)
@@ -869,7 +890,7 @@ c         Was a new baseline read?
 c           Yes, flush the old one.
             do ic = 1, mchan
               if (npnt(ic).gt.0) then
-                present(bl)  = .true.
+                havebl(bl)  = .true.
 
                 if (nofqaver) then
                   jc = ic
@@ -912,8 +933,8 @@ c           Reset the accumulators.
               corr2(ic) = (0.0,0.0)
             enddo
 
-            call uvrdvrd(tno,'lst',lst,0d0)
-            call uvrdvrd(tno,'ra', ra, 0d0)
+            call uvrdvrd(lIn,'lst',lst,0d0)
+            call uvrdvrd(lIn,'ra', ra, 0d0)
           endif
 
 c         Accumulate Stokes for this baseline.
@@ -1088,9 +1109,9 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine flagchk(tno)
+      subroutine flagchk(lIn)
 
-      integer tno
+      integer lIn
 c-----------------------------------------------------------------------
 c  Check that the user's linetype is not going to cause the flagging
 c  routine to vomit when the flagging is applied.
@@ -1099,7 +1120,7 @@ c-----------------------------------------------------------------------
       parameter (CHANNEL=1,WIDE=2)
       double precision line(6)
 c-----------------------------------------------------------------------
-      call uvinfo(tno,'line',line)
+      call uvinfo(lIn,'line',line)
       if (nint(line(1)).ne.CHANNEL .and. nint(line(1)).ne.WIDE)
      *  call bug('f','Can only flag "channel" or "wide" linetypes')
       if (nint(line(4)).ne.1)
