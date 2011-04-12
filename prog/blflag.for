@@ -132,7 +132,7 @@ c         nocal   Do not apply antenna gain calibration.
 c         nopass  Do not apply bandpass correction.
 c         nopol   Do not apply polarisation leakage correction.
 c
-c$Id: blflag.for,v 1.14 2011/04/12 02:39:52 cal103 Exp $
+c$Id: blflag.for,v 1.15 2011/04/12 05:24:56 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -140,29 +140,24 @@ c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mem.h'
 
-c     Before increasing MAXDAT, be sure that it does not cause linking
-c     to fail with truncated relocations.
-      integer    MEBI, MAXDAT, MAXEDIT
-      parameter (MEBI    = 1024*1024,
-     *           MAXDAT  = 32*MEBI,
-     *           MAXEDIT =    MEBI)
+c     Before increasing MAXDAT, check that it does not cause linking to
+c     fail with truncated relocations.
+      integer    MAXDAT
+      parameter (MAXDAT = 32*1024*1024)
 
       logical   havebl(MAXBASE), noapply, nobase, nofqaver, rms,
      *          scalar, selgen
-      integer   ant1, ant2, bl, i, length, lIn, npol, pCorr, pCorr1,
-     *          pCorr2, pFlags, pNpnt, pVis
+      integer   ant1, ant2, bl, blIdxp, i, length, lIn, nBl, nBlIdx,
+     *          nDat, nEdit, nPol, pCorr, pCorr1, pCorr2, pFlags, pNpnt,
+     *          pVis
       real      xmax, xmin, ymax, ymin
       double precision time0
       character device*64, title*32, uvflags*12, val*16, version*72,
      *          xaxis*12, yaxis*12
 
-c     Data store 768MiB ((6*4) * 32*MEBI).
-      integer   blDat(MAXDAT), blIdx(MAXDAT), chDat(MAXDAT), nBl, nDat
+c     Data store 768MiB (24*MAXDAT bytes).
+      integer   blDat(MAXDAT), blIdx(MAXDAT), chDat(MAXDAT)
       real      tDat(MAXDAT), xDat(MAXDAT), yDat(MAXDAT)
-
-c     Editing buffer 12MiB ((3*4) * MEBI).
-      integer   blEdit(MAXEDIT), chEdit(MAXEDIT), nEdit
-      real      tEdit(MAXEDIT)
 
       external  itoaf, len1, pgbeg, uvDatOpn, versan
       logical   uvDatOpn
@@ -170,8 +165,8 @@ c     Editing buffer 12MiB ((3*4) * MEBI).
       character itoaf*10, versan*72
 c-----------------------------------------------------------------------
       version = versan('blflag',
-     *                 '$Revision: 1.14 $',
-     *                 '$Date: 2011/04/12 02:39:52 $')
+     *                 '$Revision: 1.15 $',
+     *                 '$Date: 2011/04/12 05:24:56 $')
 
 c     Get the input parameters.
       call keyini
@@ -189,8 +184,8 @@ c     Get axis ranges
       call keyfin
 
 c     Set the default polarisation type if needed.
-      call uvDatGti('npol',npol)
-      if (npol.eq.0) call uvDatSet('stokes',0)
+      call uvDatGti('npol',nPol)
+      if (nPol.eq.0) call uvDatSet('stokes',0)
 
 c     Open the input data.
       if (.not.uvDatOpn(lIn)) call bug('f','Error opening input')
@@ -218,9 +213,10 @@ c     Get the data.
      *  memC(pCorr1),memC(pCorr2),memC(pVis),MAXBASE,havebl,MAXDAT,nDat,
      *  blDat,chDat,time0,tDat,xDat,yDat)
       call uvDatCls
+      call output('Number of points read: '//itoaf(nDat))
       if (nDat.eq.0) call bug('f','No points to flag')
 
-c     Free memory.
+c     Free memory (in reverse order).
       call memFree(pVis,   MAXCHAN, 'c')
       call memFree(pCorr2, MAXCHAN, 'c')
       call memFree(pCorr1, MAXCHAN, 'c')
@@ -230,16 +226,16 @@ c     Free memory.
 
 c     Loop over the baselines.
       call output('Entering interactive mode ...')
-      nEdit = 0
+      nEdit  = 0
+      blIdxp = 1
       if (nobase) then
-        call output('Processing '//itoaf(nDat)//' points')
-
         do i = 1, nDat
           blIdx(i) = i
         enddo
 
-        call edit(nDat,blDat,chDat,tDat,xDat,yDat,nDat,blIdx,xaxis,
-     *    yaxis,'All baselines',MAXEDIT,nEdit,blEdit,chEdit,tEdit)
+        call edit(xaxis,yaxis,'All baselines',nDat,blDat,chDat,tDat,
+     *    xDat,yDat,nDat,blIdx,nEdit)
+        nBlIdx = nDat
 
       else
         bl = 0
@@ -250,14 +246,19 @@ c     Loop over the baselines.
               title = 'Baseline ' // itoaf(ant1)
               length = len1(title)
               title(length+1:) = '-' // itoaf(ant2)
-              call extract(bl,nDat,blDat,nBl,blIdx)
+              call getIdx(bl,nDat,blDat,nBl,blIdx(blIdxp))
               if (nBl.gt.0) then
-                call edit(nDat,blDat,chDat,tDat,xDat,yDat,nBl,blIdx,
-     *            xaxis,yaxis,title,MAXEDIT,nEdit,blEdit,chEdit,tEdit)
+                call edit(xaxis,yaxis,title,nDat,blDat,chDat,tDat,xDat,
+     *            yDat,nBl,blIdx(blIdxp),nEdit)
+                blIdxp = blIdxp + nBl
               endif
             endif
           enddo
         enddo
+
+        nBlIdx = blIdxp - 1
+        if (nBlIdx.ne.nDat) call bug('w',
+     *    'Baseline index count check failed.')
       endif
 
       call pgend
@@ -267,7 +268,7 @@ c     Generate the "blflag.select" file, if needed.
         if (nEdit.eq.0) then
           call bug('w','No edit commands to write out!')
         else
-          call doSelGen(nEdit,blEdit,chEdit,time0,tEdit)
+          call doSelGen(nDat,blDat,chDat,time0,tDat,nBlIdx,blIdx)
         endif
       endif
 
@@ -277,7 +278,8 @@ c     Apply the changes.
         call uvDatRew
         call uvDatSet('disable',0)
         if (.not.uvDatOpn(lIn)) call bug('f','Error reopening input')
-        call flagApp(lIn,nEdit,blEdit,chEdit,time0,tEdit,version)
+        call flagApp(lIn,nDat,blDat,chDat,time0,tDat,nBlIdx,blIdx,
+     *    version)
         call uvDatCls
       endif
 
@@ -285,11 +287,12 @@ c     Apply the changes.
 
 c***********************************************************************
 
-      subroutine doSelGen(N,bl,chn,time0,dTime)
+      subroutine doSelGen(NDAT,blDat,chDat,time0,tDat,NBLIDX,blIdx)
 
-      integer   N, bl(N), chn(N)
+      integer   NDAT, blDat(NDAT), chDat(NDAT)
       double precision time0
-      real      dTime(N)
+      real      tDat(NDAT)
+      integer   NBLIDX, blIdx(NBLIDX)
 c-----------------------------------------------------------------------
 c  Generate a file of select commands.
 c-----------------------------------------------------------------------
@@ -324,36 +327,42 @@ c     antenna pairs.
         call bugno('f',iostat)
       endif
 
-      warn=.true.
-      do i = 1, N
-        if (chn(i).eq.0) then
-          time = time0 + dTime(i)
-          call julday(time-TTOL,'H',time1)
-          call julday(time+TTOL,'H',time2)
-          line = 'ant('//itoaf(i1(bl(i)))
-          length = len1(line)
-          line(length+1:) = ')('//itoaf(i2(bl(i)))
-          length = len1(line)
-          line(length+1:) = '),time('//time1
-          length = len1(line)
-          line(length+1:) = ','//time2
-          length = len1(line)
-          line(length+1:) = ')'
-          length = length + 1
-          if (i.ne.n) then
-            line(length+1:length+3) = ',or'
-            length = length + 3
-          endif
-          call txtwrite(lu,line,length,iostat)
-          if (iostat.ne.0) then
-            call bug('w','Error writing to text file blflag.select')
-            call bugno('f',iostat)
-          endif
-        else
-          if (warn) then
-            call bug('w',
-     *       'Omitting channel specific flags in text file')
-            warn=.false.
+      warn = .true.
+      do i = 1, NBLIDX
+        if (blIdx(i).lt.0) then
+c         This data was flagged.
+          k = abs(blIdx(i))
+          if (chDat(k).eq.0) then
+            time = time0 + tDat(k)
+            call julday(time-TTOL,'H',time1)
+            call julday(time+TTOL,'H',time2)
+            line = 'ant('//itoaf(i1(blDat(k)))
+            length = len1(line)
+            line(length+1:) = ')('//itoaf(i2(blDat(k)))
+            length = len1(line)
+            line(length+1:) = '),time('//time1
+            length = len1(line)
+            line(length+1:) = ','//time2
+            length = len1(line)
+            line(length+1:) = ')'
+            length = length + 1
+            if (i.ne.NBLIDX) then
+              line(length+1:length+3) = ',or'
+              length = length + 3
+            endif
+
+            call txtwrite(lu,line,length,iostat)
+            if (iostat.ne.0) then
+              call bug('w','Error writing to text file blflag.select')
+              call bugno('f',iostat)
+            endif
+
+          else
+            if (warn) then
+              call bug('w',
+     *          'Omitting channel specific flags in text file')
+              warn=.false.
+            endif
           endif
         endif
       enddo
@@ -364,11 +373,13 @@ c     antenna pairs.
 
 c***********************************************************************
 
-      subroutine flagApp(lIn,NEDIT,blEdit,chEdit,time0,tEdit,version)
+      subroutine flagApp(lIn,NDAT,blDat,chDat,time0,tDat,NBLIDX,blIdx,
+     *  version)
 
-      integer   lIn, NEDIT, blEdit(NEDIT),chEdit(NEDIT)
+      integer   lIn, NDAT, blDat(NDAT),chDat(NDAT)
       double precision time0
-      real      tEdit(NEDIT)
+      real      tDat(NDAT)
+      integer   NBLIDX, blIdx(NBLIDX)
       character version*(*)
 c-----------------------------------------------------------------------
 c  Apply flagging to the dataset.
@@ -379,7 +390,7 @@ c-----------------------------------------------------------------------
       parameter (TTOL=1d0/86400d0)
 
       logical   chflag, flags(MAXCHAN), match
-      integer   ant1, ant2, bl, i, k, nchan, ncorr, nflag
+      integer   ant1, ant2, bl, i, j, k, nchan, ncorr, nflag
       real      dTime
       double precision preamble(4)
       complex   visDat(MAXCHAN)
@@ -392,36 +403,44 @@ c-----------------------------------------------------------------------
       ncorr = 0
 
       call uvDatRd(preamble,visDat,flags,MAXCHAN,nchan)
+
       do while (nchan.gt.0)
         ncorr = ncorr + nchan
-        dTime = real(preamble(3) - time0)
         call basant(preamble(4),ant1,ant2)
         bl = (ant2*(ant2-1))/2 + ant1
-        chflag=.false.
+        dTime = real(preamble(3) - time0)
 
 c       Search for this integration.
-        do i = 1, NEDIT
-          match = blEdit(i).eq.bl .and. abs(tEdit(i)-dTime).le.TTOL
+        chflag = .false.
+        do i = 1, NBLIDX
+          if (blIdx(i).lt.0) then
+c           This data was flagged.
+            k = abs(blIdx(i))
+            match = blDat(k).eq.bl .and. abs(tDat(k)-dTime).le.TTOL
 
-c         Flag bad channels if found.
-          if (match) then
-            if (chEdit(i).eq.0) then
-              do k = 1, nchan
-                if (flags(k)) then
-                  flags(k) = .false.
-                  nflag = nflag + 1
-                  chflag=.true.
+            if (match) then
+c             Flag bad channels.
+              if (chDat(k).eq.0) then
+c               Flag the whole spectrum.
+                do j = 1, nchan
+                  if (flags(j)) then
+                    flags(j) = .false.
+                    nflag  =  nflag + 1
+                    chflag = .true.
+                  endif
+                enddo
+              else
+c               Flag the particular channel.
+                if (flags(chDat(k))) then
+                  flags(chDat(k)) = .false.
+                  nflag  =  nflag + 1
+                  chflag = .true.
                 endif
-              enddo
-            else
-              if (flags(chEdit(i))) then
-                flags(chEdit(i))=.false.
-                nflag = nflag +1
-                chflag=.true.
               endif
             endif
           endif
         enddo
+
         if (chflag) call uvflgwr(lIn,flags)
 
 c       Go back for more.
@@ -434,7 +453,7 @@ c     Write history.
       call hisWrite(lIn,line)
       call hisInput(lIn,'BLFLAG')
       call hisWrite(lIn,'BLFLAG: Number of correlations flagged: '//
-     *                        itoaf(nflag))
+     *  itoaf(nflag))
       call hisClose(lIn)
 
 c     Report how much we have done.
@@ -445,15 +464,17 @@ c     Report how much we have done.
 
 c***********************************************************************
 
-      subroutine edit(NDAT,blDat,chDat,tDat,xDat,yDat,NBL,blIdx,
-     *  xaxis,yaxis,title,MAXEDIT,nEdit,blEdit,chEdit,tEdit)
+      subroutine edit(xaxis,yaxis,title,NDAT,blDat,chDat,tDat,xDat,yDat,
+     *  NBL,blIdx,nEdit)
 
+c     Given.
+      character xaxis*(*), yaxis*(*), title*(*)
       integer   NDAT, blDat(NDAT), chDat(NDAT)
       real      tDat(NDAT), xDat(NDAT), yDat(NDAT)
-      integer   NBL, blIdx(NBL)
-      character xaxis*(*), yaxis*(*), title*(*)
-      integer   MAXEDIT, nEdit, blEdit(MAXEDIT), chEdit(MAXEDIT)
-      real      tEdit(MAXEDIT)
+      integer   NBL
+
+c     Given and returned.
+      integer   blIdx(NBL), nEdit
 c-----------------------------------------------------------------------
       logical   more
       integer   i, nEdit0
@@ -476,12 +497,12 @@ c-----------------------------------------------------------------------
             blIdx(i) = abs(blIdx(i))
           enddo
 
-          call Draw(xmin,xmax,NDAT,xDat,yDat,NBL,blIdx,xaxis,yaxis,
-     *      title,xs,ys)
+          call Draw(xaxis,yaxis,title,xmin,xmax,NDAT,xDat,yDat,NBL,
+     *      blIdx,xs,ys)
 
         else if (mode.eq.'r') then
-          call Draw(xmin,xmax,NDAT,xDat,yDat,NBL,blIdx,xaxis,yaxis,
-     *      title,xs,ys)
+          call Draw(xaxis,yaxis,title,xmin,xmax,NDAT,xDat,yDat,NBL,
+     *      blIdx,xs,ys)
 
         else if (mode.eq.'h' .or. mode.le.' ' .or. mode.eq.'?') then
           call output('-------------------------------------')
@@ -494,17 +515,18 @@ c-----------------------------------------------------------------------
           call output(' c     Clear flagging of this baseline')
           call output(' h     Help -- these messages')
           call output(' p     Define and delete polygonal region')
-          call output(' q     Quit -- Abort completely')
+          call output(' q     Quit -- discarding edits')
           call output(' r     Redraw')
           call output(' u     Unzoom')
           call output(' x     Next baseline')
           call output(' z     Zoom in')
           call output('-------------------------------------')
+
         else if (mode.eq.'u') then
           xmin = 0
           xmax = 0
-          call Draw(xmin,xmax,NDAT,xDat,yDat,NBL,blIdx,xaxis,yaxis,
-     *      title,xs,ys)
+          call Draw(xaxis,yaxis,title,xmin,xmax,NDAT,xDat,yDat,NBL,
+     *      blIdx,xs,ys)
 
         else if (mode.eq.'x') then
           more = .false.
@@ -514,16 +536,15 @@ c-----------------------------------------------------------------------
           call pgcurs(xmin,yv,mode)
           call output('Click on right-hand edge of the zoomed region')
           call pgcurs(xmax,yv,mode)
-          call Draw(xmin,xmax,NDAT,xDat,yDat,NBL,blIdx,xaxis,yaxis,
-     *      title,xs,ys)
+          call Draw(xaxis,yaxis,title,xmin,xmax,NDAT,xDat,yDat,NBL,
+     *      blIdx,xs,ys)
 
         else if (mode.eq.'a') then
           call nearest(xv,yv,xs,ys,NDAT,blDat,chDat,tDat,xDat,yDat,
-     *      NBL,blIdx,MAXEDIT,nEdit,blEdit,chEdit,tEdit)
+     *      NBL,blIdx,nEdit)
 
         else if (mode.eq.'p') then
-          call region(NDAT,blDat,chDat,tDat,xDat,yDat,NBL,blIdx,
-     *      MAXEDIT,nEdit,blEdit,chEdit,tEdit)
+          call region(NDAT,blDat,chDat,tDat,xDat,yDat,NBL,blIdx,nEdit)
 
         else
           call bug('w','Unrecognised keystroke - use h for help')
@@ -536,14 +557,11 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine region(NDAT,blDat,chDat,tDat,xDat,yDat,NBL,blIdx,
-     *  MAXEDIT,nEdit,blEdit,chEdit,tEdit)
+      subroutine region(NDAT,blDat,chDat,tDat,xDat,yDat,NBL,blIdx,nEdit)
 
       integer   NDAT, blDat(NDAT),chDat(NDAT)
       real      tDat(nDAT), xDat(NDAT), yDat(NDAT)
-      integer   NBL, blIdx(NBL), MAXEDIT, nEdit, blEdit(MAXEDIT),
-     *          chEdit(MAXEDIT)
-      real      tEdit(MAXEDIT)
+      integer   NBL, blIdx(NBL), nEdit
 c-----------------------------------------------------------------------
       integer    MAXV
       parameter (MAXV=100)
@@ -573,10 +591,10 @@ c-----------------------------------------------------------------------
 c       Find all points that are within the poly.
         call pgbbuf
         do i = 1, NBL
-          if (blIdx(i).gt.0) then
+          k = blIdx(i)
+          if (k.gt.0) then
             within = .false.
             do j = 1, nv
-              k = blIdx(i)
               if ((xDat(k)-xv(j))*(xDat(k)-xv(j+1)).le.0 .and.
      *         abs(xDat(k)-xv(j))*(yv(j+1)-yv(j)).lt.
      *         abs(xv(j+1)-xv(j))*(yDat(k)-yv(j))) then
@@ -586,12 +604,6 @@ c       Find all points that are within the poly.
 
             if (within) then
               nEdit = nEdit + 1
-              if (nEdit.gt.MAXEDIT)
-     *          call bug('f','Too many editing ops')
-              blEdit(nEdit) = blDat(k)
-              chEdit(nEdit) = chDat(k)
-              tEdit(nEdit)  = tDat(k)
-
               blIdx(i) = -blIdx(i)
               call pgpt(1,xDat(k),yDat(k),1)
             endif
@@ -604,14 +616,14 @@ c       Find all points that are within the poly.
 
 c***********************************************************************
 
-      subroutine Draw(xmin,xmax,NDAT,xDat,yDat,NBL,blIdx,xaxis,yaxis,
-     *  title,xs,ys)
+      subroutine Draw(xaxis,yaxis,title,xmin,xmax,NDAT,xDat,yDat,NBL,
+     *  blIdx,xs,ys)
 
+      character xaxis*(*), yaxis*(*), title*(*)
       real      xmin, xmax
       integer   NDAT
       real      xDat(NDAT), yDat(NDAT)
       integer   NBL, blIdx(NBL)
-      character xaxis*(*), yaxis*(*), title*(*)
       real      xs, ys
 c-----------------------------------------------------------------------
       integer   i, k
@@ -620,12 +632,12 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 c     Determine the min and max values.
       call pgbbuf
-      call setUp(NDAT,xDat,NBL,blIdx,xaxis,xlo,xhi,xtitle,xflags)
+      call setUp(xaxis,NDAT,xDat,NBL,blIdx,xlo,xhi,xtitle,xflags)
       if (xmin.lt.xmax) then
         xlo = xmin
         xhi = xmax
       endif
-      call setUp(NDAT,yDat,NBL,blIdx,yaxis,ylo,yhi,ytitle,yflags)
+      call setUp(yaxis,NDAT,yDat,NBL,blIdx,ylo,yhi,ytitle,yflags)
 
       xs = 1/(xhi-xlo)**2
       ys = 1/(yhi-ylo)**2
@@ -634,7 +646,7 @@ c     Draw the plot.
       call pgsci(1)
       call pgpage
       if ((xaxis.eq.'real' .or. xaxis.eq.'imaginary') .and.
-     *   (yaxis.eq.'real' .or. yaxis.eq.'imaginary')) then
+     *    (yaxis.eq.'real' .or. yaxis.eq.'imaginary')) then
         call pgvstd
         call pgwnad(xlo,xhi,ylo,yhi)
       else
@@ -660,12 +672,12 @@ c     Change the colour to red.
 
 c***********************************************************************
 
-      subroutine setUp(NDAT,xyDat,NBL,blIdx,axis,lo,hi,title,flags)
+      subroutine setUp(axis,NDAT,xyDat,NBL,blIdx,lo,hi,title,flags)
 
+      character axis*(*)
       integer   NDAT
       real      xyDat(NDAT)
       integer   NBL, blIdx(NBL)
-      character axis*(*)
 
       real      lo, hi
       character title*(*), flags*(*)
@@ -712,17 +724,16 @@ c-----------------------------------------------------------------------
 c***********************************************************************
 
       subroutine nearest(xv,yv,xs,ys,NDAT,blDat,chDat,tDat,xDat,yDat,
-     *  NBL,blIdx,MAXEDIT,nEdit,blEdit,chEdit,tEdit)
+     *  NBL,blIdx,nEdit)
 
 c     Given.
       real      xv, yv, xs, ys
       integer   NDAT, blDat(NDAT), chDat(NDAT)
       real      tDat(NDAT), xDat(NDAT), yDat(NDAT)
-      integer   NBL, blIdx(NBL), MAXEDIT
+      integer   NBL
 
-c     Returned.
-      integer   nEdit, blEdit(MAXEDIT), chEdit(MAXEDIT)
-      real      tEdit(MAXEDIT)
+c     Given and returned.
+      integer   blIdx(NBL), nEdit
 c-----------------------------------------------------------------------
       integer   i, j, k
       real      dsq, dsqmin
@@ -744,13 +755,7 @@ c-----------------------------------------------------------------------
         call bug('w','No points left to edit')
       else
         nEdit = nEdit + 1
-        if (nEdit.gt.MAXEDIT) call bug('f','Too many ops')
-
         k = blIdx(j)
-        blEdit(nEdit) = blDat(k)
-        chEdit(nEdit) = chDat(k)
-        tEdit(nEdit)  = tDat(k)
-
         blIdx(j) = -blIdx(j)
         call pgpt(1,xDat(k),yDat(k),1)
       endif
@@ -759,25 +764,23 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine extract(bl,NDAT,blDat,nbl,blIdx)
+      subroutine getIdx(bl,NDAT,blDat,nBl,blIdx)
 
 c     Given.
-      integer   bl, NDAT
-      integer   blDat(NDAT)
+      integer   bl, NDAT, blDat(NDAT)
 
 c     Returned.
-      integer   nbl
-      integer   blIdx(NDAT)
+      integer   nBl, blIdx(*)
 c-----------------------------------------------------------------------
 c  Construct an index into the data for the specified baseline.
 c-----------------------------------------------------------------------
       integer i
 c-----------------------------------------------------------------------
-      nbl = 0
+      nBl = 0
       do i = 1, NDAT
         if (blDat(i).eq.bl) then
-          nbl = nbl + 1
-          blIdx(nbl) = i
+          nBl = nBl + 1
+          blIdx(nBl) = i
         endif
       enddo
 
