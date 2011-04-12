@@ -132,7 +132,7 @@ c         nocal   Do not apply antenna gain calibration.
 c         nopass  Do not apply bandpass correction.
 c         nopol   Do not apply polarisation leakage correction.
 c
-c$Id: blflag.for,v 1.16 2011/04/12 05:34:40 cal103 Exp $
+c$Id: blflag.for,v 1.17 2011/04/12 05:47:51 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -145,7 +145,7 @@ c     fail with truncated relocations.
       integer    MAXDAT
       parameter (MAXDAT = 32*1024*1024)
 
-      logical   havebl(MAXBASE), noapply, nobase, nofqaver, rms,
+      logical   finish, havebl(MAXBASE), noapply, nobase, nofqaver, rms,
      *          scalar, selgen
       integer   ant1, ant2, bl, blIdxp, i, length, lIn, nBl, nBlIdx,
      *          nDat, nEdit, nPol, pCorr, pCorr1, pCorr2, pFlags, pNpnt,
@@ -165,8 +165,8 @@ c     Data store 768MiB (24*MAXDAT bytes).
       character itoaf*10, versan*72
 c-----------------------------------------------------------------------
       version = versan('blflag',
-     *                 '$Revision: 1.16 $',
-     *                 '$Date: 2011/04/12 05:34:40 $')
+     *                 '$Revision: 1.17 $',
+     *                 '$Date: 2011/04/12 05:47:51 $')
 
 c     Get the input parameters.
       call keyini
@@ -225,7 +225,7 @@ c     Free memory (in reverse order).
       call memFree(pFlags, MAXCHAN, 'l')
 
 c     Loop over the baselines.
-      call output('Entering interactive mode ...')
+      call output('Entering interactive mode...')
       nEdit  = 0
       blIdxp = 1
       if (nobase) then
@@ -234,7 +234,7 @@ c     Loop over the baselines.
         enddo
 
         call edit(xaxis,yaxis,'All baselines',nDat,blDat,chDat,tDat,
-     *    xDat,yDat,nDat,blIdx,nEdit)
+     *    xDat,yDat,nDat,blIdx,nEdit,finish)
         nBlIdx = nDat
 
       else
@@ -246,17 +246,19 @@ c     Loop over the baselines.
               title = 'Baseline ' // itoaf(ant1)
               length = len1(title)
               title(length+1:) = '-' // itoaf(ant2)
+
               call getIdx(bl,nDat,blDat,nBl,blIdx(blIdxp))
               if (nBl.gt.0) then
                 call edit(xaxis,yaxis,title,nDat,blDat,chDat,tDat,xDat,
-     *            yDat,nBl,blIdx(blIdxp),nEdit)
+     *            yDat,nBl,blIdx(blIdxp),nEdit,finish)
                 blIdxp = blIdxp + nBl
+                if (finish) goto 10
               endif
             endif
           enddo
         enddo
 
-        nBlIdx = blIdxp - 1
+ 10     nBlIdx = blIdxp - 1
         if (nBlIdx.ne.nDat) call bug('w',
      *    'Baseline index count check failed.')
       endif
@@ -274,7 +276,7 @@ c     Generate the "blflag.select" file, if needed.
 
 c     Apply the changes.
       if (nEdit.gt.0 .and. .not.noapply) then
-        call output('Applying the flagging ...')
+        call output('Applying the flagging...')
         call uvDatRew
         call uvDatSet('disable',0)
         if (.not.uvDatOpn(lIn)) call bug('f','Error reopening input')
@@ -501,7 +503,7 @@ c     Initialise accumulators.
       endif
 
 c     Let's get going.
-      call output('Reading the data ...')
+      call output('Reading the data...')
       call uvDatRd(preamble,visDat,flags,MAXCHAN,nchan)
       if (nchan.eq.0) call bug('f','No visibility data found')
       if (nchan.eq.MAXCHAN) call bug('f','Too many channels for me')
@@ -732,7 +734,7 @@ c-----------------------------------------------------------------------
 c***********************************************************************
 
       subroutine edit(xaxis,yaxis,title,NDAT,blDat,chDat,tDat,xDat,yDat,
-     *  NBL,blIdx,nEdit)
+     *  NBL,blIdx,nEdit,finish)
 
 c     Given.
       character xaxis*(*), yaxis*(*), title*(*)
@@ -742,6 +744,9 @@ c     Given.
 
 c     Given and returned.
       integer   blIdx(NBL), nEdit
+
+c     Returned.
+      logical   finish
 c-----------------------------------------------------------------------
       logical   more
       integer   i, nEdit0
@@ -753,9 +758,10 @@ c-----------------------------------------------------------------------
       more = .true.
       do while (more)
         call lcase(mode)
-        if (mode.eq.'q') then
-          call pgend
-          call bug('f','Aborting as requested')
+        if (mode.eq.'a') then
+          call nearest(xv,yv,xs,ys,NDAT,blDat,chDat,tDat,xDat,yDat,
+     *      NBL,blIdx,nEdit)
+
         else if (mode.eq.'c') then
           nEdit = nEdit0
           xmin = 0.0
@@ -767,12 +773,12 @@ c-----------------------------------------------------------------------
           call draw(xaxis,yaxis,title,xmin,xmax,NDAT,xDat,yDat,NBL,
      *      blIdx,xs,ys)
 
-        else if (mode.eq.'r') then
-          call draw(xaxis,yaxis,title,xmin,xmax,NDAT,xDat,yDat,NBL,
-     *      blIdx,xs,ys)
+        else if (mode.eq.'e') then
+          finish = .true.
+          return
 
         else if (mode.eq.'h' .or. mode.le.' ' .or. mode.eq.'?') then
-          call output('-------------------------------------')
+          call output('----------------------------------------')
           call output('Single key commands are')
           call output(' Left-button  Delete nearest point')
           call output(' Right-button Next baseline')
@@ -780,14 +786,37 @@ c-----------------------------------------------------------------------
           call output(' ?     Help')
           call output(' a     Delete nearest point')
           call output(' c     Clear flagging of this baseline')
-          call output(' h     Help -- these messages')
-          call output(' p     Define and delete polygonal region')
-          call output(' q     Quit -- discarding edits')
+          call output(' e     Exit, preserving edits')
+          call output(' h     Help, these messages')
+          call output(' p     Delete point in polygonal region')
+          call output(' q     Quit, discarding edits')
           call output(' r     Redraw')
           call output(' u     Unzoom')
           call output(' x     Next baseline')
           call output(' z     Zoom in')
-          call output('-------------------------------------')
+          call output('----------------------------------------')
+
+        else if (mode.eq.'p') then
+          call region(NDAT,blDat,chDat,tDat,xDat,yDat,NBL,blIdx,nEdit)
+
+        else if (mode.eq.'q') then
+          if (nEdit.eq.0) then
+            mode = 'y'
+          else
+            call output('Really quit, discarding edits (yN)?')
+            call pgcurs(xv,yv,mode)
+            call lcase(mode)
+          endif
+
+          if (mode.eq.'y') then
+            call pgend
+            call bug('f','Aborting as requested')
+          endif
+          call output('Continuing...')
+
+        else if (mode.eq.'r') then
+          call draw(xaxis,yaxis,title,xmin,xmax,NDAT,xDat,yDat,NBL,
+     *      blIdx,xs,ys)
 
         else if (mode.eq.'u') then
           xmin = 0
@@ -806,19 +835,14 @@ c-----------------------------------------------------------------------
           call draw(xaxis,yaxis,title,xmin,xmax,NDAT,xDat,yDat,NBL,
      *      blIdx,xs,ys)
 
-        else if (mode.eq.'a') then
-          call nearest(xv,yv,xs,ys,NDAT,blDat,chDat,tDat,xDat,yDat,
-     *      NBL,blIdx,nEdit)
-
-        else if (mode.eq.'p') then
-          call region(NDAT,blDat,chDat,tDat,xDat,yDat,NBL,blIdx,nEdit)
-
         else
           call bug('w','Unrecognised keystroke - use h for help')
         endif
 
         if (more) call pgcurs(xv,yv,mode)
       enddo
+
+      finish = .false.
 
       end
 
