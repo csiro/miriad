@@ -132,7 +132,7 @@ c         nocal   Do not apply antenna gain calibration.
 c         nopass  Do not apply bandpass correction.
 c         nopol   Do not apply polarisation leakage correction.
 c
-c$Id: blflag.for,v 1.17 2011/04/12 05:47:51 cal103 Exp $
+c$Id: blflag.for,v 1.18 2011/04/12 06:00:31 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -143,7 +143,7 @@ c-----------------------------------------------------------------------
 c     Before increasing MAXDAT, check that it does not cause linking to
 c     fail with truncated relocations.
       integer    MAXDAT
-      parameter (MAXDAT = 32*1024*1024)
+      parameter (MAXDAT = 2*MAXBUF)
 
       logical   finish, havebl(MAXBASE), noapply, nobase, nofqaver, rms,
      *          scalar, selgen
@@ -155,7 +155,7 @@ c     fail with truncated relocations.
       character device*64, title*32, uvflags*12, val*16, version*72,
      *          xaxis*12, yaxis*12
 
-c     Data store 768MiB (24*MAXDAT bytes).
+c     Data store (48*MAXBUF bytes).
       integer   blDat(MAXDAT), blIdx(MAXDAT), chDat(MAXDAT)
       real      tDat(MAXDAT), xDat(MAXDAT), yDat(MAXDAT)
 
@@ -165,8 +165,8 @@ c     Data store 768MiB (24*MAXDAT bytes).
       character itoaf*10, versan*72
 c-----------------------------------------------------------------------
       version = versan('blflag',
-     *                 '$Revision: 1.17 $',
-     *                 '$Date: 2011/04/12 05:47:51 $')
+     *                 '$Revision: 1.18 $',
+     *                 '$Date: 2011/04/12 06:00:31 $')
 
 c     Get the input parameters.
       call keyini
@@ -233,8 +233,8 @@ c     Loop over the baselines.
           blIdx(i) = i
         enddo
 
-        call edit(xaxis,yaxis,'All baselines',nDat,blDat,chDat,tDat,
-     *    xDat,yDat,nDat,blIdx,nEdit,finish)
+        call edit(xaxis,yaxis,'All baselines',nDat,xDat,yDat,nDat,blIdx,
+     *    nEdit,finish)
         nBlIdx = nDat
 
       else
@@ -249,8 +249,8 @@ c     Loop over the baselines.
 
               call getIdx(bl,nDat,blDat,nBl,blIdx(blIdxp))
               if (nBl.gt.0) then
-                call edit(xaxis,yaxis,title,nDat,blDat,chDat,tDat,xDat,
-     *            yDat,nBl,blIdx(blIdxp),nEdit,finish)
+                call edit(xaxis,yaxis,title,nDat,xDat,yDat,nBl,
+     *            blIdx(blIdxp),nEdit,finish)
                 blIdxp = blIdxp + nBl
                 if (finish) goto 10
               endif
@@ -733,13 +733,13 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine edit(xaxis,yaxis,title,NDAT,blDat,chDat,tDat,xDat,yDat,
-     *  NBL,blIdx,nEdit,finish)
+      subroutine edit(xaxis,yaxis,title,NDAT,xDat,yDat,NBL,blIdx,nEdit,
+     *  finish)
 
 c     Given.
       character xaxis*(*), yaxis*(*), title*(*)
-      integer   NDAT, blDat(NDAT), chDat(NDAT)
-      real      tDat(NDAT), xDat(NDAT), yDat(NDAT)
+      integer   NDAT
+      real      xDat(NDAT), yDat(NDAT)
       integer   NBL
 
 c     Given and returned.
@@ -759,8 +759,7 @@ c-----------------------------------------------------------------------
       do while (more)
         call lcase(mode)
         if (mode.eq.'a') then
-          call nearest(xv,yv,xs,ys,NDAT,blDat,chDat,tDat,xDat,yDat,
-     *      NBL,blIdx,nEdit)
+          call nearest(xv,yv,xs,ys,NDAT,xDat,yDat,NBL,blIdx,nEdit)
 
         else if (mode.eq.'c') then
           nEdit = nEdit0
@@ -797,7 +796,7 @@ c-----------------------------------------------------------------------
           call output('----------------------------------------')
 
         else if (mode.eq.'p') then
-          call region(NDAT,blDat,chDat,tDat,xDat,yDat,NBL,blIdx,nEdit)
+          call region(NDAT,xDat,yDat,NBL,blIdx,nEdit)
 
         else if (mode.eq.'q') then
           if (nEdit.eq.0) then
@@ -955,13 +954,12 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine nearest(xv,yv,xs,ys,NDAT,blDat,chDat,tDat,xDat,yDat,
-     *  NBL,blIdx,nEdit)
+      subroutine nearest(xv,yv,xs,ys,NDAT,xDat,yDat,NBL,blIdx,nEdit)
 
 c     Given.
       real      xv, yv, xs, ys
-      integer   NDAT, blDat(NDAT), chDat(NDAT)
-      real      tDat(NDAT), xDat(NDAT), yDat(NDAT)
+      integer   NDAT
+      real      xDat(NDAT), yDat(NDAT)
       integer   NBL
 
 c     Given and returned.
@@ -996,10 +994,10 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine region(NDAT,blDat,chDat,tDat,xDat,yDat,NBL,blIdx,nEdit)
+      subroutine region(NDAT,xDat,yDat,NBL,blIdx,nEdit)
 
-      integer   NDAT, blDat(NDAT),chDat(NDAT)
-      real      tDat(nDAT), xDat(NDAT), yDat(NDAT)
+      integer   NDAT
+      real      xDat(NDAT), yDat(NDAT)
       integer   NBL, blIdx(NBL), nEdit
 c-----------------------------------------------------------------------
       integer    MAXV
