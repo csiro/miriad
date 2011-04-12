@@ -132,7 +132,7 @@ c         nocal   Do not apply antenna gain calibration.
 c         nopass  Do not apply bandpass correction.
 c         nopol   Do not apply polarisation leakage correction.
 c
-c$Id: blflag.for,v 1.18 2011/04/12 06:00:31 cal103 Exp $
+c$Id: blflag.for,v 1.19 2011/04/12 06:43:30 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -147,7 +147,7 @@ c     fail with truncated relocations.
 
       logical   finish, havebl(MAXBASE), noapply, nobase, nofqaver, rms,
      *          scalar, selgen
-      integer   ant1, ant2, bl, blIdxp, i, length, lIn, nBl, nBlIdx,
+      integer   ant1, ant2, bl, blIdxp, i, j, length, lIn, nBl, nBlIdx,
      *          nDat, nEdit, nPol, pCorr, pCorr1, pCorr2, pFlags, pNpnt,
      *          pVis
       real      xmax, xmin, ymax, ymin
@@ -165,8 +165,8 @@ c     Data store (48*MAXBUF bytes).
       character itoaf*10, versan*72
 c-----------------------------------------------------------------------
       version = versan('blflag',
-     *                 '$Revision: 1.18 $',
-     *                 '$Date: 2011/04/12 06:00:31 $')
+     *                 '$Revision: 1.19 $',
+     *                 '$Date: 2011/04/12 06:43:30 $')
 
 c     Get the input parameters.
       call keyini
@@ -213,7 +213,7 @@ c     Get the data.
      *  memC(pCorr1),memC(pCorr2),memC(pVis),MAXBASE,havebl,MAXDAT,nDat,
      *  blDat,chDat,time0,tDat,xDat,yDat)
       call uvDatCls
-      call output('Number of points read: '//itoaf(nDat))
+      call output('Number of points to edit: '//itoaf(nDat))
       if (nDat.eq.0) call bug('f','No points to flag')
 
 c     Free memory (in reverse order).
@@ -259,11 +259,21 @@ c     Loop over the baselines.
         enddo
 
  10     nBlIdx = blIdxp - 1
-        if (nBlIdx.ne.nDat) call bug('w',
-     *    'Baseline index count check failed.')
       endif
 
       call pgend
+
+c     Move flagged entries to the start of blIdx for efficiency.
+      if (nEdit.gt.0) then
+        j = 0
+        do i = 1, nBlIdx
+          if (blIdx(i).lt.0) then
+            j = j + 1
+            blIdx(j) = abs(blIdx(i))
+          endif
+        enddo
+        nBlIdx = j
+      endif
 
 c     Generate the "blflag.select" file, if needed.
       if (selgen) then
@@ -1053,12 +1063,12 @@ c       Find all points that are within the poly.
 
 c***********************************************************************
 
-      subroutine doSelGen(NDAT,blDat,chDat,time0,tDat,NBLIDX,blIdx)
+      subroutine doSelGen(NDAT,blDat,chDat,time0,tDat,NFGIDX,fgIdx)
 
       integer   NDAT, blDat(NDAT), chDat(NDAT)
       double precision time0
       real      tDat(NDAT)
-      integer   NBLIDX, blIdx(NBLIDX)
+      integer   NFGIDX, fgIdx(NFGIDX)
 c-----------------------------------------------------------------------
 c  Generate a file of select commands.
 c-----------------------------------------------------------------------
@@ -1094,41 +1104,38 @@ c     antenna pairs.
       endif
 
       warn = .true.
-      do i = 1, NBLIDX
-        if (blIdx(i).lt.0) then
-c         This data was flagged.
-          k = abs(blIdx(i))
-          if (chDat(k).eq.0) then
-            time = time0 + tDat(k)
-            call julday(time-TTOL,'H',time1)
-            call julday(time+TTOL,'H',time2)
-            line = 'ant('//itoaf(i1(blDat(k)))
-            length = len1(line)
-            line(length+1:) = ')('//itoaf(i2(blDat(k)))
-            length = len1(line)
-            line(length+1:) = '),time('//time1
-            length = len1(line)
-            line(length+1:) = ','//time2
-            length = len1(line)
-            line(length+1:) = ')'
-            length = length + 1
-            if (i.ne.NBLIDX) then
-              line(length+1:length+3) = ',or'
-              length = length + 3
-            endif
+      do i = 1, NFGIDX
+        k = fgIdx(i)
+        if (chDat(k).eq.0) then
+          time = time0 + tDat(k)
+          call julday(time-TTOL,'H',time1)
+          call julday(time+TTOL,'H',time2)
+          line = 'ant('//itoaf(i1(blDat(k)))
+          length = len1(line)
+          line(length+1:) = ')('//itoaf(i2(blDat(k)))
+          length = len1(line)
+          line(length+1:) = '),time('//time1
+          length = len1(line)
+          line(length+1:) = ','//time2
+          length = len1(line)
+          line(length+1:) = ')'
+          length = length + 1
+          if (i.ne.NFGIDX) then
+            line(length+1:length+3) = ',or'
+            length = length + 3
+          endif
 
-            call txtwrite(lu,line,length,iostat)
-            if (iostat.ne.0) then
-              call bug('w','Error writing to text file blflag.select')
-              call bugno('f',iostat)
-            endif
+          call txtwrite(lu,line,length,iostat)
+          if (iostat.ne.0) then
+            call bug('w','Error writing to text file blflag.select')
+            call bugno('f',iostat)
+          endif
 
-          else
-            if (warn) then
-              call bug('w',
-     *          'Omitting channel specific flags in text file')
-              warn=.false.
-            endif
+        else
+          if (warn) then
+            call bug('w',
+     *        'Omitting channel specific flags in text file')
+            warn=.false.
           endif
         endif
       enddo
@@ -1139,13 +1146,13 @@ c         This data was flagged.
 
 c***********************************************************************
 
-      subroutine flagApp(lIn,NDAT,blDat,chDat,time0,tDat,NBLIDX,blIdx,
+      subroutine flagApp(lIn,NDAT,blDat,chDat,time0,tDat,NFGIDX,fgIdx,
      *  version)
 
       integer   lIn, NDAT, blDat(NDAT),chDat(NDAT)
       double precision time0
       real      tDat(NDAT)
-      integer   NBLIDX, blIdx(NBLIDX)
+      integer   NFGIDX, fgIdx(NFGIDX)
       character version*(*)
 c-----------------------------------------------------------------------
 c  Apply flagging to the dataset.
@@ -1156,7 +1163,7 @@ c-----------------------------------------------------------------------
       parameter (TTOL=1d0/86400d0)
 
       logical   chflag, flags(MAXCHAN), match
-      integer   ant1, ant2, bl, i, j, k, nchan, ncorr, nflag
+      integer   ant1, ant2, bl, i, j, k, nChan, nCorr, nFlag
       real      dTime
       double precision preamble(4)
       complex   visDat(MAXCHAN)
@@ -1165,43 +1172,41 @@ c-----------------------------------------------------------------------
       external  itoaf
       character itoaf*10
 c-----------------------------------------------------------------------
-      nflag = 0
-      ncorr = 0
+      nFlag = 0
+      nCorr = 0
 
-      call uvDatRd(preamble,visDat,flags,MAXCHAN,nchan)
+      call uvDatRd(preamble,visDat,flags,MAXCHAN,nChan)
 
-      do while (nchan.gt.0)
-        ncorr = ncorr + nchan
+      do while (nChan.gt.0)
+        nCorr = nCorr + nChan
+
         call basant(preamble(4),ant1,ant2)
         bl = (ant2*(ant2-1))/2 + ant1
         dTime = real(preamble(3) - time0)
 
-c       Search for this integration.
+c       Search for this integration in the flagged indices.
         chflag = .false.
-        do i = 1, NBLIDX
-          if (blIdx(i).lt.0) then
-c           This data was flagged.
-            k = abs(blIdx(i))
-            match = blDat(k).eq.bl .and. abs(tDat(k)-dTime).le.TTOL
+        do i = 1, NFGIDX
+          k = fgIdx(i)
+          match = blDat(k).eq.bl .and. abs(tDat(k)-dTime).le.TTOL
 
-            if (match) then
-c             Flag bad channels.
-              if (chDat(k).eq.0) then
-c               Flag the whole spectrum.
-                do j = 1, nchan
-                  if (flags(j)) then
-                    flags(j) = .false.
-                    nflag  =  nflag + 1
-                    chflag = .true.
-                  endif
-                enddo
-              else
-c               Flag the particular channel.
-                if (flags(chDat(k))) then
-                  flags(chDat(k)) = .false.
-                  nflag  =  nflag + 1
+          if (match) then
+c           Flag bad channels.
+            if (chDat(k).eq.0) then
+c             Flag the whole spectrum.
+              do j = 1, nChan
+                if (flags(j)) then
+                  flags(j) = .false.
+                  nFlag  =  nFlag + 1
                   chflag = .true.
                 endif
+              enddo
+            else
+c             Flag the particular channel.
+              if (flags(chDat(k))) then
+                flags(chDat(k)) = .false.
+                nFlag  =  nFlag + 1
+                chflag = .true.
               endif
             endif
           endif
@@ -1210,7 +1215,7 @@ c               Flag the particular channel.
         if (chflag) call uvflgwr(lIn,flags)
 
 c       Go back for more.
-        call uvDatRd(preamble,visDat,flags,MAXCHAN,nchan)
+        call uvDatRd(preamble,visDat,flags,MAXCHAN,nChan)
       enddo
 
 c     Write history.
@@ -1219,11 +1224,11 @@ c     Write history.
       call hisWrite(lIn,line)
       call hisInput(lIn,'BLFLAG')
       call hisWrite(lIn,'BLFLAG: Number of correlations flagged: '//
-     *  itoaf(nflag))
+     *  itoaf(nFlag))
       call hisClose(lIn)
 
 c     Report how much we have done.
-      call output('Total number of correlations:   '//itoaf(ncorr))
-      call output('Number of correlations flagged: '//itoaf(nflag))
+      call output('Total number of correlations:   '//itoaf(nCorr))
+      call output('Number of correlations flagged: '//itoaf(nFlag))
 
       end
