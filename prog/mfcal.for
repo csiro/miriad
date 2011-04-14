@@ -123,6 +123,8 @@ c    mhw  29sep09 Time variable bandpass bug fixes
 c    rjs  01oct09 Handle missing antennas slightly better.
 c    rjs  17dec09 There was a bug in packit/unpackit where handling a dataset
 c		  with many windows or Doppler tracking.
+c    mhw  14apr11 Fix hash function overflow by moving to double for VisId
+c                 Also use mem.h for dynamic memory
 c
 c  Problems:
 c    * Should do simple spectral index fit.
@@ -130,6 +132,7 @@ c------------------------------------------------------------------------
 	integer PolXX,PolYY,PolRR,PolLL,PolI
 	parameter(PolXX=-5,PolYY=-6,PolRR=-1,PolLL=-2,PolI=1)
 	include 'maxdim.h'
+        include 'mem.h'
 	integer MAXSPECT,MAXVIS,MAXSOLN,MAXITER,MAXPOL
 	parameter(MAXSPECT=3*MAXWIN,MAXVIS=50000000,MAXITER=30)
 	parameter(MAXSOLN=1024,MAXPOL=2)
@@ -140,7 +143,7 @@ c
 	integer tno
 	integer pWGains,pFreq,pSource,pPass,pGains,pTau
 	integer pOPass,pOGains,pOTau
-	integer nvis,VID(MAXVIS)
+	integer nvis,pVID,pVis,pWt
 	integer nspect,nschan(MAXSPECT),ischan(MAXSPECT),nv(MAXSPECT)
 	integer spectn(MAXSPECT),chanoff(MAXSPECT),nvo,nso,nspectd
 	integer npol,nants,nsoln,Count(MAXSOLN),nchan,refant,minant
@@ -150,18 +153,8 @@ c
 	double precision freq0,sfreq(MAXSPECT),sdf(MAXSPECT)
 	double precision freqc(MAXSPECT)
 	double precision interval(3),time(MAXSOLN)
-	complex Vis(MAXVIS)
-	real Wt(MAXVIS)
 	character line*64,uvflags*16,Source*64
 	logical dodelay,dopass,defflux,interp,oldflux
-c
-c  Dynamic memory stuff.
-c
-	real ref(MAXBUF)
-	complex cref(MAXBUF/2)
-	double precision dref(MAXBUF/2)
-	equivalence(ref,cref,dref)
-	common ref
 c
 c  Externals.
 c
@@ -226,12 +219,18 @@ c
 	call HisWrite(tno,'MFCAL: '//version)
 	call HisInput(tno,'MFCAL')
 c
+c Allocate some storage
+c        
+        call MemAlloc(pVID,MAXVIS,'d')
+        call MemAlloc(pVis,MAXVIS,'c')
+        call MemAlloc(pWt,MAXVIS,'r')
+c
 c  Get the input data.
 c
 	call output('Reading the data ...')
-	call DatRead(tno,MAXVIS,nvis,npol,Vis,Wt,VID,
-     *		     MAXSPECT,nspect,sfreq,sdf,nschan,nv,nants,
-     *		     MAXSOLN,nsoln,time,Count,minant,
+	call DatRead(tno,MAXVIS,nvis,npol,MemC(pVis),MemR(pWt),
+     *		     MemD(pVID),MAXSPECT,nspect,sfreq,sdf,nschan,nv,
+     *		     nants,MAXSOLN,nsoln,time,Count,minant,
      *               refant,interval,edge,Source,PolMap)
 c
 c  Squeeze out spectral windows that have no data and amalgamate windows
@@ -242,7 +241,8 @@ c
 	if(nspectd.ne.nspect)then
 	  call output('Combining near duplicate windows ...')
 	  call squeeze(nspect,spectn,chanoff,
-     *	    Vis,Wt,VID,nvis,Count,time,nsoln,nvo,nso)
+     *	    MemC(pVis),MemR(pWt),MemD(pVID),nvis,Count,time,nsoln,
+     *      nvo,nso)
 	  nvis = nvo
 	  nsoln = nso
 	  nspect = nspectd 
@@ -278,17 +278,17 @@ c  Generate the frequencies for each channel in the total passband.
 c
 	call MemAlloc(pFreq,nchan,'d')
 	call FreqGen(nspect,nschan,sfreq,sdf,
-     *				freqc,dref(pFreq),nchan)
+     *				freqc,MemD(pFreq),nchan)
 c
 c  Generate the source model.
 c
 	call MemAlloc(pSource,nchan,'r')
 	call SrcGen(Source,oldflux,defflux,
-     *	  ref(pSource),nchan,dref(pFreq),freq0,flux(1),flux(3))
+     *	  MemR(pSource),nchan,MemD(pFreq),freq0,flux(1),flux(3))
 c
 c  Now make the frequency relative to the reference frequency.
 c
-	call FreqRel(dref(pFreq),freq0,nchan)
+	call FreqRel(MemD(pFreq),freq0,nchan)
 	call FreqRel(freqc,freq0,nspect)
 c
 c  Allocate some extra memory.
@@ -304,21 +304,22 @@ c  Get an initial estimate of the wide gains and passband.
 c
 	call output('Generating initial solution estimate ...')
 	call MemAlloc(pWGains,nants*nspect*nsoln*npol,'c')
-	call WGIni(Vis,Wt,VID,ischan,nvis,npol,Count,nsoln,nchan,
-     *	  nants,nspect,ref(pSource),cref(pWGains),refant,minant)
+	call WGIni(MemC(pVis),MemR(pWt),MemD(pVID),ischan,nvis,npol,
+     *	  Count,nsoln,nchan,nants,nspect,MemR(pSource),MemC(pWGains),
+     *    refant,minant)
 c
 	call BPIni(npol,nants,nchan,nsoln,npsoln,nspect,nschan,
-     *	  cref(pWGains),freqc,cref(pPass),cref(pGains),ref(pTau),
+     *	  MemC(pWGains),freqc,MemC(pPass),MemC(pGains),MemR(pTau),
      *    dodelay,dopass)
 	call MemFree(pWGains,nants*nspect*nsoln*npol,'c')
 c
 c  Normalise the gains, and make a copy for later comparison.
 c
 	if(dopass)call Norm(npol,nants,nchan,nsoln,npsoln,Range,
-     *	  cref(pPass),cref(pGains),ref(pTau),dref(pFreq))
+     *	  MemC(pPass),MemC(pGains),MemR(pTau),MemD(pFreq))
 c
-	call GainCpy(npol,nants,nchan,nsoln,npsoln,cref(pPass),
-     *	  cref(pGains),ref(pTau),cref(pOPass),cref(pOGains),ref(pOTau))
+	call GainCpy(npol,nants,nchan,nsoln,npsoln,MemC(pPass),
+     *	 MemC(pGains),MemR(pTau),MemC(pOPass),MemC(pOGains),MemR(pOTau))
 c
 c  We have estimates of the antenna gains (Gains), the delay term
 c  (Tau) and the passbands (Pass). Perform the main solver iterations.
@@ -332,27 +333,28 @@ c
 c  Get the antenna gains and delay.
 c
 	  call SolveGT(refant,minant,nants,nspect,nchan,nsoln,npsoln,
-     *	    cref(pPass),ref(pSource),dref(pFreq),Vis,Wt,VID,ischan,
-     *	    Count,Range,nvis,npol,cref(pGains),ref(pTau),
-     *	    dodelay.and.niter.ne.1,tol)
+     *	    MemC(pPass),MemR(pSource),MemD(pFreq),MemC(pVis),MemR(pWt),
+     *      MemD(pVID),ischan,Count,Range,nvis,npol,
+     *	    MemC(pGains),MemR(pTau),dodelay.and.niter.ne.1,tol)
 c
 c  Get the passband.
 c
 	  if(dopass)call SolveBP(refant,minant,nants,nspect,nchan,nsoln,
-     *	    npsoln,cref(pPass),ref(pSource),dref(pFreq),Vis,Wt,VID,
-     *	    ischan,Count,Range,nvis,npol,cref(pGains),ref(pTau),tol)
+     *	    npsoln,MemC(pPass),MemR(pSource),MemD(pFreq),MemC(pVis),
+     *      MemR(pWt),MemD(pVID),ischan,Count,Range,nvis,npol,
+     *	    MemC(pGains),MemR(pTau),tol)
 c
 c  Normalise the total gains so that the average delay is zero and
 c  the rms passband gain is 1.
 c
 	  if(dopass)call Norm(npol,nants,nchan,nsoln,npsoln,Range,
-     *	    cref(pPass),cref(pGains),ref(pTau),dref(pFreq))
+     *	    MemC(pPass),MemC(pGains),MemR(pTau),MemD(pFreq))
 c
 c  Compare the solution with previous solutions.
 c
-	  call GainCmp(npol,nants,nchan,nsoln,npsoln,Range,cref(pPass),
-     *		cref(pGains),ref(pTau),cref(pOPass),cref(pOGains),
-     *          ref(pOTau),epsi)
+	  call GainCmp(npol,nants,nchan,nsoln,npsoln,Range,MemC(pPass),
+     *		MemC(pGains),MemR(pTau),MemC(pOPass),MemC(pOGains),
+     *          MemR(pOTau),epsi)
 c  Keep the user awake.
 c
 	  write(line,'(a,i2,a,f7.3)')'Iter=',niter,
@@ -363,7 +365,7 @@ c
 c  Scale the gains if we have no idea what the source flux really was.
 c
 	if(defflux)then
-	  call GainScal(flux,cref(pGains),npol*nants*nsoln)
+	  call GainScal(flux,MemC(pGains),npol*nants*nsoln)
 	  write(line,'(a,f8.3)')'I flux density: ',flux(1)
 	  call output(line)
 	endif
@@ -372,19 +374,22 @@ c
 	call output('Saving solution ...')
 c
 	if (dopass.and.interp) call intext(npol,nants,nchan,nspect,
-     *    nschan,npsoln,cref(pPass))
+     *    nschan,npsoln,MemC(pPass))
 	if(dopass.and.npol.eq.2)
-     *	  call pushxy(npol,nants,nsoln,cref(pGains),nchan,npsoln,
-     *          cref(pPass))
+     *	  call pushxy(npol,nants,nsoln,MemC(pGains),nchan,npsoln,
+     *          MemC(pPass))
 c
-	call GainTab(tno,time,cref(pGains),ref(pTau),npol,nants,nsoln,
+	call GainTab(tno,time,MemC(pGains),MemR(pTau),npol,nants,nsoln,
      *	  freq0,dodelay,pee,dopass)
 c
 	if(dopass)call PassTab(tno,npol,nants,nchan,nspect,sfreq,sdf,
-     *	  nschan,nsoln,time,Range,npsoln,cref(pPass),pee)
+     *	  nschan,nsoln,time,Range,npsoln,MemC(pPass),pee)
 c
 c  Free up all the memory, and close down shop.
 c
+	call MemFree(pVis,MAXVIS,'c')
+	call MemFree(pWt,MAXVIS,'r')
+	call MemFree(pVID,MAXVIS,'d')
 	call MemFree(pOTau,nants*nsoln,'r')
 	call MemFree(pOGains,nants*nsoln*npol,'c')
 	call MemFree(pOPass,nants*nchan*npol*npsoln,'c')
@@ -1207,8 +1212,9 @@ c
 	implicit none
 	integer nvis,nsoln,nants,nspect,nchan,minant,refant,npol
 	complex Vis(nvis),WGains(nants,nspect,npol,nsoln)
-	integer VID(nvis),Count(nsoln),ischan(nspect)
+	integer Count(nsoln),ischan(nspect)
 	real Source(nchan),Wt(nvis)
+        double precision VID(nvis)
 c
 c  Estimate the "wide" gains. The gains in each spectral window are
 c  solved for independently.
@@ -1288,8 +1294,9 @@ c
 	integer nschan(maxspect),nv(maxspect),Count(maxsoln),edge(2)
 	complex Vis(maxvis)
 	real Wt(maxvis)
-	integer VID(maxvis),PolMap(*)
+	integer PolMap(*)
 	character Source*(*)
+        double precision VID(maxvis)
 c
 c  Read the data, and return information on what we have read.
 c
@@ -1327,9 +1334,9 @@ c------------------------------------------------------------------------
 	integer MAXPOL
 	parameter(MAXPOL=2)
 c
-	integer nchan,nbad,nauto,nreg,ngood,ninter,i1,i2,p,i,VisId
+	integer nchan,nbad,nauto,nreg,ngood,ninter,i1,i2,p,i
 	integer idx
-	double precision preamble(4),tfirst,tlast
+	double precision preamble(4),tfirst,tlast,VisId
 	complex Data(MAXCHAN)
 	logical flags(MAXCHAN),present(MAXANT,MAXPOL),updated,ok,new
 	integer chan(MAXCHAN),spect(MAXCHAN),state(MAXCHAN),pnspect
@@ -1460,6 +1467,7 @@ c
 		w = abs(sdf(spect(i)))
 	        call packit(i1,i2,p,spect(i),chan(i),VisId)
 		call hashIdx(VisId,nvis,idx,new)
+                if (idx.gt.MAXVIS) call bug('f','Too many visibilities')
 		if(new)then
 		  Count(nsoln) = Count(nsoln) + 1
 		  VID(idx) = VisId
@@ -1532,7 +1540,8 @@ c
 	data first/.true./
 c
 	do i=1,MAXHASH
-	  hash(1,i) = 0
+	  hash(i) = 0
+          hashval(i) = 0
 	enddo
 c
 	if(first)nhash = prime(MAXHASH-1)
@@ -1543,14 +1552,15 @@ c************************************************************************
 	subroutine hashIdx(VisId,nslot,slot,new)
 c
 	implicit none
-	integer VisId,nslot,slot
+	integer nslot,slot
+        double precision VisId
 	logical new
 c
 c  This routine translates (via hash lookup) between a visibility ID to
 c  a slot number.
 c
 c  Inputs:
-c    VisId	A positive integer unique to a particular channel/polarisation/antenna pair
+c    VisId	A positive 'integer' unique to a particular channel/polarisation/antenna pair
 c  Input/Output:
 c    nslot	The number of slots used so far. If the VisID does not have
 c		a slot already, this is incremented.
@@ -1561,28 +1571,30 @@ c------------------------------------------------------------------------
 	include 'mfcal.h'
 c
 	integer idx
+        double precision d
 c
 c  Find this channel in the hash table.
 c
-	idx = mod(VisId,nHash) + 1
-	dowhile(Hash(1,idx).ne.0.and.Hash(1,idx).ne.VisId)
+        d = mod(1.d0*VisId,1.d0*nHash) + 1
+	idx = nint(d)
+	do while(Hashval(idx).ne.0.and.Hashval(idx).ne.VisId)        
 	  idx = idx + 1
 	enddo
 	if(idx.eq.MAXHASH)then
 	  idx = 1
-	  dowhile(Hash(1,idx).ne.0.and.Hash(1,idx).ne.VisId)
+	  do while(Hashval(idx).ne.0.and.Hashval(idx).ne.VisId)        
 	    idx = idx + 1
 	  enddo
 	  if(idx.eq.MAXHASH)
      *		call bug('f','Hash table overflow, in hashIdx')
 	endif
-	new = Hash(1,idx).eq.0
+	new = Hashval(idx).eq.0
 	if(new)then
 	  nslot = nslot + 1
-	  hash(1,idx) = VisId
-	  hash(2,idx) = nslot
+	  hashval(idx) = VisId
+	  hash(idx) = nslot
 	endif
-	slot = hash(2,idx)
+	slot = hash(idx)
 	end
 c************************************************************************
 	subroutine squeezed(nspect,sfreq,sdf,nschan,nv,
@@ -1673,7 +1685,7 @@ c
 	integer Count(nsi),nvo,nso
 	complex vis(nvi)
 	real wts(nvi)
-	integer vid(nvi)
+	double precision vid(nvi)
 	double precision time(nsi)
 c
 c  Combine and squeeze out data as needed.
@@ -1778,7 +1790,8 @@ c************************************************************************
 	subroutine packit(i1,i2,p,spect,chan,VID)
 c
 	implicit none
-	integer i1,i2,p,spect,chan,VID
+	integer i1,i2,p,spect,chan
+        double precision VID
 c
 c  Pack antenna and polarisation numbers into one number.
 c
@@ -1788,8 +1801,9 @@ c    p		Polarisation index.
 c    spect	Spectral window index.
 c    chan	Channel number.
 c  Output:
-c    VID	A positive integer used as a unique identifier for antenna pair,
-c		polarisation, spectral window and channel.
+c    VID	A positive 'integer' used as a unique identifier for
+c		antenna pair, polarisation, spectral window and channel.
+c               Now a double - to avoid integer overflow
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer MAXPOL
@@ -1801,17 +1815,19 @@ c------------------------------------------------------------------------
 	VID = MAXANT *   VID + i2 - 1
 	VID = MAXPOL *   VID + p  - 1
 	VID = 3*MAXWIN * VID + spect
+        if (VID.gt.2.d0**52) call bug('f','Overflow in packit')
 	end
 c************************************************************************
 	subroutine unpackit(i1,i2,p,spect,chan,VID)
 c
 	implicit none
-	integer i1,i2,p,spect,chan,VID
+	integer i1,i2,p,spect,chan
+        double precision VID
 c
 c  Unpack antenna and polarisation number.
 c
 c  Input:
-c    VID	A positive integer used as a unique identifier for antenna pair,
+c    VID	A positive 'integer' used as a unique identifier for antenna pair,
 c		polarisation, spectral window and channel.
 c  Output:
 c    i1,i2	Antenna pair.
@@ -1822,23 +1838,22 @@ c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer MAXPOL
 	parameter(MAXPOL=2)
-	integer VisId
+	double precision VisId
 c
 	VisId = VID - 1
-	spect = mod(VisId,3*MAXWIN)
-	VisId = VisId/(3*MAXWIN)
-	p     = mod(VisId,MAXPOL)
+        spect = mod(VisId,3.d0*MAXWIN)
+        VisId = VisId/(3*MAXWIN)
+	p     = mod(VisId,1.d0*MAXPOL)
 	VisId = VisId/MAXPOL
-	i2    = mod(VisId,MAXANT)
+	i2    = mod(VisId,1.d0*MAXANT)
 	VisId = VisId/MAXANT
-	i1    = mod(VisId,MAXANT)
-	chan  = VisId/MAXANT
+	i1    = mod(VisId,1.d0*MAXANT)
+        chan  = VisId/MAXANT
 c
 	i1 = i1 + 1
 	i2 = i2 + 1
 	p = p + 1
 	spect = spect + 1
-	chan = chan + 1
 c
 	end
 c************************************************************************
@@ -2440,10 +2455,10 @@ c
 	implicit none
 	integer nants,nchan,n,nsoln,refant,minant,nspect,npol,npsoln
 	real Tau(nants,nsoln),Source(nchan),tol,Wt(n)
-	double precision freq(nchan)
+	double precision freq(nchan),VID(n)
 	complex Pass(nants,nchan,npol,npsoln),Gains(nants,npol,nsoln)
 	complex Dat(n)
-	integer VID(n),Count(nsoln),ischan(nspect),Range(2,npsoln)
+	integer Count(nsoln),ischan(nspect),Range(2,npsoln)
 c
 c  Given the source, antenna gains and atmospheric delays, solve for
 c  the pass band.
@@ -2468,14 +2483,10 @@ c  Input/Output:
 c    Pass	Pass band.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
+        include 'mem.h'
 	integer pSumVM,pSumMM
 	real epsi
 	integer nbl,off,i,p,k
-c
-	real ref(MAXBUF)
-	complex cref(MAXBUF/2)
-	equivalence(ref,cref)
-	common ref
 c
 	nbl = nants*(nants-1)/2
 c
@@ -2491,14 +2502,14 @@ c  Accumulate statistics.
 c
  	  call AccPB(k,nants,nspect,nbl,nchan,npol,nsoln,npsoln,
      *          Source,freq,Dat,Wt,VID,ischan,Count,Range,n,Gains,Tau,
-     *          cref(pSumVM),ref(pSumMM))
+     *          MemC(pSumVM),MemR(pSumMM))
 c
 c  Having accumulated the crap, go and get a solution.
 c
 	  off = 0
 	  do p=1,npol
 	    do i=1,nchan
-	      call Solve(nants,nbl,cref(pSumVM+off),ref(pSumMM+off),
+	      call Solve(nants,nbl,MemC(pSumVM+off),MemR(pSumMM+off),
      *	        Pass(1,i,p,k),refant,minant,tol*tol,epsi,.false.)
 	      off = off + nbl
 	    enddo
@@ -2821,9 +2832,9 @@ c
 	implicit none
 	integer k,nants,nbl,nchan,nsoln,nvis,nspect,npol,npsoln
 	real Source(nchan),Tau(nants,nsoln),Wt(nvis)
-	double precision freq(nchan)
+	double precision freq(nchan),VID(nvis)
 	complex Vis(nvis),Gains(nants,npol,nsoln)
-	integer VID(nvis),Count(nsoln),ischan(nspect),Range(2,npsoln)
+	integer Count(nsoln),ischan(nspect),Range(2,npsoln)
 	complex SumVM(nbl,nchan,npol)
 	real SumMM(nbl,nchan,npol)
 c
@@ -2881,11 +2892,11 @@ c************************************************************************
 c
 	implicit none
 	integer refant,minant,nants,nchan,nsoln,nvis,nspect,npol,npsoln
-	integer VID(nvis),Count(nsoln),ischan(nspect),Range(2,npsoln)
+	integer Count(nsoln),ischan(nspect),Range(2,npsoln)
 	complex Pass(nants,nchan,npol,npsoln),Vis(nvis)
         complex Gains(nants,npol,nsoln)
 	real Source(nchan),Tau(nants,nsoln),tol,Wt(nvis)
-	double precision Freq(nchan)
+	double precision Freq(nchan),VID(nvis)
 	logical dodelay
 c
 c  Driver for the routine to solve for the antenna gains and delays.
@@ -2936,11 +2947,11 @@ c
 	implicit none
 	integer nants,nchan,n,refant,nspect,npol
 	real Tau(nants),Source(nchan),tol
-	double precision freq(nchan)
+	double precision freq(nchan),VID(n)
 	complex Pass(nants,nchan,npol),Gains(nants,npol)
 	complex Dat(n)
 	real Wt(n)
-	integer VID(n),ischan(nspect)
+	integer ischan(nspect)
 c
 c  Solve for the antenna gains and the atmospheric delay.
 c
@@ -2965,6 +2976,7 @@ c------------------------------------------------------------------------
 	integer MAXITER,MAXVAR
 	parameter(MAXITER=200,MAXVAR=(1+2*MAXPOL)*MAXANT)
 	include 'mirconst.h'
+        include 'mem.h'
 c
 	integer i,Idx(MAXANT,MAXPOL),TIdx(MAXANT),p
 	integer ifail,spect,chan,i1,i2,nvar,neqn
@@ -2973,11 +2985,6 @@ c  Scratch arrays for the least squares solver.
 c
 	real x(MAXVAR),dx(MAXVAR),W
 	integer dfdx,aa,f,fp
-c
-c  Dynamic memory commons.
-c
-	real ref(MAXBUF)
-	common ref
 c
 c  Externals.
 c
@@ -3067,7 +3074,7 @@ c
 c  Call the solver at last.
 c
 	call nllsqu(nvar,neqn,x,x,MAXITER,0.,tol,.true.,
-     *	  ifail,FUNC,DERIVE,ref(f),ref(fp),dx,ref(dfdx),ref(aa))
+     *	  ifail,FUNC,DERIVE,MemR(f),MemR(fp),dx,MemR(dfdx),MemR(aa))
 	if(ifail.ne.0)call bug('w',
      *	  'Solver failed to converge: ifail='//itoaf(ifail))
 c
@@ -3197,7 +3204,8 @@ c
 	complex Pass(nants,nchan,npol),Gains(nants,npol)
 	complex Dat(n)
 	real Wt(n)
-	integer VID(n),ischan(nspect)
+	integer ischan(nspect)
+        double precision VID(n)
 c
 c  Solve for the antenna gains, but not atmospheric delay.
 c

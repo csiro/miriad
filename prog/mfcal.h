@@ -11,5 +11,6 @@ c
 c
 	integer MAXHASH
 	parameter(MAXHASH=16*MAXCHAN*MAXANT)
-	integer hash(2,MAXHASH),nhash
-	common/mfcalcm2/hash,nhash
+	integer hash(MAXHASH),nhash
+        double precision hashval(MAXHASH)
+	common/mfcalcm2/hash,hashval,nhash
