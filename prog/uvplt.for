@@ -239,144 +239,11 @@ c       The output logfile name. The default is the terminal.
 c@ comment
 c       A one line comment which is written into the logfile.
 c
-c$Id: uvplt.for,v 1.11 2010/09/29 08:17:38 cal103 Exp $
+c$Id: uvplt.for,v 1.12 2011/05/03 07:58:53 cal103 Exp $
 c--
 c
 c  History:
-c    nebk 22May89  Original version.
-c    nebk 21Sep89  Change PGPAGE calls, replace READ by PROMPT and
-c                  decoding
-c    rjs  18oct89  Changes to new calling sequence for planet
-c                  scaling/rotation.
-c    rjs  23oct89  Changed 'pdev' to 'device'.
-c    pjt   2may90  maxdim.h now gets maxants and maxchan
-c    mchw 28jun90  Updated to use uvdata selection criteria.
-c    mchw 05jul90  Made standard uvheader.
-c    rjs   2nov90  Corrected documentation.
-c    nebk 18feb91  Substantial changes to add 'time', 'dtime', 'u', 'v',
-c                  'uc', 'vc',  'real' and 'imag' plot options.  Add
-c                  Stokes (IQUV) selection and multiple input file
-c                  ability by invoking the UVDAT* layer of subroutines.
-c    nebk 20feb91  Even more substantial changes to add time averaging.
-c                  Move flagging options to OPTIONS
-c    nebk 26feb91  Add capability to plot different baselines separately
-c    nebk  5mar91  Change itoa to itoaf, atod to atodf.  Add
-c                  OPTIONS=INTER
-c    nebk 24mar91  Rework MAXBASE/MAXBASE2 to avoid conflict, add
-c                  OPTIONS=NOERR, and implement averaging of u and v.
-c    nebk 28mar91  Add OPTIONS=AUTO, NOCROSS, and LOG
-c    nebk 10apr91  Add OPTIONS=ZERO,NANOSECONDS, & EQUAL, XAXIS=UVPA,
-c                  and add HANN.  Fix bounds problem when no points to
-c                  plot.
-c    nebk/mjs
-c         11apr91  Fix bug with time range and MKEYR.  Change default
-c                  xaxis to 'dtime' instead of 'time'
-c    nebk 06may91  Adjust for new pgtime routines and fix bug with
-c                  getting users comment.  CHange default axis back to
-c                  'time' since revised PGTIME routines now have a day
-c                  field.
-c    nebk 21may91  Add OPTIONS=NOCAL, prevent PGPAGE call on last plot,
-c                  put Stokes selection on plot and use roman font
-c    nebk 31may91  Add OPTIONS=SOURCE
-c    nebk 06jun91  Add planet scaling.
-c    nebk 11jun91  Fix bug with averaged vector quantities; phase wrong.
-c    nebk 17jun91  Fiddle with fonts
-c    rjs  27jun91  Changed "docal" to "nocal", add OPTIONS=NOPOL
-c    nebk 08aug91  Add DAY field to XRANGE.
-c    mchw 28aug91  Test for zero length comment in call to LogWrite
-c    nebk 04sep91  Fix logic error when dumping averaged buffers into
-c                  the plot buffer - was being done in the wrong place
-c    nebk 08sep91  Rearrange logic so that x-value gets tested for
-c                  user's plot range after averaging instead of before.
-c                  Add OPTIONS=AVALL,DAYS,HOURS
-c    nebk 09sep91  Rewrite some code that could cause integer overflows
-c                  with very large averaging times.
-c    nebk 04oct91  Plot baselines in increasing order (1-2,1-3 etc)
-c                  Add OPTIONS=XIND
-c    nebk 16jan92  CHange OPTION=BASE to OPTION=NOBASE
-c    nebk 17feb92  Don't open device when no points.  Add OPTIONS=WRAP.
-c                  Fix a bug that was preventing  memory allocation if
-c                  the first file in the VIS list had no selected data.
-c    nebk 26feb92  Add OPTIONS=SYMBOLS.  This required a lot of
-c                  rewriting
-c    nebk 07mar92  Add OPTIONS=YIND
-c    rjs  12mar92  When autoscaling, keep away from rounding problems.
-c    nebk 12apr92  Lengthen str2 by 2 for escaping of \ for SUNs in
-c                  MTITLE
-c    nebk 28apr92  Finally implement the same axis types for both X
-c                  and Y so both X and Y depend on channel now. Merge
-c                  XAXIS and YAXIS into AXIS.  Reformat documentation.
-c    nebk 24may92  Use my fabbo KEYMATCH for AXIS to shut Mr S up.
-c    rjs  27may92  Absolutely unbelievable mistake. Only Mr K could do
-c                  it.  Failed to declare a string variable to be long
-c                  enough.
-c    nebk 08jun92  Interchange HatCreek NXY defaults and properly plot
-c                  flagged data for OPTIONS=ALL (bug inserted 28apr92)
-c    nebk 23jun92  Move final accumlator flush inside file do loop
-c                  CHange options=WRAP to UNWRAP.  Finish averaging
-c                  when RA or DEC change.
-c    nebk 07jul92  Fix problem with last point of file being plotted
-c                  as if it belonged to the next file when averaging
-c    rjs  17aug92  Replace obsolete uvtrack with soon to be obsolete
-c                  uvvarini
-c    nebk 25sep92  Remove options AUTO and NOCROSS to SELECT and add
-c                  independent averaging of polarizations.  Better
-c                  NFILES memory management when DOSYMB is false.
-c    nebk 30sep92  Trap against not all pol'ns turning up in first
-c                  record.
-c    nebk 02oct92  Rearrange sequence of UVDATRD calls
-c    nebk 07oct92  Implement standard BASANT subroutine call.
-c    nebk 09dec92  Fix bounds bug in baspolid for options=nobase and
-c                  implement more flexible mixed polarization handling
-c    nebk 24dec92  When unwrapping phases, don't do any range testing.
-c    nebk 19jan93  Increment by 1 length of OPS in INPUTS (NOPASS did
-c                  this)
-c    nebk 09feb93  Use memalloc and overlay blank common with UVDAT
-c    nebk 16feb93  Change size (clever rjs algorithm),nx,ny defaults
-c    nebk 25feb93  Change to doc.  Fiddle with size parameter defaults,
-c                  add axis=hangle,dhangle, rework interactive window
-c                  stuff, plot polarizations with different colours
-c    mjs  15mar93  pgplot names have 6 or less chars.
-c    rjs  18mar93  Assume there is at least 1 polarisation in the data.
-c    nebk 27apr93  Following suggestion by pjt implement getting of
-c                  longitude through obspar as well as uv variable.
-c                  Fiddle HA -> +/- pi
-c    nebk 18jun93  Add options=colour
-c    nebk 17mar94  Add OPTIONS=2PASS  and change to OPTIONS=NOCOLOUR
-c    nebk 15jan95  Be less restrictive on use of -u and -v
-c    nebk 11mar95  No yellow for hardcopy devices
-c    nebk 22spe95  Add axis=parang
-c    nebk 03oct95  Fix calculation of hour angle.
-c    rjs  01dec95  Improve an error message.
-c    nebk 06dec95  Push MAXBASE2 upto 36 for Hat Creek.  Does not affect
-c                  ATCA
-c    nebk 09jan95  Only work out longitude if really needed; some data
-c                  sets don't have it.
-c    nebk 22may96  Add options=mrms
-c    rjs  06jun96  Change frequency behaviour to default to all
-c                  channels.
-c    rjs  30jul96  2pass tries to guess the number of points needed.
-c    rjs  14feb97  If the user sets nxy in options=nobase, then honour
-c                  it.
-c    nebk 18jun98  Document nofqav options better
-c    rjs  19nov98  Minor correction to computation of LST, and recompute
-c                  from scratch the parallactic angle.
-c    swa  03sep99  Add options=notitle.
-c    rjs  10mar00  Set maxbase2=91.
-c    rjs  28mar00  Fix colour indices when there are more than NCOL
-c                  inputs.
-c    rjs  04may00  Tidy up requirement for lat,long,lst and more.
-c    rjs  26sep00  Correct uvangle code.
-c    rjs  10jan01  Added az,el,lst to possible axes.
-c    rjs  20jan01  Change definition of nbases in uvfish to allow for
-c                  possible presence of autocorrelations.
-c    rjs  02mar01  Added airmass to possible axes.
-c    rjs  04may03  getlst could return the wrong value in some
-c                  circumstances.
-c    rjs  20sep04  Added jyperk and rms.
-c    rjs  09may06  Disable planet processing.
-c    rjs  07jun06  Neater messages.
-c    rjs  28apr09  Added frequency as something that can be plotted.
+c    Refer to the RCS log, v1.1 includes prior revision information.
 c
 c To do:
 c
@@ -504,8 +371,8 @@ c
       data polmsk /13*0/
 c-----------------------------------------------------------------------
       version = versan ('uvplt',
-     *                  '$Revision: 1.11 $',
-     *                  '$Date: 2010/09/29 08:17:38 $')
+     *                  '$Revision: 1.12 $',
+     *                  '$Date: 2011/05/03 07:58:53 $')
 c
 c  Get the parameters given by the user and check them for blunders
 c
@@ -1403,7 +1270,7 @@ c     Is the point in the selected X and Y range?
           if (ymin.ne.-1e32) return
         endif
 
-        if (y.gt.xmax) then
+        if (y.gt.ymax) then
           if (ymax.ne.+1e32) return
         endif
       endif
