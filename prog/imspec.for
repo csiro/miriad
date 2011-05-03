@@ -282,7 +282,7 @@ c@ log
 c       If specified, output is written to the file given by log=
 c       instead of to the terminal.
 c
-c$Id: imspec.for,v 1.5 2011/04/08 02:55:48 cal103 Exp $
+c$Id: imspec.for,v 1.6 2011/05/03 07:48:16 cal103 Exp $
 c--
 c
 c  History:
@@ -301,8 +301,8 @@ c-----------------------------------------------------------------------
       character versan*72
 c-----------------------------------------------------------------------
       version = versan('imspec',
-     *                 '$Revision: 1.5 $',
-     *                 '$Date: 2011/04/08 02:55:48 $')
+     *                 '$Revision: 1.6 $',
+     *                 '$Date: 2011/05/03 07:48:16 $')
 
       call inputs(lIn,naxis,dim,corners,boxes,cut,counts,beaminfo,
      *  axlabel,device,MAXBOXES)
@@ -622,43 +622,44 @@ c-----------------------------------------------------------------------
       call coInit(lIn)
 
 c     Decode the axes keyword.
+      call assertl(keyprsnt('axes'),
+     *  'The axes must be specified (via keyword ''axes'')')
+
       dim = 0
-      if (keyprsnt('axes')) then
-c       Locate the selected axes.
-        call keya('axes', axis, ' ')
-        do while (axis.ne.' ')
-          if (axis.eq.' ') goto 10
+c     Locate the selected axes.
+      call keya('axes', axis, ' ')
+      do while (axis.ne.' ')
+        if (axis.eq.' ') goto 10
 
-          dim = dim + 1
-          call assertl(dim.le.2, 'A maximum of two axes may be given')
+        dim = dim + 1
+        call assertl(dim.le.2, 'A maximum of two axes may be given')
 
-          if (len1(axis).eq.1) then
-            axnum(dim) = index(axC,axis)
-          else
-            call coFindAx(lIn, axis, axnum(dim))
+        if (len1(axis).eq.1) then
+          axnum(dim) = index(axC,axis(:1))
+        else
+          call coFindAx(lIn, axis, axnum(dim))
 
-            if (axnum(dim).eq.0) then
-c             Try harder.
-              call ucase(axis)
-              if (axis.eq.'LNG' .or. axis.eq.'LONG') then
-                axis = 'longitude'
-                call coFindAx(lIn, axis, axnum(dim))
-              else if (axis.eq.'LAT') then
-                axis = 'latitude'
-                call coFindAx(lIn, axis, axnum(dim))
-              else if (axis.eq.'SPC' .or. axis.eq.'SPEC') then
-                axis = 'spectral'
-                call coFindAx(lIn, axis, axnum(dim))
-              endif
+          if (axnum(dim).eq.0) then
+c           Try harder.
+            call ucase(axis)
+            if (axis.eq.'LNG' .or. axis.eq.'LONG') then
+              axis = 'longitude'
+              call coFindAx(lIn, axis, axnum(dim))
+            else if (axis.eq.'LAT') then
+              axis = 'latitude'
+              call coFindAx(lIn, axis, axnum(dim))
+            else if (axis.eq.'SPC' .or. axis.eq.'SPEC') then
+              axis = 'spectral'
+              call coFindAx(lIn, axis, axnum(dim))
             endif
           endif
+        endif
 
-          call assertl(axnum(dim).ne.0,
-     *      'No '//axis(:len1(axis))//' axis found')
+        call assertl(axnum(dim).ne.0,
+     *    'No '//axis(:len1(axis))//' axis found')
 
-          call keya('axes', axis, ' ')
-        enddo
-      endif
+        call keya('axes', axis, ' ')
+      enddo
 
  10   call assertl(dim.ne.0, 'No valid axes specified')
 
@@ -1424,7 +1425,7 @@ c-----------------------------------------------------------------------
       include 'imspec.h'
 
       integer   i, n(4)
-      character cubetype*9, label*12, line*80, typ*9
+      character cubetype*9, label*32, line*80, typ*9
 
       external  itoaf, len1, rtfmt
       integer   len1
@@ -1433,19 +1434,25 @@ c-----------------------------------------------------------------------
       call logwrit(' ')
 
 c     Abbreviate the label to 12 chars.
-      label = axlabel(:12)
+      label = axlabel(:32)
       if (label.eq.'Right ascension') then
         label = 'RA'
       else if (label.eq.'Relativistic') then
         label = 'Reltvstc vel'
       else
-        i = index(axlabel,'longitude')
-        if (i.ne.0) label(i:) = 'lng'
+        i = index(label,'Ecliptic ')
+        if (i.ne.0) label(i:) = 'E' // label(9:)
 
-        i = index(axlabel,'latitude')
-        if (i.ne.0) label(i:) = 'lat'
+        i = index(label,'Galactic ')
+        if (i.ne.0) label(i:) = 'G' // label(9:)
 
-        i = index(axlabel,'velocity')
+        i = index(label,' longitude')
+        if (i.ne.0) label(i:) = 'LON'
+
+        i = index(label,' latitude')
+        if (i.ne.0) label(i:) = 'LAT'
+
+        i = index(label,'velocity')
         if (i.ne.0) label(i:) = 'vel'
 
         i = index(label,'(')
@@ -1464,18 +1471,18 @@ c     Abbreviate the label to 12 chars.
         enddo
 
         typ  = cubetype(min(dim+level-1,4))
-        n(1) = (len(typ) - len1(typ)) / 2
-        n(2) =  len(typ) - n(1)
-        n(3) = (len(label) - len1(label) + 1) / 2
-        n(4) =  len(label) - n(3)
+        n(1) =  (9 - len1(typ)) / 2
+        n(2) =   9 - n(1)
+        n(3) = (12 - len1(label) + 1) / 2
+        n(4) =  12 - n(3)
 
       else if (level.eq.nlevels) then
         typ  = 'Total'
         label = ' '
-        n(1) = 1
-        n(2) = len(typ) - 1
-        n(3) = len(label) - 1
-        n(4) = 1
+        n(1) =  1
+        n(2) =  8
+        n(3) = 11
+        n(4) =  1
       endif
 
       if (plotvar(DUNIT).eq.ORIG .or. plotvar(DUNIT).eq.KELVIN) then
