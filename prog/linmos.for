@@ -60,7 +60,7 @@ c                      giving the effective gain across the field.  If
 c                      options=taper is used, this will be a smooth
 c                      function.  Otherwise it will be 1 or 0 (blanked).
 c
-c$Id: linmos.for,v 1.13 2010/11/26 01:50:28 wie017 Exp $
+c$Id: linmos.for,v 1.14 2011/05/09 22:46:54 wie017 Exp $
 c--
 c
 c  History:
@@ -126,7 +126,7 @@ c-----------------------------------------------------------------------
 
       real      TOL
       integer   MAXIN, MAXLEN, MAXOPN
-      parameter (MAXIN=1024, MAXLEN=MAXIN*64, MAXOPN=6, TOL=0.01)
+      parameter (MAXIN=4096, MAXLEN=MAXIN*64, MAXOPN=6, TOL=0.01)
 
       logical   defrms, dosen, dogain, docar, exact, taper
       integer   axLen(3,MAXIN), i, itemp, k1(MAXIN), k2(MAXIN), length,
@@ -141,8 +141,8 @@ c-----------------------------------------------------------------------
       external  len1, versan
 c-----------------------------------------------------------------------
       version = versan ('linmos',
-     *                  '$Revision: 1.13 $',
-     *                  '$Date: 2010/11/26 01:50:28 $')
+     *                  '$Revision: 1.14 $',
+     *                  '$Date: 2011/05/09 22:46:54 $')
 
 c     Get and check inputs.
       call keyini
