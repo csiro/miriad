@@ -130,7 +130,7 @@ c         velocity=lsr
 c       indicates that fits is to determine the observatory velocity
 c       wrt the LSR frame using an appropriate model.
 c
-c$Id: fits.for,v 1.18 2010/12/16 07:17:50 cal103 Exp $
+c$Id: fits.for,v 1.19 2011/05/23 01:19:39 cal103 Exp $
 c--
 c
 c  Bugs:
@@ -164,8 +164,8 @@ c-----------------------------------------------------------------------
       character versan*80
 c-----------------------------------------------------------------------
       version = versan('fits',
-     *                 '$Revision: 1.18 $',
-     *                 '$Date: 2010/12/16 07:17:50 $')
+     *                 '$Revision: 1.19 $',
+     *                 '$Date: 2011/05/23 01:19:39 $')
 c
 c  Get the input parameters.
 c
@@ -958,8 +958,8 @@ c
      *     (fid.ne.1 .or. sid.ne.1 .or. config.ne.1)) then
           warn = .true.
           call bug('i','Probable problem in handling AIPS BL table')
-          line = stcat(   'Freq ID='//itoaf(fid),
-     *           stcat( ', Src ID='//itoaf(sid),
+          line = stcat('Freq ID='//itoaf(fid),
+     *           stcat(', Src ID='//itoaf(sid),
      *                    ', Config='//itoaf(config)))
           call bug('i',line)
           call bug('i','Task does not know how to handle this')
@@ -1564,7 +1564,7 @@ c
           freqref(nconfig) = Coord(uvCrval,uvFreq)
           call bug('w','Antenna table reference frequency looks bad')
           call bug('w','Using header reference frequency')
-        elseif(abs(freqref(nconfig)-Coord(uvCrval,uvFreq)).gt.
+        else if (abs(freqref(nconfig)-Coord(uvCrval,uvFreq)).gt.
      *     0.01*abs(freqref(nconfig)) .and. nconfig.eq.1) then
           call bug('w',
      *      'Header and antenna table reference frequency differ')
@@ -4591,12 +4591,13 @@ c     Write out auxiliary keywords.
       call rdhdr(lIn, 'vobs', rval, 0.0)
       if (rval.ne.0.0) call fitwrhdr(lOut, 'VOBS', rval*R2D)
 
+c     N.B. BPA is stored in degrees in the Miriad header!
       call rdhdr(lIn, 'bmaj', rval, 0.0)
       if (rval.ne.0.0) call fitwrhdr(lOut, 'BMAJ', rval*R2D)
       call rdhdr(lIn, 'bmin', rval, 0.0)
       if (rval.ne.0.0) call fitwrhdr(lOut, 'BMIN', rval*R2D)
       call rdhdr(lIn, 'bpa', rval,  0.0)
-      if (rval.ne.0.0) call fitwrhdr(lOut, 'BPA',  rval*R2D)
+      if (rval.ne.0.0) call fitwrhdr(lOut, 'BPA',  rval)
 
 
 c     Write residual Miriad header items.  Open the "special item" which
@@ -4954,7 +4955,7 @@ c       Handle what must be a numeric value.
             type = 'real'
           else if (c.eq.'d' .or. c.eq.'D') then
             type = 'double'
-          elseif((c.lt.'0' .or. c.gt.'9') .and.
+          else if ((c.lt.'0' .or. c.gt.'9') .and.
      *            c.ne.'+' .and. c.ne.'-') then
             type = 'unknown'
             more = .false.
