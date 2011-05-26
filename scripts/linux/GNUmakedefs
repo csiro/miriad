@@ -12,10 +12,12 @@
 # after this one.
 #
 # Original: 2006/09/13, Mark Calabretta, ATNF
-# $Id: GNUmakedefs,v 1.2 2009/04/02 23:23:41 cal103 Exp $
+# $Id: GNUmakedefs,v 1.3 2011/05/26 08:48:39 cal103 Exp $
 #=============================================================================
+# ratty flags.
+RATFLAGS := -b -s g77
 
-# GNU Fortran compiler flags.
+# GNU g77 compiler flags.
 FCSTD    := -ff90-intrinsics-hide
 FCOPT     = -O -fPIC $(FCSTD)
 
