@@ -12,12 +12,10 @@
 # after this one.
 #
 # Original: 2011/03/23, Mark Calabretta, ATNF
-# $Id: GNUmakedefs,v 1.2 2011/05/26 06:28:00 cal103 Exp $
+# $Id: GNUmakedefs,v 1.3 2011/05/26 08:43:49 cal103 Exp $
 #=============================================================================
-# System identification is "linux" rather than "darwin_x86_64".
-
 # ratty flags.
-RATFLAGS := -s linux
+RATFLAGS := -s gfortran
 
 # intf2c flags.
 F2CFLAGS := -s linux
