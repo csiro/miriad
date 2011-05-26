@@ -9,13 +9,23 @@ for these machines.
 
 Usage:
 
- ratty [-h] [-s system] [-I incdir] [-D symbol] [-bglu [-n start inc] [-p data-type] [in] [out]
+ ratty [-h] [-s system] [-I incdir] [-D symbol] [-bglu [-n start inc]
+       [-p data-type] [in] [out]
 
-    system:  One of "f77" (generic unix compiler), "unicos" (Cray FORTRAN
-             compiler), "vms" (VMS FORTRAN), "alliant" (alliant unix
-             compiler), "convex" (convex unix compiler) or "sun"
-             (sun unix compiler), "f2c" (NETLIBs f2c compiler),
-             "hpux", "alpha" or "sgi", "linux"
+    system:  compiler/system type, one of
+               "alliant"   (alliant unix compiler)
+               "alpha"     (DEC alpha compiler)
+               "convex"    (CONVEX unix compiler)
+               "f2c"       (NETLIBs f2c compiler)
+               "f77"       (generic unix compiler)
+               "g77"       (GNU g77 compiler)
+               "gfortran"  (GNU gfortran chmpiler)
+               "hpux"      (HPUX compiler)
+               "linux"     (generic Linux compiler)
+               "sgi"       (SGI compiler)
+               "sun"       (sun unix compiler)
+               "unicos"    (Cray Fortran compiler)
+               "vms"       (VMS Fortran compiler)
 
     incdir:  Directory to search for include files.  The -I option may
              be used repeatedly, but must list only one directory for
@@ -44,7 +54,7 @@ Usage:
     -l:      Convert all variables, etc, to lower case.
 
     -u:      Convert all variables, etc, to upper case.
-             (some of the system generated if/then/else/endif/continue
+             (some of the system-generated if/then/else/endif/continue
               are not converted to upper case)
 
     -p:      Give the FORTRAN type to be used for "ptrdiff" data type.
@@ -77,48 +87,22 @@ vector processing capacities (compilers "unicos", "alliant" and "convex"):
     "cvd$ noconcur" followed by "cvd$ novector" on "alliant".
 */
 /*-- */
-/************************************************************************/
-/*									*/
-/*  History:								*/
-/*    rjs    oct86 Original FORTRAN version.				*/
-/*    rjs    nov88 Converted to C.					*/
-/*    rjs  15sep89 Handle `implicit undefined' statement.		*/
-/*    rjs   9feb90 -D flag, -I flag. Got stderr to work on VMS.		*/
-/*    pjt  15may90 added -? flag for people with poor memory            */
-/*    bpw  ??????? messing with string continuation, inline doc         */
-/*    pjt  17dec90 return proper exit status to shell when OK           */
-/*    mjs/bpw 17jan91 Rewrote documentation                             */
-/*    rjs  23jan91 Corrected documentation. Fixed errors introduced in	*/
-/*                 usage()                                              */
-/*    bpw  26mar91 Corrected handling of uppercase defined symbols:     */
-/*                 now such symbols are not required to be lowercase    */
-/*                 (which was undocumented).                            */
-/*    rjs  17sep91 Label start and increment. Sun is a recognised system*/
-/*    pjt  12dec91 Added tentative -g option for #line dbx comments	*/
-/*		   for non-local include files the path is not added yet*/
-/*    rjs  13dec91 Merged back in some innovate rjs options (-l|-u)     */
-/*		   also fixed old bug: -i switch didn't work (-I did)   */
-/*    rjs  14jul92 Check for consistent use of the -b switch.           */
-/*    rjs  07jan93 Get #define to work.					*/
-/*    rjs  20nov94 Added alpha.						*/
-/*    pjt   3jan95 Added f2c (used on linux)                            */
-/*    rjs  15aug95 Added sgi		                                */
-/*    rjs  22may06 Change to appease cygwin.				*/
-/*    mrc  14jul06 Get it to compile with 'gcc -Wall' without warnings. */
-/*    pjt  12mar07 merged MIR4 and atnf versions; re-added -h           */
-/*    rjs  21jul09 Add translation of "ptrdiff" data type.		*/
-/*									*/
-/* $Id: ratty.c,v 1.8 2010/05/07 07:12:10 cal103 Exp $ */
-/************************************************************************/
-/* ToDos/Shortcomings:                                                  */
-/*  The -u flag doesn't convert self-generated if/then/continue etc.    */
-/*  This would mean occurences like                                     */
-/*      textout("continue\n");                                          */
-/*  to be changed to:                                                   */
-/*      (uflag?textout("continue\n"):textout("CONTINUE\n"));            */
-/*  comment lines like "c#define foo bar" still define !!!              */
-/************************************************************************/
-#define VERSION_ID   "21-Jul-09"
+/*****************************************************************************
+*
+* History:
+*   Refer to the RCS log, v1.1 includes prior revision information.
+*
+* $Id: ratty.c,v 1.9 2011/05/26 08:40:27 cal103 Exp $
+******************************************************************************
+* ToDos/Shortcomings:
+*  The -u flag doesn't convert self-generated if/then/continue etc.
+*  This would mean occurences like
+*      textout("continue\n");
+*  to be changed to:
+*      (uflag?textout("continue\n"):textout("CONTINUE\n"));
+*  comment lines like "c#define foo bar" still define !!! 
+*****************************************************************************/
+#define VERSION_ID   "2011/05/16"
 
 #define max(a,b) ((a) > (b) ? (a) : (b) )
 #define min(a,b) ((a) < (b) ? (a) : (b) )
@@ -143,7 +127,8 @@ static void blankout(int blanks);
 static void lowercase(char *string);
 static char *getparm(char *line, char *token);
 static void cppline(char *line);
-static char *progtok(char *line, char *token, int *indent, int *lineno, int *bracketting);
+static char *progtok(char *line, char *token, int *indent, int *lineno,
+                     int *bracketting);
 static char *skipexp(char *s, int *bracketting);
 static int get_line(FILE *in, char *line);
 static int reformat(char *s);
@@ -167,34 +152,41 @@ static void usage(void);
  *		program statement.
  *  vector	is true if the target machine has vector processing
  *		capacities.
+ *  bslash	is  1 if the -b option probably should be used, or
+ *                 -1 if it probably shouldn't (subject to compiler options).
  */
 
 struct system {char *name;int doloop,prog,vector,bslash;} systems[] = {
-	{ "unknown", FALSE, FALSE, FALSE, 0 },
-	{ "f77",     FALSE, FALSE, FALSE, 0 },
-	{ "f2c",     TRUE,  FALSE, FALSE, 1 },
-	{ "unicos",  FALSE, TRUE,  TRUE, -1 },
-	{ "vms",     TRUE,  FALSE, FALSE,-1 },
-	{ "alliant", TRUE,  FALSE, TRUE,  0 },
-	{ "convex",  TRUE,  FALSE, TRUE, -1 },
-        { "trace",   TRUE,  FALSE, FALSE, 0 },
-	{ "sun",     TRUE,  FALSE, FALSE, 1 },
-	{ "sgi",     TRUE,  FALSE, FALSE, 0 },
-	{ "linux",   TRUE,  FALSE, FALSE, 1 },
-	{ "hpux",    FALSE, FALSE, FALSE, 0 },
-	{ "alpha",   TRUE,  FALSE, FALSE, 1 }};
-#define SYS_F77    1
-#define SYS_F2C    2
-#define SYS_CFT    3
-#define SYS_VMS    4
-#define SYS_FX     5
-#define SYS_CONVEX 6
-#define SYS_TRACE  7
-#define SYS_SUN    8
-#define SYS_SGI    9
-#define SYS_LINUX 10
-#define SYS_HPUX  11
-#define SYS_ALPHA 12
+  { "alliant",  TRUE,  FALSE, TRUE,   0 },
+  { "alpha",    TRUE,  FALSE, FALSE,  1 },
+  { "convex",   TRUE,  FALSE, TRUE,  -1 },
+  { "f2c",      TRUE,  FALSE, FALSE,  1 },
+  { "f77",      FALSE, FALSE, FALSE,  0 },
+  { "g77",      TRUE,  FALSE, FALSE,  1 },  /* -fbackslash is the default */
+  { "gfortran", TRUE,  FALSE, FALSE, -1 },  /* -fno-backslash is default */
+  { "hpux",     FALSE, FALSE, FALSE,  0 },
+  { "linux",    TRUE,  FALSE, FALSE,  0 },
+  { "sgi",      TRUE,  FALSE, FALSE,  0 },
+  { "sun",      TRUE,  FALSE, FALSE,  1 },
+  { "unicos",   FALSE, TRUE,  TRUE,  -1 },
+  { "vms",      TRUE,  FALSE, FALSE, -1 },
+  { "trace",    TRUE,  FALSE, FALSE,  0 },
+  { "unknown",  FALSE, FALSE, FALSE,  0 } };
+
+#define SYS_ALPHA     1
+#define SYS_CFT       2
+#define SYS_CONVEX    3
+#define SYS_F2C       4
+#define SYS_F77       5
+#define SYS_G77       6
+#define SYS_GFORTRAN  7
+#define SYS_FX        9
+#define SYS_HPUX      9
+#define SYS_LINUX    10
+#define SYS_SGI      11
+#define SYS_SUN      12
+#define SYS_TRACE    13
+#define SYS_VMS      14
 #define NSYS (sizeof(systems)/sizeof(struct system))
 
 #define LOWER 90000	/* Ratty uses statement labels above this number. */
@@ -210,15 +202,16 @@ static char *ptrdiff;
 
 private int continuation,quoted=FALSE;
 private int lower,increment;
-/************************************************************************/
+
+/****************************************************************************/
+
 int main(int argc,char *argv[])
 {
   char *s,*infile,*outfile,*sysname;
   int i;
   FILE *in;
 
-/* Initalize everything in sight. */
-
+  /* Initalize everything in sight. */
   incdir = defines = NULL;
   in_routine = dbslash = comment = gflag = lflag = uflag = FALSE;
   offlevel = level = uselabel = depth = lines = routines = chars= 0;
@@ -226,8 +219,7 @@ int main(int argc,char *argv[])
   increment = 1;
   ptrdiff = "integer";
 
-/* Handle the command line. */
-
+  /* Handle the command line. */
   sysname = "unknown";
   infile = NULL;
   outfile = NULL;
@@ -241,7 +233,10 @@ int main(int argc,char *argv[])
 	case 's': if(++i < argc) sysname = argv[i];		break;
 	case 'd':
 	case 'D': if(++i < argc) defines = add_list(defines,argv[i]);	break;
-	case 'n': if(i+2 < argc){ get_labelnos(argv[i+1],argv[i+2]); i += 2; }; break;
+	case 'n': if(i+2 < argc) {
+                    get_labelnos(argv[i+1],argv[i+2]); i += 2;
+                  };
+                  break;
 	case 'i':
 	case 'I': if(++i < argc) incdir  = add_list(incdir,argv[i]);	break;
 	case 'p': 
@@ -261,11 +256,8 @@ int main(int argc,char *argv[])
 
   label = lower - increment;
 
-/*
- * Open the input and output files. If not file is present, assume
- * standard input and output.
- */
-
+  /* Open the input and output files. If not file is present, assume
+     standard input and output. */
   if(infile == NULL) in = stdin;
   else in = fopen(infile,"r");
   if(in==NULL){
@@ -280,8 +272,7 @@ int main(int argc,char *argv[])
   }
   if(gflag && infile==NULL) gflag=FALSE;  /* handle idiots */
 
-/* Determine the target compiler type, and define a few parameters. */
-
+  /* Determine the target compiler type, and define a few parameters. */
   sys = 0;
   while(sys < NSYS && strcmp(systems[sys].name,sysname) != 0) sys++;
   if(sys == NSYS){
@@ -291,29 +282,27 @@ int main(int argc,char *argv[])
   defines = add_list(defines,sysname);
   if(systems[sys].vector) defines = add_list(defines,"vector");
 
-/* Check for sensible use of the -b flag. */
-
+  /* Check for sensible use of the -b flag. */
   if((systems[sys].bslash > 0 && !dbslash) ||
      (systems[sys].bslash < 0 &&  dbslash))
     fprintf(stderr,"### Warning: Should the -b switch be used?\n");
 
-/* Process the input file, creating the output. Then close down. */
-
+  /* Process the input file, creating the output. Then close down. */
   process(in,infile);
   Fclose(in);
   Fclose(out);
 
-/* Give a final message. */
-
+  /* Give a final message. */
   printf("Number of lines = %d; number of routines = %d\n",lines,routines);
   return 0;
 }
-/************************************************************************/
+
+/****************************************************************************/
+
+/* Get lowest label to use, and the increment to apply. */
+
 private void get_labelnos(slower,sinc)
 char *slower,*sinc;
-/*
-  Get lowest label to use, and the increment to apply.
-------------------------------------------------------------------------*/
 {
   char *s;
   lower = 0;
@@ -332,14 +321,15 @@ char *slower,*sinc;
     exit(2);
   }
 }
-/************************************************************************/
+
+/****************************************************************************/
+
+/* Process a newly opened input file, writing code to the output.
+   Note: process() is called recursively. */
+
 private void process(in,infile)
 FILE *in;
 char *infile;
-/*
-  Process a newly opened input file, writing code to the output.
-  Note: process() is called recursively.
-------------------------------------------------------------------------*/
 {
   int type,lineno,lineno1,indent,bracketting, glines=0, oldglines;
   char *s,*s0,line[MAXLINE],pathname[MAXLINE],token[MAXLINE],msg[MAXLINE];
@@ -367,19 +357,19 @@ char *infile;
 	message("RATTY may have used this label number");
       label = max(label,lineno);
 
-/* Program statement. */
       if(!strcmp(token,"program") && systems[sys].prog){
+        /* Program statement. */
 	blankout(indent); textout("program "); textout(s);
 	textout("(tty,input=tty,output=tty)\n");
 
-/* ptrdiff statement. */
       } else if(!strcmp(token,"ptrdiff")){
+        /* ptrdiff statement. */
         blankout(indent); textout(ptrdiff); textout(" "); textout(s);
         textout("\n");
 
-/* DO and DOWHILE loops. */
       } else if(!systems[sys].doloop &&
 	       (!strcmp(token,"do") || !strcmp(token,"dowhile"))){
+        /* DO and DOWHILE loops. */
 	if(depth == MAXDEPTH){
 	  message("DO/DOWHILE loops nested too deep");
 	} else {
@@ -417,8 +407,8 @@ char *infile;
 	  }
 	}
 
-/* ENDDO statement. */
       } else if(!strcmp(token,"enddo") && !systems[sys].doloop){
+        /* ENDDO statement. */
 	if(depth == 0) message("Found ENDDO without corresponding DO");
 	else {
 	  if(lineno != 0){
@@ -435,8 +425,8 @@ char *infile;
 	  depth --;
 	}
 
-/* Process an INCLUDE file. */
       } else if(!strcmp(token,"include")){
+        /* Process an INCLUDE file. */
 	s++;
 	s0 = token;
 	while(*s && *s != '\'')*s0++ = *s++;
@@ -460,8 +450,8 @@ char *infile;
           glines = oldglines;
 	}
 
-/* Procedure END */
       } else if(!strcmp(token,"end")){
+        /* Procedure END */
 	if(depth != 0)message("Ended a procedure with DO/DOWHILE unclosed");
 	depth = 0;
 	label = LOWER - 1;
@@ -470,9 +460,9 @@ char *infile;
 	routines++;
 	in_routine = FALSE;
 
-/* IMPLICIT NONE statement. */
       } else if(!strcmp(token,"implicitnone") ||
 		!strcmp(token,"implicitundefined")){
+        /* IMPLICIT NONE statement. */
 	if(sys == SYS_VMS || sys == SYS_FX || sys == SYS_CONVEX || 
            sys == SYS_SUN || sys == SYS_F2C) {
 	  blankout(indent); textout("implicit none\n");
@@ -480,21 +470,25 @@ char *infile;
 	  blankout(indent); textout("implicit undefined (a-z)\n");
 	}
 
-/* Some other line. */
       } else {
+        /* Some other line. */
 	textout(line); textout("\n");
       }
     }
   }
 }
-/************************************************************************/
+
+/****************************************************************************/
+
 private void message(text)
 char *text;
 {
   fprintf(stderr,"### %s\n",text);
   fprintf(out,"c### %s\n",text);
 }
-/************************************************************************/
+
+/****************************************************************************/
+
 private void textout(text)
 char *text;
 {
@@ -510,7 +504,9 @@ char *text;
     if(l) message("Line longer than 72 chars");
   }
 }
-/************************************************************************/
+
+/****************************************************************************/
+
 private void numout(label)
 int label;
 {
@@ -520,7 +516,9 @@ int label;
   chars += strlen(num);
   comment = FALSE;
 }
-/************************************************************************/
+
+/****************************************************************************/
+
 private void labelout(label)
 int label;
 {
@@ -528,7 +526,9 @@ int label;
   chars += 5;
   comment = FALSE;
 }
-/************************************************************************/
+
+/****************************************************************************/
+
 private void blankout(blanks)
 int blanks;
 {
@@ -536,19 +536,22 @@ int blanks;
   while(blanks-- > 0)Fputc(' ',out);
   comment = FALSE;
 }
-/************************************************************************/
+
+/****************************************************************************/
+
+/* Convert a string to lower case. */
+
 private void lowercase(string)
 char *string;
-/*
-  Convert a string to lower case.
-------------------------------------------------------------------------*/
 {
   while(*string){
     if(*string >= 'A' && *string <= 'Z') *string = *string - 'A' + 'a';
     string++;
   }
 }
-/************************************************************************/
+
+/****************************************************************************/
+
 private char *getparm(line,token)
 char *line,*token;
 {
@@ -557,25 +560,27 @@ char *line,*token;
   *token = 0;						/* Terminate token. */
   return(line);
 }
-/************************************************************************/
+
+/****************************************************************************/
+
 private void cppline(line)
 char *line;
 {
   int ok,loop;
   char *s,token[MAXLINE],parm[MAXLINE];
 
-/* Skip leading blanks, c's and hashes. */
-
-  while(*line == ' ' || *line == '#' || *line == 'c' || *line == 'C' ||
-        *line == '*' )line++;
+  /* Skip leading blanks, c's and hashes. */
+  while(*line == ' ' ||
+        *line == '#' ||
+        *line == 'c' ||
+        *line == 'C' ||
+        *line == '*') line++;
   line = getparm(line,token);
   lowercase(token);
 
-/* Determine what the directive is. */
-
-/* #ifdef or #ifndef derective. */
-
+  /* Determine what the directive is. */
   if(!strcmp(token,"ifdef") || !strcmp(token,"ifndef")){
+    /* #ifdef or #ifndef derective. */
     line = getparm(line,parm);
     level++;
     if(!offlevel){
@@ -587,31 +592,27 @@ char *line;
       }
     }
 
-/* #else directive. */
-
   } else if(!strcmp(token,"else")){
+    /* #else directive. */
     if(!level) message("Unexpected #else ignored");
     else if(!offlevel) offlevel = level;
     else if(offlevel == level) offlevel = 0;
 
-/* #endif directive. */
-
   } else if(!strcmp(token,"endif")){
+    /* #endif directive. */
     if(!level) message("Unexpected #endif ignored");
     else if(offlevel == level--) offlevel = 0;
 
-/* #define directive. */
-
   } else if(!strcmp(token,"define")){
+    /* #define directive. */
     if(!offlevel){
       line = getparm(line,parm);
       if(!*parm)message("Bad #define statement ignored.");
       else defines = add_list(defines,parm);
     }
     
-/* #maxloop directive. Issue a "short loop" directive if appropriate. */
-
   } else if(!strcmp(token,"maxloop")){
+    /* #maxloop directive. Issue a "short loop" directive if appropriate. */
     line = getparm(line,parm);
     loop = 0;
     s = parm;
@@ -621,17 +622,15 @@ char *line;
     else if(sys == SYS_CFT && loop <= 64) textout("cdir$ shortloop\n");
     else if(sys == SYS_FX  && loop <= 32) textout("cvd$  shortloop\n");
 
-/* #ivdep directive. Issue a "no dependency" directive. */
-
   } else if(!strcmp(token,"ivdep")){
+    /* #ivdep directive. Issue a "no dependency" directive. */
     if(offlevel);
     else if(sys == SYS_CFT) textout("cdir$ ivdep\n");
     else if(sys == SYS_FX ) textout("cvd$  nodepchk\n");
     else if(sys == SYS_CONVEX) textout("c$dir no_recurrence\n");
 
-/* #nooptimize directive. Do not optimize the following loop. */
-
   } else if(!strcmp(token,"nooptimize")){
+    /* #nooptimize directive. Do not optimize the following loop. */
     if(offlevel);
     else if(sys == SYS_CFT)
       textout("cdir$ nextscalar\n");
@@ -640,37 +639,35 @@ char *line;
       textout("cvd$  novector\n");
     }
 
-/* Unrecognised directive. */
-
   } else {
+    /* Unrecognised directive. */
     message("Unrecognised directive ignored");
     textout("c"); textout(token); textout("\n");
   }
 }
-/************************************************************************/
+
+/****************************************************************************/
+
+/* This gets the first token out of a line.  Tokens can be:
+     program
+     do
+     dowhile
+     enddo
+     end
+     include
+     implicit none
+     DEC continuation format
+
+   Some checks are also made for "standard" format of comments and
+   parameter statements. */
+
 private char *progtok(line,token,indent,lineno,bracketting)
 char *line,*token;
 int *indent,*lineno,*bracketting;
-/*
-  This gets the first token out of a line. Tokens can be:
-    program
-    do
-    dowhile
-    enddo
-    end
-    include
-    implicit none
-    DEC continuation format
-
-  Some checks are also made for "standard" format of comments and
-  parameter statements.
-
-------------------------------------------------------------------------*/
 {
   char *s,*t,*u;
 
-/* Determine the statement label and the indentation. */
-
+  /* Determine the statement label and the indentation. */
   s = line;
   *bracketting = 0;
   *lineno = 0;
@@ -682,32 +679,35 @@ int *indent,*lineno,*bracketting;
   t = token;
   u = s;
 
-/* A standard continuation line. Just ignore it. */
+  if (*indent == 5);
+    /* A standard continuation line. Just ignore it. */
 
-  if(*indent == 5);
-
-/* DEC format for fortran continuation. */
-
-  else if((*s < 'a' || *s > 'z') && (*s < 'A' || *s > 'Z')){
+  else if ((*s < 'a' || *s > 'z') && (*s < 'A' || *s > 'Z')){
+    /* DEC format for fortran continuation. */
     *(line+5) = '*';
     *s = ' ';
     *indent = 5;
     message("VMS format continuation converted");
 
-/* Some form of statement. Handle it correctly. Copy, ignoring blanks, to
-   the first  non-alphanumeric code. Convert to lower case on the way. */
+  } else {
+    while(*s == ' ' ||
+         (*s >= 'a' && *s <= 'z') ||
+         (*s >= 'A' && *s <= 'Z') ||
+          *s == '$' ||
+          *s == '_' ||
+         (*s >= '0' && *s <= '9')) {
+    /* Some form of statement. Handle it correctly. Copy, ignoring blanks, to
+       the first  non-alphanumeric code. Convert to lower case on the way. */
 
-  } else while(*s == ' ' || (*s >= 'a' && *s <= 'z') || (*s >= 'A' && *s <= 'Z')
-			|| *s == '$' || *s == '_' || (*s >= '0' && *s <= '9')){
     if(*s == ' ')s++;
     else if(*s >= 'A' && *s <= 'Z') *t++ = *s++ + 'a' - 'A';
     else 			    *t++ = *s++;
 
+    }
   }
   *t = 0;			/* Zero terminate. */
 
-/* Make sure the token is really what it looks like. */
-
+  /* Make sure the token is really what it looks like. */
   if(!strcmp(token,"implicitnone") || !strcmp(token,"enddo")
 				   || !strcmp(token,"end")){
     if(*s) *token = 0;
@@ -719,33 +719,32 @@ int *indent,*lineno,*bracketting;
     if(*s)*token = 0;
     else  token[7] = 0;
 
-/* Check for ptrdiff declaration */
-
   } else if(!strncmp(token,"ptrdiff",7)){
+    /* ptrdiff declaration */
     if(*s == '(')s = skipexp(s,bracketting);
     if(*s == ',' || *s == 0) token[7]=0;
     else *token=0;
 
-/* Check for a DO or DOWHILE statement. */
 
   } else if(!strcmp(token,"dowhile")){
+    /* DOWHILE statement. */
     if(*skipexp(s,bracketting)) *token = 0;
+
   } else if(!strncmp(token,"do",2)){
+    /* DO statement. */
     if((token[2] >= '0' && token[2] <= '9') || *s != '=') *token = 0;
     else {
       if(*skipexp(s+1,bracketting) != ',') *token = 0;
       else token[2] = 0;
     }
 
-/* Make a few checks to see if its one of the other ANSI statements. */    
-
   } else {
+    /* Make a few checks to see if its one of the other ANSI statements. */    
     *token = 0;
   }
 
-/* Skip over the part of the line which corresponds to the token. Remember
-   that FORTRAN allows imbedded blanks. */
-
+  /* Skip over the part of the line which corresponds to the token.  Remember
+     that FORTRAN allows embedded blanks. */
   s = u;
   t = token;
   while(*t){
@@ -756,14 +755,15 @@ int *indent,*lineno,*bracketting;
 
   return(s);
 }
-/************************************************************************/
+
+/****************************************************************************/
+
+/* This skips over an expression.  It returns a pointer to the first non-blank
+   character after the expression. */
+
 private char *skipexp(s,bracketting)
 char *s;
 int *bracketting;
-/*
-  This skips over an expression. It returns a pointer to the first non-blank
-  character after the expression.
-------------------------------------------------------------------------*/
 {
   int inchar,inexp,depth;
 
@@ -781,58 +781,58 @@ int *bracketting;
   *bracketting = depth;
   return(s);
 }
-/************************************************************************/
+
+/****************************************************************************/
+
+/* Get a line from the input file, and make a quick determination about what
+   it is.  This returns: 'c' if its a comment, ' ' for a normal line, '#' for
+   a preprocessor line, and 0 for EOF. */
+
 private int get_line(in,line)
 FILE *in;
 char *line;
-/*
-  Get a line from the input file, and make a quick determination about
-  what it is. This returns: 'c' if its a comment, ' ' for a normal
-  line, '#' for a preprocessor line, and 0 for EOF.
-------------------------------------------------------------------------*/
 {
   char *s;
   int type;
 
   if(fgets(line,MAXLINE,in) == NULL)return(0);
 
-/* Trim trailing blanks. */
-
+  /* Trim trailing blanks. */
   s = line + strlen(line);
   while(s-line >= 0 && *s <= ' ')*s-- = 0;
 
-/* Handle a blank line. */
-
   if(!*line){
+    /* Handle a blank line. */
     type = 'c';
     if(in_routine) Strcpy(line,"c");
 
-/* Handle a RATTY directive. */
-
-  } else if(!strncmp(line,"#",1) || !strncmp(line,"C#",2) || !strncmp(line,"c#",2)){
+  } else if(!strncmp(line, "#",1) ||
+            !strncmp(line,"C#",2) ||
+            !strncmp(line,"c#",2)){
+    /* Handle a RATTY directive. */
     type = '#';
-
-/* A comment. */
 
   } else if(*line == 'c' || *line == 'C' || *line == '*' || *line == 'd' ||
 	   *line == 'D' ){
+    /* A comment. */
     *line = 'c';
     type = 'c';
 
-/* Must be a normal line. Reformat it. */
 
   } else {
+    /* Must be a normal line. Reformat it. */
     type = reformat(line);
   }
   return(type);
 }
-/************************************************************************/
+
+/****************************************************************************/
+
+/* Reformat a normal line. Get rid of tabs. Look for special characters.
+   Check for unbalanced quotes. Strip off trailing ! comments. */
+
 private int reformat(s)
 char *s;
-/*
-  Reformat a normal line. Get rid of tabs. Look for special characters.
-  Check for unbalanced quotes. Strip off trailing ! comments.
-------------------------------------------------------------------------*/
 {
   char *s0,*t,line[MAXLINE],c;
   int pad,first,type;
@@ -890,13 +890,14 @@ char *s;
   *s = 0;
   return(type);
 }
-/************************************************************************/
+
+/****************************************************************************/
+
+/* Indicate that a thing is defined. */
+
 private struct link_list *add_list(list,name)
 struct link_list *list;
 char *name;
-/*
-  Indicate that a thing is defined.
-------------------------------------------------------------------------*/
 {
   struct link_list *s,*t;
 
@@ -913,12 +914,13 @@ char *name;
   s->fwd = t;
   return(list);
 }
-/************************************************************************/
+
+/****************************************************************************/
+
+/* Attempt to open an include file. */
+
 private FILE *incopen(name,pathname)
 char *name,*pathname;
-/*
-  Attempt to open an include file.
-------------------------------------------------------------------------*/
 {
   char c, *s;
   int  i;
@@ -953,12 +955,13 @@ char *name,*pathname;
 
   return(fd);
 }
-/************************************************************************/
+
+/****************************************************************************/
+
+/* Check whether a thingo is defined. */
+
 private int isdefine(name)
 char *name;
-/*
-  Check whether a thingo is defined.
-------------------------------------------------------------------------*/
 {
   struct link_list *t;
   t = defines;
@@ -966,15 +969,18 @@ char *name;
   if(t != NULL)return(TRUE);
   return(FALSE);
 }
-/************************************************************************/
+
+/****************************************************************************/
+
 private void usage()
 {
    int i;
 
    fprintf(stderr,"RATTY: Version %s\n",VERSION_ID);
    fprintf(stderr,"Usage: \n");
-   fprintf(stderr,"ratty [-s system] [-I incdir] [-D symbol] [-bglu] [-n start inc] [in] [out]\n");
-   fprintf(stderr,"-s system    compile for system (");
+   fprintf(stderr,"ratty [-s system] [-I incdir] [-D symbol] [-bglu] "
+                  "[-n start inc] [in] [out]\n");
+   fprintf(stderr,"-s system    target compiler/system (");
    for (i=1; i<NSYS; i++) fprintf(stderr," %s",systems[i].name);
    fprintf(stderr," )\n");
    fprintf(stderr,"-I incdir    add dir to include directory\n");
