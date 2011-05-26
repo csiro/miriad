@@ -1,3 +1,5 @@
+% $Id: mm.inc,v 1.2 2011/05/26 02:11:54 cal103 Exp $
+
 %\nonstopmode
 %\input{latexdefs.inc}
 %\newcommand{\oneliner}[1]{\begin{flushleft}{\ \ \ #1}\end{flushleft}}
@@ -466,8 +468,8 @@ the north spur, you should generally give the list of station
 names, as the standard array configuration names assume an
 antenna orderwhich is probably not correct.
 
-If in doubt the \htmladdnormallink{on-line configuration history}{confighist.html}
-should be consulted.
+If in doubt the \htmladdnormallink{on-line configuration history}
+{../doc/confighist.html} should be consulted.
 
 \end{itemize}
 
