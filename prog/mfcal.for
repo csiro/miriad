@@ -79,6 +79,7 @@ c	            density scale. See the help on "oldflux" for more
 c	            information.
 c@ tol
 c	Solution convergence tolerance. Default is 0.001.
+c$Id: mfcal.for,v 1.12 2011/05/29 23:43:24 wie017 Exp $
 c--
 c  History:
 c    rjs   8jul92 Original version.
@@ -138,7 +139,8 @@ c------------------------------------------------------------------------
 	parameter(MAXSOLN=1024,MAXPOL=2)
 c
 	character version*(*)
-	parameter(version='MfCal: version 1.1 17-Dec-09')
+	parameter(version='MfCal: $Revision: 1.12 $, '//
+     *             '$Date: 2011/05/29 23:43:24 $')
 c
 	integer tno
 	integer pWGains,pFreq,pSource,pPass,pGains,pTau
