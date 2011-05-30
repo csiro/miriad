@@ -2,7 +2,7 @@
 # GNUmakefile for compiling Miriad tools.
 #
 # Original: 2006/08/25, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.5 2006/11/15 00:08:09 cal103 Exp $
+# $Id: GNUmakefile,v 1.6 2011/05/30 23:23:08 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
@@ -69,7 +69,7 @@ else
   % : $(PGMRBIND)/% ;
 
   $(PGMRBIND)/% : %.c
-	$(CC) $(CCDBG) -o $@ $<
+	$(CC) $(CDBG) -o $@ $<
 
   # Static and static pattern rules.
   #---------------------------------
@@ -77,7 +77,7 @@ else
 
   ifneq "$(READLINELIB)" ""
     $(PGMRBIND)/miriad : miriad.c
-	$(CC) -DREADLINE $(CCDBG) -o $@ $< $(READLINELIB)
+	$(CC) -DREADLINE $(CDBG) -o $@ $< $(READLINELIB)
   endif
 
   clean ::
