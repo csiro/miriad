@@ -154,7 +154,7 @@ c
 	    write(line,'(2f8.4)')180/PI*x2(1),180/PI*x2(2)
             num = '_'//itoaf(npnt)
             l2 = len1(num)
-            if (l2+l>9) then
+            if (l2+l.gt.9) then
               call bug('w','Field name truncated to 9 characters')
               l=9-l2
             endif
