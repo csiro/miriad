@@ -13,15 +13,15 @@
 <a href="http://en.wikipedia.org/wiki/Platform_%28computing%29">platforms</a>.
 At the ATNF it runs under
 <a href="http://en.wikipedia.org/wiki/Linux">Linux</a> (32- and 64-bit);
-<a href="http://en.wikipedia.org/wiki/SunOS">SunOS</a> 5.6 (aka
+<a href="http://en.wikipedia.org/wiki/SunOS">SunOS</a> 5.9 (aka
 <a href="http://en.wikipedia.org/wiki/Solaris_Operating_System">Solaris</a>
-2.6) and later; and
+2.9) and later; and
 <a href="http://en.wikipedia.org/wiki/Intel">Intel</a>
 <a href="http://en.wikipedia.org/wiki/Macintosh">Macs</a> running
-<a href="http://en.wikipedia.org/wiki/Mac_OS_X">Mac&nbsp;OS&nbsp;X</a> 10.4.8
-("Tiger") which is based on
+<a href="http://en.wikipedia.org/wiki/Mac_OS_X">MacOSX</a> 10.6.2 ("Snow
+Leopard") which is based on
 <a href="http://en.wikipedia.org/wiki/Darwin_%28operating_system%29">
-Darwin</a> 8.8.0.  Binary distribution kits are provided for these
+Darwin</a> 10.2.0.  Binary distribution kits are provided for these
 platforms.
 </p>
 
@@ -72,7 +72,7 @@ system is available for them and other unix-based platforms.
       <li><a href="#LFS">Large File Support (LFS)</a></li>
       <li><a href="#Linux">Linux (32- and 64-bit)</a></li>
       <li><a href="#SunOS">SunOS 5.x (Solaris 2.x)</a></li>
-      <li><a href="#Darwin">Darwin / Mac&nbsp;OS&nbsp;X</a></li>
+      <li><a href="#Darwin">Darwin / MacOSX</a></li>
       <li><a href="#Cygwin">Cywin/Windows</a></li>
     </ul>
   </li>
@@ -160,7 +160,7 @@ libraries</a>:
 
 <li>
   The <a href="http://www.atnf.csiro.au/people/mcalabre/WCS/index.html"><code>
-  WCSLIB</code> library</a> (version 4.6.1 or higher) is used by many tasks
+  WCSLIB</code> library</a> (version 4.7 or higher) is used by many tasks
   for computing image coordinates.  It is provided in binary installations.
 </li>
 
@@ -247,17 +247,19 @@ opportunity to adjust the following parameters in the Fortran include files
 <code><a href="#MIR">$MIR</a>/inc/maxdim.h</code> and <code>tmpdim.h</code> to
 reflect your problem sizes and memory availability:
 <pre>
-	MAXBUF  -- Maximum general scratch buffer size.
-	MAXDIM  -- Maximum number of pixels on an image axis.
-	MAXCHAN -- Maximum number of spectral channels.
-	MAXANT  -- Maximum number of antennas.
-	MAXBASE -- Maximum number of baselines (normally derived from MAXANT).
-	MAXWIN  -- Maximum number of simultaneous frequency bands ("windows").
-	MAXWIDE -- Maximum number of wideband channels (Hat Ck specific).
+	MAXBUF  &ndash; Maximum general scratch buffer size.
+	MAXDIM  &ndash; Maximum number of pixels on an image axis.
+	MAXCHAN &ndash; Maximum number of spectral channels.
+	MAXANT  &ndash; Maximum number of antennas.
+	MAXBASE &ndash; Maximum number of baselines (normally derived from
+                        MAXANT).
+	MAXWIN  &ndash; Maximum number of simultaneous frequency bands
+                        ("windows").
+	MAXWIDE &ndash; Maximum number of wideband channels (Hat Ck specific).
 </pre>
 and, in <code>$MIR/inc/maxnax.h</code>,
 <pre>
-	MAXNAX  -- Maximum number of image axes.
+	MAXNAX  &ndash; Maximum number of image axes.
 </pre>
 Except for <code>MAXBUF</code>, these parameters must also be set for C source
 code in <code>$MIR/inc/maxdimc.h</code>.  Please read the comments in the
@@ -338,8 +340,15 @@ Note that if you don't have an account at the ATNF that would allow you to run
   <code>linux64</code></a>,
   <a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad-sun4sol.tar.gz">
   <code>sun4sol</code></a>, and
-  <a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad-darwin_x86.tar.gz">
-  <code>darwin_x86</code></a>).
+  <a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad-darwin_x86_64.tar.gz">
+  <code>darwin_x86_64</code></a>).
+  </p>
+
+  <p>
+  <font color="#ff0000"><b>Note:</b> all recent Macs should be able to execute
+  the x86_64 instruction set</font>.  If the <code>arch</code> command reports
+  <code>i386</code> then ignore that and instead check that the
+  <code>MACHTYPE</code> environment variable is set to <code>x86_64</code>.
   </p>
 </li>
 
@@ -452,11 +461,9 @@ To build <em>Miriad</em> from source code you will need
 <ul>
 <li>
   <p>
-  Either a
-  <a href="http://en.wikipedia.org/wiki/Fortran">Fortran</a> 77 compiler such
-  as <code>g77</code> or Sun's <code>f77</code>, or a Fortran 95 compiler such
-  as
-  <a href="http://en.wikipedia.org/wiki/Gfortran"><code>gfortran</code></a>,
+  A <a href="http://en.wikipedia.org/wiki/Fortran">Fortran</a> compiler such
+  as <a href="http://en.wikipedia.org/wiki/Gfortran"><code>gfortran</code></a>
+  or Sun's <code>f77</code>,
   </p>
 </li>
 
@@ -465,8 +472,9 @@ To build <em>Miriad</em> from source code you will need
   An
   <a href="http://en.wikipedia.org/wiki/ANSI_C">ANSI C</a> compiler such as
   <code>gcc</code> (3.x or 4.x) or Sun's <code>cc</code> (but not
-  <code>/usr/ucb/cc</code> - <a href="http://en.wikipedia.org/wiki/K%26R">
-  K&amp;R C</a> is not supported and will not work),
+  <code>/usr/ucb/cc</code> &ndash;
+  <a href="http://en.wikipedia.org/wiki/K%26R">K&amp;R C</a> is not supported
+  and will not work),
   </p>
 </li>
 
@@ -583,9 +591,9 @@ tweaking is likely to be required.
 </pre>
   If <code>mirarch</code> reports "<code>unknown</code>" you can either leave
   it at that or attempt to provide a more sensible value by appropriate
-  editing of <code>mirarch</code> (a simple shell script) - in the next step
-  <code>configure</code> will use it to determine the architecture.  Note that
-  you will not be able to run multiple architectures if more than one is
+  editing of <code>mirarch</code> (a simple shell script) &ndash; in the next
+  step <code>configure</code> will use it to determine the architecture.  Note
+  that you will not be able to run multiple architectures if more than one is
   <code>unknown</code>.
   </p>
 
@@ -629,7 +637,7 @@ tweaking is likely to be required.
   </p>
 
   <p>
-  <code>configure</code> produces three files, these are its only product.
+  <code>configure</code> produces three files, these are its only effect.
   The first two, <code>MIRRC</code> and <code>MIRRC.sh</code>, reside in
   <code>$MIR</code> and are constructed by simple textual replacement of the
   value of the <em>Miriad</em> root directory from the corresponding template
@@ -642,8 +650,8 @@ tweaking is likely to be required.
   The third and by far the most important file generated by
   <code>configure</code> is <code>$MIR/$MIRARCH/GNUmakedefs</code> (referred
   to as the <b><em>local</em></b> <code>GNUmakedefs</code>).  This is where
-  <em>all</em> of the definitions peculiar to your system are made.  You will
-  notice that there are other <code>GNUmakedefs</code> files:
+  <em>all</em> of the definitions peculiar to your system should be made.  You
+  will notice that there are other <code>GNUmakedefs</code> files:
   <code>$MIR/GNUmakedefs</code> (the <b><em>generic</em></b>
   <code>GNUmakedefs</code>) contains generic variable definitions and also
   defines rules common to all <em>Miriad</em> makefiles.  Also, if present,
@@ -749,12 +757,7 @@ tweaking is likely to be required.
 <pre>
     % rm -f $MIR/$MIRARCH/lib/libmir.a
 </pre>
-  If you're really in knots, you can delete all generated files by
-<pre>
-    % rm -rf $MIR/$MIRARCH/[a-z]*
-</pre>
-  being careful not to delete your local <code>GNUmakedefs</code>!  If you
-  can't locate the source of missing symbols, or encounter some other
+  If you can't locate the source of missing symbols, or encounter some other
   insoluble problem, refer to <a href="#trouble-shooting">trouble-shooting</a>
   below.
   </p>
@@ -855,18 +858,29 @@ A few more steps are required to finalize the installation:
   statically-linked, the executables may still require a small number of
   dynamically-linked system libraries that should be supplied by the operating
   system.  These include <code>readline</code>, <code>ncurses</code>, and
-  <code>X11</code>. Another is <code>libg2c0</code> (or <code>libg2c0-dev</code>).
+  <code>X11</code>.  Another is <code>libgfortran</code> (or
+  <code>libg2c</code>).
   </p>
 
   <p>
-  To determine what dynamic libraries are needed use the <code>ldd</code>
+  To determine what dynamic libraries are needed, use the <code>ldd</code>
   command on the executable in Linux and Solaris, or <code>'otool -L'</code>
-  on Darwin systems.  If any are reported as not found, try to locate them
-  somewhere on your system (e.g. look in <code>/usr/local/lib</code>,
-  <code>/opt/local/lib</code>, <code>/sw/lib</code>, or other likely place)
-  and if found, add that directory to your <code>LD_LIBRARY_PATH</code>
-  environment variable, or <code>DYLD_LIBRARY_PATH</code> in Darwin.  If not
-  found you will need to install them.
+  on Darwin systems.  If any are reported as not found, look first in
+  <code>$MIR/$MIRARCH/lib/</code> to see whether a copy of the library is
+  provided.  Otherwise try to locate it somewhere on your system, e.g. look
+  in <code>/usr/local/lib</code>, <code>/opt/local/lib</code>,
+  <code>/sw/lib</code>, or other likely place, and if found, add that
+  directory to your <code>LD_LIBRARY_PATH</code> environment variable, or
+  <b><code>DYLD_FALLBACK_LIBRARY_PATH</code></b> in Darwin &ndash;
+  <font color="#ff0000"><b>do not set
+  <code>DYLD_LIBRARY_PATH</code></b></font>, that's asking for trouble!
+  Alternatively, copy the library into
+  <code>/usr/local/lib/</code>.
+  </p>
+  
+  <p>
+  If the required libraries are not found on your system you will need to
+  install them.
   </p>
 </li>
 
@@ -875,36 +889,34 @@ A few more steps are required to finalize the installation:
   <p>
   The
   <a href="http://en.wikipedia.org/wiki/GNU_Compiler_Collection">GNU Fortran
-  77 and C compilers</a>, <code>g77</code> and <code>gcc</code>, are
-  effectively now the standard for compiling <em>Miriad</em> source code,
-  <code>configure</code> will usually find them before any others.  Linux and
+  95 and C compilers</a>, <code>gfortran</code> and <code>gcc</code>, are
+  effectively now the standard for compiling <em>Miriad</em> source code
+  (the 32-bit <code>linux</code> system still uses <code>g77</code> but that
+  is set to change soon).  <code>configure</code> will usually find
+  <code>gfortran</code> and <code>gcc</code> before any others.  Linux and
   other systems such as Darwin where the GNU compilers are the standard
   usually have the aliases <code>f77</code> and <code>cc</code> set up to
-  invoke <code>g77</code> and <code>gcc</code>.
+  invoke <code>gfortran</code> and <code>gcc</code>.
   </p>
 
   <p>
   You should be aware that there are major differences between versions of the
   GNU compilers, particularly <code>g77</code>.  In particular, we strongly
-  recommend against use of version 2.95.x (see <a href="#LFS">Large File
-  Support</a> below) in favour of the 3.x series (currently 3.4.x).  To see
-  what version you have installed, use
+  recommend against use of g77 2.95.x (see <a href="#LFS">Large File
+  Support</a> below) in favour of <code>gfortran</code> (currently 4.x)
+  &ndash; <code>g77</code> no longer exists in release 4.x of the GNU compiler
+  suite.  To see what version you have installed, use
+<pre>
+    gfortran --version
+</pre>
+  or
 <pre>
     g77 --version
 </pre>
-  Similarly for gcc.  If you have multiple versions installed (as is often the
-  case) you may need to reset the <code>FC</code> and <code>CC</code>
-  variables in <code>GNUmakedefs</code> to set a full pathname to select a
-  specific version.
-  </p>
-
-  <p>
-  <code>g77</code> no longer exists in release 4.x of the GNU compiler suite,
-  instead replaced by <code>gfortran</code> which is a Fortran 95 compiler.
-  <em>Miriad</em> has been built successfully on Darwin systems using
-  <code>gfortran</code> 4.2.0 for Intel Macs (and also 4.1.0 for PowerPC Macs)
-  in conjunction with <code>gcc</code> 4.x, including all third-party Fortran
-  libraries.
+  Similarly for <code>gcc</code>.  If you have multiple versions installed (as
+  is often the case) you may need to reset the <code>FC</code> and
+  <code>CC</code> variables in <code>GNUmakedefs</code> to set a full pathname
+  to select a specific version.
   </p>
 
   <p>
@@ -913,9 +925,9 @@ A few more steps are required to finalize the installation:
   for certain of the <code>PGPLOT</code> graphics drivers, notably
   <code>GIDRIV</code> (<code>GIF</code> format) and <code>PPDRIV</code>
   (<code>PPM</code>, Portable Pixel Map format), uses the non-standard
-  <b><code>%VAL</code></b> construct which, although supported by
-  <code>g77</code>, is not recognized by <code>gfortran</code>.  The obvious
-  solution is to build <code>PGPLOT</code> without these graphics drivers.
+  <b><code>%VAL</code></b> construct which was not recognized by versions of
+  <code>gfortran</code> before 4.3.  The obvious solution is to update or
+  build <code>PGPLOT</code> without these graphics drivers.
   </p>
 
   <p>
@@ -949,13 +961,14 @@ A few more steps are required to finalize the installation:
   Modern compilers use special-purpose libraries to implement their functions,
   e.g. for i/o or mathematical calculations.  For example, the
   <a href="http://en.wikipedia.org/wiki/GNU_Compiler_Collection">GNU Fortran
-  77 compiler</a>, <code>g77</code>, requires <code>libg2c</code> and
-  <code>libgcc</code> at the very least.  It will quietly pass these and
-  probably several other libraries to the
+  95 compiler</a>, <code>gfortran</code>, requires <code>libgfortran</code>,
+  <code>libgcc_s</code> and <code>libgcc</code> at the very least.  It will
+  quietly pass these and probably several other libraries to the
   <a href="http://en.wikipedia.org/wiki/Linker">linker</a> (probably called
-  <code>collect2</code> in this case) via the <code>-lg2c -lgcc</code> flags,
-  whether you specified them or not.  To see just what the compiler is doing,
-  create a trivial two-line Fortran program, <code>foo.f</code>
+  <code>collect2</code> in this case) via the <code>-lgfortran</code>,
+  <code>-lgcc_s</code>, and <code>lgcc</code> flags, whether you specified
+  them or not.  To see just what the compiler is doing, create a trivial
+  two-line Fortran program, <code>foo.f</code>
 <pre>
           PROGRAM MAIN
           END
@@ -963,9 +976,9 @@ A few more steps are required to finalize the installation:
   and compile it with the flag (typically <code>-v</code>) that causes the
   compiler to be verbose
 <pre>
-    % g77 -v foo.f
+    % gfortran -v foo.f
 </pre>
-  You should get a generous amount of output - thus explaining why the
+  You should get a generous amount of output &ndash; thus explaining why the
   compiler is quiet by default!  Look for the <code>-l</code> options passed
   to the linker in the last step, and also take note of the <code>-L</code>
   options that tell the linker where to find the compiler libraries; you will
@@ -973,8 +986,8 @@ A few more steps are required to finalize the installation:
   this exercise with different compilers you will find that each requires a
   different set of libraries.  For example, the
   <a href="http://en.wikipedia.org/wiki/GNU_Compiler_Collection">GNU Fortran
-  95 compiler</a>, <code>gfortran</code>, requires <code>libgfortran</code> in
-  place of <code>libg2c</code>, and Sun's <code>f77</code> requires
+  77 compiler</a>, <code>g77</code>, requires <code>libg2c</code> in
+  place of <code>libgfortran</code>, and Sun's <code>f77</code> requires
   <code>libF77</code>, <code>libM77</code>, and <code>libsunmath</code> and
   none of the GNU libraries.  Ideally, therefore, you should try to use a
   consistent set of compilers for everything.  In practice, however, this may
@@ -1039,9 +1052,9 @@ A few more steps are required to finalize the installation:
   found that if <code>g77</code> 2.95.4 was used to drive the linker it
   apparently used an incompatible system library with the side-effect that
   <font color="#ff0000"><em>simply opening a file >2GiB was sufficient to
-  destroy it</em></font> - the file itself was not deleted only its contents!
-  (This was discovered the hard way, the victim was a 50GiB data file that had
-  been downloaded over the net!)
+  destroy it</em></font> &ndash; the file itself was not deleted only its
+  contents!  (This was discovered the hard way, the victim was a 50GiB data
+  file that had been downloaded over the net!)
   </p>
 
   <p>
@@ -1062,8 +1075,8 @@ A few more steps are required to finalize the installation:
   </p>
 
   <p>
-  <em>Miriad</em> runs on Linux machines with both 32- and 64-bit addresses.
-  This is invisible in the installation process.
+  <em>Miriad</em> runs on Linux machines with both i386 and x86_64 instruction
+  sets.  This is invisible in the installation process.
   </p>
 
   <p>
@@ -1077,6 +1090,54 @@ A few more steps are required to finalize the installation:
   environment.</em>  To use the Intel compilers in 64-bit mode, modify the
   <code>MIRRC</code> and <code>MIRRC.sh</code> scripts so that the machine
   architecture is set to <code>linux-ia64</code>.
+  </p>
+</li>
+
+<li>
+  <a name="Darwin"><h4>Darwin / MacOSX</h4>
+  <p>
+  See comments above on GNU compilers.
+  </p>
+
+  <p>
+  Problems with unresolved symbols reported by the linker in Darwin may arise
+  from having incompatible compilers installed on the system.  The
+  MacOSX-provided GNU compilers, which are installed in <code>/usr/bin</code>
+  with libraries in <code>/usr/lib</code>, must be preserved as they are an
+  important part of the operating system.  Unfortunately, MacOSX does not, and
+  it seems will never, provide a Fortran compiler in this suite and one must
+  be obtained from elsewhere.
+  </p>
+
+  <p>
+  Fortunately, <code>gfortran</code> 4.5 (or higher) is now available for
+  Intel (<code>darwin_x86_64</code>) Macs from the
+  <a href="http://hpc.sourceforge.net">High Performance Computing</a> web
+  site.  It is supplied as a <code>tar</code> file that installs without fuss
+  directly into <code>/usr/local</code>.  Most importantly, this build of
+  <code>gfortran<code> is compatible with the GNU C compilers provided with
+  MacOSX as <code>/usr/bin/gcc-4.2</code>.  If you don't want to install HPC
+  Fortran, the recommended solution is to copy
+  <code>libgfortran.3.dylib</code> from <code>$MIR/$MIRARCH/lib/</code> into
+  <code>/usr/local/lib/</code>.
+  </p>
+
+  <p>
+  HPC <code>gfortran 4.5</code> is now used exclusively by ATNF for building
+  <em>Miriad</em> for Darwin, including for the <code>PGPLOT</code>,
+  <code>RPFITS</code>, and <code>WCSLIB</code> libraries provided in the
+  binary distribution kits.
+  </p>
+
+  <p>
+  As mentioned, the installation of multiple incompatible compilers is more
+  likely to cause problems than not.  The MacOSX-provided GNU compilers
+  installed in <code>/usr/{bin,lib}</code> must be preserved, and the HPC
+  Fortran compiler is compatible with them.  Everything else should be
+  avoided, including the Fink compilers in <code>/sw/{bin,lib}</code>, the
+  DarwinPorts compilers in <code>/opt/local/{bin,lib}</code>, and anything
+  else that may have been installed from source code in
+  <code>/usr/local/{bin,lib}</code>.
   </p>
 </li>
 
@@ -1102,55 +1163,6 @@ A few more steps are required to finalize the installation:
   <code>/usr/ccs/bin</code>.
   </p>
 </li>
-
-<li>
-  <a name="Darwin"><h4>Darwin / Mac&nbsp;OS&nbsp;X</h4>
-  <p>
-  Problems with unresolved symbols reported by the linker in Darwin may arise
-  from having incompatible compilers installed on the system.  The
-  Mac&nbsp;OS&nbsp;X-provided GNU compilers, which are installed in
-  <code>/usr/bin</code> with libraries in <code>/usr/lib</code>, must be
-  preserved as they are an important part of the operating system.
-  Unfortunately, Mac&nbsp;OS&nbsp;X does not currently provide a Fortran
-  compiler in this suite and one must be obtained from elsewhere.
-  </p>
-
-  <p>
-  Fortunately, <code>g77</code> 3.4 is now available for Intel
-  (<code>darwin_x86</code>) and PowerPC Macs from the
-  <a href="http://hpc.sourceforge.net">High Performance Computing</a> web
-  site.  It is supplied as a <code>tar</code> file that installs without fuss
-  directly into <code>/usr/local</code>.  Most importantly, this build of the
-  GNU Fortran 77 compiler is compatible with the GNU C compilers provided
-  with Mac&nbsp;OS&nbsp;X as <code>gcc-4.0</code> for Intel, and
-  <code>/usr/bin/gcc-3.3</code> for PowerPC.  However, on PowerPC systems it
-  may be necessary to extract <code>darwin-fpsave.o</code> from
-  <code>/usr/lib/gcc/darwin/3.3/libgcc.a</code> and insert it into
-  <code>/usr/local/lib/gcc/powerpc-apple-darwin8.8.0/3.4.6/libgcc.a</code>;
-  this module contains the symbols <code>saveFP</code> and
-  <code>restFP</code> needed by <code>gcc-3.3</code>-compiled C code when
-  <code>g77-3.4</code> is used to drive the linker.
-  </p>
-
-  <p>
-  Previous versions of the Darwin binary distribution kits were built with
-  the Fink Fortran and C compilers, including <code>gfortran</code> 4.1.0
-  for the Intel Macs.  However, the HPC g77 Fortran compiler is now used
-  exclusively, including for the <code>PGPLOT</code>, <code>RPFITS</code>, and
-  <code>WCSLIB</code> libraries provided in the binary distribution kits.
-  </p>
-
-  <p>
-  As mentioned, the installation of multiple incompatible compilers is more
-  likely to cause problems than not.  The Mac&nbsp;OS&nbsp;X-provided GNU
-  compilers installed in <code>/usr/{bin,lib}</code> must be preserved, and
-  the HPC Fortran compiler is compatible with them.  Everything else should
-  be avoided, including the Fink compilers in <code>/sw/{bin,lib}</code>, the
-  DarwinPorts compilers in <code>/opt/local/{bin,lib}</code>, and anything
-  else that may have been installed from source code in
-  <code>/usr/local/{bin,lib}</code>.
-  </p>
-</li>
 </ul>
 
 <p>
@@ -1160,22 +1172,6 @@ platforms, either at the ATNF or elsewhere, but they are
 We have minimal information on their current status but would be pleased to
 add notes provided from elsewhere.
 </p>
-
-<ul>
-<li>
-  <a name="Cygwin"><h4>Cywin/Windows</h4>
-  <p>
-  <a href="http://en.wikipedia.org/wiki/Cygwin">Cygwin</a> is a Linux-like
-  environment layered on top of Windows.  It is quite easy to install on a
-  Windows machine, although it can take a while to find all the required
-  packages which include all of the compilers, utilities and libraries listed
-  above, and probably many more.  They are available from
-<pre>
-   <a href="http://www.cygwin.com">http://www.cygwin.com</a>
-</pre>
-  </p>
-</li>
-</ul>
 
 <hr>
 
@@ -1254,7 +1250,7 @@ are common to all architectures (distributed as
 The latter exist as subdirectories of <code>$MIR/$MIRARCH</code> (otherwise
 referred to as <code>$MIRARCHD</code>), where <code>$MIRARCH</code> is the
 <em>Miriad</em> platform name, e.g. <code>linux</code>,
-<code>darwin_x86</code>, etc.
+<code>darwin_x86_64</code>, etc.
 </p>
 
 <p>
@@ -1273,7 +1269,7 @@ referred to as <code>$MIRARCHD</code>), where <code>$MIRARCH</code> is the
     <td><code>/$MIRARCH</code></td>
     <td></td>
     <td>Platform-specific area(s) with names like <code>linux</code>,
-        <code>darwin_x86</code>, etc., contains local
+        <code>darwin_x86_64</code>, etc., contains local
 	<code>GNUmakedefs</code>.</td>
   </tr>
   <tr valign="top">
@@ -1527,7 +1523,7 @@ directory):
 It is possible to control <code>GNUmakefile</code> variables by making private
 definitions in <code>~/miriad/$MIRARCH/GNUmakedefs</code>.  For your workspace
 alone, these override the settings in <code>$MIR/GNUmakedefs</code> and
-<code>$MIR/$MIRARCH/GNUmakedefs</code> -- particularly useful for
+<code>$MIR/$MIRARCH/GNUmakedefs</code> &ndash; particularly useful for
 experimenting with compiler options.  To get a context-sensitive list of 
 <code>GNUmakefile</code> variables with personal overrides (different for each
 directory):
@@ -1549,5 +1545,5 @@ private version:
 <hr>
 
 <p>
-<small>$Id: INSTALL.html,v 1.20 2011/01/21 06:40:46 cal103 Exp $</small>
+<small>$Id: INSTALL.html,v 1.21 2011/06/01 08:06:40 cal103 Exp $</small>
 </p>
