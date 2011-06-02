@@ -130,7 +130,7 @@ c         velocity=lsr
 c       indicates that fits is to determine the observatory velocity
 c       wrt the LSR frame using an appropriate model.
 c
-c$Id: fits.for,v 1.19 2011/05/23 01:19:39 cal103 Exp $
+c$Id: fits.for,v 1.20 2011/06/02 05:07:35 cal103 Exp $
 c--
 c
 c  Bugs:
@@ -164,8 +164,8 @@ c-----------------------------------------------------------------------
       character versan*80
 c-----------------------------------------------------------------------
       version = versan('fits',
-     *                 '$Revision: 1.19 $',
-     *                 '$Date: 2011/05/23 01:19:39 $')
+     *                 '$Revision: 1.20 $',
+     *                 '$Date: 2011/06/02 05:07:35 $')
 c
 c  Get the input parameters.
 c
@@ -2406,6 +2406,7 @@ c-----------------------------------------------------------------------
       include 'fits.h'
       integer i,j,k
       logical newsrc,newfreq,newconfg,newlst,newchi,newvel,neweq
+      logical neweph
       real chi,chi2,dT
       double precision lst,vel,az,el
       double precision sfreq0(MAXIF),sdf0(MAXIF),rfreq0(MAXIF)
@@ -2443,7 +2444,8 @@ c
       if (config.le.nconfig) time = time + timeoff(config)
 
       dT = time - tprev
-      tprev = time
+      neweph = newsrc .or. newconfg .or. abs(dT).gt.1d0/86400d0
+      if (neweph) tprev = time
 c
 c  Write out the antenna table and array latitude/longitude, evector,
 c  mount.
@@ -2503,12 +2505,12 @@ c
 c
 c  Recompute the equation of the equinox every day.
 c
-      neweq = (abs(dT).gt.1)
+      neweq = neweph
       if (neweq) eq = eqeq(time)
 c
 c  Compute and save the local sideral time. Recompute the LST every sec.
 c
-      newlst = (abs(dT).gt.1.0/(24.0*3600.0) .or. newconfg) .and. llok
+      newlst = neweph .and. llok
       if (newlst) then
         call jullst(time,long(config),lst)
         lst = lst + eq
@@ -2518,8 +2520,7 @@ c
 c  Compute and save the parallactic angle.  Recompute whenever LST
 c  changes.
 c
-      newchi = (newlst .or. newsrc .or. newconfg) .and. llok .and.
-     *         emok .and.
+      newchi = neweph .and. llok .and. emok .and.
      *        (mount(config).eq.ALTAZ .or. mount(config).eq.NASMYTH)
       if (newchi) then
         call parang(raapp(srcidx),decapp(srcidx),lst,lat(config),chi)
@@ -2537,8 +2538,7 @@ c
 c  Compute and save the radial velocity. Compute a new velocity every
 c  minute.
 c
-      newvel = velcomp .and. (abs(dT).gt.60.0/(24.0*3600.0) .or. newsrc
-     *        .or. newconfg)
+      newvel = velcomp .and. neweph
       if (newvel) then
         if (.not.llok) then
           call bug('w','Cannot compute velocities ...')
