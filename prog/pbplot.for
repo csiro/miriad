@@ -14,6 +14,8 @@ c	name.
 c@ freq
 c	The frequency, in GHz, at which to determine the primary beam. The
 c	default is 1.4 GHz.
+c@ bw   The bandwidth, in GHz. The response is averaged over the bandwidth.
+c       The default is 0.
 c@ options
 c	Extra processing options. There is only one possibility at the moment.
 c	  derivative  Plot the derivative with frequency of the primary
@@ -39,7 +41,7 @@ c------------------------------------------------------------------------
 c
 	character device*64,telescop(MAXTEL)*16,line*64,title*32
 	character logf*64
-	real freq,x(npts),y(npts,MAXTEL),maxrad,pbfwhm,cutoff
+	real freq,x(npts),y(npts,MAXTEL),maxrad,pbfwhm,cutoff,bw
 	real xmin,xmax,ymin,ymax,xlo,xhi,ylo,yhi
 	integer i,j,ntel,pbObj(MAXTEL),coObj,length
 	logical doder,more
@@ -55,6 +57,7 @@ c
 	call keyini
 	call mkeya('telescop',telescop,MAXTEL,ntel)
 	call keyr('freq',freq,1.4)
+	call keyr('bw',bw,0.0)
 	if(freq.le.0)call bug('f','Invalid frequency')
 	call keya('device',device,' ')
 	call keya('log',logf,' ')
@@ -78,8 +81,9 @@ c  the max value of X to plot.
 c
 	xmax = 0
 	do j=1,ntel
-	  call pbInit(pbObj(j),telescop(j),coObj)
+	  call pbInitb(pbObj(j),telescop(j),coObj,bw)
 	  call pbInfo(pbObj(j),pbfwhm,cutoff,maxrad)
+          maxrad = maxrad / sqrt((1+bw/2/freq)*(1-bw/2/freq))
 	  call output('Primary beam: '//telescop(j))
 	  write(line,10)180*60/pi*pbfwhm
   10	  format('  FWHM (arcmin):',f7.2)

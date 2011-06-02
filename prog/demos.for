@@ -48,7 +48,7 @@ c         detaper    This indicates that the input image is not fully
 c                    primary beam corrected. Such images are formed by
 c                    LINMOS with options=taper or by MOSMEM.
 c
-c$Id: demos.for,v 1.4 2010/11/22 06:28:45 cal103 Exp $
+c$Id: demos.for,v 1.5 2011/06/02 05:15:10 wie017 Exp $
 c--
 c  History:
 c    rjs  25apr90 Original version.
@@ -94,8 +94,8 @@ c-----------------------------------------------------------------------
       external  itoaf, len1, versan
 c-----------------------------------------------------------------------
       version = versan('demos',
-     *                 '$Revision: 1.4 $',
-     *                 '$Date: 2010/11/22 06:28:45 $')
+     *                 '$Revision: 1.5 $',
+     *                 '$Date: 2011/06/02 05:15:10 $')
 c
 c  Get the input parameters.
 c
@@ -353,7 +353,7 @@ c       Initialise the primary beam object.
         xin(1) = ra
         xin(2) = dec
         xin(3) = k
-        call pbInitc(pbObj,pbtype,tmap,'aw/aw/ap',xin)
+        call pbInitc(pbObj,pbtype,tmap,'aw/aw/ap',xin,0.0)
 
         if (detaper) then
           call mosMIni(tmap,real(k))

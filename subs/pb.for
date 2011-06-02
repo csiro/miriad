@@ -8,7 +8,9 @@ c  subroutine pbRead(tno,pbtype)
 c  subroutine pbWrite(tno,pbtype)
 c
 c  subroutine pbInit(pbObj,pbtype,coObj)
-c  subroutine pbInitc(pbObj,pbtype,coObj,in,x1)
+c  subroutine pbInitb(pbObj,pbtype,coObj,bw)
+c  subroutine pbInitc(pbObj,pbtype,coObj,in,x1,bw)
+c  subroutine pbInitcc(pbObj,pbtype,coObj,in,x1,x2,bw)
 c  subroutine pbInfo(pbObj,pbfwhm,cutoff,maxrad)
 c  subroutine pbExtent(pbObj,x0,y0,xrad,yrad)
 c  subroutine pbList
@@ -18,7 +20,7 @@ c  subroutine pbFin(pbObj)
 c
 c  Basically, a "primary beam object" is created with either pbInit or
 c  pbInitc -- the latter is used if the pointing centre is somewhere
-c  other that the reference pixel. It also takes a primary beam type.
+c  other than the reference pixel. It also takes a primary beam type.
 c  Generally this will be just a telescope name (e.g. "atca" or "hatcreek"),
 c  but is can also be "gaus(xxxx)" where xxxx gives the FWHM (in arcsec) of
 c  a gaussian primary beam.
@@ -73,6 +75,7 @@ c   13jul09   mhw    Extend ATCA frequency range at 3 and 6 cm
 c   21jul09   rjs    Merge in mchw changes. Extend VLA/EVLA frequency
 c		     ranges. Add an entry for the ATCA at 7mm.
 c   25nov10   mhw    Add support for OTF mosaicing
+c   12may11   mhw    Add bandwidth
 c************************************************************************
 c* pbList -- List known primary beam types.
 c& rjs
@@ -250,19 +253,45 @@ c  Output:
 c    pbObj	The primary beam object.
 c--
 c------------------------------------------------------------------------
-	call pbInitc(pbObj,pbtype,coObj,'op',0.d0)
+	call pbInitc(pbObj,pbtype,coObj,'op',0.d0,0.d0)
+	end
+c************************************************************************
+c* pbInitb -- Initialise a primary beam object.
+c& rjs
+c: image-data
+c+
+	subroutine pbInitb(pbObj,pbtype,coObj,bw)
+c
+	implicit none
+	integer pbObj,coObj
+	character pbtype*(*)
+        real bw
+c
+c  Initialise a primary beam object. The primary beam is assumed to
+c  be centred at the reference pixel of the coordinate system.
+c
+c  Input:
+c    pbtype	Primary beam type.
+c    coObj	The coordinate system used to form the primary beam object.
+c    bw         Bandwidth
+c  Output:
+c    pbObj	The primary beam object.
+c--
+c------------------------------------------------------------------------
+	call pbInitc(pbObj,pbtype,coObj,'op',0.d0,bw)
 	end
 c************************************************************************
 c* pbInitcc -- Initialise a primary beam object.
 c& rjs
 c: image-data
 c+
-	subroutine pbInitcc(pbObj,type,coObj,in,x1,x2)
+	subroutine pbInitcc(pbObj,type,coObj,in,x1,x2,bw)
 c
 	implicit none
 	integer pbObj,coObj
 	character type*(*),in*(*)
         double precision x1(*),x2(*)
+        real bw
 c
 c  Initialise a primary beam object. The primary beam is assumed to
 c  be centred at the location given by the coordinate system (coObj),
@@ -277,6 +306,7 @@ c    in 	Form of the input coordinate defining the reference
 c		location (passed to the co routines).
 c    x1 	The reference location.
 c    x2         The location specifying the convolution direction
+c    bw         The bandwidth
 c  Output:
 c    pbObj	The primary beam object.
 c--
@@ -286,7 +316,7 @@ c------------------------------------------------------------------------
 c
         double precision x2c(2)
         
-	call pbInitc(pbObj,type,coObj,in,x1)
+	call pbInitc(pbObj,type,coObj,in,x1,bw)
 	call coCvt(coObj,in,x2,'ap/ap',x2c)
         xn(pbObj)=x2c(1)
         yn(pbObj)=x2c(2)
@@ -299,12 +329,13 @@ c* pbInitc -- Initialise a primary beam object.
 c& rjs
 c+ image-data
 c+
-	subroutine pbInitc(pbObj,type,coObj,in,x1)
+	subroutine pbInitc(pbObj,type,coObj,in,x1,bw)
 c
 	implicit none
 	character type*(*),in*(*)
 	integer pbObj,coObj
 	double precision x1(*)
+        real bw
 c
 c  Initialise a primary beam object. The primary beam is assumed to
 c  be centred at the location given by the coordinate system (coObj),
@@ -316,6 +347,7 @@ c    coObj	The coordinate system.
 c    in 	Form of the input coordinate defining the reference
 c		location (passed to the co routines).
 c    x1 	The reference location.
+c    bw         The bandwidth
 c  Output:
 c    pbObj	The primary beam object.
 c--
@@ -412,6 +444,7 @@ c  Fill in the details.
 c
 	freq(pbObj) = f
 	pnt(pbObj) = k
+        bandw(pbObj) = bw
 	if(ctype(1:l1).eq.'GAUS')then
 	  ok = l2-l1-2 .gt. 0
 	  if(ok)call atodf(ctype(l1+2:l2-1),dtemp,ok)
@@ -469,11 +502,39 @@ c------------------------------------------------------------------------
 	pbHead = pbObj
 	end
 c************************************************************************
-c* pbGet -- Get the value of a primary beam.
-c& rjs
+c* pbGet -- Get the value of a primary beam, cope with large bandwidth.
+c& mhw
 c: image-data
 c+
 	real function pbget(pbObj,x,y)
+c
+	implicit none
+	integer pbObj
+	real x,y
+        real pbVal,pbInt
+c
+c  Determine the value of the primary beam at a given location.
+c
+c  Input:
+c    pbObj	Handle of the primary beam object.
+c    x,y	Grid location of the position of interest.
+c  Output:
+c    pbGet	Value of the primary beam.
+c--
+c------------------------------------------------------------------------
+	include 'pb.h'
+        if (bandw(pbObj).gt.0) then
+          pbGet = pbInt(pbObj,x,y)
+        else
+          pbGet = pbVal(pbObj,x,y)
+        endif
+        end
+c************************************************************************
+c* pbVal -- Get the value of a primary beam.
+c& rjs
+c: image-data
+c+
+	real function pbval(pbObj,x,y)
 c
 	implicit none
 	integer pbObj
@@ -485,7 +546,7 @@ c  Input:
 c    pbObj	Handle of the primary beam object.
 c    x,y	Grid location of the position of interest.
 c  Output:
-c    pbGet	Value of the primary beam.
+c    pbVal	Value of the primary beam.
 c--
 c------------------------------------------------------------------------
 	include 'pb.h'
@@ -515,9 +576,9 @@ c
 	  r2 = x2 + y2
 c
 	  if(r2.gt.maxrad(k))then
-	    pbGet = 0
+	    pbVal = 0
 	  else if(pbtype(k).eq.IPOLY.and.nvals(k).eq.5)then
-	    pbGet = 1/(pbvals(off) + r2*( pbvals(off+1) +
+	    pbVal = 1/(pbvals(off) + r2*( pbvals(off+1) +
      *				     r2*( pbvals(off+2) +
      *				     r2*( pbvals(off+3) +
      *	 			     r2*( pbvals(off+4) )))))
@@ -528,9 +589,9 @@ c
 	      P = P*r2 + pbvals(i)
 	    enddo
 	    if(pbtype(k).eq.IPOLY)then
-	      pbGet = 1/P
+	      pbVal = 1/P
 	    else
-	      pbGet = P
+	      pbVal = P
 	    endif
 	  else if(pbtype(k).eq.BLOCKED)then
 	    ax = sqrt(r2)
@@ -538,19 +599,19 @@ c
 	    b = pbvals(off+1)
 	    P = 2*j1xbyx(ax)
 	    if(r.gt.0)P = (P - 2*r*j1xbyx(b*ax))/(1-r)
-	    pbGet = P*P
+	    pbVal = P*P
 	  else if(pbtype(k).eq.COS6)then
-	    pbGet = cos(sqrt(r2))**6
+	    pbVal = cos(sqrt(r2))**6
 	  else if(pbtype(k).eq.GAUS)then
-	    pbGet = exp(-r2)
+	    pbVal = exp(-r2)
 	  else if(pbtype(k).eq.SINGLE)then
-	    pbGet = 1
+	    pbVal = 1
 	  endif
-	  if(pbGet.le.cutoff(k))pbGet = 0
-          pbSum = pbSum + pbGet
+	  if(pbVal.le.cutoff(k)) pbVal = 0
+          pbSum = pbSum + pbVal
         enddo
-        pbGet = pbSum/n
-        if (pbGet.le.cutoff(k)) pbGet = 0
+        pbVal = pbSum/n
+        if (pbVal.le.cutoff(k)) pbVal = 0
 c
 	end
 c************************************************************************
@@ -617,6 +678,69 @@ c
 	endif
 c
 	end
+c************************************************************************
+c* pbInt -- Get the value of an integral of a primary beam.
+c& mhw
+c: image-data
+c+
+	real function pbint(pbObj,x,y)
+c
+	implicit none
+	integer pbObj
+	real x,y
+c
+c  Determine the value of the integral (wrt frequency) of the 
+c  primary beam at a given location.
+c
+c  Input:
+c    pbObj	Handle of the primary beam object.
+c    x,y	Grid location of the position of interest.
+c  Output:
+c    pbInt	Value of the primary beam.
+c--
+c------------------------------------------------------------------------
+	include 'pb.h'
+	double precision xcb,ycb,t, scale
+	real pbSum,pbVal, cut, maxr
+	integer k,j,n
+c
+c Thought about doing this analytically but the most common IPOLY form 
+c has horrific integral, so reverting to numerical integration
+c
+	k = pnt(pbObj)
+        n = 1
+        pbInt = 0
+        pbSum = 0
+        if (bandw(pbObj).gt.0) n = NCONV
+        
+        xcb = xc(pbObj)
+        ycb = yc(pbObj)
+        cut = cutoff(k)
+        maxr = maxrad(k)
+c
+c       Adjust cutoff and maxrad to avoid step changes at the edge
+c        
+        cutoff(k) = 0.001
+        maxrad(k) = maxr*(freq(pbObj)+bandw(pbObj)/2)/
+     *                   (freq(pbObj)-bandw(pbObj)/2)
+c      
+        do j=1,n
+          t = (j - 0.5)/n -0.5
+          scale = 1 + t*(bandw(pbObj)/freq(pbObj))
+          xc(pbObj) = xcb * scale**2
+          yc(pbObj) = ycb * scale**2
+          pbInt = pbVal(pbObj,x,y)
+          pbSum = pbSum + pbInt
+        enddo
+        xc(pbObj) = xcb
+        yc(pbObj) = ycb
+        cutoff(k) = cut
+        maxrad(k) = maxr
+        pbInt = pbSum/n
+        if (pbInt.le.cutoff(k)) pbInt = 0
+c
+	end
+
 c************************************************************************
 c* pbInfo -- Return information about a primary beam.
 c& rjs

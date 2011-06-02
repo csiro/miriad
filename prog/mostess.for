@@ -59,7 +59,7 @@ c         verbose    Give lots of messages during the iterations.  The
 c                    default is to give a one line message at each
 c                    iteration.
 c
-c$Id: mostess.for,v 1.4 2010/11/22 05:33:23 cal103 Exp $
+c$Id: mostess.for,v 1.5 2011/06/02 05:15:10 wie017 Exp $
 c--
 c  History:
 c    rjs   7aug95  Adapted from MOSMEM.
@@ -96,8 +96,8 @@ c-----------------------------------------------------------------------
       external  ismax, itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('mostess',
-     *                 '$Revision: 1.4 $',
-     *                 '$Date: 2010/11/22 05:33:23 $')
+     *                 '$Revision: 1.5 $',
+     *                 '$Date: 2011/06/02 05:15:10 $')
 c
 c  Get the input parameters.
 c
@@ -1156,7 +1156,7 @@ c-----------------------------------------------------------------------
       xc = 1 - xc
       yc = 1 - yc
       call coInit(lMap)
-      call pbInitc(pbObj,pbtype,lMap,'aw/aw/ap',radec)
+      call pbInitc(pbObj,pbtype,lMap,'aw/aw/ap',radec,0.0)
       call coFin(lMap)
 
       do j = 1, ny

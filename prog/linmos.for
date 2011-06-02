@@ -37,6 +37,12 @@ c       if that is available, and if not, then the rms of the previous
 c       image is used.  If no value could be determined for the first
 c       image, a warning is issued and ALL images are given equal weight
 c       by assigning an RMS of 1.0.
+c@ bw
+c       Bandwidth of the image in GHz. If specified the beam response
+c       will be averaged across the frequency band before
+c       being applied to the image. Use for wide band images to
+c       improve the accuracy of the correction.
+c
 c@ options
 c       Extra processing options.  Several can be given, separated by
 c       commas.  Minimum match is supported.  Possible values are:
@@ -59,8 +65,7 @@ c         gain         Rather than a mosaiced image, produce an image
 c                      giving the effective gain across the field.  If
 c                      options=taper is used, this will be a smooth
 c                      function.  Otherwise it will be 1 or 0 (blanked).
-c
-c$Id: linmos.for,v 1.14 2011/05/09 22:46:54 wie017 Exp $
+c$Id: linmos.for,v 1.15 2011/06/02 05:17:34 wie017 Exp $
 c--
 c
 c  History:
@@ -107,6 +112,7 @@ c    rjs  04aug97 Doc change only.
 c    rjs  25aug97 Doc change and an extra error message.
 c    mhw  25nov10 Cope with OTF mosaics using extra parameters in
 c                 mosaic table
+c    mhw  03mar11 Add bandwidth
 c
 c  Bugs:
 c    * Blanked images are not handled when interpolation is necessary.
@@ -133,16 +139,16 @@ c-----------------------------------------------------------------------
      *          lIn(MAXIN), lOut, lScr, lWts, nIn, nOpen, nOut(4),
      *          naxis, offset, pOut, pWts
       real      blctrc(4,MAXIN), extent(4), rms(MAXIN), sigt, xoff,
-     *          yoff
-      character inName*64, inbuf*(MAXLEN), outNam*64, version*72
+     *          yoff, bw
+      character inName*64, inbuf*(MAXLEN), outNam*64, version*80
 
       integer   len1
       character versan*80
       external  len1, versan
 c-----------------------------------------------------------------------
       version = versan ('linmos',
-     *                  '$Revision: 1.14 $',
-     *                  '$Date: 2011/05/09 22:46:54 $')
+     *                  '$Revision: 1.15 $',
+     *                  '$Date: 2011/06/02 05:17:34 $')
 
 c     Get and check inputs.
       call keyini
@@ -170,6 +176,7 @@ c     Get and check inputs.
         if (rms(i).lt.0)
      *      call bug('f','Non-positive rms noise parameter.')
       enddo
+      call keyr('bw',bw,0.0)
 
 c     Get processing options.
       call getOpt(dosen,dogain,taper)
@@ -279,7 +286,7 @@ c     Process each of the files.
      *                             'old',3,axLen(1,i))
         call process(i,lScr,lWts,lIn(i),lOut,memR(pOut),memR(pWts),
      *    axLen(1,i),axLen(2,i),nOut(1),nOut(2),nOut(3),dogain,
-     *    blctrc(1,i),rms(i))
+     *    blctrc(1,i),rms(i),bw)
         call xyclose(lIn(i))
       enddo
 
@@ -343,12 +350,12 @@ c-----------------------------------------------------------------------
 **************************************************************** process
 
       subroutine process(fileno,lScr,lWts,lIn,lOut,Out,Wts,
-     *  nx,ny,n1,n2,n3,dogain,blctrc,rms)
+     *  nx,ny,n1,n2,n3,dogain,blctrc,rms,bw)
 
       integer fileno,lScr,lWts,lIn,lOut
       integer nx,ny,n1,n2,n3
       real Out(n1,n2),Wts(n1,n2)
-      real blctrc(4),rms
+      real blctrc(4),rms,bw
       logical dogain
 c-----------------------------------------------------------------------
 c  First determine the initial weight to apply to each pixel and
@@ -368,6 +375,7 @@ c    blctrc     Grid corrdinates, in the output, that the input maps to.
 c    rms        Rms noise parameter.
 c    dogain     True if we are to compute the gain function rather than
 c               the normal mosaic or sensitivity function.
+c    bw         Bandwidth, to average the response in frequency
 c  Scratch:
 c    In         Used for the interpolated version of the input.
 c    Out        Used for the output.
@@ -445,9 +453,9 @@ c     Loop over all planes.
       do k = 1, n3
         x(3) = k
         if (dootf) then
-          call pbInitcc(pbObj,pbtype,lOut,'aw/aw/ap',x,xn)
+          call pbInitcc(pbObj,pbtype,lOut,'aw/aw/ap',x,xn,bw)
         else
-          call pbInitc(pbObj,pbtype,lOut,'aw/aw/ap',x)
+          call pbInitc(pbObj,pbtype,lOut,'aw/aw/ap',x,bw)
         endif
         call xysetpl(lIn,1,k)
         if (interp) call IntpRIni
@@ -501,7 +509,8 @@ c           Weight by inverse variance.
 c           Accumulate data.
             Out(i,j) = Out(i,j) + wgt*In(i)
             Wts(i,j) = Wts(i,j) + wgt
- 10       enddo
+ 10         continue
+          enddo
         enddo
 
 c       Save the output.
@@ -850,7 +859,7 @@ c-----------------------------------------------------------------------
 
       save cdelt, cdelt1, crpix, crval, ctype, doInit, frq, lat, lng
 
-      character itoaf*2
+      character itoaf*1
       external  itoaf
 
       data doInit /.true./
