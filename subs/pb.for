@@ -253,7 +253,7 @@ c  Output:
 c    pbObj	The primary beam object.
 c--
 c------------------------------------------------------------------------
-	call pbInitc(pbObj,pbtype,coObj,'op',0.d0,0.d0)
+	call pbInitc(pbObj,pbtype,coObj,'op',0.d0,0.0)
 	end
 c************************************************************************
 c* pbInitb -- Initialise a primary beam object.
