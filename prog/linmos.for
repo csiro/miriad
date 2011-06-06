@@ -65,7 +65,7 @@ c         gain         Rather than a mosaiced image, produce an image
 c                      giving the effective gain across the field.  If
 c                      options=taper is used, this will be a smooth
 c                      function.  Otherwise it will be 1 or 0 (blanked).
-c$Id: linmos.for,v 1.15 2011/06/02 05:17:34 wie017 Exp $
+c$Id: linmos.for,v 1.16 2011/06/06 23:33:45 wie017 Exp $
 c--
 c
 c  History:
@@ -132,7 +132,7 @@ c-----------------------------------------------------------------------
 
       real      TOL
       integer   MAXIN, MAXLEN, MAXOPN
-      parameter (MAXIN=4096, MAXLEN=MAXIN*64, MAXOPN=6, TOL=0.01)
+      parameter (MAXIN=8192, MAXLEN=MAXIN*64, MAXOPN=6, TOL=0.01)
 
       logical   defrms, dosen, dogain, docar, exact, taper
       integer   axLen(3,MAXIN), i, itemp, k1(MAXIN), k2(MAXIN), length,
@@ -147,8 +147,8 @@ c-----------------------------------------------------------------------
       external  len1, versan
 c-----------------------------------------------------------------------
       version = versan ('linmos',
-     *                  '$Revision: 1.15 $',
-     *                  '$Date: 2011/06/02 05:17:34 $')
+     *                  '$Revision: 1.16 $',
+     *                  '$Date: 2011/06/06 23:33:45 $')
 
 c     Get and check inputs.
       call keyini
