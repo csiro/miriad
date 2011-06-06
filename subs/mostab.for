@@ -1007,9 +1007,10 @@ c
           xn(1) = radec2(1,i)
           xn(2) = radec2(2,i)
           if (otf.and.(xn(1).ne.0.or.xn(2).ne.0)) then 
-	    call pbInitcc(pbObj(i),telescop(i),coObj,'aw/aw/ap',x1,xn)
+	    call pbInitcc(pbObj(i),telescop(i),coObj,'aw/aw/ap',
+     *      x1,xn,0.0)
           else
-	    call pbInitc(pbObj(i),telescop(i),coObj,'ap/ap',x2)
+	    call pbInitc(pbObj(i),telescop(i),coObj,'ap/ap',x2,0.0)
           endif
 	enddo
 c
