@@ -42,6 +42,7 @@ c	            experiment of the LMC might be called "lmc_123"
 c	  clobber   If a dataset exists with the same name as one that
 c	            uvsplit would create, then delete that dataset before
 c	            creating uvsplit's output.
+c         calcode   If splitting by source, take calcode into account
 c	The following three options determine which data-set characteristics
 c	result in UVSPLIT generating different output data-sets.
 c	  nosource  Do not produce new data-sets based on source name. That
@@ -92,7 +93,7 @@ c
 	real sels(MAXSELS),maxwidth
 	integer length,i
 	logical dosource,dofreq,dowin,updated,dowide,docomp,docopy
-	logical mosaic,clobber
+	logical docalcd,mosaic,clobber
 	logical more,first,winsel,selwins(MAXWIN)
 c
 c  Externals.
@@ -103,7 +104,7 @@ c  Get the input parameters.
 c
 	call output(version)
 	call keyini
-	call GetOpt(dosource,dofreq,dowin,docopy,mosaic,clobber)
+	call GetOpt(dosource,dofreq,dowin,docopy,mosaic,clobber,docalcd)
 	call keyf('vis',vis,' ')
         call keyr('maxwidth',maxwidth,0.0)
 	call SelInput('select',sels,MAXSELS)
@@ -160,7 +161,7 @@ c
 c  Read through the file.
 c
 	  call Process(tVis,dosource,dofreq,dowin,dowide,mosaic,
-     *      maxwidth,clobber)
+     *      maxwidth,clobber,docalcd)
 c
 	  first = .false.
 	  call FileFin(docopy,more)
@@ -170,11 +171,11 @@ c
 	end
 c************************************************************************
 	subroutine Process(tVis,dosource,dofreq,dowin,dowide,mosaic,
-     *						maxwidth,clobber)
+     *			    maxwidth,clobber,docalcd)
 c
 	implicit none
 	integer tVis
-	logical dosource,dofreq,dowin,dowide,mosaic,clobber
+	logical dosource,dofreq,dowin,dowide,mosaic,clobber,docalcd
         real maxwidth
 c
 c  Do a pass through the data file.
@@ -207,7 +208,7 @@ c
 c  Create a handle to track those things that cause us to have to
 c  re-check the indices.
 c
-	call HanGen(tVis,vCheck,dosource,dofreq,dowin,dowide)
+	call HanGen(tVis,vCheck,dosource,docalcd,dofreq,dowin,dowide)
 c
 c  Loop the loop.
 c
@@ -219,7 +220,7 @@ c  Update the indices if necessary.
 c
 	  if(uvVarUpd(vCheck))then
 	    call GetIndx(tVis,dosource,dofreq,dowin,dowide,mosaic,
-     *	      maxwidth,clobber,indx,nschan,onchan,oschan,
+     *	      maxwidth,clobber,docalcd,indx,nschan,onchan,oschan,
      *        nIndx,MAXINDX)
 	    skip = .true.
 	    do i=1,nIndx
@@ -248,12 +249,13 @@ c
 	end
 c************************************************************************
 	subroutine GetIndx(tVis,dosource,dofreq,dowin,dowide,mosaic,
-     *	  maxwidth,clobber,Indx,nschan,onchan,oschan,nIndx,MAXINDX)
+     *	  maxwidth,clobber,docalcd,Indx,nschan,onchan,oschan,nIndx,
+     *    MAXINDX)
 c
 	implicit none
 	integer tVis,nIndx,MAXINDX,nschan(MAXINDX),Indx(MAXINDX)
         integer onchan(MAXINDX),oschan(MAXINDX)
-	logical dosource,dofreq,dowin,dowide,mosaic,clobber
+	logical dosource,dofreq,dowin,dowide,mosaic,clobber,docalcd
         real maxwidth
 c  Inputs:
 c       tVis - the handle to the visibility file
@@ -264,6 +266,7 @@ c       dowide   - split by wide band
 c       mosaic   - don't split mosaic fields if splitting by source
 c       maxwidth - max bandwidth of the output files - further freq split
 c       clobber  - destroy existing files with same names
+c       docalcd  - add calcode to source name
 c   Outputs:
 c       Indx     - index to translate from output name to file
 c       nschan   - number of channels in each input spectral window
@@ -275,7 +278,7 @@ c  Determine the current indices of interest.
 c
 c------------------------------------------------------------------------
 	include 'maxdim.h'
-	character base*32,source*32,c*1
+	character base*32,source*32,c*1,calcode*32
 	integer maxi,n,nchan,ichan,nwide,length,lenb,i,ii,nsub,j,nindx1
 	double precision sdf(MAXWIN),sfreq(MAXWIN)
 	real wfreq(MAXWIN)
@@ -295,6 +298,7 @@ c
 	length = 0
 	if(dosource)then
 	  call uvrdvra(tVis,'source',source,' ')
+          call uvrdvra(tVis,'calcode',calcode,' ')
 	  length = min(len1(source),len(base))
 	  lenb = 0
 	  discard = .false.
@@ -310,6 +314,10 @@ c
 	      base(lenb:lenb) = c
 	    endif
 	  enddo
+          if (docalcd.and.calcode(1:1).ne.'C') then
+            lenb=lenb+1
+            base(lenb:lenb)=calcode(1:1)
+          endif
 	  length = lenb
 	endif
 c
@@ -440,17 +448,21 @@ c
 c
 	end
 c************************************************************************
-	subroutine HanGen(tVis,vCheck,dosource,dofreq,dowin,dowide)
+	subroutine HanGen(tVis,vCheck,dosource,docalcd,
+     *                    dofreq,dowin,dowide)
 c
 	implicit none
 	integer tVis,vCheck
-	logical dosource,dofreq,dowin,dowide
+	logical dosource,dofreq,dowin,dowide,docalcd
 c
 c  Determine which variables we have to track changes.
 c
 c------------------------------------------------------------------------
 	call uvVarIni(tVis,vCheck)
-	if(dosource)call uvVarSet(vCheck,'source')
+	if(dosource)then 
+          call uvVarSet(vCheck,'source')
+          if (docalcd) call uvVarSet(vCheck,'calcode')
+        endif
 	if(dofreq)then
 	  if(dowide)then
 	    call uvVarSet(vCheck,'wfreq')
@@ -469,10 +481,11 @@ c------------------------------------------------------------------------
 c
 	end
 c************************************************************************
-	subroutine GetOpt(dosource,dofreq,dowin,docopy,mosaic,clobber)
+	subroutine GetOpt(dosource,dofreq,dowin,docopy,mosaic,clobber,
+     *   docalcd)
 c
 	implicit none
-	logical dosource,dofreq,dowin,docopy,mosaic,clobber
+	logical dosource,dofreq,dowin,docopy,mosaic,clobber,docalcd
 c
 c  Determine extra processing options.
 c
@@ -484,11 +497,11 @@ c    docopy
 c    mosaic
 c------------------------------------------------------------------------
 	integer NOPTS
-	parameter(NOPTS=6)
+	parameter(NOPTS=7)
 	logical present(NOPTS)
 	character opts(NOPTS)*8
 	data opts/'nosource','nofreq  ','nowindow','nocopy  ',
-     *		  'mosaic  ','clobber '/
+     *		  'mosaic  ','clobber ','calcode'/
 c
 	call options('options',opts,present,NOPTS)
 	dosource = .not.present(1)
@@ -497,6 +510,7 @@ c
 	docopy   = .not.present(4)
 	mosaic   =      present(5)
 	clobber  =      present(6)
+        docalcd  =      present(7)
 c
 	end
 c************************************************************************
