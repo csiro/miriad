@@ -130,7 +130,7 @@ c         velocity=lsr
 c       indicates that fits is to determine the observatory velocity
 c       wrt the LSR frame using an appropriate model.
 c
-c$Id: fits.for,v 1.20 2011/06/02 05:07:35 cal103 Exp $
+c$Id: fits.for,v 1.21 2011/06/09 00:27:45 cal103 Exp $
 c--
 c
 c  Bugs:
@@ -164,8 +164,8 @@ c-----------------------------------------------------------------------
       character versan*80
 c-----------------------------------------------------------------------
       version = versan('fits',
-     *                 '$Revision: 1.20 $',
-     *                 '$Date: 2011/06/02 05:07:35 $')
+     *                 '$Revision: 1.21 $',
+     *                 '$Date: 2011/06/09 00:27:45 $')
 c
 c  Get the input parameters.
 c
@@ -2751,6 +2751,7 @@ c
 
       nvis = 0
       length = uvRandom + 1 + 3*nchan
+      call scrrecsz(tScr,length)
       offset = 0
 c
 c  Get things which define the coordinate system.
@@ -2852,8 +2853,8 @@ c
             endif
             i0 = i0 + 3
           enddo
-          call scrwrite(tScr,OutData,offset,length)
-          offset = offset + length
+          call scrwrite(tScr,OutData,offset,1)
+          offset = offset + 1
         else
           badpol = badpol + 1
         endif
@@ -3348,7 +3349,7 @@ c
       wt = 0
 
       do j = 1, nvis
-        call scrread(tScr,In,(j-1)*length,length)
+        call scrread(tScr,In,(j-1),1)
         P = nint(In(1))
         iP = pols(P)
 c
