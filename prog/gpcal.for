@@ -139,7 +139,7 @@ c                    solution for the observation already exists.  This
 c                    preliminary solution must be formed from a
 c                    calibrator with known Stokes-V.
 c
-c$Id: gpcal.for,v 1.8 2010/09/28 23:46:09 cal103 Exp $
+c$Id: gpcal.for,v 1.9 2011/06/10 00:43:58 wie017 Exp $
 c--
 c  History:
 c    rjs,nebk 1may91 Original version.
@@ -282,8 +282,8 @@ c-----------------------------------------------------------------------
       external  itoaf, keyprsnt, uvDatOpn
 c-----------------------------------------------------------------------
       version = versan('gpcal',
-     *                 '$Revision: 1.8 $',
-     *                 '$Date: 2010/09/28 23:46:09 $')
+     *                 '$Revision: 1.9 $',
+     *                 '$Date: 2011/06/10 00:43:58 $')
 c
 c  Get inputs.
 c
@@ -543,7 +543,7 @@ c
         call writeo(tIn,'Leakage terms:')
         do j = 1, nants
           if (present(j)) then
-            write(line,'(1x,a,i2,a,f6.3,a,f6.3,a,f6.3,a,f6.3,a)')
+            write(line,'(1x,a,i2,a,f8.5,a,f8.5,a,f8.5,a,f8.5,a)')
      *      'Ant',j,':Dx,Dy = (',real(D(1,j)),',',aimag(D(1,j)),'),(',
      *                           real(D(2,j)),',',aimag(D(2,j)),')'
             call writeo(tIn,line)
