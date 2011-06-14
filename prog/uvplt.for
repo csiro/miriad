@@ -239,7 +239,7 @@ c       The output logfile name. The default is the terminal.
 c@ comment
 c       A one line comment which is written into the logfile.
 c
-c$Id: uvplt.for,v 1.12 2011/05/03 07:58:53 cal103 Exp $
+c$Id: uvplt.for,v 1.13 2011/06/14 04:40:21 cal103 Exp $
 c--
 c
 c  History:
@@ -371,8 +371,8 @@ c
       data polmsk /13*0/
 c-----------------------------------------------------------------------
       version = versan ('uvplt',
-     *                  '$Revision: 1.12 $',
-     *                  '$Date: 2011/05/03 07:58:53 $')
+     *                  '$Revision: 1.13 $',
+     *                  '$Date: 2011/06/14 04:40:21 $')
 c
 c  Get the parameters given by the user and check them for blunders
 c
@@ -3921,10 +3921,9 @@ c-----------------------------------------------------------------------
 
 ************************************************************************
 
-      subroutine uvdes (doflag, doall, dofqav, maxant, maxbase,
-     *   maxchan,
-     *   basmsk, polmsk, data, goodf, nfiles, npols, nbases, npnts,
-     *   baseday, dayoff, yearoff)
+      subroutine uvdes (doflag, doall, dofqav, maxant, maxbase, maxchan,
+     *  basmsk, polmsk, data, goodf, nfiles, npols, nbases, npnts,
+     *  baseday, dayoff, yearoff)
 c-----------------------------------------------------------------------
 c     Read through the data once, finding out the number of
 c     selected baselines polarizations and files.
@@ -3959,22 +3958,18 @@ c-----------------------------------------------------------------------
       nbases = 0
       call output(' ')
       call output('Pass 1: determine data characteristics')
-c
-c Loop over files
-c
+
+c     Loop over files.
       call uvdatgti('nfiles', nfiles)
       do i = 1, nfiles
         if (.not.uvDatOpn(lin)) call bug('f','Error opening inputs')
-c
-c Read first visbility (making variables available)
-c
-        call getdat(preamble, data, goodf, maxchan, nread,
-     *                                  dofqav, doflag, doall)
+
+c       Read first visibility, thus making variables available.
+        call getdat(preamble, data, goodf, maxchan, nread, dofqav,
+     *    doflag, doall)
 
         if (i.eq.1) then
-c
-c Get reference day
-c
+c         Get reference day.
           call uvrdvrd(lin, 'time', baseday, 0d0)
           call julcal(baseday,y,m,d)
           julyear = caljul(y,1,1d0)
@@ -3984,13 +3979,10 @@ c
         endif
 
         do while (nread.ne.0)
-c
-c Does this visibility have any data that we want ?
-c
+c         Does this visibility have any data that we want?
           call goodat(nread, goodf, nkeep)
-c
-c Find new polarization
-c
+
+c         Find new polarization.
           if (nkeep.gt.0) then
             call uvdatgti('pol', polidx)
             if (polidx.lt.-8 .or. polidx.gt.4) call bug('f',
@@ -3999,9 +3991,8 @@ c
               npols = npols + 1
               polmsk(polidx) = npols
             endif
-c
-c Find new baseline
-c
+
+c           Find new baseline.
             call basant(preamble(4), ia1, ia2)
             basidx = ia1 + ia2*(ia2-1)/2
             if (ia1.gt.maxant .or. ia2.gt.maxant) then
@@ -4018,26 +4009,24 @@ c
           endif
 
           npnts = npnts + nkeep
-c
-c Read another visibility
-c
-          call getdat(preamble, data, goodf, maxchan, nread,
-     *                                  dofqav, doflag, doall)
+
+c         Read another visibility.
+          call getdat(preamble, data, goodf, maxchan, nread, dofqav,
+     *      doflag, doall)
         enddo
         call uvdatcls
       enddo
-c
-c Reinitialize masks
-c
+
+c     Reinitialize masks.
       do i = -8, 4
         polmsk(i) = 0
       enddo
+
       do i = 1, maxant+maxbase
         basmsk(i) = 0
       enddo
-c
-c Reinitialize UVDAT routines
-c
+
+c     Reinitialize UVDAT routines.
       call uvdatrew
 
       end
@@ -4045,10 +4034,12 @@ c
 ************************************************************************
 
       subroutine uvfish (nfiles, npols, nbases, baseday, dayoff,
-     *                   yearoff)
+     *  yearoff)
+
+      integer nfiles, npols, nbases, dayoff
+      double precision baseday, yearoff
 c-----------------------------------------------------------------------
-c     Try and guess at how many polarizations and baselines
-c     we should expect to find.
+c  Guess the number of polarizations and baselines.
 c
 c  Output:
 c    nfiles    Number of files read
@@ -4056,27 +4047,27 @@ c    npols     Number of polarizations encountered
 c    nbases    Number of baselines encountered
 c    baseday   Reference day from first file
 c    dayoff    Offset to subtract from day to make fractional days
+c    yearoff   Offset to subtract from day/365.25 to make years
 c-----------------------------------------------------------------------
-      double precision baseday, yearoff
-      integer nfiles, npols, nbases, dayoff
-cc
-      integer pols(12), pols2(12), lin, i, j, npols2, nants,y,m
-      double precision julyear,d, caljul
-      logical found
+      include 'maxdim.h'
 
-      logical uvdatopn, uvdatprb
+      logical   found, flags(MAXCHAN)
+      integer   i, j, lin, m, nants, npols2, nread, pols(12), pols2(12),
+     *          y
+      double precision caljul, d, julyear, preamble(4)
+      complex   data(MAXCHAN)
+
+      external uvdatopn, uvdatprb
+      logical  uvdatopn, uvdatprb
 c-----------------------------------------------------------------------
-c
-c Extract number of files
-c
+c     Extract number of files.
       call uvdatgti('nfiles', nfiles)
-c
-c Now deal with polarizations.  See if the user selected them with
-c "select" or "stokes" keyword.   If they select nothing (or
-c everything) then NPOLS will end up at 12.  NO-ONE will EVER ask
-c for 12 polarizations, and so I can assume then that they have asked
-c for everything in the file in this case.
-c
+
+c     Now deal with polarizations.  See if the user selected them with
+c     "select" or "stokes" keyword.   If they select nothing (or
+c     everything) then NPOLS will end up at 12.  NO-ONE will EVER ask
+c     for 12 polarizations, and so I can assume then that they have
+c     asked for everything in the file in this case.
       npols = 0
       do i = -8, 4
         if (i.ne.0 .and. uvdatprb('polarization', dble(i))) then
@@ -4084,20 +4075,19 @@ c
           pols(npols) = i
         endif
       enddo
+
       if (npols.eq.12) then
         do i = 1, 12
           pols(i) = 0
         enddo
         npols = 0
       endif
-c
-c Now fish out what they set with the 'stokes=' selection
-c
+
+c     Fish out what they set with the 'stokes=' selection.
       call uvdatgti('npol', npols2)
       call uvdatgti('pols', pols2)
-c
-c Now merge the two lists into one
-c
+
+c     Merge the two lists into one.
       if (npols2.gt.0) then
         do j = 1, npols2
           found = .false.
@@ -4110,15 +4100,16 @@ c
           endif
         enddo
       endif
-c
-c If the user didn't select anything, read the first set of
-c polarizations from the first file
-c
+
+c     If the user didn't select anything, read the first set of
+c     polarizations from the first file.
       if (.not.uvdatopn(lin)) call bug('f','Error opening input')
       call uvnext(lin)
-c
-c Get reference day
-c
+
+c     Read first visibility, thus making variables available.
+      call uvdatrd(preamble, data, flags, MAXCHAN, nread)
+
+c     Get reference day.
       call uvrdvrd(lin, 'time', baseday, 0d0)
       call julcal(baseday,y,m,d)
       julyear = caljul(y,1,1d0)
@@ -4131,17 +4122,16 @@ c
         if (npols.eq.0) call bug('f',
      *    'There are no polarizations present in the data')
       endif
-c
-c Now deal with baselines.  We don't do a very good job here.  All
-c we can do is find what the NANTS variable is set to.  Note that
-c programs such as UVCAT just copy NANTS over, even if you select
-c a subset of baseline.  RJS very stubborn (what's new) on this issue.
-c
+
+c     Deal with baselines.  We don't do a very good job here.  All we
+c     can do is find what the NANTS variable is set to.  Note that
+c     programs such as UVCAT just copy NANTS over, even if you select
+c     a subset of baseline.  RJS very stubborn (what's new) on this
+c     issue.
       call uvrdvri(lin, 'nants', nants, 0)
       nbases = nants * (nants+1) / 2
-c
-c Close uv file and reinitialize UVDAT routines
-c
+
+c     Close uv file and reinitialize UVDAT routines
       call uvdatcls
       call uvdatrew
 
