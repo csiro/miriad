@@ -1,3 +1,4 @@
+        integer   MAXFRQ, MAXPHI, MAXLPHI
         parameter(MAXFRQ=2048)
         parameter(MAXPHI=2048)
 c       NOTE: MAXLPHI *must* be 2*MAXPHI+1
