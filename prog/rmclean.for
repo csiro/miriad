@@ -1,4 +1,4 @@
-c************************************************************************
+c***********************************************************************
         program rmclean
 c
 c= RMCLEAN - Run RM-CLEAN on a set of 'dirty' rm-cubes
@@ -55,6 +55,8 @@ c@ ni
 c       Number of CLEAN iterations per pixel. Default 'niters'.
 c@ debug
 c       Debug mode? 0=no, 1=yes. Default 0.
+c
+c $Id: rmclean.for,v 1.1 2011/06/16 05:07:05 cal103 Exp $
 c--
 c  History:
 c    ghh   28nov07  Initial version [1.0]. Based on matlab version.
@@ -66,14 +68,14 @@ c    ghh   10jul08  Version 1.3: added output of residual cubes
 c                                and changed to allow cutoff=0, gain=1
 c    ghh   15sep08  Version 1.4: minor changes
 c    ghh   22sep08  Version 1.5: fixed RM axis scaling behavior
-c    ghh   21apr09  Version 1.6: increased allowed size of frequency file
-c                                added debug option and some output
+c    ghh   21apr09  Version 1.6: increased allowed size of frequency
+c                                file added debug option and some output
 c                                added constant MAXFRQ for array sizes
 c                                To do: repeat this for MAXPHI
 c    ghh   19apr11  Version 1.7: increased allowed size of phi axis
 c                                added constant MAXPHI
 c                                created rmclean.h
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       implicit none
       include 'mirconst.h'
       include 'maxdim.h'
@@ -86,14 +88,14 @@ c------------------------------------------------------------------------
       character*80 line*80
       character*5 method*5
       character*8 axrm*8
-      integer nmax,nsize(3),axnum(2),x,y,i,j,k,debug
+      integer nmax,nsize(3),axnum(2),x,y,i,debug
       integer loutqc,loutuc,loutqm,loutum,loutni,linq,linu
       integer loutqr,loutur
       integer ffile,iostat,llen,nf,whl,mi
       integer nphi,pphi,naxis,xpix,ypix,nval,blc(3)
       real gain,cutoff,fwhm,fvals(MAXFRQ),phi(MAXPHI),lphi(MAXLPHI)
       real dqs(MAXPHI),dus(MAXPHI),cqs(MAXPHI),cus(MAXPHI)
-      real mqs(MAXPHI),mus(MAXPHI),cbeam(MAXPHI),lam02
+      real mqs(MAXPHI),mus(MAXPHI),lam02
       real rqs(MAXPHI),rus(MAXPHI)
       real nrow(MAXDIM)
       real sphi,dphi,junk,lf
@@ -361,13 +363,13 @@ c
       call xyclose(loutni)
 c
       end
-c************************************************************************
+c***********************************************************************
       subroutine mkRMTF(numphi,phiv,numf,fv,R,width,lam02)
 c
       implicit none
       include 'mirconst.h'
       include 'rmclean.h'
-      complex R(MAXLPHI),compI,arg
+      complex R(MAXLPHI),compI
       real lam2(MAXFRQ),lam02,width,minl2,maxl2,phiv(MAXLPHI),fv(MAXFRQ)
       integer numphi,numf,i,j
 c
@@ -385,7 +387,7 @@ c     Produce the minimum, maximum, and weighted mean lambda^2
       lam02 = lam02/numf
 c     Now make the rmtf
       do i = 1, numphi*2+1
-        R(i) = complex(0.0,0.0)
+        R(i) = cmplx(0.0,0.0)
         do j = 1, numf
           R(i) = R(i)+exp(-2.0*compI*phiv(i)*(lam2(j)-lam02))
         enddo
@@ -395,14 +397,14 @@ c     Calculate the theoretical resolution (fwhm) of range(lambda^2)
       width = (2.0*sqrt(3.0))/(maxl2-minl2)
 c
       end
-c************************************************************************
+c***********************************************************************
       subroutine doRMCLEAN(numphi,phiv,R,nm,g,cut,width,mi,lam02,
      +                     dq,du,cq,cu,mq,mu,rq,ru,n)
 c
       implicit none
       include 'mirconst.h'
       include 'rmclean.h'
-      complex R(MAXLPHI),dp(MAXPHI),cp(MAXPHI),modcomp,sR(MAXLPHI)
+      complex R(MAXLPHI),dp(MAXPHI),modcomp,sR(MAXLPHI)
       complex mcdr,compI
       real phiv(MAXPHI),g,cut,width,absp(MAXPHI),maxabsp,xc(MAXPHI)
       real dq(MAXPHI),du(MAXPHI),cq(MAXPHI),cu(MAXPHI),mq(MAXPHI)
@@ -414,7 +416,7 @@ c
       compI = (0.0,1.0)
 c     Do some initializations
       do i = 1, numphi
-        dp(i) = complex(dq(i),du(i))
+        dp(i) = cmplx(dq(i),du(i))
         absp(i) = abs(dp(i))
         mq(i) = 0.0
         mu(i) = 0.0
@@ -449,24 +451,24 @@ c         Subtract out the clean component * shifted rmtf
           dp(i) = dp(i)-modcomp*sR((numphi/2)+i)
           absp(i) = abs(dp(i))
 c         Add a piece (pre-derotated) to the cleaned spectrum
-          cq(i) = cq(i)+(realpart(mcdr)
+          cq(i) = cq(i)+(real(mcdr)
      +      *exp(-(phiv(i)-phiv(maxabspi))**2/(2.0*((width/2.355)**2))))
-          cu(i) = cu(i)+(imagpart(mcdr)
+          cu(i) = cu(i)+(aimag(mcdr)
      +      *exp(-(phiv(i)-phiv(maxabspi))**2/(2.0*((width/2.355)**2))))
           if(i.eq.maxabspi) then
 c           Store the clean components for later reference
-            mq(i) = mq(i) + realpart(modcomp)
-            mu(i) = mu(i) + imagpart(modcomp)
+            mq(i) = mq(i) + real(modcomp)
+            mu(i) = mu(i) + aimag(modcomp)
           endif
         enddo
       enddo
 c     Finally, add the (derotated) residuals into the clean spectrum
 10    do i = 1, numphi
-        rq(i) = realpart(dp(i))
-        ru(i) = imagpart(dp(i))
+        rq(i) = real(dp(i))
+        ru(i) = aimag(dp(i))
         dp(i) = dp(i)*exp(-2.0*compI*phiv(i)*lam02)
-        cq(i) = cq(i) + realpart(dp(i))
-        cu(i) = cu(i) + imagpart(dp(i))
+        cq(i) = cq(i) + real(dp(i))
+        cu(i) = cu(i) + aimag(dp(i))
       enddo
 c
       end
@@ -529,8 +531,8 @@ c     Figure out which power of two to zero-pad with
       if(mod(n,2**pt).ne.0) then
         xp = (2**pt)-n
         do i = 1, xp
-          a(n+i) = complex(0.0,0.0)
-          b(n+i) = complex(0.0,0.0)
+          a(n+i) = cmplx(0.0,0.0)
+          b(n+i) = cmplx(0.0,0.0)
         enddo
       endif
 c     Now do the fourier transforms of the inputs
