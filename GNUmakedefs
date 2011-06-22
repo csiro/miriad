@@ -25,12 +25,12 @@
 # target names by running 'gmake help'
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakedefs,v 1.36 2011/05/26 06:21:08 cal103 Exp $
+# $Id: GNUmakedefs,v 1.37 2011/06/22 01:48:51 cal103 Exp $
 #-----------------------------------------------------------------------------
 # We rely only on the MIR environment variable.
 MIRROOT  := $(MIR)
 
-# MIRARCH will evaluate to something like alpha, linux, or sun4sol.
+# MIRARCH will evaluate to something like linux, or sun4sol.
 MIRARCH  := $(shell $(MIRROOT)/scripts/mirarch)
 MIRARCHD := $(MIRROOT)/$(MIRARCH)
 MIRBIND  := $(MIRARCHD)/bin
@@ -183,8 +183,11 @@ LINPACKLIB := -L$(MIRLIBD) -llinpack
 # into it.  X11 will almost certainly be needed but it is defined separately
 # below.  Typically -lpng will also be needed and in turn this may require -lz
 # (the zlib compression library).  You may also need to add -L options to tell
-# the linker where to find them.
-PGPLOTLIB  := -lpgplot -lpng -lz
+# the linker where to find them.  The installed names of the PGPLOT and png
+# libraries may differ from the defaults defined here (e.g. for Darwin).
+PGPLOT     := pgplot
+PNG        := png
+PGPLOTLIB   = -l$(PGPLOT) -l$(PNG) -lz
 
 # RPFITS, required by a handful of tasks, primarily atlod, that read ATNF data
 # using subroutine RPFITSIN.  It is supplied with Miriad in the binary
@@ -808,6 +811,8 @@ show ::
 	-@ echo "---------------------"
 	-@ echo "RPFITSLIB  = $(RPFITSLIB)"
 	-@ echo "LINPACKLIB = $(LINPACKLIB)"
+	-@ echo "PGPLOT     = $(PGPLOT)"
+	-@ echo "PNG        = $(PNG)"
 	-@ echo "PGPLOTLIB  = $(PGPLOTLIB)"
 	-@ echo "WCSLIB     = $(WCSLIB)"
 	-@ echo "X11LIB     = $(X11LIB)"
