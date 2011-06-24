@@ -14,7 +14,7 @@ c	The output corrected file. No default.
 c@ wvrphase
 c	A text file containing the phase corrections.
 c       Format : time (yymmmdd:hh:mm:ss), phase (6x).
-c	  .
+c	Prepending a '-' to the file name will negate the phases.
 c@ offset
 c	Offset, in seconds, between the recorded values and the data
 c--
@@ -23,6 +23,7 @@ c    03jul04 rjs  Original version.
 c    25jul04 rjs  Adjust tolerance to determine glitches.
 c    09sep08 mhw  Modify atrtfix to become atscfix
 c    23mar11 mhw  Modify atscfix to become atwvr
+c    22jun11 mhw  Add pol code back in
 c------------------------------------------------------------------------
 	character version*(*)
 	parameter(version='AtWVR: version 1.0 23-Mar-11')
@@ -32,7 +33,7 @@ c
 	character vis*64,out*64,wvrphase*64
 	real phase,theta
 	complex w
-	integer lVis,lOut,nchan,i
+	integer lVis,lOut,nchan,i,pol,npol,sign
 	double precision preamble(5)
 	complex data(MAXCHAN)
 	logical flags(MAXCHAN)
@@ -47,6 +48,11 @@ c
 	call keya('vis',vis,' ')
 	call keya('out',out,' ')
 	call keya('wvrphase',wvrphase,' ')
+        sign=1
+        if (wvrphase(1:1).eq.'-') then 
+          sign=-1
+          wvrphase = wvrphase(2:)
+        endif
 	call keyr('offset',offset,0.0)
 	call keyfin
 c
@@ -78,10 +84,13 @@ c
 c  Loop through the data
 c               
 	dowhile(nchan.gt.0)
+          call uvrdvri(lVis,'pol',pol,0)
+          call uvrdvri(lVis,'npol',npol,0)
+
 	  phase = Phget(preamble(4)-offset/86400.d0,preamble(5))
 c
 	  do i=1,nchan
-	    theta = PI/180*phase
+	    theta = sign*PI/180*phase
 	    w = cmplx(cos(theta),sin(theta))
 	    data(i) = w*data(i)
 	  enddo
@@ -89,6 +98,10 @@ c
 c  Copy to the output.
 c
           call varCopy(lVis,lOut)
+          if(npol.gt.0)then
+            call uvputvri(lOut,'npol',npol,1)
+            call uvputvri(lOut,'pol',pol,1)
+          endif
           call uvwrite(lOut,preamble,data,flags,nchan)
           call uvread(lVis,preamble,data,flags,MAXCHAN,nchan)
         enddo
