@@ -371,6 +371,10 @@ c    nplanes -- Number of planes we can fit in a reasonable amount of
 c		memory.
 c    npass   -- Number of i/o passes needed to grid all these images.
 c
+c  Check for integer overflow 
+c
+        if (log(2.0*nu)+log(1.0*nv)+log(1.0*npnt).gt.31*log(2.0)) 
+     *   call bug('f','Too many pointings for this image size') 
 	plsize= 2*nu*nv*npnt
 	nextra = max(0, npnt*nxc*nyc - 2*nu*((npnt-1)*nv+(v0+nyc/2-1)),
      *		        nxc*nyc-2*nu*nyc-2*((u0-1)+nu*(v0-(nyc/2+1))) )
