@@ -79,9 +79,9 @@ c@ options
 c	Extra processing options. Several can be given, separated by commas.
 c	  noapply Do not apply the scale factor - just evaluate it.
 c         nospec Do not try to determine and correct the spectral index across
-c                the band
+c                the band.
 c
-c$Id: mfboot.for,v 1.5 2010/04/30 08:23:28 cal103 Exp $
+c$Id: mfboot.for,v 1.6 2011/06/24 03:11:40 wie017 Exp $
 c--
 c  History:
 c    rjs     15jan06 Original version adapted from plboot.
@@ -90,6 +90,7 @@ c    rjs     09may06 Increase size of MAXPNT.
 c    rjs     07jul06 Increase size of MAXPNT again.
 c    mhw     07sep09 Use central frequency for planet parameters
 c    mhw     24mar10 Correct spectral index too
+c    mhw     16jun11 Fix triple mode spectral index correction
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
@@ -215,6 +216,10 @@ c
             f2 = SumF(2)/SumN(2)
             fac1 = SumXX(1)/SumXY(1)
             fac2 = SumXX(2)/SumXY(2)
+            if (mode.eq.'triple') then
+              fac1 = fac1 ** (1.0/3.0)
+              fac2 = fac2 ** (1.0/3.0)
+            endif
             if (f2.eq.f1) 
      *       call bug('f','Error in spectral index calculation')
             alpha = log(fac2/fac1)/log(f2/f1)
@@ -447,7 +452,7 @@ c
 	  call uvdatGtr('variance',rms2)
 	  do i=1,nchan
 	    if(flags(i))then
-              if (i.lt.nchan/2) then
+              if (i.le.nchan/2) then
                 d(1) = d(1) + data(i)
                 m(1) = m(1) + model(i)
                 n(1) = n(1) + 1
@@ -496,7 +501,7 @@ c
 c
         if(pgbeg(0,device,1,1).ne.1)then
           call pgldev
-          call bug('f','Error opeing graphics device')
+          call bug('f','Error opening graphics device')
         endif
         call pgscf(2)
         call pgrnge(0.0,xmax,xlo,xhi)
