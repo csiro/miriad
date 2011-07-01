@@ -38,6 +38,8 @@
        22-jul-04  jwr	changed type of "size" in hexists_c() from int to size_t
        05-nov-04  jwr	changed file sizes from size_t to off_t
        02-jan-05  rjs   Correct type of hreada/hwritea "length" parameter. Tidy.
+
+ $Id: hio.c,v 1.2 2011/07/01 11:31:11 cal103 Exp $
 */
 
 
@@ -72,7 +74,7 @@
 typedef struct {          /* buffer for I/O operations */
   off_t  offset;
   size_t length;
-  int    state; 
+  int    state;
   char   *buf;
 } IOB;
 
@@ -87,10 +89,10 @@ typedef struct item {
   struct item *fwd;
 } ITEM;
 
-typedef struct tree { 
+typedef struct tree {
   char *name;
   int handle,flags,rdwr,wriostat;
-  ITEM *itemlist; 
+  ITEM *itemlist;
 } TREE;
 
 static TREE foreign = {"",0,0,0,0,NULL};
@@ -365,7 +367,7 @@ void habort_c()
         if(*name)hdelete_c(t->handle,name,&iostat);
         it = itfwd;
       }
-    
+
 /* Pretend the cache has not changed and finish up. Completely delete
    trees that were opened as NEW. Otherwise finish up. */
 
@@ -611,7 +613,7 @@ void haccess_c(int tno,int *ihandle,Const char *keyword,Const char *status,int *
 
 /* Check and set the read/write flags. */
 
-  if(item->flags & ACCESS_MODE) bug_c('f',"haccess_c: Multiple access to item");  
+  if(item->flags & ACCESS_MODE) bug_c('f',"haccess_c: Multiple access to item");
   item->flags |= mode;
 
 /* Open the file if necessary. */
@@ -1181,7 +1183,8 @@ private void hwrite_fill_c(ITEM *item,IOB *iob,int next,int *iostat)
 ------------------------------------------------------------------------*/
 {
   char buffer[BUFSIZE];
-  int offset,length;
+  off_t  offset;
+  size_t length;
 
   offset = BUFALIGN * ((iob->offset + iob->length) / BUFALIGN);
   length = BUFALIGN * ((next-1)/BUFALIGN + 1) - offset;
