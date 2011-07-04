@@ -39,7 +39,7 @@
        05-nov-04  jwr	changed file sizes from size_t to off_t
        02-jan-05  rjs   Correct type of hreada/hwritea "length" parameter. Tidy.
 
- $Id: hio.c,v 1.3 2011/07/04 07:38:16 cal103 Exp $
+ $Id: hio.c,v 1.4 2011/07/04 08:22:09 cal103 Exp $
 */
 
 
@@ -129,12 +129,12 @@ private int first=TRUE;
 /* Declare our private routines. */
 
 static void hinit_c(void);
-static int hfind_nl(char *buf, int len);
+static int  hfind_nl(char *buf, size_t len);
 static void hcheckbuf_c(ITEM *item, off_t next, int *iostat);
 static void hwrite_fill_c(ITEM *item, IOB *iob, off_t next, int *iostat);
 static void hcache_create_c(TREE *t, int *iostat);
 static void hcache_read_c(TREE *t, int *iostat);
-static int hname_check(char *name);
+static int  hname_check(char *name);
 static void hdir_c(ITEM *item);
 static void hrelease_item_c(ITEM *item);
 static ITEM *hcreate_item_c(TREE *tree, char *name);
@@ -259,7 +259,8 @@ void hflush_c(int tno,int *iostat)
   TREE *t;
   ITEM *item;
   char s[CACHE_ENT];
-  int offset,i,ihandle;
+  int   i, ihandle;
+  off_t offset;
 
   t = hget_tree(tno);
   *iostat = 0;
@@ -1112,7 +1113,7 @@ void hio_c(int ihandle,int dowrite,int type,char *buf,
   }
 }
 /************************************************************************/
-private int hfind_nl(char *buf,int len)
+private int hfind_nl(char *buf, size_t len)
 /*
   Return the character number of the first new-line character.
 ------------------------------------------------------------------------*/
@@ -1283,7 +1284,7 @@ private void hcache_read_c(TREE *t,int *iostat)
   abort completely.
 ------------------------------------------------------------------------*/
 {
-  int offset;
+  off_t offset;
   ITEM *item;
   char s[CACHE_ENT];
   int ihandle;
@@ -1317,7 +1318,7 @@ private int hname_check(char *name)
   alpha is allowed. The name "header" is generally reserved.
 ------------------------------------------------------------------------*/
 {
-  int length,i;
+  size_t i, length;
   char c;
 
   length = strlen(name);
@@ -1339,7 +1340,7 @@ private void hdir_c(ITEM *item)
   file.
 ------------------------------------------------------------------------*/
 {
-  int length,plength,len;
+  size_t len, length, plength;
   char *context,*s;
   ITEM *it;
   TREE *t;
