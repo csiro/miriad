@@ -97,64 +97,10 @@ c       Integer used to initialise the random number generator.  The
 c       same value of SEED produces the same noise, different values
 c       produce different noise.
 c
-c$Id: imgen.for,v 1.4 2010/11/22 05:48:54 cal103 Exp $
+c$Id: imgen.for,v 1.5 2011/07/04 00:59:16 cal103 Exp $
 c--
-c
 c  History:
-c    rjs  Dark-ages Original version.
-c    rjs  27oct89   Renamed it IMGEN.
-c    rjs  30may91   Write some extra header variables.
-c    mchw 03jun91   Fixed a bug and added more header variables.
-c    rjs  29aug91   Included 'mirconst'. The old value of pi was wrong.
-c    nebk 20sep91   Made gaussian noise image start with different
-c                   seed on each application of imgen.
-c    pjt  15oct91   multiplied julian date by 100000 in randset() for
-c                   seed created crval, cdelt and crpix all in double
-c                   now filename buffers (in,out) a bit longer.
-c    pjt  16oct91   fixed some style ambiguities
-c    pjt   7nov91   added 'bpa' item in case gaussian model
-c    mchw  10jul92  fixed bug in bpa definition.
-c    nebk  09sep92  Make reference pixel 1.0 for axes of length
-c                   1, otherwise point models fall of map
-c    nebk  04nov92  Copy BTYPE to output
-c    pjt   13nov92  Initial version to handle 3D input cubes
-c                   also updated pbfwhm into copy header list!!!!!!
-c    rjs   24nov92  Merged pjt and nebk versions.
-c    mchw  10apr93  Improved warning messages.
-c    lgm   27apr93  Added feature allowing specification of position
-c                   angle for disk model.
-c    mchw  19may93  Merged lgm and mchw versions; adjust doc to match
-c                   code.
-c    rjs   19aug94  Major rework.  Multiple objects.  Position angle.
-c                   Better coords.
-c    rjs   12sep94  totflux option.
-c    bmg   08may96  Added object=shell
-c    rjs   24sep96  Some corrections to object=shell.
-c    rjs   13dec96  Increase max number of objects.
-c    rjs   02jul97  cellscal change.
-c    rjs   14jul97  Check when there are too many objects and increase
-c                   max number of objects.
-c    rjs   23jul97  added pbtype.
-c    mchw  23oct97  added comet model for parent molecule.
-c    rjs   29oct97  Check that the coordinates for a point source fall
-c                   within the image.
-c    rjs   11dec97  Make total flux option consistent when there is an
-c                   input image.
-c    rjs   19mar98  Copy across mosaic table.
-c    mchw  19mar99  Add model isothermal 2D projection for cluster gas.
-c    lss   07jul99  Add 3D gaussian model for cubes.
-c    rjs   10jan00  Added "seed" parameter.
-c    mchw  16jan01  Jet model.
-c    pjt    6sep01  using MAXDIM1 instead of MAXDIM
-c    pjt    3nov01  changed radec default to reflect those in uvgen
-c    pjt   21jan02  using MAXDIM1
-c    pjt   25jun02  allow imsize to be 3 dimensional [for MIR4]
-c    pjt    3dec02  using MAXDIM again, MAXDIM1 retired; MAXDIM2 is new
-c    pjt   30jan03  merged MIR4 into current release
-c    pjt   23feb03  officially merged MIR4
-c---
-c ToDo:
-c    write good headers if 3D cubes written
+c    Refer to the RCS log, v1.1 includes prior revision information.
 c-----------------------------------------------------------------------
       include 'mirconst.h'
       include 'maxdim.h'
@@ -176,9 +122,9 @@ c-----------------------------------------------------------------------
       character in*80, out*80, objects(NOBJECTS)*8, objs(MAXOBJS)*8,
      *          version*72
 
-      logical   keyprsnt
-      character versan*80
       external  keyprsnt, versan
+      logical   keyprsnt
+      character versan*72
 
       data objects/'level   ','noise   ','point   ',
      *             'gaussian','disk    ','j1x     ',
@@ -186,8 +132,8 @@ c-----------------------------------------------------------------------
      *             'gauss3  ','jet     '/
 c-----------------------------------------------------------------------
       version = versan('imgen',
-     *                 '$Revision: 1.4 $',
-     *                 '$Date: 2010/11/22 05:48:54 $')
+     *                 '$Revision: 1.5 $',
+     *                 '$Date: 2011/07/04 00:59:16 $')
 c
 c  Get the parameters from the user.
 c
@@ -404,32 +350,39 @@ c  Close up shop.
 c
       if (lIn.ne.0) call xyclose(lIn)
       call xyclose(lOut)
+
       end
+
 c***********************************************************************
+
       subroutine GetOpt(totflux)
 
       logical totflux
 
 c  Get extra processing options.
 c-----------------------------------------------------------------------
-      integer NOPTS
+      integer    NOPTS
       parameter (NOPTS=1)
-      character opts(NOPTS)*8
-      logical present(NOPTS)
 
-      data opts/'totflux '/
+      logical   present(NOPTS)
+      character opts(NOPTS)*8
+
+      data opts  /'totflux '/
 c-----------------------------------------------------------------------
       call options('options',opts,present,NOPTS)
       totflux = present(1)
+
       end
+
 c***********************************************************************
+
       subroutine GetBuf(lIn,j,Buff,n1,factor)
 
       integer lIn,j,n1
       real factor,Buff(n1)
 
+c-----------------------------------------------------------------------
 c  Initialise a row.
-c
 c-----------------------------------------------------------------------
       integer i
 c-----------------------------------------------------------------------
@@ -445,7 +398,9 @@ c-----------------------------------------------------------------------
       endif
 
       end
+
 c***********************************************************************
+
       subroutine header(lIn,lOut,crpix1,crpix2,crval1,crval2,
      *  cdelt1,cdelt2,bmaj,bmin,bpa,version)
 
@@ -453,9 +408,8 @@ c***********************************************************************
       double precision crpix1,crpix2,cdelt1,cdelt2,crval1,crval2
       real bmaj,bmin,bpa
       character version*(*)
-
+c-----------------------------------------------------------------------
 c  Make a header for the output image.
-c
 c-----------------------------------------------------------------------
       character line*64
 c-----------------------------------------------------------------------
@@ -492,15 +446,17 @@ c     Update the history.
       call hisclose(lOut)
 
       end
+
 c***********************************************************************
+
       subroutine DoMod(j0,object,Data,n1,amp,fwhm1,fwhm2,posang,x,y,
-     *                                                        fac)
+     *  fac)
 
       integer n1,j0
       character object*(*)
       real Data(n1)
       real amp,fwhm1,fwhm2,posang,x,y,fac
-
+c-----------------------------------------------------------------------
 c  Add the contribution of a particular component.
 c
 c  Input:
@@ -512,8 +468,8 @@ c-----------------------------------------------------------------------
       real xx,yy,xp,yp,scale,cospa,sinpa,t,a,log2,limit,p,theta,sum
       real Buff(MAXDIM)
 
-      real      j1xbyx
       external  j1xbyx
+      real      j1xbyx
 c-----------------------------------------------------------------------
 c  Add the new contribution.First the gaussian. Work out the region
 c  where the exponential greater than exp(-25), and don't bother
@@ -606,8 +562,7 @@ c       Handle a cluster isothermal gas projection.
         do i = 1, n1
           xx = (i-x)
           p = (xx*xx+yy*yy)/(fwhm1*fwhm1)
-          a = amp * (1.0 + p)**-0.5
-c           a = amp * (1. + p)**(0.5-1.5*beta)
+          a = amp * (1.0 + p)**(-0.5)
           data(i) = data(i) + a
         enddo
 

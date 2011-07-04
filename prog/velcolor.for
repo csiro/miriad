@@ -30,15 +30,10 @@ c       Two values.  Exclude pixels with values in the range clip(1) to
 c       clip(2).  If only one value is given, then exclude -abs(clip) to
 c       +abs(clip).
 c
-c$Id: velcolor.for,v 1.4 2010/11/22 05:17:13 cal103 Exp $
+c$Id: velcolor.for,v 1.5 2011/07/04 00:59:16 cal103 Exp $
 c--
 c  History:
-c    06aug92 mchw  Adapted from RALINT task.
-c    16sep92 mchw  Added pivot and cleaned up code.  Stubs for other
-c                  axes.
-c    27feb93 mjs   use tmpdim.h instead of maxdim.h
-c    02jul97 rjs   cellscal change.
-c    23jul97 rjs   added pbtype.
+c    Refer to the RCS log, v1.1 includes prior revision information.
 c-----------------------------------------------------------------------
       include 'tmpdim.h'
 
@@ -48,15 +43,15 @@ c-----------------------------------------------------------------------
       integer   blc(MAXNAX), boxes(MAXBOXES), i, j, lin, lout, naxis,
      *          nsize(MAXNAX), size(MAXNAX), trc(MAXNAX)
       real      bhi, blo, clip(2), pivot
-      character in*64, out*64, line*72, version*72
+      character in*256, out*256, line*72, version*72
 
-      logical   keyprsnt
-      character versan*80
       external  keyprsnt, versan
+      logical   keyprsnt
+      character versan*72
 c-----------------------------------------------------------------------
       version = versan('velcolor',
-     *                 '$Revision: 1.4 $',
-     *                 '$Date: 2010/11/22 05:17:13 $')
+     *                 '$Revision: 1.5 $',
+     *                 '$Date: 2011/07/04 00:59:16 $')
 
 c     Get inputs.
       call keyini
