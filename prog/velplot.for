@@ -57,77 +57,10 @@ c@ log
 c       The output log file. The default filename is velplot.log
 c       Results from image analysis are written into the log file.
 c
-c$Id: velplot.for,v 1.9 2010/11/22 05:09:47 cal103 Exp $
+c$Id: velplot.for,v 1.10 2011/07/05 00:55:42 cal103 Exp $
 c--
 c  History:
-c       developed from Ralint's Velplot (Fuller, Vogel, Wright, 1970's)
-c    Nov 1988 mchw Adjustable array dimensions.
-c    aug 1989      Added subroutines to read and write Miriad files.
-c    25may90 mchw  Major rebuild using Miriad user interface.
-c                  Removed Ralint subroutines, mapio etc.
-c    15jan91 mchw  Added in-code doc and removed a couple of bugs.
-c    23jul91 dm/dw modified VMS version for UNIX
-c    25jul91 mchw  removed pi from velplot.h to avoid MONGO conflict.
-c    31jul91 djw   PGPLOT version
-c    02aug91 mchw  Ported back to Vax and minor bugs cleaned up.
-c    14aug91 ms    Patches for cray.
-c    02oct91 djw   Fixed Pgplot transformation arrays (1 pixel).
-c    07oct91 djw   Modified cursor options to draw specs and cuts.
-c    25oct91 mchw  More patches for cray.
-c    28oct91 djw   Grayscale
-c    31oct91 mchw  Changed grid of spectra to match plot on paper.
-c                       Changed ifdef to cft, and improved user i/o.
-c                       Added width to range of maps. More cleanup.
-c    10apr92 mjs   In sub velmap, "label" now char*30 to elim string
-c                       truncation in assignment.
-c    13apr92 mchw  Changed position-velocity plots to increment in
-c                       direction of pa and fixed bug for unequal axes.
-c    28may92 mchw  Convert frequency axis on input image to velocity.
-c    29may92 mchw  Changed to absolute cutoff level in moment maps.
-c                  Added integral and rms in cursor defined box.
-c    04jun92 mchw  Read and write ascii files of spectra & pos-vel cuts.
-c    09jun92 mchw  Added Gaussian Fits to spectra using nllsqu.
-c    10jun92 djw   Added Multiple Gaussian Fits to spectra.
-c    10jun92 mchw  Save rms estimates. Write Gaussian fits into log.
-c    12jun92 mchw  Estimate fit from moments. Less things to type in.
-c    15jun92 jat   Add position-intensity cuts to PosVel.
-c    16jun92 mchw  Write more info' into log. Improved documentation.
-c    07jul92 mjs   Remove doubly-declared variables (Convex coughs).
-c    13jul92 mchw  Fix new ?? bug in Intensity plot input in PosVel.
-c    19aug92 mchw  Fix bug in integration box. Normalize chisq in fit.
-c    04sep92 mchw  Spectra options: omits plots, rectangular grids.
-c    16sep92 mchw  Better image header for position-velocity maps.
-c    23sep92 mchw  Add option to get velocity of peak channel.
-c    30sep92 mchw  Add history to output image files.
-c    05nov92 djw   Add option to write ascii file of gaussian fits.
-c    27feb93 mjs   use tmpdim.h instead of maxdim.h
-c    13mar93 mjs   pgplot subr names have less than 7 chars.
-c    02jul93 mjs   Elim unused labeled stmts to elim compiler warnings;
-c                  elim branches to labels from outside the block.
-c    08jul93 mjs   Merge 2 versions with minor differences.
-c    21sep93 mchw  Added nint to integer expressions using pixel size.
-c    25oct93 mchw  Added nint in subroutine readmap.
-c    01feb95 jm/mchw Elliminate some questions. call pgask(.FALSE.)
-c    02feb95 jm    De-FLINT'd.
-c    16jun95 mchw  Change default: no Gaus fit. Trap typo. pgask(.TRUE.)
-c                       swap P and V cursor options.
-c    30jan96 mchw  Merge AT version with 16jun95 update.
-c    09feb96 mchw  Address some of complaints in AT Users Guide.
-c    09nov96 mchw  Allow for FREQ axis.
-c    16may97 mchw  Increase array dimensions to MAXDIM.
-c    23may97 mchw  Cosmetics. More information for users.
-c    10jun97 rjs   Use memalloc to reduce memory usage.
-c    04sep97 mchw  Upgrading. Report absolute positions with cursor.
-c    10sep97 mchw  Fix new bug at exactly 45.0 position angle.
-c    08jul98 mchw  Improve code in spectra and Gaussian fits.
-c    16jul98 mchw  More robust interactive input; Elliminate ifdef's.
-c    05mar99 mchw  added logarithmic contour levels.
-c    05apr00 mchw  specify RA and DEC cuts with a range and increment.
-c    29aug00 mchw  Label RA, DEC on spectra and position-velocity plots.
-c    19sep00 pjt   increased filenames
-c    27jan01 pjt   fixed bug due to above
-c    22mar02 mchw  better logarithmic contour levels.
-c    26jun02 mchw  fixed bug due to longer filenames. (cf. 19sep00)
+c    Refer to the RCS log, v1.1 includes prior revision information.
 c-----------------------------------------------------------------------
       include 'velplot.h'
       include 'mem.h'
@@ -152,8 +85,8 @@ c     Set default plotting parameters.
       character versan*80, version*80
 c-----------------------------------------------------------------------
       version = versan('velplot',
-     *                 '$Revision: 1.9 $',
-     *                 '$Date: 2010/11/22 05:09:47 $')
+     *                 '$Revision: 1.10 $',
+     *                 '$Date: 2011/07/05 00:55:42 $')
 c
 c  Get the input parameters.
 c
@@ -453,9 +386,9 @@ c
 20    ncon = 2*cmaj/xy + 1
       ncon = min(99,(max(ncon,3)))
       call output('Gaussian falls to 6% at edge of array')
-      write(line, 105) ncon, ncon*xy
+      write(line, 30) ncon, ncon*xy
       call output(line)
-105   format(' size of convolution array:',i5,' pixels,',f8.3,
+ 30   format(' size of convolution array:',i5,' pixels,',f8.3,
      *       ' arcsecs')
 
       end
@@ -2848,7 +2781,7 @@ c-----------------------------------------------------------------------
 
       if (cdelt1.eq.0.0 .or. cdelt2.eq.0.0)
      *  call bug('f', 'Coordinate increment missing (cdelt).')
-      if (abs(cdelt1).ne.abs(cdelt2)) 
+      if (abs(cdelt1).ne.abs(cdelt2))
      *  call bug('f', 'Unequal coordinate increments (cdelt).')
 
       xy = abs(cdelt1)
@@ -3734,7 +3667,7 @@ c     Save plot device type from command line.
 c     Loop through list of maps. Reset image vel and width.
       key='L'
 
-60    vel  = vlsr(1)
+ 10   vel  = vlsr(1)
       delv = vlsr(2) - vlsr(1)
       if (write.ne.'Y' .and. apint.ne.'Y') then
         call plPanels(imaps,windx,windy)
@@ -3821,9 +3754,8 @@ c           Plot contours and greyscale (if required).
             call plotcon(v,nx,ny,cf,tr)
 
 c           Plot labels.
-            write(c1,130) vmin(k)
-            write(c2,130) vmax(k)
-130         format(f9.3)
+            write(c1,'(f9.3)') vmin(k)
+            write(c2,'(f9.3)') vmax(k)
             label = '                         '
             label = c1//' - '//c2
             call pglab(xlabel,ylabel,label)
@@ -3877,11 +3809,12 @@ c           If one map and not hardcopy then call for cursor.
               call pgwnad(-xmin,-xmax,ymin,ymax)
               call cursor(v,nx,ny,key)
               call pgwnad(xmin,xmax,ymin,ymax)
-              if (key.eq.'E') goto 66
-              goto 60
+              if (key.eq.'E') goto 20
+              goto 10
             endif
           endif
-66      endif
+        endif
+ 20     continue
       enddo
 
 c     Finished plotting maps; replotting options.
@@ -3900,7 +3833,7 @@ c     Finished plotting maps; replotting options.
             if (length.ne.0) then
               read(ans,'(i1)') lwidth
             endif
-            goto 60
+            goto 10
           endif
         endif
       endif
@@ -4514,7 +4447,7 @@ c     Write it.
       enddo
 
 c     Write the history.
-      call hisopen (lOut, 'append')
+      call hisopen(lOut, 'append')
       call hiswrite(lOut, 'VELPLOT:')
       call hisinput(lOut, 'VELPLOT')
 
