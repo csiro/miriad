@@ -4,7 +4,7 @@
 #-----------------------------------------------------------------------------
 # Bourne shell (bash or ksh) version of MIRRC originally by George Martin.
 #
-# $Id: MIRRC.sh.in,v 1.6 2007/02/23 02:59:25 cal103 Exp $
+# $Id: MIRRC.sh.in,v 1.7 2011/07/07 01:51:16 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Miriad root directory set by configure or otherwise.
   MIR=@MIRROOT@ ; export MIR
@@ -47,4 +47,16 @@
   if [ -f $MIRLIB/grfont.dat ]
   then
     PGPLOT_FONT=$MIRLIB/grfont.dat ; export PGPLOT_FONT
+  fi
+
+# Set DYLD_FALLBACK_LIBRARY_PATH as well on Darwin/MacOSX.
+  if [ "$MIRARCH" = darwin_x86_64 ]
+  then
+    if [ "$DYLD_FALLBACK_LIBRARY_PATH" != "" ]
+    then
+      DYLD_FALLBACK_LIBRARY_PATH="${MIRLIB}:$DYLD_FALLBACK_LIBRARY_PATH"
+    else
+      DYLD_FALLBACK_LIBRARY_PATH="$MIRLIB"
+    fi
+    export DYLD_FALLBACK_LIBRARY_PATH
   fi
