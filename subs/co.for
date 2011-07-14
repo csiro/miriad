@@ -36,7 +36,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: co.for,v 1.19 2011/02/18 04:28:10 cal103 Exp $
+c $Id: co.for,v 1.20 2011/07/14 07:47:40 cal103 Exp $
 c***********************************************************************
 
 c* coInit -- Initialise coordinate conversion routines.
@@ -137,7 +137,7 @@ c-----------------------------------------------------------------------
       obstime(icrd2) = obstime(icrd1)
 
       defs(1,icrd2)  = defs(1,icrd1)
-      defs(2,icrd2)  = defs(3,icrd1)
+      defs(2,icrd2)  = defs(2,icrd1)
       defs(3,icrd2)  = defs(3,icrd1)
       defs(4,icrd2)  = defs(4,icrd1)
 
@@ -2733,7 +2733,7 @@ c     We did not find it.  If we are allowed to allocate one, do so.
         return
       endif
 
-      call bug('f','Unable to find coordinate object in coInit')
+      call bug('f','Unable to find coordinate object in coLoc')
       coLoc = 0
 
       end
