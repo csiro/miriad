@@ -228,7 +228,7 @@ c       Interpolation tolerance.  Tolerate an error of the specified
 c       amount in converting pixel locations in the input to the output.
 c       Must be less that 0.5.  The default is 0.05.
 c
-c$Id: regrid.for,v 1.8 2010/12/17 07:48:47 cal103 Exp $
+c$Id: regrid.for,v 1.9 2011/07/14 09:59:16 cal103 Exp $
 c--
 c
 c  History:
@@ -248,15 +248,15 @@ c-----------------------------------------------------------------------
       logical   altPrj, doDesc, doEqEq, doGalEq, doNear, doOff, noScale,
      *          doTCel, doZero
       integer   axMap(MAXNAX), BufSize, cOut, gnx, gny, GridSize, i,
-     *          ilat, ilng, k, lBuf, lDef, lIn, lOut, lTem, m, maxc(3),
-     *          maxv(3), minc(3), minv(3), n, naxes, nAxIn(MAXNAX),
-     *          nAxOut(MAXNAX), nAxTem(MAXNAX), nblank, nBuf(3), ndesc,
-     *          nIAxes, npv, nTAxes, nxy, off(3), offset, order(3),
-     *          rBuf, valid, xv, xyzero, yv, zv
+     *          ilat, ilng, ispc, k, lBuf, lDef, lIn, lOut, lTem, m,
+     *          maxc(3), maxv(3), minc(3), minv(3), n, naxes,
+     *          nAxIn(MAXNAX), nAxOut(MAXNAX), nAxTem(MAXNAX), nblank,
+     *          nBuf(3), ndesc, nIAxes, npv, nTAxes, nxy, off(3),
+     *          offset, order(3), rBuf, valid, xv, xyzero, yv, zv
       real      tol
-      double precision cdelt, crpix, crval, desc(4,MAXNAX), eqnox,
-     *          latpol, llrot, lonpol, phi0, pv(0:29), theta0
-      character cellscal*12, ctype*16, in*64, keyw*8, line*64, out*64,
+      double precision cdelt, crpix, crval, desc(4,MAXNAX), latpol,
+     *          llrot, lonpol, phi0, pv(0:29), theta0
+      character algo*3, ctype*16, in*64, keyw*8, line*64, out*64,
      *          pcode*3, pcodes(NPCODE)*3, tin*64, version*80
 
       external  hdprsnt, itoaf, keyprsnt, versan
@@ -271,8 +271,8 @@ c     Projection codes.
      *  'pco', 'tsc', 'csc', 'qsc', 'hpx'/
 c-----------------------------------------------------------------------
       version = versan ('regrid',
-     *                  '$Revision: 1.8 $',
-     *                  '$Date: 2010/12/17 07:48:47 $')
+     *                  '$Revision: 1.9 $',
+     *                  '$Date: 2011/07/14 09:59:16 $')
 
 c     Get the input parameters.
       call keyini
@@ -349,15 +349,17 @@ c     Descriptors, if given, must match the number in 'axes'.
      *  'Inconsistent number of axis descriptors given.')
 
 
-c     Set up the output coordinate system.  Defaults come initially from
-c     the input image.
+c   Set up the output coordinate system.
       call coInit(lIn)
       if (altPrj) call coAltPrj(lIn)
       call coCreate(cOut)
 
       call coFindAx(lIn, 'longitude', ilng)
       call coFindAx(lIn, 'latitude',  ilat)
+      call coFindAx(lIn, 'spectral',  ispc)
 
+c     Axis defaults come initially from the input image.
+      lDef = lIn
       doTCel = .false.
       do i = 1, nIAxes
         if (axMap(i).eq.ilng .or. axMap(i).eq.ilat) then
@@ -369,8 +371,6 @@ c       Set descriptors for the axes that will remain unchanged.
         call coAxGet(lIn,  i, ctype, crpix, crval, cdelt)
         call coAxSet(cOut, i, ctype, crpix, crval, cdelt)
       enddo
-
-      lDef = lIn
 
 c     Reset descriptors for the axes specified by 'axes' if need be.
       if (tin.ne.' ') then
@@ -394,6 +394,13 @@ c       Reset descriptors from the template.
           nAxOut(axMap(i)) = nAxTem(axMap(i))
           call coAxGet(lTem, axMap(i), ctype, crpix, crval, cdelt)
           call coAxSet(cOut, axMap(i), ctype, crpix, crval, cdelt)
+
+          if (axMap(i).eq.ispc) then
+c           Reset the spectral axis of the input coordinate object to
+c           match that of the output (may change vobs).  Preempts any
+c           change that pCvtInit might make by calling coSpcSet.
+            call coSpcSet(lIn, ctype, ispc, algo)
+          endif
         enddo
 
 c       Celestial parameters should default from the template iff
@@ -451,8 +458,7 @@ c     WCSLIB will provide the defaults if these are still undefined.
       if (theta0.ne.UNDEF) call coSetD(cOut, 'theta0',  theta0)
       if (xyzero.ne.-1)    call coSetI(cOut, 'xyzero',  xyzero)
 
-      call coGetD(lDef, 'epoch', eqnox)
-      call coSetD(cOut, 'epoch', eqnox)
+      call coCpyD(lDef, cOut, 'epoch')
 
 c     Projection parameters.
       if (pcode.eq.' ') then
@@ -461,8 +467,7 @@ c         Copy them from the template or input image.
           do m = 0, 29
             keyw = 'pv'//itoaf(m)
             if (hdprsnt(lDef, keyw)) then
-              call coGetD(lDef, keyw, pv(m))
-              call coSetD(cOut, keyw, pv(m))
+              call coCpyD(lDef, cOut, keyw)
             endif
           enddo
         else
@@ -483,19 +488,26 @@ c     Options.
       if (noScale) then
         call coSetA(cOut, 'cellscal', 'CONSTANT')
       else
-        call coGetA(lDef, 'cellscal', cellscal)
-        call coSetA(cOut, 'cellscal', cellscal)
+        call coCpyA(lDef, cOut, 'cellscal')
       endif
 
 c     Finished with the template image.
       if (tin.ne.' ') call xyclose(lTem)
- 
+
+c     The remaining coordinate parameters come from the input image.
+      call coCpyD(lIn, cOut, 'obstime')
+      call coCpyD(lIn, cOut, 'restfreq')
+      call coCpyD(lIn, cOut, 'vobs')
 
 c     Set up output celestial coordinates.
       call setCel(lIn, cOut, doDesc, doEqEq, doGalEq)
 
 c     Set up offset coordinates.
       if (doOff) call doOffset(lIn,nAxIn,cOut,nAxOut)
+
+c     Initialise coordinate conversions.
+      call pCvtInit(cOut,lIn)
+
 
 c     Check the output image dimensions.
       if (nAxOut(1).gt.MAXDIM) call bug('f','Output too big for me')
@@ -509,7 +521,6 @@ c     Create the output.
 
 c     Initialise.
       GridSize = 0
-      call pCvtInit(cOut,lIn)
       call BufIni(nBuf,off,minc,maxc,BufSize)
 
       nblank = 0
@@ -837,12 +848,14 @@ c***********************************************************************
       integer lIn,lOut,nAxIn(3),nAxOut(3)
 c-----------------------------------------------------------------------
       include 'maxdim.h'
+
       integer NV
-      double precision tol
-      parameter (tol=0.49,NV=10)
-      double precision in(3),out(3,NV,NV,NV),crpix
-      integer minv(3),maxv(3),i,j,k,l,nv1,nv2,nv3
-      logical weird(3),warned,valid(NV,NV,NV),first
+      double precision TOL
+      parameter (NV = 10, TOL = 0.49d0)
+
+      logical first, valid(NV,NV,NV), warned, weird(3)
+      integer i, j, k, l, maxv(3), minv(3), nv1, nv2, nv3
+      double precision crpix, in(3), out(3,NV,NV,NV)
 
       external  itoaf
       character itoaf*2
@@ -862,12 +875,12 @@ c-----------------------------------------------------------------------
             in(3) = 1 + (k-1)*(nAxIn(3)-1)/real(nv3-1)
             call pCvt(in,out(1,i,j,k),3,valid(i,j,k))
 
-            if (valid(i,j,k) .and. first) then
+            if (first .and. valid(i,j,k)) then
               first = .false.
               do l = 1, 3
                 weird(l) = .false.
-                minv(l) = nint(out(l,i,j,k)-0.49d0)
-                maxv(l) = nint(out(l,i,j,k)+0.49d0)
+                minv(l) = nint(out(l,i,j,k)-TOL)
+                maxv(l) = nint(out(l,i,j,k)+TOL)
               enddo
             endif
           enddo
@@ -882,8 +895,8 @@ c     Determine the min and max pixels that we are interested in.
           do i = 1, nv1
             do l = 1, 3
               if (valid(i,j,k)) then
-                minv(l) = min(minv(l),nint(out(l,i,j,k)-0.49d0))
-                maxv(l) = max(maxv(l),nint(out(l,i,j,k)+0.49d0))
+                minv(l) = min(minv(l),nint(out(l,i,j,k)-TOL))
+                maxv(l) = max(maxv(l),nint(out(l,i,j,k)+TOL))
               endif
             enddo
           enddo
@@ -970,18 +983,18 @@ c-----------------------------------------------------------------------
       character line*64
 
 c     Follows the list of keywords in HEADCP (headcopy.for) with the
-c     omission of coordinate keywords, cellscal, epoch, and vobs, which
-c     are handled by coWrite, and the addition of rms (but not datamin
-c     or datamax).
+c     omission of coordinate keywords, cellscal, epoch, obstime,
+c     restfreq, and vobs, which are handled by coWrite, and the addition
+c     of rms (but not datamin or datamax).
       integer   NKEYS
-      parameter (NKEYS=24)
+      parameter (NKEYS=22)
       character keyw(NKEYS)*8
       data keyw /
      *    'bmaj    ', 'bmin    ', 'bpa     ', 'btype   ', 'bunit   ',
      *    'date-obs', 'instrume', 'ltype   ', 'lstart  ', 'lstep   ',
      *    'lwidth  ', 'mostable', 'niters  ', 'object  ', 'observer',
-     *    'obsra   ', 'obsdec  ', 'obstime ', 'pbfwhm  ', 'pbtype  ',
-     *    'restfreq', 'telescop', 'history ', 'rms     '/
+     *    'obsra   ', 'obsdec  ', 'pbfwhm  ', 'pbtype  ', 'telescop',
+     *    'history ', 'rms     '/
 c-----------------------------------------------------------------------
       call coWrite(cOut,lOut)
 
