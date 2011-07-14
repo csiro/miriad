@@ -20,6 +20,9 @@ c    subroutine coSpcSet(lu,axis,iax,algo)
 c    subroutine coPrjSet(lu,proj)
 c    subroutine coAxGet(lu,iax,ctype,crpix,crval,cdelt)
 c    subroutine coAxSet(lu,iax,ctype,crpix,crval,cdelt)
+c    subroutine coCpyD(lu1,lu2,object)
+c    subroutine coCpyI(lu1,lu2,object)
+c    subroutine coCpyA(lu1,lu2,object)
 c    subroutine coGetD(lu,object,value)
 c    subroutine coGetI(lu,object,value)
 c    subroutine coGetA(lu,object,value)
@@ -36,7 +39,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: co.for,v 1.21 2011/07/14 07:51:02 cal103 Exp $
+c $Id: co.for,v 1.22 2011/07/14 07:53:59 cal103 Exp $
 c***********************************************************************
 
 c* coInit -- Initialise coordinate conversion routines.
@@ -283,7 +286,82 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-c* coGetA -- Get a value from the guts of the coordinate routines.
+c* coCpyA -- Copy a value from one coordinate object to another.
+c& mrc
+c: coordinates
+c+
+      subroutine coCpyA(lu1, lu2, object)
+
+      integer   lu1, lu2
+      character object*(*)
+c  ---------------------------------------------------------------------
+c  Copy a character value from one coordinate object to another.
+c
+c  Input:
+c    lu1        Handle of the source coordinate object.
+c    lu2        Handle of the destination coordinate object.
+c    object     Name of the thing to set.
+c-----------------------------------------------------------------------
+      character cVal*128
+c-----------------------------------------------------------------------
+      call coGetA(lu1, object, cVal)
+      call coSetA(lu2, object, cVal)
+
+      end
+
+c***********************************************************************
+
+c* coCpyD -- Copy a value from one coordinate object to another.
+c& mrc
+c: coordinates
+c+
+      subroutine coCpyD(lu1, lu2, object)
+
+      integer   lu1, lu2
+      character object*(*)
+c  ---------------------------------------------------------------------
+c  Copy a floating point value from one coordinate object to another.
+c
+c  Input:
+c    lu1        Handle of the source coordinate object.
+c    lu2        Handle of the destination coordinate object.
+c    object     Name of the thing to set.
+c-----------------------------------------------------------------------
+      double precision dVal
+c-----------------------------------------------------------------------
+      call coGetD(lu1, object, dVal)
+      call coSetD(lu2, object, dVal)
+
+      end
+
+c***********************************************************************
+
+c* coCpyI -- Copy a value from one coordinate object to another.
+c& mrc
+c: coordinates
+c+
+      subroutine coCpyI(lu1, lu2, object)
+
+      integer   lu1, lu2
+      character object*(*)
+c  ---------------------------------------------------------------------
+c  Copy an integer value from one coordinate object to another.
+c
+c  Input:
+c    lu1        Handle of the source coordinate object.
+c    lu2        Handle of the destination coordinate object.
+c    object     Name of the thing to set.
+c-----------------------------------------------------------------------
+      integer   iVal
+c-----------------------------------------------------------------------
+      call coGetI(lu1, object, iVal)
+      call coSetI(lu2, object, iVal)
+
+      end
+
+c***********************************************************************
+
+c* coGetA -- Get a value from a coordinate object.
 c& rjs
 c: coordinates
 c+
@@ -292,7 +370,7 @@ c+
       integer   lu
       character object*(*), cVal*(*)
 c  ---------------------------------------------------------------------
-c  Get a character value from the guts of the coordinate routines.
+c  Get a character value from a coordinate object.
 c
 c  Input:
 c    lu         Handle of the coordinate object.
@@ -331,14 +409,14 @@ c     Parse parameterized keywords.
           cVal = 'CONSTANT'
         endif
       else
-        call bug('f','Unrecognised object in coGetA'//obj)
+        call bug('f','Unrecognised object in coGetA: '//obj)
       endif
 
       end
 
 c***********************************************************************
 
-c* coGetD -- Get a value from the guts of the coordinate routines.
+c* coGetD -- Get a value from a coordinate object.
 c& rjs
 c: coordinates
 c+
@@ -348,7 +426,7 @@ c+
       character object*(*)
       double precision dVal
 c  ---------------------------------------------------------------------
-c  Get a floating value from the guts of the coordinate routines.
+c  Get a floating point value from a coordinate object.
 c
 c  Input:
 c    lu         Handle of the coordinate object.
@@ -428,14 +506,14 @@ c     Parse parameterized keywords.
       else if (obj.eq.'obstime') then
         dVal = obstime(icrd)
       else
-        call bug('f','Unrecognised object in coGetD'//obj)
+        call bug('f','Unrecognised object in coGetD: '//obj)
       endif
 
       end
 
 c***********************************************************************
 
-c* coGetI -- Get a value from the guts of the coordinate routines.
+c* coGetI -- Get a value from a coordinate object.
 c& mrc
 c: coordinates
 c+
@@ -445,7 +523,7 @@ c+
       character object*(*)
       integer    iVal
 c  ---------------------------------------------------------------------
-c  Get an integer value from the guts of the coordinate routines.
+c  Get an integer value from a coordinate object.
 c
 c  Input:
 c    lu         Handle of the coordinate object.
@@ -468,14 +546,14 @@ c     Parse parameterized keywords.
       else if (object.eq.'xyzero') then
         status = celgti(cel(1,icrd), CEL_OFFSET, iVal)
       else
-        call bug('f','Unrecognised object in coGetI'//object(:8))
+        call bug('f','Unrecognised object in coGetI: '//object(:8))
       endif
 
       end
 
 c***********************************************************************
 
-c* coSetA -- Set a value in the guts of the coordinate routines.
+c* coSetA -- Set a value in a coordinate object.
 c& rjs
 c: coordinates
 c+
@@ -484,7 +562,7 @@ c+
       integer lu
       character object*(*),value*(*)
 c  ---------------------------------------------------------------------
-c  Set a value in the guts of the coordinate routines.
+c  Set a character value in a coordinate object.
 c
 c  Input:
 c    lu         Handle of the coordinate object.
@@ -525,14 +603,14 @@ c     Parse parameterized keywords.
           call bug('f','Unrecognised value for cellscal in coSetA')
         endif
       else
-        call bug('f','Unrecognised object in coSetA'//obj)
+        call bug('f','Unrecognised object in coSetA: '//obj)
       endif
 
       end
 
 c***********************************************************************
 
-c* coSetD -- Set a value in the guts of the coordinate routines.
+c* coSetD -- Set a value in a coordinate object.
 c& rjs
 c: coordinates
 c+
@@ -542,7 +620,7 @@ c+
       character object*(*)
       double precision value
 c  ---------------------------------------------------------------------
-c  Set a value in the guts of the coordinate routines.
+c  Set a floating point value in a coordinate object.
 c
 c  Input:
 c    lu         Handle of the coordinate object.
@@ -625,7 +703,7 @@ c     Parse parameterized keywords.
 
 c***********************************************************************
 
-c* coSetI -- Set a value in the guts of the coordinate routines.
+c* coSetI -- Set a value in a coordinate object.
 c& mrc
 c: coordinates
 c+
@@ -635,7 +713,7 @@ c+
       character object*(*)
       integer value
 c  ---------------------------------------------------------------------
-c  Set a value in the guts of the coordinate routines.
+c  Set an integer value in a coordinate object.
 c
 c  Input:
 c    lu         Handle of the coordinate object.
