@@ -23,33 +23,10 @@ c         relax  This instructs IMCAT to ignore axis descriptor
 c                mismatches (e.g. pixel increments etc).  Use this with
 c                care.
 c
-c$Id: imcat.for,v 1.5 2010/11/22 06:08:33 cal103 Exp $
+c$Id: imcat.for,v 1.6 2011/07/18 04:48:01 cal103 Exp $
 c--
-c
 c  History:
-c    10oct89 mchw  Initial version
-c    27oct89 rjs   Renamed it IMCAT.
-c    20jun90 mchw  Copied across beam and linetype keywords.
-c    04oct90 mchw  Added crpix and cdelt keywords; removed crot
-c                    check that cdelt, crpix and crval are consistent.
-c    09nov90 mchw  Added pbfwhm keyword.
-c    25feb91 mjs   Changed references of itoa to be itoaf.
-c    08mar91 mchw  Changed file input to keyf.
-c    05aug91 pjt   Also copy the mask over, and compute new minmax.
-c                  Fixed bug when #maps > MAXMAP, made default cdelt
-c                  1.0.  Only one input file open at any time.
-c    03nov91 rjs   Check buffer overflow and more standard history.
-c    04nov91 mchw  Restored inputs to history.
-c    08nov91 pjt   Increase MAXMAP to appease local maphogs
-c    13jul92 nebk  Add OPTIONS=RELAX and btype to keywords
-c    19jul94 nebk  Allow for roundoff in axis descriptor comparisons
-c    20sep95 rjs   Really allow for roundoff in axis descriptor
-c                  comparisons.  Increase number of maps.
-c    16jan97 rjs   Add "axis" keyword, and get it to work with an
-c                  arbitrary number of axis.
-c    12jun97 nebk  Copy header items for axes 6 and 7
-c    02jul97 rjs   cellscal change.
-c    23jul97 rjs   add pbtype.
+c    Refer to the RCS log, v1.1 includes prior revision information.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -70,8 +47,8 @@ c-----------------------------------------------------------------------
       external  hdprsnt, itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('imcat',
-     *                 '$Revision: 1.5 $',
-     *                 '$Date: 2010/11/22 06:08:33 $')
+     *                 '$Revision: 1.6 $',
+     *                 '$Date: 2011/07/18 04:48:01 $')
 
 c     Get the input parameters.
       call keyini
@@ -111,7 +88,8 @@ c     Open the input maps and check sizes, crpix and cdelt.
       enddo
 
       call xyclose(lIn)
-      x1 = crval1(axis) + (axLen1(axis)+1-crpix1(axis))*cdelt1(axis)
+      x1 = crval1(axis) +
+     *       (dble(axLen1(axis)+1) - crpix1(axis))*cdelt1(axis)
 
       warned  = .false.
       warned1 = .false.
@@ -139,35 +117,35 @@ c     Open the input maps and check sizes, crpix and cdelt.
             if (axLen(i).ne.axLen1(i)) call bug('f',
      *        'The images do not have compatible dimensions')
 
-            call descmp(crval, crval1(i), ok)
-            if (.not.ok) then
-              if (.not.warned) call bug(wflag,
-     *          'crval values differ on axis '//caxis)
-              warned1 = .true.
-            endif
-
             call descmp(crpix, crpix1(i), ok)
             if (.not.ok) then
               if (.not.warned) call bug(wflag,
      *          'crpix values differ on axis '//caxis)
               warned1 = .true.
             endif
+
+            call descmp(crval, crval1(i), ok)
+            if (.not.ok) then
+              if (.not.warned) call bug(wflag,
+     *          'crval values differ on axis '//caxis)
+              warned1 = .true.
+            endif
           else
 c           For celestial axes this test is only approximate, in normal
 c           circumstances cdelt and crval should not differ.
-            x  = crval + (1-crpix)*cdelt
+            x  = crval + (1d0 - crpix)*cdelt
             ok = abs(x-x1).le.0.01*abs(cdelt)
             if (.not.ok) then
               if (.not.warned) call bug(wflag,
      *          'Images are not contiguous on axis '//caxis)
               warned1 = .true.
             endif
+            x1 = x1 + dble(axLen(axis))*cdelt1(axis)
           endif
         enddo
 
         warned = warned .or. warned1
         call xyclose(lIn)
-        axLen1(axis) = axLen1(axis) + axLen(axis)
       enddo
 
 c     Open the output and make its header from the first input image.
