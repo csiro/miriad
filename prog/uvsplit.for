@@ -366,12 +366,13 @@ c
 	      call uvgetvri(tVis,'nschan',nschan,nindx)
 	    endif
 c            
-c Check for data with IFs at identical frequencies         
+c Check for data with identical center frequencies         
 c
             duplicate=.false.
             do i=1,nindx-1
               do j=i+1,nindx
-                if (sfreq(i).eq.sfreq(j)) duplicate=.true.
+                if (sfreq(i)+sdf(i)*(nschan(i)/2) .eq.
+     *              sfreq(j)+sdf(j)*(nschan(j)/2)) duplicate=.true.
               enddo
             enddo
                   
