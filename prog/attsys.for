@@ -3,12 +3,12 @@ c************************************************************************
 c
 	implicit none
 c
-c= attsys - Apply or un-apply on-line Tsys values.
+c= attsys - Apply or un-apply or redo on-line Tsys values.
 c& rjs
 c: uv analysis
 c+
-c	ATTSYS either applies or removes the Tsys weighting from correlation
-c	data.
+c	ATTSYS can apply or remove the Tsys weighting from correlation
+c	data and can reapply Tsys based on a specified IF.
 c
 c	NOTE: If you are using two IF bands when observing, ATTSYS cannot
 c	be used after you have split or copied the file down to single-IF
@@ -17,6 +17,9 @@ c@ vis
 c	The names of the input uv data sets. No default.
 c@ out
 c	The name of the output uv data set. No default.
+c@ tsysif
+c       The IF number used to provide the Tsys correction values.
+c       Default is 1.
 c@ options
 c	Extra processing options. Several options can be given,
 c	separated by commas. Minimum match is supported. Possible values
@@ -28,23 +31,29 @@ c	            cannot use the "apply" and "unapply" options
 c	            simultaneously.
 c	  auto      Use the "tcorr" variable to determine whether Tsys
 c	            has been applied or not.
-c	            NOTE: Information needed for options=auto is lost if you
-c	            copy or split a dataset. If you are going to use 
+c	            NOTE: Information needed for options=auto is lost if
+c	            you copy or split a dataset. If you are going to use 
 c	            options=auto, you generally have to do it on the file
 c	            resulting from atlod.
+c         redo      Remove the existing Tsys correction from all IFs and
+c                   reapply the Tsys from the specified IF to all.
+c                   This can be used for certain CABB observations where
+c                   the zoom bands have no valid Tsys information.
+c                   This option cannot be combined with any others.
 c--
 c  History:
 c    17jul00 rjs  Original version.
 c    25may02 rjs  Added options=auto
+c    20jul11 mhw  Incorporate tsysfix program by jra
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
-	parameter(version='AtTsys: version 1.0 25-May-02')
+	parameter(version='AtTsys: version 1.1 20-Jul-11')
 c
 	integer lVis,lOut,vupd,pol,npol,i1,i2
-	logical updated,doapply,auto
+	logical updated,doapply,auto,redo
 	character vis*64,out*64,type*1
-	integer nschan(MAXWIN),nif,nchan,nants,length,tcorr,na
+	integer nschan(MAXWIN),nif,nchan,nants,length,tcorr,na,tsysif
 	real xtsys(MAXANT*MAXWIN),ytsys(MAXANT*MAXWIN)
 	complex data(MAXCHAN)
 	logical flags(MAXCHAN)
@@ -58,7 +67,8 @@ c
 	call keyini
 	call keya('vis',vis,' ')
 	call keya('out',out,' ')
-	call GetOpt(doapply,auto)
+        call keyi('tsysif',tsysif,1)
+	call GetOpt(doapply,auto,redo)
 	call keyfin
 c
 c  Check the inputs.
@@ -110,6 +120,8 @@ c
 	  if(uvvarUpd(vupd))then
 	    call uvprobvr(lVis,'nschan',type,length,updated)
 	    nif = length
+	    if(tsysif.lt.1.or.tsysif.gt.nif)
+     *	      call bug('f','Invalid tsysif parameter')	
 	    if(type.ne.'i'.or.length.le.0.or.length.gt.MAXWIN)
      *	      call bug('f','Invalid nschan parameter')
 	    call uvgetvri(lVis,'nschan',nschan,nif)
@@ -135,10 +147,10 @@ c
 	      call uvrdvri(lVis,'tcorr',tcorr,1)
 	    endif
 	    if(doapply.eqv.(tcorr.eq.0))call tsysap(data,nchan,nschan,
-     *		xtsys,ytsys,nants,nif,doapply,i1,i2,pol)
+     *		xtsys,ytsys,nants,nif,doapply,redo,i1,i2,pol,1)
 	  else
 	    call tsysap(data,nchan,nschan,xtsys,ytsys,nants,nif,
-     *						doapply,i1,i2,pol)
+     *			doapply,redo,i1,i2,pol,tsysif)
 	  endif
 c
 	  call varCopy(lVis,lOut)
@@ -155,19 +167,19 @@ c
 	end
 c************************************************************************
 	subroutine tsysap(data,nchan,nschan,xtsys,ytsys,nants,nif,
-     *						doapply,i1,i2,pol)
+     *					doapply,redo,i1,i2,pol,tsysif)
 c
 	implicit none
-	integer nchan,nants,nif,nschan(nif),i1,i2,pol
+	integer nchan,nants,nif,tsysif,nschan(nif),i1,i2,pol
 	real xtsys(nants,nif),ytsys(nants,nif)
-	logical doapply
+	logical doapply,redo
 	complex data(nchan)
 c
 c------------------------------------------------------------------------
 	integer XX,YY,XY,YX
 	parameter(XX=-5,YY=-6,XY=-7,YX=-8)
 	integer i,j,k
-	real T1T2
+	real T1T2,new_T1T2
 c
 	i = 0
 	do k=1,nif
@@ -176,17 +188,23 @@ c
 	    i = i + 1
 	    if(pol.eq.XX)then
 	      T1T2 = xtsys(i1,k)*xtsys(i2,k)
+	      new_T1T2 = xtsys(i1,tsysif)*xtsys(i2,tsysif)
 	    else if(pol.eq.YY)then
 	      T1T2 = ytsys(i1,k)*ytsys(i2,k)
+              new_T1T2 = ytsys(i1,tsysif)*ytsys(i2,tsysif)
 	    else if(pol.eq.XY)then
-	      T1T2 = xtsys(i1,k)*ytsys(i2,k)
+              T1T2 = xtsys(i1,k)*ytsys(i2,k)
+              new_T1T2 = xtsys(i1,tsysif)*ytsys(i2,tsysif)
 	    else if(pol.eq.YX)then
 	      T1T2 = ytsys(i1,k)*xtsys(i2,k)
+              new_T1T2 = ytsys(i1,tsysif)*xtsys(i2,tsysif)
 	    else
 	      call bug('f','Invalid polarization code')
 	    endif
 c
-	    if(doapply)then
+	    if (redo) then
+	     data(i) = data(i)*sqrt(new_T1T2/T1T2)         
+            else if(doapply)then
 	      data(i) = data(i)*sqrt(T1T2)/50.0
 	    else
 	      data(i) = data(i)*50.0/sqrt(T1T2)
@@ -196,22 +214,25 @@ c
 c
 	end
 c************************************************************************
-	subroutine getopt(doapply,auto)
+	subroutine getopt(doapply,auto,redo)
 c
 	implicit none
-	logical doapply,auto
+	logical doapply,auto,redo
 c------------------------------------------------------------------------
 	integer NOPTS
-	parameter(NOPTS=3)
+	parameter(NOPTS=4)
 	character opts(NOPTS)*10
 	logical present(NOPTS)
 c
-	data opts/'apply     ','unapply   ','automatic '/
+	data opts/'apply     ','unapply   ','automatic ','redo      '/
 c
 	call options('options',opts,present,NOPTS)
 	if(present(1).and.present(2))call bug('f',
      *	  'Cannot both apply and unapply Tsys correction')
 	doapply = .not.present(2)
 	auto    = present(3)
+        redo = present(4)
+        if (present(4).and.(present(1).or.present(2).or.present(3)))
+     *    call bug('f','Option redo must be used on its own')
 c
 	end
