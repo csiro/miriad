@@ -38,14 +38,15 @@ c       coordinate type (ctype), as listed by PRTHD.  In this it is not
 c       necessary to specify the algorithm code, e.g. 'RA' matches both
 c       'RA---NCP' and 'RA---SIN', while 'VOPT' matches 'VOPT-F2W'.
 c
-c       Axes may also be specified via their order in the cube as
+c       Axes may also be specified via their order in the image as
 c       'x', 'y', 'z', 'a', 'b', 'c', and 'd' for axes 1 to 7.
 c
 c       The following generic values are also understood: 'longitude'
 c       ('lng' or 'long'), 'latitude' (or 'lat'), and 'spectral' ('spc'
 c       or 'spec').
 c
-c       No default.
+c       The default is 'x,y' if the input is multi-dimensional,
+c       otherwise 'x'.
 c
 c@ plot
 c       Selects the statistic to be plotted.  Minimal matching is
@@ -127,7 +128,7 @@ c@ log
 c       If specified, output is written to the file given by log=
 c       instead of to the terminal.
 c
-c$Id: imstat.for,v 1.6 2011/05/03 07:48:06 cal103 Exp $
+c$Id: imstat.for,v 1.7 2011/07/28 05:58:43 cal103 Exp $
 c--
 c  IMSPEC - plots spectra from image data
 c& bpw
@@ -160,29 +161,6 @@ c< region
 c       imspec only recognizes rectangular boxes.  It will use the mask
 c       associated with the input image.
 c
-c@ axes
-c       One or two axes along which data are averaged to obtain a data
-c       point on the profile.  Combined with the region keyword, it can
-c       be used to get a profile as function of any coordinate.  E.g.
-c       'axes=spectral' averages each spectrum in the selected region -
-c       whether expressed as frequency, velocity, etc.
-c       'axes=longitude,latitude' averages each celestial image plane
-c       in the dataset (regardless of orientation).
-c
-c       axes is case insensitive, and may be specified explicitly by
-c       coordinate type (ctype), as listed by PRTHD.  In this it is not
-c       necessary to specify the algorithm code, e.g. 'RA' matches both
-c       'RA---NCP' and 'RA---SIN', while 'VOPT' matches 'VOPT-F2W'.
-c
-c       Axes may also be specified via their order in the cube as
-c       'x', 'y', 'z', 'a', 'b', 'c', and 'd' for axes 1 to 7.
-c
-c       The following generic values are also understood: 'longitude'
-c       ('lng' or 'long'), 'latitude' (or 'lat'), and 'spectral' ('spc'
-c       or 'spec').
-c
-c       No default.
-c
 c       The region specifications in the following examples are relative
 c       to the reference pixel and assume an (RA,Dec,spectral) cube:
 c
@@ -205,6 +183,30 @@ c       - Plot a profile in Dec in the range dec:[-31,32] with RA
 c         averaged from RA:[-10,10], for spectral channel 10:
 c           region=relpix,box(-10,-31,10,32)(10)
 c           axes=ra,spectral
+c
+c@ axes
+c       One or two axes along which data are averaged to obtain a data
+c       point on the profile.  Combined with the region keyword, it can
+c       be used to get a profile as function of any coordinate.  E.g.
+c       'axes=spectral' averages each spectrum in the selected region -
+c       whether expressed as frequency, velocity, etc.
+c       'axes=longitude,latitude' averages each celestial image plane
+c       in the dataset (regardless of orientation).
+c
+c       axes is case insensitive, and may be specified explicitly by
+c       coordinate type (ctype), as listed by PRTHD.  In this it is not
+c       necessary to specify the algorithm code, e.g. 'RA' matches both
+c       'RA---NCP' and 'RA---SIN', while 'VOPT' matches 'VOPT-F2W'.
+c
+c       Axes may also be specified via their order in the image as
+c       'x', 'y', 'z', 'a', 'b', 'c', and 'd' for axes 1 to 7.
+c
+c       The following generic values are also understood: 'longitude'
+c       ('lng' or 'long'), 'latitude' (or 'lat'), and 'spectral' ('spc'
+c       or 'spec').
+c
+c       The default is 'x,y' if the input is multi-dimensional,
+c       otherwise 'x'.
 c
 c@ plot
 c       This selects what will be plotted as function of e.g. velocity.
@@ -301,8 +303,8 @@ c-----------------------------------------------------------------------
       character versan*72
 c-----------------------------------------------------------------------
       version = versan('imstat',
-     *                 '$Revision: 1.6 $',
-     *                 '$Date: 2011/05/03 07:48:06 $')
+     *                 '$Revision: 1.7 $',
+     *                 '$Date: 2011/07/28 05:58:43 $')
 
       call inputs(lIn,naxis,dim,corners,boxes,cut,counts,beaminfo,
      *  axlabel,device,MAXBOXES)
@@ -374,7 +376,7 @@ c-----------------------------------------------------------------------
 
       call cutinp(cut)
 
-      call axinp(lIn,naxis, dim,subcube,axlabel)
+      call axinp(lIn, naxis, dim, subcube, axlabel)
 
       dimen = abs(dim)
       call xyzsetup(lIn, subcube(:dimen), blc,trc, viraxlen,vircsz)
@@ -622,44 +624,49 @@ c-----------------------------------------------------------------------
       call coInit(lIn)
 
 c     Decode the axes keyword.
-      call assertl(keyprsnt('axes'),
-     *  'The axes must be specified (via keyword ''axes'')')
+      if (.not.keyprsnt('axes')) then
+c       Use the first two axes whatever they are.
+        dim = min(2, naxis)
+        axnum(1) = 1
+        axnum(2) = 2
 
-      dim = 0
-c     Locate the selected axes.
-      call keya('axes', axis, ' ')
-      do while (axis.ne.' ')
-        if (axis.eq.' ') goto 10
+      else
+        dim = 0
+c       Locate the selected axes.
+        call keya('axes', axis, ' ')
+        do while (axis.ne.' ')
+          if (axis.eq.' ') goto 10
 
-        dim = dim + 1
-        call assertl(dim.le.2, 'A maximum of two axes may be given')
+          dim = dim + 1
+          call assertl(dim.le.2, 'A maximum of two axes may be given')
 
-        if (len1(axis).eq.1) then
-          axnum(dim) = index(axC,axis(:1))
-        else
-          call coFindAx(lIn, axis, axnum(dim))
+          if (len1(axis).eq.1) then
+            axnum(dim) = index(axC,axis(:1))
+          else
+            call coFindAx(lIn, axis, axnum(dim))
 
-          if (axnum(dim).eq.0) then
-c           Try harder.
-            call ucase(axis)
-            if (axis.eq.'LNG' .or. axis.eq.'LONG') then
-              axis = 'longitude'
-              call coFindAx(lIn, axis, axnum(dim))
-            else if (axis.eq.'LAT') then
-              axis = 'latitude'
-              call coFindAx(lIn, axis, axnum(dim))
-            else if (axis.eq.'SPC' .or. axis.eq.'SPEC') then
-              axis = 'spectral'
-              call coFindAx(lIn, axis, axnum(dim))
+            if (axnum(dim).eq.0) then
+c             Try harder.
+              call ucase(axis)
+              if (axis.eq.'LNG' .or. axis.eq.'LONG') then
+                axis = 'longitude'
+                call coFindAx(lIn, axis, axnum(dim))
+              else if (axis.eq.'LAT') then
+                axis = 'latitude'
+                call coFindAx(lIn, axis, axnum(dim))
+              else if (axis.eq.'SPC' .or. axis.eq.'SPEC') then
+                axis = 'spectral'
+                call coFindAx(lIn, axis, axnum(dim))
+              endif
             endif
           endif
-        endif
 
-        call assertl(axnum(dim).ne.0,
-     *    'No '//axis(:len1(axis))//' axis found')
+          call assertl(axnum(dim).ne.0,
+     *      'No '//axis(:len1(axis))//' axis found')
 
-        call keya('axes', axis, ' ')
-      enddo
+          call keya('axes', axis, ' ')
+        enddo
+      endif
 
  10   call assertl(dim.ne.0, 'No valid axes specified')
 
@@ -1471,9 +1478,9 @@ c     Abbreviate the label to 12 chars.
         enddo
 
         typ  = cubetype(min(dim+level-1,4))
-        n(1) =  (9 - len1(typ)) / 2
+        n(1) = max(1, (9-len1(typ))/2)
         n(2) =   9 - n(1)
-        n(3) = (12 - len1(label) + 1) / 2
+        n(3) = max(1, (12-len1(label)+1)/2)
         n(4) =  12 - n(3)
 
       else if (level.eq.nlevels) then
