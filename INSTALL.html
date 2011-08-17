@@ -98,7 +98,7 @@ system is available for them and other unix-based platforms.
 </a> is distributed via
 <a href="http://en.wikipedia.org/wiki/File_Transfer_Protocol#Anonymous_FTP">
 anonymous <code>ftp</code></a> as
-<a href="http://en.wikipedia.org/wiki/Gzip"><code>gzip</code></a>'d
+<a href="http://en.wikipedia.org/wiki/bzip2"><code>bzip2</code></a>'d
 <a href="http://en.wikipedia.org/wiki/Tar_%28file_format%29">
 <code>tar</code></a> files which are updated weekly.  For convenience the
 <a href="http://www.atnf.csiro.au/computing/software/miriad"><em>Miriad
@@ -108,7 +108,7 @@ homepage</em></a> contains
 <em>User</em></a> and
 <a href="http://www.atnf.csiro.au/computing/software/miriad/progguide/index.html">
 <em>Programmer Guides</em></a>, and these are also available as separate
-<code>gzip</code>'d
+<code>bzip2</code>'d
 <a href="http://en.wikipedia.org/wiki/PostScript">PostScript</a> files (both
 forms are included in the distribution).
 </p>
@@ -330,17 +330,17 @@ Note that if you don't have an account at the ATNF that would allow you to run
 
   <p>
   You will need the common runtime files,
-  <a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad-common.tar.gz">
-  <code>miriad-common.tar.gz</code></a> (which includes catalogues, auxiliary
+  <a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad-common.tar.bz2">
+  <code>miriad-common.tar.bz2</code></a> (which includes catalogues, auxiliary
   data files and also the compiled documentation) and the binaries, which will
-  be in a <code>gzip</code>'d <code>tar</code> file with a name like
-  <a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad-linux.tar.gz">
-  <code>miriad-linux.tar.gz</code></a> (others currently are
-  <a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad-linux64.tar.gz">
+  be in a <code>bzip2</code>'d <code>tar</code> file with a name like
+  <a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad-linux.tar.bz2">
+  <code>miriad-linux.tar.bz2</code></a> (others currently are
+  <a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad-linux64.tar.bz2">
   <code>linux64</code></a>,
-  <a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad-sun4sol.tar.gz">
+  <a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad-sun4sol.tar.bz2">
   <code>sun4sol</code></a>, and
-  <a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad-darwin_x86_64.tar.gz">
+  <a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad-darwin_x86_64.tar.bz2">
   <code>darwin_x86_64</code></a>).
   </p>
 
@@ -359,8 +359,8 @@ Note that if you don't have an account at the ATNF that would allow you to run
   <code>/usr/local/miriad</code>, then you might use something like
 <pre>
     % cd /usr/local
-    % zcat miriad-common.tar.gz | tar xvf -
-    % zcat miriad-linux.tar.gz  | tar xvf -
+    % bzcat miriad-common.tar.bz2 | tar xvf -
+    % bzcat miriad-linux.tar.bz2  | tar xvf -
 </pre>
   </p>
 
@@ -503,8 +503,8 @@ To build <em>Miriad</em> from source code you will need
   You may compile the <em>Miriad</em> documentation from its sources if you
   wish, although this is not necessary and not supported as the pre-compiled
   documentation is provided as part of the
-  <a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad-common.tar.gz">
-  <code>miriad-common.tar.gz</code></a> distribution <code>tar</code> file.
+  <a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad-common.tar.bz2">
+  <code>miriad-common.tar.bz2</code></a> distribution <code>tar</code> file.
   To compile it you would need the document processing utilities listed in
   the <a href="#step6">generic <code>GNUmakedefs</code></a>.
 </li>
@@ -548,15 +548,15 @@ tweaking is likely to be required.
 
   <p>
   You will need the source code,
-  <a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad-code.tar.gz">
-  <code>miriad-code.tar.gz</code></a>, and common runtime files,
-  <a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad-common.tar.gz">
-  <code>miriad-common.tar.gz</code></a>, which includes catalogues, auxiliary
+  <a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad-code.tar.bz2">
+  <code>miriad-code.tar.bz2</code></a>, and common runtime files,
+  <a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad-common.tar.bz2">
+  <code>miriad-common.tar.bz2</code></a>, which includes catalogues, auxiliary
   data files and also the compiled documentation.  (If you're interested, the
   <a href="http://en.wikipedia.org/wiki/Revision_Control_System">
   <code>RCS</code></a> version files are also available in
-  <a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad-rcs.tar.gz">
-  <code>miriad-rcs.tar.gz</code></a>, these will show exactly what changes
+  <a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad-rcs.tar.bz2">
+  <code>miriad-rcs.tar.bz2</code></a>, these will show exactly what changes
   have been made to the source files in recent times.)
   </p>
 </li>
@@ -569,8 +569,8 @@ tweaking is likely to be required.
   might use something like
 <pre>
     % cd /usr/local
-    % zcat miriad-code.tar.gz   | tar xvf -
-    % zcat miriad-common.tar.gz | tar xvf -
+    % bzcat miriad-code.tar.bz2   | tar xvf -
+    % bzcat miriad-common.tar.bz2 | tar xvf -
 </pre>
   </p>
 
@@ -1245,8 +1245,8 @@ where it is assumed that the <em>Miriad</em> environment and a sensible
 <p>
 The <em>Miriad</em> runtime system consists of a number of directories that
 are common to all architectures (distributed as
-<a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad-common.tar.gz">
-<code>miriad-common.tar.gz</code></a>) and some that are platform-specific.
+<a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad-common.tar.bz2">
+<code>miriad-common.tar.bz2</code></a>) and some that are platform-specific.
 The latter exist as subdirectories of <code>$MIR/$MIRARCH</code> (otherwise
 referred to as <code>$MIRARCHD</code>), where <code>$MIRARCH</code> is the
 <em>Miriad</em> platform name, e.g. <code>linux</code>,
@@ -1361,8 +1361,8 @@ referred to as <code>$MIRARCHD</code>), where <code>$MIRARCH</code> is the
 
 <p>
 <em>Miriad</em> source code and utilities (distributed as
-<a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad-code.tar.gz">
-<code>miriad-code.tar.gz</code></a>) exist in the following directories:
+<a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad-code.tar.bz2">
+<code>miriad-code.tar.bz2</code></a>) exist in the following directories:
 <table>
   <tr valign="top">
     <td width="40"></td>
@@ -1545,5 +1545,5 @@ private version:
 <hr>
 
 <p>
-<small>$Id: INSTALL.html,v 1.21 2011/06/01 08:06:40 cal103 Exp $</small>
+<small>$Id: INSTALL.html,v 1.22 2011/08/17 05:26:14 cal103 Exp $</small>
 </p>
