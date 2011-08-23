@@ -229,7 +229,7 @@ c       nocal   Do not apply antenna gain calibration.
 c       nopass  Do not apply bandpass correction.
 c       nopol   Do not apply polarisation leakage correction.
 c
-c$Id: pgflag.for,v 1.12 2011/03/30 00:47:30 ste616 Exp $
+c$Id: pgflag.for,v 1.13 2011/08/23 23:20:28 ste616 Exp $
 c--
 c
 c  History:
@@ -360,8 +360,8 @@ c
       logical uvDatOpn
 
       version = versan ('pgflag',
-     :                  '$Revision: 1.12 $',
-     :                  '$Date: 2011/03/30 00:47:30 $')
+     :                  '$Revision: 1.13 $',
+     :                  '$Date: 2011/08/23 23:20:28 $')
 
 c
 c Get user inputs
@@ -1236,8 +1236,8 @@ c     must be flagging based on one antenna; figure out which one
                isave(5)=1
             endif
             if (nflagged.gt.0) then
-               time1=times(1,i)+1
-               time2=times(2,i)+1
+               time1=times(1,i)
+               time2=times(2,i)
                if (time1.gt.ntime) then
                   time1=ntime
                endif
@@ -1293,17 +1293,23 @@ c     do the flagging
             bl=((ant2-1)*ant2)/2+ant1
             do i=1,nflags
                if (bases(bl,i).eqv..true.) then
-                  time1=times(1,i)+1
-                  time2=times(2,i)+1
+c                  write(status,'(A,F20.10)') 'preamble time',t
+c                  call output(status)
+                  time1=times(1,i)
+                  time2=times(2,i)
                   if (time1.gt.ntime) then
                      time1=ntime
                   endif
                   if (time2.gt.ntime) then
                      time2=ntime
                   endif
+c                  write(status,'(A,F20.10,F20.10)') 'ftimes',
+c     *                 t1(time1),t1(time2)
+c                  call output(status)
                   if ((t1(time1).le.t).and.
      *                (t1(time2).ge.t)) then
                      flagged=.true.
+c                     call output('flagged')
                      do j=chans(1,i),chans(2,i)
                         flags(j)=.not.flagval(i)
                         if (flagval(i).eqv..false.) then
@@ -1620,15 +1626,16 @@ c     check that we have a full selection box
                flagval(nflags)=.false.
                isave(5)=1
             endif
-            time1=miny+1
-            time2=maxy+1
+            time1=miny
+            time2=maxy
             if (time1.gt.ntime) then
                time1=ntime
             endif
             if (time2.gt.ntime) then
                time2=ntime
             endif
-            call FmtCmd(flagstring,isave,t1(time1),t1(time2),chanoff,
+            call FmtCmd(flagstring,isave,t1(time1),t1(time2),
+     *       chanoff,
      *       chanw,day0,selectline)
             call output(flagstring)
          elseif (undo) then
@@ -2770,7 +2777,7 @@ c
       include 'maxdim.h'
       integer i,j,k,offset,length,pnt,bl,i0
       real buf(2*MAXCHAN+3),t
-c      character status*60
+c      character status*80
 
       some_unflagged=.false.
       if (firstread) then
@@ -2795,11 +2802,17 @@ c
          bl=nint(buf(1))
          if (bl.eq.rqbl) then
             t=buf(2)+(dble(buf(3))-day0)
+c            write(status,'(A,I6,F20.10)') 'btimes',k,t
+c            call output(status)
             do pnt=1,ntime
                if (t1(pnt).gt.-1.0) then
+c                  write(status,'(A,I6,F20.10,F20.10,F20.10)') 'ttimes',
+c     *                 pnt,t1(pnt),t1(pnt+1),t1(pnt+2)
+c                  call output(status)
 c                  call output('time valid')
-                  if ((t1(pnt).le.t).and.((t.le.t1(pnt+1)).or.
-     *               ((t1(pnt+1).eq.-2).and.(t.le.t1(pnt+2))))) goto 10
+                  if (((t1(pnt).le.t).and.(t.lt.t1(pnt+1))).or.
+     *               ((t1(pnt+1).eq.-2).and.(t.lt.t1(pnt+2))).or.
+     *               ((t1(pnt).le.t).and.(pnt.eq.ntime)))goto 10
                endif
             enddo
 c            write(status,'(A,F20.10)') 'Time slot miscalculation',t
