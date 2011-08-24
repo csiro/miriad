@@ -4,7 +4,7 @@
 #-----------------------------------------------------------------------------
 # Generate Miriad update tar files for distribution from the ftp area.
 #
-# $Id: mirexport,v 1.8 2008/02/25 00:25:18 cal103 Exp $
+# $Id: mirexport,v 1.9 2011/08/24 23:32:55 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Initialize.
   cd $MIR
@@ -48,7 +48,7 @@
   date -u +'%Y%m%d' > VERSION
   chmod 444 VERSION
 
-  tar -cf $output VERSION -I $contents
+  tar -cf $output VERSION -T $contents
   rm -f VERSION
 
   gzip -f $output
