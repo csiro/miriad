@@ -37,116 +37,9 @@ c  pgtbx2cg
 c  pgtbx3cg
 c
 c  History:
-c     nebk   20sep91    Created from PGDISP/PGCURS
-c     nebk   08nov91    Use local blc,trc in call to BOXRUNS in
-c                       CHNSELPG, because they may get modified
-c                       if blanked pixels exist
-c     nebk   28apr92    "g" format seems to behave capriciously
-c                        Try to do something better in VCLABPG
-c                        Renamed subroutines to *cg from *pg
-c                        as pgdisp etc -> cgdisp etc
-c     nebk   12may92     Return actual scales in VPADJCG
-c     nebk   14may92     Add  LIMTRCG. Add a couple more
-c                        parameters to HEDINFCG
-c     nebk   18may92     Add AXFNDCG
-c     nebk   04jul92     Don't modify variable (PLAV) in READIMCG. Add
-c                        OTOPIXCG, SETTRCG, CONLINCG, STRERSCG,
-c                        DEGHSMCG, ANN*CG, CHKDESCG, CHKDIMCG, add
-c                        argument MIRROR to CONLEVCG
-c     nebk   08jul82     Add OPTCG and INIT/NORM to READIMCG call.  Fix
-c                        bug in CHNSELCG causing groups to be
-c                        redundantly specified under some circumstances
-c     nebk   14jul92     Add POSOFF to OTOPIXCG. Type CDELT and CRVAL
-c                        as DOUBLE PRECISION
-c     nebk   07aug92     Try to instill some more modularity into all
-c                        coordinate conversions with PIX2WCG and
-c                        W2PIXCG, removing SETTRCG along the way.
-c     nebk   22oct92     Add units to velocity and frequency axes
-c                        in LIMTRCG.  SETLABCG was not correctly
-c                        setting the dms,hms PGTBOX strings.
-c     nebk   28nov92     Add 'abs/relkms' and 'abs/relghz' label types
-c                        Change "linear" to "abslin"
-c     nebk   02dec92     Add pix2wfcg, sunitcg
-c     nebk   24dec92     SPlit off from cgsubs.for
-c     nebk   27feb93     Appease Mr T and reformat call sequence
-c                        variable code
-c     mjs    15mar93     pgplot names have 6 or less chars.
-c     nebk   21apr93     vclabcg -> lab3cg and make it generic so that
-c                        whatever is on the third axis gets labelled
-c     nebk   27may93     Add YHTQCG and use it in a few places
-c     nebk   29may93     Replace CHTONVCG by new PGQCS
-c     nebk   02jun93     Replace VSSIZECG by new PGQVSZ
-c     nebk   02jun93     Move ANNDEFCG, VPADJCG, VPASPCG here from
-c                        CGSUBS.FOR as they now call PGPLOT
-c     nebk   16jun93     Remove VPASPCG.  Its functions can now be done
-c                        with PGQCS
-c     nebk   23jun93     Rework VPADJCG because rellin/abslin for RA
-c                        axes now gives radians of polar rotation
-c                        Correctly deal with user given scales
-c     nebk   25aug93     Add "absdeg" and "reldeg" axis types.
-c                        Scrap DEGHMSCG in favour of new DANGLEH
-c                        Add DOERASE to STRERSCG and LAB3CG
-c     nebk   13nov93     Minor change to AXLABCG with options strings
-c                        Better units for Amax in ANNVECCG
-c     nebk   14dec93     Variety of formatting changes in ANN* routines
-c     nebk   09jan94     Convert CRPIX to double precision
-c     nebk   17jan94     Add fiddle viewport and grey wedge to VPADJCG
-c     nebk   27jan94     Add WEDGCG, ERSWINCG and BOXCG
-c     nebk   02mar94     Justification->1.0 in PGMTXT call in AXLABCG
-c                        Imported SETLABCG from cgsubs.for as it now
-c                        calls PGQCS to be cleverer about displacements
-c     nebk   08mar94     Move WEDGECG here from CGSUBS.FOR. Variables
-c                        PLINC&PLAV -> KBIN(1:2)
-c     nebk   17mar94     Get rid of horrid hoop jumping in STRERSCG
-c                        with new PGSTBG routine
-c     nebk   15jun94     Include spatial binning info in ANNWINCG
-c                        CHange LAB3CG positioning algorithm slightly
-c                        Add justification to STRERSCG
-c     nebk   28jun94     Add ANNBOXCG, STRFMTCG, CONFMTCG and remove
-c                        CONLINCG.  Add box type images to VPSIZCG
-c     nebk   12jul94     Mess about with scale algorithm in VPADJCG
-c     nebk   02aug94     LAB3CG was getting value wrong when channels
-c                        averaged together
-c     nebk   24aug94     Change LAB3CG to use COSUBS coordinate
-c                        conversion routines to label with true world
-c                        value of third third axis
-c     nebk   23dec94     Strings (str1:4) not long enough in ANNWINCG
-c                        Increase length of STR1 in CONFMTCG
-c     nebk   05jan95     Replace PGGRAY by new PGIMAG.
-c     nebk   14apr95     Label grey scales as "pixel maps" in ANNGRSCG
-c     nebk   11aug95     Add arcmin labels and argument nofirst to
-c                        AXLABCG
-c     nebk   24aug95     Add grid argument to SETLABCG
-c     nebk   02sep95     Add BGCOLCG, LABAXCG, DRHORICG, DRVERTCG.
-c                        Remove BOXCG.  Add dotr argument to VPSIZCG and
-c                        AXLABCG.  Add temporary tick enquiry fuges
-c                        through QTIKCG, PGTBX1-3CG
-c     nebk   19oct95     Bias wedges by pixr(1) rather than image min
-c                        when log or square root transfer function
-c     nebk   22nov95     Fix problem with top/right labelling of multi-
-c                        panel plots.  Remove WEDISP from call sequence
-c                        of VPSIZCG
-c     nebk   23nov95     Add argument CONLAB to CONTURCG to label
-c                        contours and new call for CTYPECO
-c     nebk   29nov95     Use only W2WCO routines in NAXLABCG and
-c                        friends, rather than directly using co.for
-c                        routines
-c     nebk   18dec95     Add argument DOABUT to VPSIZCG. Fix truncated
-c                        strings in ANNINICG and ANNWINCG
-c     nebk   31jan96     More sig figs for pixel label in LAB3CG
-c     nebk   02may96     NAXLABCG was in a tangle for RA=0 crossing axes
-c                        when *not* labelled as 'hms'
-c     nebk   31oct96     Make sure zp is correct if just one plane
-c                        in NAXLABCG
-c     nebk   14fen97     Add argumebnt val3form to LAB3CG
-c     rjs    15apr97     Mr K was not checking for ANGL axis type in
-c                        LAB3CG -- and causing things to vomit.
-c     rjs    10nov97     Make more robust to things missing from
-c                        headers.
-c     jwr    08jul04     Replaced MemAlloc where MemFree was meant
-c     rgd    01aug08     Added the arcmas call for milliarcs
+c     Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: cgpgsubs.for,v 1.6 2010/07/27 05:46:55 cal103 Exp $
+c $Id: cgpgsubs.for,v 1.7 2011/08/29 02:16:28 cal103 Exp $
 c***********************************************************************
 c
 c* annboxCG -- Annotate plot with information from a box image
@@ -1334,33 +1227,33 @@ c
         else if (types(3).eq.'UV' .or. types(3).eq.'NONE' .or.
      *           types(3).eq.'ANGL' ) then
           ltype = 'absnat'
-        else if (types(3).eq.'RA' .or. types(3).eq.'LONG') then
+        else if (types(3).eq.'RA' .or. types(3).eq.'LNG') then
 c
 c Look for DEC axis amongst first two and find label type to
 c set label type for 3rd axis value
 c
-          if (types(1).eq.'DEC' .or. types(1).eq.'LATI') then
+          if (types(1).eq.'DEC' .or. types(1).eq.'LAT') then
             ltype = 'hms'
             if (labtyp(1).eq.'arcsec' .or. labtyp(1).eq.'arcmin' .or.
      +          labtyp(1).eq.'arcmas' .or. labtyp(1)(4:6).eq.'deg')
      +          ltype = labtyp(1)
-          else if (types(2).eq.'DEC' .or. types(2).eq.'LATI') then
+          else if (types(2).eq.'DEC' .or. types(2).eq.'LAT') then
             ltype = 'hms'
             if (labtyp(2).eq.'arcsec' .or. labtyp(2).eq.'arcmin' .or.
      +          labtyp(2).eq.'arcmas' .or. labtyp(2)(4:6).eq.'deg')
      +          ltype = labtyp(2)
           end if
-        else if (types(3).eq.'DEC' .or. types(3).eq.'LATI') then
+        else if (types(3).eq.'DEC' .or. types(3).eq.'LAT') then
 c
 c Look for RA axis amongst first two and find label type to
 c set label type for 3rd axis value
 c
-          if (types(1).eq.'RA' .or. types(1).eq.'LONG') then
+          if (types(1).eq.'RA' .or. types(1).eq.'LNG') then
             ltype = 'dms'
             if (labtyp(1).eq.'arcsec' .or. labtyp(1).eq.'arcmin' .or.
      +          labtyp(1).eq.'arcmas' .or. labtyp(1)(4:6).eq.'deg')
      +          ltype = labtyp(1)
-          else if (types(2).eq.'RA' .or. types(2).eq.'LONG') then
+          else if (types(2).eq.'RA' .or. types(2).eq.'LNG') then
             ltype = 'dms'
             if (labtyp(2).eq.'arcsec' .or. labtyp(2).eq.'arcmin' .or.
      +          labtyp(2).eq.'arcmas' .or. labtyp(2)(4:6).eq.'deg')
