@@ -589,179 +589,11 @@ c       The OFFSET directive is not applied to ANY position fields in
 c       succeeding directives that have %OTYPEs that are "hms" or "dms".
 c       I am too lazy to code it.
 c
-c$Id: cgdisp.for,v 1.14 2010/11/24 04:30:40 cal103 Exp $
+c$Id: cgdisp.for,v 1.15 2011/08/29 02:18:13 cal103 Exp $
 c--
 c
 c  History:
-c    nebk 27Aug89  Original and near perfect version
-c    rjs   4oct89  Fixed some nonstandard FORTRAN.
-c    rjs  23oct89  Changed 'pdev' to 'device'.
-c    rjs  15nov89  Changed call sequence to mkeyr.
-c    pjt   2may90  Replaced maxchan by mxchan because of new maxdim.h
-c    nebk  9sep90  Fixed some wrong code in dim. compat. checks.
-c    nebk 12oct90  Add floating solid/dashed contour level break point
-c    rjs  25oct90  Merges nebk's version with the BIMA version.
-c    nebk 17dec90  Increase size of annot to 3 characters
-c    nebk 09jan91  Combine plev and alev into slev. Replace chan,blc,trc
-c                  by region and reduced chan. combine ofile and otype
-c                  into olay. Combine annot, aspect & part of lines into
-c                  options. Interpret returned pgbegin status correctly.
-c    nebk 14jan91  Deal with blanked pixels and redistribute top level
-c                  code.
-c    nebk 18jan91  Add second contour image
-c    nebk 22jan91  Change default plot device to "?"
-c    nebk 30jan91  Change data statement for contour blanking to a
-c                  standard F77 syntax and speed up contouring for an
-c                  unblanked image
-c    nebk  5mar91  Change itoa to itoaf, atoi to atoif, atod to atodf
-c                  and add epoch to annotation of plot.
-c    mjs/nebk
-c         10mar91  Removed concatenated char*(*) variables in sub calls
-c    nebk 12mar91  Change keya to keyf for input files.
-c    nebk 09apr91  Better memory management to allow bigger images.
-c    nebk 24apr91  Adjust for new pgtime routines
-c    nebk 05jun91  Adjust calls to pgpage
-c    rjs  22jul91  Added 's' flag to BoxSet calls.
-c    nebk 10aug91  Was not recognizing "lo" type overlays.
-c    nebk 11aug91  Account for offset for log grey scales and cin=gin
-c    nebk 04sep91  Deal with discontinously selected groups of channels.
-c    nebk 11sep91  Add options=beam%% and rename from cgplot
-c    nebk 20sep91  Stripped subroutines common with pgcurs into
-c                  subspg.for
-c    nebk/mjs
-c         12nov91  Initialize ep2 if no second contour image
-c    nebk/mjs
-c         13mar92  Name change:  pgdisp -> cgdisp
-c    nebk 07apr92  Adapt to memalloc subs. & add source name to
-c                  annotation
-c    nebk 29apr92  Fix problem with character size getting lost and
-c                  rename *pg subroutines to *cg
-c    nebk 05may92  Full annotation not showing for nxy=1 (introduced
-c                  29apr92)
-c    nebk 18may92  Major road works to add extra contour & vector images
-c    nebk 02jun92  Allow contour images to be the same, bring olay
-c                  in-line with new labtyp & change call to chnselcg
-c    nebk 06jun92  Combine overlay drawing into one subroutine and cause
-c                  all lines in olay file begining with # to be ignored
-c    nebk 22jun92  Put all overlay info into overlay file and impliment
-c                  "line" and "clear" overlays. CHange options=equal
-c                  to unequal.
-c    nebk 04jul92  Strip otopix, settr, linelev, conwrite, contents of
-c                  fullann, vpchdef, chkds2 to cgsubs.for. add op=mirror
-c                  & replace readc/g/v with readimcg.  Use deghmscg
-c    nebk 10jul92  Go to optcg instead of options. Remove call to
-c                  BOXMASK
-c    nebk 17jul92  Add the overlay  offset line facility.
-c    nebk 09aug92  Modify for new o2pixcg/w2pixcg code, strip code to
-c                  strprpcg and omatchcg
-c    nebk 01oct92  Overlay size decoding code was rubbish as of 09aug92.
-c    nebk 16oct92  Add informational suggestion for options=unequal use
-c    nebk 28nov92  Add velocity and frequency label types and change
-c                  linear -> abslin.
-c    nebk 28jan93  Remove some unnecessary code to do with opening
-c                  the same file twice
-c    mjs  12mar93  Use maxnax.h file instead of setting own value.
-c    mjs  13mar93  pgplot subr names have less than 7 chars.
-c    nebk 21apr93  Replace options=chan,vel by generic 3pix,3vel
-c    nebk 20may93  Tell user to use options=relax when appropriate
-c    nebk 29may93  Replace call to chtonvcg by new PG routine pgqcs
-c    nebk 02jun93  Replace calls to vssizecg by new PG routine pgqvsz
-c    nebk 23jun93  Add options=wedge. Use pgqcs to remove need for
-c                  vpasp, change for new call to vpadjcg, rework beam
-c                  plotting.  Make "clear" overlays appear again!
-c    nebk 15jul93  Try and make beams come out right way around again
-c    nebk 24aug93  Convert overlay channel field to channel range. Add
-c                  LABTYPs "absdeg" and "reldeg".  Add options=noerase
-c                  and noepoch
-c    nebk 17nov93  's' flag to boxset. Add labtyp="none".
-c    nebk 14dec93  Add type=mask, ofig=circle. Strip limits to limitscg
-c    nebk 03jan94  New call to matchcg (formerly omatchcg)
-c    nebk 09jan94  Convert crpix to double precision
-c    nebk 29jan94  Add options=fiddle and range transfer function types
-c                  "heq" and "sqr".  Strip viewsize to vpsizcg. Allow
-c                  clear overlays to fall off edge of image.
-c    nebk 05feb04  Add 1 grey range/transfer f'n per subplot ability
-c    nebk 02mar94  New call and location for SETLABCG
-c    nebk 11mar94  Implement spatial binning and OPTIONS=SINGLE
-c    nebk 16jun94  Clarify use of region keyword, add overlay type
-c                  "ocircle" and change "circle" to include radius.
-c                  Better locating of overlay ID string.
-c    nebk 30jun94  Add image type "box", and add one more "line"
-c                  argument to make axes independent.
-c    nebk 08aug94  Remove 's' from boxset which naughty robbie included
-c                  in 1991. This broke the ability to handle
-c                  discontinuous planes (for 3 years !)
-c    nebk 26aug94  Change to convert overlay locations in true world
-c                  coordinates to linear world coordinates for plotting.
-c                  Linearize axis descriptors at the centre of the
-c                  displayed region.  Call new LAB3CG which labels with
-c                  true world coords on third axis.
-c    nebk 23dec94  Make sure selected region no bigger than image
-c    nebk 05jan95  Use new PGIMAG in favour of PGGRAY adding support
-c                  for fiddling of lookup table for hardcopy devices
-c                  Make sure annotation writes reference location as
-c                  original, not linearized version
-c    nebk 20feb95  Add colour table selection to keyword "range" and
-c                  get pgimag to make black on white for hard copy.
-c                  Move to image type "pixel" instead of "grey"
-c    nebk 10apr95  Accomodate absolute b&w lookup table
-c    nebk 11aug95  Reversed lookup tables getting lost, add
-c                  labtyp=arcmin options=nofirst
-c    nebk 03sep95  Options=grid,trlab. Nonlinear axis labels and detect
-c                  if display has black or white background
-c    nebk 09oct95  More care with overlay display channels
-c    nebk 19oct95  Eliminate MAXGR parameter in favour of MAXCHAN
-c    nebk 12nov95  Change to deal internally only in absolute pixels
-c                  Better job on overlays, add options=nodistort
-c                  '*lin' -> '*nat'
-c    nebk 22nov95  Add ellipse overlays
-c    nebk 29nov95  Add options=conlab
-c    nebk 04dec95  If > 1 contour image, their sizes were being lost
-c    nebk 18dec95  Add options=abut
-c    nebk 10jan96  NAXIS in POSDEC2 was not always beeing assigned to
-c    nebk 30jan96  Remove restictions on CHAN so that groups of channels
-c                  can now overlap
-c    nebk 23may96  Bump up size of OLAY line
-c    nebk 04sep96  Remove spurious call to pgsci in subroutine DROVER
-c    nebk 24sep96  Remove another (!) spurious call to pgsci in DROVER
-c    nebk 31oct96  FIx problem with an incorrect krng sometimes being
-c                  fed to NAXLABCG
-c    nebk 23jan97  Was getting vector scales wrong if first subplot
-c                  all blank.
-c    nebk 13feb97  Add keyword "3form", finally admitting defeat
-c    nebk 24mar97  Add COLS1 keyword
-c    nebk 01apr97  Don't write overlat ID string if overlay off plot
-c    nebk 15may97  Options=nofirst got broken at some point
-c    nebk 16may97  Replciate one value for all contours for COLS1
-c    nebk 18jul97  Doc change (masks ANDed not ORed)
-c    rjs  21jul97  Call initco earlier.
-c    rjs  21aug97  Missed calling initco earlier for boxes.
-c    nebk 25mar98  Channel range was wrongly interpreted for line
-c                  overlays
-c    rjs  31mar98  Get it to agree with documentation as far as cols1
-c                  parameter goes.
-c    nebk 16jun98  FIx problem in posdec2 where ocen2 was of
-c                  size 2 instead of 3.  Was stuffing up w2wco
-c    cjp  16jun98  Added "sym" overlay type
-c    nebk 16jul98  Fix problem when region selected planes were not
-c                  contiguious
-c    nebk 09sep98  "sym" overlay ID strings were not being written
-c                  in the right place
-c    nebk 17sep98  hardcopy devices were over-riding too much colour
-c                  table control
-c    nebk 09apr99  fix problem with hard copy colour tbales and
-c                  multipanel plots
-c    rjs  08may00  Change incorrect keyf call to keya.
-c    rjs  13jul00  Correct angle of beam plotting when there is a
-c                  rotation between sky and pixel grid.
-c    dpr  14feb01  Add beamtyp keyword
-c    dpr  27feb01  Added scale-bar
-c    dpr  18jun01  Add option blacklabel
-c    nebk 14nov01  For box type, make sure abs max comes from entire
-c                  image
-c    pjt  19jan02  retrofitted options=corner introduced in 14feb01/BIMA
-c                  version
-c    pjt  29jan02  documented beamtyp=n, worked around a miriadB bug
+c    Refer to the RCS log, v1.1 includes prior revision information.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -829,8 +661,8 @@ c     Plotting parameters.
       data getvsc /.true./
 c-----------------------------------------------------------------------
       version = versan ('cgdisp',
-     *                  '$Revision: 1.14 $',
-     *                  '$Date: 2010/11/24 04:30:40 $')
+     *                  '$Revision: 1.15 $',
+     *                  '$Date: 2011/08/29 02:18:13 $')
 c
 c Get user inputs
 c
@@ -1065,14 +897,14 @@ c
              if (bgcol.eq.1) call ofmcmp
            endif
 c
+c Apply user specified OFM to PGPLOT device.
+c
+           if (hard.ne.'YES') call intofm(coltab(j), j, pixr)
+c
 c Draw image
 c
            call pgimag(memr(ipim), win(1), win(2), 1, win(1),
      *                  1, win(2), pixr2(1), pixr2(2), tr)
-c
-c Apply user specified OFM to PGPLOT device.
-c
-           if (hard.ne.'YES') call intofm(coltab(j), j, pixr)
          endif
 
          call pgslw(lwid(1))
@@ -3797,13 +3629,13 @@ c       Do we have a longitude/latitude pair?
         lng = 0
         lat = 0
         call axtypco(lun, 2, 1, ctype)
-        if (ctype(1).eq.'RA' .or. ctype(1).eq.'LONG') then
-          if (ctype(2).eq.'DEC' .or. ctype(2).eq.'LATI') then
+        if (ctype(1).eq.'RA' .or. ctype(1).eq.'LNG') then
+          if (ctype(2).eq.'DEC' .or. ctype(2).eq.'LAT') then
             lng = 1
             lat = 2
           endif
-        else if (ctype(1).eq.'DEC' .or. ctype(1).eq.'LATI') then
-          if (ctype(1).eq.'RA' .or. ctype(1).eq.'LONG') then
+        else if (ctype(1).eq.'DEC' .or. ctype(1).eq.'LAT') then
+          if (ctype(1).eq.'RA' .or. ctype(1).eq.'LNG') then
             lng = 2
             lat = 1
           endif
@@ -3893,13 +3725,13 @@ c       Do we have a longitude/latitude pair?
         lng = 0
         lat = 0
         call axtypco(lun, 2, 1, ctype)
-        if (ctype(1).eq.'RA' .or. ctype(1).eq.'LONG') then
-          if (ctype(2).eq.'DEC' .or. ctype(2).eq.'LATI') then
+        if (ctype(1).eq.'RA' .or. ctype(1).eq.'LNG') then
+          if (ctype(2).eq.'DEC' .or. ctype(2).eq.'LAT') then
             lng = 1
             lat = 2
           endif
-        else if (ctype(1).eq.'DEC' .or. ctype(1).eq.'LATI') then
-          if (ctype(1).eq.'RA' .or. ctype(1).eq.'LONG') then
+        else if (ctype(1).eq.'DEC' .or. ctype(1).eq.'LAT') then
+          if (ctype(1).eq.'RA' .or. ctype(1).eq.'LNG') then
             lng = 2
             lat = 1
           endif
