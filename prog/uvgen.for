@@ -18,7 +18,7 @@ c@ source
 c       The name of a text file containing the source components, one
 c       component per line.  There is no default.  The source components
 c       are elliptical Gaussian components.  Each line consists of at
-c       least three and up to nine values:
+c       least three and up to ten values:
 c         flux,dra,ddec,bmaj,bmin,bpa,iflux,ipa,vflux
 c       where
 c         flux:          Total flux in Jy.
@@ -34,6 +34,7 @@ c                        percentage polarization and position angle.
 c                        The default is 0.
 c         vflux:         Percentage circular polarization.  The default
 c                        is 0.
+c         alpha:         Spectral index. The default is 0.
 c       The text file is free-format, with commas or blanks used to
 c       separate the values.  Comments (starting with #) can be included
 c       in the file.
@@ -234,6 +235,13 @@ c       composed of a correlator efficiency (0.88) and an antenna
 c       efficiency (0.65 at 6 cm).  The overall result is jyperk=12.7.
 c       The default jyperk=150, a typical value for the Hat Creek 6.1m
 c       antennas.
+c@ options
+c       A number of options can be specified, separated by commas.
+c         'leakfvar' Add linear variation of leakage parameters across
+c                    each spectral window
+c         'delay'    Add delay noise instead of phase noise, i.e., make
+c                    the phases vary with frequency
+c         'bandpass' Add a semi random bandpass function to the spectra
 c@ out
 c       This gives the name of the output Miriad data file.  There is
 c       no default.  If the dataset exists, visibilities are appended to
@@ -342,6 +350,8 @@ c    13mar05 rjs   Add antenna azimuth and elevation to output dataset.
 c    01jan07 rjs   Parameterise number of windows than this can handle.
 c                  Tidy up messages.
 c    05apr11 mhw   Change epoch to J2000
+c    01aug11 mhw   Add variation with frequency in phase and leakage,
+c                  bandpass and spectral index.
 c
 c  Bugs/Shortcomings:
 c    * Frequency and time smearing is not simulated.
@@ -373,7 +383,8 @@ c-----------------------------------------------------------------------
       integer MW
       parameter(MW=4)
       character version*(*)
-      parameter(version = 'Uvgen: version 1.0 01-Jan-07')
+      parameter(version = 'Uvgen: $Revision: 1.6 $, '//
+     *  '$Date: 2011/09/04 23:19:29 $')
       integer ALTAZ,EQUATOR,XYEW
       parameter(ALTAZ=0,EQUATOR=1,XYEW=3)
       integer PolRR,PolLL,PolRL,PolLR,PolXX,PolYY,PolXY,PolYX
@@ -385,14 +396,14 @@ c-----------------------------------------------------------------------
       include 'uvgen.h'
 
       real corfin(MW),corbw(MW),zeeman
-      complex vis,modI,oldI,gradI,gain(MAXANT),leak(2,MAXANT)
+      complex vis,modI,oldI,gradI,gain(2,MAXANT),leak(4,MAXANT)
       complex wcorr(maxspect,maxpol),chan(MAXCHAN,maxpol)
-      real wsignal(maxspect),tpower(MAXANT),pnoise(MAXANT)
+      real wsignal(maxspect),tpower(MAXANT),pnoise(2,MAXANT)
       logical flags(MAXCHAN)
-      logical donoise,dogains,doleak,dopoint
+      logical donoise,dogains,doleak,dopoint,dofleak,dodelay,doband
       real sind,cosd,sinl,cosl,sinel,flux,dra,ddec
-      double precision freq,iffreq,dtemp
-      real wmaj,wmin,wpa,poln,polpa,polvv,x,z,h,sinha,cosha,ha,haend
+      double precision freq,iffreq,dtemp,rfreq
+      real wmaj,wmin,wpa,poln,polpa,polvv,alp,x,z,h,sinha,cosha,ha,haend
       double precision antaz,antel
       double precision bxx,byy,bzz,bxy,byx
       real pbfwhm(3),center(2,MAXPNT),evector
@@ -424,7 +435,7 @@ c  Variables describing the source.
 c
       integer ns
       real ta(maxsrc),sx(maxsrc),sy(maxsrc),smaj(maxsrc),smin(maxsrc)
-      real spa(maxsrc),per(maxsrc),pa(maxsrc),polv(maxsrc)
+      real spa(maxsrc),per(maxsrc),pa(maxsrc),polv(maxsrc),alpha(maxsrc)
       real smajd(maxsrc),smind(maxsrc),tad(maxsrc),sxd(maxsrc),
      *     syd(maxsrc),szd(maxsrc)
 c
@@ -492,6 +503,7 @@ c
 
       call keyr('baseunit',utns,1.0)
       call keyd('freq',freq,100.d0)
+      rfreq = freq
       call keyd('freq',iffreq,0.0d0)
       call keyt('time',timeout,'atime',0.d0)
       if(timeout.le.1)call dayjul('80JAN01',timeout)
@@ -563,11 +575,11 @@ c
       call keyr('tpower',trms,0.)
       call keyr('tpower',tatm,0.)
       call keyr('jyperk',jyperk,150.)
+      call getopt(dofleak,dodelay,doband)
 
       call keya('out',outfile,' ')
       if(outfile.eq.' ')
      *  call bug('f','Output file must be given')
-c        call GetOpt(dochi,dogaus)
       call keyfin
 c
 c  Determine the rise and set times of the source, at the minimum
@@ -636,7 +648,7 @@ c
       call output('-------------------')
       call hiswrite(unit,'UVGEN: Source specifications:')
       write(line,'(a)')'     Flux     RA      DEC    Major  Minor  '//
-     *  '  Axis    Pol-I  Pol-PA  Pol-V'
+     *  '  Axis    Pol-I  Pol-PA  Pol-V alpha'
       call output(line)
       umsg = 'UVGEN: '//line(1:75)
       call hiswrite(unit, umsg )
@@ -662,11 +674,12 @@ c
         call tinGetr(poln,0.0)
         call tinGetr(polpa,0.0)
         call tinGetr(polvv,0.0)
+        call tinGetr(alp,0.0)
         ns = ns + 1
         if(ns.gt.maxsrc)
      *    call bug('f','Max number of source components read')
-        write(line,'(i2,f7.2,2f8.1,2f8.2,f8.1,f8.1,f8.2,f8.1)')
-     *        ns,flux,dra,ddec,wmaj,wmin,wpa,poln,polpa,polvv
+        write(line,'(i2,f7.2,2f8.1,2f8.2,f8.1,f8.1,f8.2,f8.1,f6.2)')
+     *        ns,flux,dra,ddec,wmaj,wmin,wpa,poln,polpa,polvv,alp
         call output(line)
         umsg = 'UVGEN: '//line
         call hiswrite(unit, umsg )
@@ -681,6 +694,7 @@ c
         per(ns) = poln / 100.
         pa(ns)  = polpa * pi/180
         polv(ns) = polvv / 100.
+        alpha(ns) = alp
       enddo
 
       call tinClose
@@ -924,11 +938,12 @@ c
         call output('-------------------')
         call output('Polarization Leakage Terms')
         call hiswrite(unit,'UVGEN: Polarization Leakage Terms')
-        call gaus(leak,4*nant)
+        call gaus(Leak,8*nant)
         Leak(1,1) = 0
+        if (dofleak) Leak(3,1)=0
         do i=1,nant
-          Leak(1,i) = leakrms * leak(1,i)
-          Leak(2,i) = leakrms * leak(2,i)
+          Leak(1,i) = leakrms * Leak(1,i)
+          Leak(2,i) = leakrms * Leak(2,i)
           write(line,'(1x,a,i2,a,f6.3,a,f6.3,a,f6.3,a,f6.3,a)')
      *      'Ant',i,':Dx,Dy = (',real(Leak(1,i)),',',
      *                          aimag(Leak(1,i)),'),(',
@@ -936,7 +951,18 @@ c
      *                          aimag(Leak(2,i)),')'
           call output(line)
           call hiswrite(unit,'UVGEN: '//line)
-        enddo
+          if (dofleak) then
+            Leak(3,i) = leakrms * Leak(3,i)
+            Leak(4,i) = leakrms * Leak(4,i)
+            write(line,'(1x,a,i2,a,f6.3,a,f6.3,a,f6.3,a,f6.3,a)')
+     *      'Ant',i,':Dx,Dy = (',real(Leak(3,i)),',',
+     *                          aimag(Leak(3,i)),'),(',
+     *                           real(Leak(4,i)),',',
+     *                          aimag(Leak(4,i)),')'
+            call output(line)
+            call hiswrite(unit,'UVGEN: '//line)
+          endif
+         enddo
       endif
 c
 c  Set atmospheric gain.
@@ -979,8 +1005,12 @@ c  Compute new antenna gains.
 c
         if(dogains)then
           do n = 1, nant
-            pnoise(n) = rang(0.,prms)
-            gain(n) = rang(1.,arms) * expi(pnoise(n))
+            pnoise(1,n) = rang(0.,prms)
+            gain(1,n) = rang(1.,arms) * expi(pnoise(1,n))
+            if (dodelay) then
+              pnoise(2,n) = rang(0.,prms)
+              gain(2,n) = gain(1,n) * expi(pnoise(2,n))
+            endif  
           enddo
         endif
 
@@ -1021,7 +1051,7 @@ c
           endif
           if(trms.gt.0. .or. tatm.gt.0.) then
             do n = 1, nant
-              tpower(n) = rang(1.,trms)*systemp(1) + tatm*pnoise(n)
+              tpower(n) = rang(1.,trms)*systemp(1) + tatm*pnoise(1,n)
             enddo
             call uvputvri(unit,'ntpower',nant,1)
             call uvputvrr(unit,'tpower',tpower,nant)
@@ -1054,8 +1084,9 @@ c
                 do ipol = 1, npol
                   do is = 1,nwide
                     call modvis(preamble(1),preamble(2),preamble(3),
-     *                dble(wfreq(is)),ns,tad,sxd,syd,szd,smaj,smind,
-     *                spa,per,pa,polV,pol(ipol),psi,vis,zeeman,modI)
+     *                dble(wfreq(is)),rfreq,ns,tad,sxd,syd,szd,smaj,
+     *                smind,spa,per,pa,polV,alpha,pol(ipol),psi,vis,
+     *                zeeman,modI)
                     wsignal(is) = wsignal(is) +
      *                                real(vis)**2 + aimag(vis)**2
                     wcorr(is,ipol) = vis
@@ -1065,10 +1096,10 @@ c
      *             rang(0.,patm * baseline**pslope * sinel**pelev))
                 if(doleak)
      *             call PolLeak(wcorr,nwide,maxspect,npol,
-     *                leak(1,m),leak(1,n))
+     *                leak(1,m),leak(1,n),.false.)
                 if(dogains)
      *             call AntGain(wcorr,nwide,maxspect,npol,
-     *                Gain(m)*conjg(gain(n)*gatm))
+     *                gain(1,m),gain(1,n),gatm,.false.,.false.,1,1)
                 if(donoise)
      *             call NoiseAdd(wcorr,nwide,maxspect,npol,wrms)
               endif
@@ -1083,8 +1114,8 @@ c
                     do ic = ischan(is), ischan(is)+nschan(is)-1
                       freq = sfreq(is) + (ic-ischan(is))*sdf(is)
                       call modvis(preamble(1),preamble(2),preamble(3),
-     *                  freq,ns,tad,sxd,syd,szd,smajd,smind,spa,
-     *                  per,pa,polV,pol(ipol),psi,vis,zeeman,modI)
+     *                  freq,rfreq,ns,tad,sxd,syd,szd,smajd,smind,spa,
+     *                  per,pa,polV,alpha,pol(ipol),psi,vis,zeeman,modI)
 
                       if(famp.ne.0. .and. fwid.ne.0.)then
                           xx = (real(freq)-fcen)/fwid
@@ -1112,17 +1143,16 @@ c
                           oldI = modI
                         endif
                       endif
-
                       chan(ic,ipol) = vis
                     enddo
                   enddo
                 enddo
                 if(dogains)
      *             call AntGain(chan,numchan,MAXCHAN,npol,
-     *                Gain(m)*conjg(gain(n)))
+     *                gain(1,m),gain(1,n),gatm,dodelay,doband,m,n)
                 if(doleak)
      *             call PolLeak(chan,numchan,MAXCHAN,npol,
-     *                leak(1,m),leak(1,n))
+     *                leak(1,m),leak(1,n),dofleak)
                 if(donoise)
      *             call NoiseAdd(chan,numchan,MAXCHAN,npol,rrms)
               endif
@@ -1177,6 +1207,28 @@ c
 
       call hisclose(unit)
       call uvclose(unit)
+      end
+c********1*********2*********3*********4*********5*********6*********7*c
+      subroutine GetOpt(dofleak,dodelay,doband)
+c
+      logical dofleak,dodelay,doband
+c
+c  Get the user options
+c
+c  Output:
+c    dofleak   Add frequency variation to leakage terms
+c    dodelay   Add frequency variation to phase terms
+c    doband    Add a bandpass function
+c-----------------------------------------------------------------------
+      integer nopt
+      parameter (nopt=3)
+      character opts(nopt)*8
+      logical present(nopt)
+      data opts/'leakfvar','delay   ','bandpass'/
+      call options('options',opts,present,nopt)
+      dofleak = present(1)
+      dodelay = present(2)
+      doband = present(3)
       end
 c********1*********2*********3*********4*********5*********6*********7*c
       subroutine GetSrc(pbfwhm,ra0,dec0,center,
@@ -1268,11 +1320,12 @@ c-----------------------------------------------------------------------
 
       end
 c***********************************************************************
-      subroutine PolLeak(vis,nchan,maxchan,npol,D1,D2)
+      subroutine PolLeak(vis,nchan,maxchan,npol,D1,D2,dofleak)
 
       integer nchan,maxchan,npol
       complex vis(maxchan,npol)
-      complex D1(2),D2(2)
+      complex D1(4),D2(4)
+      logical dofleak
 
 c  Allow some of the signal to leak from one polarization to another.
 c  Despite the variable names, this works equally well fro circular and
@@ -1286,6 +1339,8 @@ c    D1,D2      Leakage terms of the two antennas.  Leak1(1) is the
 c               leakage of Y into the X feed (or L into R) for antenna
 c               1.  Leak1(2) is the leakage of X into the Y (or R into
 c               L) for antenna 1.
+c    dofleak    If true, use indices 3 and 4 of D1 and D2 to introduce
+c               variation with frequency
 c    npol       Number of polarizations.  It must be 4!
 c    maxchan    Size of the "vis" array.
 c    nchan      Number of used channels.
@@ -1294,48 +1349,85 @@ c    vis        The visibility data.
 c-----------------------------------------------------------------------
       integer X,Y,XX,YY,XY,YX
       parameter(X=1,Y=2,XX=1,YY=2,XY=3,YX=4)
-      integer i
-      complex Vxx,Vxy,Vyx,Vyy
+      integer i,n
+      complex Vxx,Vxy,Vyx,Vyy,D1X,D1Y,D2X,D2Y
 
       if(npol.ne.4)call bug('f','npol not 4, in PolLeak')
 
+      n = max(1,nchan-1)
       do i=1,nchan
         Vxx = vis(i,XX)
         Vyy = vis(i,YY)
         Vxy = vis(i,XY)
         Vyx = vis(i,YX)
-        vis(i,XX) = Vxx + D1(X)*Vyx + conjg(D2(X))*Vxy
-     *                  + D1(X)*      conjg(D2(X))*Vyy
-        vis(i,YY) = Vyy + D1(Y)*Vxy + conjg(D2(Y))*Vyx
-     *                  + D1(Y)*      conjg(D2(Y))*Vxx
-        vis(i,XY) = Vxy + D1(X)*Vyy + conjg(D2(Y))*Vxx
-     *                  + D1(X)*      conjg(D2(Y))*Vyx
-        vis(i,YX) = Vyx + D1(Y)*Vxx + conjg(D2(X))*Vyy
-     *                  + D1(Y)*      conjg(D2(X))*Vxy
+        D1X = D1(X)
+        D1Y = D1(Y)
+        D2X = D2(X)
+        D2Y = D2(Y)
+        if (dofleak.and.nchan.gt.1) then
+          D1X = D1X*(nchan-i)/n + D1(X+2)*(i-1)/n
+          D1Y = D1Y*(nchan-i)/n + D1(Y+2)*(i-1)/n
+          D2X = D2X*(nchan-i)/n + D2(X+2)*(i-1)/n
+          D2Y = D2Y*(nchan-i)/n + D2(Y+2)*(i-1)/n
+        endif
+        vis(i,XX) = Vxx + D1X*Vyx + conjg(D2X)*Vxy
+     *                  + D1X*      conjg(D2X)*Vyy
+        vis(i,YY) = Vyy + D1Y*Vxy + conjg(D2Y)*Vyx
+     *                  + D1Y*      conjg(D2Y)*Vxx
+        vis(i,XY) = Vxy + D1X*Vyy + conjg(D2Y)*Vxx
+     *                  + D1X*      conjg(D2Y)*Vyx
+        vis(i,YX) = Vyx + D1Y*Vxx + conjg(D2X)*Vyy
+     *                  + D1Y*      conjg(D2X)*Vxy
       enddo
 
       end
 c***********************************************************************
-      subroutine AntGain(vis,nchan,maxchan,npol,Gain)
+      subroutine AntGain(vis,nchan,maxchan,npol,G1,G2,
+     *                   gAtm,dodelay,doband,ant1,ant2)
 
-      integer nchan,maxchan,npol
+      integer nchan,maxchan,npol,ant1,ant2
       complex vis(maxchan,npol)
-      complex Gain
+      complex G1(2), G2(2), gAtm
+      logical dodelay,doband
 c
 c  Apply a gain to the data.
 c
 c  Input:
-c    Gain       The gain to apply.
+c    G1,G2       The gain to apply.
 c    npol       Number of polarizations.
 c    maxchan    Size of the "vis" array.
 c    nchan      Number of used channels.
 c  Input/Output:
 c    vis        The visibility data.
 c-----------------------------------------------------------------------
-      integer i,j
+      integer i,j,n
+      Complex Gain, Gain1, Gain2,g, expi
+      real mag,fac
 
-      do j=1,npol
-        do i=1,nchan
+      Gain = G1(1) * conjg(G2(1) * gAtm)
+      n = max(1,nchan-1)
+      do i=1,nchan
+        if (dodelay) then
+          fac = (nchan-i*1.0)/n
+          g = G1(1)/G1(2)
+          mag=abs(g)
+          Gain1 = G1(2) * (1+(mag-1)*fac)*(g/mag)**fac
+          g = G2(1)/G2(2)
+          mag=abs(g)
+          Gain2 = G2(2) * (1+(mag-1)*fac)*(g/mag)**fac
+          Gain = Gain1 * conjg(Gain2 * gAtm)
+        endif
+c
+c  Add a complex bandpass, different one for each antenna
+c        
+        if (doband) then
+          Gain1 = 0.75 + 0.5*sin(3.1415*i/nchan) + 
+     *      0.1*expi(3.1415*(5+ant1/5.0)*i/nchan)
+          Gain2 = 0.75 + 0.5*sin(3.1415*i/nchan) +
+     *      0.1*expi(3.1415*(5+ant2/5.0)*i/nchan)
+          Gain = Gain * Gain1 * conjg(Gain2)
+        endif
+        do j=1,npol
           vis(i,j) = Gain * vis(i,j)
         enddo
       enddo
@@ -1448,13 +1540,13 @@ c
 
       end
 c***********************************************************************
-      subroutine modvis (uns,vns,wns,freq,ns,ta,sx,sy,sz,
-     *        smaj,smin,spa,per,pa,polV,code,psi,cont,zeeman,modI)
+      subroutine modvis (uns,vns,wns,freq,rfreq,ns,ta,sx,sy,sz,
+     *        smaj,smin,spa,per,pa,polV,alpha,code,psi,cont,zeeman,modI)
 
-      double precision uns,vns,wns,freq
+      double precision uns,vns,wns,freq,rfreq
       integer ns,code
       real ta(ns),sx(ns),sy(ns),sz(ns),smaj(ns),smin(ns)
-      real spa(ns),per(ns),pa(ns),polV(ns)
+      real spa(ns),per(ns),pa(ns),polV(ns),alpha(ns)
       real psi,zeeman
       complex cont,modI
 c
@@ -1465,6 +1557,7 @@ c
 c  Input:
 c    uns,vns,wns The (u,v,w) coordinate of the visibility, in nanosec.
 c    freq       The frequency of the visibility, in GHz.
+c    rfreq      The reference frequency (for spectral index)
 c    code       Polarisation code (AIPS/FITS style).
 c    ns         Number of gaussians in the model.
 c    psi        Parallactic angle, in radians.
@@ -1476,6 +1569,7 @@ c    spa        Gaussian position angle, in radians.
 c    per        Fractional linear polarisation (in range [0,1]).
 c    pa         Position angle of the polarisation, in radians.
 c    polV       Fractional circular polarisation (in range [0,1]).
+c    alpha      Spectral index
 c    zeeman     Zeeman coefficient.
 c  Output:
 c    cont       The computed visibility.
@@ -1486,7 +1580,7 @@ c-----------------------------------------------------------------------
       parameter(PolI=1,PolRR=-1,PolLL=-2,PolRL=-3,PolLR=-4)
       parameter(       PolXX=-5,PolYY=-6,PolXY=-7,PolYX=-8)
 
-      real p,umaj,umin,uvmaj,uvmin,gaus,flux
+      real p,umaj,umin,uvmaj,uvmin,gaus,flux,sifac
       complex vis
       logical inten
       double precision u,v,w
@@ -1510,6 +1604,7 @@ c
       cont = (0.,0.)
       modI = (0.,0.)
       do j = 1,ns
+        sifac = (freq/rfreq)**alpha(j)
         flux = 0
         if(polV(j).ne.0..or.per(j).ne.0.or.inten.or.zeeman.ne.0.)then
           uvmaj = 1. / ( pi * 0.6 * smaj(j) )
@@ -1553,8 +1648,8 @@ c
           endif
 
           p=2*pi*(u*sx(j)+v*sy(j)+w*(sz(j)-1))
-          cont = cont + vis * expi(p) * flux
-          modI = modI + expi(p) * flux
+          cont = cont + vis * expi(p) * flux * sifac
+          modI = modI + expi(p) * flux * sifac
         endif
       enddo
       end
@@ -1663,37 +1758,4 @@ c
           enddo
         endif
       enddo
-      end
-c********1*********2*********3*********4*********5*********6*********7*c
-c options not currently used:
-c@ options
-c       This gives extra processing options.  Several options can be
-c       given, each separated by commas.  They may be abbreviated to the
-c       minimum needed to avoid ambiguity.  Possible options are:
-c          'parang'     Set the effective parallactic angle to zero, for
-c                       cases where this is already done, e.g. corrected
-c                       data, equatorial mounts or polarization
-c                       rotators.
-c          'gaussian'   Make a Gaussian spectral line with
-c                       center=fcen and FWHM=fwid [GHz].
-      subroutine GetOpt(dochi,dogaus)
-
-      logical dochi,dogaus
-c
-c  Determine extra processing options.
-c
-c  Output:
-c    dochi      Set the effective parallactic angle to zero
-c    dogaus     Make Gaussian line profile.
-c-----------------------------------------------------------------------
-      integer nopt
-      parameter(nopt=2)
-      character opts(nopt)*9
-      logical present(nopt)
-      data opts/'parang   ','gaussian '/
-
-      call options('options',opts,present,nopt)
-      dochi  = present(1)
-      dogaus = present(2)
-
       end
