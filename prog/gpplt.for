@@ -105,21 +105,21 @@ c    rjs  23jan07 Handle second leakage table.
 c    mhw  26aug09 Handle multiple bandpass solution intervals
 c  Bugs:
 c------------------------------------------------------------------------
-	integer MAXSELS
+	integer MAXSELS,MAXFBIN,MAXSOLN
 	character version*(*)
-	parameter(MAXSELS=256)
+	parameter(MAXSELS=256,MAXFBIN=16,MAXSOLN=1024)
 	parameter(version='GpPlt: version 23-Jan-07')
 	include 'gpplt.h'
 	integer iostat,tIn,nx,ny,nfeeds,nants,nsols,ierr,symbol,nchan
-	integer ntau,length,i,off,nbpsols
+	integer ntau,length,i,k,off,nbpsols,nfbin,ngains
 	character vis*64,device*64,logfile*64,BaseTime*20
-	double precision T0
+	double precision T0,freq(MAXFBIN),time(maxTimes)
 	logical doamp,dophase,doreal,doimag,dogains,dopol,dodtime,doxy
 	logical doxbyy,doplot,dolog,more,ltemp,dodots,dodelay,dopass
 	logical dospec,dowrap,dopol2
 	complex G1(maxGains),G2(maxGains)
 	real alpha(maxGains)
-	real times(maxTimes),range(2)
+	real rtime(maxTimes),range(2)
 	character Feeds(3)*1
 	real sels(MAXSELS)
 c
@@ -247,43 +247,47 @@ c
 c  Do the gain plots.
 c
 	if(dogains.or.doxy.or.doxbyy.or.dodelay.or.dospec)then
-	  call GLoad(tIn,T0,times,G1,nfeeds,ntau,nants,nsols,sels,
-     *	    maxGains,maxTimes)
-	  if(.not.dodtime)call TScale(times,nsols)
+          call uvGnRead(tIn,G1,time,freq,ngains,nfeeds,ntau,nsols,
+     *                  nfbin,maxgains,maxtimes,maxfbin)
+          nants=ngains/(nfeeds+ntau)
+          call GainSel(sels,G1,time,T0,nants,nfeeds,ntau,nsols,nfbin)
+	  call TScale(time,T0,rtime,dodtime,nsols)
 	  call JulDay(T0,'H',BaseTime)
 	  call output('The base time is '//BaseTime)
 	  if(doLog)
      *	    call LogWrite('# The base time is '//BaseTime,more)
+          do k=0,nfbin
 	  if(dogains)then
-	    call GnCvt(G1,G2,nfeeds,ntau,nants*nsols)
-	    call GainPlt(vis,times,G2,nfeeds,nants,nsols,range,
+	    call GnCvt(G1,G2,k,nfeeds,ntau,nants*nsols)
+	    call GainPlt(vis,rtime,G2,nfeeds,nants,nsols,range,
      *		Feeds(nfeeds),doamp,dophase,dowrap,doreal,doimag,
-     *		doplot,dolog,dodtime,symbol,nx*ny)
+     *		doplot,dolog,dodtime,symbol,nx*ny,k)
 	  endif
 	  if(doxy)then
-	    call XYCvt(G1,G2,nfeeds,ntau,nants*nsols,.true.)
-	    call GainPlt(vis,times,G2,1,nants,nsols,range,
+	    call XYCvt(G1,G2,k,nfeeds,ntau,nants*nsols,.true.)
+	    call GainPlt(vis,rtime,G2,1,nants,nsols,range,
      *		'XY',doamp,dophase,dowrap,doreal,doimag,
-     *		doplot,dolog,dodtime,symbol,nx*ny)
+     *		doplot,dolog,dodtime,symbol,nx*ny,k)
 	  endif
 	  if(doxbyy)then
-	    call XYCvt(G1,G2,nfeeds,ntau,nants*nsols,.false.)
-	    call GainPlt(vis,times,G2,1,nants,nsols,range,
+	    call XYCvt(G1,G2,k,nfeeds,ntau,nants*nsols,.false.)
+	    call GainPlt(vis,rtime,G2,1,nants,nsols,range,
      *		'X*Y',doamp,dophase,dowrap,doreal,doimag,
-     *		doplot,dolog,dodtime,symbol,nx*ny)
+     *		doplot,dolog,dodtime,symbol,nx*ny,k)
 	  endif
 	  if(dodelay)then
-	    call AlphaCvt(G1,alpha,nfeeds,ntau,nants*nsols,.true.)
-	    call AlphaPlt(vis,times,alpha,nants,nsols,range,
+	    call AlphaCvt(G1,k,alpha,nfeeds,ntau,nants*nsols,.true.)
+	    call AlphaPlt(vis,rtime,alpha,nants,nsols,range,
      *		'Delay (nsec)',
-     *		doplot,dolog,dodtime,symbol,nx*ny)
+     *		doplot,dolog,dodtime,symbol,nx*ny,k)
 	  endif
 	  if(dospec)then
-	    call AlphaCvt(G1,alpha,nfeeds,ntau,nants*nsols,.false.)
-	    call AlphaPlt(vis,times,alpha,nants,nsols,range,
+	    call AlphaCvt(G1,k,alpha,nfeeds,ntau,nants*nsols,.false.)
+	    call AlphaPlt(vis,rtime,alpha,nants,nsols,range,
      *		'Spectral Correction',
-     *		doplot,dolog,dodtime,symbol,nx*ny)
+     *		doplot,dolog,dodtime,symbol,nx*ny,k)
 	  endif
+          enddo
 	endif
 c
 c  Do the bandpass plots.
@@ -293,9 +297,9 @@ c
           i=1
           nbpsols=1
           do while (i.le.nbpsols)
-	    call BLoad(tIn,off,times,G1,T0,nfeeds,nants,nchan,
+	    call BLoad(tIn,off,rtime,G1,T0,nfeeds,nants,nchan,
      *		nbpsols,sels,maxGains,maxTimes)
-	    call BPPlt(times,G1,T0,nfeeds,nants,nchan,range,
+	    call BPPlt(rtime,G1,T0,nfeeds,nants,nchan,range,
      *		Feeds(nfeeds),doamp,dophase,dowrap,doreal,doimag,
      *		doplot,dolog,symbol,nx*ny)
             i=i+1
@@ -306,17 +310,19 @@ c  Do the polarization leakage term plots.
 c
 	if(dopol)then
 	  if(doLog)call LogWrite('# Polarization leakage table',more)
-	  call PLoad(tIn,G1,nfeeds,nants,maxGains,.false.)
-	  call PolPlt(G1,nfeeds,nants,range,Feeds(nfeeds),
-     *		doamp,dophase,doreal,doimag,doplot,dolog,symbol)
+	  call PLoad(tIn,G1,nfeeds,nants,nfbin,freq,MAXFBIN,
+     *               .false.)
+	  call PolPlt(G1,nfeeds,nants,nfbin,freq,range,Feeds(nfeeds),
+     *          MAXANT,doamp,dophase,doreal,doimag,doplot,dolog,symbol)
 	endif
 c
 	if(dopol2)then
 	  if(doLog)call LogWrite('# Second polarization leakage table',
      *								   more)
-	  call PLoad(tIn,G1,nfeeds,nants,maxGains,.true.)
-	  call PolPlt(G1,nfeeds,nants,range,Feeds(nfeeds),
-     *		doamp,dophase,doreal,doimag,doplot,dolog,symbol)
+	  call PLoad(tIn,G1,nfeeds,nants,nfbin,freq,MAXFBIN,
+     *               .true.)
+	  call PolPlt(G1,nfeeds,nants,0,freq,range,Feeds(nfeeds),
+     *		MAXANT,doamp,dophase,doreal,doimag,doplot,dolog,symbol)
 	endif
 c
 c  Close up now.
@@ -326,115 +332,20 @@ c
 	call hclose(tIn)
 	end
 c************************************************************************
-	subroutine GLoad(tIn,T0,time,G,nfeeds,ntau,nants,nsols,sels,
-     *	  maxGains,maxTimes)
+	subroutine GainSel(sels,G,time,T0,nfeeds,ntau,nants,nsols,nfbin)
 c
 	implicit none
-	integer tIn,nfeeds,nants,ntau,nsols,maxGains,maxTimes
-	complex G(maxGains)
-	real time(maxTimes),sels(*)
-	double precision T0
-c
-c  Load the antenna gains.
-c
-c  Input:
-c    tIn
-c    maxGains
-c    maxTimes
-c  Output:
-c    T0		Base time, as a Julian date.
-c    time	Offset Julian date.
-c    G		The antenna gains.
-c    nfeeds	Number of feeds (1 or 2).
-c    ntau	Number of delay/spec corr terms (0 or 1).
-c    nants	Number of antennas.
-c    nsols	Number of solution intervals.
-c-----------------------------------------------------------------------_
-	integer item,iostat,offset,i,k,ngains
-	double precision T
-	logical doselect,select
-c
-c  Externals.
-c
-	integer hsize
-	logical SelProbe
-c
-c  Determine the various parameters, and check their validity. We have pretty
-c  well checked that all is OK before, so nothing should go wrong.
-c
-	doselect = SelProbe(sels,'time?',0.d0)
-	call rdhdi(tIn,'nfeeds',nfeeds,1)
-	call rdhdi(tIn,'ntau',ntau,0)
-	call rdhdi(tIn,'ngains',ngains,1)
-	call rdhdi(tIn,'nsols',nsols,1)
-	if(nfeeds.le.0.or.ntau.lt.0.or.ngains.le.0.or.nsols.le.0)
-     *	  call bug('f','Bad gain table size information')
-	nants = ngains / (nfeeds + ntau)
-	if(nants*(nfeeds+ntau).ne.ngains)
-     *	  call bug('f','Number of gains does equal nants*(nfeeds+ntau)')
-	if((nfeeds+ntau)*nants*nsols.gt.maxGains)call bug('f',
-     *	  'Too many gains for me')
-	if(nsols.gt.maxTimes)call bug('f',
-     *	  'Too many solution intervals for me')
-c
-	call haccess(tIn,item,'gains','read',iostat)
-	if(iostat.ne.0)then
-	  call bug('w','Error accessing the gains table')
-	  call bugno('f',iostat)
-	endif
-c
-c  Determine what we thing the number of solutions should be from the
-c  size of the file.
-c
-	if(hsize(item).ne.8+(ngains+1)*8*nsols)
-     *	  call bug('f','Gain table does not look the right size')
-c
-c  All is OK. Lets go for it.
-c
-	k = 0
-	offset = 8
-	do i=1,nsols
-	  call hreadd(item,T,offset,8,iostat)
-	  if(iostat.ne.0)call bugno('f',iostat)
-	  offset = offset + 8
-	  if(doselect)then
-	    select = SelProbe(sels,'time',T)
-	  else
-	    select = .true.
-	  endif
-	  if(select)then
-	    k = k + 1
-	    if(k.eq.1) T0 = nint(T - 1.d0) + 0.5d0
-	    time(k) = T - T0
-	    call hreadr(item,G((k-1)*ngains+1),offset,8*ngains,iostat)
-	    if(iostat.ne.0)call bugno('f',iostat)
-	  endif
-	  offset = offset + 8*ngains
-	enddo
-	if(k.eq.0)call bug('f','No gains selected')
-	nsols = k
-	call hdaccess(item,iostat)
-	if(iostat.ne.0)call bugno('f',iostat)
-c
-c  Blank out the antenna gains that were not selected.
-c
-	if(SelProbe(sels,'antennae?',0.d0))
-     *	  call AntGSel(sels,G,nfeeds,ntau,nants,nsols)
-	end
-c************************************************************************
-	subroutine AntGSel(sels,G,nfeeds,ntau,nants,nsols)
-c
-	implicit none
-	integer nfeeds,ntau,nants,nsols
+	integer nfeeds,ntau,nants,nsols,nfbin
 	real sels(*)
-	complex G(nfeeds+ntau,nants,nsols)
+        double precision time(nsols),T0
+	complex G((nfeeds+ntau)*nants,nsols,0:nfbin)
 c
-c  Blank out any antennas that were not selected.
+c  Blank out any times and antennas that were not selected.
 c
 c------------------------------------------------------------------------
-	include 'maxdim.h'
-	integer i,j,k
-	logical ant(MAXANT)
+	include 'gpplt.h'
+	integer i,j,k,fbin
+	logical ant(MAXANT),timesel(MAXTIMES),doselect
 c
 c  Externals.
 c
@@ -445,18 +356,31 @@ c
 	do i=1,nants
 	  ant(i) = SelProbe(sels,'antennae',257.d0*i)
 	enddo
+        
+        T0=0
+	doselect = SelProbe(sels,'time?',0.d0)
+        do i=1,nsols
+          if (doselect) then
+            timesel(i) = SelProbe(sels,'time',time(i))
+          else
+            timesel(i) = .true.
+          endif
+          if (T0.eq.0.and.timesel(i)) T0=nint(time(i)-1.d0)+0.5d0
+        enddo
 c
-c  Now blank out the unwanted antennas.
+c  Now blank out the unwanted antennas & times
 c
 	do k=1,nsols
 	  do j=1,nants
-	    if(.not.ant(j))then
-	      do i=1,nfeeds
-		G(i,j,k) = 0
-	      enddo
+            if(.not.ant(j).or..not.timesel(k))then
+              do fbin=0,nfbin
+	        do i=1,nfeeds+ntau
+		  G(i+(j-1)*(nfeeds+ntau),k,fbin) = 0
+	        enddo
+              enddo
 	    endif
 	  enddo
-	enddo
+        enddo
 c
 	end
 c************************************************************************
@@ -658,22 +582,26 @@ c
 c
 	end
 c************************************************************************
-	subroutine PLoad(tIn,Leaks,nfeeds,nants,maxLeaks,do2)
+	subroutine PLoad(tIn,Leaks,nfeeds,nants,nfbin,
+     *                   freq,MAXFBIN,do2)
 c
 	implicit none
-	integer tIn,nfeeds,nants,maxLeaks
-	complex Leaks(2,maxLeaks)
-	logical do2
+        include 'gpplt.h'
+	integer tIn,nfeeds,nants,nfbin,maxLeaks,MAXFBIN
+	complex Leaks(2,MAXANT,0:MAXFBIN)
+        double precision freq(MAXFBIN)
+	logical do2,hdprsnt
 c
 c  Load the polarisation leakage table.
 c
 c------------------------------------------------------------------------	
-	integer item,iostat
+	integer item,iostat,i,off
 c
 c  Externals.
 c
 	integer hsize
 c
+        nfbin = 0
 	if(do2)then
 	  call haccess(tIn,item,'leakage2','read',iostat)
 	else
@@ -703,14 +631,34 @@ c  And close up.
 c
 	call hdaccess(item,iostat)
 	if(iostat.ne.0)call bugno('f',iostat)
+c
+c  Read freq binned leakages if any
+c        
+        if (.not.do2.and.hdprsnt(tIn,'leakagef')) then
+          call haccess(tIn,item,'leakagef','read',iostat)
+          call hreadi(item,nfbin,4,4,iostat)
+          off = 8
+          do i=1,nfbin
+            call hreadr(item,Leaks(1,1,i),off,8*nants*nfeeds,iostat)
+            off = off + 8*nants*nfeeds
+            call hreadd(item,freq(i),off,8,iostat)
+            off = off + 8
+          enddo
+          call hdaccess(item,iostat)
+          if (iostat.ne.0) then
+            call bug('w','Error reading leakagef table')
+            nfbin = 0
+          endif
+        endif
+        
 	end
 c************************************************************************
 	subroutine AlphaPlt(vis,time,alpha,nants,nsols,range,
      *			ylabel,
-     *			doplot,dolog,dodtime,symbol,ppp)
+     *			doplot,dolog,dodtime,symbol,ppp,fbin)
 c
 	implicit none
-	integer nants,nsols,symbol,ppp
+	integer nants,nsols,symbol,ppp,fbin
 	real time(nsols),range(2)
 	real alpha(nants*nsols)
 	character ylabel*(*),vis*(*)
@@ -739,7 +687,9 @@ c
 	    call SetPG(time(1),time(nsols),y,nsols,range,dodtime)
 	    call pgpt(nsols,time,y,symbol)
 	    Title = 'Antenna '//itoaf(j)//'File='//vis
-	    length = len1(title)
+            if (fbin.gt.0) Title = 'Antenna '//itoaf(j)//
+     *        'Fbin='//itoaf(fbin)//'File='//vis
+            length = len1(title)
 	    call pglab('Time',ylabel,Title(1:length))
 	  enddo
 	  call subfill(nants,ppp)
@@ -796,13 +746,15 @@ c------------------------------------------------------------------------
 	enddo
 	end
 c************************************************************************
-	subroutine PolPlt(Leaks,nfeeds,nants,range,Feeds,
+	subroutine PolPlt(Leaks,nfeeds,nants,nfbin,freq,range,Feeds,
+     *          MAXANT,
      *		doamp,dophase,doreal,doimag,doplot,dolog,symbol)
 c
 	implicit none
-	integer nants,nfeeds,symbol
+	integer nants,nfeeds,nfbin,symbol,MAXANT
 	logical doamp,dophase,doreal,doimag,doplot,dolog
-	complex Leaks(nfeeds*nants)
+	complex Leaks(nfeeds,MAXANT,0:nfbin)
+        double precision freq(nfbin)
 	character Feeds(nfeeds)*(*)
 	real range(2)
 c
@@ -814,22 +766,22 @@ c
 	real GetAmp,GetPhasW,GetReal,GetImag
 	external GetAmp,GetPhasW,GetReal,GetImag
 c
-	if(doamp)  call PolPlt2(Leaks,nfeeds,nants,range,'Amp',Feeds,
-     *	  doplot,dolog,symbol,GetAmp)
-	if(dophase)call PolPlt2(Leaks,nfeeds,nants,range,'Phase',Feeds,
-     *	  doplot,dolog,symbol,GetPhasW)
-	if(doreal) call PolPlt2(Leaks,nfeeds,nants,range,'Real',Feeds,
-     *	  doplot,dolog,symbol,GetReal)
-	if(doimag) call PolPlt2(Leaks,nfeeds,nants,range,'Imag',Feeds,
-     *	  doplot,dolog,symbol,GetImag)
+	if(doamp)  call PolPlt2(Leaks,nfeeds,nants,nfbin,freq,range,
+     *	  'Amp',Feeds,doplot,dolog,symbol,GetAmp)
+	if(dophase)call PolPlt2(Leaks,nfeeds,nants,nfbin,freq,range,
+     *	  'Phase',Feeds,doplot,dolog,symbol,GetPhasW)
+	if(doreal) call PolPlt2(Leaks,nfeeds,nants,nfbin,freq,range,
+     *	  'Real',Feeds,doplot,dolog,symbol,GetReal)
+	if(doimag) call PolPlt2(Leaks,nfeeds,nants,nfbin,freq,range,
+     *	  'Imag',Feeds,doplot,dolog,symbol,GetImag)
 	end
 c************************************************************************
 	subroutine GainPlt(vis,time,G,nfeeds,nants,nsols,range,
      *	  Feeds,doamp,dophase,dowrap,doreal,doimag,doplot,dolog,
-     *    dodtime,symbol,ppp)
+     *    dodtime,symbol,ppp,fbin)
 c
 	implicit none
-	integer nfeeds,nants,nsols,ppp,symbol
+	integer nfeeds,nants,nsols,ppp,symbol,fbin
 	complex G(nfeeds*nants*nsols)
 	real time(nsols),range(2)
 	logical doamp,dophase,dowrap,doreal,doimag,doplot,dolog,dodtime
@@ -853,6 +805,7 @@ c    symbol	Plotting symbol.
 c    dodtime	Give time in fractions of a day.
 c    ppp	Plots per page.
 c    vis	File name.
+c    fbin       Frequency bin (0=cont)
 c------------------------------------------------------------------------
 c
 c  Externals.
@@ -861,20 +814,22 @@ c
 	external GetAmp,GetPhasW,GetPhase,GetReal,GetImag
 c
 	if(doamp)  call GainPlt2(vis,time,G,nfeeds,nants,nsols,range,
-     *	  'Amp',Feeds,doplot,dolog,dodtime,symbol,GetAmp,ppp)
+     *	  'Amp',Feeds,doplot,dolog,dodtime,symbol,GetAmp,ppp,fbin)
 	if(dophase)then
 	  if(dowrap)then
 	    call GainPlt2(vis,time,G,nfeeds,nants,nsols,range,
-     *	      'Phase',Feeds,doplot,dolog,dodtime,symbol,GetPhasW,ppp)
+     *	      'Phase',Feeds,doplot,dolog,dodtime,symbol,GetPhasW,ppp,
+     *         fbin)
 	  else
 	    call GainPlt2(vis,time,G,nfeeds,nants,nsols,range,
-     *	      'Phase',Feeds,doplot,dolog,dodtime,symbol,GetPhase,ppp)
+     *	      'Phase',Feeds,doplot,dolog,dodtime,symbol,GetPhase,ppp,
+     *        fbin)
 	  endif
 	endif
 	if(doreal) call GainPlt2(vis,time,G,nfeeds,nants,nsols,range,
-     *	  'Real',Feeds,doplot,dolog,dodtime,symbol,GetReal,ppp)
+     *	  'Real',Feeds,doplot,dolog,dodtime,symbol,GetReal,ppp,fbin)
 	if(doimag) call GainPlt2(vis,time,G,nfeeds,nants,nsols,range,
-     *	  'Imag',Feeds,doplot,dolog,dodtime,symbol,GetImag,ppp)
+     *	  'Imag',Feeds,doplot,dolog,dodtime,symbol,GetImag,ppp,fbin)
 	end
 c************************************************************************
 	subroutine BpPlt(freq,G,T0,nfeeds,nants,nchan,range,
@@ -930,12 +885,14 @@ c
      *	  'Imag',Feeds,doplot,dolog,symbol,GetImag,ppp)
 	end
 c************************************************************************
-	subroutine PolPlt2(Leaks,nfeeds,nants,range,type,Feeds,
-     *	  doplot,dolog,symbol,GetVal)
+	subroutine PolPlt2(Leaks,nfeeds,nants,nfbin,freq,range,
+     *	  type,Feeds,doplot,dolog,symbol,GetVal)
 c
 	implicit none
-	integer nfeeds,nants,symbol
-	complex Leaks(nfeeds*nants)
+	include 'gpplt.h'
+	integer nfeeds,nants,symbol,nfbin
+	complex Leaks(2,MAXANT,0:nfbin)
+        double precision freq(nfbin)
 	logical doplot,dolog
 	character Feeds(nfeeds)*(*),type*(*)
 	real range(2)
@@ -943,54 +900,65 @@ c
 	external GetVal
 c
 c------------------------------------------------------------------------
-	include 'gpplt.h'
 	real x(2*MAXANT),y(2*MAXANT),Value
-	integer ifeed,iant,j,j1,j2
+	integer ifeed,iant,j,j1,j2,i
 	logical more
-	character line*132,Label*16
+	character line*132,Label*16,label2*24
 c
 c  Externals.
 c
 	character itoaf*3
 c
+        label2=' '
 	if(doplot)then
-	  do ifeed=1,nfeeds
-	    Value = 0
-	    do iant=1,nants
-	      x(iant) = iant
-	      y(iant) = GetVal(Leaks(ifeed+nfeeds*(iant-1)),Value)
+          do i=0,nfbin
+	    do ifeed=1,nfeeds
+	      Value = 0
+	      do iant=1,nants
+	        x(iant) = iant
+	        y(iant) = GetVal(Leaks(ifeed,iant,i),Value)
+	      enddo
+	      call SetPG(1.,real(nants),y,nants,range,.true.)
+	      call pgpt(nants,x,y,symbol)
+	      Label = Feeds(ifeed)//'-Leakage-'//type
+              if (i.gt.0) then
+                write(label2,'(A,F7.3,A,I2,A)') 
+     *           'Freq. ',freq(i),' (bin ',i,')'  
+              endif
+	      call pglab('Antenna Number',Label,label2)
 	    enddo
-	    call SetPG(1.,real(nants),y,nants,range,.true.)
-	    call pgpt(nants,x,y,symbol)
-	    Label = Feeds(ifeed)//'-Leakage-'//type
-	    call pglab('Antenna Number',Label,' ')
-	  enddo
+          enddo
 	endif
 c
 	if(dolog)then
-	  Value = 0
-	  do j=1,nfeeds*nants
-	    y(j) = GetVal(Leaks(j),Value)
-	  enddo
-	  write(line,10)type,(Feeds(ifeed),ifeed=1,nfeeds)
-   10	  format('# Listing of the ',a,
-     *		' of the leakages for feeds ',4(a,:,','))
-	  call LogWrite(line,more)
-	  line = '# Number of antennas: '//itoaf(nants)
-	  call LogWrite(line,more)
-	  do j1=1,nfeeds*nants,6
-	    j2 = min(j1+5,nfeeds*nants)
-	    write(line, '(7f14.6)')(y(j),j=j1,j2)
+          do i=0,nfbin
+	    Value = 0
+	    write(line,10)type,(Feeds(ifeed),ifeed=1,nfeeds)
+   10	    format('# Listing of the ',a,
+     *	    	   ' of the leakages for feeds ',4(a,:,','))
 	    call LogWrite(line,more)
+	    line = '# Number of antennas: '//itoaf(nants)
+            if (i.gt.0) then
+              write(line,'(A,F7.3,A,I2,A)') 
+     *         'Freq. ',freq(i),' (bin ',i,')'
+	      call LogWrite(line,more)
+            endif
+	    do j=1,nfeeds
+              do j1=1,nants,7
+	        write(line,'(7f14.6)') 
+     *            (GetVal(leaks(j,j1+j2-1,i),Value),j2=1,min(nants,7))
+	        call LogWrite(line,more)
+              enddo
+            enddo
 	  enddo
 	endif
 	end
 c************************************************************************
 	subroutine GainPlt2(vis,time,G,nfeeds,nants,nsols,range,
-     *	  Type,Feeds,doplot,dolog,dodtime,symbol,GetVal,ppp)
+     *	  Type,Feeds,doplot,dolog,dodtime,symbol,GetVal,ppp,fbin)
 c
 	implicit none
-	integer nfeeds,nants,nsols,ppp,symbol
+	integer nfeeds,nants,nsols,ppp,symbol,fbin
 	real time(nsols),range(2)
 	complex G(nfeeds*nants*nsols)
 	logical doplot,dolog,dodtime
@@ -1039,6 +1007,8 @@ c
 		call pgpt(ng,x,y,symbol)
 	        Label = Feeds(ifeed)//'-Gain-'//type
 	        Title = 'Antenna '//itoaf(iant)//'File='//vis
+                if (fbin.gt.0) Title = 'Antenna '//itoaf(iant)//
+     *            ' Fbin='//itoaf(fbin)//'File='//vis
 		length = len1(title)
 	        call pglab('Time',Label,Title(1:length))
 		nres = nres + 1
@@ -1239,26 +1209,31 @@ c
 	enddo
 	end
 c************************************************************************
-	subroutine TScale(time,nsols)
+	subroutine TScale(time,T0,rtime,dodscale,nsols)
 c
 	implicit none
 	integer nsols
-	real time(nsols)
+        double precision time(nsols),T0
+        logical dodscale
+	real rtime(nsols)
 c
 c  Scale the times to seconds.
 c
 c  Input:
+c    time       Full precision JD time
+c    T0         Base Time
+c    dodscale   Scale in days instead of seconds
 c    nsols	Number of times.
-c  Input/Output:
-c    time	The times. On input, these are in fractions of a day.
-c		On output these are the seconds in a day.
+c  Output:
+c   rtime	Times, in fractions of a day or seconds
 c------------------------------------------------------------------------
 	integer i
 	real scale
-	parameter(scale=24.0*3600.0)
 c
+        scale=24.0*3600.0
+        if (dodscale) scale=1
 	do i=1,nsols
-	  time(i) = scale * time(i)
+	  rtime(i) = scale * (time(i)-T0)
 	enddo
 	end
 c************************************************************************
@@ -1386,11 +1361,11 @@ c------------------------------------------------------------------------
 	GetImag = aimag(G)	
 	end
 c************************************************************************
-	subroutine GnCvt(In,Out,nfeeds,ntau,ngains)
+	subroutine GnCvt(In,Out,fbin,nfeeds,ntau,ngains)
 c
 	implicit none
-	integer nfeeds,ntau,ngains
-	complex In(nfeeds+ntau,ngains),Out(nfeeds,ngains)
+	integer nfeeds,ntau,ngains,fbin
+	complex In(nfeeds+ntau,ngains,0:fbin),Out(nfeeds,ngains)
 c
 c  Pick out the true gains.
 c
@@ -1399,17 +1374,17 @@ c------------------------------------------------------------------------
 c
 	do j=1,ngains
 	  do i=1,nfeeds
-	    Out(i,j) = In(i,j)
+	    Out(i,j) = In(i,j,fbin)
 	  enddo
 	enddo
 	end
 c************************************************************************
-	subroutine AlphaCvt(In,Out,nfeeds,ntau,ngains,doimag)
+	subroutine AlphaCvt(In,fbin,Out,nfeeds,ntau,ngains,doimag)
 c
 	implicit none
-	integer nfeeds,ntau,ngains
+	integer nfeeds,ntau,ngains,fbin
 	logical doimag
-	complex In((nfeeds+ntau)*ngains)
+	complex In((nfeeds+ntau)*ngains,0:fbin)
 	real Out(ngains)
 c
 c------------------------------------------------------------------------
@@ -1419,20 +1394,20 @@ c
 	i = 1 + nfeeds
 	do j=1,ngains
 	  if(doimag)then
-	    Out(j) = aimag(In(i)) / (2*pi)
+	    Out(j) = aimag(In(i,fbin)) / (2*pi)
 	  else
-	    Out(j) = real(In(i))
+	    Out(j) = real(In(i,fbin))
 	  endif
 	  i = i + nfeeds + ntau
 	enddo
 	end
 c************************************************************************
-	subroutine XYCvt(In,Out,nfeeds,ntau,ngains,doxy)
+	subroutine XYCvt(In,Out,fbin,nfeeds,ntau,ngains,doxy)
 c
 	implicit none
-	integer nfeeds,ntau,ngains
+	integer nfeeds,ntau,ngains,fbin
 	logical doxy
-	complex In((nfeeds+ntau)*ngains),Out(ngains)
+	complex In((nfeeds+ntau)*ngains,0:fbin),Out(ngains)
 c
 c  This divides or multiplies the X gains by the Y gains, to get the XY gains.
 c
@@ -1442,13 +1417,13 @@ c------------------------------------------------------------------------
 c
 	i = 1
 	do j=1,ngains
-	  temp = abs(real(In(i+1)))+abs(aimag(In(i+1)))
+	  temp = abs(real(In(i+1,fbin)))+abs(aimag(In(i+1,fbin)))
 	  if(temp.le.0)then
 	    Out(j) = 0
 	  else if(doxy)then
-	    Out(j) = In(i)/In(i+1)
+	    Out(j) = In(i,fbin)/In(i+1,fbin)
 	  else
-	    Out(j) = In(i)*conjg(In(i+1))
+	    Out(j) = In(i,fbin)*conjg(In(i+1,fbin))
 	  endif
 	  i = i + nfeeds + ntau
 	enddo

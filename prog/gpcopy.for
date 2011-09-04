@@ -67,6 +67,7 @@ c		  apparently corrupt gain table.
 c    rjs  19sep04 Copy across sensitivity model.
 c    rjs  23jan07 Correct some logical errors and also copy "leakage2" table.
 c    mhw  02sep09 Handle multiple bandpass solution intervals
+c    mhw  11aug11 Copy gainsf and leakagef tables
 c  Bugs:
 c    None?
 c------------------------------------------------------------------------
@@ -123,6 +124,7 @@ c
 	    call output('Copying leakage table')
 	    call hdcopy(tIn,tOut,'leakage')
 	    call hdcopy(tIn,tOut,'leakage2')
+	    call hdcopy(tIn,tOut,'leakagef')
 	  endif
         end if
 c
@@ -150,6 +152,7 @@ c
 	    call hdcopy(tIn,tOut,'nfeeds')
 	    call hdcopy(tIn,tOut,'ntau')
 	    call hdcopy(tIn,tOut,'gains')
+	    call hdcopy(tIn,tOut,'gainsf')
 	    call hdcopy(tIn,tOut,'freq0')
 	    call hdcopy(tIn,tOut,'senmodel')
 	  endif

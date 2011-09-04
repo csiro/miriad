@@ -15,6 +15,12 @@ c
 c       Normally GPCAL writes the solutions as a gains table (item
 c       'gains') and a polarization leakage table (item 'leakage').
 c
+c       With nfbin>1, GPCAL writes additional tables 'gainsf' and
+c       'leakagef' with solutions for frequency binned data.
+c       Not many other tasks currently read these tables, but
+c       they will be applied in preference to the single frequency
+c       versions if present. 
+c
 c       GPCAL can handle either dual linear or dual circular feeds.
 c       However by default it expects dual linears -- you must use
 c       options=circular so switch it to circular mode.  Also the
@@ -73,6 +79,12 @@ c       max time length is exceeded, or a gap larger than the max gap is
 c       encountered.  The default is max length is 5 minutes, and the
 c       max gap size is the same as the max length.  The polarisation
 c       characteristics are assumed to be constant over the observation.
+c@ nfbin
+c       The number of frequency bins. The default is 1. Use nfbin>1 to
+c       solve for variation across the band in the gain and leakage 
+c       parameters.
+c       Works best for uv files with a single spectral window, i.e., 
+c       after uvsplit.      
 c@ tol
 c       Error tolerance. The default is 0.001 which should be adequate.
 c@ xyphase
@@ -139,7 +151,7 @@ c                    solution for the observation already exists.  This
 c                    preliminary solution must be formed from a
 c                    calibrator with known Stokes-V.
 c
-c$Id: gpcal.for,v 1.9 2011/06/10 00:43:58 wie017 Exp $
+c$Id: gpcal.for,v 1.10 2011/09/04 23:09:19 wie017 Exp $
 c--
 c  History:
 c    rjs,nebk 1may91 Original version.
@@ -228,6 +240,7 @@ c                    effect of large XY phase errors on leakages in the
 c                    iteration process.  Add (and correct!) misc
 c                    comments to the code.
 c    mhw     03sep10 Use mean freq of all data used for flux cal
+c    mhw     15feb11 Solve for leakage in frequency bins
 c
 c  Miscellaneous notes:
 c ---------------------
@@ -260,19 +273,21 @@ c-----------------------------------------------------------------------
       logical   amphsol, circular, defflux, dopass, notrip, oldflx,
      *          polcal, polref, polsol, qusolve, reset, usepol, useref,
      *          vsolve, xyref, xysol, xyvary
-      integer   i, j, jmax, maxsoln, minant, nants, nbl, niter, nsoln,
-     *          nxyphase, off, refant, tIn
-      real      epsi, epsi1, fac, flux(4), oldFlux(4), pcent, tol,
-     *          ttol, xyphase(MAXANT)
-      double precision freq, interval(2)
+      integer   i, j, k, jmax, maxsoln, minant, nants, nbl, niter, 
+     *          nsoln, nxyphase, off, refant, tIn, nfbin, n, fbin
+      real      epsi, epsi1, fac, flux(4,0:MAXFBIN), 
+     *          oldFlux(4,0:MAXFBIN), pcent,
+     *          tol, ttol, xyphase(MAXANT)
+      double precision freq(0:MAXFBIN), interval(2)
       character line*80, source*32, uvflags*8, version*72
 
       logical present(MAXANT)
       integer Count(MAXDBL)
       real    SumS(MAXDBL),SumC(MAXDBL)
       real    SumS2(MAXDBL),SumCS(MAXDBL)
-      complex D(2,MAXANT),xyp(MAXANT),Gains(2,MAXDANTS)
-      complex OldD(2,MAXANT),OldGains(2,MAXDANTS)
+      complex D(2,MAXANT*MAXFBIN),xyp(MAXANT*MAXFBIN)
+      complex Gains(2,MAXDANTS)
+      complex OldD(2,MAXANT*MAXFBIN),OldGains(2,MAXDANTS)
       complex Vis(4,MAXDBL),xypcorr,xypref
       complex VisCos(4,MAXDBL),VisSin(4,MAXDBL)
       double precision time(MAXDSOLN)
@@ -282,8 +297,8 @@ c-----------------------------------------------------------------------
       external  itoaf, keyprsnt, uvDatOpn
 c-----------------------------------------------------------------------
       version = versan('gpcal',
-     *                 '$Revision: 1.9 $',
-     *                 '$Date: 2011/06/10 00:43:58 $')
+     *                 '$Revision: 1.10 $',
+     *                 '$Date: 2011/09/04 23:09:19 $')
 c
 c  Get inputs.
 c
@@ -294,15 +309,16 @@ c
       if (dopass) uvflags = 'dlbf'
       call uvDatInp('vis',uvflags)
       defflux = .not.keyprsnt('flux')
-      call keyr('flux',flux(1),1.0)
-      call keyr('flux',flux(2),0.0)
-      call keyr('flux',flux(3),0.0)
-      call keyr('flux',flux(4),0.0)
+      call keyr('flux',flux(1,0),1.0)
+      call keyr('flux',flux(2,0),0.0)
+      call keyr('flux',flux(3,0),0.0)
+      call keyr('flux',flux(4,0),0.0)
       call keyi('refant',refant,3)
       call keyi('minants',minant,2)
       call mkeyr('xyphase',xyphase,MAXANT,nxyphase)
       call keyd('interval',interval(1),5d0)
       call keyd('interval',interval(2),interval(1))
+      call keyi('nfbin',nfbin,1)
       call keyr('tol',tol,0.001)
       call keyfin
 c
@@ -319,10 +335,22 @@ c
         interval(1) = 1
         interval(2) = 1
       endif
+      if (nfbin.le.1) nfbin=1
+      if (nfbin.gt.MAXFBIN) then
+        nfbin=MAXFBIN
+        call bug('w','Max number of frequency bins exceeded')
+      endif
+      n = 0
+      if (nfbin.gt.1) n = nfbin
+      do i=1,n
+        do j=1,4
+          flux(j,i) = flux(j,0)
+        enddo
+      enddo
 c
 c  Determine the polarisation solver to use.
 c
-      polcal = abs(flux(2))+abs(flux(3))+abs(flux(4)).gt.0.0
+      polcal = abs(flux(2,0))+abs(flux(3,0))+abs(flux(4,0)).gt.0.0
       usepol = (xysol .and. .not.xyvary) .or.
      *          polsol .or. qusolve .or. vsolve
       useref = (polref .and. .not.polsol) .or. (xyref .and. .not.usepol)
@@ -365,7 +393,8 @@ c
       if (minant.gt.nants)
      *  call bug('f','Number of antennae is less than minimum')
       nbl = (nants*(nants-1))/2
-      maxsoln = min(MAXDANTS/nants,MAXDBL/nbl,MAXDSOLN) - 1
+      maxsoln = min(MAXDANTS/nants/nfbin,
+     * MAXDBL/nbl/nfbin,MAXDSOLN) - 1
 c
 c  Set the initial estimates of the polarisation characteristics.
 c
@@ -379,29 +408,40 @@ c
       call output('Reading the data ...')
       call DatRead(tIn,useref .or. usepol .or. xyref .or. polcal,
      *  nants,nbl,maxsoln,
-     *  interval,refant,minant,time,nsoln,present,notrip,
+     *  interval,refant,minant,n,time,nsoln,present,notrip,
      *  Vis,VisCos,VisSin,SumS,SumC,SumS2,SumCS,Count,
      *  source, freq)
 c
 c  If an antenna is not present, set its leakages to zero.
+c  Initialize frequency bin values to continuum value.
 c
-      do i = 1, nants
-        if (.not.present(i)) then
-          d(1,i) = (0.0,0.0)
-          d(2,i) = (0.0,0.0)
-        endif
+      do fbin = 0, n
+        do i = 1, nants
+          k = i + fbin*nants
+          if (.not.present(i)) then
+            d(1,k) = (0.0,0.0)
+            d(2,k) = (0.0,0.0)
+          else if (fbin.gt.0) then
+            d(1,k) = d(1,i)
+            d(2,k) = d(2,i)
+            xyp(k) = xyp(i)
+          endif
+        enddo
       enddo
 c
 c  Initialize the flux array.
 c
       if (defflux) then
-        call getiquv(source,freq,oldflx,flux,defflux)
+        do fbin = 0, n
+          call getiquv(source,freq(fbin),oldflx,flux(1,fbin),defflux)
+        enddo
       endif
 
       if (defflux .and. .not.qusolve) call bug('w',
      *  'It is unwise to omit OPTION=QUSOLVE when flux is unknown')
-      if (flux(1).le.0.0) call bug('f','Invalid total flux value')
-      pcent = sqrt(flux(2)**2 + flux(3)**2 + flux(4)**2) / flux(1)
+      if (flux(1,0).le.0.0) call bug('f','Invalid total flux value')
+      pcent = sqrt(flux(2,0)**2 + flux(3,0)**2 + flux(4,0)**2) /
+     *  flux(1,0)
       if (polref .and. pcent.eq.0.0 .and. .not.qusolve) call bug('f',
      *  'You must give values for Q,U,V to use option POLREF')
       if (polref .and. pcent.lt.0.05) call bug('w',
@@ -409,147 +449,166 @@ c
 c
 c  Initialise the gains.
 c
-      call GainIni(nants,nsoln,Gains,1.0,xyp)
+      call GainIni(nants,nsoln,n,Gains,1.0,xyp)
 c
 c  Iterate until we have converged.
 c
-      niter = 0
-      epsi = tol + 1.0
-      if (usepol .or. useref) then
-        ttol = 0.01
-      else
-        ttol = tol
-      endif
+      do fbin = 0, n
+        if (fbin.gt.0) then
+          write(line,'(a,i2)') 'Solution for freq bin ',fbin
+          call output(line)
+        endif
+        niter = 0
+        epsi = tol + 1.0
+        if (usepol .or. useref) then
+          ttol = 0.01
+        else
+          ttol = tol
+        endif
 
-      do while (epsi.gt.tol .and. niter.lt.MAXITER)
-        niter = niter + 1
-        epsi = 0.0
-        call CopyG(nants,nsoln,D,Gains,Flux,OldD,OldGains,OldFlux)
-        ttol = max(0.3*ttol,0.5*tol)
+        do while (epsi.gt.tol .and. niter.lt.MAXITER)
+          niter = niter + 1
+          epsi = 0.0
+          call CopyG(nants,nsoln,n,fbin,
+     *               D,Gains,Flux,OldD,OldGains,OldFlux)
+          ttol = max(0.3*ttol,0.5*tol)
 c
 c  Solve for the antenna gains.
 c
-        xypref = xyp(refant)
-        if (amphsol) then
-          if (niter.eq.1 .and. xysol .and. .not.xyvary) then
-            call output('Estimating the XY phases ...')
-            call AmpSolve(nsoln,nants,nbl,flux,refant,
-     *        xyref .and. .not.qusolve,.true.,
-     *        D,xyp,Gains,niter.le.1,ttol,epsi1,
-     *        Vis,VisCos,VisSin,SumS,SumC,SumS2,SumCS,Count,
-     *        circular)
-            call xyfudge(nsoln,nants,xyp,Gains,refant,.false.)
-          else
-            call AmpSolve(nsoln,nants,nbl,flux,refant,
-     *        xyref .and. xyvary .and. .not.qusolve,xyvary,
-     *        D,xyp,Gains,niter.le.1,ttol,epsi1,
-     *        Vis,VisCos,VisSin,SumS,SumC,SumS2,SumCS,Count,
-     *        circular)
-            if (xyvary) call xyfudge(nsoln,nants,xyp,Gains,
-     *                                        refant,.true.)
-          endif
+          xypref = xyp(refant+fbin*(n+1))
+          if (amphsol) then
+            if (niter.eq.1 .and. xysol .and. .not.xyvary) then
+              call output('Estimating the XY phases ...')
+              call AmpSolve(maxsoln,nsoln,nants,nbl,n,fbin,flux,refant,
+     *          xyref .and. .not.qusolve,.true.,
+     *          D,xyp,Gains,niter.le.1,ttol,epsi1,
+     *          Vis,VisCos,VisSin,SumS,SumC,SumS2,SumCS,Count,
+     *          circular)
+              call xyfudge(nsoln,nants,n,fbin,xyp,
+     *                     Gains,refant,.false.)
+            else
+              call AmpSolve(maxsoln,nsoln,nants,nbl,n,fbin,flux,refant,
+     *          xyref .and. xyvary .and. .not.qusolve,xyvary,
+     *          D,xyp,Gains,niter.le.1,ttol,epsi1,
+     *          Vis,VisCos,VisSin,SumS,SumC,SumS2,SumCS,Count,
+     *          circular)
+              if (xyvary) call xyfudge(nsoln,nants,n,fbin,xyp,
+     *                                          Gains,refant,.true.)
+            endif
 c
 c  If the XY phase for the reference antenna has changed, then adjust
 c  the leakages accordingly.
 c
-          xypcorr = xyp(refant)*conjg(xypref)
-          if ((polref .or. polsol .or. xyref) .and.
-     *        abs(real(xypcorr)-1)+abs(aimag(xypcorr)).gt.ttol)
-     *                          call rotleaks(D,nants,xypcorr)
+            xypcorr = xyp(refant+fbin*(n+1))*conjg(xypref)
+            if ((polref .or. polsol .or. xyref) .and.
+     *          abs(real(xypcorr)-1)+abs(aimag(xypcorr)).gt.ttol)
+     *                     call rotleaks(D,nants,xypcorr)
 
-          write(line,'(a,i2,a,f7.3)')'Iter=',niter,
-     *        ', Amplit/Phase Solution Error: ',epsi1
-          call output(line)
-          epsi = max(epsi,epsi1)
-        endif
+            write(line,'(a,i2,a,f7.3)')'Iter=',niter,
+     *          ', Amplit/Phase Solution Error: ',epsi1
+            call output(line)
+            epsi = max(epsi,epsi1)
+          endif
 c
 c  Solve for all the polarisation characteristics.
 c
-        if (usepol) then
-          call PolSolve(nsoln,nants,nbl,flux,refant,polsol,polref,
-     *      qusolve,vsolve,xysol,xyref,
-     *      notrip,D,Gains,xyp,epsi1,present,Vis,VisCos,VisSin,
-     *      SumS,SumC,SumS2,SumCS,Count,circular)
-          write(line,'(a,i2,a,f7.3)')'Iter=',niter,
-     *        ', Polarisation Solution Error: ',epsi1
-          call output(line)
-          epsi = max(epsi,epsi1)
-        else if (useref) then
-          call RefSolve(nsoln,nants,nbl,flux,xyref,polref,D,
-     *      Gains,xyp,epsi1,Vis,VisCos,VisSin,
-     *      SumS,SumC,SumS2,SumCS,Count,circular)
-          write(line,'(a,i2,a,f7.3)')'Iter=',niter,
-     *        ', Reference Solution Error:    ',epsi1
-          call output(line)
-          epsi = max(epsi,epsi1)
-        endif
+          if (usepol) then
+            call PolSolve(maxsoln,nsoln,nants,nbl,n,fbin,flux,refant,
+     *        polsol,polref,qusolve,vsolve,xysol,xyref,notrip,
+     *        D,Gains,xyp,epsi1,present,Vis,VisCos,VisSin,
+     *        SumS,SumC,SumS2,SumCS,Count,circular)
+            write(line,'(a,i2,a,f7.3)')'Iter=',niter,
+     *          ', Polarisation Solution Error: ',epsi1
+            call output(line)
+            epsi = max(epsi,epsi1)
+          else if (useref) then
+            call RefSolve(maxsoln,nsoln,nants,nbl,n,fbin,flux,xyref,
+     *        polref,D,Gains,xyp,epsi1,Vis,VisCos,VisSin,
+     *        SumS,SumC,SumS2,SumCS,Count,circular)
+            write(line,'(a,i2,a,f7.3)')'Iter=',niter,
+     *          ', Reference Solution Error:    ',epsi1
+            call output(line)
+            epsi = max(epsi,epsi1)
+          endif
 
-        if ((usepol .or. useref) .and. amphsol) then
-          call CompareG(nants,nsoln,D,Gains,Flux,
-     *        OldD,OldGains,OldFlux,epsi)
-          write(line,'(a,i2,a,f7.3)')'Iter=',niter,
-     *        ', Overall Solution Error:      ',epsi
-          call output(line)
-        else if (amphsol) then
-          epsi = 0.0
-        endif
-      enddo
-      if (niter.ge.MAXITER)
-     *  call bug('w','Failed to converge ... saving solution anyway')
+          if ((usepol .or. useref) .and. amphsol) then
+            call CompareG(nants,nsoln,n,fbin,D,Gains,Flux,
+     *          OldD,OldGains,OldFlux,epsi)
+            write(line,'(a,i2,a,f7.3)')'Iter=',niter,
+     *          ', Overall Solution Error:      ',epsi
+            call output(line)
+          else if (amphsol) then
+            epsi = 0.0
+          endif
+        enddo
+        if (niter.ge.MAXITER)
+     *    call bug('w','Failed to converge ... saving solution anyway')
 c
 c  If no flux was given, scale the gains so that they have an rms of
 c  of any original gains. Determine what flux this implies.
 c
-      if (defflux) call GainScal(flux,Gains,2*nants*nsoln,fac)
+
+        if (defflux) call GainScal(flux(1,fbin),
+     *     Gains(1,fbin*nants*nsoln+1),2*nants*nsoln,fac)
 c
 c  Tell about the source polarisation.
 c
-      write(line,'(a,f8.4)')'I flux density: ', flux(1)
-      call writeo(tIn,line)
-      if (qusolve) then
-        write(line,'(a,f8.3)')'Percent Q:',100.0*flux(2)/flux(1)
+        write(line,'(a,f8.4)')'I flux density: ', flux(1,fbin)
         call writeo(tIn,line)
-        write(line,'(a,f8.3)')'Percent U:',100.0*flux(3)/flux(1)
-        call writeo(tIn,line)
-      endif
-      if (vsolve) then
-        write(line,'(a,f8.3)')'Percent V:',100.0*flux(4)/flux(1)
-        call writeo(tIn,line)
-      endif
+        if (qusolve) then
+          write(line,'(a,f8.3)')'Percent Q:',
+     *         100.0*flux(2,fbin)/flux(1,fbin)
+          call writeo(tIn,line)
+          write(line,'(a,f8.3)')'Percent U:',
+     *         100.0*flux(3,fbin)/flux(1,fbin)
+          call writeo(tIn,line)
+        endif
+        if (vsolve) then
+          write(line,'(a,f8.3)')'Percent V:',
+     *         100.0*flux(4,fbin)/flux(1,fbin)
+          call writeo(tIn,line)
+        endif
 c
 c  Tell about the XY phases.
 c
-      if ((xysol .or. xyref .or. nxyphase.gt.0) .and. .not.xyvary) then
-        call writeo(tIn,'XY phases (degrees)')
-        do j = 1,nants,7
-          jmax = min(j+6,nants)
-          do i = j, jmax
-            xyphase(i) = atan2(aimag(xyp(i)),real(xyp(i)))
+        if ((xysol .or. xyref .or. nxyphase.gt.0).and. .not.xyvary) then
+          call writeo(tIn,'XY phases (degrees)')
+          do j = 1,nants,7
+            jmax = min(j+6,nants)
+            do i = j, jmax
+              xyphase(i) = atan2(aimag(xyp(i)),real(xyp(i)))
+            enddo
+            write(line,'(1x,a,i2,a,i2,a,7f7.1)')'Xyphase(',j,'-',jmax,
+       *      ') = ',(180/pi*xyphase(i),i=j,jmax)
+            call writeo(tIn,line)
           enddo
-          write(line,'(1x,a,i2,a,i2,a,7f7.1)')'Xyphase(',j,'-',jmax,
-     *      ') = ',(180/pi*xyphase(i),i=j,jmax)
-          call writeo(tIn,line)
-        enddo
-      endif
+        endif
+c
+c  Tell about the leakage parameters.
+c
+        if (polsol .or. polref .or. xyref) then
+          call writeo(tIn,'Leakage terms:')
+          do j = 1, nants
+            if (present(j)) then
+              k = j + fbin*nants
+              write(line,'(1x,a,i2,a,f8.5,a,f8.5,a,f8.5,a,f8.5,a)')
+     *       'Ant',j,':Dx,Dy = (',real(D(1,k)),',',aimag(D(1,k)),
+     *                         '),(',real(D(2,k)),',',aimag(D(2,k)),')'
+              call writeo(tIn,line)
+            endif
+          enddo
+        endif
+      enddo
 c
 c  Write out the gain table.
 c
       if (amphsol)
-     *  call GainTab(tIn,time,Gains,nants,nsoln)
+     *  call GainTab(tIn,time,Gains,nants,nsoln,n,freq)
 c
-c  Tell about the leakage parameters, and save them.
+c  Write out the leakage parameters.
 c
       if (polsol .or. polref .or. xyref) then
-        call writeo(tIn,'Leakage terms:')
-        do j = 1, nants
-          if (present(j)) then
-            write(line,'(1x,a,i2,a,f8.5,a,f8.5,a,f8.5,a,f8.5,a)')
-     *      'Ant',j,':Dx,Dy = (',real(D(1,j)),',',aimag(D(1,j)),'),(',
-     *                           real(D(2,j)),',',aimag(D(2,j)),')'
-            call writeo(tIn,line)
-          endif
-        enddo
-        call LeakTab(tIn,D,nants)
+        call LeakTab(tIn,D,nants,n,freq)
       endif
 c
 c  All said and done.
@@ -561,11 +620,11 @@ c
 
 **************************************************************** xyfudge
 
-      subroutine xyfudge(nsoln,nants,xyp,Gains,refant,xyvary)
+      subroutine xyfudge(nsoln,nants,nfbin,fbin,xyp,Gains,refant,xyvary)
 
-      integer nsoln,nants,refant
+      integer nsoln,nants,refant,nfbin,fbin
       logical xyvary
-      complex Gains(2,nants,nsoln),xyp(nants)
+      complex Gains(2,nants,nsoln,0:nfbin),xyp(nants,0:nfbin)
 c-----------------------------------------------------------------------
 c  Given X and Y antenna gains, remove a mean XY phase from
 c  each antenna. If the XY phase is not supposed to vary, replace
@@ -596,12 +655,15 @@ c
 c
 c  Accumulate all the info.
 c
+      
       do j = 1, nsoln
         do i = 1, nants
-          if (   abs(real(Gains(X,i,j)))+abs(aimag(Gains(X,i,j))).gt.0.0
-     *     .and. abs(real(Gains(Y,i,j)))+abs(aimag(Gains(Y,i,j))).gt.0.0
+          if (   abs(real(Gains(X,i,j,fbin)))+
+     *           abs(aimag(Gains(X,i,j,fbin))).gt.0.0
+     *     .and. abs(real(Gains(Y,i,j,fbin)))+
+     *           abs(aimag(Gains(Y,i,j,fbin))).gt.0.0
      *      ) then
-            w = Gains(Y,i,j) / Gains(X,i,j)
+            w = Gains(Y,i,j,fbin) / Gains(X,i,j,fbin)
             theta = atan2(aimag(w),real(w))
             if (count(i).eq.0) then
               phase(i) = theta
@@ -622,7 +684,7 @@ c
       do i = 1, nants
         if (count(i).gt.0) then
           theta = phase(i)  / count(i)
-          xyp(i) = cmplx(cos(theta),sin(theta))
+          xyp(i,fbin) = cmplx(cos(theta),sin(theta))
           sd = nint(180/pi*sqrt(abs(phase2(i)/count(i)-theta*theta)))
           if (sd.gt.10) then
             write(line,'(a,i2,a,i4,a)')
@@ -631,7 +693,7 @@ c
             call bug('w',line)
           endif
         else
-          xyp(i) = 1
+          xyp(i,fbin) = 1
         endif
       enddo
 c
@@ -641,18 +703,21 @@ c
       if (.not.xyvary) then
         do j = 1, nsoln
           do i = 1, nants
-            t = abs(Gains(X,i,j))
-            if (t.gt.0) Gains(Y,i,j) =
-     *        abs(Gains(Y,i,j)) * Gains(X,i,j) / t * xyp(i)
+            t = abs(Gains(X,i,j,fbin))
+            if (t.gt.0) Gains(Y,i,j,fbin) =
+     *        abs(Gains(Y,i,j,fbin)) * Gains(X,i,j,fbin) / t *
+     *         xyp(i,fbin)
           enddo
         enddo
       else
         do j = 1, nsoln
-          w = conjg(Gains(Y,refant,j))/abs(Gains(Y,refant,j))
-     *                                                * xyp(refant)
-          do i = 1, nants
-            Gains(Y,i,j) = w*Gains(Y,i,j)
-          enddo
+          t = abs(Gains(Y,refant,j,fbin))
+          if (t.gt.0) then
+            w = conjg(Gains(Y,refant,j,fbin))/t * xyp(refant,fbin)
+            do i = 1, nants
+              Gains(Y,i,j,fbin) = w*Gains(Y,i,j,fbin)
+            enddo
+          endif
         enddo
       endif
 
@@ -684,13 +749,13 @@ c-----------------------------------------------------------------------
 
 *************************************************************** CompareG
 
-      subroutine CompareG(nants,nsoln,D,Gains,Flux,
+      subroutine CompareG(nants,nsoln,nfbin,fbin,D,Gains,Flux,
      *                        OldD,OldGains,OldFlux,epsi)
 
-      integer nants,nsoln
-      complex D(2,nants),Gains(2,nants,nsoln)
-      complex OldD(2,nants),OldGains(2,nants,nsoln)
-      real Flux(4),OldFlux(4),epsi
+      integer nants,nsoln,nfbin,fbin
+      complex D(2,nants,0:nfbin),Gains(2,nants,nsoln,0:nfbin)
+      complex OldD(2,nants,0:nfbin),OldGains(2,nants,nsoln,0:nfbin)
+      real Flux(4,0:nfbin),OldFlux(4,0:nfbin),epsi
 c-----------------------------------------------------------------------
 c  Determine the change in the solutions.
 c-----------------------------------------------------------------------
@@ -701,26 +766,26 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
       epsi = 0
       do i = 1, nants
-        Temp = D(X,i) - OldD(X,i)
+        Temp = D(X,i,fbin) - OldD(X,i,fbin)
         epsi = max(epsi,real(Temp)**2+aimag(Temp)**2)
-        Temp = D(Y,i) - OldD(Y,i)
+        Temp = D(Y,i,fbin) - OldD(Y,i,fbin)
         epsi = max(epsi,real(Temp)**2+aimag(Temp)**2)
       enddo
 
       do j = 1, nsoln
         do i = 1, nants
-          Temp = Gains(X,i,j) - OldGains(X,i,j)
-          t = real(Gains(X,i,j))**2 + aimag(Gains(X,i,j))**2
+          Temp = Gains(X,i,j,fbin) - OldGains(X,i,j,fbin)
+          t = real(Gains(X,i,j,fbin))**2 + aimag(Gains(X,i,j,fbin))**2
           if (t.gt.0) epsi = max(epsi,(real(Temp)**2+aimag(Temp)**2)/t)
-          Temp = Gains(Y,i,j) - OldGains(Y,i,j)
-          t = real(Gains(Y,i,j))**2 + aimag(Gains(Y,i,j))**2
+          Temp = Gains(Y,i,j,fbin) - OldGains(Y,i,j,fbin)
+          t = real(Gains(Y,i,j,fbin))**2 + aimag(Gains(Y,i,j,fbin))**2
           if (t.gt.0) epsi = max(epsi,(real(Temp)**2+aimag(Temp)**2)/t)
         enddo
       enddo
 
-      t = Flux(1)*Flux(1)
+      t = Flux(1,fbin)*Flux(1,fbin)
       do i = 1, 4
-        epsi = max(epsi,(Flux(i)-OldFlux(i))**2/t)
+        epsi = max(epsi,(Flux(i,fbin)-OldFlux(i,fbin))**2/t)
       enddo
 
       epsi = sqrt(epsi)
@@ -728,12 +793,13 @@ c-----------------------------------------------------------------------
 
 ****************************************************************** CopyG
 
-      subroutine CopyG(nants,nsoln,D,Gains,Flux,OldD,OldGains,OldFlux)
+      subroutine CopyG(nants,nsoln,nfbin,k,
+     *                 D,Gains,Flux,OldD,OldGains,OldFlux)
 
-      integer nants,nsoln
-      complex D(2,nants),Gains(2,nants,nsoln)
-      complex OldD(2,nants),OldGains(2,nants,nsoln)
-      real Flux(4),OldFlux(4)
+      integer nants,nsoln,nfbin,k
+      complex D(2,nants,0:nfbin),Gains(2,nants,nsoln,0:nfbin)
+      complex OldD(2,nants,0:nfbin),OldGains(2,nants,nsoln,0:nfbin)
+      real Flux(4,0:nfbin),OldFlux(4,0:nfbin)
 
 c-----------------------------------------------------------------------
 c  Copy the gains to a safe place.
@@ -742,37 +808,40 @@ c-----------------------------------------------------------------------
       integer i,j
 c-----------------------------------------------------------------------
       do i = 1, nants
-        OldD(X,i) = D(X,i)
-        OldD(Y,i) = D(Y,i)
+        OldD(X,i,k) = D(X,i,k)
+        OldD(Y,i,k) = D(Y,i,k)
       enddo
 
       do j = 1, nsoln
         do i = 1, nants
-          OldGains(X,i,j) = Gains(X,i,j)
-          OldGains(Y,i,j) = Gains(Y,i,j)
+          OldGains(X,i,j,k) = Gains(X,i,j,k)
+          OldGains(Y,i,j,k) = Gains(Y,i,j,k)
         enddo
       enddo
 
       do i = 1, 4
-        OldFlux(i) = Flux(i)
+        OldFlux(i,k) = Flux(i,k)
       enddo
 
       end
 
 *************************************************************** AmpSolve
 
-      subroutine AmpSolve(nsoln,nants,nbl,flux,refant,xyref,xyvary,
-     *    D,xyp,Gains,first,tol,epsi,
+      subroutine AmpSolve(maxsoln,nsoln,nants,nbl,nfbin,fbin,flux,
+     *    refant,xyref,xyvary,D,xyp,Gains,first,tol,epsi,
      *    Vis,VisCos,VisSin,SumS,SumC,SumS2,SumCS,Count,circular)
 
-      integer nsoln,nants,nbl,refant
-      real flux(4),epsi,tol
+      integer maxsoln,nsoln,nants,nfbin,nbl,refant,fbin
+      real flux(4,0:nfbin),epsi,tol
       logical first,xyref,xyvary
-      complex D(2,nants),Gains(2,nants,nsoln),xyp(nants)
-      integer Count(nbl,0:nsoln)
-      complex Vis(4,nbl,nsoln),VisSin(4,nbl,nsoln),VisCos(4,nbl,nsoln)
-      real SumS(nbl,0:nsoln),SumC(nbl,0:nsoln),SumS2(nbl,0:nsoln)
-      real SumCS(nbl,0:nsoln)
+      complex D(2,nants,0:nfbin),Gains(2,nants,nsoln,0:nfbin)
+      complex xyp(nants,0:nfbin)
+      integer Count(nbl,0:maxsoln,0:nfbin)
+      complex Vis(4,nbl,maxsoln,0:nfbin),VisSin(4,nbl,maxsoln,0:nfbin)
+      complex VisCos(4,nbl,maxsoln,0:nfbin)
+      real SumS(nbl,0:maxsoln,0:nfbin),SumC(nbl,0:maxsoln,0:nfbin)
+      real SumS2(nbl,0:maxsoln,0:nfbin)
+      real SumCS(nbl,0:maxsoln,0:nfbin)
       logical circular
 c-----------------------------------------------------------------------
 c  Solve for antenna amplitudes and phases.
@@ -780,6 +849,7 @@ c
 c  Input:
 c    nsoln      Number of solution intervals.
 c    nants,nbl  Number of antennae and number of baselines.
+c    nfbin,fbin Number of frequency bins, bin number
 c    flux       The flux of the calibrator.
 c    refant     The reference antenna number.
 c    first      True if this is the first call.
@@ -807,15 +877,16 @@ c-----------------------------------------------------------------------
 c
 c  Determine the model seen by each baseline.
 c
-      call GetVis(nants,nbl,flux,D,a,b,c,circular)
+      call GetVis(nants,nbl,flux(1,fbin),D(1,1,fbin),a,b,c,circular)
       k = 0
       do j = 2, nants
         do i = 1, j-1
           k = k + 1
           do l = 1, 4
             xyphase = (1.0,0.0)
-            if (l.eq.YX .or. l.eq.YY) xyphase = xyphase * xyp(i)
-            if (l.eq.XY .or. l.eq.YY) xyphase = xyphase * conjg(xyp(j))
+            if (l.eq.YX .or. l.eq.YY) xyphase = xyphase * xyp(i,fbin)
+            if (l.eq.XY .or. l.eq.YY) xyphase = xyphase *
+     *        conjg(xyp(j,fbin))
             a(l,k) = xyphase * a(l,k)
             b(l,k) = xyphase * b(l,k)
             c(l,k) = xyphase * c(l,k)
@@ -859,17 +930,17 @@ c
         do j = 2, nants
           do i = 1, j-1
             k = k + 1
-            if (Count(k,soln).gt.0) then
+            if (Count(k,soln,fbin).gt.0) then
               nbld = nbld + 1
               do l = 1, 4
-                SVM(l,nbld) = a(l,k)*Vis(l,k,soln)
-     *                          + b(l,k)*VisCos(l,k,soln)
-     *                          + c(l,k)*VisSin(l,k,soln)
-                SMM(l,nbld) = Count(k,soln)*(amag(l,k)+bmag(l,k))
-     *                          + (cmag(l,k)-bmag(l,k))*SumS2(k,soln)
-     *                          + ab(l,k)*SumC(k,soln)
-     *                          + ac(l,k)*SumS(k,soln)
-     *                          + bc(l,k)*SumCS(k,soln)
+                SVM(l,nbld) = a(l,k)*Vis(l,k,soln,fbin)
+     *                      + b(l,k)*VisCos(l,k,soln,fbin)
+     *                      + c(l,k)*VisSin(l,k,soln,fbin)
+                SMM(l,nbld) = Count(k,soln,fbin)*(amag(l,k)+bmag(l,k))
+     *                      +(cmag(l,k)-bmag(l,k))*SumS2(k,soln,fbin)
+     *                      + ab(l,k)*SumC(k,soln,fbin)
+     *                      + ac(l,k)*SumS(k,soln,fbin)
+     *                      + bc(l,k)*SumCS(k,soln,fbin)
               enddo
               if (Indx(i).eq.0) then
                 nantsd = nantsd + 1
@@ -887,58 +958,68 @@ c
 c
 c  Fill in the current estimates of everything, and go get the solution.
 c
-        do k = 1, nants
-          if (Indx(k).gt.0) then
-            Gx(Indx(k)) = Gains(X,k,soln)
-            Gy(Indx(k)) = Gains(Y,k,soln) * conjg(xyp(k))
-            Axy(Indx(k)) = abs(Gains(Y,k,soln) / Gains(X,k,soln))
-          endif
-        enddo
+        if (nbld.gt.0) then
+          do k = 1, nants
+            if (Indx(k).gt.0) then
+              Gx(Indx(k)) = Gains(X,k,soln,fbin)
+              Gy(Indx(k)) = Gains(Y,k,soln,fbin) * conjg(xyp(k,fbin))
+              Axy(Indx(k)) = abs(Gains(Y,k,soln,fbin) /
+     *                           Gains(X,k,soln,fbin))
+            endif
+          enddo
 
-        convrg = .true.
-        if (xyvary) then
-          if (first) then
-            call AmpSol0(nbld,nantsd,SVM,SMM,b1,b2,Gx,axy,epsi)
-            do k = 1, nantsd
-              Gy(k) = axy(k) * Gx(k)
-            enddo
+          convrg = .true.
+          if (xyvary) then
+            if (first) then
+              if (nbld.gt.0)call AmpSol0(nbld,nantsd,SVM,SMM,b1,b2,Gx,
+     *                                   axy,epsi)
+              do k = 1, nantsd
+                Gy(k) = axy(k) * Gx(k)
+              enddo
+            endif
+            call AmpSol2(nbld,nantsd,SVM,SMM,b1,b2,Gx,Gy,tol*tol,epsi)
+          else
+            if (first) call AmpSol0(nbld,nantsd,SVM,SMM,b1,b2,
+     *                              Gx,axy,epsi)
+            call AmpSol1(nbld,nantsd,SVM,SMM,b1,b2,Gx,axy,tol*tol,epsi)
           endif
-          call AmpSol2(nbld,nantsd,SVM,SMM,b1,b2,Gx,Gy,tol*tol,epsi)
-        else
-          if (first) call AmpSol0(nbld,nantsd,SVM,SMM,b1,b2,
-     *                                                Gx,axy,epsi)
-          call AmpSol1(nbld,nantsd,SVM,SMM,b1,b2,Gx,axy,tol*tol,epsi)
-        endif
 c
 c  Unpack the solutions and determine the Y gains.
 c
-        if (convrg) then
-          do k = 1, nants
-            if (Indx(k).eq.0) then
-              Gains(X,k,soln) = (0.0,0.0)
-              Gains(Y,k,soln) = (0.0,0.0)
-            else
-              Gains(X,k,soln) = Gx(Indx(k))
-              if (xyvary) then
-                Gains(Y,k,soln) = xyp(k) * Gy(Indx(k))
+          if (convrg) then
+            do k = 1, nants
+              if (Indx(k).eq.0) then
+                Gains(X,k,soln,fbin) = (0.0,0.0)
+                Gains(Y,k,soln,fbin) = (0.0,0.0)
               else
-                Gains(Y,k,soln) = axy(Indx(k))*xyp(k)*Gx(Indx(k))
+                Gains(X,k,soln,fbin) = Gx(Indx(k))
+                if (xyvary) then
+                  Gains(Y,k,soln,fbin) = xyp(k,fbin) * Gy(Indx(k))
+                else
+                  Gains(Y,k,soln,fbin) = axy(Indx(k))
+     *                                 * xyp(k,fbin) * Gx(Indx(k))
+                endif
               endif
-            endif
-          enddo
+            enddo
 c
 c  Refer the solution to the reference antenna.
 c
-          TempX = conjg(Gains(X,refant,soln)) /
-     *              abs(Gains(X,refant,soln))
-          TempY = TempX
-          if (.not.xyref) TempY = conjg(Gains(Y,refant,soln)) /
-     *                             abs(Gains(Y,refant,soln)) *
-     *                             xyp(refant)
-          do k = 1, nants
-            Gains(X,k,soln) = TempX * Gains(X,k,soln)
-            Gains(Y,k,soln) = TempY * Gains(Y,k,soln)
-          enddo
+            TempX = conjg(Gains(X,refant,soln,fbin)) /
+     *              abs(Gains(X,refant,soln,fbin))
+            TempY = TempX
+            if (.not.xyref) TempY = conjg(Gains(Y,refant,soln,fbin)) /
+     *                              abs(Gains(Y,refant,soln,fbin)) *
+     *                              xyp(refant,fbin)
+            do k = 1, nants
+              Gains(X,k,soln,fbin) = TempX * Gains(X,k,soln,fbin)
+              Gains(Y,k,soln,fbin) = TempY * Gains(Y,k,soln,fbin)
+            enddo
+          endif
+        else
+          do k=1,nants
+            Gains(X,k,soln,fbin) = 0
+            Gains(Y,k,soln,fbin) = 0
+           enddo   
         endif
       enddo
 c
@@ -1018,20 +1099,21 @@ c
 
 *************************************************************** RefSolve
 
-      subroutine RefSolve(nsoln,nants,nbl,flux,xyref,polref,
-     *    D,Gains,xyp,epsi,
+      subroutine RefSolve(maxsoln,nsoln,nants,nbl,nfbin,fbin,flux,
+     *    xyref,polref,D,Gains,xyp,epsi,
      *    Vis,VisCos,VisSin,SumS,SumC,SumS2,SumCS,Count,circular)
 
-      integer nsoln,nants,nbl
+      integer maxsoln,nsoln,nants,nbl,nfbin,fbin
       logical xyref,polref
-      real flux(4),epsi
+      real flux(4,0:nfbin),epsi
       logical circular
-      complex D(2,nants),Gains(2,nants,nsoln),xyp(nants)
-
-      integer Count(nbl,0:nsoln)
-      complex Vis(4,nbl,nsoln),VisSin(4,nbl,nsoln),VisCos(4,nbl,nsoln)
-      real SumS(nbl,0:nsoln),SumC(nbl,0:nsoln),SumS2(nbl,0:nsoln)
-      real SumCS(nbl,0:nsoln)
+      complex D(2,nants,0:nfbin),Gains(2,nants,nsoln,0:nfbin)
+      complex xyp(nants,0:nfbin)
+      integer Count(nbl,0:maxsoln,0:nfbin)
+      complex Vis(4,nbl,maxsoln,0:nfbin),VisSin(4,nbl,maxsoln,0:nfbin)
+      complex VisCos(4,nbl,maxsoln,0:nfbin)
+      real SumS(nbl,0:maxsoln,0:nfbin),SumC(nbl,0:maxsoln,0:nfbin)
+      real SumS2(nbl,0:maxsoln,0:nfbin),SumCS(nbl,0:maxsoln,0:nfbin)
 c-----------------------------------------------------------------------
 c  Solve for an offset in the value of the leakage parameters and the XY
 c  phases.  It uses a linearised approach for solving for the XY phase
@@ -1079,8 +1161,11 @@ c
 c
 c  Generate the matrix that we are to solve for.
 c
-      call RefAcc(nsoln,nants,var,nvar,nbl,Gains,D,flux,A,b,
-     *  Vis,VisCos,VisSin,SumS,SumC,SumS2,SumCS,Count,circular)
+      call RefAcc(nsoln,nants,var,nvar,nbl,Gains(1,1,1,fbin),
+     *  D(1,1,fbin),flux(1,fbin),A,b,
+     *  Vis(1,1,1,fbin),VisCos(1,1,1,fbin),VisSin(1,1,1,fbin),
+     *  SumS(1,0,fbin),SumC(1,0,fbin),SumS2(1,0,fbin),SumCS(1,0,fbin),
+     *  Count(1,0,fbin),circular)
 c
 c  Solve the system of equations.
 c
@@ -1106,12 +1191,12 @@ c
         call rotleaks(D,nants,Gain)
 
         do i = 1, nants
-          xyp(i) = xyp(i) * Gain
+          xyp(i,fbin) = xyp(i,fbin) * Gain
         enddo
 
         do j = 1, nsoln
           do i = 1, nants
-            Gains(Y,i,j) = Gains(Y,i,j) * Gain
+            Gains(Y,i,j,fbin) = Gains(Y,i,j,fbin) * Gain
           enddo
         enddo
       endif
@@ -1121,8 +1206,8 @@ c
       if (idxD.ne.0) then
         leakoff = 0.5*cmplx(b(idxD),b(idxD+1))
         do i = 1, nants
-          D(X,i) = D(X,i) + leakoff
-          D(Y,i) = D(Y,i) - conjg(leakoff)
+          D(X,i,fbin) = D(X,i,fbin) + leakoff
+          D(Y,i,fbin) = D(Y,i,fbin) - conjg(leakoff)
         enddo
         epsi = max(abs(b(idxD)),abs(b(idxD+1)),epsi)
       endif
@@ -1131,8 +1216,8 @@ c
 
 ***************************************************************** RefAcc
 
-      subroutine RefAcc(nsoln,nants,var,nvar,nbl,Gains,D,flux,A,b,
-     *  Vis,VisCos,VisSin,SumS,SumC,SumS2,SumCS,Count,circular)
+      subroutine RefAcc(nsoln,nants,var,nvar,nbl,Gains,D,flux,
+     *  A,b,Vis,VisCos,VisSin,SumS,SumC,SumS2,SumCS,Count,circular)
 
       integer nsoln,nants,nbl,nvar,var(nvar)
       complex Gains(2,nants,nsoln),D(2,nants)
@@ -1140,8 +1225,8 @@ c
 
       integer Count(nbl,0:nsoln)
       complex Vis(4,nbl,nsoln),VisSin(4,nbl,nsoln),VisCos(4,nbl,nsoln)
-      real SumS(nbl,0:nsoln),SumC(nbl,0:nsoln),SumS2(nbl,0:nsoln)
-      real SumCS(nbl,0:nsoln)
+      real SumS(nbl),SumC(nbl),SumS2(nbl)
+      real SumCS(nbl)
       logical circular
 c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
@@ -1153,7 +1238,7 @@ c-----------------------------------------------------------------------
       double precision temp
       complex V(4,MAXBASE),VS(4,MAXBASE),VC(4,MAXBASE)
 c-----------------------------------------------------------------------
-      call SumVis(nsoln,nants,nbl,Gains,Count(1,1),
+      call SumVis(nsoln,nants,nbl,Gains,Count,
      *  Vis,VisCos,VisSin,V,VS,VC)
       call RefCoeff(flux,ar,ai,br,bi,cr,ci,D,nants,nbl,circular)
 
@@ -1173,19 +1258,19 @@ c-----------------------------------------------------------------------
      *                  -   (cr(0,m,k)*cr(j,m,k)
      *                    -  br(0,m,k)*br(j,m,k)
      *                    +  ci(0,m,k)*ci(j,m,k)
-     *                    -  bi(0,m,k)*bi(j,m,k)) * SumS2(k,0)
+     *                    -  bi(0,m,k)*bi(j,m,k)) * SumS2(k)
      *                  -   (ar(0,m,k)*br(j,m,k)
      *                    +  br(0,m,k)*ar(j,m,k)
      *                    +  ai(0,m,k)*bi(j,m,k)
-     *                    +  bi(0,m,k)*ai(j,m,k)) * SumC(k,0)
+     *                    +  bi(0,m,k)*ai(j,m,k)) * SumC(k)
             temp = temp -   (ar(0,m,k)*cr(j,m,k)
      *                    +  cr(0,m,k)*ar(j,m,k)
      *                    +  ai(0,m,k)*ci(j,m,k)
-     *                    +  ci(0,m,k)*ai(j,m,k)) * SumS(k,0)
+     *                    +  ci(0,m,k)*ai(j,m,k)) * SumS(k)
      *                  -   (br(0,m,k)*cr(j,m,k)
      *                    +  cr(0,m,k)*br(j,m,k)
      *                    +  bi(0,m,k)*ci(j,m,k)
-     *                    +  ci(0,m,k)*bi(j,m,k)) * SumCS(k,0)
+     *                    +  ci(0,m,k)*bi(j,m,k)) * SumCS(k)
           enddo
         enddo
         b(jd) = temp
@@ -1205,19 +1290,19 @@ c-----------------------------------------------------------------------
      *                    + (cr(i,m,k)*cr(j,m,k)
      *                    -  br(i,m,k)*br(j,m,k)
      *                    +  ci(i,m,k)*ci(j,m,k)
-     *                    -  bi(i,m,k)*bi(j,m,k)) * SumS2(k,0)
+     *                    -  bi(i,m,k)*bi(j,m,k)) * SumS2(k)
      *                    + (ar(i,m,k)*br(j,m,k)
      *                    +  br(i,m,k)*ar(j,m,k)
      *                    +  ai(i,m,k)*bi(j,m,k)
-     *                    +  bi(i,m,k)*ai(j,m,k)) * SumC(k,0)
+     *                    +  bi(i,m,k)*ai(j,m,k)) * SumC(k)
               temp = temp + (ar(i,m,k)*cr(j,m,k)
      *                    +  cr(i,m,k)*ar(j,m,k)
      *                    +  ai(i,m,k)*ci(j,m,k)
-     *                    +  ci(i,m,k)*ai(j,m,k)) * SumS(k,0)
+     *                    +  ci(i,m,k)*ai(j,m,k)) * SumS(k)
      *                    + (br(i,m,k)*cr(j,m,k)
      *                    +  cr(i,m,k)*br(j,m,k)
      *                    +  bi(i,m,k)*ci(j,m,k)
-     *                    +  ci(i,m,k)*bi(j,m,k)) * SumCS(k,0)
+     *                    +  ci(i,m,k)*bi(j,m,k)) * SumCS(k)
             enddo
           enddo
           A(id,jd) = temp
@@ -1286,23 +1371,23 @@ c                 0 Dr  i  T   0 Dr  i  T   0 Dr  i  T   0 Dr  i  T
 c-----------------------------------------------------------------------
       do k = 1, nbl
         if (circular) then
-          call Fill(flux,3,arc,ar(0,1,k))
-          call Fill(flux,3,aic,ai(0,1,k))
-          call Fill(flux,3,brc,br(0,1,k))
-          call Fill(flux,3,bic,bi(0,1,k))
-          call Fill(flux,3,crc,cr(0,1,k))
-          call Fill(flux,3,cic,ci(0,1,k))
+          call Fill(flux(1),3,arc,ar(0,1,k))
+          call Fill(flux(1),3,aic,ai(0,1,k))
+          call Fill(flux(1),3,brc,br(0,1,k))
+          call Fill(flux(1),3,bic,bi(0,1,k))
+          call Fill(flux(1),3,crc,cr(0,1,k))
+          call Fill(flux(1),3,cic,ci(0,1,k))
         else
-          call Fill(flux,3,arl,ar(0,1,k))
-          call Fill(flux,3,ail,ai(0,1,k))
-          call Fill(flux,3,brl,br(0,1,k))
-          call Fill(flux,3,bil,bi(0,1,k))
-          call Fill(flux,3,crl,cr(0,1,k))
-          call Fill(flux,3,cil,ci(0,1,k))
+          call Fill(flux(1),3,arl,ar(0,1,k))
+          call Fill(flux(1),3,ail,ai(0,1,k))
+          call Fill(flux(1),3,brl,br(0,1,k))
+          call Fill(flux(1),3,bil,bi(0,1,k))
+          call Fill(flux(1),3,crl,cr(0,1,k))
+          call Fill(flux(1),3,cil,ci(0,1,k))
         endif
       enddo
 
-      call GetVis(nants,nbl,flux,D,a,b,c,circular)
+      call GetVis(nants,nbl,flux(1),D(1,1),a,b,c,circular)
 c
 c  Now fill in the unset ones.
 c
@@ -1432,21 +1517,23 @@ c
 
 *************************************************************** PolSolve
 
-      subroutine PolSolve(nsoln,nants,nbl,flux,refant,polsol,polref,
-     *    qusolve,vsolve,xysol,xyref,notrip,D,Gains,xyp,epsi,
-     *    present,Vis,VisCos,VisSin,SumS,SumC,SumS2,SumCS,Count,
-     *    circular)
+      subroutine PolSolve(maxsoln,nsoln,nants,nbl,nfbin,fbin,flux,
+     *    refant,polsol,polref,qusolve,vsolve,xysol,xyref,notrip,D,
+     *    Gains,xyp,epsi,present,Vis,VisCos,VisSin,SumS,SumC,SumS2,
+     *    SumCS,Count,circular)
 
-      integer nsoln,nants,nbl,refant
+      integer maxsoln,nsoln,nants,nbl,refant, nfbin, fbin
       logical xysol,qusolve,vsolve,xyref,polsol,polref,notrip,circular
-      real flux(4),epsi
-      complex D(2,nants),Gains(2,nants,nsoln),xyp(nants)
+      real flux(4,0:nfbin),epsi 
+      complex D(2,nants,0:nfbin),Gains(2,nants,nsoln,0:nfbin)
+      complex xyp(nants,0:nfbin)
 
-      integer Count(nbl,0:nsoln)
+      integer Count(nbl,0:maxsoln,0:nfbin)
       logical present(nants)
-      complex Vis(4,nbl,nsoln),VisSin(4,nbl,nsoln),VisCos(4,nbl,nsoln)
-      real SumS(nbl,0:nsoln),SumC(nbl,0:nsoln),SumS2(nbl,0:nsoln)
-      real SumCS(nbl,0:nsoln)
+      complex Vis(4,nbl,maxsoln,0:nfbin),VisSin(4,nbl,maxsoln,0:nfbin)
+      complex VisCos(4,nbl,maxsoln,0:nfbin)
+      real SumS(nbl,0:maxsoln,0:nfbin),SumC(nbl,0:maxsoln,0:nfbin)
+      real SumS2(nbl,0:maxsoln,0:nfbin),SumCS(nbl,0:maxsoln,0:nfbin)
 c-----------------------------------------------------------------------
 c  Solve for the leakage parameters, the source Q and U, XY phases, etc.
 c  This uses a linearised approach, where the produces of the error
@@ -1487,7 +1574,7 @@ c    flux   )   On input, these contain the current estimates of the
 c    Gains  )   gains, leakages, etc.  On output, they contain the
 c    D      )   updated estimates.
 c  Output:
-c    xyp        XY phase sstimate.
+c    xyp        XY phase estimate.
 c    epsi       The relative change in the gains, etc.
 c-----------------------------------------------------------------------
       include 'gpcal.h'
@@ -1506,8 +1593,9 @@ c
       polref1 = polref
       xyref1  = xyref
       if ((polref .or. xyref) .and. qusolve) then
-        temp = flux(2)*flux(2) + flux(3)*flux(3) + flux(4)*flux(4)
-        if (temp.lt.1e-4*flux(1)*flux(1)) then
+        temp = flux(2,fbin)*flux(2,fbin) + flux(3,fbin)*flux(3,fbin) 
+     *         + flux(4,fbin)*flux(4,fbin)
+        if (temp.lt.1e-4*flux(1,fbin)*flux(1,fbin)) then
           call bug('w','Turning off XYREF/POLREF for this iteration')
           polref1 = .false.
           xyref1 = .false.
@@ -1524,15 +1612,24 @@ c
 c
 c  We are going to solve the system Ax = b. Generate A and b.
 c
-      call PolAcc(nsoln,nants,nbl,Gains,D,flux,Vars,
-     *  A,b,nvar,Vis,VisCos,VisSin,SumS,SumC,SumS2,SumCS,Count,
-     *  circular)
+      call PolAcc(nsoln,nants,nbl,Gains(1,1,1,fbin),D(1,1,fbin),
+     * flux(1,fbin),Vars,
+     *  A,b,nvar,Vis(1,1,1,fbin),VisCos(1,1,1,fbin),VisSin(1,1,1,fbin),
+     *  SumS(1,0,fbin),SumC(1,0,fbin),SumS2(1,0,fbin),SumCS(1,0,fbin),
+     *  Count(1,0,fbin),circular)
 c
 c  Solve the system of equations using LINPACK routines.
 c
       call sgeco(A,nvar,nvar,pivot,rcond,z)
-      if (rcond.le.1e-6) call bug('f',
-     *  'Solution for requested parameters is degenerate')
+      if (rcond.le.1e-6) then
+        if (nfbin.eq.0) then
+          call bug('f',
+     *      'Solution for requested parameters is degenerate')
+        else
+          epsi=0
+          return
+        endif
+      endif
       if (rcond.lt.1e-4) call bug('w',
      *  'Solution for requested parameters is unstable')
       call sgesl(A,nvar,nvar,pivot,b,1)
@@ -1543,32 +1640,33 @@ c  Q and U.
 c
       epsi = 0
       if (QUvar.gt.0) then
-        temp = flux(1)
-        if (circular) temp = flux(1) + flux(4)
-        flux(2) = flux(2) + b(QUvar)   * temp
-        flux(3) = flux(3) + b(QUvar+1) * temp
+        temp = flux(1,fbin)
+        if (circular) temp = flux(1,fbin) + flux(4,fbin)
+        flux(2,fbin) = flux(2,fbin) + b(QUvar)   * temp
+        flux(3,fbin) = flux(3,fbin) + b(QUvar+1) * temp
         epsi = max(epsi,b(QUvar)**2,b(QUvar+1)**2)
       endif
 c
 c  The phases.
 c
       if (xysol) then
-        xypref = xyp(refant)
+        xypref = xyp(refant,fbin)
         do i = 1, nants
           call UnpackT(Tvar(X,i),b,nvar,expix(i),epsi)
           call UnpackT(Tvar(Y,i),b,nvar,expiy(i),epsi)
-          xyp(i) = xyp(i) * expiy(i)*conjg(expix(i))
+          xyp(i,fbin) = xyp(i,fbin) * expiy(i)*conjg(expix(i))
         enddo
 
         do j = 1, nsoln
           do i = 1, nants
-            Gains(X,i,j) = Gains(X,i,j) * expix(i)
-            Gains(Y,i,j) = Gains(Y,i,j) * expiy(i)
+            Gains(X,i,j,fbin) = Gains(X,i,j,fbin) * expix(i)
+            Gains(Y,i,j,fbin) = Gains(Y,i,j,fbin) * expiy(i)
           enddo
         enddo
 
-        xypcorr = xyp(refant)*conjg(xypref)
-        if (abs(aimag(xypcorr)).gt.1e-3) call rotleaks(D,nants,xypcorr)
+        xypcorr = xyp(refant,fbin)*conjg(xypref)
+        if (abs(aimag(xypcorr)).gt.1e-3) 
+     *     call rotleaks(D(1,1,fbin),nants,xypcorr)
       endif
 c
 c  The leakage terms.  Accumulate some weird things so we can normalise
@@ -1598,7 +1696,7 @@ c
 
       if (vsolve) then
         dv = -2.0*aimag(Sum2)/ngood
-        flux(4) = flux(4) + dv*flux(1)
+        flux(4,fbin) = flux(4,fbin) + dv*flux(1,fbin)
         dDx = dDx - cmplx(0.0,0.5*dv)
         dDy = dDy + cmplx(0.0,0.5*dv)
         epsi = max(epsi,dv*dv)
@@ -1606,8 +1704,8 @@ c
 
       do i = 1, nants
         if (present(i)) then
-          D(X,i) = D(X,i) + dD(X,i) - dDx
-          D(Y,i) = D(Y,i) + dD(Y,i) - dDy
+          D(X,i,fbin) = D(X,i,fbin) + dD(X,i) - dDx
+          D(Y,i,fbin) = D(Y,i,fbin) + dD(Y,i) - dDy
         endif
       enddo
 c
@@ -1662,7 +1760,7 @@ c-----------------------------------------------------------------------
 c
 c  Sum the visibilities.
 c
-      call SumVis(nsoln,nants,nbl,Gains,Count(1,1),
+      call SumVis(nsoln,nants,nbl,Gains,Count,
      *  Vis,VisCos,VisSin,V,VS,VC)
 c
 c  Correct the sums for the current leakage estimates.
@@ -2150,19 +2248,20 @@ c-----------------------------------------------------------------------
 **************************************************************** DatRead
 
       subroutine DatRead(tIn,polsol,nants,nbl,maxsoln,
-     *  interval,refant,minant,time,nsoln,present,notrip,
+     *  interval,refant,minant,nfbin,time,nsoln,present,notrip,
      *  Vis,VisCos,VisSin,SumS,SumC,SumS2,SumCS,Count,
      *  source,freq)
 
-      integer nsoln,nants,nbl,maxsoln,tIn,refant,minant
+      integer nsoln,nants,nbl,maxsoln,tIn,refant,minant,nfbin
       logical polsol,present(nants),notrip
-      double precision interval(2),freq
+      double precision interval(2),freq(0:nfbin)
       character source*(*)
-      complex Vis(4,nbl,maxsoln)
-      complex VisCos(4,nbl,maxsoln),VisSin(4,nbl,maxsoln)
-      real SumS(nbl,0:maxsoln),SumC(nbl,0:maxsoln)
-      real SumS2(nbl,0:maxsoln),SumCS(nbl,0:maxsoln)
-      integer Count(nbl,0:maxsoln)
+      complex Vis(4,nbl,maxsoln,0:nfbin)
+      complex VisCos(4,nbl,maxsoln,0:nfbin)
+      complex VisSin(4,nbl,maxsoln,0:nfbin)
+      real SumS(nbl,0:maxsoln,0:nfbin),SumC(nbl,0:maxsoln,0:nfbin)
+      real SumS2(nbl,0:maxsoln,0:nfbin),SumCS(nbl,0:maxsoln,0:nfbin)
+      integer Count(nbl,0:maxsoln,0:nfbin)
       double precision time(maxsoln)
 c-----------------------------------------------------------------------
 c  Read in the visibility data and form sums of things that we will need
@@ -2188,13 +2287,13 @@ c               Accumulated statistics.
 c-----------------------------------------------------------------------
       include 'gpcal.h'
       integer i,j,k,l,i1,i2,bl,totvis,ngood,nauto,nchan,nbad,n,nread
-      integer ncorr,nr,b1,b2,b3,nfreq
-      double precision preamble(4),tfirst,tlast,dfreq
+      integer ncorr(0:MAXFBIN),nr,b1,b2,b3,nfreq(0:MAXFBIN)
+      double precision preamble(4),tfirst,tlast,dfreq(0:MAXFBIN)
       double precision sfreq(MAXCHAN)
       real Cos2Chi,Sin2Chi,chi
       logical accept,flag(MAXCHAN,4),okscan,trip,tied(MAXANT),ok
       logical missing
-      complex data(MAXCHAN,4),d(4)
+      complex data(MAXCHAN,4),d(4,0:MAXFBIN)
       character line*80
 c
 c  Externals.
@@ -2224,10 +2323,11 @@ c
       ngood = 0
       nbad = 0
       nauto = 0
-      freq = 0
-      nfreq = 0
+      do k=0,nfbin
+        freq(k)=0
+        nfreq(k)=0
+      enddo
       do while (nchan.gt.0)
-        dfreq=0
         totvis = totvis + 1
         call uvinfo(tIn,'sfreq',sfreq)
 c
@@ -2241,30 +2341,50 @@ c
 c
 c  Accumulate the polarisations.
 c
-        ncorr = 0
-        d(XX) = 0
-        d(YY) = 0
-        d(XY) = 0
-        d(YX) = 0
+        do k=0,nfbin
+          ncorr(k) = 0
+          d(XX,k) = 0
+          d(YY,k) = 0
+          d(XY,k) = 0
+          d(YX,k) = 0
+          dfreq(k) = 0
+        enddo
+        k = 0
         if (polsol) then
           do j = 1, nchan
             if (flag(j,XX) .and. flag(j,YY) .and.
      *          flag(j,XY) .and. flag(j,YX)) then
-              ncorr = ncorr + 1
-              d(XX) = d(XX) + data(j,XX)
-              d(YY) = d(YY) + data(j,YY)
-              d(XY) = d(XY) + data(j,XY)
-              d(YX) = d(YX) + data(j,YX)
-              dfreq=dfreq+log(sfreq(j))
+              if (nfbin.gt.0) then
+                k = min(nfbin,(j-1)/(nchan/nfbin)+1)
+                ncorr(k) = ncorr(k) + 1
+                d(XX,k) = d(XX,k) + data(j,XX)
+                d(YY,k) = d(YY,k) + data(j,YY)
+                d(XY,k) = d(XY,k) + data(j,XY)
+                d(YX,k) = d(YX,k) + data(j,YX)
+                dfreq(k)=dfreq(k)+log(sfreq(j))
+              endif
+              ncorr(0) = ncorr(0) + 1
+              d(XX,0) = d(XX,0) + data(j,XX)
+              d(YY,0) = d(YY,0) + data(j,YY)
+              d(XY,0) = d(XY,0) + data(j,XY)
+              d(YX,0) = d(YX,0) + data(j,YX)
+              dfreq(0)=dfreq(0)+log(sfreq(j))
             endif
           enddo
         else
           do j = 1, nchan
             if (flag(j,XX) .and. flag(j,YY)) then
-              ncorr = ncorr + 1
-              d(XX) = d(XX) + data(j,XX)
-              d(YY) = d(YY) + data(j,YY)
-              dfreq=dfreq+log(sfreq(j))
+              if (nfbin.gt.0) then
+                k = min(nfbin,(j-1)/(nchan/nfbin)+1)
+                ncorr(k) = ncorr(k) + 1
+                d(XX,k) = d(XX,k) + data(j,XX)
+                d(YY,k) = d(YY,k) + data(j,YY)
+                dfreq(k)=dfreq(k)+log(sfreq(j))
+              endif
+              ncorr(0) = ncorr(0) + 1
+              d(XX,0) = d(XX,0) + data(j,XX)
+              d(YY,0) = d(YY,0) + data(j,YY)
+              dfreq(0)=dfreq(0)+log(sfreq(j))
             endif
           enddo
         endif
@@ -2272,7 +2392,7 @@ c
 c  Determine if we will accept this visibility.
 c
         call basant(preamble(4),i1,i2)
-        accept = ncorr.gt.0 .and. i1.gt.0 .and. i1.le.nants .and.
+        accept = ncorr(0).gt.0 .and. i1.gt.0 .and. i1.le.nants .and.
      *                            i2.gt.0 .and. i2.le.nants .and.
      *                            i1.ne.i2
 c
@@ -2285,7 +2405,7 @@ c
      *        preamble(3).gt.tlast+interval(2)) then
             if (nsoln.ne.0) then
               time(nsoln) = (tfirst+tlast)/2
-              okscan = doaccept(time(nsoln),Count(1,nsoln),
+              okscan = doaccept(time(nsoln),Count(1,nsoln,0),
      *                                n,nants,nbl,refant,minant)
               if (okscan) then
                 ngood = ngood + n
@@ -2301,16 +2421,18 @@ c
      *        call bug('f','Too many solution intervals')
             tfirst = preamble(3)
             tlast  = tfirst
-            do j = 1, nbl
-              Count(j,nsoln) = 0
-              SumS(j,nsoln)  = 0
-              SumC(j,nsoln)  = 0
-              SumS2(j,nsoln) = 0
-              SumCS(j,nsoln) = 0
-              do i = 1, 4
-                Vis(i,j,nsoln) = (0.0,0.0)
-                VisCos(i,j,nsoln) = (0.0,0.0)
-                VisSin(i,j,nsoln) = (0.0,0.0)
+            do k = 0, nfbin
+              do j = 1, nbl
+                Count(j,nsoln,k) = 0
+                SumS(j,nsoln,k)  = 0
+                SumC(j,nsoln,k)  = 0
+                SumS2(j,nsoln,k) = 0
+                SumCS(j,nsoln,k) = 0
+                do i = 1, 4
+                  Vis(i,j,nsoln,k) = (0.0,0.0)
+                  VisCos(i,j,nsoln,k) = (0.0,0.0)
+                  VisSin(i,j,nsoln,k) = (0.0,0.0)
+                enddo
               enddo
             enddo
           else if (preamble(3).lt.tfirst) then
@@ -2326,19 +2448,25 @@ c
           call uvrdvrr(tIn,'chi',chi,0.0)
           Cos2Chi = cos(2*chi)
           Sin2Chi = sin(2*chi)
-          do i = 1, 4
-            Vis(i,bl,nsoln) = Vis(i,bl,nsoln)       + d(i)
-            VisCos(i,bl,nsoln) = VisCos(i,bl,nsoln) + d(i)*Cos2Chi
-            VisSin(i,bl,nsoln) = VisSin(i,bl,nsoln) + d(i)*Sin2Chi
+          do k = 0, nfbin
+            do i = 1, 4
+              Vis(i,bl,nsoln,k) = Vis(i,bl,nsoln,k)       + d(i,k)
+              VisCos(i,bl,nsoln,k) = VisCos(i,bl,nsoln,k) 
+     *           + d(i,k)*Cos2Chi
+              VisSin(i,bl,nsoln,k) = VisSin(i,bl,nsoln,k)
+     *           + d(i,k)*Sin2Chi
+            enddo
+            Count(bl,nsoln,k) = Count(bl,nsoln,k) + ncorr(k)
+            SumS(bl,nsoln,k)  = SumS(bl,nsoln,k)  + ncorr(k) * Sin2Chi
+            SumC(bl,nsoln,k)  = SumC(bl,nsoln,k)  + ncorr(k) * Cos2Chi
+            SumCS(bl,nsoln,k) = SumCS(bl,nsoln,k)
+     *         + ncorr(k) * Cos2Chi*Sin2Chi
+            SumS2(bl,nsoln,k) = SumS2(bl,nsoln,k)
+     *         + ncorr(k) * Sin2Chi*Sin2Chi
+            nfreq(k) = nfreq(k) + ncorr(k)
+            freq(k) = freq(k) + dfreq(k)
           enddo
-          Count(bl,nsoln) = Count(bl,nsoln) + ncorr
-          SumS(bl,nsoln)  = SumS(bl,nsoln)  + ncorr * Sin2Chi
-          SumC(bl,nsoln)  = SumC(bl,nsoln)  + ncorr * Cos2Chi
-          SumCS(bl,nsoln) = SumCS(bl,nsoln) + ncorr * Cos2Chi*Sin2Chi
-          SumS2(bl,nsoln) = SumS2(bl,nsoln) + ncorr * Sin2Chi*Sin2Chi
           n = n + 1
-          nfreq = nfreq + ncorr
-          freq = freq + dfreq
         else if (i1.eq.i2) then
           nauto = nauto + 1
         else
@@ -2351,7 +2479,7 @@ c  Check if the last time interval is to be accepted.
 c
       if (nsoln.ne.0) then
         time(nsoln) = (tfirst+tlast)/2
-        okscan = doaccept(time(nsoln),Count(1,nsoln),
+        okscan = doaccept(time(nsoln),Count(1,nsoln,0),
      *                        n,nants,nbl,refant,minant)
         if (okscan) then
           ngood = ngood + n
@@ -2362,7 +2490,9 @@ c
 c
 c  Tell the user whats what.
 c
-      freq = exp(freq/nfreq)
+      do k=0,nfbin
+        if (nfreq(k).gt.0) freq(k) = exp(freq(k)/nfreq(k))
+      enddo
       call output('Number of solution intervals: '//itoaf(nsoln))
       call output('Total visibilities read: '//itoaf(totvis))
       if (nauto.ne.0)
@@ -2379,22 +2509,24 @@ c
      *  call bug('f','No data to process!')
 c
 c  Accumulate all the sums into slot 0.
-c
-      do j = 1, nbl
-        Count(j,0) = Count(j,1)
-        SumS(j,0)  = SumS(j,1)
-        SumC(j,0)  = SumC(j,1)
-        SumS2(j,0) = SumS2(j,1)
-        SumCS(j,0) = SumCS(j,1)
-      enddo
-
-      do l = 2, nsoln
+c 
+      do k = 0, nfbin
         do j = 1, nbl
-          Count(j,0) = Count(j,0) + Count(j,l)
-          SumS(j,0)  = SumS(j,0)  + SumS(j,l)
-          SumC(j,0)  = SumC(j,0)  + SumC(j,l)
-          SumS2(j,0) = SumS2(j,0) + SumS2(j,l)
-          SumCS(j,0) = SumCS(j,0) + SumCS(j,l)
+          Count(j,0,k) = Count(j,1,k)
+          SumS(j,0,k)  = SumS(j,1,k)
+          SumC(j,0,k)  = SumC(j,1,k)
+          SumS2(j,0,k) = SumS2(j,1,k)
+          SumCS(j,0,k) = SumCS(j,1,k)
+        enddo
+
+        do l = 2, nsoln
+          do j = 1, nbl
+            Count(j,0,k) = Count(j,0,k) + Count(j,l,k)
+            SumS(j,0,k)  = SumS(j,0,k)  + SumS(j,l,k)
+            SumC(j,0,k)  = SumC(j,0,k)  + SumC(j,l,k)
+            SumS2(j,0,k) = SumS2(j,0,k) + SumS2(j,l,k)
+            SumCS(j,0,k) = SumCS(j,0,k) + SumCS(j,l,k)
+          enddo
         enddo
       enddo
 c
@@ -2407,9 +2539,9 @@ c
             b1 = (k-1)*(k-2)/2 + j
             b2 = (j-1)*(j-2)/2 + i
             b3 = (k-1)*(k-2)/2 + i
-            trip = trip .or. (Count(b1,0).gt.0 .and.
-     *                        Count(b2,0).gt.0 .and.
-     *                        Count(b3,0).gt.0)
+            trip = trip .or. (Count(b1,0,0).gt.0 .and.
+     *                        Count(b2,0,0).gt.0 .and.
+     *                        Count(b3,0,0).gt.0)
           enddo
         enddo
       enddo
@@ -2427,7 +2559,7 @@ c
         do j = 2, nants
           do i = 1, j-1
             b1 = (j-1)*(j-2)/2 + i
-            if (Count(b1,0).gt.0) then
+            if (Count(b1,0,0).gt.0) then
               present(i) = .true.
               present(j) = .true.
               tied(i) = tied(i) .or. tied(j)
@@ -2569,7 +2701,7 @@ c
       else
         call GetXY(tIn,fac,phase,count,MAXANT,n)
       endif
-      if (fac.le.0 .or. n.eq.0) fac = 1
+      if (fac.le.0.or.n.eq.0) fac=1
       do i = n+1, nants
         count(i) = 0
       enddo
@@ -2606,8 +2738,8 @@ c
         call hdaccess(item,iostat)
       else
         if (vsolve) call bug('f',
-     *    'A leakage table must exist to use options=vsolve')
-        n = 0
+     *      'A leakage table must exist to use options=vsolve')
+         n = 0
       endif
       do i = n+1, nants
         D(X,i) = (0.0,0.0)
@@ -2618,10 +2750,10 @@ c
 
 **************************************************************** GainIni
 
-      subroutine GainIni(nants,nsoln,Gains,fac,xyp)
+      subroutine GainIni(nants,nsoln,nfbin,Gains,fac,xyp)
 
-      integer nants,nsoln
-      complex Gains(2,nants,nsoln),xyp(nants)
+      integer nants,nsoln,nfbin
+      complex Gains(2,nants,nsoln,0:nfbin),xyp(nants,0:nfbin)
       real fac
 c-----------------------------------------------------------------------
 c  Initialise the gains.
@@ -2633,26 +2765,28 @@ c  Output:
 c    Gains      Initial gains.
 c-----------------------------------------------------------------------
       include 'gpcal.h'
-      integer i,j
+      integer i,j,k
 c-----------------------------------------------------------------------
-      do j = 1, nsoln
-        do i = 1, nants
-          Gains(X,i,j) = fac
-          Gains(Y,i,j) = fac*xyp(i)
+      do k = 0, nfbin
+        do j = 1, nsoln
+          do i = 1, nants
+            Gains(X,i,j,k) = fac
+            Gains(Y,i,j,k) = fac*xyp(i,k)
+          enddo
         enddo
       enddo
       end
 
 **************************************************************** GainTab
 
-      subroutine GainTab(tIn,time,Gains,nants,nsoln)
+      subroutine GainTab(tIn,time,Gains,nants,nsoln,nfbin,freq)
 
       integer tIn
-      integer nsoln,nants
-      double precision time(nsoln)
-      complex Gains(2*nants,nsoln)
+      integer nsoln,nants,nfbin
+      double precision time(nsoln), freq(0:nfbin)
+      complex Gains(2*nants,nsoln,0:nfbin)
 c-----------------------------------------------------------------------
-c  Write out the amp/phase gain table.
+c  Write out the amp/phase gain tables.
 c
 c  Input:
 c    tIn        Handle of the file.
@@ -2660,9 +2794,10 @@ c    time       Time (midpoint) for each solution interval.
 c    Gains      The gains to be written out.
 c    nants      Number of antenna.
 c    nsoln      Number of solution intervals.
+c    nfbin      Number of frequency bins
 c-----------------------------------------------------------------------
       include 'maxdim.h'
-      integer iostat,off,item,i,j
+      integer iostat,off,item,i,j,fbin
       complex G(2*MAXANT)
 c-----------------------------------------------------------------------
       call haccess(tIn,item,'gains','write',iostat)
@@ -2676,7 +2811,7 @@ c-----------------------------------------------------------------------
         call bugno('f',iostat)
       endif
 c
-c  Write out all the gains.
+c  Write out all the continuum  gains.
 c
       off = 8
       do i = 1, nsoln
@@ -2687,8 +2822,9 @@ c
           call bugno('f',iostat)
         endif
         do j = 1, 2*nants
-          if (abs(real(Gains(j,i)))+abs(aimag(Gains(j,i))).ne.0) then
-            G(j) = 1/Gains(j,i)
+          if (abs(real(Gains(j,i,0)))+abs(aimag(Gains(j,i,0)))
+     *          .ne.0) then
+            G(j) = 1/Gains(j,i,0)
           else
             G(j) = (0.0,0.0)
           endif
@@ -2713,6 +2849,58 @@ c
       call wrhdi(tIn,'ngains',2*nants)
       call wrhdi(tIn,'nsols',nsoln)
       call wrhdd(tIn,'interval',0.5d0)
+      
+      if (nfbin.le.1) return
+c
+c  Now write the gains for the frequency binned solutions
+c
+      call haccess(tIn,item,'gainsf','write',iostat)
+      if (iostat.ne.0) then
+        call bug('w','Error opening output gainsf table.')
+        call bugno('f',iostat)
+      endif
+      call hwritei(item,0,0,4,iostat)
+      call hwritei(item,nfbin,4,4,iostat)
+      if (iostat.ne.0) then
+        call bug('w','Error writing header of gainsf table')
+        call bugno('f',iostat)
+      endif
+c
+c  Write out all the gains.
+c
+      off = 8
+      do fbin = 1, nfbin
+        do i = 1, nsoln
+          call hwrited(item,time(i),off,8,iostat)
+          off = off + 8
+          if (iostat.ne.0) then
+            call bug('w','Error writing time to gainsf table')
+            call bugno('f',iostat)
+          endif
+          do j = 1, 2*nants
+            if (abs(real(Gains(j,i,fbin)))+abs(aimag(Gains(j,i,fbin)))
+     *          .ne.0) then
+              G(j) = 1/Gains(j,i,fbin)
+            else
+              G(j) = (0.0,0.0)
+            endif
+          enddo
+          call hwriter(item,G,off,8*2*nants,iostat)
+          off = off + 8*2*nants
+          if (iostat.ne.0) then
+            call bug('w','Error writing gains to gainsf table')
+            call bugno('f',iostat)
+          endif
+        enddo
+        call hwrited(item,freq(fbin),off,8,iostat)
+        off = off + 8
+      enddo
+c
+c  Finished writing the gain table.
+c
+      call hdaccess(item,iostat)
+      if (iostat.ne.0) call bugno('f',iostat)
+      call wrhdi(tIn,'nfbin',nfbin)
 
       end
 
@@ -2768,10 +2956,11 @@ c
 
 **************************************************************** LeakTab
 
-      subroutine LeakTab(tIn,D,nants)
+      subroutine LeakTab(tIn,D,nants,nfbin,freq)
 
-      integer tIn,nants
-      complex D(2,nants)
+      integer tIn,nants,nfbin
+      double precision freq(0:nfbin)
+      complex D(2,nants,0:nfbin)
 c-----------------------------------------------------------------------
 c  Save the polarisation gains in an item in the calibrator file.
 c  This uses some dirty tricks. Firstly it uses wrhdc to create the
@@ -2782,8 +2971,9 @@ c  Input:
 c    tIn        Handle of the calibrator file.
 c    D          Leakage parameters.
 c    nants      Number of antennae.
+c    nfbin      Number of freq bins
 c-----------------------------------------------------------------------
-      integer item,iostat
+      integer item,iostat, off, k
 c-----------------------------------------------------------------------
       call wrhdc(tIn,'leakage',(1.0,0.0))
       call haccess(tIn,item,'leakage','append',iostat)
@@ -2794,10 +2984,36 @@ c-----------------------------------------------------------------------
 c
 c  The item alignment requirement requires that we start writing at
 c  byte 8. Bytes 0-3 are the header, and bytes 4-7 are unused.
+c  For v2+ table: use byte 4-7 to write version number
 c
-      call hwriter(item,D,8,2*8*nants,iostat)
+      off = 8
+      call hwriter(item,D,off,2*8*nants,iostat)
       if (iostat.ne.0) then
         call bug('w','Error writing to the leakage table')
+        call bugno('f',iostat)
+      endif
+      call hdaccess(item,iostat)
+      if (iostat.ne.0) call bugno('f',iostat)
+      if (nfbin.le.1) return
+c
+c  Now write the frequency binned leakages
+c
+      call haccess(tIn,item,'leakagef','write',iostat)
+      if (iostat.ne.0) then
+        call bug('w','Error opening the output leakagef table')
+        call bugno('f',iostat)
+      endif
+      off = 4
+      call hwritei(item,nfbin,off,4,iostat)
+      off = 8
+      do k = 1, nfbin
+        call hwriter(item,D(1,1,k),off,2*8*nants,iostat)
+        off = off + 2*8*nants
+        call hwrited(item,freq(k),off,8, iostat)
+        off = off + 8
+      enddo
+      if (iostat.ne.0) then
+        call bug('w','Error writing to the leakagef table')
         call bugno('f',iostat)
       endif
       call hdaccess(item,iostat)
