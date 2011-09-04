@@ -79,6 +79,7 @@ c    pjt  18jan03 extra char for f2c interfaces
 c    rjs  18sep04 Support the variance being scaled by the noise level.
 c    rjs  01jan05 Change arg of uvgnfac to double precision.
 c    rjs  02feb07 Correct call to uvgetvr for 'baseline'
+c    mhw  24feb11 Read gainsf and leakagef calibration tables
 c
 c  User-Callable Routines:
 c    uvDatInp(key,flags)
@@ -375,7 +376,8 @@ c
 c
 c  Setup the gains routines, if necessary.
 c
-	  WillCal = docal.and.hdprsnt(tno,'gains')
+          dofbcal = docal.and.hdprsnt(tno,'gainsf')
+	  WillCal = dofbcal.or.(docal.and.hdprsnt(tno,'gains'))
 	  dogsv = .false.
 	  if(willcal)then
 	    call rdhda(tno,'senmodel',senmodel,' ')
@@ -390,7 +392,6 @@ c
 	    call bug('w',umsg)
 	    willpass = .false.
 	  endif
-	  if(WillCal.or.willpass)call uvGnIni(tno,WillCal,willpass)
 c
 c  Try to determine the number of polarisations in the file (npol parameter),
 c  We conclude that the file has only one polarisation if the "npol"
@@ -409,11 +410,14 @@ c  leakage terms in the first place! Also we do not perform polarisation
 c  correction to PolII, so turn polarization correction off if this is
 c  the only polarisation that we are interested in.
 c
-	  WillLeak = doleak.and.hdprsnt(tno,'leakage')
+          dofbleak = doleak.and.hdprsnt(tno,'leakagef')
+	  WillLeak = dofbleak.or.(doleak.and.hdprsnt(tno,'leakage'))
 	  if(nPol.eq.1) WillLeak = WillLeak.and.Pols(1).ne.PolII
 	  if(WillLeak.and.nPolF.lt.4.and.nPolF.ne.0)
      *	    call bug('f','Required polarizations missing from the file')
 	  if(WillLeak) call uvLkIni()
+	  if(WillCal.or.willpass.or.dofbleak)
+     *      call uvGnIni(tno,WillCal,willpass)
 c
 c  Check if we need to perform polarisation/Stokes processing.
 c  We use the shortcut of
@@ -455,6 +459,17 @@ c
 	    WillPol = .false.
 	  endif
 c
+c  Track the spectral variables if we are using freq binned solutions
+c          
+          if(dofbcal.or.dofbleak) then
+            call uvVarIni(tno,vupd)
+            call uvVarSet(vupd,'nspect')
+            call uvVarSet(vupd,'sfreq')
+            call uvVarSet(vupd,'sdf')
+            call uvVarSet(vupd,'nschan')
+          endif
+
+c
 c  If there is to be polarisation handling, make sure that the user
 c  has not used polarization selection.
 c
@@ -469,13 +484,23 @@ c
 	    call output(umsg)
 	  endif
 	  if(WillCal.and..not.calmsg(pnt)) then
-	    umsg = 'Applying gain corrections to '//
+            if (dofbcal) then
+	      umsg = 'Applying freq. dependent gain corrections to '//
      *	      InBuf(k1(pnt):k2(pnt))
+             else 
+	       umsg = 'Applying gain corrections to '//
+     *	      InBuf(k1(pnt):k2(pnt))
+            endif
 	    call output(umsg)
 	  endif
 	  if(WillLeak.and..not.calmsg(pnt))then
-	    umsg = 'Applying polarization leakage corrections to '//
+            if (dofbleak) then
+              umsg = 'Applying freq. dependent leakage correction to '//
+     *         InBuf(k1(pnt):k2(pnt)) 
+            else
+ 	      umsg = 'Applying polarization leakage corrections to '//
      *	      InBuf(k1(pnt):k2(pnt))
+            endif
 	    call output(umsg)
 	  endif
 	  WillCal = WillCal.or.willpass
@@ -486,7 +511,7 @@ c
 	  uvDatOpn = .true.
 	  tIn = tno
 	  iPol = 0
-	else
+	else 
 	  uvDatOpn = .false.
 	endif
 	end
@@ -519,6 +544,8 @@ c------------------------------------------------------------------------
 	include 'uvdat.h'
 	double precision linepar(6)
 	character umsg*80
+        logical uvvarupd
+        external uvvarupd
 c
 c  Get the data.
 c
@@ -526,11 +553,15 @@ c
 	  call uvPolGet(preamble,data,flags,n,nread)
 	else
 	  call uvread(tno,preamble,data,flags,n,nread)
+          if (dofbcal) updated = updated .or. uvVarUpd(vupd)
+          if (dofbcal.and.updated) call uvDatFrq(nread)
 	  GWt = 1
 	  if(WillCal.and.nread.gt.0)call uvGnFac(preamble(idxT),
-     *	    preamble(idxBL),0,.false.,data,flags,nread,GWt)
+     *	    preamble(idxBL),0,.false.,data,flags,nread,GWt,chnfreq,
+     *      updated)
 	  GWt = GWt*GWt
 	endif
+        updated = .false.
 c
 c  Fill in velocity/felocity defaults if needed.
 c
@@ -639,6 +670,7 @@ c
 c  Externals.
 c
 	logical uvPolIni
+        complex uvLkInt
 c
 c  Get more polarisation info, if necessary.
 c
@@ -692,10 +724,11 @@ c
 	    data(i) = 0
 	  enddo
 	  do j=1,nc
-	    coeff = coeffs(j,iPol)
+	    coeff = coeffs(j,iPol,0)
 	    k = indices(j,iPol)
 	    do i=1,nread
 	      if(Sflags(i,k))then
+                if (nfbin.gt.1) coeff = uvLkInt(j,iPol,i)
 	        data(i) = data(i) + coeff * Sdata(i,k)
 	        count(i) = count(i) + 1
 	      endif
@@ -711,7 +744,7 @@ c  must be good.
 c
 	else
 	  k = indices(1,iPol)
-	  coeff = coeffs(1,iPol)
+	  coeff = coeffs(1,iPol,0)
 	  if(real(coeff).eq.1.and.aimag(coeff).eq.0)then
 	    do i=1,nread
 	      data(i) = SData(i,k)
@@ -719,15 +752,17 @@ c
 	    enddo
 	  else
 	    do i=1,nread
+              if (nfbin.gt.1) coeff = uvLkInt(1,iPol,i)
 	      data(i) = coeff * Sdata(i,k)
 	      flags(i) = Sflags(i,k)
 	    enddo
 	  endif
 c
 	  do j=2,nc
-	    coeff = coeffs(j,iPol)
+	    coeff = coeffs(j,iPol,0)
 	    k = indices(j,iPol)
 	    do i=1,nread
+              if (nfbin.gt.1) coeff = uvLkInt(j,iPol,i)
 	      data(i) = data(i) + coeff * Sdata(i,k)
 	      flags(i) = flags(i) .and. Sflags(i,k)
 	    enddo
@@ -735,6 +770,50 @@ c
 	endif
 c
 	end
+c************************************************************************
+	complex function uvLkInt(i1,i2,chan)
+c
+	implicit none
+c
+c  This interpolates the pol coefficients from bins to channels.
+c------------------------------------------------------------------------
+	include 'uvdat.h'
+	integer i1,i2,chan
+c************************************************************************
+        integer i,b1,b2
+        double precision d,d1,d2,fac
+        b1 = 1
+        d1 = abs(chnfreq(chan)-freq(b1))
+        do i=2,nfbin
+          d = abs(chnfreq(chan)-freq(i))
+          if (d.lt.d1) then
+            d1 = d
+            b1 = i
+          endif
+        enddo
+        if (b1.eq.1) then
+          b2 = 2
+        else if (b1.eq.nfbin) then
+          b2=nfbin-1
+        else 
+          d1 = abs(chnfreq(chan)-freq(b1-1))
+          d2 = abs(chnfreq(chan)-freq(b1+1))
+          if (d1.lt.d2) then
+            b2 = b1 - 1
+          else
+            b2 = b1 + 1
+          endif
+        endif
+        if (b1.eq.b2) then
+          fac = 1
+        else
+          fac = (chnfreq(chan)-freq(b1))/(freq(b2)-freq(b1))
+        endif
+c
+c  Linear/Vector interpolation - do we need a scalar option?
+c        
+        uvLkInt = (1-fac)*coeffs(i1,i2,b1)+fac*coeffs(i1,i2,b2)
+        end
 c************************************************************************
 	logical function uvPolIni()
 c
@@ -744,11 +823,13 @@ c  This reads in all the needed data for the polarisation conversion step.
 c  It also calculates the coefficients needed to convert to the desired
 c  polarisation type.
 c------------------------------------------------------------------------
-	include 'uvdat.h'
-	integer ntmp,indx(PolMin:PolMax),P,nP,i,j,k,type(maxPol)
+        include 'uvdat.h'
+	integer ntmp,indx(PolMin:PolMax),P,nP,i,j,k,l,n,type(maxPol)
 	logical NoChi,circ2,circx,lin2,linx,doLkCorr
 	real Cos2Chi,Sin2Chi,wt(maxPol),temp
 	logical raw,caled(maxPol)
+        logical uvvarupd
+        external uvvarupd
 	
 c
 c  Initialise the indx array.
@@ -763,6 +844,7 @@ c
 	uvPolIni = Snread.eq.0
 	if(uvPolIni)return
 c
+        if (dofbcal.or.dofbleak) updated = updated .or. uvVarUpd(vupd)
 	call uvrdvri(tno,'npol',nP,1)
 	if(nP.lt.1.or.nP.gt.maxPol) call bug('f',
      *	  'Invalid number of polarisations for me to handle')
@@ -773,6 +855,10 @@ c
 	  nPol = nP
 	endif
 	caled(1) = .false.
+c
+c  Get frequency setup of data, assuming line data
+c        
+        if (updated) call uvDatFrq(Snread)
 c
 c  Read the remaining data records.
 c
@@ -811,7 +897,7 @@ c
 	  if(indx(Pols(i)).ne.0)then
 	    doLkCorr = doLkCorr.and.Pols(i).lt.0
 	    ncoeff(i) = 1
-	    coeffs(1,i) = 1
+	    coeffs(1,i,0) = 1
 	    type(1) = Pols(i)
 c
 c  The case of Stokes I, when the source is assumed unpolarised.
@@ -822,26 +908,26 @@ c
 	    if(indx(PolI).ne.0)then
 	      ncoeff(i) = 1
 	      type(1) = PolI
-	      coeffs(1,i) = 1
+	      coeffs(1,i,0) = 1
 	    else
 	      if(indx(PolRR).ne.0)then
 		ncoeff(i) = ncoeff(i) + 1
-		coeffs(ncoeff(i),i) = 1
+		coeffs(ncoeff(i),i,0) = 1
 		type(ncoeff(i)) = PolRR
 	      endif
 	      if(indx(PolLL).ne.0)then
 		ncoeff(i) = ncoeff(i) + 1
-		coeffs(ncoeff(i),i) = 1
+		coeffs(ncoeff(i),i,0) = 1
 		type(ncoeff(i)) = PolLL
 	      endif
 	      if(indx(PolXX).ne.0)then
 		ncoeff(i) = ncoeff(i) + 1
-		coeffs(ncoeff(i),i) = 1
+		coeffs(ncoeff(i),i,0) = 1
 		type(ncoeff(i)) = PolXX
 	      endif
 	      if(indx(PolYY).ne.0)then
 		ncoeff(i) = ncoeff(i) + 1
-		coeffs(ncoeff(i),i) = 1
+		coeffs(ncoeff(i),i,0) = 1
 		type(ncoeff(i)) = PolYY
 	      endif
 	    endif
@@ -853,14 +939,14 @@ c
 	  else if(Pols(i).eq.PolI)then
 	    if(circ2)then
 	      ncoeff(i) = 2
-	      coeffs(1,i) = (0.5,0.0)
-	      coeffs(2,i) = (0.5,0.0)
+	      coeffs(1,i,0) = (0.5,0.0)
+	      coeffs(2,i,0) = (0.5,0.0)
 	      type(1) = PolRR
 	      type(2) = PolLL
 	    else if(lin2)then
 	      ncoeff(i) = 2
-	      coeffs(1,i) = (0.5,0.0)
-	      coeffs(2,i) = (0.5,0.0)
+	      coeffs(1,i,0) = (0.5,0.0)
+	      coeffs(2,i,0) = (0.5,0.0)
 	      type(1) = PolXX
 	      type(2) = PolYY
 	    endif
@@ -871,17 +957,17 @@ c
 	    if(circx)then
 	      if(NoChi)call uvPolChi(NoChi,Cos2Chi,Sin2Chi)
 	      ncoeff(i) = 2
-	      coeffs(1,i) = (0.5,0.0) * cmplx(Cos2Chi,-Sin2Chi)
-	      coeffs(2,i) = (0.5,0.0) * cmplx(Cos2Chi, Sin2Chi)
+	      coeffs(1,i,0) = (0.5,0.0) * cmplx(Cos2Chi,-Sin2Chi)
+	      coeffs(2,i,0) = (0.5,0.0) * cmplx(Cos2Chi, Sin2Chi)
 	      type(1) = PolRL
 	      type(2) = PolLR
 	    else if(lin2.and.linx)then
 	      if(NoChi)call uvPolChi(NoChi,Cos2Chi,Sin2Chi)
 	      ncoeff(i) = 4
-	      coeffs(1,i) = cmplx( 0.5*Cos2Chi,0.0)
-	      coeffs(2,i) = cmplx(-0.5*Cos2Chi,0.0)
-	      coeffs(3,i) = cmplx(-0.5*Sin2Chi,0.0)
-	      coeffs(4,i) = cmplx(-0.5*Sin2Chi,0.0)
+	      coeffs(1,i,0) = cmplx( 0.5*Cos2Chi,0.0)
+	      coeffs(2,i,0) = cmplx(-0.5*Cos2Chi,0.0)
+	      coeffs(3,i,0) = cmplx(-0.5*Sin2Chi,0.0)
+	      coeffs(4,i,0) = cmplx(-0.5*Sin2Chi,0.0)
 	      type(1) = PolXX
 	      type(2) = PolYY
 	      type(3) = PolXY
@@ -894,17 +980,17 @@ c
 	    if(circx)then
 	      if(NoChi)call uvPolChi(NoChi,Cos2Chi,Sin2Chi)
 	      ncoeff(i) = 2
-	      coeffs(1,i) = (0.0,-0.5) * cmplx(Cos2Chi, Sin2Chi)
-	      coeffs(2,i) = (0.0, 0.5) * cmplx(Cos2Chi,-Sin2Chi)
+	      coeffs(1,i,0) = (0.0,-0.5) * cmplx(Cos2Chi, Sin2Chi)
+	      coeffs(2,i,0) = (0.0, 0.5) * cmplx(Cos2Chi,-Sin2Chi)
 	      type(1) = PolLR
 	      type(2) = PolRL
 	    else if(lin2.and.linx)then
 	      if(NoChi)call uvPolChi(NoChi,Cos2Chi,Sin2Chi)
 	      ncoeff(i) = 4
-	      coeffs(1,i) = cmplx( 0.5*Sin2Chi,0.0)
-	      coeffs(2,i) = cmplx(-0.5*Sin2Chi,0.0)
-	      coeffs(3,i) = cmplx( 0.5*Cos2Chi,0.0)
-	      coeffs(4,i) = cmplx( 0.5*Cos2Chi,0.0)
+	      coeffs(1,i,0) = cmplx( 0.5*Sin2Chi,0.0)
+	      coeffs(2,i,0) = cmplx(-0.5*Sin2Chi,0.0)
+	      coeffs(3,i,0) = cmplx( 0.5*Cos2Chi,0.0)
+	      coeffs(4,i,0) = cmplx( 0.5*Cos2Chi,0.0)
 	      type(1) = PolXX
 	      type(2) = PolYY
 	      type(3) = PolXY
@@ -916,42 +1002,42 @@ c
 	  else if(Pols(i).eq.PolV)then
 	    if(circ2)then
 	      ncoeff(i) = 2
-	      coeffs(1,i) = ( 0.5,0.0)
-	      coeffs(2,i) = (-0.5,0.0)
+	      coeffs(1,i,0) = ( 0.5,0.0)
+	      coeffs(2,i,0) = (-0.5,0.0)
 	      type(1) = PolRR
 	      type(2) = PolLL
 	    else if(linx)then
 	      ncoeff(i) = 2
-	      coeffs(1,i) = (0.0, 0.5)
-	      coeffs(2,i) = (0.0,-0.5)
+	      coeffs(1,i,0) = (0.0, 0.5)
+	      coeffs(2,i,0) = (0.0,-0.5)
 	      type(1) = PolXY
 	      type(2) = PolYX
 	    endif
 	  else if(Pols(i).eq.PolQQ)then
 	    if(circx)then
 	      ncoeff(i) = 2
-	      coeffs(1,i) = (0.5,0.0)
-	      coeffs(2,i) = (0.5,0.0)
+	      coeffs(1,i,0) = (0.5,0.0)
+	      coeffs(2,i,0) = (0.5,0.0)
 	      type(1) = PolRL
 	      type(2) = PolLR
 	    elseif(lin2)then
 	      ncoeff(i) = 2
-	      coeffs(1,i) = ( 0.5,0.0)
-	      coeffs(2,i) = (-0.5,0.0)
+	      coeffs(1,i,0) = ( 0.5,0.0)
+	      coeffs(2,i,0) = (-0.5,0.0)
 	      type(1) = PolXX
 	      type(2) = PolYY
 	    endif
 	  else if(Pols(i).eq.PolUU)then
 	    if(circx)then
 	      ncoeff(i) = 2
-	      coeffs(1,i) = (0.0,-0.5)
-	      coeffs(2,i) = (0.0, 0.5)
+	      coeffs(1,i,0) = (0.0,-0.5)
+	      coeffs(2,i,0) = (0.0, 0.5)
 	      type(1) = PolLR
 	      type(2) = PolRL
 	    else if(linx)then
 	      ncoeff(i) = 2
-	      coeffs(1,i) = (0.5,0.0)
-	      coeffs(2,i) = (0.5,0.0)
+	      coeffs(1,i,0) = (0.5,0.0)
+	      coeffs(2,i,0) = (0.5,0.0)
 	      type(1) = PolXY
 	      type(2) = PolYX
 	    endif
@@ -971,10 +1057,14 @@ c
 c  The leakage correction and gain correction routines may find that they
 c  cannot do the work. In this case, ncoeff(i) is set to zero.
 c
-c  Correct there coefficients for polarisation leakage.
+c  Correct the coefficients for polarisation leakage.
 c
-	  if(doLkCorr) call uvLkCorr(Spreambl(idxBL),maxPol,ncoeff(i),
-     *	      type,coeffs(1,i),Leaks,nLeaks)
+          n = 0
+	  if(doLkCorr) then
+            call uvLkCorr(Spreambl(idxBL),maxPol,ncoeff(i),
+     *	      type,i,coeffs,Leaks,nLeaks,nfbin,MAXANT,MAXFBIN)
+            n = nfbin
+          endif
 c
 c  Calculate the sum of the weights of the coefficients -- to that
 c  we can work out the correct variance later on.
@@ -982,40 +1072,107 @@ c
 c
 c  Correct the data that we need to correct.
 c
-	  SumWts(i) = 0
+          do l=0,n
+            SumWts(i,l) = 0
+          enddo
 	  if(WillCal)then
 	    do j=1,ncoeff(i)
 	      k = indx(type(j))
 	      indices(j,i) = k
 	      if(.not.caled(k))then
-		call uvGnFac(Spreambl(idxT),
-     *		  Spreambl(idxBL),type(j),.false.,Sdata(1,k),
-     *		  Sflags(1,k),Snread,wt(k))
+                call uvGnFac(Spreambl(idxT),
+     *	          Spreambl(idxBL),type(j),.false.,Sdata(1,k),
+     *	          Sflags(1,k),Snread,wt(k),chnfreq,updated)
 	        caled(k) = .true.
 	      endif
-	      temp = real(coeffs(j,i))**2 + aimag(coeffs(j,i))**2
-	      if(dogsv)then
-	        SumWts(i) = SumWts(i) + wt(k)*wt(k)*temp
-	      else
-	        SumWts(i) = SumWts(i) + temp
-	      endif
+              do l=0,n
+	        temp = real(coeffs(j,i,l))**2 + aimag(coeffs(j,i,l))**2
+	        if(dogsv)then
+	          SumWts(i,l) = SumWts(i,l) + wt(k)*wt(k)*temp
+	        else
+	          SumWts(i,l) = SumWts(i,l) + temp
+	        endif
+              enddo
 	    enddo
 c
 c  Else determine the indices of the data that corresponds.
 c
 	  else
 	    do j=1,ncoeff(i)
-	      temp = real(coeffs(j,i))**2 + aimag(coeffs(j,i))**2
-	      SumWts(i) = SumWts(i) + temp
+              do l=0,n
+	        temp = real(coeffs(j,i,l))**2 + aimag(coeffs(j,i,l))**2
+	        SumWts(i,l) = SumWts(i,l) + temp
+              enddo
 	      indices(j,i) = indx(type(j))
 	    enddo
 	  endif
-	  if(doaver(i)) SumWts(i) = SumWts(i) / (ncoeff(i)**2)
+	  if(doaver(i)) then
+            do l=0,n
+              SumWts(i,l) = SumWts(i,l) / (ncoeff(i)**2)
+            enddo
+          endif
 	enddo
 c
 	uvPolIni = .true.
 c
 	end
+c************************************************************************
+	subroutine uvDatFrq(n)
+c
+	implicit none
+        integer n
+c
+c  This determines the freq setup of the data
+c
+c  Output:
+c------------------------------------------------------------------------
+	include 'mirconst.h'
+	include 'uvdat.h'
+c************************************************************************
+
+        double precision sdf(MAXWIN),sdf0(MAXWIN)
+        double precision sfreq(MAXWIN),sfreq0(MAXWIN)
+        integer nschan(MAXWIN),nschan0(MAXWIN)
+        integer nspect,nspect0
+        integer nchan1,lstart1,lstep1,lwidth1,ispect,chan,i
+
+        call uvrdvri(tno,'nspect',nspect0,1)
+        if (nspect0.le.0 .or. nspect0.gt.MAXWIN) call bug('f',
+     *    'Bad value for variable nspect, in uvDatFrq')
+        call uvgetvri(tno,'nschan',nschan0,nspect0)
+        call uvgetvrd(tno,'sdf',sdf0,nspect0)
+        call uvgetvrd(tno,'sfreq',sfreq0,nspect0)
+        lstart1 = nint(lstart)
+        lstep1 = nint(lstep)
+        lwidth1 = nint(lwidth)
+c
+c  Generate the output window description and channel freqs
+c
+        ispect = 1
+        nspect = 0
+        chan = 0
+        nchan1 = n
+        do while (nchan1.gt.0)
+          do while (lstart1.gt.nschan0(ispect))
+            lstart1 = lstart1 - nschan0(ispect)
+            ispect = ispect + 1
+          enddo
+          nspect = nspect + 1
+          sfreq(nspect) = sfreq0(ispect) +
+     *        (lstart1-1)*sdf0(ispect) + 0.5*(lwidth1-1)*sdf0(ispect)
+          nschan(nspect) = min((nschan0(ispect)-lstart1)/
+     *      lstep1+1,nchan1)
+          sdf(nspect)    = lstep1 *sdf0(ispect)
+          do i=1,nschan(nspect)
+            chan=chan+1
+            chnfreq(chan)=sfreq(nspect)+(i-1)*sdf(nspect)
+          enddo
+          nchan1 = nchan1 - nschan(nspect)
+          lstart1 = lstart1 + lstep1*nschan(nspect)
+        enddo
+        if (chan.ne.n) call bug('f',
+     *     'inconsistent number of channels in uvDatFrq')
+        end
 c************************************************************************
 	subroutine uvPolChi(NoChi,Cos2Chi,Sin2Chi)
 c
@@ -1226,7 +1383,7 @@ c
 	  call uvinfo(tno,'variance',variance)
 	  rval = variance
 	  if(WillPol)then
-	    rval = SumWts(iPol) * rval
+	    rval = SumWts(iPol,0) * rval
 	  elseif(dogsv)then
 	    rval = GWt * rval
 	  endif
@@ -1234,9 +1391,9 @@ c
 	  call uvrdvrr(tno,'jyperk',rval,0.)
 	  if(WillPol)then
 	    if(ncoeff(iPol).gt.1.and.Pols(iPol).gt.0)then
-	      rval = sqrt(2*SumWts(iPol)) * rval
+	      rval = sqrt(2*SumWts(iPol,0)) * rval
 	    else
-	      rval = sqrt(SumWts(iPol)) * rval
+	      rval = sqrt(SumWts(iPol,0)) * rval
 	    endif
 	  elseif(dogsv)then
 	    rval = sqrt(GWt) * rval
@@ -1370,7 +1527,7 @@ c
 c  This reads the polarization leakage table.
 c
 c------------------------------------------------------------------------
-	integer iostat,litem
+	integer iostat,litem,i,off
 	include 'uvdat.h'
 c
 c  Externals.
@@ -1379,7 +1536,7 @@ c
 c
 c  Open the gains file.
 c
-	call haccess(tno,litem,'leakage','read',iostat)
+        call haccess(tno,litem,'leakage','read',iostat)
 	if(iostat.ne.0)call UvGnBug(iostat,'accessing leakage table')
 c
 c  Determine the number of leakage parameters, as a consistency
@@ -1388,23 +1545,60 @@ c
 	nLeaks = (hsize(litem)-8)/16
 	if(nLeaks.lt.1)call bug('f','Leakage table appears bad')
 c
-c  Read in the leakages and finish up.
+c  Read in the leakages.
 c
 	call hreadr(litem,Leaks,8,16*nLeaks,iostat)
-	if(iostat.ne.0)call UvGnBug(iostat,'reading leakage table')
-	call hdaccess(litem,iostat)
-	if(iostat.ne.0)call UvGnBug(iostat,'closing leakage table')
+        if(iostat.ne.0)call UvGnBug(iostat,'reading leakage table')
+c
+c  Finish up.
+c      
+	  call hdaccess(litem,iostat)
+	  if(iostat.ne.0)call UvGnBug(iostat,'closing leakage table')
+          nfbin = 0
+c
+c  Now do the frequency binned leakages
+c                  
+        if (dofbleak) then
+          call haccess(tno,litem,'leakagef','read',iostat)
+	  if(iostat.ne.0)
+     *     call UvGnBug(iostat,'accessing leakagef table')
+c
+c  Determine the number of leakage parameters, as a consistency
+c  check.
+c
+	  nLeaks = (hsize(litem)-8)/8
+	  if(nLeaks.lt.3)call bug('f','leakagef table appears bad')
+c
+c  Read in the leakages.
+c
+          call hreadi(litem,nfbin,4,4,iostat)
+          if (nfbin.le.0.or.iostat.ne.0) 
+     *      call UvGnBug(iostat,'reading leakagef table')
+          nLeaks = (nLeaks/nfbin - 1)/2
+          off = 8
+          do i=1,nfbin
+            call hreadr(litem,Leaks(1,1,i),off,16*nLeaks,iostat)
+            off = off + 16*nLeaks
+            call hreadd(litem,freq(i),off,8,iostat)
+            off = off + 8
+	    if(iostat.ne.0) 
+     *        call UvGnBug(iostat,'reading leakagef table')
+          enddo     
+	  call hdaccess(litem,iostat)
+	  if(iostat.ne.0) call UvGnBug(iostat,'closing leakagef table')
+        endif
 c
 	end
 c************************************************************************
-	subroutine uvLkCorr(baseline,maxPol,ncoeff,type,coeffs,
-     *	  Leaks,nLeaks)
+	subroutine uvLkCorr(baseline,maxPol,ncoeff,type,pol,coeffs,
+     *	  Leaks,nLeaks,nfbin,MAXANT,MAXFBIN)
 c
 	implicit none
-	integer maxPol,ncoeff,type(maxPol),nLeaks
-	complex coeffs(maxPol)
+	integer maxPol,ncoeff,type(maxPol),pol,nLeaks,nfbin
+        integer MAXANT,MAXFBIN
+	complex coeffs(maxPol,maxPol,0:nfbin)
 	double precision baseline
-	complex Leaks(2,nLeaks)
+	complex Leaks(2,MAXANT,0:MAXFBIN)
 c
 c  The input represents the coefficients that relate the measured
 c  polarisations to the desired. We now have to correct these
@@ -1420,7 +1614,7 @@ c    ncoeff	Number of coefficients.
 c    type	The polarisation type corresponding to each coefficient.
 c    coeffs	The value of the coefficient.
 c------------------------------------------------------------------------
-	integer i1,i2,n,i,j
+	integer i1,i2,n,i,j,k
 	complex G(4),t,ta,tb
 	real tr
 	integer indx(4,4),cf1(4),cf2(4),off
@@ -1437,34 +1631,40 @@ c
 	off = 0
 	if(type(1).le.-5)off = -4
 c
-	j = off - type(1)
-	G(indx(1,j)) =  coeffs(1)
-	G(indx(2,j)) = -coeffs(1) *       Leaks(cf1(j),i1)
-	G(indx(3,j)) = -coeffs(1) * conjg(Leaks(cf2(j),i2))
-	G(indx(4,j)) =  coeffs(1) * Leaks(cf1(j),i1) * 
-     *			      conjg(Leaks(cf2(j),i2))
+        do k=nfbin,0,-1
+	  j = off - type(1)
+	  G(indx(1,j)) =  coeffs(1,pol,0)
+	  G(indx(2,j)) = -coeffs(1,pol,0) *       Leaks(cf1(j),i1,k)
+	  G(indx(3,j)) = -coeffs(1,pol,0) * conjg(Leaks(cf2(j),i2,k))
+	  G(indx(4,j)) =  coeffs(1,pol,0) * Leaks(cf1(j),i1,k) * 
+     *			      conjg(Leaks(cf2(j),i2,k))
 c
-	do i=2,n
-	  j = off - type(i)
-	  G(indx(1,j)) = G(indx(1,j))
-     *	     + coeffs(i)
-	  G(indx(2,j)) = G(indx(2,j))
-     *	     - coeffs(i) *	 Leaks(cf1(j),i1)
-	  G(indx(3,j)) = G(indx(3,j))
-     *	     - coeffs(i) * conjg(Leaks(cf2(j),i2))
-	  G(indx(4,j)) = G(indx(4,j))
-     *	     + coeffs(i) * Leaks(cf1(j),i1) * conjg(Leaks(cf2(j),i2))
-	enddo
+	  do i=2,n
+	    j = off - type(i)
+	    G(indx(1,j)) = G(indx(1,j))
+     *	     + coeffs(i,pol,0)
+	    G(indx(2,j)) = G(indx(2,j))
+     *	     - coeffs(i,pol,0) *	 Leaks(cf1(j),i1,k)
+	    G(indx(3,j)) = G(indx(3,j))
+     *	     - coeffs(i,pol,0) * conjg(Leaks(cf2(j),i2,k))
+	    G(indx(4,j)) = G(indx(4,j))
+     *	     + coeffs(i,pol,0) * Leaks(cf1(j),i1,k) *
+     *         conjg(Leaks(cf2(j),i2,k))
+	  enddo
 c
-	ta = (1.,0.) - Leaks(1,i1)*Leaks(2,i1)
-	tb = (1.,0.) - Leaks(1,i2)*Leaks(2,i2)
-	t = ta * conjg(tb)
-	tr = real(t)*real(t) + aimag(t)*aimag(t)
-	t = conjg(t)/tr
+	  ta = (1.,0.) - Leaks(1,i1,k)*Leaks(2,i1,k)
+	  tb = (1.,0.) - Leaks(1,i2,k)*Leaks(2,i2,k)
+	  t = ta * conjg(tb)
+	  tr = real(t)*real(t) + aimag(t)*aimag(t)
+	  t = conjg(t)/tr
 c
+	  do i=1,4
+	    coeffs(i,pol,k) = t*G(i)
+	  enddo
+        enddo
+c        
 	ncoeff = 4
 	do i=1,4
-	  coeffs(i) = t*G(i)
 	  type(i) = off - i
 	enddo
 c	

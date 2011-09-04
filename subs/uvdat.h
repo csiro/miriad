@@ -52,6 +52,8 @@ c				gains.
 c    npream			Number of elements in the preamble.
 c    idxT			Index of "time" in the preamble.
 c    idxBL			Index of "baseline" in the preamble.
+c    dofbcal                    Frequency binned cal file is present
+c    dofbleak                   Frequency binned leakage file is present
 c
 	integer maxsels,maxNam,maxIn
 	parameter(maxsels=512,maxNam=20000,maxIn=400)
@@ -59,7 +61,7 @@ c
 	real plmaj,plmin,plangle
 	logical doplanet,dowave,doref,dodata,docal,dosels,doleak,dopass
 	logical PlInit,WillCal,WillLeak,auto,cross,calmsg(maxIn),dow
-	logical dogsv
+	logical dogsv, dofbcal, dofbleak
 	integer k1(maxIn),k2(maxIn),nchan,npream,idxT,idxBL
 	character line*32,ref*32,InBuf*(maxNam)
 	integer nIn,pnt,tno
@@ -92,8 +94,8 @@ c  Leaks    Polarisation leakage parameters.
 c  nLeaks   Number of polarisation leakage parameters.
 c
 	include 'maxdim.h'
-	integer MAXPOL,MAXPRE
-	parameter(MAXPOL=4,MAXPRE=8)
+	integer MAXPOL,MAXPRE,MAXFBIN
+	parameter(MAXPOL=4,MAXPRE=8,MAXFBIN=16)
 c
 	integer PolII,PolI,PolQ,PolU,PolV,PolRR,PolLL,PolRL,PolLR
 	integer PolXX,PolYY,PolXY,PolYX,PolQQ,PolUU,PolMin,PolMax
@@ -108,11 +110,12 @@ c
 	integer Snread
 	complex SData(MAXCHAN,MAXPOL)
 	integer ncoeff(MAXPOL),indices(MAXPOL,MAXPOL)
-	logical doaver(MAXPOL),Sflags(MAXCHAN,MAXPOL)
-	complex coeffs(MAXPOL,MAXPOL)
-	real SumWts(MAXPOL),GWt
-	integer nLeaks
-	complex Leaks(2,MAXANT)
+	logical doaver(MAXPOL),Sflags(MAXCHAN,MAXPOL),updated
+	complex coeffs(MAXPOL,MAXPOL,0:MAXFBIN)
+	real SumWts(MAXPOL,0:MAXFBIN),GWt
+	integer nLeaks, nfbin, vupd
+	complex Leaks(2,MAXANT,0:MAXFBIN)
+        double precision freq(0:MAXFBIN), chnfreq(MAXCHAN)
 c
 c  The common blocks.
 c
@@ -121,11 +124,12 @@ c
      *	 plmaj,plmin,plangle
 	common/UVDatCoD/doplanet,dowave,doref,dodata,dosels,dow,
      *	 dogsv,plinit,k1,k2,nchan,nIn,pnt,tno,npream,idxT,idxBL,
-     *	 auto,cross,docal,WillCal,doleak,WillLeak,dopass,calmsg
+     *	 auto,cross,docal,WillCal,doleak,WillLeak,dopass,dofbcal,
+     *   dofbleak,calmsg
 c
 	common/UVDatCoB/line,ref,InBuf
 c
-	common/UvDatCoC/Spreambl,Leaks,coeffs,SumWts,GWt
+	common/UvDatCoC/Spreambl,Leaks,coeffs,freq,chnfreq,SumWts,GWt
 	common/UVDatCoE/WillPol,PolCpy,
      *	 SelPol,SelPol1,nPol,nPolF,Pols,iPol,Snread,SData,ncoeff,doaver,
-     *	 Sflags,indices,nLeaks
+     *	 Sflags,indices,nLeaks,nfbin,vupd,updated

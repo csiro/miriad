@@ -30,8 +30,9 @@ c    01jan05 rjs  Double precision baselines and use basant.
 c    08jan07 rjs  Use MAXWIN more rigorously.
 c    08aug07 rjs  Correct bug in averaging wide channels.
 c    27aug09 mhw  Handle multiple bandpass solution intervals
+c    24feb11 mhw  Handle freq bins in gains and leakage
 c
-c $Id: uvgn.for,v 1.8 2010/10/05 03:34:47 cal103 Exp $
+c $Id: uvgn.for,v 1.9 2011/09/04 23:01:53 wie017 Exp $
 c***********************************************************************
 
       subroutine uvGnIni(tno1,dogains1,dopass1)
@@ -98,6 +99,7 @@ c***********************************************************************
 c-----------------------------------------------------------------------
       include 'uvgn.h'
       integer iostat
+      integer i,j,k,off
 
 c     Externals.
       integer hsize
@@ -117,23 +119,185 @@ c
       if (hsize(gitem).ne.8+(ngains+1)*8*nsols)
      *        call bug('f','Gain table size is incorrect')
 
-c
-c  Read in the first gain solution.
-c
       t1 = 1
       t2 = 2
+c
+c  Read in the gain solutions
+c
 
-      solno(t2) = 1
-      call hreadd(gitem,timetab(t2),8,8,iostat)
-      if (iostat.ne.0)
-     *  call uvGnBug(iostat,'reading first time')
-      call uvGnGet(gitem,solno(t2),Gains(1,t2),gflag(1,t2),
-     *  nsols,ngains)
+      off = 8
+      do i=1,nsols
+        call hreadd(gitem,timetab(i),off,8,iostat)
+        call hreadr(gitem,Gains(1,i,0),off+8,8*ngains,iostat)
+        if (iostat.ne.0) call uvGnBug(iostat,'reading gains')
+        do j = 1, ngains
+          gFlag(j,i,0) = abs(real(Gains(j,i,0)))+
+     *                    abs(aimag(Gains(j,i,0))).ne.0
+        enddo
+        off = off + 8 + ngains * 8
+      enddo
+      call hdaccess(gitem,iostat)
+      
+c
+c  Read in the binned gain solutions
+c
+      nfbin = 0
+      call haccess(tno,gitem,'gainsf','read',iostat)
+      if (iostat.ne.0) return
+      call hreadi(gitem,nfbin,4,4,iostat)
+      if (iostat.ne.0) call UvGnBug(iostat,'reading gainsf header')
+      off = 8
+      do k=1,nfbin
+        do i=1,nsols
+          off = off + 8
+          call hreadr(gitem,Gains(1,i,k),off,8*ngains,iostat)
+          do j = 1, ngains
+            gFlag(j,i,k) = abs(real(Gains(j,i,k)))+
+     *                      abs(aimag(Gains(j,i,k))).ne.0
+          enddo
+          off = off + ngains * 8
+        enddo
+        call hreadd(gitem,freq(k),off,8,iostat)
+        if (iostat.ne.0) call UvGnBug(iostat,'reading gainsf')
+        off = off + 8
+      enddo       
+      call hdaccess(gitem,iostat)
 
-      solno(t1) = 0
-      timetab(t1) = timetab(t2) - 1e6*dtime
-      call uvGnGet(gitem,solno(t1),Gains(1,t1),gflag(1,t1),
-     *  nsols,ngains)
+      end
+
+c***********************************************************************
+
+      subroutine uvGnRead(tno,G,time,freq,ngains,nfeeds,ntau,nsols,
+     *  nfbin,maxgains,maxtimes,maxfbin) 
+      integer tno,ngains,nfeeds,ntau,nsols,nfbin,maxgains,maxtimes
+      integer maxfbin
+      complex G(maxgains)
+      double precision time(maxtimes),freq(maxfbin)
+c-----------------------------------------------------------------------
+c      Read a gain table into memory.
+c      Read both the standard gains and the gainsf table if present.
+c      Intended as a standalone routine to read gain tables.
+c-----------------------------------------------------------------------
+      integer iostat
+      integer i,j,k,off,item
+
+c     Externals.
+      integer hsize
+c-----------------------------------------------------------------------
+      call rdhdi(tno,'ngains', ngains,0)
+      call rdhdi(tno,'nfeeds', nfeeds,0)
+      call rdhdi(tno,'ntau', ntau,0)
+      call rdhdi(tno,'nsols', nsols,0)
+      if (nsols.le.0) call bug('f',
+     *    'Number of gain solutions is missing or bad, in uvGnRead')
+      if (nsols.gt.maxtimes) call bug('f',
+     *    'Too many solutions for supplied buffer, in uvGnRead')
+      if (ngains*nsols.gt.maxgains) call bug('f',
+      *   'Too many gains for supplied buffer, in uvGnRead')
+
+      call haccess(tno,item,'gains','read',iostat)
+      if (iostat.ne.0) call UvGnBug(iostat,'accessing gains table')
+c
+c  Check that its the right size.
+c
+      if (hsize(item).ne.8+(ngains+1)*8*nsols)
+     *        call bug('f','Gain table size is incorrect')
+
+c
+c  Read in the gain solutions
+c
+
+      off = 8
+      k=1
+      do i=1,nsols
+        call hreadd(item,time(i),off,8,iostat)
+        call hreadr(item,G(k),off+8,8*ngains,iostat)
+        if (iostat.ne.0) call uvGnBug(iostat,'reading gains')
+        off = off + 8 + ngains * 8
+        k=k+ngains
+      enddo
+      call hdaccess(item,iostat)
+      
+c
+c  Read in the binned gain solutions
+c
+      nfbin = 0
+      call haccess(tno,item,'gainsf','read',iostat)
+      if (iostat.ne.0) return
+      call hreadi(item,nfbin,4,4,iostat)
+      if (iostat.ne.0) call UvGnBug(iostat,'reading gainsf header')
+      if (nfbin.gt.maxfbin) call bug('f',
+     *   'Too many freq bins for supplied buffer, in uvGnRead')
+      if (ngains*nsols*nfbin.gt.maxgains) call bug('f',
+     *   'Too many gains for supplied buffer, in uvGnRead.')
+      off = 8
+      do j=1,nfbin
+        do i=1,nsols
+          off = off + 8
+          call hreadr(item,G(k),off,8*ngains,iostat)
+          off = off + ngains * 8
+          k=k+ngains
+        enddo
+        call hreadd(item,freq(j),off,8,iostat)
+        if (iostat.ne.0) call UvGnBug(iostat,'reading gainsf')
+        off = off + 8
+      enddo       
+      call hdaccess(item,iostat)
+
+      end
+
+c***********************************************************************
+
+      subroutine uvGnWrit(tno,G,time,freq,ngains,nsols,
+     *  nfbin,maxgains,maxtimes,maxfbin) 
+      integer tno,ngains,nsols,nfbin,maxgains,maxtimes
+      integer maxfbin
+      complex G(maxgains)
+      double precision time(maxtimes),freq(maxfbin)
+c-----------------------------------------------------------------------
+c      Read a gain table into memory.
+c      Read both the standard gains and the gainsf table if present.
+c      Intended as a standalone routine to read gain tables.
+c-----------------------------------------------------------------------
+      integer iostat
+      integer i,j,k,off,item
+c-----------------------------------------------------------------------
+      call haccess(tno,item,'gains','update',iostat)
+      if (iostat.ne.0) call UvGnBug(iostat,'accessing gains table')
+c
+c  Write the gain solutions
+c
+      off = 8
+      k=1
+      do i=1,nsols
+        call hwrited(item,time(i),off,8,iostat)
+        call hwriter(item,G(k),off+8,8*ngains,iostat)
+        if (iostat.ne.0) call uvGnBug(iostat,'writing gains')
+        off = off + 8 + ngains * 8
+        k=k+ngains
+      enddo
+      call hdaccess(item,iostat)
+      
+c
+c  Write the binned gain solutions
+c
+      call haccess(tno,item,'gainsf','update',iostat)
+      if (iostat.ne.0) return
+      call hwritei(item,nfbin,4,4,iostat)
+      if (iostat.ne.0) call UvGnBug(iostat,'writing gainsf header')
+      off = 8
+      do j=1,nfbin
+        do i=1,nsols
+          off = off + 8
+          call hwriter(item,G(k),off,8*ngains,iostat)
+          off = off + ngains * 8
+          k=k+ngains
+        enddo
+        call hwrited(item,freq(j),off,8,iostat)
+        if (iostat.ne.0) call UvGnBug(iostat,'writing gainsf')
+        off = off + 8
+      enddo       
+      call hdaccess(item,iostat)
 
       end
 
@@ -180,16 +344,9 @@ c***********************************************************************
 c-----------------------------------------------------------------------
 c  Close up the bandpass and delay routines. This does not do much!
 c-----------------------------------------------------------------------
-      integer iostat
       include 'uvgn.h'
 c-----------------------------------------------------------------------
 c
-c  Close the gains file, if needed.
-c
-      if (dogains) then
-        call hdaccess(gitem,iostat)
-        if (iostat.ne.0) call uvGnBug(iostat,'closing gains table')
-      endif
 c
 c  Free up all the memory that may have been allocated for the antenna
 c  based bandpass calibration.
@@ -236,12 +393,12 @@ c
 c***********************************************************************
 
       subroutine uvGnFac(time,baseline,pol,dowide,data,flags,nread,
-     *  grms)
+     *  grms,chnfreq,updated)
 
       integer nread
       complex data(nread)
-      logical flags(nread),dowide
-      double precision time,baseline
+      logical flags(nread),dowide,updated
+      double precision time,baseline,chnfreq(nread)
       real grms
       integer pol
 c-----------------------------------------------------------------------
@@ -263,12 +420,11 @@ c  Output:
 c    grms       The rms gain.
 c-----------------------------------------------------------------------
       include 'uvgn.h'
-      logical t1valid,t2valid,t1good,t2good,flag
-      integer i,i1,i2,ant1,ant2,s,itemp,n,offset,iostat,p,gpant
-      double precision dtemp
+      logical t1good,t2good,flag(0:MAXFBIN)
+      integer i,i1,i2,ant1,ant2,s,n,p,gpant,k
       real mag,epsi
       complex tau1,tau2,taua1,taub1,taua2,taub2,tau
-      complex ga1,gb1,ga2,gb2,g,gain
+      complex ga1,gb1,ga2,gb2,g,gain(0:MAXFBIN)
       integer f1(4),f2(4)
       save f1,f2
       data f1/0,1,0,1/
@@ -303,57 +459,33 @@ c
 c
 c  If we are applying the gains, get the solution.
 c  Check if (t1,t2) bounds the solution. If not, find t1,t2 which do.
-c  This uses a binary step through the gains file.
+c  This uses a binary step through the gains array.
 c
       tau = 0
       if (dogains) then
         if ((time-timetab(t1))*(time-timetab(t2)).gt.0) then
-          t1valid = .true.
-          t2valid = .true.
           n = 1
-          do while (timetab(t2).lt.time .and. solno(t2).lt.nsols)
-            itemp = t2
-            t2 = t1
-            t1 = itemp
-            t1valid = t2valid
-            t2valid = .false.
-            solno(t2) = min(solno(t1)+n,nsols)
+          do while (timetab(t2).lt.time .and. t2.lt.nsols)
+            t1 = t2
+            t2 = min(t2+n,nsols)
             n = n + n
-            offset = 8*(ngains+1)*(solno(t2)-1) + 8
-            call hreadd(gitem,timetab(t2),offset,8,iostat)
-            if (iostat.ne.0) call uvGnBug(iostat,'reading gains time')
           enddo
-          do while (timetab(t1).gt.time .and. solno(t1).gt.1)
-            itemp = t2
+          do while (timetab(t1).gt.time .and. t1.gt.1)
             t2 = t1
-            t1 = itemp
-            t2valid = t1valid
-            t1valid = .false.
-            solno(t1) = max(solno(t2)-n,1)
+            t1 = max(t1-n,1)
             n = n + n
-            offset = 8*(ngains+1)*(solno(t1)-1) + 8
-            call hreadd(gitem,timetab(t1),offset,8,iostat)
-            if (iostat.ne.0) call uvGnBug(iostat,'reading gains time')
           enddo
 c
 c  Check for the case that we have fallen off the end of the gains
 c  table.
 c
           if (time.gt.timetab(t2)) then
-            itemp = t2
-            t2 = t1
-            t1 = itemp
-            t1valid = t2valid
-            t2valid = .false.
-            solno(t2) = nsols + 1
+            t1 = t2
+            t2 = nsols + 1
             timetab(t2) = time + 1e6*dtime
           else if (time.lt.timetab(t1)) then
-            itemp = t2
             t2 = t1
-            t1 = itemp
-            t2valid = t1valid
-            t1valid = .false.
-            solno(t1) = 0
+            t1 = 0
             timetab(t1) = time - 1e6*dtime
           endif
 c
@@ -361,28 +493,14 @@ c  We have solution intervals which bound "time", but they may not
 c  be adjacent solutions. Home in on an adjacent solution pair. We use
 c  a binary bisection technique.
 c
-          do while (solno(t1)+1.ne.solno(t2))
-            s = (solno(t1)+solno(t2))/2
-            offset = 8*(ngains+1)*(s-1) + 8
-            call hreadd(gitem,dtemp,offset,8,iostat)
-            if (iostat.ne.0) call uvGnBug(iostat,'reading gains time')
-            if (dtemp.gt.time) then
-              solno(t2) = s
-              timetab(t2) = dtemp
-              t2valid = .false.
+          do while (t1+1.ne.t2)
+            s = (t1+t2)/2
+            if (timetab(s).gt.time) then
+              t2 = s
             else
-              solno(t1) = s
-              timetab(t1) = dtemp
-              t1valid = .false.
+              t1 = s
             endif
           enddo
-c
-c  Read in the gains if necessary.
-c
-          if (.not.t1valid) call uvGnGet(gitem,solno(t1),
-     *      Gains(1,t1),gflag(1,t1),nsols,ngains)
-          if (.not.t2valid) call uvGnGet(gitem,solno(t2),
-     *      Gains(1,t2),gflag(1,t2),nsols,ngains)
         endif
 c
 c  Determine the indices of the gains.
@@ -390,115 +508,178 @@ c
         gpant = nfeeds + ntau
         i1 = gpant*(ant1-1) + 1
         i2 = gpant*(ant2-1) + 1
+        
+        do k=0,nfbin
 c
 c  Determine the gains for each antenna.
 c
-        flag = .true.
-        t1good = abs(time-timetab(t1)).lt.dtime
-        t2good = abs(time-timetab(t2)).lt.dtime
+          flag(k) = .true.
+          t1good = abs(time-timetab(t1)).lt.dtime
+          t2good = abs(time-timetab(t2)).lt.dtime
 
-        if (    t1good .and. gflag(i1+f1(p),t1)) then
-          ga1 = gains(i1+f1(p),t1)
-        else if (t2good .and. gflag(i1+f1(p),t2)) then
-          ga1 = gains(i1+f1(p),t2)
-        else
-          flag = .false.
-        endif
-
-        if (    t2good .and. gflag(i1+f1(p),t2)) then
-          ga2 = gains(i1+f1(p),t2)
-        else if (t1good .and. gflag(i1+f1(p),t1)) then
-          ga2 = gains(i1+f1(p),t1)
-        else
-          flag = .false.
-        endif
-
-        if (    t1good .and. gflag(i2+f2(p),t1)) then
-          gb1 = gains(i2+f2(p),t1)
-        else if (t2good .and. gflag(i2+f2(p),t2)) then
-          gb1 = gains(i2+f2(p),t2)
-        else
-          flag = .false.
-        endif
-        if (    t2good .and. gflag(i2+f2(p),t2)) then
-          gb2 = gains(i2+f2(p),t2)
-        else if (t1good .and. gflag(i2+f2(p),t1)) then
-          gb2 = gains(i2+f2(p),t1)
-        else
-          flag = .false.
-        endif
-
-        if (ntau.eq.1 .and. flag) then
-          if (    t1good .and. gflag(i1+f1(p),t1)) then
-            taua1 = gains(i1+nfeeds,t1)
-          else if (t2good .and. gflag(i1+f1(p),t2)) then
-            taua1 = gains(i1+nfeeds,t2)
+          if (    t1good .and. gflag(i1+f1(p),t1,k)) then
+            ga1 = gains(i1+f1(p),t1,k)
+          else if (t2good .and. gflag(i1+f1(p),t2,k)) then
+            ga1 = gains(i1+f1(p),t2,k)
+          else
+            flag(k) = .false.
           endif
 
-          if (    t2good .and. gflag(i1+f1(p),t2)) then
-            taua2 = gains(i1+nfeeds,t2)
-          else if (t1good .and. gflag(i1+f1(p),t1)) then
-            taua2 = gains(i1+nfeeds,t1)
+          if (    t2good .and. gflag(i1+f1(p),t2,k)) then
+            ga2 = gains(i1+f1(p),t2,k)
+          else if (t1good .and. gflag(i1+f1(p),t1,k)) then
+            ga2 = gains(i1+f1(p),t1,k)
+          else
+            flag(k) = .false.
           endif
 
-          if (    t1good .and. gflag(i2+f2(p),t1)) then
-            taub1 = gains(i2+nfeeds,t1)
-          else if (t2good .and. gflag(i2+f2(p),t2)) then
-            taub1 = gains(i2+nfeeds,t2)
+          if (    t1good .and. gflag(i2+f2(p),t1,k)) then
+            gb1 = gains(i2+f2(p),t1,k)
+          else if (t2good .and. gflag(i2+f2(p),t2,k)) then
+            gb1 = gains(i2+f2(p),t2,k)
+          else
+            flag(k) = .false.
           endif
-          if (    t2good .and. gflag(i2+f2(p),t2)) then
-            taub2 = gains(i2+nfeeds,t2)
-          else if (t1good .and. gflag(i2+f2(p),t1)) then
-            taub2 = gains(i2+nfeeds,t1)
+          if (    t2good .and. gflag(i2+f2(p),t2,k)) then
+            gb2 = gains(i2+f2(p),t2,k)
+          else if (t1good .and. gflag(i2+f2(p),t1,k)) then
+            gb2 = gains(i2+f2(p),t1,k)
+          else
+            flag(k) = .false.
           endif
-        endif
+
+          if (ntau.eq.1 .and. flag(0) .and. k.eq.0) then
+            if (    t1good .and. gflag(i1+f1(p),t1,0)) then
+              taua1 = gains(i1+nfeeds,t1,0)
+            else if (t2good .and. gflag(i1+f1(p),t2,0)) then
+              taua1 = gains(i1+nfeeds,t2,0)
+            endif
+
+            if (    t2good .and. gflag(i1+f1(p),t2,0)) then
+              taua2 = gains(i1+nfeeds,t2,0)
+            else if (t1good .and. gflag(i1+f1(p),t1,0)) then
+              taua2 = gains(i1+nfeeds,t1,0)
+            endif
+
+            if (    t1good .and. gflag(i2+f2(p),t1,0)) then
+              taub1 = gains(i2+nfeeds,t1,0)
+            else if (t2good .and. gflag(i2+f2(p),t2,0)) then
+              taub1 = gains(i2+nfeeds,t2,0)
+            endif
+            if (    t2good .and. gflag(i2+f2(p),t2,0)) then
+              taub2 = gains(i2+nfeeds,t2,0)
+            else if (t1good .and. gflag(i2+f2(p),t1,0)) then
+              taub2 = gains(i2+nfeeds,t1,0)
+            endif
+          endif
 c
 c  If all is good, interpolate the gains to the current time interval.
 c
-        if (flag) then
-          epsi = (timetab(t2)-time)/(timetab(t2)-timetab(t1))
+          if (flag(k)) then
+            epsi = (timetab(t2)-time)/(timetab(t2)-timetab(t1))
 
-          g = ga1/ga2
-          mag = abs(g)
-          gain = ga2 * (1 + (mag-1)*epsi) * (g/mag) ** epsi
+            g = ga1/ga2
+            mag = abs(g)
+            gain(k) = ga2 * (1 + (mag-1)*epsi) * (g/mag) ** epsi
 
-          g = gb1/gb2
-          mag = abs(g)
-          gain = gain *
+            g = gb1/gb2
+            mag = abs(g)
+            gain(k) = gain(k) *
      *           conjg(gb2 * (1 + (mag-1)*epsi) * (g/mag) ** epsi)
 
-          if (ntau.eq.1) then
-            tau1 = taua1 + conjg(taub1)
-            tau2 = taua2 + conjg(taub2)
-            tau = tau2 - epsi * (tau2 - tau1)
+            if (ntau.eq.1.and.k.eq.0) then
+              tau1 = taua1 + conjg(taub1)
+              tau2 = taua2 + conjg(taub2)
+              tau = tau2 - epsi * (tau2 - tau1)
+            endif
           endif
-        endif
+        enddo
       else
-        flag = .true.
+        do k=0,nfbin
+          flag(k) = .true.
+        enddo
+      endif
+      
+      if (updated) then
+        call uvGnInt(chnfreq,nread)
       endif
 c
 c  Apply the gain to the data.
 c
   100 continue
-      if (flag) then
+      if (nfbin.eq.0.and..not.flag(0)) then 
+        do i = 1, nread
+          flags(i) = .false.
+        enddo
+      else
         if (dogains) then
-          do i = 1, nread
-            data(i) = gain * data(i)
-          enddo
-          grms = abs(gain)
+          if (nfbin.eq.0) then
+            do i = 1, nread
+              data(i) = gain(0) * data(i)
+            enddo
+            grms = abs(gain(0))
+          else
+            do i = 1, nread
+              if (flag(b(1,i)).and.flag(b(2,i))) then
+                g = gain(b(1,i))/gain(b(2,i))
+                mag = abs(g)
+                data(i) = data(i)*gain(b(2,i))*(1+(mag-1)*fac(i))*
+     *            (g/mag)**fac(i)
+              else
+                flags(i) = .false.
+              endif
+            enddo 
+          endif
         endif
         if (dopass .or. dotau)
      *    call uvGnPsAp(dowide,time,ant1,ant2,p,tau,data,flags,nread)
         if (docgains .or. dowgains)
      *    call uvGnCWAp(dowide,ant1,ant2,data,flags,nread)
-      else
-        do i = 1, nread
-          flags(i) = .false.
-        enddo
       endif
 
       end
 
+c************************************************************************
+	subroutine uvGnInt(chnfreq,n)
+c
+	implicit none
+        integer n
+        double precision chnfreq(n)
+c
+c  Interpolate from bins to channels.
+c------------------------------------------------------------------------
+	include 'uvgn.h'
+	integer chan,i
+        double precision d1,d2,d
+c************************************************************************
+        do chan=1,n
+          b(1,chan) = 1
+          d1 = abs(chnfreq(chan)-freq(1))
+          do i=2,nfbin
+            d = abs(chnfreq(chan)-freq(i))
+            if (d.lt.d1) then
+              d1 = d
+              b(1,chan) = i
+            endif
+          enddo
+          b(2,chan) = 0
+          d2 = abs(chnfreq(chan))
+          do i=1,nfbin
+            d = abs(chnfreq(chan)-freq(i))
+            if (i.ne.b(1,chan).and.d.lt.d2) then
+              d2 = d
+              b(2,chan) = i
+            endif
+          enddo
+          if (b(2,chan).eq.0) b(2,chan)=b(1,chan)
+          if (b(1,chan).eq.b(2,chan)) then
+            fac(chan) = 0
+          else
+            fac(chan) = (freq(b(2,chan))-chnfreq(chan))/
+     *                  (freq(b(2,chan))-freq(b(1,chan)))
+          endif
+        enddo
+        end
 c***********************************************************************
 
       subroutine uvGnCWAp(dowide,ant1,ant2,data,flags,nread)
