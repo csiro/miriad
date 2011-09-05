@@ -1243,7 +1243,8 @@ c
 	    call uvrdvrd(tno,'baseline',baseline,0.d0)
 	    if(baseline.le.0)call bug('f','Invalid baseline number')
 	    call uvgetvrd(tno,'time',time,1)
-	    call uvGnFac(time,baseline,0,.true.,data,flags,nread,GWt)
+	    call uvGnFac(time,baseline,0,.true.,data,flags,nread,GWt,
+     *       chnfreq,.false.)
 	    Gwt = GWt*GWt
 	  endif
 	endif
