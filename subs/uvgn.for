@@ -32,7 +32,7 @@ c    08aug07 rjs  Correct bug in averaging wide channels.
 c    27aug09 mhw  Handle multiple bandpass solution intervals
 c    24feb11 mhw  Handle freq bins in gains and leakage
 c
-c $Id: uvgn.for,v 1.9 2011/09/04 23:01:53 wie017 Exp $
+c $Id: uvgn.for,v 1.10 2011/09/05 22:53:46 wie017 Exp $
 c***********************************************************************
 
       subroutine uvGnIni(tno1,dogains1,dopass1)
@@ -434,7 +434,9 @@ c
 c  Assume that we fail!
 c
       grms = 1
-      flag = .false.
+      do k=0,nfbin
+        flag(k) = .false.
+      enddo
 c
 c  Determine the polarisation type index.
 c
