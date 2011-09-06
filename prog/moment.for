@@ -70,41 +70,10 @@ c       range pkmask(1) to pkmask(2) exclusive.  If only one value is
 c       given, then mask pixels with peak intensity less than pkmask.
 c       Default = 0.
 c
-c$Id: moment.for,v 1.15 2010/11/22 05:37:20 cal103 Exp $
+c$Id: moment.for,v 1.16 2011/09/06 01:49:28 cal103 Exp $
 c--
 c  History:
-c    26may89 Robert Loushin  original version - v-axis of vxy image
-c                  only.
-c    25jun90 mchw  Major update and rework to allow for other image
-c                  axes.
-c                       Fixed a bug for 2nd and higher moments.
-c    13nov90 mchw  Added suport for xyv images, and pixel blanking.
-c                       Made 2nd moment work and removed higher moments.
-c    08feb91 mchw  Two values for clip range, and version in history.
-c    25feb91 mjs   Changed references of itoa to itoaf.
-c    01aug91 rjs   Use boxSet(...'s')
-c    05aug91 alr/pjt Changed clip from include to exclude range.
-c                       Write out dummy 3rd. axis.
-c    06aug91 mchw       Merge in above changes.
-c    11jul92 pjt   Fixed rather serious flagging bug when axis=1
-c    26nov92 nebk  Add btype
-c     4jan93 pjt   Fixed rather serious flagging bug when axis=3
-c     5feb93 rjs   Use memalloc.
-c     5apr93 pjt   Since rjs is walkabouting, I had to fix that amazing
-c                  bug: indexor's (i0,j0) in moment3 wrong if blc,trc
-c                  used
-c    04jan96 nebk  Write header descriptors as double precision
-c    26nov96 rjs   Increase length of input and output file names.
-c    07mar97 rjs   Improve a message.
-c    30jun97 rjs   Change units of 0th moment image to be jy/beam.km/s
-c    23jul97 rjs   Added pbtype.
-c    27feb98 mwp   Added mom=-2 for peak temperature
-c    13jul00 rjs   Copy across llrot keyword.
-c    12feb01 pjt   Mask pixels if their velocity is out of range
-c    15feb01 dpr   Truncate rangemask key to rngmsk - doh!
-c    16feb01 pjt   Added mom=-3 for velocity of peak fit to poly=2
-c    18jan02 pjt   Turned rngmask typo into rngmsk (duh)
-c     4mar02 pjt   documented FWHM/sigma, fixed units of mom=2 map
+c    Refer to the RCS log, v1.1 includes prior revision information.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mirconst.h'
@@ -127,8 +96,8 @@ c-----------------------------------------------------------------------
       external  itoaf, keyprsnt, hdprsnt, versan
 c-----------------------------------------------------------------------
       version = versan ('moment',
-     *                  '$Revision: 1.15 $',
-     *                  '$Date: 2010/11/22 05:37:20 $')
+     *                  '$Revision: 1.16 $',
+     *                  '$Date: 2011/09/06 01:49:28 $')
 
 c     Get inputs.
       call keyini
@@ -404,9 +373,9 @@ c     Update the axis for which the moment was computed.
       call rdhda(lIn,'ctype'//cin, ctype, ' ')
 
       cout  = itoaf(min(3,naxes))
-      cdelt = cdelt * (trc(axis) - blc(axis) + 1)
       pxmid = (blc(axis) + trc(axis)) / 2.0
       crval = crval + (pxmid - crpix)*cdelt
+      cdelt = cdelt * (trc(axis) - blc(axis) + 1)
       call wrhdd(lOut,'crpix'//cout, 1d0)
       call wrhdd(lOut,'cdelt'//cout, cdelt)
       call wrhdd(lOut,'crval'//cout, crval)
