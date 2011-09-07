@@ -488,6 +488,7 @@ c
           enddo
         endif
  
+        if (nfbinv.le.1) return
         call haccess(tVis,item,'gainsf','append',iostat)
         if (iostat.eq.0) then
           offset = 8
