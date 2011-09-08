@@ -791,28 +791,25 @@ c************************************************************************
             b1 = i
           endif
         enddo
-        if (b1.eq.1) then
-          b2 = 2
-        else if (b1.eq.nfbin) then
-          b2=nfbin-1
-        else 
-          d1 = abs(chnfreq(chan)-freq(b1-1))
-          d2 = abs(chnfreq(chan)-freq(b1+1))
-          if (d1.lt.d2) then
-            b2 = b1 - 1
-          else
-            b2 = b1 + 1
+        b2 = 0
+        d2 = abs(chnfreq(chan))
+        do i=1,nfbin
+          d = abs(chnfreq(chan)-freq(i))
+          if (i.ne.b1.and.d.lt.d2) then
+            d2 = d
+            b2 = i
           endif
-        endif
+        enddo
+        if (b2.eq.0) b2=b1
         if (b1.eq.b2) then
-          fac = 1
+          fac = 0
         else
-          fac = (chnfreq(chan)-freq(b1))/(freq(b2)-freq(b1))
+          fac = (freq(b2)-chnfreq(chan))/(freq(b2)-freq(b1))
         endif
 c
 c  Linear/Vector interpolation - do we need a scalar option?
 c        
-        uvLkInt = (1-fac)*coeffs(i1,i2,b1)+fac*coeffs(i1,i2,b2)
+        uvLkInt = fac*coeffs(i1,i2,b1)+(1-fac)*coeffs(i1,i2,b2)
         end
 c************************************************************************
 	logical function uvPolIni()
