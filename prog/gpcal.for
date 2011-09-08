@@ -151,7 +151,7 @@ c                    solution for the observation already exists.  This
 c                    preliminary solution must be formed from a
 c                    calibrator with known Stokes-V.
 c
-c$Id: gpcal.for,v 1.10 2011/09/04 23:09:19 wie017 Exp $
+c$Id: gpcal.for,v 1.11 2011/09/08 02:35:55 wie017 Exp $
 c--
 c  History:
 c    rjs,nebk 1may91 Original version.
@@ -297,8 +297,8 @@ c-----------------------------------------------------------------------
       external  itoaf, keyprsnt, uvDatOpn
 c-----------------------------------------------------------------------
       version = versan('gpcal',
-     *                 '$Revision: 1.10 $',
-     *                 '$Date: 2011/09/04 23:09:19 $')
+     *                 '$Revision: 1.11 $',
+     *                 '$Date: 2011/09/08 02:35:55 $')
 c
 c  Get inputs.
 c
@@ -1034,7 +1034,7 @@ c
      *  V,VS,VC)
 
       integer nsoln,nants,nbl
-      integer Count(nbl,nsoln)
+      integer Count(nbl,0:nsoln)
       complex Vis(4*nbl,nsoln),VisCos(4*nbl,nsoln),VisSin(4*nbl,nsoln)
       complex Gains(2*nants,nsoln),V(4*nbl),VS(4*nbl),VC(4*nbl)
 c-----------------------------------------------------------------------
@@ -1087,10 +1087,13 @@ c
       do l = 1, nsoln
         do k = 1, 4*nbl
           if (Count((k+3)/4,l).gt.0) then
-            g = 1/(Gains(b1(k),l)*conjg(Gains(b2(k),l)))
-            V(k)  = V(k)  + g*Vis(k,l)
-            VS(k) = VS(k) + g*VisSin(k,l)
-            VC(k) = VC(k) + g*VisCos(k,l)
+            if (abs(gains(b1(k),l)).gt.0.and.
+     *          abs(gains(b2(k),l)).gt.0) then 
+              g = 1/(Gains(b1(k),l)*conjg(Gains(b2(k),l)))
+              V(k)  = V(k)  + g*Vis(k,l)
+              VS(k) = VS(k) + g*VisSin(k,l)
+              VC(k) = VC(k) + g*VisCos(k,l)
+            endif
           endif
         enddo
       enddo
@@ -1617,6 +1620,7 @@ c
      *  A,b,nvar,Vis(1,1,1,fbin),VisCos(1,1,1,fbin),VisSin(1,1,1,fbin),
      *  SumS(1,0,fbin),SumC(1,0,fbin),SumS2(1,0,fbin),SumCS(1,0,fbin),
      *  Count(1,0,fbin),circular)
+     
 c
 c  Solve the system of equations using LINPACK routines.
 c
