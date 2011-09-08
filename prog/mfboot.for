@@ -81,7 +81,7 @@ c	  noapply Do not apply the scale factor - just evaluate it.
 c         nospec Do not try to determine and correct the spectral index across
 c                the band.
 c
-c$Id: mfboot.for,v 1.6 2011/06/24 03:11:40 wie017 Exp $
+c$Id: mfboot.for,v 1.7 2011/09/08 05:15:04 wie017 Exp $
 c--
 c  History:
 c    rjs     15jan06 Original version adapted from plboot.
@@ -601,51 +601,33 @@ c  Scale the gains table present in the data.
 c
 c------------------------------------------------------------------------
 	include 'maxdim.h'
-	complex Gains(3*MAXANT)
-	real scale(3*MAXANT)
-	integer item,iostat,nfeeds,ntau,nsols,ngains,offset,i,j
+        integer maxgains,maxtimes,maxfbin
+        parameter (MAXTIMES=10000,MAXFBIN=16,MAXGAINS=3*MAXANT*MAXTIMES*
+     *     MAXFBIN)
+	complex G(MAXGAINS)
+        double precision time(MAXTIMES),freq(0:MAXFBIN)
+	integer nfeeds,ntau,nsols,ngains,nfbin,i,j,k,l
+        
+        call uvGnRead(lVis,G,time,freq,ngains,nfeeds,ntau,nsols,nfbin,
+     *    maxgains,maxtimes,maxfbin)
+        if (ntau.gt.0.and.nfbin.gt.0) call bug('f','Cannot handle '//
+     *    ' combination of gains table with delays and gainsf table')
 c
-c  Externals.
+c        scale the gains
 c
-	integer hsize
-c
-	call haccess(lVis,item,'gains','append',iostat)
-	if(iostat.ne.0)then
-	  call bug('w','Error opening to modify gains item')
-	  call bugno('f',iostat)
-	endif
-	call rdhdi(lVis,'nfeeds',nfeeds,1)
-	call rdhdi(lVis,'ntau',ntau,0)
-	call rdhdi(lVis,'ngains',ngains,0)
-	if(mod(ngains,nfeeds+ntau).ne.0)
-     *	  call bug('f','Bad number of gains or feeds in table')
-	nsols = hsize(item)
-	if(mod(nsols-8,8*ngains+8).ne.0)
-     *	  call bug('f','Size of gain table looks wrong')
-	nsols = (nsols-8)/(8*ngains+8)
-c
-	if(ngains.gt.3*MAXANT)call bug('f','Too many gains for me!')
-	do i=1,ngains,nfeeds+ntau
-	  scale(i) = fac
-	  if(nfeeds.eq.2)scale(i+1) = fac
-	  if(ntau.eq.1)scale(i+nfeeds) = 1
-	enddo
-c
-c  Now correct the data.
-c
-	offset = 16
-	do i=1,nsols
-	  call hreadr(item,gains,offset,8*ngains,iostat)
-	  if(iostat.ne.0)call bugno('f',iostat)
-	  do j=1,ngains
-	    gains(j) = scale(j)*gains(j)
-	  enddo
-	  call hwriter(item,gains,offset,8*ngains,iostat)
-	  if(iostat.ne.0)call bugno('f',iostat)
-	  offset = offset + 8 + 8*ngains
-	enddo
-c
-	call hdaccess(item,iostat)
+        l=1
+        do k=0,nfbin
+          do j=1,nsols
+            do i=1,ngains,nfeeds+ntau
+              G(l) = G(l) * fac
+              if (nfeeds.eq.2) G(l+1)=G(l+1) * fac
+              l = l + nfeeds + ntau
+            enddo
+          enddo
+        enddo
+            
+        call uvGnWrit(lVis,G,time,freq,ngains,nsols,nfbin,maxgains,
+     *    maxtimes,maxfbin)
 	end
 c************************************************************************
 	subroutine bpSca(lVis,f0,alpha)
