@@ -26,7 +26,8 @@ c	and phase (in degrees). For example gain=2,90 produces a gain
 c	with a amplitude of 2 and phase of 90 degrees. The default is 1,0.
 c@ options
 c	This gives extra processing options. Several values can be given,
-c	separated by commas. Option values can be abbreviated to uniqueness.
+c	separated by commas. Option values can be abbreviated to
+c       uniqueness.
 c
 c	The following options operate on the gains:
 c	  replace   The existing gains are replaced by the value
@@ -41,9 +42,9 @@ c	  scale     The phase of the gains is multiplied by the factor
 c	            given by the `gain' keyword. 
 c	  dup       Convert a single-polarization gain table into a dual
 c	            polarization table.
-c         invert    The existing gains are inverted (1/gain, phase negated)
-c                   to allow undoing calibration that has been applied to
-c                   the uvdata with uvaver.
+c         invert    The existing gains are inverted (1/gain, phase 
+c                   negated) to allow undoing calibration that has been 
+c                   applied to the uvdata with uvaver.
 c
 c	The following option operates on the polarization leakages:
 c	  reflect   The existing leakages are made to possess a
@@ -66,24 +67,26 @@ c    rjs   01dec98 Added options=dup.
 c    tw    16aug03 Allow gain amplitude selection
 c    rjs   02jan05 Correct gain selection.
 c    mhw   01mar11 Added options=invert
+c    mhw   08sep11 Handle freq binned gains
 c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
         include 'mirconst.h'
-	integer MAXFEED,MAXSELS
+	integer MAXFEED,MAXSELS,MAXFBIN
 	character version*(*)
 	parameter(version='Gpedit: version 1.0 02-Jan-05')
-	parameter(MAXFEED=2,MAXSELS=300)
+	parameter(MAXFEED=2,MAXSELS=300,MAXFBIN=16)
 c
 	character vis*64
 	logical domult,dorep,doflag,doamp,dophas,dorefl,dozm,doscal
 	logical dogain,doleak,dup,doinv
 	integer iostat,tVis,itGain,itLeak,nants,nfeeds,nsols,ntau,i
-	integer numfeed,feeds(MAXFEED),nleaks
+	integer numfeed,feeds(MAXFEED),nleaks,nfbin,ngains,maxgains
 	complex gain,Leaks(2,MAXANT)
 	real amp,phi,sels(MAXSELS)
 	logical mask(2*MAXANT)
 	integer pGains,pTimes
+        double precision freq(MAXFBIN)
 c
 c  Externals.
 c
@@ -141,10 +144,12 @@ c
      *	    call bug('f','Too many antennae for me to cope with')
 	  if(nsols.le.0)
      *	    call bug('f','Bad number of solutions')
-	  call memAlloc(pGains,nsols*nants*nfeeds,'c')
+          maxgains = nsols*nants*2*maxfbin
+	  call memAlloc(pGains,maxgains,'c')
 	  call memAlloc(pTimes,nsols,'d')
 c
-c  Check the given feed numbers, and set the default feed numbers if needed.
+c  Check the given feed numbers, and set the default feed numbers 
+c  if needed.
 c
 	  if(numfeed.gt.0)then
 	    do i=1,numfeed
@@ -166,37 +171,45 @@ c
 c
 c  Open the gains file. Mode=='append' so that we can overwrite it.
 c
-	  call haccess(tVis,itGain,'gains','append',iostat)
-	  if(iostat.ne.0)call EditBug(iostat,'Error accessing gains')
+c	  call haccess(tVis,itGain,'gains','append',iostat)
+c	  if(iostat.ne.0)call EditBug(iostat,'Error accessing gains')
 c
 c  Read the gains.
 c
-	  call GainRd(itGain,nsols,nants,nfeeds,
-     *				memd(pTimes),memc(pGains))
+          call uvGnRead(tVis,memc(pGains),memd(pTimes),freq,
+     *    ngains,nfeeds,ntau,nsols,nfbin,maxgains,nsols,maxfbin)
+c	  call GainRd(itGain,nsols,nants,nfeeds,
+c     *				memd(pTimes),memc(pGains))
 c
 c  Edit the gains.
 c
 	  gain = amp * cmplx(cos(phi*pi/180.),sin(phi*pi/180.))
-	  if(dorep) call GainEdt(nsols,nants*nfeeds,
+	  if(dorep) call GainEdt(nsols,nants*nfeeds,nfbin,
      *	    memd(pTimes),memc(pGains),mask,sels,gain,RepOp)
-	  if(domult)call GainEdt(nsols,nants*nfeeds,
+	  if(domult)call GainEdt(nsols,nants*nfeeds,nfbin,
      *	    memd(pTimes),memc(pGains),mask,sels,gain,MultOp)
-	  if(doflag)call GainEdt(nsols,nants*nfeeds,
+	  if(doflag)call GainEdt(nsols,nants*nfeeds,nfbin,
      *	    memd(pTimes),memc(pGains),mask,sels,gain,FlagOp)
-	  if(doamp )call GainEdt(nsols,nants*nfeeds,
+	  if(doamp )call GainEdt(nsols,nants*nfeeds,nfbin,
      *	    memd(pTimes),memc(pGains),mask,sels,gain,AmpOp)
-	  if(dophas)call GainEdt(nsols,nants*nfeeds,
+	  if(dophas)call GainEdt(nsols,nants*nfeeds,nfbin,
      *	    memd(pTimes),memc(pGains),mask,sels,gain,PhasOp)
-	  if(doscal)call GainEdt(nsols,nants*nfeeds,
+	  if(doscal)call GainEdt(nsols,nants*nfeeds,nfbin,
      *	    memd(pTimes),memc(pGains),mask,sels,gain,ScalOp)
-	  if(doinv) call GainEdt(nsols,nants*nfeeds,
+	  if(doinv) call GainEdt(nsols,nants*nfeeds,nfbin,
      *	    memd(pTimes),memc(pGains),mask,sels,gain,InvOp)
-     
+c
+c  Duplicate gains if needed
+c     
+          if (dup) call GainDup(memc(pGains),ngains,maxgains)
+            
 c
 c  Write out the gains.
 c
-	  call GainWr(itGain,dup,nsols,nants,nfeeds,
-     *				memd(pTimes),memc(pGains))
+          call uvGnWrit(tVis,memc(pGains),memd(pTimes),freq,ngains,
+     *      nsols,nfbin,maxgains,nsols,maxfbin)
+c	  call GainWr(itGain,dup,nsols,nants,nfeeds,
+c     *				memd(pTimes),memc(pGains))
 	  call memFree(pTimes,nsols,'d')
 	  call memFree(pGains,nfeeds*nants*nsols,'c')
 	  call hdaccess(itGain,iostat)
@@ -350,13 +363,13 @@ c
 	enddo
 	end
 c********1*********2*********3*********4*********5*********6*********7*c
-	subroutine GainEdt(nsols,nants,times,Gains,mask,sels,
+	subroutine GainEdt(nsols,nants,nfbin,times,Gains,mask,sels,
      *							gain,oper)
 c
 	implicit none
-	integer nsols,nants
+	integer nsols,nants,nfbin
 	double precision times(nsols)
-	complex Gains(nants,nsols),gain
+	complex Gains(nants,nsols,0:nfbin),gain
 	real sels(*)
 	logical mask(nants)
 	external oper
@@ -373,23 +386,25 @@ c    oper	The routine to perform the operation.
 c  Input/Output:
 c    gains	The gains.
 c-----------------------------------------------------------------------
-	integer i,j
+	integer i,j,k
 c
 c  Externals.
 c
 	logical SelProbe
 c
-	do j=1,nsols
-	  if(SelProbe(sels,'time',times(j)))then
-	    do i=1,nants
-	      if (mask(i)) then
-		 if (SelProbe(sels,'amplitude',dble(abs(Gains(i,j)))))
-     *								   then
-		    call oper(Gains(i,j),gain)
-		 endif
-	      endif
-	    enddo
-	  endif
+        do k=0,nfbin
+	  do j=1,nsols
+	    if(SelProbe(sels,'time',times(j)))then
+	      do i=1,nants
+	        if (mask(i)) then
+		   if (SelProbe(sels,'amplitude',
+     *			dble(abs(Gains(i,j,k))))) then
+		      call oper(Gains(i,j,k),gain)
+		   endif
+	        endif
+	      enddo
+	    endif
+          enddo
 	enddo
 c
 	end
@@ -455,6 +470,32 @@ c
 	if (t.gt.0) Gain = 1 / Gain
 	end
         
+c********1*********2*********3*********4*********5*********6*********7*c
+	subroutine GainDup(Gains,ngains,maxgains)
+c
+	implicit none
+	integer ngains,maxgains
+	complex Gains(maxgains)
+c
+c  Duplicate the gains to turn a single feed table into a dual feed one
+c
+c  Input/Output:
+c    Gains	The single feed gains
+c    ngains	Number gains
+c    maxgains	Max number of gains
+c-----------------------------------------------------------------------
+	include 'maxdim.h'
+c
+	integer i
+c
+	if(2*ngains.gt.maxgains)call bug('f',
+     *     'Too many gains in GainDup')
+        do i=ngains,1,-1
+          gains(i*2-1)=gains(i)
+          gains(i*2)=gains(i)
+	enddo
+        ngains=ngains*2
+	end
         
 c********1*********2*********3*********4*********5*********6*********7*c
 	subroutine GainWr(itGain,dup,nsols,nants,nfeeds,times,Gains)
