@@ -23,7 +23,8 @@ c       value before the item is stored.  Possible units are "degrees",
 c       "arcminutes", "arcseconds", "time", "hours", "hms", and "dms"
 c       (with mininum match).  Times are given in the standard Miriad
 c       form and are stored as Julian dates.  Angular units are
-c       converted if necessary and stored in radians.
+c       converted if necessary and stored in radians.  bpa, being the
+c       exception, is stored in degrees.
 c@ type
 c       The data type of the argument.  Values can be 'integer', 'real',
 c       'double' and 'ascii'.  The default is determined from the format
@@ -37,6 +38,8 @@ c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c-----------------------------------------------------------------------
+      include 'mirconst.h'
+
       logical   ok
       integer   iostat, l, lin, n
       double precision d
@@ -48,8 +51,8 @@ c-----------------------------------------------------------------------
       character versan*72
 c-----------------------------------------------------------------------
       version = versan ('puthd',
-     *                  '$Revision: 1.2 $',
-     *                  '$Date: 2011/09/15 05:41:32 $')
+     *                  '$Revision: 1.3 $',
+     *                  '$Date: 2011/09/15 05:53:36 $')
 
       call keyini
       call keya('in',in,' ')
@@ -114,6 +117,9 @@ c     warn user.
         else
           call atodf(value(1:l),d,ok)
           if (ok .and. unit.ne.' ') call units(d,unit)
+
+c          bpa is stored in degrees.  (WHY?)
+           if (item.eq.'bpa') d = d * DR2D
         endif
 
         if (.not.ok) call bug('f','Error decoding numeric value')
