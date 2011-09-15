@@ -32,7 +32,7 @@ c    08aug07 rjs  Correct bug in averaging wide channels.
 c    27aug09 mhw  Handle multiple bandpass solution intervals
 c    24feb11 mhw  Handle freq bins in gains and leakage
 c
-c $Id: uvgn.for,v 1.11 2011/09/06 04:27:27 wie017 Exp $
+c $Id: uvgn.for,v 1.12 2011/09/15 05:18:31 wie017 Exp $
 c***********************************************************************
 
       subroutine uvGnIni(tno1,dogains1,dopass1)
@@ -281,25 +281,26 @@ c
 c
 c  Write the binned gain solutions
 c
-      call haccess(tno,item,'gainsf','append',iostat)
-      if (iostat.ne.0) return
-      call hwritei(item,nfbin,4,4,iostat)
-      if (iostat.ne.0) call UvGnBug(iostat,'writing gainsf header')
-      off = 8
-      do j=1,nfbin
-        do i=1,nsols
-          call hwrited(item,time(i),off,8,iostat)
+      if (nfbin.gt.1) then
+        call haccess(tno,item,'gainsf','append',iostat)
+        if (iostat.ne.0) call UvGnBug(iostat,'writing gainsf header')
+        call hwritei(item,nfbin,4,4,iostat)
+        if (iostat.ne.0) call UvGnBug(iostat,'writing gainsf header')
+        off = 8
+        do j=1,nfbin
+          do i=1,nsols
+            call hwrited(item,time(i),off,8,iostat)
+            off = off + 8
+            call hwriter(item,G(k),off,8*ngains,iostat)
+            off = off + ngains * 8
+            k=k+ngains
+          enddo
+          call hwrited(item,freq(j),off,8,iostat)
+          if (iostat.ne.0) call UvGnBug(iostat,'writing gainsf')
           off = off + 8
-          call hwriter(item,G(k),off,8*ngains,iostat)
-          off = off + ngains * 8
-          k=k+ngains
-        enddo
-        call hwrited(item,freq(j),off,8,iostat)
-        if (iostat.ne.0) call UvGnBug(iostat,'writing gainsf')
-        off = off + 8
-      enddo       
-      call hdaccess(item,iostat)
-
+        enddo       
+        call hdaccess(item,iostat)
+      endif
       end
 
 c***********************************************************************
