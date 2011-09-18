@@ -1,5 +1,5 @@
 C=======================================================================
-C $Id: maxdim.h,v 1.9 2009/09/01 06:46:24 cal103 Exp $
+C $Id: maxdim.h,v 1.10 2011/09/18 23:15:53 wie017 Exp $
 C-----------------------------------------------------------------------
 C     Size of an INTEGER array used to implement a memory heap.  This
 C     array is the sole variable in blank COMMON in Miriad.  Trial-and-
@@ -37,7 +37,7 @@ C     Maximum number of channels in spectral data.
 
 C     Maximum number of windows in visibility data.
       INTEGER   MAXWIN
-      PARAMETER(MAXWIN = 16)
+      PARAMETER(MAXWIN = 48)
 
 C     Maximum number of wideband channels.
       INTEGER   MAXWIDE
