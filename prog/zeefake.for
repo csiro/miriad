@@ -23,7 +23,7 @@ c@ imsize
 c       The output cube sizes, all three dimensions required (VXY).
 c
 c@ vinc
-c       The velocity increment along the cubes in Km/s.  No default.
+c       The velocity increment along the cubes in km/s.  No default.
 c
 c@ delv
 c       The Zeeman splitting (separation of split lines) in km/s.
@@ -62,7 +62,7 @@ c
 c@ type
 c       The line type - "e" for emission (default), "a" for absorption.
 c
-c$Id: zeefake.for,v 1.5 2011/02/17 03:23:13 cal103 Exp $
+c$Id: zeefake.for,v 1.6 2011/10/05 06:55:35 cal103 Exp $
 c--
 c
 c  History:
@@ -88,8 +88,8 @@ c-----------------------------------------------------------------------
       external  versan
 c-----------------------------------------------------------------------
       version = versan('zeefake',
-     *                 '$Revision: 1.5 $',
-     *                 '$Date: 2011/02/17 03:23:13 $')
+     *                 '$Revision: 1.6 $',
+     *                 '$Date: 2011/10/05 06:55:35 $')
 
 c     Get inputs.
       call keyini
@@ -314,7 +314,7 @@ c-----------------------------------------------------------------------
       call wrhdd(lun, 'crval3', 0d0)
       call wrhdd(lun, 'crval4', dble(index(stokes,'IQUV')))
 
-      call wrhda(lun, 'ctype1', 'VELO')
+      call wrhda(lun, 'ctype1', 'VRAD')
       call wrhda(lun, 'ctype2', 'RA---SIN')
       call wrhda(lun, 'ctype3', 'DEC--SIN')
       call wrhda(lun, 'ctype4', 'STOKES')
