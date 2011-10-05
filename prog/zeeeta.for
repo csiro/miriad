@@ -10,8 +10,8 @@ c
 c       eta  =  (dI/dnu)_rms / sigma
 c            =  sqrt[SUM (dI/dnu)**2 / N] / sigma
 c
-c       where sigma is the standard deviation of the I or V image,
-c       and N is the number of channels in the spectrum.
+c       where sigma is the standard deviation of the I or V image, and N
+c       is the number of channels in the spectrum.
 c
 c@ in
 c       The input Stokes I image in vxy order.  No default.
@@ -20,54 +20,44 @@ c       The output eta image, if blc,trc is not specified.
 c@ sigma
 c       r.m.s. noise of signal free I spectrum.
 c@ chan
-c       The channel range. Default is all channels.
+c       The channel range.  Default is all channels.
 c@ blc
-c       Specify the blc of the spatial window in pixels.  If unset,
-c       the whole image is done, with no spatial summing, and
-c       an output eta image made.  If blc and trc are set, then
-c       eta is computed for this window, and the results output to
-c       the terminal.
+c       Specify the blc of the spatial window in pixels.  If unset, the
+c       whole image is done, with no spatial summing, and an output eta
+c       image made.  If blc and trc are set, then eta is computed for
+c       this window, and the results output to the terminal.
 c@ trc
 c       Specify the trc of the spatial window in pixels
 c@ der
-c       1 or 2 for one or two sided derivative.  If you would
-c       like to see a plot of the last derivative spectrum, include
-c       a 'p' as well, e.g. 2p or 1p.
+c       1 or 2 for one or two sided derivative.  If you would like to
+c       see a plot of the last derivative spectrum, include a 'p' as
+c       well, e.g. 2p or 1p.
 c@ aveop
 c       'a' to average spectra before computing eta.  Only if blc,trc
 c       set.
 c
-c$Id: zeeeta.for,v 1.4 2010/11/22 05:07:09 cal103 Exp $
+c$Id: zeeeta.for,v 1.5 2011/10/05 06:46:10 cal103 Exp $
 c--
 c
 c  History:
-c    rl     jul89  Initial version.
-c    nebk   jul89  Add channel range, xy, and derivative
-c                  options.  Add header and history
-c                  information to output image.
-c    nebk   aug89  Add blc,trc and remove xy option and last derivative
-c                  plot option.
-c           aug89  Add averaging option
-c    rjs  27oct89  Removed plotting option, because it uses non-standard
-c                  routines. Renamed it Zeeeta.
-c    rjs  02jul97  cellscal change.
+c    Refer to the RCS log, v1.1 includes prior revision information.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
 
       logical   dutput, flags(MAXDIM)
-      integer   bchan, blc(2), echan, i, iend, ioff, ist, j, jend, jst,
-     *          k, kend, kst, lIn, lOut, naxis, nxy, nxyz, nz,
-     *          siz(3), trc(2)
+      integer   axnum, bchan, blc(2), echan, i, iend, ioff, ist, j,
+     *          jend, jst, k, kend, kst, lIn, lOut, naxis, nxy, nxyz,
+     *          nz, siz(3), trc(2)
       real      buf(MAXDIM), bufav(MAXDIM), chan(MAXDIM), der(MAXDIM),
      *          dfac, eata(MAXDIM), sigma, sumsq
-      character ader*2, aveop*1, ctype*10, in*24, out*24, version*72
+      character ader*2, aveop*1, in*24, out*24, version*72
 
-      character versan*80
       external  versan
+      character versan*80
 c-----------------------------------------------------------------------
       version = versan('zeeeta',
-     *                 '$Revision: 1.4 $',
-     *                 '$Date: 2010/11/22 05:07:09 $')
+     *                 '$Revision: 1.5 $',
+     *                 '$Date: 2011/10/05 06:46:10 $')
 
 c     Get user inputs.
       call keyini
@@ -85,16 +75,16 @@ c     Get user inputs.
       call keya('aveop', aveop, 's')
       call keyfin
 
-c     Open input file.
+c     Open the input cube and do basic checks.
       call xyopen(lIn, in, 'old', 3, siz)
       if (siz(1).gt.MAXDIM) call bug('f','Image too big')
       call rdhdi(lIn, 'naxis', naxis, 0)
-      if (naxis.lt.3) call bug('f', 'Image only has 2 dimensions')
-      call rdhda(lIn, 'ctype1', ctype, ' ')
-      if (ctype(1:4).ne.'FREQ' .and.
-     *    ctype(1:4).ne.'VELO' .and.
-     *    ctype(1:4).ne.'FELO') call bug('f',
-     *      'Input image not in correct order')
+      if (naxis.lt.3) call bug('f', 'Image has less than 3 axes')
+
+      call coInit(lIn)
+      call coFindAx(lIn, 'spectral', axnum)
+      call coFin(lIn)
+      if (axnum.ne.1) call bug('f', 'Input image not in vxy order')
 
 c     Check some more inputs.
       if (sigma.le.0.0) call bug('f', 'sigma must be positive')
