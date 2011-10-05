@@ -40,7 +40,7 @@ c       it.
 c@ phase
 c       The output phase image.  Default is not to write it.
 c
-c$Id: fft.for,v 1.2 2011/02/15 05:00:24 cal103 Exp $
+c$Id: fft.for,v 1.3 2011/10/05 05:59:53 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -63,8 +63,8 @@ c-----------------------------------------------------------------------
       character versan*72
 c-----------------------------------------------------------------------
       version = versan('fft',
-     *                 '$Revision',
-     *                 '$Date')
+     *                 '$Revision: 1.3 $',
+     *                 '$Date: 2011/10/05 05:59:53 $')
 c
 c  Get the input parameters.
 c
