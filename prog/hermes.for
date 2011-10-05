@@ -16,15 +16,15 @@ c       $MIR/cat/hermes.in is a sample input file, and can be copied
 c       to the user's own directory.  A more complete discussion of
 c       program HERMES can be found in file $MIR/cat/hermes.txt.
 c@ in
-c       Parameter file. Default is "hermes.in".
+c       Parameter file.  Default is "hermes.in".
 c@ imsize
-c       Image size. Default is 64.
+c       Image size.  Default is 64.
 c@ log
-c       Output log file. Default is "hermes.log".
+c       Output log file.  Default is "hermes.log".
 c@ out
-c       Output image. Units JY/PIXEL. No default.
+c       Output image.  Units JY/PIXEL.  No default.
 c
-c$Id: hermes.for,v 1.5 2011/02/15 06:01:08 cal103 Exp $
+c$Id: hermes.for,v 1.6 2011/10/05 07:10:00 cal103 Exp $
 c--
 c  History:
 c    D.Mitchell 01Jun89  Initial version.
@@ -34,17 +34,20 @@ c    nebk       26nov92  Add btype
 c-----------------------------------------------------------------------
       include 'hermes.h'
       include 'maxdim.h'
-      character in*64,out*64,log*64
-      integer lout,nsize(3),imsize
-      integer i,j,icrpix,jcrpix,iimin,iimax,jjmin,jjmax,ioff,joff
-      real row(maxdim),pixel
-      character versan*80, version*80
 
-      data row/maxdim*0.0/
+      integer   i, icrpix, iimax, iimin, imsize, ioff, j, jcrpix, jjmax,
+     *          jjmin, joff, lout, nsize(3)
+      real      pixel, row(MAXDIM)
+      character in*64, log*64, out*64, version*80
+
+      external  versan
+      character versan*80
+
+      data row /MAXDIM*0.0/
 c-----------------------------------------------------------------------
       version = versan ('hermes',
-     *                '$Revision: 1.5 $',
-     *                '$Date: 2011/02/15 06:01:08 $')
+     *                '$Revision: 1.6 $',
+     *                '$Date: 2011/10/05 07:10:00 $')
 c
 c  Get the input parameters.
 c
@@ -83,13 +86,13 @@ c
       call wrhdi(lOut,'naxis3',nsize(3))
       call wrhda(lOut,'ctype1','RA---SIN')
       call wrhda(lOut,'ctype2','DEC--SIN')
-      call wrhda(lOut,'ctype3','VELO-LSR')
+      call wrhda(lOut,'ctype3','VRAD')
       call wrhdr(lOut,'crpix1',float(nsize(1)/2+1))
       call wrhdr(lOut,'crpix2',float(nsize(2)/2+1))
       call wrhdr(lOut,'crpix3',1.0)
       pixel = cell*pi/(180.0*3600.0)
       call wrhdr(lOut,'cdelt1',-pixel)
-      call wrhdr(lOut,'cdelt2',pixel)
+      call wrhdr(lOut,'cdelt2', pixel)
       call wrhda(lOut,'bunit','JY/PIXEL')
       call wrhdr(lOut,'crval1',0.0)
       call wrhdr(lOut,'crval2',0.0)
@@ -101,15 +104,15 @@ c
 c
 c  write out image.
 c
-      scale = scale*tnot
+      scale  = scale*tnot
       icrpix = float(nsize(1)/2+1)
-      iimin = icrpix-32
-      iimax = icrpix+31
-      ioff = icrpix-33
+      iimin  = icrpix-32
+      iimax  = icrpix+31
+      ioff   = icrpix-33
       jcrpix = float(nsize(2)/2+1)
-      jjmin = jcrpix-32
-      jjmax = jcrpix+31
-      joff = jcrpix-33
+      jjmin  = jcrpix-32
+      jjmax  = jcrpix+31
+      joff   = jcrpix-33
 
       call xysetpl(lOut,1,1)
       do j = 1, nsize(2)
