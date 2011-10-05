@@ -56,14 +56,14 @@ c       Top right corner of spatial region to examine.
 c       Default is all of image.
 c@ bin
 c       Binning widths for all three (v,x,y) dimensions. Default = 1.
-c       This keyword enables each region (spectral and spatial) to
-c       be binned up before fitting.  It's as if you had observed
-c       with lower resolution.  Spatial binning is of no use if
-c       you are using spatial averaging.
+c       This keyword enables each region (spectral and spatial) to be
+c       binned up before fitting.  It's as if you had observed with
+c       lower resolution.  Spatial binning is of no use if you are using
+c       spatial averaging.
 c@ split
 c       Splitting (split to unsplit in channels) to use for calculation
-c       of hatV and all simulation (i.e., don't use actual splitting
-c       as predicted by fitting algorithm when generating V spectra.
+c       of hatV and all simulation (i.e., don't use actual splitting as
+c       predicted by fitting algorithm when generating V spectra.
 c@ nruns
 c       The number of simulation runs to undertake.   If 0, then just
 c       the initial fits are done.  Default is 0.
@@ -98,7 +98,7 @@ c@ nran
 c       Throw away NRAN random numbers before starting.  Use this to
 c       continue a set of simulations with different random numbers.
 c
-c$Id: zeesim.for,v 1.2 2011/02/17 04:37:38 cal103 Exp $
+c$Id: zeesim.for,v 1.3 2011/10/05 06:24:26 cal103 Exp $
 c--
 c
 c  History:
@@ -137,8 +137,8 @@ c-----------------------------------------------------------------------
      *   /0, 0, 0, 0, 0, 0, 0/
 c-----------------------------------------------------------------------
       version = versan('zeesim',
-     *                 '$Revision: 1.2 $',
-     *                 '$Date: 2011/02/17 04:37:38 $')
+     *                 '$Revision: 1.3 $',
+     *                 '$Date: 2011/10/05 06:24:26 $')
 
 c First section: read in data
 c----------------------------
@@ -495,14 +495,14 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine dimcheck(liin, lvin, lbin, beam, isize, vsize, bsize,
+      subroutine dimcheck(lIin, lVin, lBin, beam, isize, vsize, bsize,
      *                    maxdim, bxref, byref)
 
-      integer   liin, lvin, lbin, isize(3), vsize(3), bsize(2), maxdim,
-     *          bxref, byref
+      integer   lIin, lVin, lBin
       character beam*(*)
+      integer   isize(3), vsize(3), bsize(2), maxdim, bxref, byref
 c-----------------------------------------------------------------------
-c     Make dimension checks on arrays and images
+c     Make dimension checks on arrays and images.
 c
 c     Input:
 c       l*in   i   Handles for I, V and Beam images
@@ -512,25 +512,25 @@ c       maxdim i   Max allowed size for images firts dimension
 c     Output:
 c       b*ref  r   Reference pixel
 c-----------------------------------------------------------------------
+      integer   axnum
       real      crpix1, crpix2
-      character ctype1*8
 c-----------------------------------------------------------------------
-      call rdhda(liin, 'ctype1', ctype1, ' ')
-      if (ctype1(1:4).ne.'FREQ' .and. ctype1(1:4).ne.'VELO' .and.
-     *    ctype1(1:4).ne.'FELO')
-     *    call bug('f', 'I cube not in vxy order')
+      call coInit(lIin)
+      call coFindAx(lIin, 'spectral', axnum)
+      if (axnum.ne.1) call bug('f', 'I cube not in vxy order')
+      call coFin(lIin)
 
-      call rdhda(lvin, 'ctype1', ctype1, ' ')
-      if (ctype1(1:4).ne.'FREQ' .and. ctype1(1:4).ne.'VELO' .and.
-     *    ctype1(1:4).ne.'FELO')
-     *    call bug('f', 'V cube not in vxy order')
+      call coInit(lVin)
+      call coFindAx(lVin, 'spectral', axnum)
+      if (axnum.ne.1) call bug('f', 'V cube not in vxy order')
+      call coFin(lVin)
 
       if (isize(1).gt.maxdim .or. vsize(1).gt.maxdim)
      *    call bug('f', 'First dimension of I or V images too large')
 
       if (beam.ne.' ') then
-        call rdhdr(lbin, 'crpix1', crpix1, 0.0)
-        call rdhdr(lbin, 'crpix2', crpix2, 0.0)
+        call rdhdr(lBin, 'crpix1', crpix1, 0.0)
+        call rdhdr(lBin, 'crpix2', crpix2, 0.0)
         if (crpix1.eq.0 .or. crpix2.eq.0)
      *    call bug('f', 'No reference pixel for beam')
         bxref = nint(crpix1)
@@ -839,7 +839,7 @@ c     magnetic field strength
 c
 c     Input:
 c       liin    i    handle for I image
-c       obin    i    SPectral binning width
+c       obin    i    Spectral binning width
 c       freq    r    Frequency of line (GHz)
 c     Output:
 c       scale   r    B=2*scale*alpha Gauss, where alpha is the splitting
