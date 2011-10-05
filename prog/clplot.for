@@ -54,7 +54,7 @@ c@ log
 c       The output log file. The default filename is clplot.log
 c       Results from image analysis are written into the log file.
 c
-c$Id: clplot.for,v 1.12 2011/07/05 00:48:45 cal103 Exp $
+c$Id: clplot.for,v 1.13 2011/10/05 05:52:01 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -88,8 +88,8 @@ c  real ary(128*128*64)=1048576 reals = 4 MBytes
 c  real ary(256*256*128)=8388608 reals = 32 MBytes
 c-----------------------------------------------------------------------
       version = versan ('clplot',
-     *                  '$Revision: 1.12 $',
-     *                  '$Date: 2011/07/05 00:48:45 $')
+     *                  '$Revision: 1.13 $',
+     *                  '$Date: 2011/10/05 05:52:01 $')
 c
 c  Get the input parameters.
 c
@@ -398,10 +398,10 @@ c***********************************************************************
 
       subroutine convsize(cmaj,cmin,cpa,xy,ncon)
 
-      real cmaj,cmin,cpa,xy
+      real    cmaj, cmin, cpa, xy
       integer ncon
 c-----------------------------------------------------------------------
-c  Determine size of convolution array for VELO
+c  Determine size of convolution array.
 c               mchw Oct 1987
 c  Inputs:
 c    xy                 Pixel size
@@ -409,10 +409,10 @@ c  Outputs:
 c    cmaj,cmin,cpa      Convolving beam and position angle.
 c    ncon               Size of convolution array.
 c-----------------------------------------------------------------------
-      character*80 line
-      integer length
-#ifdef cft
+      integer   length
+      character line*80
 
+#ifdef cft
 c     External.
       character substr*80
 #endif
@@ -424,25 +424,25 @@ c
       cmin = 0.0
       cpa  = 0.0
 
-10    call prompt(line,length,
+ 10   call prompt(line,length,
      *  '>Enter convolving beam (major("), minor("), pa(deg): ')
-      if (length.eq.0) goto 20
+      if (length.eq.0) goto 40
 #ifdef cft
-      read(substr(line,1),102,err=10) cmaj
-      read(substr(line,2),102) cmin
-      read(substr(line,3),102) cpa
-102   format(f20.0)
+      read(substr(line,1),20,err=10) cmaj
+      read(substr(line,2),20) cmin
+      read(substr(line,3),20) cpa
+ 20   format(f20.0)
 #else
-      read(line(1:length),103,err=10,end=20) cmaj,cmin,cpa
-103   format(3f20.0)
+      read(line(1:length),30,err=10,end=40) cmaj,cmin,cpa
+ 30   format(3f20.0)
 #endif
-c
-20    ncon = 2*cmaj/xy + 1
+
+ 40   ncon = 2*cmaj/xy + 1
       ncon = min(99,(max(ncon,3)))
       call output('Gaussian falls to 6% at edge of array')
-      write(line, 105) ncon, ncon*xy
+      write(line, 50) ncon, ncon*xy
       call output(line)
-105   format(' size of convolution array:',i5,' pixels,',f8.3,
+ 50   format(' size of convolution array:',i5,' pixels,',f8.3,
      *       ' arcsecs')
 
       end
