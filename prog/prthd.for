@@ -7,7 +7,7 @@ c+
 c       PRTHD is a Miriad task that summarises a Miriad data-set.
 c@ in
 c       Input image and/or uv data-sets.  Several may be given, and
-c       their names may include wildcards.  No default. 
+c       their names may include wildcards.  No default.
 c@ log
 c       Output log file.  Default is the terminal.
 c@ options
@@ -15,7 +15,7 @@ c       Extra processing options.  Possible values are:
 c         brief   Give one line description of each file.
 c         full    Several line description of each file (default).
 c
-c$Id: prthd.for,v 1.6 2010/12/16 07:10:51 cal103 Exp $
+c$Id: prthd.for,v 1.7 2011/10/06 05:10:12 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -35,8 +35,8 @@ c-----------------------------------------------------------------------
       character versan*80
 c-----------------------------------------------------------------------
       version = versan('prthd',
-     *                 '$Revision: 1.6 $',
-     *                 '$Date: 2010/12/16 07:10:51 $')
+     *                 '$Revision: 1.7 $',
+     *                 '$Date: 2011/10/06 05:10:12 $')
 
 c     Get input parameters.
       call keyini
@@ -371,9 +371,8 @@ c-----------------------------------------------------------------------
 
       logical   more
       integer   i, j, length, n, p
-      real      crpix
-      double precision cdelt, crval
-      character aval*72, line*80, pols*32, radec*12, str*2, units*12
+      double precision cdelt, crpix, crval
+      character ctype*72, line*80, pols*32, radec*12, str*2, units*12
 
       external  itoaf, hangleh, len1, polsC2P, rangleh
       integer   len1
@@ -389,34 +388,34 @@ c-----------------------------------------------------------------------
         units = ' '
         str = itoaf(i)
         call rdhdi(tno, 'naxis'//str, n, 0)
-        call rdhda(tno, 'ctype'//str, aval, 'none')
+        call rdhda(tno, 'ctype'//str, ctype, 'none')
         call rdhdd(tno, 'crval'//str, crval, 0d0)
-        call rdhdr(tno, 'crpix'//str, crpix, 0.0)
+        call rdhdd(tno, 'crpix'//str, crpix, 0d0)
         call rdhdd(tno, 'cdelt'//str, cdelt, 0d0)
 
-        if (aval(1:4).eq.'RA--' .or. aval.eq.'RA') then
+        if (ctype(1:4).eq.'RA--' .or. ctype.eq.'RA') then
 c         RA.
           radec = hangleh(crval)
-          write(line, 10) aval(1:8), n, radec, crpix, cdelt*R2AS
+          write(line, 10) ctype(1:8), n, radec, crpix, cdelt*R2AS
  10       format(a8, i7, 3x, a11, f10.2, 1pe16.6, '  arcsec')
 
-        else if (aval(1:4).eq.'DEC-' .or. aval.eq.'DEC') then
+        else if (ctype(1:4).eq.'DEC-' .or. ctype.eq.'DEC') then
 c         Dec.
           radec = rangleh(crval)
-          write(line, 20) aval(1:8), n, radec, crpix, cdelt*R2AS
+          write(line, 20) ctype(1:8), n, radec, crpix, cdelt*R2AS
  20       format(a8, i7, 2x, a12, f10.2, 1pe16.6, '  arcsec')
-        else if (aval(1:4).eq.'GLON' .or. aval(1:4).eq.'GLAT' .or.
-     *           aval(1:4).eq.'ELON' .or. aval(1:4).eq.'ELAT') then
+        else if (ctype(1:4).eq.'GLON' .or. ctype(1:4).eq.'GLAT' .or.
+     *           ctype(1:4).eq.'ELON' .or. ctype(1:4).eq.'ELAT') then
 c         Galactic and Ecliptic coordinates.
-          write(line,30) aval(1:8), n, crval*DR2D, crpix, cdelt*DR2D
+          write(line,30) ctype(1:8), n, crval*DR2D, crpix, cdelt*DR2D
  30       format(a8,i7,f14.6,f10.2,1pe16.6,'  deg')
 
-        else if (aval.eq.'ANGLE') then
+        else if (ctype.eq.'ANGLE') then
 c         Angles on the sky.
-          write(line, 40) aval(1:8), n, crval*DR2D, crpix, cdelt*DR2AS,
+          write(line, 40) ctype(1:8), n, crval*DR2D, crpix, cdelt*DR2AS,
       *     'arcsec'
 
-        else if (aval.eq.'STOKES') then
+        else if (ctype.eq.'STOKES') then
 c         Stokes.
           length = 0
           do j = 1, n
@@ -432,25 +431,31 @@ c         Stokes.
             endif
           enddo
 
-          write(line,40) aval(1:8), n, pols(2:length)
+          write(line,40) ctype(1:8), n, pols(2:length)
  40       format(a8,i7,8x,a)
 
         else
 c         Others.
-          if (aval(1:5).eq.'FELO-' .or. aval(1:5).eq.'VELO-') then
-            units = 'km/sec'
-          else if (aval(1:4).eq.'FREQ') then
+          if (ctype(1:4).eq.'FREQ') then
             units = 'GHz'
-          else if (aval(1:3).eq.'UU-' .or. aval(1:3).eq.'VV-') then
+          else if (ctype(:5).eq.'VRAD-' .or. ctype.eq.'VRAD' .or.
+     *             ctype(:5).eq.'VOPT-' .or. ctype.eq.'VOPT' .or.
+     *             ctype(:5).eq.'VELO-' .or.
+     *             ctype(:5).eq.'FELO-') then
+            units = 'km/s'
+          else if (ctype(:3).eq.'UU-' .or. ctype(:3).eq.'VV-') then
             units = 'lambda'
-          else if (aval.eq.'TIME') then
-            units = 'seconds'
+          else if (ctype.eq.'TIME') then
+            units = 's'
           endif
-          write(line,50) aval(1:8), n, crval, crpix, cdelt, units
+
+          write(line,50) ctype(1:8), n, crval, crpix, cdelt, units
  50       format(a8,i7,2x,1pe13.6,0pf9.2,3x,1pe13.6,2x,a)
         endif
+
         call logwrite(line,more)
       enddo
+
       call logwrite('--------------------------------'//
      *              '--------------------------------',more)
 
