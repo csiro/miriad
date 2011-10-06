@@ -4,26 +4,26 @@ c= IMPOS - Converts image coordinates between different systems.
 c& nebk
 c: image analysis
 c+
-c       IMPOS takes a coordinate in a specified system (such
-c       as "abspix" or "arcsec") and converts it to all appropriate
-c       coordinate systems (absolute world, offset world, pixels,
-c       offset pixels).   Spectral axes are converted to values in
-c       frequency, radio and optical velocities.
+c       IMPOS takes a coordinate in a specified system (such as "abspix"
+c       or "arcsec") and converts it to all appropriate coordinate
+c       systems (absolute world, offset world, pixels, offset pixels).
+c       Spectral axes are converted to values in frequency, radio and
+c       optical velocities.
 c
 c       If the input is an image and the specified coordinate represents
 c       a valid pixel, its value is reported as well.
 c
 c@ in
-c       The input image or visibility dataset. For a visibility dataset,
-c       the coordinate system is relative to the first visibility
-c       record.
+c       The input image or visibility dataset.  For a visibility
+c       dataset, the coordinate system is relative to the first
+c       visibility record.
 c@ coord
 c       Specify the coordinate for each axis that you are interested
 c       in; you don't necessarily need one for every axis in the image.
 c       No default.
 c@ type
 c       Specify the coordinate system of the input coordinate for each
-c       axis.  Different axes can be in different systems. Choose from:
+c       axis.  Different axes can be in different systems.  Choose from:
 c
 c          "hms"         HH:MM:SS.S  (e.g. for RA)
 c          "dms"         DD:MM:SS.S  (e.g. for DEC)
@@ -60,7 +60,7 @@ c                      RA = (p1 - CRPIX1)*CDELT1/cos(CRVAL2).
 c                   This interpretation differs significantly from the
 c                   FITS standard when lat0 (i.e. CRVAL2) is non-zero.
 c
-c$Id: impos.for,v 1.7 2011/08/09 06:32:56 cal103 Exp $
+c$Id: impos.for,v 1.8 2011/10/06 04:20:38 cal103 Exp $
 c--
 c
 c  History:
@@ -80,11 +80,10 @@ c-----------------------------------------------------------------------
       real      data(MAXDIM), value
       double precision rfreq, pixel(MAXNAX), win(MAXNAX)
       character bunit*9, ctypes(MAXNAX)*9, file*80, labtyp(MAXTYP)*6,
-     *          sctypes(3)*4, str1*132, strout1(MAXNAX)*80,
+     *          sctypes(3)*8, str1*132, strout1(MAXNAX)*80,
      *          strout2(MAXNAX)*80, strout3(MAXNAX)*80, stypei*9,
-     *          stypes(3)*9, text*132, trail*6, typei(MAXNAX)*6,
-     *          typeo(MAXNAX)*6, typeo2(MAXNAX)*6, typeo3(MAXNAX)*6,
-     *          version*80
+     *          stypes(3)*9, text*132, typei(MAXNAX)*6, typeo(MAXNAX)*6,
+     *          typeo2(MAXNAX)*6, typeo3(MAXNAX)*6, version*80
 
       external  hdprsnt, versan
       logical   hdprsnt
@@ -99,8 +98,8 @@ c-----------------------------------------------------------------------
       data nco, ipix /0, MAXNAX*1/
 c-----------------------------------------------------------------------
       version = versan ('impos',
-     *                  '$Revision: 1.7 $',
-     *                  '$Date: 2011/08/09 06:32:56 $')
+     *                  '$Revision: 1.8 $',
+     *                  '$Date: 2011/10/06 04:20:38 $')
 
 c     Get inputs.
       call keyini
@@ -163,23 +162,25 @@ c     convention order in which spectral axes will be listed.
       call sstdef(lIn, nco, typei, stypei, sax)
       dospec = sax.ne.0 .and. nco.ge.sax
       if (sax.gt.0) then
-        trail = ctypes(sax)(5:)
-        sctypes(1) = ctypes(sax)(1:4)
+        sctypes(1) = ctypes(sax)
+        if (sctypes(1)(:4).eq.'VELO') sctypes(1) = 'VRAD'
+        if (sctypes(1)(:4).eq.'FELO') sctypes(1) = 'VOPT-F2W'
+
         if (rfreq.gt.0d0) then
           if (sctypes(1).eq.'FREQ') then
-            sctypes(2) = 'VELO'
-            sctypes(3) = 'FELO'
+            sctypes(2) = 'VRAD'
+            sctypes(3) = 'VOPT-F2W'
             stypes(1) = 'frequency'
             stypes(2) = 'radio'
             stypes(3) = 'optical'
-          else if (sctypes(1).eq.'VELO') then
-            sctypes(2) = 'FELO'
+          else if (sctypes(1).eq.'VRAD') then
+            sctypes(2) = 'VOPT-F2W'
             sctypes(3) = 'FREQ'
             stypes(1) = 'radio'
             stypes(2) = 'optical'
             stypes(3) = 'frequency'
-          else if (sctypes(1).eq.'FELO') then
-            sctypes(2) = 'VELO'
+          else if (sctypes(1).eq.'VOPT-F2W') then
+            sctypes(2) = 'VRAD'
             sctypes(3) = 'FREQ'
             stypes(1) = 'optical'
             stypes(2) = 'radio'
@@ -215,21 +216,18 @@ c     Convert & format and inform.
         call pader(typeo(i), strout1(i), strlen1(i))
 
         if (i.eq.sax) then
-          write(text, 100) i, sctypes(1)//trail,
-     *                     strout1(i)(1:strlen1(i))
+          write(text, 100) i, sctypes(1), strout1(i)(1:strlen1(i))
           call output(text)
 
           if (dospec) then
-            write(text, 100) i, sctypes(2)//trail,
-     *                       strout2(i)(1:strlen2(i))
+            write(text, 100) i, sctypes(2), strout2(i)(1:strlen2(i))
             call output(text)
-            write(text, 100) i, sctypes(3)//trail,
-     *                       strout3(i)(1:strlen3(i))
+            write(text, 100) i, sctypes(3), strout3(i)(1:strlen3(i))
             call output(text)
           endif
         else
           write(text, 100) i, ctypes(i), strout1(i)(1:strlen1(i))
-100       format('Axis ', i1, ': ',  a, ' = ', a)
+100       format('Axis',i2,': ',a8,' = ',a)
           call output(text)
         endif
       enddo
@@ -253,16 +251,13 @@ c     ------------------------
       call output('Offset world coordinates')
       do i = 1, nco
         if (i.eq.sax) then
-          write(text, 100) i, sctypes(1)//trail,
-     *                     strout1(i)(1:strlen1(i))
+          write(text, 100) i, sctypes(1), strout1(i)(1:strlen1(i))
           call output(text)
 
           if (dospec) then
-            write(text, 100) i, sctypes(2)//trail,
-     *                       strout2(i)(1:strlen2(i))
+            write(text, 100) i, sctypes(2), strout2(i)(1:strlen2(i))
             call output(text)
-            write(text, 100) i, sctypes(3)//trail,
-     *                       strout3(i)(1:strlen3(i))
+            write(text, 100) i, sctypes(3), strout3(i)(1:strlen3(i))
             call output(text)
           endif
         else
