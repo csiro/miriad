@@ -24,7 +24,7 @@ c               1 -> no spectral axis,
 c History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: getfreq.for,v 1.3 2011/02/18 04:35:02 cal103 Exp $
+c $Id: getfreq.for,v 1.4 2011/10/06 07:10:02 cal103 Exp $
 c-----------------------------------------------------------------------
       double precision freq1, freq2
       character algo*3, line*80
@@ -33,7 +33,7 @@ c     Initialize the coordinate object.
       call coInit(tin)
 
 c     Switch spectral axis to frequency.
-      call coSpcSet(tin, 'FREQ', ifrq, algo)
+      call coSpcSet(tin, 'FREQ', ' ', ifrq, algo)
       if (ifrq.eq.0) then
         call coFin(tin)
         call bug('w',

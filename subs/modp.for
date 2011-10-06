@@ -119,7 +119,7 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 c     Determine the reference frequency.
       call coInit(tmod)
-      call coSpcSet(tmod, 'FREQ', ifrq, algo)
+      call coSpcSet(tmod, 'FREQ', ' ', ifrq, algo)
       if (ifrq.ne.0) then
         call coCvt1(tmod, ifrq, 'op', 0d0, 'aw', freq0)
       else

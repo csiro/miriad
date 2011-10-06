@@ -35,7 +35,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: cosubs.for,v 1.10 2011/08/29 02:15:48 cal103 Exp $
+c $Id: cosubs.for,v 1.11 2011/10/06 07:10:02 cal103 Exp $
 c***********************************************************************
 
 c* axfndCO -- Find a specified generic axis in an image
@@ -563,9 +563,7 @@ c-----------------------------------------------------------------------
       endif
 
       do i = i1, i2
-c
-c Get generic axis type and set default
-c
+c       Get generic axis type and set default.
         call axtypco(lun, 0, i, gtype)
 
         j = 1
@@ -841,7 +839,7 @@ c     while we are it.
       endif
 
 c     Switch spectral axis to type of input coordinate.
-      if (stypei.ne.' ') call coSpcSet(lun, stypei, ifrq, algo)
+      if (stypei.ne.' ') call coSpcSet(lun, stypei, ' ', ifrq, algo)
 
 c     Convert coordinates to absolute pixels first; loop over axes.
       cti = '  '
@@ -879,7 +877,7 @@ c       Having turned the coordinate into a pixel, we can now convert
 c       it to the desired output coordinate type.
 
 c       Switch spectral axis to type of output coordinate.
-        if (stypeo.ne.' ') call coSpcSet(lun, stypeo, ifrq, algo)
+        if (stypeo.ne.' ') call coSpcSet(lun, stypeo, ' ', ifrq, algo)
 
 c       Loop over axes
         cti = '  '
@@ -914,7 +912,7 @@ c     the input values to improve precision.
       enddo
 
 c     Restore spectral axis type from header.
-      call coSpcSet(lun, ' ', ifrq, algo)
+      call coSpcSet(lun, ' ', ' ', ifrq, algo)
 
       end
 

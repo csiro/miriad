@@ -64,7 +64,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: boxes.for,v 1.4 2011/02/18 04:22:44 cal103 Exp $
+c $Id: boxes.for,v 1.5 2011/10/06 07:10:02 cal103 Exp $
 c--
 c***********************************************************************
 
@@ -233,7 +233,7 @@ c       Finish up with this subcommand.
      *          ctype(1:4).ne.'VOPT' .and.
      *          ctype(1:4).ne.'VELO' .and.
      *          ctype(1:4).ne.'FELO') then
-              call coSpcSet(lu, 'VRAD', iax, algo)
+              call coSpcSet(lu, 'VRAD', ' ', iax, algo)
             endif
           endif
         else
