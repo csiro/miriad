@@ -23,7 +23,7 @@ c       the (x,y) intensity distribution integrated over the z-axis,
 c       e.g. velocity-integrated image.  The second image is an (x,y)
 c       model for the z-values, e.g. a mean velocity image.  No default
 c       for either.
-c       A 3rd input image gives the z-dispersion at each point. e.g. a
+c       A 3rd input image gives the z-dispersion at each point, e.g. a
 c       velocity dispersion image.  If the 3rd image is not specified
 c       then fixed dispersion, sigma must be specified.
 c@ region
@@ -34,22 +34,22 @@ c@ sigma
 c       Fixed value for z-dispersion if not specified by 3rd input
 c       image.
 c@ nchan
-c       Number of channels for z-axis of output image. Default=1.
+c       Number of channels for z-axis of output image.  Default=1.
 c@ start
-c       Starting value for z-axis of output image. No default.
+c       Starting value for z-axis of output image.  No default.
 c@ step
-c       Interval for z-axis of output image. No default.
+c       Interval for z-axis of output image.  No default.
 c@ out
-c       The output (x,y,z) image. No default.
+c       The output (x,y,z) image.  No default.
 c@ options
-c       Options. Minimum match is active.
+c       Options.  Minimum match is active.
 c         relax  ignore axis descriptor mismatches
 c                (e.g. pixel increments etc).  Use with care.
 c
-c$Id: velimage.for,v 1.4 2010/11/22 05:15:59 cal103 Exp $
+c$Id: velimage.for,v 1.5 2011/10/06 00:51:03 cal103 Exp $
 c--
 c  History:
-c    23sep92 mchw  New task.
+c    Refer to the RCS log, v1.1 includes prior revision information.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -72,8 +72,8 @@ c-----------------------------------------------------------------------
       external  itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('velimage',
-     *                 '$Revision: 1.4 $',
-     *                 '$Date: 2010/11/22 05:15:59 $')
+     *                 '$Revision: 1.5 $',
+     *                 '$Date: 2011/10/06 00:51:03 $')
 
 c     Get the input parameters.
       call keyini
@@ -153,7 +153,7 @@ c     Open the output image and write its header.
       call wrhdd(lOut, 'crpix3', 1d0)
       call wrhdd(lOut, 'cdelt3', dble(step))
       call wrhdd(lOut, 'crval3', dble(start))
-      call wrhda(lOut, 'ctype3', 'VELO-LSR')
+      call wrhda(lOut, 'ctype3', 'VRAD')
       call wrhda(lOut, 'bunit',  'KM/S')
 
 c     Generate the output image.
@@ -203,14 +203,15 @@ c  Output:
 c     relax     If true issue warnings about mismatched axis
 c               descriptors between images instead of fatal error.
 c-----------------------------------------------------------------------
-      integer maxopt
-      parameter (maxopt = 1)
+      integer MAXOPT
+      parameter (MAXOPT = 1)
 
-      character ops(maxopt)*5
-      logical present(maxopt)
+      logical   present(MAXOPT)
+      character ops(MAXOPT)*5
+
       data ops /'relax'/
 c-----------------------------------------------------------------------
-      call options('options', ops, present, maxopt)
+      call options('options', ops, present, MAXOPT)
       relax = present(1)
 
       end
