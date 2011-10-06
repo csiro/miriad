@@ -13,11 +13,9 @@ c       Miriad image.  The spectrum is integrated, or averaged over the
 c       region specified for the other image axes.  The output spectrum
 c       can be plotted and/or written out as an ascii file for further
 c       analysis.
-c
 c@ in
 c       The input image.  vxy and xyv images are acceptable inputs.
 c       No default.
-c
 c@ region
 c       Rectangular region of image to be averaged.  E.g.
 c         % imspect  region=relpix,box(-4,-4,5,5)(10,50) for an xyv
@@ -26,23 +24,18 @@ c       over the center 10 x 10 pixels in the x-y plane.  For a vxy
 c       image where the x and y size is 128x128, the corresponding
 c       region=box(10,61,50,70)(61,70).  Box refers image axes 1 and 2
 c       for either vxy or xyv images.  The default is the entire image.
-c
 c@ xaxis
 c       The x-axis can be plotted as 'channel' or the units in the
 c       image.  The default which is whatever units are in the header.
-c
 c@ yaxis
 c       If 'average' then the pixels enclosed in the x-y area specified
 c       are averaged.  If 'sum' they are summed and normalized if the
 c       units are known.  Default is 'average'
-c
 c@ yrange
 c       Y-axis range for plot.  The default is to self-scale.
-c
 c@ hann
 c       Hanning smoothing length (an odd integer < 15).  The default is
 c       no smoothing (hann = 1).
-c
 c@ options
 c       List of minimum match task enrichment options.
 c       1deriv  Take 1-sided derivative of spectrum before plotting and
@@ -50,18 +43,15 @@ c               after Hanning smoothing.  Useful for Zeeman enthusiasts.
 c       2deriv  Take 2-sided derivative of spectrum before plotting.
 c       curve   Plot the spectrum joining up the dots instead of the
 c               default step-plot.
-c
 c@ device
 c       Standard PGPLOT device.  See the help on "device" for more
 c       information.
-c
 c@ log
 c       Write spectrum to this ascii file.  Default is no output file.
-c
 c@ comment
 c       A one-line comment which is written into the logfile.
 c
-c$Id: imspect.for,v 1.2 2011/02/16 04:44:42 cal103 Exp $
+c$Id: imspect.for,v 1.3 2011/10/06 04:49:49 cal103 Exp $
 c--
 c
 c  History:
@@ -92,8 +82,8 @@ c-----------------------------------------------------------------------
       character itoaf*3, versan*72
 c-----------------------------------------------------------------------
       version = versan('imspect',
-     *                 '$Revision: 1.2 $',
-     *                 '$Date: 2011/02/16 04:44:42 $')
+     *                 '$Revision: 1.3 $',
+     *                 '$Date: 2011/10/06 04:49:49 $')
 
 c     Get inputs.
       call keyini
@@ -129,9 +119,11 @@ c     Check inputs.
       naxis = min(naxis,MAXNAX)
       if (nsize(1).gt.MAXDIM) call bug('f','Input file too big for me')
 
-c     Find v-axis.
-      call GetVaxis(lIn,vaxis,vctype)
-      if (vaxis.eq.0) call bug('f','Velocity axis was not found')
+c     Find spectral axis.
+      call coInit(lIn)
+      call coFindAx(lIn, 'spectral', vaxis)
+      call coFin(lIn)
+      if (vaxis.eq.0) call bug('f','Spectral axis not found')
 
 c     Set up the region of interest.
       call BoxMask(lIn,boxes,MAXBOXES)
@@ -249,43 +241,6 @@ c     All done.
 
 c***********************************************************************
 
-      subroutine GetVaxis(lIn,vaxis,vctype)
-
-      integer   lIn, vaxis
-      character vctype*(*)
-c-----------------------------------------------------------------------
-c  Find the v-axis.
-c
-c  Inputs:
-c    lIn        The handle of the image.
-c  Output:
-c    vaxis      The velocity or frequency axis.
-c
-c                 03jul90 mchw.
-c-----------------------------------------------------------------------
-      integer   axis, naxis
-      character ctype*9
-
-      external  itoaf
-      character itoaf*1
-c-----------------------------------------------------------------------
-c     Look for v-axis
-      vaxis = 0
-      call rdhdi(lIn,'naxis',naxis,1)
-      do axis = 1, naxis
-        call rdhda(lIn,'ctype'//itoaf(axis),ctype,' ')
-        if (ctype(1:4).eq.'VELO' .or.
-     *      ctype(1:4).eq.'FELO' .or.
-     *      ctype(1:4).eq.'FREQ') then
-          vaxis = axis
-          vctype = ctype
-        endif
-      enddo
-
-      end
-
-c***********************************************************************
-
       subroutine vaxis1(lIn,naxis,blc,trc,nchan,chan,spec,npix,none)
 
       integer lIn,naxis,blc(naxis),trc(naxis),nchan,npix(nchan)
@@ -398,6 +353,7 @@ c***********************************************************************
       real chan(nchan),spec(nchan),value(nchan)
 c-----------------------------------------------------------------------
 c  Get plot axes and write labels.
+c
 c  Inputs:
 c    lIn        The handle of the image.
 c    vaxis      The velocity or frequency axis.
@@ -416,9 +372,9 @@ c    spec       Spectrum (with converted units).
 c    xlabel     Label for xaxis.
 c    ylabel     Label for yaxis.
 c
-c    - Could be much fancier by converting internal units 'JY' 'JY/BEAM'
-c    etc. to requested units 'JY' 'JY/BEAM' 'K' etc. calling GetBeam
-c    to get beam oversampling factor.
+c    - Could be much fancier by converting internal units 'JY',
+c    'JY/BEAM', etc. to requested units 'JY', 'JY/BEAM', 'K', etc.
+c    calling GetBeam to get beam oversampling factor.
 c-----------------------------------------------------------------------
       integer   i
       real      bmaj, bmin, cbof, omega
@@ -430,15 +386,15 @@ c-----------------------------------------------------------------------
       character itoaf*1
 c-----------------------------------------------------------------------
 c     Get xlabel.
-      call rdhda(lIn,'ctype'//itoaf(vaxis),ctype,' ')
+      call rdhda(lIn, 'ctype'//itoaf(vaxis), ctype, ' ')
       if (xaxis.eq.'channel') then
         xlabel = 'Channel'
       else if (ctype(1:4).eq.'FREQ') then
         xlabel = 'Frequency (GHz)'
-      else if (ctype(1:4).eq.'VELO') then
-        xlabel = 'Velocity (km/s)'
-      else if (ctype(1:4).eq.'FELO') then
-        xlabel = 'Felocity (km/s)'
+      else if (ctype.eq.'VRAD' .or. ctype(1:4).eq.'VELO') then
+        xlabel = 'Radio velocity (km/s)'
+      else if (ctype.eq.'VOPT-F2W' .or. ctype(1:4).eq.'FELO') then
+        xlabel = 'Optical felocity (km/s)'
       else
         xlabel = ctype(1:len1(ctype))
       endif
