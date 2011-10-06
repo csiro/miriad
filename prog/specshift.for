@@ -33,6 +33,7 @@ c        doblank    Don't wrap profile around; blank if out of range.
 c                   By default the edge channels are assumed to be
 c                   noise so the profile is wrapped when shifting
 c                   beyond edges.
+c$Id: specshift.for,v 1.6 2011/10/06 07:25:04 cal103 Exp $
 c--
 c   History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -64,8 +65,8 @@ c-----------------------------------------------------------------------
       data axC  /'xyzabcd'/
 c-----------------------------------------------------------------------
       version = versan('specshift',
-     *                 '$Revision: 1.5 $',
-     *                 '$Date: 2011/04/04 05:17:56 $')
+     *                 '$Revision: 1.6 $',
+     *                 '$Date: 2011/10/06 07:25:04 $')
 
 c     Get and check the inputs.
       call keyini
@@ -101,7 +102,7 @@ c     Set regions.
 
 c     Find the spectral axis.
       call coInit(lIn)
-      call coSpcSet(lIn, 'VRAD', spcAxI, algo)
+      call coSpcSet(lIn, 'VRAD', ' ', spcAxI, algo)
       if (spcAxI.eq.0) call bug('f', 'No spectral axis in input cube')
       spcAxC = axC(spcAxI:spcAxI)
 

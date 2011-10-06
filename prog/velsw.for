@@ -17,10 +17,8 @@ c       Assuming that the data were measured with equal frequency
 c       increments, some approximation is involved assigning a velocity
 c       axis increment for the optical convention.  In this case, the
 c       increment stored is correct at the reference pixel.
-c
 c@ in
 c       Name of the input image data set.  No default.
-c
 c@ axis
 c       This determines what the labelling on the spectral axis will
 c       be changed to.  Possible values are 'frequency', 'radio' (for
@@ -32,7 +30,7 @@ c       This can be "barycentre" (solar system barycentre), "lsr" (Local
 c       Standard of Rest) or "observatory" (topocentric).  The default
 c       is not to change this.
 c
-c$Id: velsw.for,v 1.4 2011/03/01 03:03:27 cal103 Exp $
+c$Id: velsw.for,v 1.5 2011/10/06 07:25:04 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -58,8 +56,8 @@ c     N.B. switches and frames must be in alphabetical order.
       data ftypes  /'HEL',        'LSR',     'OBS'/
 c-----------------------------------------------------------------------
       version = versan('velsw',
-     *                 '$Revision: 1.4 $',
-     *                 '$Date: 2011/03/01 03:03:27 $')
+     *                 '$Revision: 1.5 $',
+     *                 '$Date: 2011/10/06 07:25:04 $')
 
 c     Get input parameters.
       call keyini
@@ -84,7 +82,7 @@ c     Open the input map.
 
 c     Perform the transformation.
       call coInit(lIn)
-      call coSpcSet(lIn, ctype, ifrq, algo)
+      call coSpcSet(lIn, ctype, ' ', ifrq, algo)
       if (ifrq.eq.0) call bug('f','No spectral axis in input image')
       call coWrite(lIn, lIn)
       call coFin(lIn)
