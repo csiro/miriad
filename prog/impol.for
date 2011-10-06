@@ -103,7 +103,7 @@ c       make this bias plot without actually working on any data if you
 c       wish. See also VLA memo no. 161 by Patrick Leahy.
 c       Default is no plot.
 c
-c$Id: impol.for,v 1.17 2011/03/28 07:08:43 cal103 Exp $
+c$Id: impol.for,v 1.18 2011/10/06 07:18:56 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -137,8 +137,8 @@ c-----------------------------------------------------------------------
       data tIn, lpout, lmout, lpaout /3*0, 2*0, 2*0, 2*0/
 c-----------------------------------------------------------------------
       version = versan('impol',
-     *                 '$Revision: 1.17 $',
-     *                 '$Date: 2011/03/28 07:08:43 $')
+     *                 '$Revision: 1.18 $',
+     *                 '$Date: 2011/10/06 07:18:56 $')
 
 c     Get user inputs.
       call keyini
@@ -696,12 +696,12 @@ c     Find frequency axis if rotating position angles back.
       parot = 0.0
       if (rm.ne.0.0) then
         call coInit(lq)
-        call coSpcSet(lq, 'FREQ', ifrq, algo)
+        call coSpcSet(lq, 'FREQ', ' ', ifrq, algo)
 
         if (ifrq.eq.0) call bug('f',
      *    'Could not find frequency axis for applying RM')
         if (ifrq.le.2) call bug('f',
-     *    'Frequency axis is either 1 or 2.0  These should be spatial')
+     *    'Frequency axis is either 1 or 2.  These should be spatial')
 
         if (ifrq.gt.3 .or. naxis(ifrq).eq.1) then
 c         Find frequency of pixel one.

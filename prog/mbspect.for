@@ -141,7 +141,7 @@ c@ comment
 c       A one-line comment which is written into the logfile and any
 c       plot.
 c
-c$Id: mbspect.for,v 1.11 2011/02/18 05:13:19 cal103 Exp $
+c$Id: mbspect.for,v 1.12 2011/10/06 07:18:56 cal103 Exp $
 c--
 c
 c  History:
@@ -180,8 +180,8 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 c     Don't report the ID so that gif and ps output can be piped.
       version = versan ('-mbspect',
-     *                  '$Revision: 1.11 $',
-     *                  '$Date: 2011/02/18 05:13:19 $')
+     *                  '$Revision: 1.12 $',
+     *                  '$Date: 2011/10/06 07:18:56 $')
 
 c     Get inputs.
       call keyini
@@ -354,7 +354,7 @@ c     Set spatial and spectral range.
 
       blc(vaxis) = 1
       trc(vaxis) = nsize(vaxis)
-      if (xaxis.ne.'channel') call coSpcSet(lIn, xaxis, ifrq, algo)
+      if (xaxis.ne.'channel') call coSpcSet(lIn, xaxis, ' ', ifrq, algo)
       if (xrange(1).ne.0.0 .or. xrange(2).ne.0.0) then
         if (xaxis.eq.'FREQ' .or. xaxis.eq.'frequency') then
           fac = 1000.0
@@ -1229,7 +1229,7 @@ c     Construct x-axis label.
       else if (xaxis.eq.'VOPT' .or.
      *         xaxis.eq.'FELO' .or.
      *         xaxis.eq.'optical') then
-        xlabel = 'Optical velocity, \ficz\fr (km s\u-1\d)'
+        xlabel = 'Optical felocity, \ficz\fr (km s\u-1\d)'
       else
         xlabel = ctype(1:len1(ctype))
       endif
@@ -1242,7 +1242,7 @@ c     Convert x-axis units.
 
       else
         call coInit(lIn)
-        call coSpcSet(lIn, xaxis, ifrq, algo)
+        call coSpcSet(lIn, xaxis, ' ', ifrq, algo)
         do i = 1, nchan
           call coCvt1(lIn, vaxis, 'ap', dble(chan(i)), 'aw', dtemp)
           value(i) = dtemp

@@ -23,7 +23,7 @@ c@ select
 c       Visibility data selection - only 'uvrange' selection is
 c       supported.  See the help on "select" for more information.
 c
-c$Id: im2uv.for,v 1.3 2011/02/18 04:42:25 cal103 Exp $
+c$Id: im2uv.for,v 1.4 2011/10/06 07:18:56 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -47,8 +47,8 @@ c-----------------------------------------------------------------------
       character versan*72
 c-----------------------------------------------------------------------
       version = versan('im2uv',
-     *                 '$Revision: 1.3 $',
-     *                 '$Date: 2011/02/18 04:42:25 $')
+     *                 '$Revision: 1.4 $',
+     *                 '$Date: 2011/10/06 07:18:56 $')
 
 c     Get the input parameters.
       call keyini
@@ -278,7 +278,7 @@ c     Set up the output dataset.
       call coInit(tIn)
 
 c     Frequency info.
-      call coSpcSet(tIn, 'FREQ', iax, algo)
+      call coSpcSet(tIn, 'FREQ', ' ', iax, algo)
       if (iax.eq.0) then
         ctype = 'FREQ-OBS'
         sfreq = 1.4

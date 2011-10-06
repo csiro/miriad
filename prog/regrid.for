@@ -228,7 +228,7 @@ c       Interpolation tolerance.  Tolerate an error of the specified
 c       amount in converting pixel locations in the input to the output.
 c       Must be less that 0.5.  The default is 0.05.
 c
-c$Id: regrid.for,v 1.10 2011/07/28 03:52:54 cal103 Exp $
+c$Id: regrid.for,v 1.11 2011/10/06 07:18:56 cal103 Exp $
 c--
 c
 c  History:
@@ -271,8 +271,8 @@ c     Projection codes.
      *  'pco', 'tsc', 'csc', 'qsc', 'hpx'/
 c-----------------------------------------------------------------------
       version = versan ('regrid',
-     *                  '$Revision: 1.10 $',
-     *                  '$Date: 2011/07/28 03:52:54 $')
+     *                  '$Revision: 1.11 $',
+     *                  '$Date: 2011/10/06 07:18:56 $')
 
 c     Get the input parameters.
       call keyini
@@ -406,7 +406,7 @@ c       Reset descriptors from the template.
 c           Reset the spectral axis of the input coordinate object to
 c           match that of the output (may change vobs).  Preempts any
 c           change that pCvtInit might make by calling coSpcSet.
-            call coSpcSet(lIn, ctype, ispc, algo)
+            call coSpcSet(lIn, ctype, ' ', ispc, algo)
           endif
         enddo
 
