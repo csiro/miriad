@@ -39,7 +39,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: co.for,v 1.22 2011/07/14 07:53:59 cal103 Exp $
+c $Id: co.for,v 1.23 2011/10/06 04:05:40 cal103 Exp $
 c***********************************************************************
 
 c* coInit -- Initialise coordinate conversion routines.
@@ -1694,10 +1694,11 @@ c-----------------------------------------------------------------------
 
       integer   icrd, ilat, ilng, itype, otype
       double precision df, frq, vel
-      character ctype1*8, ctype2*8, iframe*4, oframe*4, ttype*16
+      character ctype1*8, ctype2*8, iframe*4, num*2, oframe*4, ttype*16
 
-      external  coLoc
+      external  coLoc, itoaf
       integer   coLoc
+      character itoaf*2
 c-----------------------------------------------------------------------
 c     Compatibility between the old and new API.  As an interim measure
 c     we continue to do it the old way.
@@ -1717,7 +1718,10 @@ c     Identify the spectral axis.
       if (ifrq.eq.0) return
 
 c     Reset to header type?
-      if (ttype.eq.' ') ttype = ctype(ifrq,icrd)
+      if (ttype.eq.' ') then
+        num = itoaf(ifrq)
+        call rdhda(lu, 'ctype'//num, ttype, ' ')
+      endif
 
 c     Determine the type.
       itype = cotype(ifrq,icrd)
