@@ -16,7 +16,7 @@ c    subroutine coLMN(lu,in,x1,lmn)
 c    subroutine coGeom(lu,in,x1,ucoeff,vcoeff)
 c    subroutine coFindAx(lu,axis,iax)
 c    subroutine coFreq(lu,in,x1,freq)
-c    subroutine coSpcSet(lu,axis,iax,algo)
+c    subroutine coSpcSet(lu,type,frame,iax,algo)
 c    subroutine coPrjSet(lu,proj)
 c    subroutine coAxGet(lu,iax,ctype,crpix,crval,cdelt)
 c    subroutine coAxSet(lu,iax,ctype,crpix,crval,cdelt)
@@ -39,7 +39,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: co.for,v 1.23 2011/10/06 04:05:40 cal103 Exp $
+c $Id: co.for,v 1.24 2011/10/06 07:10:02 cal103 Exp $
 c***********************************************************************
 
 c* coInit -- Initialise coordinate conversion routines.
@@ -1639,7 +1639,7 @@ c-----------------------------------------------------------------------
       integer   ifrq
       character algo*3
 c-----------------------------------------------------------------------
-      call coSpcSet(lu, type, ifrq, algo)
+      call coSpcSet(lu, type, ' ', ifrq, algo)
 
       if (ifrq.eq.0) then
         call bug('f','Call to coVelSet for non-velocity axis')
@@ -1655,11 +1655,13 @@ c: coordinates
 c+
 
 c WARNING, THIS SUBROUTINE IS UNDER DEVELOPMENT, THE API MAY CHANGE!
-      subroutine coSpcSet(lu, type, ifrq, algo)
+      subroutine coSpcSet(lu, type, frame, ifrq, algo)
 c WARNING, THIS SUBROUTINE IS UNDER DEVELOPMENT, THE API MAY CHANGE!
 
-      integer   lu, ifrq
-      character type*(*), algo*3
+      integer   lu
+      character type*(*), frame*(*)
+      integer   ifrq
+      character algo*3
 c  ---------------------------------------------------------------------
 c  Switch the spectral axis from its current type to another spectral
 c  type.
@@ -1680,6 +1682,16 @@ c               For backwards compatibility, the following are also
 c               recognised: '{FREQ,VELO,FELO}{,-{OBS,HEL,LSR}}' meaning
 c               'FREQ', 'VRAD', and 'VOPT'.  Likewise, 'FREQUENCY',
 c               'RADIO', and 'OPTICAL'.
+c
+c    frame      Spectral frame: 'TOPOCENTRIC', 'BARYCENTRIC', or 'LSRK', 
+c               but only conversions between the last two are supported.
+c
+c               frame may be blank to leave it unspecified or leave it
+c               as is.
+c
+c               For backwards compatibility, if 'type' was specified as
+c               one of: '{FREQ,VELO,FELO}{,-{OBS,HEL,LSR}}' then frame
+c               will be set from that.
 c
 c  Output:
 c    ifrq       Spectral axis number.
@@ -1736,12 +1748,33 @@ c     Determine the type.
       endif
 
 c     Determine the reference frame conversion.
-      if (ctype(ifrq,icrd)(5:5).eq.'-') then
-        iframe = ctype(ifrq,icrd)(5:8)
+      if (specsys(icrd).eq.'TOPOCENT') then
+        iframe = '-OBS'
+      else if (specsys(icrd).eq.'BARYCENT') then
+        iframe = '-HEL'
+      else if (specsys(icrd).eq.'LSRK') then
+        iframe = '-LSR'
+      else if (ctype(ifrq,icrd)(5:).eq.'-OBS' .or.
+     *         ctype(ifrq,icrd)(5:).eq.'-HEL' .or.
+     *         ctype(ifrq,icrd)(5:).eq.'-LSR') then
+        iframe = ctype(ifrq,icrd)(5:)
       else
         iframe = ' '
       endif
-      oframe = ttype(5:)
+
+      if (frame.eq.'TOPOCENT') then
+        oframe = '-OBS'
+      else if (frame.eq.'BARYCENT') then
+        oframe = '-HEL'
+      else if (frame.eq.'LSRK') then
+        oframe = '-LSR'
+      else if (ttype(5:).eq.'-OBS' .or.
+     *         ttype(5:).eq.'-HEL' .or.
+     *         ttype(5:).eq.'-LSR') then
+        oframe = ttype(5:)
+      else
+        oframe = ' '
+      endif
       if (oframe.eq.' ') oframe = iframe
       if (iframe.eq.' ') iframe = oframe
 
@@ -2611,6 +2644,7 @@ c     Projection parameters.
       call rdhdd(lu, 'vobs',     vobs(icrd),    0d0)
       call rdhdd(lu, 'epoch',    eqnox(icrd),   0d0)
       call rdhdd(lu, 'obstime',  obstime(icrd), 0d0)
+      call rdhda(lu, 'specsys',  specsys(icrd), ' ')
       call rdhda(lu, 'cellscal', cscal, '1/F')
       frqscl(icrd) = cscal.eq.'1/F'
       if (.not.frqscl(icrd) .and. cscal.ne.'CONSTANT') call bug('w',
