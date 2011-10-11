@@ -48,7 +48,7 @@ c       lmc_1, lmc_2, etc.  The full name must be 9 characters or less.
 c@ cycles
 c       For mode=atmosaic, the number of cycles spent on each pointing.
 c
-c$Id: mosgen.for,v 1.4 2011/10/11 03:44:31 cal103 Exp $
+c$Id: mosgen.for,v 1.5 2011/10/11 03:56:01 cal103 Exp $
 c--
 c
 c  History:
@@ -61,9 +61,9 @@ c-----------------------------------------------------------------------
 
       logical   first, more
       integer   cycles, i, j, l, l2, lu, nout, npnt, nx, ny, pbObj, s
-      real      cutoff, freq, h, maxrad, pbfwhm, v, widthx, widthy,
+      real      cutoff, h, maxrad, pbfwhm, v, widthx, widthy,
      *          x(MAXPNT), y(MAXPNT)
-      double precision dec, ra, x1(2), x2(2)
+      double precision dec, freq, ra, x1(2), x2(2)
       character device*64, line*16, line1*80, logf*80, mode*8,
      *          modes(NMODES)*8, name*12, num*6, telescop*16, version*72
 
@@ -74,32 +74,34 @@ c-----------------------------------------------------------------------
       data modes /'atmosaic', 'uvgen   '/
 c-----------------------------------------------------------------------
       version = versan('mosgen',
-     *                 '$Revision: 1.4 $',
-     *                 '$Date: 2011/10/11 03:44:31 $')
+     *                 '$Revision: 1.5 $',
+     *                 '$Date: 2011/10/11 03:56:01 $')
 
       call keyini
-      call keya('device',device,' ')
-      call keyt('radec',ra,'hms',0d0)
+      call keyt('radec',ra, 'hms',0d0)
       call keyt('radec',dec,'dms',0d0)
       call keyr('width',widthx,0.1)
       call keyr('width',widthy,widthx)
       widthx = 0.5*widthx*D2R
       widthy = 0.5*widthy*D2R
-      call keyr('freq',freq,1.4)
-      call keya('name',name,'pnt')
-      call keyi('cycles',cycles,3)
+      call keyd('freq',freq,1.4d0)
+      call keya('device',device,' ')
+      call keya('log',logf,' ')
       call keymatch('mode',NMODES,modes,1,mode,nout)
       if (nout.eq.0) mode = modes(1)
-      call keya('log',logf,' ')
       call keya('telescop',telescop,'atca')
+      call keya('name',name,'pnt')
+      call keyi('cycles',cycles,3)
       call keyfin
 
       l = len1(name)
 
       call logOpen(logf,' ')
 
-      call coRaDec(lu,'SIN',ra,dec)
-      call coAxSet(lu,3,'FREQ',1d0,dble(freq),0.1d0*dble(freq))
+      call coCreate(3, lu)
+      call coAxSet(lu, 1, 'RA---SIN', 0d0,   ra, 1d0)
+      call coAxSet(lu, 2, 'DEC--SIN', 0d0,  dec, 1d0)
+      call coAxSet(lu, 3, 'FREQ',     1d0, freq, 0.1d0*freq)
       call coReinit(lu)
       call pbInit(pbObj,telescop,lu)
       call pbInfo(pbObj,pbfwhm,cutoff,maxrad)
@@ -111,10 +113,10 @@ c-----------------------------------------------------------------------
 
       i = -nx
       j = -ny
-      s =   1
-      npnt = 0
+      s = 1
+      npnt  = 0
       first = .true.
-      more = .true.
+      more  = .true.
       do while (more)
         x1(1) = i*h
         x1(2) = j*v
@@ -122,7 +124,7 @@ c-----------------------------------------------------------------------
         call CoCvt(lu,'aw/aw',x2,'ow/ow',x1)
 
         if (first) then
-          ra = x2(1)
+          ra  = x2(1)
           dec = x2(2)
           line1 = stcat('# Reference position is '//hangleh(x2(1)),
      *                                         ','//rangleh(x2(2)))
