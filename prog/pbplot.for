@@ -22,7 +22,7 @@ c       PGPLOT device.  Default is no plot.
 c@ log
 c       Log file for listing.  Default is no log file.
 c
-c$Id: pbplot.for,v 1.3 2011/10/11 04:40:27 cal103 Exp $
+c$Id: pbplot.for,v 1.4 2011/10/11 04:51:22 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -45,8 +45,8 @@ c-----------------------------------------------------------------------
       character versan*72
 c-----------------------------------------------------------------------
       version = versan('pbplot',
-     *                 '$Revision: 1.3 $',
-     *                 '$Date: 2011/10/11 04:40:27 $')
+     *                 '$Revision: 1.4 $',
+     *                 '$Date: 2011/10/11 04:51:22 $')
 
 c     Get input parameters.
       call keyini
@@ -65,9 +65,11 @@ c       No telescopes were given, just list the possibilities.
         goto 999
       endif
 
-c     Create a simple coorindate object.
-      call coRaDec(coObj,'SIN',0d0,0d0)
-      call coAxSet(coObj,3,'FREQ',0d0,dble(freq),0.1d0*dble(freq))
+c     Create a simple coordinate object.
+      call coCreate(3, coObj)
+      call coAxSet(coObj, 1, 'RA---SIN', 0d0, 0d0, 1d0)
+      call coAxSet(coObj, 2, 'DEC--SIN', 0d0, 0d0, 1d0)
+      call coAxSet(coObj, 3, 'FREQ', 0d0, dble(freq), 0.1d0*dble(freq))
       call coReinit(coObj)
 
 c     Create the primary beam objects.
@@ -75,7 +77,9 @@ c     Create the primary beam objects.
       do j = 1, ntel
         call pbInitb(pbObj(j),telescop(j),coObj,bw)
         call pbInfo(pbObj(j),pbfwhm,cutoff,maxrad)
-        maxrad = maxrad / sqrt((1.0 + bw/2.0/freq)*(1.0 - bw/2.0/freq))
+
+c       Average over bandwidth.
+        maxrad = maxrad * freq / sqrt((freq + bw/2.0)*(freq - bw/2.0))
 
 c       Issue messages.
         call output('Primary beam: '//telescop(j))
