@@ -38,7 +38,7 @@ c                  rather than the Stokes responses.
 c         subtract Subtract off the circularly symmetric portion of the
 c                  primary beam response from I, XX and YY responses.
 c
-c$Id: offpol.for,v 1.5 2011/05/17 04:27:14 cal103 Exp $
+c$Id: offpol.for,v 1.6 2011/10/11 04:04:59 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -73,8 +73,8 @@ c     Observatory latitude.
       data stokId /'i', 'q', 'u', 'v', 'xx', 'yy', 'xy', 'yx'/
 c-----------------------------------------------------------------------
       version = versan('offpol',
-     *                 '$Revision: 1.5 $',
-     *                 '$Date: 2011/05/17 04:27:14 $')
+     *                 '$Revision: 1.6 $',
+     *                 '$Date: 2011/10/11 04:04:59 $')
 
 c     Get the inputs.
       call keyini
@@ -110,8 +110,10 @@ c     Get the inputs.
       crpix2 = dble(jc)
 
 c     Determine the FWHM of the primary beam at this frequency.
-      call coRaDec(coObj,'SIN',0d0,0d0)
-      call coAxSet(coObj,3,'FREQ',0d0,freq,0.1d0*freq)
+      call coCreate(3, coObj)
+      call coAxSet(coObj, 1, 'RA---SIN', 0d0, 0d0, 1d0)
+      call coAxSet(coObj, 2, 'DEC--SIN', 0d0, 0d0, 1d0)
+      call coAxSet(coObj, 3, 'FREQ', 0d0, freq, 0.1d0*freq)
       call coReinit(coObj)
       call pbInit(pbObj,'atca',coObj)
       call pbInfo(pbObj,pbfwhm,cutoff,maxrad)
@@ -265,7 +267,7 @@ c-----------------------------------------------------------------------
       integer nsize(4),coObj
       character line*64
 c-----------------------------------------------------------------------
-      call coCreate(coObj)
+      call coCreate(4, coObj)
       call coAxSet(coObj,1,'RA---SIN',crpix1,crval1,cdelt1)
       call coAxSet(coObj,2,'DEC--SIN',crpix2,crval2,cdelt2)
       call coAxSet(coObj,3,'FREQ',    1d0,sfreq,0.1d0)
