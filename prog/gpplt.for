@@ -587,7 +587,7 @@ c************************************************************************
 c
 	implicit none
         include 'gpplt.h'
-	integer tIn,nfeeds,nants,nfbin,maxLeaks,MAXFBIN
+	integer tIn,nfeeds,nants,nfbin,MAXFBIN
 	complex Leaks(2,MAXANT,0:MAXFBIN)
         double precision freq(MAXFBIN)
 	logical do2,hdprsnt
@@ -616,7 +616,7 @@ c  Determine the number of antennas.
 c
 	nfeeds = 2
 	nants = (hsize(item)-8)/16
-	if(nants.le.0.or.nants.gt.maxLeaks)
+	if(nants.le.0.or.nants.gt.MAXANT)
      *	  call bug('f','Illegal number of leakage parameters')
 c
 c  Now read them in.
