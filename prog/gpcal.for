@@ -151,7 +151,7 @@ c                    solution for the observation already exists.  This
 c                    preliminary solution must be formed from a
 c                    calibrator with known Stokes-V.
 c
-c$Id: gpcal.for,v 1.11 2011/09/08 02:35:55 wie017 Exp $
+c$Id: gpcal.for,v 1.12 2011/10/17 03:17:15 wie017 Exp $
 c--
 c  History:
 c    rjs,nebk 1may91 Original version.
@@ -297,8 +297,8 @@ c-----------------------------------------------------------------------
       external  itoaf, keyprsnt, uvDatOpn
 c-----------------------------------------------------------------------
       version = versan('gpcal',
-     *                 '$Revision: 1.11 $',
-     *                 '$Date: 2011/09/08 02:35:55 $')
+     *                 '$Revision: 1.12 $',
+     *                 '$Date: 2011/10/17 03:17:15 $')
 c
 c  Get inputs.
 c
@@ -502,7 +502,7 @@ c
             xypcorr = xyp(refant+fbin*(n+1))*conjg(xypref)
             if ((polref .or. polsol .or. xyref) .and.
      *          abs(real(xypcorr)-1)+abs(aimag(xypcorr)).gt.ttol)
-     *                     call rotleaks(D,nants,xypcorr)
+     *             call rotleaks(D(1,1+nants*fbin),nants,xypcorr)
 
             write(line,'(a,i2,a,f7.3)')'Iter=',niter,
      *          ', Amplit/Phase Solution Error: ',epsi1
@@ -1191,7 +1191,7 @@ c
         Gain = cmplx(t2,t1*t2)
         epsi = abs(t1)
 
-        call rotleaks(D,nants,Gain)
+        call rotleaks(D(1,1,fbin),nants,Gain)
 
         do i = 1, nants
           xyp(i,fbin) = xyp(i,fbin) * Gain
