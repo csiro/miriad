@@ -911,23 +911,33 @@ c
 c
         label2=' '
 	if(doplot)then
-          do i=0,nfbin
-	    do ifeed=1,nfeeds
-	      Value = 0
-	      do iant=1,nants
-	        x(iant) = iant
-	        y(iant) = GetVal(Leaks(ifeed,iant,i),Value)
-	      enddo
-	      call SetPG(1.,real(nants),y,nants,range,.true.)
-	      call pgpt(nants,x,y,symbol)
-	      Label = Feeds(ifeed)//'-Leakage-'//type
-              if (i.gt.0) then
-                write(label2,'(A,F7.3,A,I2,A)') 
-     *           'Freq. ',freq(i),' (bin ',i,')'  
-              endif
-	      call pglab('Antenna Number',Label,label2)
+	  do ifeed=1,nfeeds
+	    Value = 0
+	    do iant=1,nants
+	      x(iant) = iant
+	      y(iant) = GetVal(Leaks(ifeed,iant,0),Value)
 	    enddo
-          enddo
+	    call SetPG(1.,real(nants),y,nants,range,.true.)
+	    call pgpt(nants,x,y,symbol)
+	    Label = Feeds(ifeed)//'-Leakage-'//type
+	    call pglab('Antenna Number',Label,label2)
+	  enddo
+          if (nfbin.gt.0) then
+            do iant=1,nants
+	      do ifeed=1,nfeeds
+	        Value = 0
+	        do i=1,nfbin
+	          x(i) = freq(i)
+	          y(i) = GetVal(Leaks(ifeed,iant,i),Value)
+	        enddo
+	        call SetPG(x(1),x(nfbin),y,nfbin,range,.true.)
+	        call pgpt(nfbin,x,y,symbol)
+	        Label = Feeds(ifeed)//'-Leakage-'//type
+                write(label2,'(A,I3)') 'Antenna',iant 
+	        call pglab('Frequency(MHz)',Label,label2)
+	      enddo
+            enddo
+          endif
 	endif
 c
 	if(dolog)then
@@ -940,9 +950,9 @@ c
 	    line = '# Number of antennas: '//itoaf(nants)
             if (i.gt.0) then
               write(line,'(A,F7.3,A,I2,A)') 
-     *         'Freq. ',freq(i),' (bin ',i,')'
-	      call LogWrite(line,more)
+     *         '# Freq. ',freq(i),' (bin ',i,')'
             endif
+	    call LogWrite(line,more)
 	    do j=1,nfeeds
               do j1=1,nants,7
 	        write(line,'(7f14.6)') 
@@ -1255,10 +1265,15 @@ c------------------------------------------------------------------------
 	real xlo,xhi,ylo,yhi,delta,maxv
 	integer i
 c
-	delta = 0.05*(xmax-xmin)
+	delta = 0.05*abs(xmax-xmin)
 	if(delta.le.0)delta = 1
-	xlo = xmin - delta
-	xhi = xmax + delta
+        if (xmin.lt.xmax) then
+  	  xlo = xmin - delta
+	  xhi = xmax + delta
+        else
+  	  xlo = xmax - delta
+	  xhi = xmin + delta
+        endif
 c
 	if(range(2).gt.range(1))then
 	  yhi = range(2)
