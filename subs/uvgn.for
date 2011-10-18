@@ -32,7 +32,7 @@ c    08aug07 rjs  Correct bug in averaging wide channels.
 c    27aug09 mhw  Handle multiple bandpass solution intervals
 c    24feb11 mhw  Handle freq bins in gains and leakage
 c
-c $Id: uvgn.for,v 1.13 2011/10/18 01:56:33 wie017 Exp $
+c $Id: uvgn.for,v 1.14 2011/10/18 02:34:49 wie017 Exp $
 c***********************************************************************
 
       subroutine uvGnIni(tno1,dogains1,dopass1)
@@ -487,7 +487,8 @@ c
             t1 = t2
             t2 = nsols + 1
             timetab(t2) = time + 1e6*dtime
-          else if (time.lt.timetab(t1)) then
+          else if (time.lt.timetab(t1).or.
+     *             (t1.eq.t2.and.time.eq.timetab(t1))) then
             t2 = t1
             t1 = 0
             timetab(t1) = time - 1e6*dtime
