@@ -32,7 +32,7 @@ c    08aug07 rjs  Correct bug in averaging wide channels.
 c    27aug09 mhw  Handle multiple bandpass solution intervals
 c    24feb11 mhw  Handle freq bins in gains and leakage
 c
-c $Id: uvgn.for,v 1.12 2011/09/15 05:18:31 wie017 Exp $
+c $Id: uvgn.for,v 1.13 2011/10/18 01:56:33 wie017 Exp $
 c***********************************************************************
 
       subroutine uvGnIni(tno1,dogains1,dopass1)
@@ -120,7 +120,7 @@ c
      *        call bug('f','Gain table size is incorrect')
 
       t1 = 1
-      t2 = 2
+      t2 = min(2,nsols)
 c
 c  Read in the gain solutions
 c
