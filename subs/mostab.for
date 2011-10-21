@@ -29,7 +29,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: mostab.for,v 1.4 2011/10/21 05:08:09 cal103 Exp $
+c $Id: mostab.for,v 1.5 2011/10/21 05:43:04 cal103 Exp $
 c***********************************************************************
 
       subroutine MosCIni
@@ -162,14 +162,14 @@ c-----------------------------------------------------------------------
       include 'mirconst.h'
 
       double precision tol
-      parameter (tol=dpi/180d0/3600d0)
+      parameter (tol=DPI/180d0/3600d0)
 
-      logical found
-      integer indx,pnt
-      double precision lm(2),ll1,mm1
+      logical   found
+      integer   indx, pnt
+      double precision ll1, lm(2), mm1
 
-c     Externals.
-      integer MosHash
+      external MosHash
+      integer  MosHash
 c-----------------------------------------------------------------------
 c  Locate this pointing in our list of previously encountered pointings.
 c
@@ -234,13 +234,13 @@ c  associated with this pointing position.
 c-----------------------------------------------------------------------
       include 'mirconst.h'
 
-      double precision tol
-      parameter (tol=5d0*dpi/180d0/3600d0)
+      double precision TOL
+      parameter (TOL = 5d0*DAS2R)
 
       integer i,j,n,indx
 c-----------------------------------------------------------------------
-      i = nint(ll/tol)
-      j = nint(mm/tol)
+      i = nint(ll/TOL)
+      j = nint(mm/TOL)
       n = mod(2*max(abs(i),abs(j)) - 1,HashSize)
 
       if (n.lt.0) then
@@ -272,43 +272,41 @@ c-----------------------------------------------------------------------
       include 'mostab.h'
       include 'mirconst.h'
 
-      integer i,i0
-      double precision l0,m0
+      integer   i, i0
+      double precision l0, m0
 c-----------------------------------------------------------------------
-c  Determine the average (l,m).
-c
+c     Determine the average (l,m).
       if (.not.solar) then
-        l0 = 0
-        m0 = 0
+        l0 = 0d0
+        m0 = 0d0
         do i = 1, npnt
           l0 = l0 + llmm(1,i)
           m0 = m0 + llmm(2,i)
         enddo
         l0 = l0 / npnt
         m0 = m0 / npnt
-c
-c  Determine the pointing that is closest to this one.
-c
+
+c       Determine the pointing that is closest to this one.
         i0 = 1
         do i = 2, npnt
-          if (abs(llmm(1,i)-l0)+abs(llmm(2,i)-m0).lt.
-     *       abs(llmm(1,i0)-l0)+abs(llmm(2,i0)-m0)) i0 = i
+          if (abs(llmm(1,i) -l0)+abs(llmm(2,i) -m0).lt.
+     *        abs(llmm(1,i0)-l0)+abs(llmm(2,i0)-m0)) i0 = i
         enddo
-c
-c  Convert from direction cosine to RA,DEC.
-c
+
+c       Convert from direction cosines to ra,dec.
         call coCvt(coRef,'ap/ap',llmm(1,i0),'aw/aw',radec0)
       endif
-c
-c  Return with all the goodies.
-c
-      ra1 = radec0(1)
-      dec1 = radec0(2)
+
+c     Return with all the goodies.
+      ra1   = radec0(1)
+      dec1  = radec0(2)
       npnt1 = npnt
       call coFin(coRef)
 
       end
+
 c***********************************************************************
+
       logical function MosSolar(lIn)
 
       integer lIn
@@ -426,35 +424,37 @@ c
 
 c***********************************************************************
 
-      subroutine MosShift(coObj,npnt1,nchan,x,y)
+      subroutine MosShift(coObj,NPNT1,NCHAN,x,y)
 
-      integer coObj,npnt1,nchan
-      real x(nchan,npnt1),y(nchan,npnt1)
+      integer   coObj, NPNT1, NCHAN
+      real      x(NCHAN,NPNT1), y(NCHAN,NPNT1)
 c-----------------------------------------------------------------------
 c  Determine the fractional pixel shifts and the resulting
 c  alignment between the different pointings.
 c
 c  Input:
 c    coObj      Coordinate object handle.
-c    npnt1      Number of pointings.
-c    nchan      Number of frequency channels.
+c    NPNT1      Number of pointings.
+c    NCHAN      Number of frequency channels.
 c  Output:
 c    x,y        Pixel location, relative to the reference pixel,
 c               of the resulting pointing.
 c-----------------------------------------------------------------------
       include 'mostab.h'
-      integer i,j
-      double precision x1(3),x2(3)
+
+      integer   i, j
+      double precision x1(3), x2(3)
 c-----------------------------------------------------------------------
-      if (npnt.ne.npnt1)
+      if (npnt.ne.NPNT1)
      *  call bug('f','Inconsistent number of pointings')
 
-      do j = 1, npnt
-        do i = 1, nchan
+      do i = 1, NCHAN
+        call coCvt1(coObj,3,'ap',dble(i),'aw',x1(3))
+
+        do j = 1, npnt
           x1(1) = radec(1,j)
           x1(2) = radec(2,j)
-          x1(3) = i
-          call coCvt(coObj,'aw/aw/ap',x1,'op/op/ap',x2)
+          call coCvt(coObj,'aw/aw/aw',x1,'op/op/op',x2)
           x(i,j) = x2(1)
           y(i,j) = x2(2)
         enddo
@@ -464,8 +464,7 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine MosSizer(nx2,ny2,x,y,npnt,nchan,mnx,mny,
-     *                                        crpix1,crpix2)
+      subroutine MosSizer(nx2,ny2,x,y,npnt,nchan,mnx,mny,crpix1,crpix2)
 
       integer nx2,ny2,npnt,nchan,mnx,mny
       real x(nchan,npnt),y(nchan,npnt)
@@ -605,8 +604,8 @@ c
 c  Do fractional pixel shift.
 c
         do i = 1, nchan
-          theta = -2*pi * (ud* (anint(x(i,pnt)) - x(i,pnt)) +
-     *                     vd* (anint(y(i,pnt)) - y(i,pnt)))
+          theta = -TWOPI * (ud*(anint(x(i,pnt)) - x(i,pnt)) +
+     *                      vd*(anint(y(i,pnt)) - y(i,pnt)))
           fac(i) = cmplx(cos(theta),sin(theta))
         enddo
 
@@ -745,11 +744,11 @@ c  Write -- to standard output -- the contents of the mosaic table.
 c-----------------------------------------------------------------------
       include 'mostab.h'
 
-      integer i
-      character line*80,ras*12,decs*14
+      integer   i
+      character decs*14, line*80, ras*12
 
-c     Externals.
-      character itoaf*8,rangle*32,hangle*32
+      external  itoaf, hangle, rangle
+      character itoaf*8, hangle*12, rangle*14
 c-----------------------------------------------------------------------
       call output('    Number of pointing centers: '//itoaf(npnt))
       call output(' ')
@@ -760,16 +759,18 @@ c-----------------------------------------------------------------------
       call output('     ----------- ------------------------  '//
      *        '------------    --------')
       do i = 1, npnt
-        ras = hangle(radec(1,i))
+        ras  = hangle(radec(1,i))
         decs = rangle(radec(2,i))
+
         write(line,10) i,2*nx2+1,2*ny2+1,ras,decs,telescop(i),rms2(i)
-  10    format(i4,1x,i5,1x,i5,1x,3a,1pe8.2)
+ 10     format(i4,1x,i5,1x,i5,1x,3a,1pe8.2)
         call output(line)
+
         if (otf) then
-          ras = hangle(radec2(1,i))
+          ras  = hangle(radec2(1,i))
           decs = rangle(radec2(2,i))
           write(line,20) ras,decs
-  20      format(17x,2a)
+ 20       format(17x,2a)
           call output(line)
         endif
       enddo
@@ -780,15 +781,15 @@ c***********************************************************************
 
       subroutine mosInit(nx,ny)
 
-      integer nx,ny
+      integer nx, ny
 c-----------------------------------------------------------------------
 c  Initialise a mosaic table.
 c-----------------------------------------------------------------------
       include 'mostab.h'
 c-----------------------------------------------------------------------
       npnt = 0
-      nx2 = (nx-1)/2
-      ny2 = (ny-1)/2
+      nx2  = (nx-1)/2
+      ny2  = (ny-1)/2
 
       end
 
@@ -796,9 +797,9 @@ c***********************************************************************
 
       subroutine mosGet(i,ra1,dec1,rms1,pbtype1)
 
-      integer i
-      double precision ra1,dec1
-      real rms1
+      integer   i
+      double precision ra1, dec1
+      real      rms1
       character pbtype1*(*)
 c-----------------------------------------------------------------------
 c  Get information from the table.
@@ -809,7 +810,7 @@ c-----------------------------------------------------------------------
       if (i.lt.1 .or. i.gt.npnt)
      *  call bug('f','Invalid pointing number, in mosGet')
 
-      ra1 = radec(1,i)
+      ra1  = radec(1,i)
       dec1 = radec(2,i)
       rms1 = rms2(i)
       pbtype1 = telescop(i)
@@ -820,9 +821,9 @@ c***********************************************************************
 
       subroutine mosSet(i,ra1,dec1,rms1,pbtype1)
 
-      integer i
-      double precision ra1,dec1
-      real rms1
+      integer   i
+      double precision ra1, dec1
+      real      rms1
       character pbtype1*(*)
 c-----------------------------------------------------------------------
 c  Add an extry to the mosaic table.
@@ -853,8 +854,8 @@ c  Return information about the mosaicing setup.
 c-----------------------------------------------------------------------
       include 'mostab.h'
 c-----------------------------------------------------------------------
-      nx2d = nx2
-      ny2d = ny2
+      nx2d  = nx2
+      ny2d  = ny2
       npnt1 = npnt
 
       end
@@ -886,8 +887,9 @@ c  Input:
 c    tno        Handle of the output dataset.
 c-----------------------------------------------------------------------
       include 'mostab.h'
-      integer i,item,iostat,offset,ival(2)
-      real rval(2)
+
+      integer   i, iostat, item, ival(2), offset
+      real      rval(2)
 c-----------------------------------------------------------------------
 c
 c  Open the pointing table.
@@ -997,27 +999,29 @@ c***********************************************************************
 
       subroutine MosMIni(coObj,chan)
 
-      integer coObj
-      real chan
+      integer   coObj
+      real      chan
 c-----------------------------------------------------------------------
 c  Initialise ready for a mosaic operation.
 c-----------------------------------------------------------------------
       include 'mostab.h'
-      double precision x1(3),x2(2),xn(2)
-      integer i
+
+      integer   i
+      double precision x1(3), x2(2), xn(2)
 c-----------------------------------------------------------------------
-      x1(3) = chan
+      call coCvt1(coObj,3,'ap',dble(chan),'aw',x1(3))
+
       do i = 1, npnt
         x1(1) = radec(1,i)
         x1(2) = radec(2,i)
-        call coCvt(coObj,'aw/aw/ap',x1,'ap/ap',x2)
+        call coCvt(coObj,'aw/aw/aw',x1,'ap/ap/ap',x2)
         x0(i) = x2(1)
         y0(i) = x2(2)
+
         xn(1) = radec2(1,i)
         xn(2) = radec2(2,i)
-        if (otf .and. (xn(1).ne.0 .or. xn(2).ne.0)) then
-          call pbInitcc(pbObj(i),telescop(i),coObj,'aw/aw/ap',
-     *    x1,xn,0.0)
+        if (otf .and. (xn(1).ne.0d0 .or. xn(2).ne.0d0)) then
+          call pbInitcc(pbObj(i),telescop(i),coObj,'aw/aw/aw',x1,xn,0.0)
         else
           call pbInitc(pbObj(i),telescop(i),coObj,'ap/ap',x2,0.0)
         endif
@@ -1282,10 +1286,10 @@ c***********************************************************************
 
       subroutine MosVal(coObj,in,x,gain,rms)
 
-      integer coObj
+      integer   coObj
       character in*(*)
       double precision x(*)
-      real gain,rms
+      real      gain, rms
 c-----------------------------------------------------------------------
 c  Determine the gain and rms response at a particular position.
 c
@@ -1299,37 +1303,40 @@ c    rms        The rms at the position.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mostab.h'
-      integer runs(3)
+
+      integer   runs(3)
       double precision xref(3)
 c-----------------------------------------------------------------------
-c
-c  Determine the location of the reference position, in grid units.
-c
-      call coCvt(coObj,in,x,'ap/ap/ap',xref)
-c
-c  Initialise, mosaic, tidy up.
-c
-      call mosMini(coObj,real(xref(3)))
-      Runs(1) = nint(xref(2))
-      Runs(2) = nint(xref(1))
-      Runs(3) = Runs(2)
-      call mosWtsr(Runs,1,Gain,Rms,1)
-      if (Gain.gt.0) then
-        Gain = 1/Gain
-        Rms = sqrt(Rms*Gain)
+c     Determine the location of the reference position in pixel coords.
+      call coCvt(coObj, in, x, 'ap/ap/ap', xref)
+
+c     Initialise.
+      call mosMini(coObj, real(xref(3)))
+
+c     Mosaic, tidy up.
+      runs(1) = nint(xref(2))
+      runs(2) = nint(xref(1))
+      runs(3) = runs(2)
+      call mosWtsr(runs, 1, gain, rms, 1)
+
+      if (gain.gt.0.0) then
+        gain = 1.0 / gain
+        rms  = sqrt(rms*gain)
       endif
+
+c     Tidy up.
       call mosMFin
 
       end
 
 c***********************************************************************
 
-      subroutine MosPnt(coObj,in,x,beams,psf,nx,ny,npnt1)
+      subroutine MosPnt(coObj,in,x,beams,psf,NX,NY,NPNT1)
 
-      integer nx,ny,npnt1,coObj
+      integer   coObj, NX, NY, NPNT1
       character in*(*)
       double precision x(*)
-      real beams(nx,ny,npnt1),psf(nx,ny)
+      real      beams(NX,NY,NPNT1), psf(NX,NY)
 c-----------------------------------------------------------------------
 c  Determine the true point-spread function of a mosaiced image.
 c
@@ -1338,26 +1345,26 @@ c    coObj      Coordinate object.
 c    in,x       These are the normal arguments to coCvr, giving the
 c               location (in RA,DEC,freq) of interest.
 c    beams      The beam patterns for each pointing.
-c    nx,ny      The size of the individual beam patterns.
-c    npnt1      The number of pointings.
+c    NX,NY      The size of the individual beam patterns.
+c    NPNT1      The number of pointings.
 c  Output:
 c    psf        The point-spread function.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mem.h'
-      integer pWts
+
+      integer   pWts
       double precision xref(3)
 c-----------------------------------------------------------------------
-c
-c  Determine the location of the reference position, in grid units.
-c
-      call coCvt(coObj,in,x,'ap/ap/ap',xref)
-      call MosMini(coObj,real(xref(3)))
+c     Determine the location of the reference position in pixel coords.
+      call coCvt(coObj, in, x, 'ap/ap/ap', xref)
 
-      call MemAlloc(pWts,nx*ny,'r')
-      call MosPnt1(beams,psf,memr(pWts),nx,ny,npnt1,
-     *                          nint(xref(1)),nint(xref(2)))
-      call MemFree(pWts,nx*ny,'r')
+      call MosMini(coObj, real(xref(3)))
+
+      call MemAlloc(pWts, NX*NY, 'r')
+      call MosPnt1(NX, NY, NPNT1, nint(xref(1)), nint(xref(2)), beams,
+     *             memr(pWts), psf)
+      call MemFree(pWts, NX*NY, 'r')
 
       call MosMFin
 
@@ -1365,78 +1372,73 @@ c
 
 c***********************************************************************
 
-      subroutine MosPnt1(beams,psf,wts,nx,ny,npnt1,xr,yr)
+      subroutine MosPnt1(NX,NY,NPNT1,xr,yr,beams,wts,psf)
 
-      integer nx,ny,npnt1,xr,yr
-      real beams(nx,ny,npnt1),psf(nx,ny),wts(nx,ny)
+      integer   NX, NY, NPNT1, xr, yr
+      real      beams(NX,NY,NPNT1), wts(NX,NY), psf(NX,NY)
 c-----------------------------------------------------------------------
 c  Determine the true point-spread function of a mosaiced image.
 c
 c  Input:
-c    beams      The beam patterns for each pointing.
-c    nx,ny      The size of the individual beam patterns.
-c    npnt1      The number of pointings.
+c    NX,NY      The size of the individual beam patterns.
+c    NPNT1      The number of pointings.
 c    xr,yr      Pixel location where we want to work out the PSF.
+c    beams      The beam patterns for each pointing.
 c  Scratch:
-c    Wts        The weight array.
+c    wts        The weight array.
 c  Output:
 c    psf        The point-spread function.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mostab.h'
-      integer i,j,k,imin,imax,jmin,jmax,xoff,yoff
-      real Pb(MAXDIM),Wt3,scale
 
-c     Externals.
-      real pbGet
-      real mosWt3
+      integer   i, imax, imin, j, jmax, jmin, k, xoff, yoff
+      real      pb(MAXDIM), scale, wt3
+
+      external  mosWt3, pbGet
+      real      mosWt3, pbGet
 c-----------------------------------------------------------------------
-c
-c  Check!
-c
-      if (npnt.ne.npnt1)
+c     Check!
+      if (npnt.ne.NPNT1)
      *  call bug('f','Inconsistent number of pointings')
-c
-c  Initialise the output and weights array.
-c
-      do j = 1, ny
-        do i = 1, nx
-          PSF(i,j) = 0
-          Wts(i,j) = 0
+
+c     Initialise the output and weights array.
+      do j = 1, NY
+        do i = 1, NX
+          psf(i,j) = 0.0
+          wts(i,j) = 0.0
         enddo
       enddo
 
-      xoff = xr - nx/2 - 1
-      yoff = yr - ny/2 - 1
-c
-c  Loop over all the pointings.
-c
+      xoff = xr - NX/2 - 1
+      yoff = yr - NY/2 - 1
+
+c     Loop over all the pointings.
       do k = 1, npnt
         call mosExt(k,imin,imax,jmin,jmax)
         imin = max(imin-xoff,1)
-        imax = min(imax-xoff,nx)
+        imax = min(imax-xoff,NX)
         jmin = max(jmin-yoff,1)
-        jmax = min(jmax-yoff,ny)
+        jmax = min(jmax-yoff,NY)
         if (imin.le.imax .and. jmin.le.jmax) then
-          Wt3 = mosWt3(k)
-          scale = Wt3 * pbGet(pbObj(k),real(xr),real(yr))
-          if (scale.gt.0) then
+          wt3 = mosWt3(k)
+          scale = wt3 * pbGet(pbObj(k),real(xr),real(yr))
+          if (scale.gt.0.0) then
             do j = jmin, jmax
               do i = imin, imax
                 Pb(i) = pbGet(pbObj(k),real(i+xoff),real(j+yoff))
               enddo
               do i = imin, imax
-                PSF(i,j) = PSF(i,j) + scale*Pb(i)*Beams(i,j,k)
-                Wts(i,j) = Wts(i,j) + Wt3*Pb(i)*Pb(i)
+                psf(i,j) = psf(i,j) + scale*Pb(i)*beams(i,j,k)
+                wts(i,j) = wts(i,j) + wt3*Pb(i)*Pb(i)
               enddo
             enddo
           endif
         endif
       enddo
-c
-c  Reweight the data.
-c
-      call MosWt(Rms2,npnt,PSF,Wts,nx*ny)
+
+c     Reweight the data.
+      call MosWt(Rms2,npnt,psf,wts,NX*NY)
 
       end
 
@@ -1450,7 +1452,7 @@ c  Return the field-dependent weight to be used in mosaicing.
 c-----------------------------------------------------------------------
       include 'mostab.h'
 c-----------------------------------------------------------------------
-      MosWt3 = 1/(Rms2(k)*Rms2(k))
+      MosWt3 = 1.0 / (rms2(k)*rms2(k))
 
       end
 
