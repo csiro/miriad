@@ -230,6 +230,8 @@ c
 c***********************************************************************
 
       subroutine coordfid(lu,ip)
+
+      integer   lu, ip
 c-----------------------------------------------------------------------
 c     Convert coordinates between world and pixel coordinates, need to
 c     fix error estimates, the imfit ones are suspect
@@ -239,35 +241,27 @@ c     lu ...... handle of the coordinate system.
 c     ip ...... image plane index
 c-----------------------------------------------------------------------
       include  'imsad.h'
-      include  'mirconst.h'
 
-      integer lu, ip
-      double precision in(3), out(3)
-      real ma, mi, pa
       integer   i
+      real      ma, mi, pa
+      double precision x1(3), x2(3)
 c-----------------------------------------------------------------------
-c
-c Loop over components to fit
-c
+c     Loop over components to fit.
       do i = 1, nc
-c
-c Convert the position FR: absolute pixel TO: offset world radians
-c
-        in(1) = dble(pf(2,i))
-        in(2) = dble(pf(3,i))
-        in(3) = dble(ip)
-        call coCvt(lu,'ap/ap/ap',in,'ow/ow/ap',out)
+c       Convert position to offset world coordinates.
+        x1(1) = dble(pf(2,i))
+        x1(2) = dble(pf(3,i))
+        x1(3) = dble(ip)
+        call coCvt(lu,'ap/ap/ap',x1,'ow/ow/ow',x2)
 
-        pf(2,i) = real(out(1))
-        pf(3,i) = real(out(2))
-c
-c Convert Gaussian parameters FR: absolute pixel TO: world radians
-c
-        call coGauCvt(lu,'ap/ap/ap',in,'p', pf(4,i),pf(5,i),pf(6,i),
+        pf(2,i) = real(x2(1))
+        pf(3,i) = real(x2(2))
+
+c       Convert Gaussian parameters to world coordinates.
+        call coGauCvt(lu,'ap/ap/ap',x1,'p', pf(4,i),pf(5,i),pf(6,i),
      *   'w',ma,mi,pa)
-c
-c Convert units - the errors are screwed
-c
+
+c       Convert units - the errors are screwed.
         pf(4,i) = ma
         pf(5,i) = mi
         pf(6,i) = pa
@@ -1345,45 +1339,45 @@ c-----------------------------------------------------------------------
       include 'mirconst.h'
 
       integer   i, j
-      double precision in(3), out(3), Diwin(2,MAXSRC), Djwin(2,MAXSRC),
-     * Dimax, Djmax, imin, imax, jmin, jmax
+      double precision dimax, diwin(2,MAXSRC), djmax, djwin(2,MAXSRC),
+     *          imax, imin, jmax, jmin, x1(3), x2(3)
       character line*132
 c-----------------------------------------------------------------------
-      Dimax = -9e9
-      Djmax = -9e9
+      dimax = -9d9
+      djmax = -9d9
 
-      imin = 9e9
-      imax = -imin
-      jmin = 9e9
-      jmax = -jmin
+      imin =  9d9
+      imax = -9d9
+      jmin =  9d9
+      jmax = -9d9
 
       do i = 1, ns
         if (arcsec) then
           do j = 1, 2
-            in(1) = dble(iwin(j,i))
-            in(2) = dble(jwin(j,i))
-            in(3) = dble(ip)
-            call coCvt(lui,'ap/ap/ap',in,'ow/ow/ap',out)
-            Diwin(j,i) = out(1)*DR2AS
-            Djwin(j,i) = out(2)*DR2AS
+            x1(1) = dble(iwin(j,i))
+            x1(2) = dble(jwin(j,i))
+            x1(3) = dble(ip)
+            call coCvt(lui,'ap/ap/ap',x1,'ow/ow/ow',x2)
+            diwin(j,i) = x2(1)*DR2AS
+            djwin(j,i) = x2(2)*DR2AS
 
-            if (abs(Diwin(j,i)).gt.Dimax) Dimax = abs(Diwin(j,i))
-            if (abs(Djwin(j,i)).gt.Djmax) Djmax = abs(Djwin(j,i))
+            if (abs(diwin(j,i)).gt.dimax) dimax = abs(diwin(j,i))
+            if (abs(djwin(j,i)).gt.djmax) djmax = abs(djwin(j,i))
 
-            if (Diwin(j,i).lt.imin) imin = Diwin(j,i)
-            if (Djwin(j,i).lt.jmin) jmin = Djwin(j,i)
+            if (diwin(j,i).lt.imin) imin = diwin(j,i)
+            if (djwin(j,i).lt.jmin) jmin = djwin(j,i)
 
-            if (Diwin(j,i).gt.imax) imax = Diwin(j,i)
-            if (Djwin(j,i).gt.jmax) jmax = Djwin(j,i)
+            if (diwin(j,i).gt.imax) imax = diwin(j,i)
+            if (djwin(j,i).gt.jmax) jmax = djwin(j,i)
           enddo
-          write(line,100) Diwin(1,i), Djwin(1,i),
-     *                    Diwin(2,i), Djwin(2,i)
-100       format('arcsec,box(',sp,1pe10.3,',',sp,1pe10.3,',',
+
+          write(line,10) diwin(1,i), djwin(1,i), diwin(2,i), djwin(2,i)
+ 10       format('arcsec,box(',sp,1pe10.3,',',sp,1pe10.3,',',
      *           sp,1pe10.3,',',sp,1pe10.3,')')
+
         else
-          write(line,200) iwin(1,i), jwin(1,i),
-     *                    iwin(2,i), jwin(2,i)
-200       format('abspix,box(',i4,',',i4,',',i4,',',i4,')')
+          write(line,20) iwin(1,i), jwin(1,i), iwin(2,i), jwin(2,i)
+ 20       format('abspix,box(',i4,',',i4,',',i4,',',i4,')')
         endif
 
         if (dolog) then
@@ -1394,15 +1388,18 @@ c-----------------------------------------------------------------------
       enddo
 
       if (arcsec .and. ns.ge.1) then
-        write(line,300) Dimax+4.0, Djmax+4.0
-300     format('maxima',2(1x,f8.3))
+        write(line,30) dimax+4d0, djmax+4d0
+ 30     format('maxima',2(1x,f8.3))
+
         if (dolog) then
           call logwrit(line)
         else
-         call output(line)
+          call output(line)
         endif
-        write(line,400) imin-4.0, imax+4.0, jmin-4.0, jmax+4.0
-400     format('extent',4(1x,f8.3))
+
+        write(line,40) imin-4d0, imax+4d0, jmin-4d0, jmax+4d0
+ 40     format('extent',4(1x,f8.3))
+
         if (dolog) then
           call logwrit(line)
         else
