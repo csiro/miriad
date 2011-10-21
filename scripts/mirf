@@ -38,7 +38,7 @@
 #       In view of its prevalance, we have settled on '*'.
 #
 # Original: 2010/08/19 MRC (from ancient lore).
-# $Id: mirf,v 1.6 2010/11/22 07:07:46 cal103 Exp $
+# $Id: mirf,v 1.7 2011/10/21 04:45:28 cal103 Exp $
 #-----------------------------------------------------------------------------
   DETAB=
   LOWER=
@@ -75,8 +75,8 @@
       sed -e 's|  *$||' \
           -e 's|^C|c|' \
           -e '/^c/b' \
-          -e '/^  *IMPLICIT NONE$/d' \
-          -e '/^  *IMPLICIT none$/d' \
+          -e '/^  *IMPLICIT  *NONE$/d' \
+          -e '/^  *IMPLICIT  *none$/d' \
           -e 's| PROGRAM *| program |' \
           -e 's| SUBROUTINE *| subroutine |' \
           -e 's| FUNCTION *| function |' \
@@ -129,7 +129,7 @@
           -e '/^c\*\{72\}/s|\*||' \
           -e '/^c/b' \
           -e 's|^     [^ ]|     *|' \
-          -e '/^  *implicit none$/d' \
+          -e '/^  *implicit  *none$/d' \
           -e 's|\([0-9]\)\.0*e\([-+0-9]\)|\1e\2|g' \
           -e 's|\([0-9]\)\.0*d\([-+0-9]\)|\1d\2|g' \
           -e 's|\([0-9]\)\.$|\1.0|g' \
@@ -162,9 +162,11 @@
           -e 's|\.and\.\([^ ]\)|.and. \1|g' \
           -e 's| write  *(| write(|'   \
           -e 's| format  *(| format(|'   \
-          -e 's| call  *\([a-zA-Z][a-zA-Z0-9]*\)  *(| call \1(|'   \
+          -e 's| subroutine  *\([a-zA-Z][a-zA-Z0-9]*\)  *(| subroutine \1(|' \
+          -e 's| call  *\([a-zA-Z][a-zA-Z0-9]*\)  *(| call \1(|' \
           -e 's| if(| if (|'   \
           -e 's|)then|) then|' \
+          -e 's| else *if *(| else if (|' \
           -e 's|end if|endif|' \
           -e '/^ *do /s|\([^ ]\)=|\1 =|g' \
           -e '/^ *do /s|=\([^ ]\)|= \1|g' \
