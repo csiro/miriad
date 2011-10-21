@@ -6,7 +6,7 @@ c
 c    subroutine coInit(lu)
 c    subroutine coDup(lin,lout)
 c    subroutine coRaDec(lu,proj,ra0,dec0)
-c    subroutine coCreate(lu)
+c    subroutine coCreate(naxis,lu)
 c    subroutine coAltPrj(lu)
 c    subroutine coReinit(lu)
 c    subroutine coCvt(lu,in,x1,out,x2)
@@ -39,7 +39,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: co.for,v 1.24 2011/10/06 07:10:02 cal103 Exp $
+c $Id: co.for,v 1.25 2011/10/21 01:43:19 cal103 Exp $
 c***********************************************************************
 
 c* coInit -- Initialise coordinate conversion routines.
@@ -120,11 +120,11 @@ c-----------------------------------------------------------------------
       external  coLoc
       integer   coLoc
 c-----------------------------------------------------------------------
-      call coCreate(lout)
       icrd1 = coLoc(lin,  .false.)
+
+      call coCreate(naxis(icrd1), lout)
       icrd2 = coLoc(lout, .false.)
 
-      naxis(icrd2) = naxis(icrd1)
       do iax = 1, naxis(icrd2)
         crpix(iax,icrd2) = crpix(iax,icrd1)
         cdelt(iax,icrd2) = cdelt(iax,icrd1)
@@ -176,7 +176,7 @@ c    lu         Handle of the output coordinate object.
 c-----------------------------------------------------------------------
       character ctypei*8
 c-----------------------------------------------------------------------
-      call coCreate(lu)
+      call coCreate(2, lu)
 
       if (proj.ne.' ') then
         ctypei = 'RA---' // proj
@@ -198,9 +198,9 @@ c* coCreate -- Begin intialisation of a coordinate object.
 c& rjs
 c: coordinates
 c+
-      subroutine coCreate(lu)
+      subroutine coCreate(nax, lu)
 
-      integer lu
+      integer nax, lu
 c  ---------------------------------------------------------------------
 c  Begin building up a coordinate object from scratch.
 c
@@ -216,6 +216,8 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
       icrd = coLoc(0, .true.)
       lu = -icrd
+
+      naxis(icrd) = nax
 
 c     Initialize the celprm struct.
       status = celini(cel(1,icrd))
