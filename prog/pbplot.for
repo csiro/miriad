@@ -11,7 +11,8 @@ c       can be given.  Normally this will simply be a telescope name.
 c@ freq
 c       Frequency at which to determine the primary beam, in GHz.
 c       Default is 1.4 GHz.
-c@ bw   Bandwidth, in GHz.  The response is averaged over the bandwidth.
+c@ bw
+c       Bandwidth, in GHz.  The response is averaged over the bandwidth.
 c       The default is 0.
 c@ options
 c       Extra processing options:
@@ -22,7 +23,7 @@ c       PGPLOT device.  Default is no plot.
 c@ log
 c       Log file for listing.  Default is no log file.
 c
-c$Id: pbplot.for,v 1.4 2011/10/11 04:51:22 cal103 Exp $
+c$Id: pbplot.for,v 1.5 2011/10/21 01:57:36 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -45,8 +46,8 @@ c-----------------------------------------------------------------------
       character versan*72
 c-----------------------------------------------------------------------
       version = versan('pbplot',
-     *                 '$Revision: 1.4 $',
-     *                 '$Date: 2011/10/11 04:51:22 $')
+     *                 '$Revision: 1.5 $',
+     *                 '$Date: 2011/10/21 01:57:36 $')
 
 c     Get input parameters.
       call keyini
