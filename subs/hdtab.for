@@ -12,7 +12,7 @@ c    09may00 rjs  Do not allow default image size if pbtype=SINGLE.
 c    28jun05 rjs  Check the u,v coordinates to see if NCP projection is
 c                 best.
 c
-c $Id: hdtab.for,v 1.5 2010/10/14 03:53:59 cal103 Exp $
+c $Id: hdtab.for,v 1.6 2011/10/21 01:44:46 cal103 Exp $
 c***********************************************************************
 
       subroutine HdInit(mfs1,mosaic1)
@@ -305,7 +305,7 @@ c  Generate a coordinate object.
 c-----------------------------------------------------------------------
       include 'hdtab.h'
 c-----------------------------------------------------------------------
-      call coCreate(coObj)
+      call coCreate(3, coObj)
       call coAxSet(coObj,1,ctype1,0d0,crval1,cdelt1)
       call coAxSet(coObj,2,ctype2,0d0,crval2,cdelt2)
       call coAxSet(coObj,3,ctype3,1d0,crval3,cdelt3)
