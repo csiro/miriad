@@ -228,9 +228,8 @@ c       Interpolation tolerance.  Tolerate an error of the specified
 c       amount in converting pixel locations in the input to the output.
 c       Must be less that 0.5.  The default is 0.05.
 c
-c$Id: regrid.for,v 1.11 2011/10/06 07:18:56 cal103 Exp $
+c$Id: regrid.for,v 1.12 2011/10/21 01:30:21 cal103 Exp $
 c--
-c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c-----------------------------------------------------------------------
@@ -271,8 +270,8 @@ c     Projection codes.
      *  'pco', 'tsc', 'csc', 'qsc', 'hpx'/
 c-----------------------------------------------------------------------
       version = versan ('regrid',
-     *                  '$Revision: 1.11 $',
-     *                  '$Date: 2011/10/06 07:18:56 $')
+     *                  '$Revision: 1.12 $',
+     *                  '$Date: 2011/10/21 01:30:21 $')
 
 c     Get the input parameters.
       call keyini
@@ -352,7 +351,7 @@ c     Descriptors, if given, must match the number in 'axes'.
 c   Set up the output coordinate system.
       call coInit(lIn)
       if (altPrj) call coAltPrj(lIn)
-      call coCreate(cOut)
+      call coCreate(naxes, cOut)
 
       call coFindAx(lIn, 'longitude', ilng)
       call coFindAx(lIn, 'latitude',  ilat)
