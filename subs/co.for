@@ -39,7 +39,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: co.for,v 1.25 2011/10/21 01:43:19 cal103 Exp $
+c $Id: co.for,v 1.26 2011/10/24 04:05:24 cal103 Exp $
 c***********************************************************************
 
 c* coInit -- Initialise coordinate conversion routines.
@@ -229,7 +229,6 @@ c     Initialize the celprm struct.
       vobs(icrd)    = 0d0
       eqnox(icrd)   = 0d0
       obstime(icrd) = 0d0
-      naxis(icrd)   = 0
       frqscl(icrd)  = .true.
 
       end
