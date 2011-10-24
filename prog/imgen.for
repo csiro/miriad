@@ -97,7 +97,7 @@ c       Integer used to initialise the random number generator.  The
 c       same value of SEED produces the same noise, different values
 c       produce different noise.
 c
-c$Id: imgen.for,v 1.5 2011/07/04 00:59:16 cal103 Exp $
+c$Id: imgen.for,v 1.6 2011/10/24 06:35:38 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -106,8 +106,8 @@ c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
 
-      integer MAXOBJS, NOBJECTS
-      parameter (NOBJECTS = 11, MAXOBJS = 3000)
+      integer    MAXOBJS, NOBJECTS
+      parameter (MAXOBJS = 3000, NOBJECTS = 11)
 
       logical   totflux
       integer   i, j, k, lIn, lOut, n1, n2, n3, naxis, nobjs,
@@ -126,14 +126,13 @@ c-----------------------------------------------------------------------
       logical   keyprsnt
       character versan*72
 
-      data objects/'level   ','noise   ','point   ',
-     *             'gaussian','disk    ','j1x     ',
-     *             'shell   ','comet   ','cluster ',
-     *             'gauss3  ','jet     '/
+      data objects/'level   ', 'noise   ', 'point   ', 'gaussian',
+     *             'disk    ', 'j1x     ', 'shell   ', 'comet   ',
+     *             'cluster ', 'gauss3  ', 'jet     '/
 c-----------------------------------------------------------------------
       version = versan('imgen',
-     *                 '$Revision: 1.5 $',
-     *                 '$Date: 2011/07/04 00:59:16 $')
+     *                 '$Revision: 1.6 $',
+     *                 '$Date: 2011/10/24 06:35:38 $')
 c
 c  Get the parameters from the user.
 c
@@ -155,8 +154,8 @@ c
         if (objs(i).ne.'level' .and. objs(i).ne.'noise') then
           call keyr('spar',x(i),0.0)
           call keyr('spar',y(i),0.0)
-          x(i) = x(i) / 3600.0 * pi/180.0
-          y(i) = y(i) / 3600.0 * pi/180.0
+          x(i) = x(i)*AS2R
+          y(i) = y(i)*AS2R
         else
           x(i) = 0
           y(i) = 0
@@ -164,33 +163,33 @@ c
         if (objs(i).eq.'gauss3') call keyr('spar',z(i),0.0)
         if (objs(i)(1:5).eq.'gauss' .or. objs(i).eq.'disk' .or.
      *     objs(i).eq.'j1x' .or. objs(i).eq.'jet') then
-          call keyr('spar',fwhm1(i),5.0)
-          call keyr('spar',fwhm2(i),5.0)
+          call keyr('spar',fwhm1(i), 5.0)
+          call keyr('spar',fwhm2(i), 5.0)
           call keyr('spar',posang(i),0.0)
           if (objs(i).ne.'jet') then
-            fwhm1(i) = fwhm1(i) / 3600.0 * pi/180.0
-            fwhm2(i) = fwhm2(i) / 3600.0 * pi/180.0
+            fwhm1(i) = fwhm1(i)*AS2R
+            fwhm2(i) = fwhm2(i)*AS2R
             if (min(fwhm1(i),fwhm2(i)).le.0)
      *      call bug('f','BMAJ and BMIN parameters must be positive')
           endif
           posang(i) = posang(i) * pi/180.0
           if (objs(i).eq.'gauss3') call keyr('spar',fwhm3(i),5.0)
-        elseif(objs(i).eq.'shell' .or. objs(i).eq.'comet') then
+        else if (objs(i).eq.'shell' .or. objs(i).eq.'comet') then
           call keyr('spar',fwhm1(i),5.0)
-          fwhm1(i) = fwhm1(i) / 3600.0 * pi/180.0
+          fwhm1(i) = fwhm1(i)*AS2R
           if (fwhm1(i).le.0)
      *      call bug('f','BMAJ and BMIN parameters must be positive')
           fwhm2(i) = fwhm1(i)
-          posang(i) = 0
-        elseif(objs(i).eq.'cluster') then
+          posang(i) = 0.0
+        else if (objs(i).eq.'cluster') then
           call keyr('spar',fwhm1(i),50.0)
-          fwhm1(i) = fwhm1(i) / 3600.0 * pi/180.0
+          fwhm1(i) = fwhm1(i)*AS2R
           fwhm2(i) = fwhm1(i)
-          posang(i) = 0
+          posang(i) = 0.0
         else
-          fwhm1(i) = 0
-          fwhm2(i) = 0
-          posang(i) = 0
+          fwhm1(i)  = 0.0
+          fwhm2(i)  = 0.0
+          posang(i) = 0.0
         endif
       enddo
 c
@@ -198,15 +197,15 @@ c  Get parameters used to construct the output image (if needed).
 c
       call keyd('cell',cdelt1,-1d0)
       call keyd('cell',cdelt2,cdelt1)
-      cdelt1 = -abs(cdelt1/3600 * pi/180.0)
-      cdelt2 =  abs(cdelt2/3600 * pi/180.0)
+      cdelt1 = -abs(cdelt1*DAS2R)
+      cdelt2 =  abs(cdelt2*DAS2R)
       call keyi('imsize',n1,256)
       call keyi('imsize',n2,n1)
       call keyi('imsize',n3,1)
       call keyt('radec',crval1,'hms',0d0)
-      call keyt('radec',crval2,'dms',dpi/6d0)
-      crpix1 = n1/2 + 1
-      crpix2 = n2/2 + 1
+      call keyt('radec',crval2,'dms',DPI/6d0)
+      crpix1 = dble(n1/2 + 1)
+      crpix2 = dble(n2/2 + 1)
 
       call GetOpt(totflux)
 
@@ -233,9 +232,9 @@ c
         enddo
         call rdhdr(lIn,'bmaj',bmaj,0.0)
         call rdhdr(lIn,'bmin',bmin,0.0)
-        call rdhdr(lIn,'bpa',bpa,0.0)
-        call rdhdd(lIn,'cdelt1',cdelt1,1d0*cdelt1)
-        call rdhdd(lIn,'cdelt2',cdelt2,1d0*cdelt2)
+        call rdhdr(lIn,'bpa', bpa, 0.0)
+        call rdhdd(lIn,'cdelt1',cdelt1,cdelt1)
+        call rdhdd(lIn,'cdelt2',cdelt2,cdelt2)
       else
         if (n3.eq.1) then
            naxis = 2
@@ -246,9 +245,9 @@ c
         nsize(2) = n2
         nsize(3) = n3
         lIn = 0
-        bmaj = 0
-        bmin = 0
-        bpa = 0
+        bmaj = 0.0
+        bmin = 0.0
+        bpa  = 0.0
         if (n1.le.0 .or. n2.le.0) call bug('f','Image size error')
       endif
       if (n1.gt.MAXDIM) call bug('f','Image dimension too big')
@@ -257,18 +256,18 @@ c  If we have a single gaussian object, use this as the beam
 c  parameters.
 c
       if (nobjs.eq.1 .and. objs(1)(1:5).eq.'gauss' .and. .not.
-     *        totflux .and. abs(bmaj*bmin).eq.0) then
+     *       totflux .and. abs(bmaj*bmin).eq.0) then
         if (fwhm1(1).gt.fwhm2(1)) then
           bmaj = fwhm1(1)
           bmin = fwhm2(1)
-          bpa  = 180/pi * posang(1)
+          bpa  = posang(1)*R2D
         else
           bmaj = fwhm2(1)
           bmin = fwhm1(1)
-          bpa  = 180/pi * posang(1) - 90
+          bpa  = posang(1)*R2D - 90.0
         endif
-        if (bpa.lt.-90) bpa = bpa + 180
-        if (bpa.gt.90) bpa = bpa - 180
+        if (bpa.lt.-90.0) bpa = bpa + 180.0
+        if (bpa.gt.+90.0) bpa = bpa - 180.0
       endif
 c
 c  Now open the output, and add a header to it.
@@ -288,26 +287,26 @@ c
       do k = 1, n3
         if (lIn.ne.0) call xysetpl(lIn,1,k)
         call xysetpl(lOut,1,k)
-c
-c  Convert offsets and Gaussian parameters from world to pixel units.
-c
+
+c       Convert offsets and Gaussian parameters to pixel coordinates.
+        call coCvt1(lOut, 3, 'ap', dble(k), 'ow', x1(3))
         do i = 1, nobjs
           x1(1) = x(i)
           x1(2) = y(i)
-          x1(3) = k
-          call coCvt(lOut,'ow/ow/p',x1,'ap/ap/ap',x2)
+          call coCvt(lOut,'ow/ow/ow',x1,'ap/ap/ap',x2)
+
           xd(i) = x2(1)
           yd(i) = x2(2)
           if (objs(i).ne.'jet') then
-           if (fwhm1(i)*fwhm2(i).gt.0 .and. objs(i).ne.'jet') then
-            call coGauCvt(lOut,'ow/ow/p',x1,
-     *        'w',fwhm1(i), fwhm2(i), posang(i),
-     *        'p',fwhm1d(i),fwhm2d(i),posangd(i))
-           else
-            fwhm1d(i) = 0
-            fwhm2d(i) = 0
-            posangd(i) = 0
-           endif
+            if (fwhm1(i)*fwhm2(i).gt.0.0 .and. objs(i).ne.'jet') then
+              call coGauCvt(lOut,'ow/ow/ow',x1,
+     *          'w',fwhm1(i), fwhm2(i), posang(i),
+     *          'p',fwhm1d(i),fwhm2d(i),posangd(i))
+            else
+              fwhm1d(i)  = 0.0
+              fwhm2d(i)  = 0.0
+              posangd(i) = 0.0
+            endif
           else
             fwhm1d(i) = fwhm1(i)
             fwhm2d(i) = fwhm2(i)
@@ -358,7 +357,7 @@ c***********************************************************************
       subroutine GetOpt(totflux)
 
       logical totflux
-
+c-----------------------------------------------------------------------
 c  Get extra processing options.
 c-----------------------------------------------------------------------
       integer    NOPTS
@@ -380,7 +379,6 @@ c***********************************************************************
 
       integer lIn,j,n1
       real factor,Buff(n1)
-
 c-----------------------------------------------------------------------
 c  Initialise a row.
 c-----------------------------------------------------------------------
@@ -464,6 +462,7 @@ c    fac        Flux adjustment.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mirconst.h'
+
       integer i,j,ymin,ymax,xmin,xmax,maxit,it
       real xx,yy,xp,yp,scale,cospa,sinpa,t,a,log2,limit,p,theta,sum
       real Buff(MAXDIM)
@@ -480,7 +479,7 @@ c
       if (object(1:5).eq.'gauss') then
         log2 = log(2.0)
         if (fac.ne.0) then
-          a = fac * amp / (pi/4/log2 * fwhm1 * fwhm2)
+          a = fac * amp / (PI/4.0/log2 * fwhm1 * fwhm2)
         else
           a = amp
         endif
@@ -507,7 +506,7 @@ c
 c       Handle a J1(x)/x function.
         scale = 3.83
         if (fac.ne.0) then
-          a = fac * amp / (4*pi/scale/scale * fwhm1 * fwhm2)
+          a = fac * amp / (4.0*pi/scale/scale * fwhm1 * fwhm2)
         else
           a = amp
         endif
@@ -546,9 +545,9 @@ c       Handle a comet.
           p = sqrt(xx*xx+yy*yy)
           sum = 0.0
           do it = -maxit+1, maxit-1
-            theta = it*pi/2.0/maxit
+            theta = it*PI/2.0/maxit
             sum = sum +
-     *        exp(-p/fwhm1/(cos(theta)))*pi/2.0/(maxit-2)
+     *        exp(-p/fwhm1/(cos(theta)))*PI/2.0/(maxit-2)
           enddo
           if (p.ne.0.0) then
             a = amp / p * sum
@@ -569,7 +568,7 @@ c       Handle a cluster isothermal gas projection.
       else if (object.eq.'disk') then
 c       Handle a disk.
         if (fac.ne.0) then
-          a = fac * amp / (pi/4 * fwhm1 * fwhm2)
+          a = fac * amp / (PI/4.0 * fwhm1 * fwhm2)
         else
           a = amp
         endif
@@ -594,7 +593,7 @@ c       Handle a disk.
       else if (object.eq.'shell') then
 c       Handle a spherical shell.
         if (fac.ne.0) then
-          a = fac * amp / (pi * sqrt(fwhm1 * fwhm1))
+          a = fac * amp / (PI * sqrt(fwhm1 * fwhm1))
         else
           a = amp
         endif
@@ -641,4 +640,5 @@ c       Handle a point source.
 c       Should never get here.
         call bug('f','Unknown object type')
       endif
+
       end
