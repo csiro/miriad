@@ -39,7 +39,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: co.for,v 1.26 2011/10/24 04:05:24 cal103 Exp $
+c $Id: co.for,v 1.27 2011/10/24 05:36:39 cal103 Exp $
 c***********************************************************************
 
 c* coInit -- Initialise coordinate conversion routines.
@@ -1086,18 +1086,7 @@ c  in the normal small angle approximation for offsets in RA and DEC.
 c
 c  Input:
 c    in         A character string indicating the input coordinate
-c               types.  It is composed of two-letter codes separated
-c               from each other by a slash (/):
-c                 'op'  Offset   pixel coordinate,
-c                 'ap'  Absolute pixel coordinate,
-c                 'ow'  Offset   world coordinate,
-c                 'aw'  Absolute world coordinate,
-c               one for each coordinate requiring conversion.
-c               For example 'ap/ap' indicates two coordinates, both in
-c               absolute pixels.  A special code
-c                 '...' ditto,
-c               may be used to indicate repetition of the last type
-c               specified up to the image dimensionality.
+c               types.  See the prologue of coCrack.
 c    x1         Input coordinate elements of type specified by the 'in'
 c               parameter.  The dimensionality must agree with 'in'.
 c    out        Output coordinate codes, in the same fashion as 'in',
@@ -1437,7 +1426,8 @@ c
 c  Input:
 c    lu         Handle of the coordinate system.
 c    iax        Axis number.
-c    in,out     These indicate the conversion to be performed.
+c    in,out     These indicate the conversion to be performed.  See the
+c               prologue of coCrack.
 c    x1         Input coordinate.
 c  Output:
 c    x2         Output, converted, coordinate.
@@ -1526,9 +1516,8 @@ c    lu         Handle of the coordinate system.
 c    x1         This gives the coordinate of the centroid of the
 c               gaussian.
 c    in         This gives the units of the input gaussian centroid in
-c               the same format as the "in" parameter of coCvt.  For
-c               example, to indicate that the input coordinate consists
-c               of 3 numbers in absolute world units, use 'aw/aw/aw'.
+c               the same format as the "in" parameter of coCvt.  See the
+c               prologue of coCrack.
 c    ing,outg   The conversion to be performed.  Possible values are:
 c                 'w'   Input or output is in world units.
 c                 'p'   Input or output is in pixel units.
@@ -1707,7 +1696,8 @@ c-----------------------------------------------------------------------
 
       integer   icrd, ilat, ilng, itype, otype
       double precision df, frq, vel
-      character ctype1*8, ctype2*8, iframe*4, num*2, oframe*4, ttype*16
+      character ctype1*16, ctype2*16, iframe*4, num*2, oframe*4,
+     *          ttype*16
 
       external  coLoc, itoaf
       integer   coLoc
@@ -1728,6 +1718,7 @@ c     we continue to do it the old way.
 c     Identify the spectral axis.
       icrd = coLoc(lu,.false.)
       ifrq = frqax(icrd)
+      algo = ' '
       if (ifrq.eq.0) return
 
 c     Reset to header type?
@@ -1758,7 +1749,7 @@ c     Determine the reference frame conversion.
       else if (ctype(ifrq,icrd)(5:).eq.'-OBS' .or.
      *         ctype(ifrq,icrd)(5:).eq.'-HEL' .or.
      *         ctype(ifrq,icrd)(5:).eq.'-LSR') then
-        iframe = ctype(ifrq,icrd)(5:)
+        iframe = ctype(ifrq,icrd)(5:8)
       else
         iframe = ' '
       endif
@@ -2253,11 +2244,11 @@ c-----------------------------------------------------------------------
 
       integer   iax, icrd, p
       double precision cdelti, crpixi, crvali
-      character ctypei*8, line*80, pols*4, radec*20, units*8
+      character ctypei*16, line*80, pols*4, radec*12, units*8
 
       external  coLoc, hangle, polsC2P, rangle
       integer   coLoc
-      character hangle*32, PolsC2P*2, rangle*32
+      character hangle*12, PolsC2P*2, rangle*12
 c-----------------------------------------------------------------------
       icrd = coLoc(lu,.false.)
 
@@ -2270,7 +2261,7 @@ c-----------------------------------------------------------------------
         if (ctypei.eq.'RA' .or. ctypei(1:4).eq.'RA--') then
 c         Time.
           radec = hangle(crvali)
-          write(line, 10) ctypei, radec, crpixi, cdelti*DR2D*3600d0
+          write(line, 10) ctypei, radec, crpixi, cdelti*DR2AS
  10       format(a8,3x,a11,f10.2,3x,1pe13.6,'  arcsec')
 
         else if (ctypei.eq.'DEC' .or. ctypei(1:4).eq.'DEC-' .or.
@@ -2280,7 +2271,7 @@ c         Time.
      *           ctypei(1:4).eq.'ELAT') then
 c         Angle.
           radec = rangle(crvali)
-          write(line, 20) ctypei, radec, crpixi, cdelti*DR2D*3600d0
+          write(line, 20) ctypei, radec, crpixi, cdelti*DR2AS
  20       format(a8,2x,a12,f10.2,3x,1pe13.6,'  arcsec')
 
         else if (ctypei(1:6).eq.'STOKES') then
@@ -2868,8 +2859,22 @@ c  Decode a coordinate conversion specifier code - refer to the prologue
 c  of coCvtv.
 c
 c  Input:
-c    code
 c    maxnax
+c    code       Two-letter codes, one for each coordinate requiring
+c               conversion, separated from each other by a slash (/):
+c                 'op'  Offset   pixel coordinate,
+c                 'ap'  Absolute pixel coordinate,
+c                 'ow'  Offset   world coordinate,
+c                 'aw'  Absolute world coordinate,
+c               For example 'ap/ap' indicates two coordinates, both in
+c               absolute pixels.  A special code
+c                 '...' ditto,
+c               may be used to indicate repetition of the last type
+c               specified up to the image dimensionality.  The following
+c               abbreviations are understood:
+c                 'p' is equivalent to 'ap/...',
+c                 'w' is equivalent to 'aw/...'.
+c    defn       Number of axes expected.
 c  Output:
 c    x1pix,x1off
 c    n
@@ -2882,42 +2887,56 @@ c-----------------------------------------------------------------------
       new = .true.
       ditto = .false.
 
-      do i = 1, len(code)
-        c = code(i:i)
-        if (c.le.' ') then
-          continue
+      if (code.eq.'p' .or. code.eq.'P') then
+        n = 1
+        x1pix(1) = .true.
+        x1off(1) = .false.
+        ditto = .true.
 
-        else if (c.eq.'/') then
-          if (ditto)
-     *      call bug('f','Unrecognised conversion code, in coCvt')
-          new = .true.
+      else if (code.eq.'w' .or. code.eq.'W') then
+        n = 1
+        x1pix(1) = .false.
+        x1off(1) = .false.
+        ditto = .true.
 
-        else if (c.eq.'.') then
-          ditto = .true.
+      else
+        do i = 1, len(code)
+          c = code(i:i)
+          if (c.le.' ') then
+            continue
 
-        else
-          if (ditto)
-     *      call bug('f','Unrecognised conversion code, in coCvt')
+          else if (c.eq.'/') then
+            if (ditto)
+     *        call bug('f','Unrecognised conversion code, in coCvt')
+            new = .true.
 
-          if (new) then
-            n = n + 1
-            if (n.gt.maxnax) call bug('f','Too many axes, in coCvt')
-            new = .false.
-          endif
+          else if (c.eq.'.') then
+            ditto = .true.
 
-          if (c.eq.'p' .or. c.eq.'P') then
-            x1pix(n) = .true.
-          else if (c.eq.'w' .or. c.eq.'W') then
-            x1pix(n) = .false.
-          else if (c.eq.'o' .or. c.eq.'O') then
-            x1off(n) = .true.
-          else if (c.eq.'a' .or. c.eq.'A') then
-            x1off(n) = .false.
           else
-            call bug('f','Unrecognised conversion code, in coCvt')
+            if (ditto)
+     *        call bug('f','Unrecognised conversion code, in coCvt')
+
+            if (new) then
+              n = n + 1
+              if (n.gt.maxnax) call bug('f','Too many axes, in coCvt')
+              new = .false.
+            endif
+
+            if (c.eq.'p' .or. c.eq.'P') then
+              x1pix(n) = .true.
+            else if (c.eq.'w' .or. c.eq.'W') then
+              x1pix(n) = .false.
+            else if (c.eq.'o' .or. c.eq.'O') then
+              x1off(n) = .true.
+            else if (c.eq.'a' .or. c.eq.'A') then
+              x1off(n) = .false.
+            else
+              call bug('f','Unrecognised conversion code, in coCvt')
+            endif
           endif
-        endif
-      enddo
+        enddo
+      endif
 
       if (ditto .and. n.gt.0 .and. n.lt.defn) then
         do i = n+1, defn
