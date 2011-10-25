@@ -39,7 +39,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: co.for,v 1.27 2011/10/24 05:36:39 cal103 Exp $
+c $Id: co.for,v 1.28 2011/10/25 07:03:42 cal103 Exp $
 c***********************************************************************
 
 c* coInit -- Initialise coordinate conversion routines.
@@ -1241,7 +1241,7 @@ c     user was silly enough not to give enough inputs.
       call coCvt(lu,in,x1,'aw/...',x2)
       freq1 = x2(frqax(icrd))
 
-c     Convert from velocityes
+c     Convert from velocities
       itype = cotype(frqax(icrd),icrd)
       if (itype.eq.FRQTYP) then
         continue
@@ -1665,6 +1665,9 @@ c                 VOPT: optical velocity (wavelength-like)
 c               These may be suffixed with '-' and a spectral algorithm
 c               code (see below) which is ignored.
 c
+c               Type may also be specified as 'VELOCITY' to switch from
+c               frequency to VRAD but leave VRAD and VOPT unchanged.
+c
 c               type may also be blank to revert to the spectral type
 c               specified in the image header.
 c
@@ -1673,7 +1676,7 @@ c               recognised: '{FREQ,VELO,FELO}{,-{OBS,HEL,LSR}}' meaning
 c               'FREQ', 'VRAD', and 'VOPT'.  Likewise, 'FREQUENCY',
 c               'RADIO', and 'OPTICAL'.
 c
-c    frame      Spectral frame: 'TOPOCENTRIC', 'BARYCENTRIC', or 'LSRK', 
+c    frame      Spectral frame: 'TOPOCENTRIC', 'BARYCENTRIC', or 'LSRK',
 c               but only conversions between the last two are supported.
 c
 c               frame may be blank to leave it unspecified or leave it
@@ -1703,23 +1706,14 @@ c-----------------------------------------------------------------------
       integer   coLoc
       character itoaf*2
 c-----------------------------------------------------------------------
-c     Compatibility between the old and new API.  As an interim measure
-c     we continue to do it the old way.
-      ttype = type
-      call ucase(ttype)
-      if (ttype.eq.'FREQUENCY') then
-        ttype = 'FREQ'
-      else if (ttype(:4).eq.'VRAD' .or. ttype.eq.'RADIO') then
-        ttype = 'VELO'
-      else if (ttype(:4).eq.'VOPT' .or. ttype.eq.'OPTICAL') then
-        ttype = 'FELO'
-      endif
-
 c     Identify the spectral axis.
       icrd = coLoc(lu,.false.)
       ifrq = frqax(icrd)
       algo = ' '
       if (ifrq.eq.0) return
+
+      ttype = type
+      call ucase(ttype)
 
 c     Reset to header type?
       if (ttype.eq.' ') then
@@ -1727,8 +1721,24 @@ c     Reset to header type?
         call rdhda(lu, 'ctype'//num, ttype, ' ')
       endif
 
-c     Determine the type.
+c     Compatibility between the old and new API.  As an interim measure
+c     we continue to do it the old way.
       itype = cotype(ifrq,icrd)
+      if (ttype.eq.'FREQUENCY') then
+        ttype = 'FREQ'
+      else if (ttype(:4).eq.'VRAD' .or. ttype.eq.'RADIO') then
+        ttype = 'VELO'
+      else if (ttype(:4).eq.'VOPT' .or. ttype.eq.'OPTICAL') then
+        ttype = 'FELO'
+      else if (ttype.eq.'VELOCITY') then
+        if (itype.eq.FELTYP) then
+          ttype = 'FELO'
+        else
+          ttype = 'VELO'
+        endif
+      endif
+
+c     Determine the type.
       if (ttype(1:4).eq.'FREQ') then
         otype = FRQTYP
       else if (ttype(1:4).eq.'VELO') then
