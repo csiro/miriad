@@ -3,6 +3,8 @@ c* Title -  Write title in standard format into LogFile.
 c& mchw
 c: image analysis,log-file
 c+
+c $Id: title.for,v 1.3 2011/10/25 01:40:01 cal103 Exp $
+
       subroutine Title(lIn,naxis,blc,trc,cbof)
 
       integer lIn,naxis,blc(naxis),trc(naxis)
@@ -18,44 +20,47 @@ c    cbof       Beam oversampling factor.
 c-----------------------------------------------------------------------
       include 'mirconst.h'
 
-      double precision RTS
-      parameter (RTS=3600d0*180d0/PI)
-
       logical   more
       integer   lblc, ltrc
-      real      bmaj, bmin, cbof, DperJy, freq, omega
-      character bunit*20, ctype1*9, ctype2*9, ctype3*9, line*80,
+      real      bmaj, bmin, cbof, ifrq, KperJy, rfreq, omega
+      character algo*3, bunit*20, ctype1*9, ctype2*9, line*80,
      *          txtblc*20, txttrc*20
 
-      external  len1
+      external  itoaf, len1
       integer   len1
+      character itoaf*2
 c-----------------------------------------------------------------------
 c     Get beam size etc.
       call GetBeam(lIn,naxis,bunit,bmaj,bmin,omega,cbof)
-      call rdhdr(lIn,'restfreq',freq,0.0)
-      if (freq.eq.0.0) then
-        call rdhda(lIn,'ctype3',ctype3,' ')
-        if (ctype3(1:4).eq.'FREQ') then
-          call rdhdr(lIn,'crval3',freq,0.0)
+
+c     Get the rest frequency.
+      call rdhdr(lIn, 'restfreq', rfreq, 0.0)
+      if (rfreq.eq.0.0) then
+c       Rest frequency not recorded, use the frequency reference value.
+        call coInit(lIn)
+        call coSpcSet(lIn, 'FREQ', ' ', ifrq, algo)
+        if (ifrq.gt.0) then
+          call rdhdr(lIn, 'crval'//itoaf(ifrq), rfreq, 0.0)
         endif
+        call coFin(lIn)
       endif
 
-      DperJy=1.0
-      if (freq.ne.0.0) then
-        DperJy= (0.3/freq)**2 /(2.0*1.38e3*omega)
+      KperJy = 1.0
+      if (rfreq.ne.0.0) then
+        KperJy = (0.3/rfreq)**2 / (2.0*1.38e3*omega)
       endif
 
       write(line,'(a,a,a,f10.6,a,f15.4)')
      *      '  bunit: ', bunit(1:len1(bunit)),
-     *      '  frequency: ', freq,
-     *      '    K/Jy: ', DperJy
+     *      '  frequency: ', rfreq,
+     *      '    K/Jy: ', KperJy
       call LogWrite(line,more)
 
       call rdhda(lIn,'ctype1',ctype1,' ')
       call rdhda(lIn,'ctype2',ctype2,' ')
       write(line,'(a,a,a,a,a,f6.2,a,f6.2,a)')
      *  '  Axes: ',ctype1,' x ',ctype2,
-     *  '   Beam: ',bmaj*RTS,' x ',bmin*RTS,' arcsecs'
+     *  '  Beam: ',bmaj*DR2AS,' x ',bmin*DR2AS,' arcsec'
       call LogWrite(line,more)
 
       call mitoaf(blc,3,txtblc,lblc)
