@@ -36,15 +36,14 @@ c           The moments are calculated independently for each pixel
 c           using spectral channels with intensity satisfying the
 c           specified clip range.
 c
-c           For FREQ axes the radio velocity is computed from the line
-c           rest frequency recorded in the header.  For VELO and FELO
+c           For frequency axes the radio velocity is computed from the
+c           line rest frequency recorded in the header.  For velocity
 c           axes the axis scale is used directly.
 c@ axis
 c       Axis for which the moment is calculated.  Moments may be
 c       computed for non-spectral axes though brightness units recorded
 c       in the output image header will usually be incorrect.  Defaults
-c       to the spectral axis (FREQ, VELO, or FELO) determined from the
-c       input image header.
+c       to the spectral axis determined from the input image header.
 c@ clip
 c       Two values.  For mom >= -1, exclude spectral channels with
 c       intensity in the range clip(1) to clip(2) inclusive.  If only
@@ -70,7 +69,7 @@ c       range pkmask(1) to pkmask(2) exclusive.  If only one value is
 c       given, then mask pixels with peak intensity less than pkmask.
 c       Default = 0.
 c
-c$Id: moment.for,v 1.16 2011/09/06 01:49:28 cal103 Exp $
+c$Id: moment.for,v 1.17 2011/10/25 09:43:44 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -79,30 +78,30 @@ c-----------------------------------------------------------------------
       include 'mirconst.h'
       include 'mem.h'
 
-      integer maxnax, maxboxes, maxruns
-      parameter (maxnax=3, maxboxes=2048)
-      parameter (maxruns=3*MAXDIM)
+      integer    MAXNAX, MAXBOX
+      parameter (MAXNAX=3, MAXBOX=2048)
 
-      logical rngmsk
-      integer axis, blc(maxnax), boxes(maxboxes), i, j, lIn, lOut,
-     *        mom, n1, n2, n3, naxes, naxis(maxnax), nchan,
-     *        oaxis(maxnax), pMasks, pSpecs, span, trc(maxnax)
-      real    blo, bhi, cdelt, clip(2), crpix, crval, pkmask(2), offset,
-     *        restfreq, scl, tmp, vrange(2)
-      character cin*1, ctype*9, in*64, text*72, out*64, version*80
+      logical   rngmsk
+      integer   axis, blc(MAXNAX), boxes(MAXBOX), i, iSpc, j, lIn,
+     *          lOut, mom, n1, n2, n3, naxes, naxis(MAXNAX), nchan,
+     *          oaxis(MAXNAX), pMasks, pSpecs, span, trc(MAXNAX)
+      real      blo, bhi, clip(2), pkmask(2), offset, scl, tmp,
+     *          vrange(2)
+      double precision cdelt, crpix, crval
+      character algo*3, ctype*16, in*128, text*72, out*128, version*72
 
       logical   keyprsnt, hdprsnt
-      character itoaf*1, versan*80
+      character itoaf*1, versan*72
       external  itoaf, keyprsnt, hdprsnt, versan
 c-----------------------------------------------------------------------
       version = versan ('moment',
-     *                  '$Revision: 1.16 $',
-     *                  '$Date: 2011/09/06 01:49:28 $')
+     *                  '$Revision: 1.17 $',
+     *                  '$Date: 2011/10/25 09:43:44 $')
 
 c     Get inputs.
       call keyini
       call keya('in',in,' ')
-      call BoxInput('region',in,boxes,maxboxes)
+      call BoxInput('region',in,boxes,MAXBOX)
       call keya('out',out,' ')
       call keyi('mom',mom,0)
       call keyi('axis',axis,0)
@@ -158,9 +157,9 @@ c     Check inputs.
 
 
 c     Open input cube and get parameters.
-      call xyopen(lIn,in,'old',maxnax,naxis)
+      call xyopen(lIn,in,'old',MAXNAX,naxis)
       call rdhdi(lIn,'naxis',naxes,0)
-      naxes = min(naxes,maxnax)
+      naxes = min(naxes,MAXNAX)
 
 c     Check the axis number.
       if (axis.gt.naxes) then
@@ -183,58 +182,31 @@ c     Determine the min and max value.
       endif
 
 c     Set up the region of interest.
-      call BoxSet(boxes,maxnax,naxis,'s')
-      call BoxInfo(boxes,maxnax,blc,trc)
+      call BoxSet(boxes,MAXNAX,naxis,'s')
+      call BoxInfo(boxes,MAXNAX,blc,trc)
 
-c     Locate the spectral axis if need be.
-      if (axis.eq.0) then
-        do i = 1, naxes
-          cin = itoaf(i)
-          call rdhda(lIn, 'ctype'//cin, ctype, ' ')
-          if (ctype(:4).eq.'FREQ' .or.
-     *        ctype(:4).eq.'VELO' .or.
-     *        ctype(:4).eq.'FELO') then
-            axis = i
-            goto 40
-          endif
-        enddo
-      endif
+c     Locate the spectral axis, but don't preclude non-spectral axes.
+      call coInit(lIn)
+      call coFindAx(lIn, 'spectral', iSpc)
+      if (axis.eq.0) axis = iSpc
 
- 40   if (axis.lt.1) then
+      if (axis.lt.1) then
         call bug('f', 'Spectral axis not found.')
       else if (axis.gt.3) then
         call output('Reorder axes to take moment of axis 1, 2, or 3.')
         call bug('f', 'axis not implemented.')
       endif
 
-c     Calculate offset and scale to convert from channels to km/s.
-      cin = itoaf(axis)
-      if (hdprsnt(lIn, 'crpix'//cin) .and.
-     *    hdprsnt(lIn, 'crval'//cin)) then
-        call rdhdr(lIn,'crpix'//cin, crpix, 0.0)
-        call rdhdr(lIn,'crval'//cin, crval, 0.0)
-      else
-        call bug('f', 'crpix and/or crval not in header.')
+c     Determine offset and scale for output.
+      if (axis.eq.iSpc) then
+c       Spectral axis, switch to velocity.
+        call coSpcSet(lIn, 'VELOCITY', ' ', iSpc, algo)
       endif
 
-      call rdhdr(lIn, 'cdelt'//cin, cdelt, 0.0)
-      if (cdelt.eq.0.0) call bug('f','cdelt is 0 or not present.')
-
-c     Compute velocity parameters.
-      cin = itoaf(axis)
-      call rdhda(lIn, 'ctype'//cin, ctype, ' ')
-      if (ctype(1:4).eq.'FREQ') then
-        call rdhdr(lIn, 'restfreq', restfreq, 0.0)
-        if (restfreq.eq.0.0) then
-          call bug('f','restfreq not present in header.')
-        endif
-
-        offset = crpix - (crval - restfreq) / cdelt
-        scl = -CMKS * (cdelt / restfreq) * 1e-3
-      else
-        offset = crpix - crval/cdelt
-        scl = cdelt
-      endif
+      call coAxGet(lIn, axis, ctype, crpix, crval, cdelt)
+      offset = crpix - crval/cdelt
+      scl = cdelt
+      call coFin(lIn)
 
 c     Transform to pixel coordinates of output axis.
       offset = offset - blc(axis) + 1.0
@@ -256,14 +228,12 @@ c     Check span.
         call bug('w', 'Span exceeds channel range, ignored.')
       endif
 
-      if (ctype(:4).eq.'FREQ' .or.
-     *    ctype(:4).eq.'VELO' .or.
-     *    ctype(:4).eq.'FELO') then
-        write(text, 50) vrange(1), vrange(2), scl
- 50     format('Velocity range (km/s):',f10.2,' to',f10.2,' by',f8.2)
+      if (axis.eq.iSpc) then
+        write(text, 40) vrange(1), vrange(2), scl
+ 40     format('Velocity range (km/s):',f10.2,' to',f10.2,' by',f8.2)
       else
-        write(text, 60) vrange(1), vrange(2), scl
- 60     format('Axis range:',f10.2,' to',f10.2,' by',f8.2)
+        write(text, 50) vrange(1), vrange(2), scl
+ 50     format('Axis range:',f10.2,' to',f10.2,' by',f8.2)
       endif
       call output(text)
 
@@ -285,7 +255,7 @@ c     Open output image and write its header.
       enddo
       oaxis(naxes) = 1
       call xyopen(lOut,out,'new',naxes,oaxis)
-      call header(lIn,lOut,naxes,blc,trc,mom,axis)
+      call header(lIn,lOut,naxes,blc,trc,mom,axis,iSpc)
 
 c     Compute the moment.
       if (axis.eq.1) then
@@ -325,24 +295,26 @@ c     Update history and close files.
 
 c***********************************************************************
 
-      subroutine header(lIn,lOut,naxes,blc,trc,mom,axis)
+      subroutine header(lIn, lOut, naxes, blc, trc, mom, axis, iSpc)
 
-      integer lIn,lOut,naxes,blc(naxes),trc(naxes),mom,axis
+      integer   lIn, lOut, naxes, blc(naxes), trc(naxes), mom, axis,
+     *          iSpc
 c-----------------------------------------------------------------------
 c  Copy keywords to output file.
 c
 c  Inputs:
 c    lIn,lOut   Handle of input and output files.
-c    naxes      The number of input axes.
-c    blc,trc    The corners of the input image.
+c    naxes      Number of input axes.
+c    blc,trc    Corners of the input image.
 c    mom        The moment to be calculated.
-c    axis       The axis for which the moment is calculated.
+c    axis       Axis for which the moment is calculated.
+c    isSpc      Spectral axis number.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
 
       integer   axmap(MAXDIM), i, l
       double precision cdelt, crpix, crval, pxmid
-      character atemp*16, cin*1, cout*1, ctype*10
+      character atemp*16, cin*2, cout*2, ctype*16
 
       logical   hdprsnt
       integer   len1
@@ -367,24 +339,22 @@ c     Copy the header.
 
 c     Update the axis for which the moment was computed.
       cin  = itoaf(axis)
-      call rdhdd(lIn,'crpix'//cin, crpix, 1d0)
-      call rdhdd(lIn,'cdelt'//cin, cdelt, 1d0)
-      call rdhdd(lIn,'crval'//cin, crval, 0d0)
-      call rdhda(lIn,'ctype'//cin, ctype, ' ')
+      call rdhdd(lIn, 'crpix'//cin, crpix, 1d0)
+      call rdhdd(lIn, 'cdelt'//cin, cdelt, 1d0)
+      call rdhdd(lIn, 'crval'//cin, crval, 0d0)
+      call rdhda(lIn, 'ctype'//cin, ctype, ' ')
 
       cout  = itoaf(min(3,naxes))
       pxmid = (blc(axis) + trc(axis)) / 2.0
       crval = crval + (pxmid - crpix)*cdelt
       cdelt = cdelt * (trc(axis) - blc(axis) + 1)
-      call wrhdd(lOut,'crpix'//cout, 1d0)
-      call wrhdd(lOut,'cdelt'//cout, cdelt)
-      call wrhdd(lOut,'crval'//cout, crval)
-      call wrhda(lOut,'ctype'//cout, ctype)
+      call wrhdd(lOut, 'crpix'//cout, 1d0)
+      call wrhdd(lOut, 'cdelt'//cout, cdelt)
+      call wrhdd(lOut, 'crval'//cout, crval)
+      call wrhda(lOut, 'ctype'//cout, ctype)
 
 c     Brightness units.
-      if (ctype(:4).eq.'FREQ' .or.
-     *    ctype(:4).eq.'VELO' .or.
-     *    ctype(:4).eq.'FELO') then
+      if (axis.eq.iSpc) then
         if (mom.eq.-3) then
           call wrhda(lOut,'bunit','km/s')
           call wrbtype(lOut,'velocity')
