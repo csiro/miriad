@@ -62,20 +62,10 @@ c       the linearly polarized intensity spectral index image, and the
 c       second will receive an estimate of the rotation measure (units
 c       of rad/m**2).
 c
-c$Id: mfspin.for,v 1.4 2010/11/22 05:38:14 cal103 Exp $
+c$Id: mfspin.for,v 1.5 2011/10/25 06:00:15 cal103 Exp $
 c--
-c
 c  History:
-c    rjs   4may92  Cloned from RESTOR.
-c    rjs   6may92  Outputs mask file. Computes rotation measure. Does
-c                  primary beam correction.
-c    rjs  26may92  Write btype keyword. Change of sign convention for
-c                  spectral index.
-c    nebk 28jan93  Adapt to new primary beam routines.
-c    rjs  24oct94  Use newer pb routines.
-c    rjs  27oct94  Fix bug in runs-determining routine.
-c    rjs  23jul97  Added pbtype,cellscal.
-c    rjs  26nov97  Increase MAXRUNS.
+c    Refer to the RCS log, v1.1 includes prior revision information.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mirconst.h'
@@ -91,28 +81,28 @@ c-----------------------------------------------------------------------
      *          yBeam
       real      cdelt1, cdelt2, clip(2), crpix1, crpix2, dat(MAXBUF),
      *          fwhm1, fwhm2, nu0, pa, Patch(NP*NP)
-      character beam*64, line*72, modl1*64, modl2*64, out1*64, out2*64,
-     *          pbtype*16, version*72
+      character beam*128, line*72, modl1*128, modl2*128, out1*128,
+     *          out2*128, pbtype*16, version*72
 
       integer   nextpow2
       logical   keyprsnt
-      character versan*80
+      character versan*72
       external  keyprsnt, nextpow2, versan
 
       common dat
 c-----------------------------------------------------------------------
       version = versan('mfspin',
-     *                 '$Revision: 1.4 $',
-     *                 '$Date: 2010/11/22 05:38:14 $')
+     *                 '$Revision: 1.5 $',
+     *                 '$Date: 2011/10/25 06:00:15 $')
 c
 c  Get the input parameters.
 c
       call keyini
       call keya('model',modl1,' ')
       call keya('model',modl2,' ')
-      call keya('beam',Beam,' ')
-      call keya('out',Out1,' ')
-      call keya('out',Out2,' ')
+      call keya('beam',beam,' ')
+      call keya('out',out1,' ')
+      call keya('out',out2,' ')
       call keyr('clip',clip(1),0.0)
       twoclip = keyprsnt('clip')
       if (twoclip) then
@@ -130,21 +120,21 @@ c
 c  Check the reasonableness of the inputs.
 c
       if (clip(2).lt.clip(1)) call bug('f','Bad clip range')
-      if (Modl1.eq.' ') call bug('f','Input model name missing')
+      if (modl1.eq.' ') call bug('f','Input model name missing')
       if (Out1.eq.' ')  call bug('f','Output map name missing')
-      doQU = Modl2.ne.' '
+      doQU = modl2.ne.' '
 
       fwhm1 = fwhm1 * AS2R
       fwhm2 = fwhm2 * AS2R
       NeedFwhm = fwhm1*fwhm2.eq.0
-      if (Beam.eq.' ' .and. NeedFwhm)
+      if (beam.eq.' ' .and. NeedFwhm)
      *  call bug('f','Either beam or fwhm must be given')
 c
 c  Determine the gaussian that we are going to convolve with. If its is
 c  in the beams header, just use that. Otherwise fit it.
 c
       if (NeedFwhm) then
-        call xyopen(lBeam,Beam,'old',3,nsize)
+        call xyopen(lBeam,beam,'old',3,nsize)
         mBeam = nsize(1)
         nBeam = nsize(2)
         call rdhdr(lBeam,'bmaj',fwhm1,0.0)
@@ -180,7 +170,7 @@ c
 c
 c  Open the model, and get various info about it.
 c
-      call xyopen(lMod1,Modl1,'old',3,nsize)
+      call xyopen(lMod1,modl1,'old',3,nsize)
       mModel = nsize(1)
       nModel = nsize(2)
       if (nsize(3).ne.2) call bug('f',
@@ -194,7 +184,7 @@ c
 c  If there is a second model, open it, etc.
 c
       if (doQU) then
-        call xyopen(lMod2,Modl2,'old',3,nsize)
+        call xyopen(lMod2,modl2,'old',3,nsize)
         if (nsize(1).ne.mModel .or. nsize(2).ne.nModel)
      *    call bug('f','Model sizes do not agree')
         if (nsize(3).ne.2) call bug('f',
@@ -204,13 +194,13 @@ c
 c
 c  Make the Q model the first.
 c
-        if (pol1.gt.pol2) call QUswap(lMod1,pol1,Modl1,lMod2,pol2,Modl2)
+        if (pol1.gt.pol2) call QUswap(lMod1,lMod2,pol1,pol2,modl1,modl2)
 c
 c  Final checks for sensibleness.
 c
         if (pol1.ne.POLQ .and. pol2.ne.POLU) call bug('f',
      *    'The two models do not seem to be Q and U')
-        if (Out2.ne.' ' .and. nu0.le.0) call bug('f',
+        if (out2.ne.' ' .and. nu0.le.0.0) call bug('f',
      *    'Unable to determine reference frequency')
       else if (pol1.eq.POLQ .or. pol1.eq.POLU) then
         call bug('w',
@@ -280,16 +270,16 @@ c
 c
 c  Save the spectral index map.
 c
-      call WriteOut(Out1,dat(Alpha1),npix,mModel,nModel,
+      call WriteOut(out1,dat(Alpha1),npix,mModel,nModel,
      *        Runs,nruns,lMod1,version,fwhm1,fwhm2,pa,
      *        pbcorr,pbtype,.true.)
 c
 c  Save the rotation measure map, if required.
 c
-      if (Out2.ne.' ') then
+      if (out2.ne.' ') then
         if (doQU) then
           call CorrRM(npix,dat(Alpha2),nu0)
-          call WriteOut(Out2,dat(Alpha2),npix,mModel,nModel,
+          call WriteOut(out2,dat(Alpha2),npix,mModel,nModel,
      *        Runs,nruns,lMod1,version,fwhm1,fwhm2,pa,
      *        pbcorr,pbtype,.false.)
         else
@@ -312,27 +302,27 @@ c
 
 c***********************************************************************
 
-      subroutine QUswap(lMod1,pol1,Modl1,lMod2,pol2,Modl2)
+      subroutine QUswap(lMod1,lMod2,pol1,pol2,modl1,modl2)
 
-      integer pol1,pol2,lMod1,lMod2
-      character Modl1,Modl2
+      integer   lMod1, lMod2, pol1, pol2
+      character modl1*(*), modl2*(*)
 c-----------------------------------------------------------------------
 c  Swap around things.
 c-----------------------------------------------------------------------
-      integer t
-      character line*64
+      integer   itmp
+      character ctmp*128
 c-----------------------------------------------------------------------
-      t = lMod1
+      itmp  = lMod1
       lMod1 = lMod2
-      lMod2 = t
+      lMod2 = itmp
 
-      t = pol1
+      itmp = pol1
       pol1 = pol2
-      pol2 = t
+      pol2 = itmp
 
-      line = Modl1
-      Modl1 = Modl2
-      Modl2 = line
+      ctmp  = modl1
+      modl1 = modl2
+      modl2 = ctmp
 
       end
 
@@ -361,66 +351,68 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine GetInfo(tmod,nx,ny,
-     *                pol,nu0,cdelt1,cdelt2,crpix1,crpix2)
+      subroutine GetInfo(lMod,nx,ny,pol,nu0,cdelt1,cdelt2,crpix1,crpix2)
 
-      integer tmod,nx,ny,pol
-      real nu0,cdelt1,cdelt2,crpix1,crpix2
+      integer lMod, nx, ny, pol
+      real    nu0, cdelt1, cdelt2, crpix1, crpix2
 c-----------------------------------------------------------------------
 c  Determine various info about the model.
 c
 c  Input:
-c    tmod       The handle of the input model.
+c    lMod       The handle of the input model.
 c    nx,ny      Model size.
 c  Output:
 c    pol        The polarisation type of the model.  If this info is
 c               missing then Stokes-I is assumed.
-c    nu0        Reference frequency of the model. Default is 0.
+c    nu0        Reference frequency of the model.  Default is 0.0.
 c    crpix1,crpix2 Reference pixel -- assumed to be the pointing centre.
 c               Default is the model centre.
 c    cdelt1,cdelt2 Pixel increments -- No default.
 c-----------------------------------------------------------------------
-      integer StokesI
-      parameter (StokesI=1)
-      integer naxis,i,n
-      character ctype*16,num*2
-      real crval,crpix,cdelt,value
+      integer    STOKESI
+      parameter (STOKESI=1)
 
-c     Externals.
+      integer   iax, ifrq, n, naxis
+      real      cdelt, crpix, crval
+      character algo*3, ctype*16, num*2
+
+      external  itoaf
       character itoaf*2
 c-----------------------------------------------------------------------
-c
-c  The first two axes are assumed to be RA and DEC.
-c
-      call rdhdr(tmod,'crpix1',crpix1,real(nx/2+1))
-      call rdhdr(tmod,'crpix2',crpix2,real(ny/2+1))
-      call rdhdr(tmod,'cdelt1',cdelt1,0.0)
-      call rdhdr(tmod,'cdelt2',cdelt2,0.0)
-      if (cdelt1*cdelt2.eq.0)
-     *        call bug('f','Model pixel increment missing')
-c
-c  Determine the polarisation and reference frequency of the model.
-c
-      call rdhdi(tmod,'naxis',naxis,0)
-      pol = StokesI
-      nu0 = 0
-      do i = 3, naxis
-        num = itoaf(i)
-        call rdhda(tmod,'ctype'//num,ctype,' ')
-        n = 0
-        if (ctype(1:4).eq.'FREQ' .or. ctype(1:6).eq.'STOKES') then
-          call rdhdi(tmod,'naxis'//num,n,0)
-          if (n.gt.1 .and. ctype(1:6).eq.'STOKES') call bug('f',
-     *                'Cannot handle polarisation cubes')
-          call rdhdr(tmod,'crval'//num,crval,1.0)
-          call rdhdr(tmod,'crpix'//num,crpix,1.0)
-          call rdhdr(tmod,'cdelt'//num,cdelt,1.0)
-          value = nint(crval + (1.0-crpix)*cdelt)
-          if (ctype(1:4).eq.'FREQ') then
-            nu0 = value
-          else
-            pol = nint(value)
-          endif
+c     The first two axes are assumed to be RA and DEC.
+      call rdhdr(lMod, 'crpix1', crpix1, real(nx/2+1))
+      call rdhdr(lMod, 'crpix2', crpix2, real(ny/2+1))
+      call rdhdr(lMod, 'cdelt1', cdelt1, 0.0)
+      call rdhdr(lMod, 'cdelt2', cdelt2, 0.0)
+      if (cdelt1.eq.0.0 .or. cdelt2.eq.0.0)
+     *  call bug('f','Model pixel increment missing')
+
+c     Determine the frequency of channel 1.
+      nu0 = 0.0
+      call coInit(lMod)
+      call coSpcSet(lMod, 'FREQ', ' ', ifrq, algo)
+      if (ifrq.eq.0) then
+        call coCvt1(lMod, ifrq, 'ap', 1d0, 'aw', nu0)
+      endif
+      call coFin(lMod)
+
+c     Determine the polarisation.
+      call rdhdi(lMod, 'naxis', naxis, 0)
+      pol = STOKESI
+      do iax = 3, naxis
+        if (iax.eq.ifrq) continue
+
+        num = itoaf(iax)
+        call rdhda(lMod, 'ctype'//num, ctype, ' ')
+
+        if (ctype.eq.'STOKES') then
+          call rdhdi(lMod, 'naxis'//num, n, 0)
+          if (n.ne.1) call bug('f', 'Cannot handle polarisation cubes')
+
+          call rdhdr(lMod, 'crpix'//num, crpix, 1.0)
+          call rdhdr(lMod, 'cdelt'//num, cdelt, 1.0)
+          call rdhdr(lMod, 'crval'//num, crval, 1.0)
+          pol = nint(crval + (1.0 - crpix)*cdelt)
         endif
       enddo
 
@@ -662,9 +654,9 @@ c-----------------------------------------------------------------------
 c***********************************************************************
 
       subroutine WriteOut(Out,Data,npix,nx,ny,Runs,nRuns,
-     *  lModel,version,fwhm1,fwhm2,pa,pbcorr,pbtype,si)
+     *  lMod,version,fwhm1,fwhm2,pa,pbcorr,pbtype,si)
 
-      integer lModel,nx,ny,nRuns,npix
+      integer lMod,nx,ny,nRuns,npix
       integer Runs(3,nRuns+1)
       real Data(npix)
       character version*(*),out*(*),pbtype*(*)
@@ -677,7 +669,7 @@ c  Input:
 c    Out        Output image name.
 c    Data       The model pixel values.
 c    nx,ny      The size of the model.
-c    lModel     The handle of the input file -- used to construct output
+c    lMod       The handle of the input file -- used to construct output
 c               header.
 c    version    Program version.
 c    fwhm1,fwhm2,pa Gaussian parameters -- for output history.
@@ -694,7 +686,7 @@ c     Open the output.
       nsize(2) = ny
       nsize(3) = 1
       nsize(4) = 1
-      call rdhdi(lModel,'naxis',naxis,2)
+      call rdhdi(lMod,'naxis',naxis,2)
       naxis = min(naxis,4)
       call xyopen(lOut,Out,'new',naxis,nsize)
 
@@ -703,7 +695,7 @@ c     Write out the data.
       call putruns(lOut,Runs,nRuns,0,0,nx,ny)
 
 c     Make a verbatim copy of the header.
-      call headcp(lModel, lOut, 0, 0, 0, 0)
+      call headcp(lMod, lOut, 0, 0, 0, 0)
 
 c     Update items that have changed.
       if (si) then
