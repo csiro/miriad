@@ -6,7 +6,7 @@ c: image analysis
 c+
 c       VELPLOT is an interactive task to analyse spectra, position-
 c       velocity slices, and integrated velocity maps from Miriad
-c       Images.  There are three basic display options:
+c       images.  There are three basic display options:
 c
 c        - Velocity-averaged (x,y) images over selected velocity
 c               intervals.  Also makes velocity and velocity dispersion
@@ -57,7 +57,7 @@ c@ log
 c       The output log file. The default filename is velplot.log
 c       Results from image analysis are written into the log file.
 c
-c$Id: velplot.for,v 1.10 2011/07/05 00:55:42 cal103 Exp $
+c$Id: velplot.for,v 1.11 2011/10/27 04:18:03 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -68,11 +68,14 @@ c-----------------------------------------------------------------------
       integer    MAXBOXES
       parameter (MAXBOXES=128)
 
-      integer boxes(MAXBOXES),nsize(3)
-      character ans*1,line*80,logfil*80
-      integer lIn,nx,ny,nc,length
-      real vlsr(MAXDIM)
-      integer ary,v
+      integer   ary, boxes(MAXBOXES), lIn, length, nc, nsize(3), nx, ny,
+     *          v
+      real      vlsr(MAXDIM)
+      character ans*1, line*80, logfil*80, version*72
+
+      external  len1, versan
+      integer   len1
+      character versan*72
 
 c     Set default plotting parameters.
       data units/'J'/,alabel/'Y'/,percent/'Y'/
@@ -81,12 +84,10 @@ c     Set default plotting parameters.
       data gray/'N'/,defgray/'Y'/
       data lgaufit/'N'/,lgauplot/'Y'/
       data levels/15,30,45,60,75,90,0,0,0,0/,nlevels/6/
-
-      character versan*80, version*80
 c-----------------------------------------------------------------------
       version = versan('velplot',
-     *                 '$Revision: 1.10 $',
-     *                 '$Date: 2011/07/05 00:55:42 $')
+     *                 '$Revision: 1.11 $',
+     *                 '$Date: 2011/10/27 04:18:03 $')
 c
 c  Get the input parameters.
 c
@@ -119,7 +120,7 @@ c
       if (nx.gt.MAXDIM .or. ny.gt.MAXDIM .or. nc.gt.MAXDIM)
      *  call bug('w','Dimension too big for some buffers')
       call output(' ')
-      call readmap(lIn,memr(ary),vlsr,nx,ny,nc)
+      call readMap(lIn,nx,ny,nc,memr(ary),vlsr)
 c
 c  Tell user how to exit from xwindow.
 c
@@ -137,9 +138,9 @@ c
 c
 c  Start the output log file.
 c
-      call LogOpen(logfil,'q')
-      call LogWrit('VELPLOT '//version)
-      call velohead(nx,ny,nc)
+      call logOpen(logfil,'q')
+      call logWrit(version(:len1(version)))
+      call veloHead(nx,ny,nc)
 c
 c  Prompt for interactive options:
 c
@@ -159,7 +160,7 @@ c
         call output('Exit     - Exit from program')
         call output(' ')
 
-        call prompt(ans,length,'Selection (type 1st character) :')
+        call prompt(ans,length,'Selection (type 1st character): ')
         call ucase(ans)
         if (ans.eq.'C') then
           call comment
@@ -288,7 +289,7 @@ c
 
 c***********************************************************************
 
-      subroutine convinit(cmaj,cmin,cpa,xy,ncon,con)
+      subroutine convInit(cmaj,cmin,cpa,xy,ncon,con)
 
       integer ncon
       real cmaj,cmin,cpa,xy
@@ -347,7 +348,7 @@ c
 
 c***********************************************************************
 
-      subroutine convsize(cmaj,cmin,cpa,xy,ncon)
+      subroutine convSize(cmaj,cmin,cpa,xy,ncon)
 
       real cmaj,cmin,cpa,xy
       integer ncon
@@ -2402,8 +2403,8 @@ c
 c
 c  Set up convolution function.
 c
-      call convsize(cmaj,cmin,cpa,xy,ncon)
-      call convinit(cmaj,cmin,cpa,xy,ncon,con)
+      call convSize(cmaj,cmin,cpa,xy,ncon)
+      call convInit(cmaj,cmin,cpa,xy,ncon,con)
 c
 c  Check whether it is contour or intensity plots
 c
@@ -2740,57 +2741,58 @@ c
 
 c***********************************************************************
 
-      subroutine readmap(lIn,ary,vlsr,nx,ny,nc)
+      subroutine readMap(lIn, nx, ny, nc, ary, vlsr)
 
-      integer lIn,nx,ny,nc
-      real ary(1),vlsr(1)
+      integer   lIn, nx, ny, nc
+      real      ary(1), vlsr(1)
 c-----------------------------------------------------------------------
 c  Read portion of Miriad Image into array.
 c
 c  Inputs:
 c    lIn        Handle of input Image.
+c    nx,ny,nc   dimensions of images
 c
 c  Outputs:
 c    ary(nx,ny,nc)
 c               spectral line image
 c    vlsr(nc)   velocity array
-c    nx ny nc   dimensions of images
 c-----------------------------------------------------------------------
-      include 'velplot.h'
       include 'mirconst.h'
-
-      double precision CKMS
-      parameter (CKMS = DCMKS*1d-3)
+      include 'velplot.h'
 
       integer   i, ipt, j, k
-      real      cdelt1, cdelt2, cdelt3, crpix1, crpix2,
-     *          crpix3, crval3, row(MAXDIM)
+      real      row(MAXDIM)
+      double precision cdelt1, cdelt2, cdelt3, crpix1, crpix2, crpix3,
+     *          crval3, dVal
+      character algo*3, ctype3*16
 c-----------------------------------------------------------------------
-      call rdhdr(lIn, 'crpix1', crpix1, real(nx/2+1))
-      call rdhdr(lIn, 'crpix2', crpix2, real(ny/2+1))
-      call rdhdr(lIn, 'crpix3', crpix3, 1.0)
-      call rdhdr(lIn, 'cdelt1', cdelt1, 0.0)
-      call rdhdr(lIn, 'cdelt2', cdelt2, 0.0)
-      call rdhdr(lIn, 'cdelt3', cdelt3, 1.0)
-      call rdhdr(lIn, 'crval1', crval(1), 0.0)
-      call rdhdr(lIn, 'crval2', crval(2), 0.0)
-      call rdhdr(lIn, 'crval3', crval3,   1.0)
-      call rdhda(lIn, 'ctype1', ctype(1), ' ')
-      call rdhda(lIn, 'ctype2', ctype(2), ' ')
-      call rdhda(lIn, 'ctype3', ctype(3), ' ')
+c     Check the presence and ordering of the required axes.
+      call coInit(lIn)
+      call coFindAx(lIn, 'LONGITUDE', i)
+      call coFindAx(lIn, 'LATITUDE',  j)
+      call coFindAx(lIn, 'SPECTRAL',  k)
+      if (i.ne.1 .or. j.ne.2 .or. k.ne.3)
+     *  call bug('f', 'Expecting lng,lat,spc on axes 1,2,3')
 
-      if (cdelt1.eq.0.0 .or. cdelt2.eq.0.0)
+c     Check the celestial coordinate increments.
+      call rdhdd(lIn, 'cdelt1', cdelt1, 0d0)
+      call rdhdd(lIn, 'cdelt2', cdelt2, 0d0)
+      if (cdelt1.eq.0d0 .or. cdelt2.eq.0d0)
      *  call bug('f', 'Coordinate increment missing (cdelt).')
       if (abs(cdelt1).ne.abs(cdelt2))
      *  call bug('f', 'Unequal coordinate increments (cdelt).')
 
-      xy = abs(cdelt1)
-      if ((ctype(1)(1:2).eq.'RA'   .and. ctype(2)(1:3).eq.'DEC') .or.
-     *    (ctype(1)(1:4).eq.'GLON' .and. ctype(2)(1:4).eq.'GLAT')) then
-        xy = xy*R2AS
-      endif
+c     Fill the velplot commons.
+      xy = abs(cdelt1)*R2AS
+      call rdhdr(lIn, 'crval1', crval(1), 0.0)
+      call rdhdr(lIn, 'crval2', crval(2), 0.0)
+      call rdhda(lIn, 'ctype1', ctype(1), ' ')
+      call rdhda(lIn, 'ctype2', ctype(2), ' ')
+      call rdhda(lIn, 'ctype3', ctype(3), ' ')
 
 c     Reference pixel in box coordinates.
+      call rdhdd(lIn, 'crpix1', crpix1, dble(nx/2+1))
+      call rdhdd(lIn, 'crpix2', crpix2, dble(ny/2+1))
       brpix(1) = nint(crpix1) - blc(1) + 1
       brpix(2) = nint(crpix2) - blc(2) + 1
 
@@ -2803,19 +2805,18 @@ c     Reference pixel in box coordinates.
       call rdhda(lIn, 'object', object, ' ')
       call rdhdr(lIn, 'restfreq', restfreq, 0.0)
 
-      if (ctype(3)(1:4).eq.'FREQ' .and. restfreq.ne.0.0) then
-        call output('Convert frequency axis to velocity')
-        cdelt3 = (cdelt3/restfreq)*CKMS
-        crval3 = (crval3/restfreq)*CKMS
-      endif
+      call coSpcSet(lIn, 'VELOCITY', ' ', k, algo)
+      call coAxGet(lIn, k, ctype3, crpix3, crval3, cdelt3)
+      call coCvt1(lIn, k, 'ap', dble(blc(3)), 'aw', dVal)
+      vel = real(dVal)
 
-      vel  = crval3 + (blc(3)-crpix3)*cdelt3
-      delv = cdelt3
+      delv = real(cdelt3)
       do i = 1, nc
-        vlsr(i) = crval3 + (blc(3)-crpix3 +i-1)*cdelt3
+        call coCvt1(lIn, k, 'ap', dble(blc(3)+i-1), 'aw', dVal)
+        vlsr(i) = dVal
       enddo
 
-
+c     Read the data into memory.
       call output('Reading data cube...')
       ipt = 1
       do k = blc(3), trc(3)
@@ -3119,8 +3120,8 @@ c
 c
 c  Set up convolution function.
 c
-      call convsize(cmaj,cmin,cpa,xy,ncon)
-      call convinit(cmaj,cmin,cpa,xy,ncon,con)
+      call convSize(cmaj,cmin,cpa,xy,ncon)
+      call convInit(cmaj,cmin,cpa,xy,ncon,con)
       write(line,'(a,3f10.4)') '  original beam ', bmaj*R2AS, bmin*R2AS,
      *  bpa
       call output(line)
@@ -3355,12 +3356,10 @@ c
           call output('only first 30 spectra written to '//outfile)
         endif
         call TxtOpen(lu,outfile,'new',iostat)
-        if (iostat.eq.0) write(text,'(a,a)')
-     *    'File: ',outfile
+        if (iostat.eq.0) write(text,'(a,a)') 'File: ',outfile
         length=6 + len(file)
         call TxtWrite(lu,text,length,iostat)
-        if (iostat.eq.0) write(text,'(a,a)')
-     *    'Image File: ',file
+        if (iostat.eq.0) write(text,'(a,a)') 'Image file: ',file
         length=12 + len(file)
         call TxtWrite(lu,text,length,iostat)
         if (iostat.eq.0) write(text,'(a,a,4x,f11.6,a)')
@@ -3866,7 +3865,7 @@ c-----------------------------------------------------------------------
       call output(msg)
       write(msg, *) ' Array dimensions are: nx,ny,nc=',nx,ny,nc
       call output(msg)
-      call LogWrit('Image File: '//file)
+      call LogWrit('Image file: '//file)
       call header(6)
 
       end
@@ -4203,12 +4202,10 @@ c     Write out gaussian fits to ASCII file.
       endif
       call TxtOpen(lu,outfile,'new',iostat)
         call TxtOpen(lu,outfile,'new',iostat)
-        if (iostat.eq.0) write(text,'(a,a)')
-     *    'File: ',outfile
+        if (iostat.eq.0) write(text,'(a,a)') 'File: ',outfile
         length=6 + len(file)
         call TxtWrite(lu,text,length,iostat)
-        if (iostat.eq.0) write(text,'(a,a)')
-     *    'Image File: ',file
+        if (iostat.eq.0) write(text,'(a,a)') 'Image file: ',file
         length=12 + len(file)
         call TxtWrite(lu,text,length,iostat)
       if (iostat.eq.0) write(text,'(a,a,4x,f11.6,a)')
