@@ -4,7 +4,7 @@ c= fft - Fourier transform on image(s)
 c& mchw
 c: uv analysis, map making
 c+
-c       FFT is a MIRIAD task which performs a fast Fourier transform on
+c       FFT is a MIRIAD task that performs a fast Fourier transform on
 c       an image.  If the input is a cube, then each plane is FFT'ed
 c       individually (i.e. this does not perform a 3D FFT).
 c
@@ -16,31 +16,29 @@ c       The output of the FFT is normally complex-valued.  You can save
 c       it in any one of several ways -- as the real or imaginary part,
 c       or as the magnitude (amplitude) and phase.
 c@ rin
-c       The input real part image.  No default.
+c       Input real image.  No default.
 c@ iin
-c       The input imaginary part image.  The default is a zero image.
+c       Input imaginary image.  The default is a zero image.
 c@ sign
-c       This gives the sign of the exponent in the transform. -1 gives a
-c       forward transform, +1 an inverse transform. An inverse transform
-c       applies 1/N scaling. The default is a forward transform.
+c       Sign of the exponent in the transform.  -1 gives a a forward
+c       transform, +1 an inverse transform.  The inverse transform
+c       applies 1/N scaling.  The default is a forward transform.
 c@ center
 c       Origin of the transform.  If two values are given they are used
 c       as the origin in the x and y axis respectively.  If one value is
 c       given then it's used for the origin for both the x and y.  The
 c       default is the header value for CRPIX1 and CRPIX2 or N/2+1 if
-c       they are not present in the header. 
+c       they are not present in the header.
 c@ rout
-c       The output real part image.  The default is not to write this
-c       image.
+c       Output real image.  Default is not to write it
 c@ iout
-c       The output imaginary part image.  Default is not to write it.
+c       Output imaginary image.  Default is not to write it.
 c@ mag
-c       The output magnitude (amplitude) image.  Default is not to write
-c       it.
+c       Output amplitude image.  Default is not to write it.
 c@ phase
-c       The output phase image.  Default is not to write it.
+c       Output phase image.  Default is not to write it.
 c
-c$Id: fft.for,v 1.3 2011/10/05 05:59:53 cal103 Exp $
+c$Id: fft.for,v 1.4 2011/10/27 05:51:15 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -63,11 +61,10 @@ c-----------------------------------------------------------------------
       character versan*72
 c-----------------------------------------------------------------------
       version = versan('fft',
-     *                 '$Revision: 1.3 $',
-     *                 '$Date: 2011/10/05 05:59:53 $')
-c
-c  Get the input parameters.
-c
+     *                 '$Revision: 1.4 $',
+     *                 '$Date: 2011/10/27 05:51:15 $')
+
+c     Get the input parameters.
       call keyini
       call keya('rin',rIn,' ')
       call keya('iin',iIn,' ')
@@ -84,9 +81,8 @@ c
       if (rout.eq.' ' .and.  iout.eq.' ' .and.
      *    mag.eq.' ' .and. phase.eq.' ')
      *  call bug('f','There are no output names')
-c
-c  Open the real part, and work out the defaults.
-c
+
+c     Open the real part, and work out the defaults.
       if (rIn.eq.' ') call bug('f','A real input part must be given')
       call xyopen(lrIn,rIn,'old',MAXNAX,nin)
       doflag = hdprsnt(lrIn,'mask')
@@ -112,11 +108,9 @@ c
       endif
       if (Center2.lt.1 .or. Center2.gt.n2) Center2 = mod(Center2,n2)
       if (Center2.lt.1) Center2 = Center2 + n2
-c
-c  Process it according to whether there is an imaginary part to
-c  worry about.
-c
+
       if (iIn.ne.' ') then
+c       Check that the imaginary part is the same size.
         call xyopen(liIn,iIn,'old',MAXNAX,nout)
         doflag = doflag .or. hdprsnt(lrIn,'mask')
         do i = 1, MAXNAX
@@ -126,52 +120,48 @@ c
       else
         liIn = 0
       endif
-c
-c  Determine the output size.
-c
+
+c     Determine the output size.
       do i = 1, naxis
         nout(i) = nin(i)
       enddo
       nout(1) = n1
       nout(2) = n2
-c
-c  Now open the output files.
-c
+
+c     Open the output files.
       if (rOut.ne.' ') then
         call xyopen(lrOut,rOut,'new',naxis,nout)
-        call header(lrIn,lrOut,'Real',version,nout)
+        call header(lrIn,lrOut,nout,'Real',version)
       else
         lrOut = 0
       endif
 
       if (iOut.ne.' ') then
         call xyopen(liOut,iOut,'new',naxis,nout)
-        call header(lrIn,liOut,'Imaginary',version,nout)
+        call header(lrIn,liOut,nout,'Imaginary',version)
       else
         liOut = 0
       endif
 
       if (mag.ne.' ') then
         call xyopen(lMag,mag,'new',naxis,nout)
-        call header(lrIn,lMag,'Magnitude',version,nout)
+        call header(lrIn,lMag,nout,'Magnitude',version)
       else
         lMag = 0
       endif
 
       if (phase.ne.' ') then
         call xyopen(lPhase,phase,'new',naxis,nout)
-        call header(lrIn,lPhase,'Phase',version,nout)
+        call header(lrIn,lPhase,nout,'Phase',version)
       else
         lPhase = 0
       endif
-c
-c  Allocate memory.
-c
+
+c     Allocate memory.
       if (liIn.eq.0) call MemAlloc(Data,n1*n2,'r')
       call MemAlloc(cData,n1*n2,'c')
-c
-c  Loop around doing the FFT of a plane, then writing it out.
-c
+
+c     Loop FFTing each plane and writing it out.
       call IncIni(naxis,nin,dims)
       do while (Inc3More(naxis,nin,dims))
         if (naxis.gt.2) then
@@ -182,6 +172,7 @@ c
           if (lMag.ne.0)  call xysetpl(lMag,naxis-2,dims(3))
           if (lPhase.ne.0) call xysetpl(lPhase,naxis-2,dims(3))
         endif
+
         if (liIn.eq.0) then
           call GetPlR(memR(Data),nin(1),nin(2),n1,n2,lrIn,doflag)
           if (Sgn.eq.1) call Scale(memR(Data),n1*n2,1.0/real(n1*n2))
@@ -193,11 +184,11 @@ c
           if (Sgn.eq.1) call Scale(memC(cData),2*n1*n2,1.0/real(n1*n2))
           call FFTCC2(MemC(cData),n1,n2,Sgn,Center1,Center2)
         endif
+
         call OutData(memC(cData),n1,n2,lrOut,liOut,lMag,lPhase)
       enddo
-c
-c  Finish up.
-c
+
+c     Finish up.
       if (liIn.eq.0) call MemFree(Data,n1*n2,'r')
       call MemFree(cData,n1*n2,'c')
 
@@ -241,7 +232,7 @@ c***********************************************************************
       real    In(n1,n2)
       complex Out(n1,n2)
 c-----------------------------------------------------------------------
-c  Perform a Fourier transform of a real image. There is no scaling.
+c  Perform a Fourier transform of a real image.  There is no scaling.
 c  The "phase-centre" of the transform is (ic,jc), and the centre of
 c  the output is (n1/2+1,n2/2+1).
 c
@@ -260,11 +251,10 @@ c-----------------------------------------------------------------------
       real      rdat(MAXDIM)
       complex   cdat(MAXDIM), cdat2(MAXDIM)
 c-----------------------------------------------------------------------
-c
-c  First pass -- transform in the x direction. During this pass, shift
-c  the image in x so that the centre is at pixel (1,?). Also multiply
-c  by (-1)**(i-1), so that the centre of the output is at pixel n1/2.
-c
+c     First pass -- transform in the x direction.  During this pass,
+c     shift the image in x so that the centre is at pixel (1,?).  Also
+c     multiply by (-1)**(i-1), so that the centre of the output is at
+c     pixel n1/2.
       do j = 1, n2
         do i = ic, n1
           rdat(i-ic+1) =  In(i,j)
@@ -280,11 +270,11 @@ c
 
         call fftrc(rdat,out(1,j),sgn,n1)
       enddo
-c
-c  Second pass -- transform in the y direction. During this pass, shift
-c  the image in y so that the centre is at pixel (1,1). Also multiply
-c  by (-1)**(j-1), so that the centre of the output is at pixel n2/2.
-c
+
+c     Second pass -- transform in the y direction.  During this pass,
+c     shift the image in y so that the centre is at pixel (1,1).  Also
+c     multiply c  by (-1)**(j-1), so that the centre of the output is
+c     at pixel n2/2.
       do i = 1, n1/2+1
         do j = jc, n2
           cdat(j-jc+1) =  Out(i,j)
@@ -304,10 +294,9 @@ c
           Out(i,j) = cdat2(j)
         enddo
       enddo
-c
-c  Third pseudo-pass: Make the output full size, by using complex
-c  conjugate symmetry to fill in unused spaces.
-c
+
+c     Third pseudo-pass: Make the output full size, by using complex
+c     conjugate symmetry to fill in unused spaces.
 c#ivdep
       do i = n1/2+2, n1
         Out(i,1) = conjg(Out(n1+2-i,1))
@@ -329,7 +318,7 @@ c***********************************************************************
       integer n1,n2,Sgn,Ic,Jc
       complex In(n1,n2)
 c-----------------------------------------------------------------------
-c  Perform a Fourier transform of a complex image. There is no scaling.
+c  Perform a Fourier transform of a complex image.  There is no scaling.
 c  The "phase-centre" of the transform is (ic,jc), and the centre of the
 c  output is (n1/2+1,n2/2+1).
 c
@@ -346,11 +335,10 @@ c-----------------------------------------------------------------------
       integer   i, j
       complex   cdat(MAXDIM), cdat2(MAXDIM)
 c-----------------------------------------------------------------------
-c
-c  First pass -- transform in the x direction. During this pass, shift
-c  the image in x so that the centre is at pixel (1,?). Also multiply
-c  by (-1)**(i-1), so that the centre of the output is at pixel n1/2.
-c
+c     First pass -- transform in the x direction.  During this pass,
+c     shift the image in x so that the centre is at pixel (1,?).  Also
+c     multiply by (-1)**(i-1), so that the centre of the output is at
+c     pixel n1/2.
       do j = 1, n2
         do i = ic, n1
           cdat(i-ic+1) =  In(i,j)
@@ -366,11 +354,11 @@ c
 
         call fftcc(cdat,in(1,j),sgn,n1)
       enddo
-c
-c  Second pass -- transform in the y direction. During this pass, shift
-c  the image in y so that the centre is at pixel (1,1). Also multiply
-c  by (-1)**(j-1), so that the centre of the output is at pixel n2/2.
-c
+
+c     Second pass -- transform in the y direction.  During this pass,
+c     shift the image in y so that the centre is at pixel (1,1).  Also
+c     multiply by (-1)**(j-1), so that the centre of the output is at
+c     pixel n2/2.
       do i = 1, n1
         do j = jc, n2
           cdat(j-jc+1) =  In(i,j)
@@ -395,93 +383,86 @@ c
 
 c***********************************************************************
 
-      subroutine header(lIn,lOut,Type,version,n)
+      subroutine header(lIn,lOut,n,otype,version)
 
-      integer lIn,lOut,n(2)
-      character Type*(*),version*(*)
+      integer   lIn, lOut, n(2)
+      character otype*(*), version*(*)
 c-----------------------------------------------------------------------
 c  Create the output header for the transformed file.
 c-----------------------------------------------------------------------
-      integer NKEYS
-      parameter (NKEYS=20)
-
-      integer   i
-      double precision cdelt
-      character ax*1, bunit*32
-      character ctype*16, keyw(NKEYS)*8, line*64
+      integer   iax
+      double precision cdelt, crpix, crval
+      character algo*3, bunit*32, cax*2, ctype*16
 
       external  itoaf
-      character itoaf*1
-
-      data keyw/   'obstime ','epoch   ','history ',
-     *  'object  ','telescop','vobs    ','restfreq',
-     *  'cellscal',
-     *  'cdelt3  ','crval3  ','crpix3  ','ctype3  ',
-     *  'cdelt4  ','crval4  ','crpix4  ','ctype4  ',
-     *  'cdelt5  ','crval5  ','crpix5  ','ctype5  '/
+      character itoaf*2
 c-----------------------------------------------------------------------
-c
-c  Copy all the other keywords across, which have not changed.
-c
-      call wrhdr(lOut,'crpix1',real(n(1)/2+1))
-      call wrhdr(lOut,'crpix2',real(n(2)/2+1))
-      call wrhdd(lOut,'crval1',0d0)
-      call wrhdd(lOut,'crval2',0d0)
+c     Start with a verbatim copy of the input header.
+      call headcp(lIn, lOut, 0, 0, 0, 0)
 
-      do i = 1, 2
-        ax = itoaf(i)
-        call rdhdd(lIn,'cdelt'//ax,cdelt,1d0)
-        call rdhda(lIn,'ctype'//ax,ctype,' ')
-        if (ctype(1:4).eq.'RA--') then
-          ctype(1:2) = 'UU'
-          cdelt = 1.0/(n(i)*cdelt)
-        else if (ctype(1:4).eq.'UU--') then
-          ctype(1:2) = 'RA'
+c     Find the spectral axis.
+      call coInit(lIn)
+      call coFindAx(lIn, 'spectral', iax)
+      if (iax.le.2) then
+c       Ensure that it's expressed as frequency.
+        call coSpcSet(lIn, 'FREQ', ' ', iax, algo)
+      endif
+
+c     Update changed keywords.
+      call wrhdd(lOut, 'crpix1', dble(n(1)/2+1))
+      call wrhdd(lOut, 'crpix2', dble(n(2)/2+1))
+      call wrhdd(lOut, 'crval1', 0d0)
+      call wrhdd(lOut, 'crval2', 0d0)
+
+      do iax = 1, 2
+        call coAxGet(lIn, iax, ctype, crpix, crval, cdelt)
+        cdelt = 1d0 / (n(iax)*cdelt)
+
+        if (ctype(:4).eq.'RA--') then
+          ctype(:2) = 'UU'
+
+        else if (ctype(:4).eq.'UU--') then
+          ctype(:2) = 'RA'
           if (ctype(6:8).eq.'NCP') ctype(6:8) = 'SIN'
-          cdelt = 1.0/(n(i)*cdelt)
-        else if (ctype(1:4).eq.'DEC-') then
-          ctype(1:3) = 'VV-'
-          cdelt = 1.0/(n(i)*cdelt)
-        else if (ctype(1:4).eq.'VV--') then
-          ctype(1:3) = 'DEC'
+
+        else if (ctype(:4).eq.'DEC-') then
+          ctype(:3) = 'VV-'
+
+        else if (ctype(:4).eq.'VV--') then
+          ctype(:3) = 'DEC'
           if (ctype(6:8).eq.'NCP') ctype(6:8) = 'SIN'
-          cdelt = 1.0/(n(i)*cdelt)
-        else if (ctype(1:4).eq.'FREQ') then
+
+        else if (ctype(:4).eq.'FREQ') then
           ctype = 'TIME'
-          cdelt = 1.0/(n(i)*cdelt*1e9)
+          cdelt = 1d-9 * cdelt
+
         else if (ctype.eq.'TIME') then
           ctype = 'FREQ'
-          cdelt = 1e-9/(n(i)*cdelt)
+          cdelt = 1d-9 * cdelt
         endif
-        call wrhdd(lOut,'cdelt'//ax,cdelt)
-        call wrhda(lOut,'ctype'//ax,ctype)
+
+        cax = itoaf(iax)
+        call wrhdd(lOut, 'cdelt'//cax, cdelt)
+        call wrhda(lOut, 'ctype'//cax, ctype)
       enddo
-c
-c  Copy other keywords and add to the history file.
-c
-      do i = 1, NKEYS
-        call hdcopy(lIn,lOut,keyw(i))
-      enddo
-c
-c  Determine correct bunit.
-c
-      call rdhda(lin,'bunit',bunit,' ')
+
+      call coFin(lIn)
+
+c     Determine the correct bunit.
+      call rdhda(lin, 'bunit', bunit, ' ')
       if (bunit.eq.'JY/BEAM' .or. bunit.eq.'JY') then
         bunit = 'JY'
       else
         bunit = ' '
       endif
-      if (Type.eq.'Phase') bunit = 'DEGREES'
-      if (bunit.ne.' ') call wrhda(lOut,'bunit',bunit)
-c
-c  Write the history.
-c
+      if (otype.eq.'Phase') bunit = 'DEGREES'
+      if (bunit.ne.' ') call wrhda(lOut, 'bunit', bunit)
+
+c     Update history.
       call hisopen(lOut,'append')
-      line = 'FFT: Miriad '//version
-      call hiswrite(lOut,line)
-      call hisinput(lOut,'FFT')
-      line = 'FFT: File is '//Type//' data.'
-      call hiswrite(lOut,line)
+      call hiswrite(lOut, 'FFT: Miriad ' // version)
+      call hisinput(lOut, 'FFT')
+      call hiswrite(lOut, 'FFT: File is ' // otype // ' data.')
       call hisclose(lOut)
 
       end
@@ -508,9 +489,7 @@ c-----------------------------------------------------------------------
       integer   i, j
       real      ip, rdat(MAXDIM), rp
 c-----------------------------------------------------------------------
-c
-c  Output the real file.
-c
+c     Output the real file.
       if (lrOut.ne.0) then
         do j = 1, n2
           do i = 1, n1
@@ -519,9 +498,8 @@ c
           call xywrite(lrOut,j,rdat)
         enddo
       endif
-c
-c  Output the imaginary file.
-c
+
+c     Output the imaginary file.
       if (liOut.ne.0) then
         do j = 1, n2
           do i = 1, n1
@@ -530,9 +508,8 @@ c
           call xywrite(liOut,j,rdat)
         enddo
       endif
-c
-c  Output the magnitude file.
-c
+
+c     Output the magnitude file.
       if (lMag.ne.0) then
         do j = 1, n2
           do i = 1, n1
@@ -541,9 +518,8 @@ c
           call xywrite(lMag,j,rdat)
         enddo
       endif
-c
-c  Output the phase file.
-c
+
+c     Output the phase file.
       if (lPhase.ne.0) then
         do j = 1, n2
           do i = 1, n1
