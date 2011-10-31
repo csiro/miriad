@@ -32,7 +32,7 @@ c    08aug07 rjs  Correct bug in averaging wide channels.
 c    27aug09 mhw  Handle multiple bandpass solution intervals
 c    24feb11 mhw  Handle freq bins in gains and leakage
 c
-c $Id: uvgn.for,v 1.14 2011/10/18 02:34:49 wie017 Exp $
+c $Id: uvgn.for,v 1.15 2011/10/31 00:28:01 wie017 Exp $
 c***********************************************************************
 
       subroutine uvGnIni(tno1,dogains1,dopass1)
@@ -354,33 +354,33 @@ c  Free up all the memory that may have been allocated for the antenna
 c  based bandpass calibration.
 c
       if (nTab.ne.0) then
-        call MemFree(pTab, nTab, 'c')
+        call MemFrep(pTab, nTab, 'c')
         nTab = 0
       endif
       if (nDat(1).ne.0) then
-        call MemFree(pDat(1),nDat(1),'c')
-        call MemFree(pFlags(1),nDat(1),'l')
+        call MemFrep(pDat(1),nDat(1),'c')
+        call MemFrep(pFlags(1),nDat(1),'l')
         nDat(1) = 0
       endif
       if (nDat(2).ne.0) then
-        call MemFree(pDat(2),nDat(2),'c')
-        call MemFree(pFlags(2),nDat(2),'l')
+        call MemFrep(pDat(2),nDat(2),'c')
+        call MemFrep(pFlags(2),nDat(2),'l')
         nDat(2) = 0
       endif
       if (nFreq(1).ne.0) then
-        call MemFree(pFreq(1),nFreq(1),'d')
+        call MemFrep(pFreq(1),nFreq(1),'d')
         nFreq(1) = 0
       endif
       if (nFreq(2).ne.0) then
-        call MemFree(pFreq(2),nFreq(2),'d')
+        call MemFrep(pFreq(2),nFreq(2),'d')
         nFreq(2) = 0
       endif
 c
 c  Free up all the memory that may have been allocated for the baseline
 c  based bandpass calibration.
 c
-      if (docgains) call MemFree(pCgains,ncgains*ncbase,'c')
-      if (dowgains) call MemFree(pWgains,nwgains*nwbase,'c')
+      if (docgains) call MemFrep(pCgains,ncgains*ncbase,'c')
+      if (dowgains) call MemFrep(pWgains,nwgains*nwbase,'c')
 c
 c  Clear out everything.
 c
@@ -704,6 +704,7 @@ c    data
 c    flags
 c-----------------------------------------------------------------------
       include 'uvgn.h'
+      include 'mem.h'
       integer LINE,WIDE,VELO
       parameter (LINE=1,WIDE=2,VELO=3)
       integer TYPE,COUNT,START,WIDTH,STEP
@@ -711,10 +712,6 @@ c-----------------------------------------------------------------------
       integer linetype,i,j,bl,i0
       logical willcg,ok
       double precision dat(6)
-
-c     Dynamic memory bull.
-      complex cref(MAXBUF/2)
-      common cref
 c-----------------------------------------------------------------------
 c
 c  Determine whether its cgains or wgains that we are to apply.
@@ -757,7 +754,7 @@ c
         enddo
       else
         do i = 1, nread
-          data(i) = data(i) * cref(j)
+          data(i) = data(i) * memC(j)
           j = j + 1
         enddo
       endif
@@ -851,17 +848,11 @@ c    data       The correlation data. Corrected on output.
 c    flags      The data flags.
 c-----------------------------------------------------------------------
       include 'uvgn.h'
+      include 'mem.h'
 
       logical upd
       integer table,i
       real    factor
-
-c     Dynamic memory commons.
-      logical lref(MAXBUF)
-      double precision dref(MAXBUF/2)
-      complex cref(MAXBUF/2)
-      equivalence (lref,dref,cref)
-      common cref
 
       logical  uvvarupd
       external uvvarupd
@@ -923,9 +914,9 @@ c     Compute the interpolation factor for the time direction.
 
 c     Having the up-to-date gains and frequencies, apply them.
       if (dopass) call uvGnPsPB(ant1,ant2,p,nfeeds,nants,
-     *  cref(pDat(table)),lref(pFlags(table)),data,flags,nread)
+     *  memC(pDat(table)),memL(pFlags(table)),data,flags,nread)
 
-      if (dotau) call uvGnPsDl(tau,data,dref(pFreq(table)),freq0,nread)
+      if (dotau) call uvGnPsDl(tau,data,memD(pFreq(table)),freq0,nread)
 
       end
 
@@ -1050,7 +1041,8 @@ c***********************************************************************
      *  nspect,sfreq,sdf,nschan,pGains,Size,bptimes,maxsoln)
 
       integer tno,maxspect,nbpsols,ngains,nchan,nspect,maxsoln
-      integer nschan(maxspect),Size,pGains
+      integer nschan(maxspect),Size
+      ptrdiff pGains
       double precision sfreq(maxspect),sdf(maxspect)
       double precision bptimes(maxsoln)
 c-----------------------------------------------------------------------
@@ -1070,13 +1062,10 @@ c    nschan
 c    pGains     All the bandpass gains
 c    Size       Size of pGains allocation
 c-----------------------------------------------------------------------
+      include 'maxdim.h'
+      include 'mem.h'
       integer item,iostat,i,off,offg,n
       double precision freqs(2)
-
-c     Dynamic memory rubbish.
-      include 'maxdim.h'
-      complex cref(MAXBUF/2)
-      common cref
 
 c     Externals.
       integer hsize
@@ -1088,7 +1077,7 @@ c     Get the dimensionality numbers.
       if (ngains.le.0 .or. nchan.le.0 .or. nspect.le.0) call bug('f',
      *  'Invalid value for nchan, ngains or nspect, in uvDat')
       Size = ngains*nchan*n
-      call MemAlloc(pGains,Size,'c')
+      call MemAllop(pGains,Size,'c')
       if (nspect.gt.maxspect) call bug('f',
      *  'Too many spectral windows for me to handle, in uvDat')
 
@@ -1124,7 +1113,7 @@ c     Read in the gains themselves now.
       off=8
       offg=0
       do i = 1, n
-        call hreadr(item,cref(pGains+offg),off,8*ngains*nchan,iostat)
+        call hreadr(item,memC(pGains+offg),off,8*ngains*nchan,iostat)
         off=off+8*ngains*nchan
         offg=offg+ngains*nchan
         if (nbpsols.gt.0) then
@@ -1172,19 +1161,13 @@ c    pFlags
 c    pFreq,nFreq
 c-----------------------------------------------------------------------
       include 'maxdim.h'
+      include 'mem.h'
       integer MAXSPECT
       parameter (MAXSPECT=MAXWIN)
       integer nspect0,nschan0(MAXSPECT)
       double precision sfreq0(MAXSPECT),sdf0(MAXSPECT)
       double precision swidth0(MAXSPECT)
       logical doaver
-
-c     Dynamic memory commons.
-      logical lref(MAXBUF)
-      double precision dref(MAXBUF/2)
-      complex cref(MAXBUF/2)
-      equivalence (lref,dref,cref)
-      common cref
 c-----------------------------------------------------------------------
 c     Load the description of the data line.
       call uvGnPsGt(tno,dowide,nread,MAXSPECT,doaver,
@@ -1202,29 +1185,29 @@ c     Generate the gains?
 c       Check if we have enough space.
         if (nDat.lt.nfeeds*nants*nread) then
           if (nDat.gt.0) then
-            call MemFree(pDat,nDat,'c')
-            call MemFree(pFlags,nDat,'l')
+            call MemFrep(pDat,nDat,'c')
+            call MemFrep(pFlags,nDat,'l')
           endif
           nDat = nfeeds*nants*nread
-          call MemAlloc(pDat,nDat,'c')
-          call MemAlloc(pFlags,nDat,'l')
+          call MemAllop(pDat,nDat,'c')
+          call MemAllop(pFlags,nDat,'l')
         endif
 
         call uvGnPsMa(nbpsols,nfeeds*nants,nchan,nspect,sfreq,sdf,
-     *    nschan,cref(pTab),bpsolno,factor,nread,nspect0,sfreq0,sdf0,
-     *    swidth0,nschan0,cref(pDat),lref(pFlags))
+     *    nschan,memC(pTab),bpsolno,factor,nread,nspect0,sfreq0,sdf0,
+     *    swidth0,nschan0,memC(pDat),memL(pFlags))
       endif
 
 c     Generate the frequency table?
       if (dotau) then
 c       Check if we have enough space.
         if (nFreq.lt.nread) then
-          if (nFreq.gt.0) call MemFree(pFreq,nFreq,'d')
+          if (nFreq.gt.0) call MemFrep(pFreq,nFreq,'d')
           nFreq = nread
-          call MemAlloc(pFreq,nFreq,'d')
+          call MemAllop(pFreq,nFreq,'d')
         endif
 
-        call uvGnPsFq(nread,nspect0,sfreq0,sdf0,nschan0,dref(pFreq))
+        call uvGnPsFq(nread,nspect0,sfreq0,sdf0,nschan0,memD(pFreq))
       endif
 
       end
@@ -1559,10 +1542,7 @@ c  This reads the channel gains into common from the cgains item.
 c-----------------------------------------------------------------------
       integer iostat,item
       include 'uvgn.h'
-
-c     Dynamic memory commons.
-      complex cref(MAXBUF/2)
-      common cref
+      include 'mem.h'
 c-----------------------------------------------------------------------
 c
 c  Get the number of channel gains.
@@ -1576,7 +1556,7 @@ c
 c
 c  Allocate memory.
 c
-      call MemAlloc(pCgains,ncgains*ncbase,'c')
+      call MemAllop(pCgains,ncgains*ncbase,'c')
 c
 c  Open the cgains item.
 c
@@ -1585,7 +1565,7 @@ c
 c
 c  Read in channel gains and finish up..
 c
-      call hreadr(item,cref(pCgains),0,8*ncgains*ncbase,iostat)
+      call hreadr(item,memC(pCgains),0,8*ncgains*ncbase,iostat)
       if (iostat.ne.0) call UvGnBug(iostat,'reading cgains table')
       call hdaccess(item,iostat)
       if (iostat.ne.0) call UvGnBug(iostat,'closing cgains table')
@@ -1600,10 +1580,8 @@ c  This reads the wideband gains into common from the wgains item.
 c-----------------------------------------------------------------------
       integer iostat,item
       include 'uvgn.h'
+      include 'mem.h'
 
-c     Dynamic memory commons.
-      complex cref(MAXBUF/2)
-      common cref
 c-----------------------------------------------------------------------
 c
 c  Get the number of wideband gains.
@@ -1617,7 +1595,7 @@ c
 c
 c  Allocate memory.
 c
-      call MemAlloc(pWgains,nwgains*nwbase,'c')
+      call MemAllop(pWgains,nwgains*nwbase,'c')
 c
 c  Open the wgains item.
 c
@@ -1626,7 +1604,7 @@ c
 c
 c  Read in channel gains and finish up..
 c
-      call hreadr(item,cref(pWgains),0,8*nwgains*nwbase,iostat)
+      call hreadr(item,memC(pWgains),0,8*nwgains*nwbase,iostat)
       if (iostat.ne.0) call UvGnBug(iostat,'reading wgains table')
       call hdaccess(item,iostat)
       if (iostat.ne.0) call UvGnBug(iostat,'closing wgains table')

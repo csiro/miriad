@@ -29,7 +29,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: mostab.for,v 1.5 2011/10/21 05:43:04 cal103 Exp $
+c $Id: mostab.for,v 1.6 2011/10/31 00:28:01 wie017 Exp $
 c***********************************************************************
 
       subroutine MosCIni
@@ -393,8 +393,8 @@ c
 c  Allocate the arrays to determine shifts.
 c
       nxy = nchan*npnt
-      call MemAlloc(pX,nxy,'r')
-      call MemAlloc(pY,nxy,'r')
+      call MemAllop(pX,nxy,'r')
+      call MemAllop(pY,nxy,'r')
 c
 c  Do the shift calculations.
 c
@@ -958,8 +958,8 @@ c-----------------------------------------------------------------------
       real Sig
 c-----------------------------------------------------------------------
       if (nxy.gt.0) then
-        call MemFree(pX,nxy,'r')
-        call MemFree(pY,nxy,'r')
+        call MemFrep(pX,nxy,'r')
+        call MemFrep(pY,nxy,'r')
         nxy = 0
       endif
 
@@ -1043,7 +1043,7 @@ c-----------------------------------------------------------------------
       include 'mem.h'
       include 'mostab.h'
 
-      integer pWts
+      ptrdiff pWts
 c-----------------------------------------------------------------------
       if (npnt1.ne.npnt)
      *  call bug('f','Inconsistency in Mosaic')
@@ -1051,12 +1051,12 @@ c-----------------------------------------------------------------------
       if (npnt.eq.1) then
         call Mosaic1(In,Out,nx,ny,mnx,mny,Runs,MAXRUNS,nRuns)
       else
-        call MemAlloc(pWts,mnx*mny,'r')
+        call MemAllop(pWts,mnx*mny,'r')
         if (nx2.gt.(nx-1)/2 .or. ny2.gt.(ny-1)/2)
      *    call bug('f','Inconsistency in Mosaicer')
         call Mosaic2(In,Out,memr(pWts),nx,ny,npnt,mnx,mny,Rms2)
         call mosRuns(memr(pWts),mnx,mny,Runs,MAXRUNS,nRuns)
-        call memFree(pWts,mnx*mny,'r')
+        call memFrep(pWts,mnx*mny,'r')
       endif
 
       end
@@ -1353,7 +1353,7 @@ c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mem.h'
 
-      integer   pWts
+      ptrdiff   pWts
       double precision xref(3)
 c-----------------------------------------------------------------------
 c     Determine the location of the reference position in pixel coords.
@@ -1361,10 +1361,10 @@ c     Determine the location of the reference position in pixel coords.
 
       call MosMini(coObj, real(xref(3)))
 
-      call MemAlloc(pWts, NX*NY, 'r')
+      call MemAllop(pWts, NX*NY, 'r')
       call MosPnt1(NX, NY, NPNT1, nint(xref(1)), nint(xref(2)), beams,
      *             memr(pWts), psf)
-      call MemFree(pWts, NX*NY, 'r')
+      call MemFrep(pWts, NX*NY, 'r')
 
       call MosMFin
 

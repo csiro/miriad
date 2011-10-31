@@ -91,9 +91,9 @@ c------------------------------------------------------------------------
 	integer i,k,z,l
 	real hf,hl,hs,hz,hh
 	logical first
-	integer pivot
+	ptrdiff pivot
 c
-	call memAlloc(pivot,n,'i')
+	call memAllop(pivot,n,'i')
 c
 	first = .true.
 	hs = 0
@@ -162,5 +162,5 @@ c
 c
 c ENDE:
   30	continue
-	call memfree(pivot,n,'i')
+	call memfrep(pivot,n,'i')
 	end

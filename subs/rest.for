@@ -23,7 +23,8 @@ c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
 c
-	integer naxis1,naxis2,naxis3,ipnt,isdb,nxy,pGaus,x0,y0,ic,jc
+	integer naxis1,naxis2,naxis3,ipnt,isdb,nxy,x0,y0,ic,jc
+        ptrdiff pGaus
 	double precision crpix1,crpix2
 	real bmaj,bmin,bpa
 c
@@ -72,7 +73,7 @@ c
 	  nxy = 0
 	else
 	  nxy = nx*ny
-	  call memAlloc(pGaus,nxy,'r')
+	  call memAllop(pGaus,nxy,'r')
 	  if(mode.eq.'clean'.or.mode.eq.'convolve')
      *	    call RestGaus(memr(pGaus),nx,ny,x0,y0,bmaj,bmin,bpa)
 	endif
@@ -103,7 +104,7 @@ c
 c
 c  All said and done.
 c
-	if(nxy.gt.0)call memFree(pGaus,nxy,'r')
+	if(nxy.gt.0)call memFrep(pGaus,nxy,'r')
 	call coFin(lBeam)
 c
 	end
@@ -258,7 +259,8 @@ c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
 	include 'rest.h'
-	integer pDat,naxis1,naxis2,naxis3
+	ptrdiff pDat
+        integer naxis1,naxis2,naxis3
 c
 	call xysetpl(lModel,1,i)
 	call rdhdi(lModel,'naxis1',naxis1,0)
@@ -266,22 +268,22 @@ c
 	call rdhdi(lModel,'naxis3',naxis3,1)
 c
 	if(mosaic)then
-	  call memAlloc(pDat,naxis1*naxis2,'r')
+	  call memAllop(pDat,naxis1*naxis2,'r')
 	  call RestGet(lModel,memr(pDat),
      *	    naxis1,naxis2,naxis1,naxis2,naxis1/2+1,naxis2/2+1)
 	  call mcPlane(lModel,i)
 	  call mcCnvl(memr(pDat),naxis1,naxis2,Out,nx,ny)
-	  call memFree(pDat,naxis1*naxis2,'r')
+	  call memFrep(pDat,naxis1*naxis2,'r')
 	else
 	  call CnvlF(cnvl1,lModel,naxis1,naxis2,Out,' ')
 	endif
 c
 	if(mfs.and.naxis3.eq.2)then
-	  call memAlloc(pDat,nx*ny,'r')
+	  call memAllop(pDat,nx*ny,'r')
 	  call xysetpl(lModel,1,2)
 	  call CnvlF(cnvl2,lModel,naxis1,naxis2,memr(pDat),' ')
 	  call RestAdd(Out,memr(pDat),nx,ny)
-	  call memFree(pDat,nx*ny,'r')
+	  call memFrep(pDat,nx*ny,'r')
 	endif
 c
 	end

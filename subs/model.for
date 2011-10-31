@@ -62,7 +62,7 @@ c    rjs  14dec99 Support for visibility datasets as models.
 c    rjs  14aug00 Re-Added "sources" file support.
 c    rjs  18sep05 Type mismatch error.
 c
-c $Id: model.for,v 1.5 2010/10/14 04:00:54 cal103 Exp $
+c $Id: model.for,v 1.6 2011/10/31 00:28:01 wie017 Exp $
 c***********************************************************************
 c*ModelIni -- Ready the uv data file for processing by the Model routine
 c&rjs
@@ -284,11 +284,13 @@ c    nchan
 c    nvis
 c-----------------------------------------------------------------------
       include 'maxdim.h'
+      include 'mem.h'
       integer maxgcf,width,maxlen
       parameter (maxgcf=2048,width=6)
       parameter (maxlen=5*maxchan+10)
 
-      integer length,nx,ny,nz,nxd,nyd,nu,nv,ngcf,u0,v0,nread,j,pnt
+      integer length,nx,ny,nz,nxd,nyd,nu,nv,ngcf,u0,v0,nread,j
+      ptrdiff pnt
       integer polm
       double precision preamble(6),ucoeff(3),vcoeff(3),wcoeff(3)
       double precision x1(2),x2(2)
@@ -297,10 +299,8 @@ c-----------------------------------------------------------------------
       real Out(maxlen),uu,vv,u,v
       logical accept,flags(maxchan),doshift,GotFreq
       logical domodl
-      complex Buffer(1+(MAXBUF-1)/2)
       complex In(maxchan),Intp(maxchan+1)
       double precision sfreq(maxchan),freq0
-      common Buffer
 
 c     Externals.
       logical hdprsnt
@@ -343,7 +343,7 @@ c
       v0 = nyd/2 + 1
       umax = 0.5*(nxd-1-width)
       vmax = 0.5*(nyd-1-width)
-      call MemAlloc(pnt,2*nu*nv*nz+1,'r')
+      call MemAllop(pnt,nu*nv*nz+1,'c')
 
       nvis = 0
 
@@ -369,7 +369,7 @@ c
 c  Now that we have the info, we can find the FFT of the model.
 c
       call ModFFT(tvis,tmod,nx,ny,nz,nxd,nyd,level,polm,doclip,
-     *  Buffer(pnt/2+1),nv,nu,mfs,xref1,yref1,xref2,yref2)
+     *  memC(pnt),nv,nu,mfs,xref1,yref1,xref2,yref2)
       ngcf = width*((maxgcf-1)/width) + 1
       doshift = abs(xref1)+abs(yref1)+abs(xref2)+abs(yref2).gt.0
       call gcffun('spheroidal',gcf,ngcf,width,1.0)
@@ -415,7 +415,7 @@ c
                 Intp(j) = 0
                 flags(j) = zero .and. flags(j)
               else
-                call ModGrid(uu,vv,Buffer(pnt/2+1),nu,nv,nz,u0,v0,
+                call ModGrid(uu,vv,memC(pnt),nu,nv,nz,u0,v0,
      *            gcf,ngcf,Intp(j))
                 if (nz.eq.2) Intp(j) = Intp(j) +
      *                log(real(sfreq(j)/freq0))*Intp(j+1)
@@ -433,7 +433,7 @@ c
               enddo
               GotFreq = .true.
             else
-              call ModGrid(u,v,Buffer(pnt/2+1),nu,nv,nread,u0,v0,
+              call ModGrid(u,v,memC(pnt),nu,nv,nread,u0,v0,
      *          gcf,ngcf,Intp)
             endif
           endif
@@ -462,7 +462,7 @@ c
 
       if (nread.ne.0) call bug('w',
      *  'Stopped reading vis data when number of channels changed')
-      call MemFree(pnt,2*nu*nv*nz+1,'r')
+      call MemFrep(pnt,nu*nv*nz+1,'c')
       end
 
 c***********************************************************************
