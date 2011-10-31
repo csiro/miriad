@@ -1,7 +1,7 @@
 	include 'maxdim.h'
 c
 	integer MAXDATA,MAXPOL
-	parameter(MAXDATA=5000,MAXPOL=2)
+	parameter(MAXDATA=100000,MAXPOL=2)
 c
 	complex Vis(MAXDATA),Model(MAXDATA)
 	integer b1(MAXDATA),b2(MAXDATA),t1(MAXDATA),t2(MAXDATA)
