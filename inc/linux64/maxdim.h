@@ -1,5 +1,5 @@
 C=======================================================================
-C $Id: maxdim.h,v 1.10 2011/09/18 23:15:53 wie017 Exp $
+C $Id: maxdim.h,v 1.11 2011/10/31 00:46:33 wie017 Exp $
 C-----------------------------------------------------------------------
 C     Size of an INTEGER array used to implement a memory heap.  This
 C     array is the sole variable in blank COMMON in Miriad.  Trial-and-
@@ -21,7 +21,7 @@ C     segvs in mfclean.  Note that, depending on the algorithm, MAXBUF
 C     may also play an important role in determining the maximum image
 C     size that can be handled.
       INTEGER   MAXDIM
-      PARAMETER(MAXDIM = 16*1024)
+      PARAMETER(MAXDIM = 32*1024)
 
 C     Maximum number of antennas (ATA=64).
       INTEGER   MAXANT
