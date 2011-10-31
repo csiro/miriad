@@ -75,7 +75,7 @@ c                    This will give better stability if you are daring
 c                    enough to deconvolve more than the inner quarter of
 c                    the dirty image.
 c
-c$Id: maxen.for,v 1.4 2010/11/22 05:41:21 cal103 Exp $
+c$Id: maxen.for,v 1.5 2011/10/31 00:37:30 wie017 Exp $
 c--
 c  History:
 c    rjs   nov88 - Original version.
@@ -151,7 +151,7 @@ c-----------------------------------------------------------------------
       character BeamNam*64, DefNam*64, entropy*8, flags*8, line*72,
      *          MapNam*64, messlev*8, ModelNam*64, OutNam*64, version*72
 
-      integer pBem,pMap,pEst,pDef,pRes,pNewEst,pNewRes
+      ptrdiff   pBem,pMap,pEst,pDef,pRes,pNewEst,pNewRes
       real Data(MaxBuf)
       common Data
 
@@ -160,8 +160,8 @@ c-----------------------------------------------------------------------
       external  ismax, itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('maxen',
-     *                 '$Revision: 1.4 $',
-     *                 '$Date: 2010/11/22 05:41:21 $')
+     *                 '$Revision: 1.5 $',
+     *                 '$Date: 2011/10/31 00:37:30 $')
 c
 c  Get the input parameters.
 c
@@ -260,12 +260,12 @@ c
 c  Allocate arrays to hold everything.
 c
       MaxMap = nOut(1)*nOut(2)
-      call MemAlloc(pMap,MaxMap,'r')
-      call MemAlloc(pEst,MaxMap,'r')
-      call MemAlloc(pDef,MaxMap,'r')
-      call MemAlloc(pRes,MaxMap,'r')
-      call MemAlloc(pNewEst,MaxMap,'r')
-      call MemAlloc(pNewRes,MaxMap,'r')
+      call MemAllop(pMap,MaxMap,'r')
+      call MemAllop(pEst,MaxMap,'r')
+      call MemAllop(pDef,MaxMap,'r')
+      call MemAllop(pRes,MaxMap,'r')
+      call MemAllop(pNewEst,MaxMap,'r')
+      call MemAllop(pNewRes,MaxMap,'r')
 c
 c  Open the model if needed, and check that is is the same size as the
 c  output.
@@ -1075,7 +1075,8 @@ c***********************************************************************
       subroutine Diff(pBem,Estimate,Map,Residual,nPoint,nx,ny,
      *  Run,nRun)
 
-      integer nPoint,nx,ny,nRun,Run(3,nRun),pBem
+      integer nPoint,nx,ny,nRun,Run(3,nRun)
+      ptrdiff pBem
       real Estimate(nPoint),Map(nPoint),Residual(nPoint)
 c
 c-----------------------------------------------------------------------

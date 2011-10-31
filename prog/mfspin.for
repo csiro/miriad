@@ -62,10 +62,11 @@ c       the linearly polarized intensity spectral index image, and the
 c       second will receive an estimate of the rotation measure (units
 c       of rad/m**2).
 c
-c$Id: mfspin.for,v 1.5 2011/10/25 06:00:15 cal103 Exp $
+c$Id: mfspin.for,v 1.6 2011/10/31 00:37:30 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
+c    mhw  27oct11  Use ptrdiff type for memory allocations
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mirconst.h'
@@ -75,10 +76,11 @@ c-----------------------------------------------------------------------
       parameter (POLQ=2, POLU=3 ,POLV=4)
 
       logical   doQU, NeedFwhm,pbcorr,twoclip
-      integer   Alpha1, Alpha2, Flux1, Flux2, Gaus, handle, lBeam,
+      integer    lBeam,
      *          lMod1, lMod2, mBeam, mModel, nBeam, nModel, nPd, npix,
      *          nruns, nsize(3), pol1, pol2, Runs(3,MAXRUNS), xBeam,
      *          yBeam
+      ptrdiff   Alpha1, Alpha2, Flux1, Flux2, Gaus, handle
       real      cdelt1, cdelt2, clip(2), crpix1, crpix2, dat(MAXBUF),
      *          fwhm1, fwhm2, nu0, pa, Patch(NP*NP)
       character beam*128, line*72, modl1*128, modl2*128, out1*128,
@@ -92,8 +94,8 @@ c-----------------------------------------------------------------------
       common dat
 c-----------------------------------------------------------------------
       version = versan('mfspin',
-     *                 '$Revision: 1.5 $',
-     *                 '$Date: 2011/10/25 06:00:15 $')
+     *                 '$Revision: 1.6 $',
+     *                 '$Date: 2011/10/31 00:37:30 $')
 c
 c  Get the input parameters.
 c
@@ -216,19 +218,19 @@ c
 c
 c  Get the Fourier transform of the gaussian.
 c
-      call MemAlloc(Gaus,mBeam*nBeam,'r')
+      call MemAllop(Gaus,mBeam*nBeam,'r')
       call GetBeam(mBeam,nBeam,xBeam,yBeam,dat(Gaus),
      *  cdelt1,cdelt2,fwhm1,fwhm2,pa)
       call CnvlIniA(handle,dat(Gaus),mBeam,nBeam,xBeam,yBeam,0.0,'s')
-      call MemFree(Gaus,mBeam*nBeam,'r')
+      call MemFrep(Gaus,mBeam*nBeam,'r')
 c
 c  Allocate all the memory we could possible want.
 c
-      call MemAlloc(Flux1,mModel*nModel,'r')
-      call MemAlloc(Alpha1,mModel*nModel,'r')
+      call MemAllop(Flux1,mModel*nModel,'r')
+      call MemAllop(Alpha1,mModel*nModel,'r')
       if (doQU) then
-        call MemAlloc(Flux2,mModel*nModel,'r')
-        call MemAlloc(Alpha2,mModel*nModel,'r')
+        call MemAllop(Flux2,mModel*nModel,'r')
+        call MemAllop(Alpha2,mModel*nModel,'r')
       else
         Flux2 = Flux1
       endif
@@ -289,12 +291,12 @@ c
 c
 c  All said and done. Close up the files, and leave.
 c
-      call MemFree(Flux1,mModel*nModel,'r')
-      call MemFree(Alpha1,mModel*nModel,'r')
+      call MemFrep(Flux1,mModel*nModel,'r')
+      call MemFrep(Alpha1,mModel*nModel,'r')
       call xyclose(lMod1)
       if (doQU) then
-        call MemFree(Flux2,mModel*nModel,'r')
-        call MemFree(Alpha2,mModel*nModel,'r')
+        call MemFrep(Flux2,mModel*nModel,'r')
+        call MemFrep(Alpha2,mModel*nModel,'r')
         call xyclose(lMod2)
       endif
 

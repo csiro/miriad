@@ -96,7 +96,7 @@ c@ clip
 c       This sets the relative clip level in Steer mode. Values are
 c       typically 0.75 to 0.9. The default is image dependent.
 c
-c$Id: clean.for,v 1.11 2010/11/22 07:06:45 cal103 Exp $
+c$Id: clean.for,v 1.12 2011/10/31 00:37:30 wie017 Exp $
 c--
 c
 c  History:
@@ -151,6 +151,7 @@ c   rjs  28aug00 - Increase max complexity of region-of-interest.
 c   dpr  06mar01 - Doc change only.
 c   gmx  07mar04 - Changed optimum gain determination to handle
 c                   negative components
+c   mhw  27oct11 - Use ptrdiff type for memory allocations
 c
 c  Important Constants:
 c    MaxDim     The max linear dimension of an input (or output) image.
@@ -175,7 +176,7 @@ c-----------------------------------------------------------------------
 
       real Data(MaxBuf)
       integer Boxes(MAXBOX),Run(3,MAXRUN),MaxMap
-      integer pBem,pMap,pEst,pRes
+      ptrdiff pBem,pMap,pEst,pRes
       real RCmp(MAXCMP2),CCmp(MAXCMP2)
       real Histo(MAXP/2+1),BemPatch(MAXBEAM)
       integer ICmp(MAXCMP1),JCmp(MAXCMP1)
@@ -199,8 +200,8 @@ c     Externals.
       character itoaf*8, versan*80
 c-----------------------------------------------------------------------
       version = versan ('clean',
-     *                  '$Revision: 1.11 $',
-     *                  '$Date: 2010/11/22 07:06:45 $')
+     *                  '$Revision: 1.12 $',
+     *                  '$Date: 2011/10/31 00:37:30 $')
 c
 c  Get the input parameters.
 c
@@ -264,9 +265,9 @@ c
 c  Allocate space for the Map,Estimate and Residuals.
 c
       MaxMap = nOut(1)*nOut(2)
-      call MemAlloc(pMap,MaxMap,'r')
-      call MemAlloc(pEst,MaxMap,'r')
-      call MemAlloc(pRes,MaxMap,'r')
+      call MemAllop(pMap,MaxMap,'r')
+      call MemAllop(pEst,MaxMap,'r')
+      call MemAllop(pRes,MaxMap,'r')
 c
 c  Open the model if there is one.  Note that currently the model
 c  must agree exactly in size with the output map (an unfortunate
@@ -885,7 +886,8 @@ c***********************************************************************
       subroutine Steer(pBem,Residual,Estimate,Temp,nPoint,nx,ny,
      *        Limit,Gain,Niter,Run,nrun)
 
-      integer Niter,nrun,Run(3,nrun),nPoint,nx,ny,pBem
+      integer Niter,nrun,Run(3,nrun),nPoint,nx,ny
+      ptrdiff pBem
       real Gain,Limit
       real Residual(nPoint),Temp(nPoint),Estimate(nPoint)
 c-----------------------------------------------------------------------
@@ -1522,7 +1524,8 @@ c***********************************************************************
       subroutine Diff(pBem,Estimate,Map,Residual,nPoint,nx,ny,
      *  Run,nRun)
 
-      integer nPoint,nx,ny,nRun,Run(3,nRun),pBem
+      integer nPoint,nx,ny,nRun,Run(3,nRun)
+      ptrdiff pBem
       real Estimate(nPoint),Map(nPoint),Residual(nPoint)
 c-----------------------------------------------------------------------
       integer i

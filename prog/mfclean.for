@@ -98,7 +98,7 @@ c       x and y pixel coordinate (in the output model; this goes from 1
 c       to N), the "I" component and the "I*alpha" component.  The
 c       default is to not create a log file.
 c
-c$Id: mfclean.for,v 1.4 2010/11/22 05:39:13 cal103 Exp $
+c$Id: mfclean.for,v 1.5 2011/10/31 00:37:30 wie017 Exp $
 c--
 c  History:
 c    rjs   Nov89 - Original version.
@@ -143,6 +143,7 @@ c   rjs  24jun97 - Correct check for good alignment.
 c   rjs  02jul97 - Added cellscal.
 c   rjs  23jul97 - Added pbtype.
 c   rjs  14aug00 - Added log file output.
+c   mhw  27oct11 - Use ptrdiff type for memory allocations
 c
 c  Bugs and Shortcomings:
 c     * The way it does convolutions is rather inefficent, partially
@@ -170,8 +171,8 @@ c-----------------------------------------------------------------------
       parameter (maxBeam=maxP*maxP,maxBox=3*MAXDIM,maxRun=3*maxDim)
 
       integer Boxes(maxBox),Run(3,maxRun),nPoint,nRun
-      integer Map0,Map1,Res0,Res1,Est0,Est1,Tmp
-      integer FFT0,FFT1,FFT01,FFT10,FFT00,FFT11
+      ptrdiff Map0,Map1,Res0,Res1,Est0,Est1,Tmp
+      ptrdiff FFT0,FFT1,FFT01,FFT10,FFT00,FFT11
       real Rcmp0(maxCmp2),Rcmp1(maxCmp2),Ccmp0(maxCmp2),Ccmp1(maxCmp2)
       real Histo(maxP/2+1)
       real Patch00(maxBeam),Patch11(maxBeam)
@@ -198,8 +199,8 @@ c-----------------------------------------------------------------------
       external  itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('mfclean',
-     *                 '$Revision: 1.4 $',
-     *                 '$Date: 2010/11/22 05:39:13 $')
+     *                 '$Revision: 1.5 $',
+     *                 '$Date: 2011/10/31 00:37:30 $')
 c
 c  Get the input parameters.
 c
@@ -294,7 +295,7 @@ c
 c  Get the FFT of the beam.
 c
       call output('FFTing the beams ...')
-      call MemAlloc(Tmp,n1*n2,'r')
+      call MemAllop(Tmp,n1*n2,'r')
       call xysetpl(lBeam,1,1)
       call GetBeam(FFT0,lBeam,dat(Tmp),n1,n2,n1d,n2d,ic,jc)
       call xysetpl(lBeam,1,2)
@@ -303,8 +304,8 @@ c
 c  Get the convolution of the map and the two beams.
 c
       call output('Calculating the map*beam ...')
-      call MemAlloc(Map0,nPoint,'r')
-      call MemAlloc(Map1,nPoint,'r')
+      call MemAllop(Map0,nPoint,'r')
+      call MemAllop(Map1,nPoint,'r')
       call GetMap(FFT0,lMap,Run,nRun,xmin-1,ymin-1,dat(Map0),
      *                                dat(Tmp),nMap(1),nMap(2))
       call GetMap(FFT1,lMap,Run,nRun,xmin-1,ymin-1,dat(Map1),
@@ -351,10 +352,10 @@ c  Free up the unneeded beams, and then allocate some more memory.
 c
       call CnvlFin(FFT1)
       call CnvlFin(FFT0)
-      call MemAlloc(Res0,nPoint,'r')
-      call MemAlloc(Res1,nPoint,'r')
-      call MemAlloc(Est0,nPoint,'r')
-      call MemAlloc(Est1,nPoint,'r')
+      call MemAllop(Res0,nPoint,'r')
+      call MemAllop(Res1,nPoint,'r')
+      call MemAllop(Est0,nPoint,'r')
+      call MemAllop(Est1,nPoint,'r')
 c
 c  Initialise the estimate, and determine the residuals if the the user
 c  gave an estimate. Determine statistics about the estimate and the
@@ -475,7 +476,8 @@ c***********************************************************************
 
       subroutine GetBeam(FFT,lBeam,Data,n1,n2,n1d,n2d,ic,jc)
 
-      integer FFT,lBeam,n1,n2,n1d,n2d,ic,jc
+      ptrdiff FFT
+      integer lBeam,n1,n2,n1d,n2d,ic,jc
       real Data(n1,n2)
 c-----------------------------------------------------------------------
 c  This reads in a subsection of the beam, zeros part of it, and

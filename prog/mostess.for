@@ -59,12 +59,13 @@ c         verbose    Give lots of messages during the iterations.  The
 c                    default is to give a one line message at each
 c                    iteration.
 c
-c$Id: mostess.for,v 1.5 2011/06/02 05:15:10 wie017 Exp $
+c$Id: mostess.for,v 1.6 2011/10/31 00:37:30 wie017 Exp $
 c--
 c  History:
 c    rjs   7aug95  Adapted from MOSMEM.
 c    rjs  02jul97  cellscal change.
 c    rjs  23jul97  added pbtype.
+c    mhw  27oct11  Use ptrdiff type for memory allocations
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -77,12 +78,13 @@ c-----------------------------------------------------------------------
       parameter (MAXPNT=350)
 
       logical   converge, doflux, positive, verbose
-      integer   Cnvl(MAXPNT), i, icentre, jcentre, lBeam, lDef, lMap,
+      integer   i, icentre, jcentre, lBeam, lDef, lMap,
      *          lMod, lOut, maxniter, measure, mnx, mny, n, n1, n2,
      *          naxis, nBeam(2), nDef(3), niter, nMap(2), nMod(3),
      *          nOut(MAXNAX), npnt, nx, ny, offset(3), pbObj(MAXPNT),
-     *          pDChi, pDef, pEst, pMap, pNewDChi, pNewEst, pNewRes,
-     *          pRes, pTmp, pWt, x0(MAXPNT), y0(MAXPNT)
+     *          x0(MAXPNT), y0(MAXPNT)
+      ptrdiff   pDChi, pDef, pEst, pMap, pNewDChi, pNewEst, pNewRes,
+     *          pRes, pTmp, pWt, Cnvl(MAXPNT)
       real      Alpha, Beta, ClipLev, De, Df, Flux, Grad11, GradEE,
      *          GradEF, GradEH, GradEJ, GradFF, GradFH, GradFJ, GradHH,
      *          GradJJ, Immax, Immin, J0, J1, OStLen1, OStLen2, Q, Qest,
@@ -96,8 +98,8 @@ c-----------------------------------------------------------------------
       external  ismax, itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('mostess',
-     *                 '$Revision: 1.5 $',
-     *                 '$Date: 2011/06/02 05:15:10 $')
+     *                 '$Revision: 1.6 $',
+     *                 '$Date: 2011/10/31 00:37:30 $')
 c
 c  Get the input parameters.
 c
@@ -193,15 +195,15 @@ c
 c
 c  Loop.
 c
-      call memAlloc(pWt,mnx*mny,'r')
-      call memAlloc(pEst,mnx*mny,'r')
-      call memAlloc(pDef,mnx*mny,'r')
-      call memAlloc(pRes,npnt*nx*ny,'r')
-      call memAlloc(pNewEst,mnx*mny,'r')
-      call memAlloc(pNewRes,npnt*nx*ny,'r')
-      call memAlloc(pDChi,mnx*mny,'r')
-      call memAlloc(pNewDChi,mnx*mny,'r')
-      call memAlloc(pTmp,nx*ny,'r')
+      call memAllop(pWt,mnx*mny,'r')
+      call memAllop(pEst,mnx*mny,'r')
+      call memAllop(pDef,mnx*mny,'r')
+      call memAllop(pRes,npnt*nx*ny,'r')
+      call memAllop(pNewEst,mnx*mny,'r')
+      call memAllop(pNewRes,npnt*nx*ny,'r')
+      call memAllop(pDChi,mnx*mny,'r')
+      call memAllop(pNewDChi,mnx*mny,'r')
+      call memAllop(pTmp,nx*ny,'r')
 c
 c  Get the sum A**2/sigma**2
 c
@@ -406,16 +408,16 @@ c
 c
 c  Release any allocated memory.
 c
-      call memFree(pMap,npnt*nx*ny,'r')
-      call memFree(pWt,mnx*mny,'r')
-      call memFree(pEst,mnx*mny,'r')
-      call memFree(pDef,mnx*mny,'r')
-      call memFree(pRes,npnt*nx*ny,'r')
-      call memFree(pNewEst,mnx*mny,'r')
-      call memFree(pNewRes,npnt*nx*ny,'r')
-      call memFree(pDChi,mnx*mny,'r')
-      call memFree(pNewDChi,mnx*mny,'r')
-      call memFree(pTmp,nx*ny,'r')
+      call memFrep(pMap,npnt*nx*ny,'r')
+      call memFrep(pWt,mnx*mny,'r')
+      call memFrep(pEst,mnx*mny,'r')
+      call memFrep(pDef,mnx*mny,'r')
+      call memFrep(pRes,npnt*nx*ny,'r')
+      call memFrep(pNewEst,mnx*mny,'r')
+      call memFrep(pNewRes,npnt*nx*ny,'r')
+      call memFrep(pDChi,mnx*mny,'r')
+      call memFrep(pNewDChi,mnx*mny,'r')
+      call memFrep(pTmp,nx*ny,'r')
 c
 c  Thats all folks.
 c
@@ -865,7 +867,8 @@ c***********************************************************************
      *  pbObj,Cnvl,sigma,x0,y0)
 
       integer npnt,nx,ny,mnx,mny
-      integer pbObj(npnt),Cnvl(npnt),x0(npnt),y0(npnt)
+      integer pbObj(npnt),x0(npnt),y0(npnt)
+      ptrdiff Cnvl(npnt)
       real sigma(npnt)
       real Est(mnx,mny),Res(nx,ny,npnt),Map(nx,ny,npnt),Tmp(nx,ny)
       real DChi(mnx,mny)
@@ -1068,7 +1071,7 @@ c***********************************************************************
 
       integer npnt,ic,jc
       character BeamNam(npnt)*(*)
-      integer Cnvl(npnt)
+      ptrdiff Cnvl(npnt)
 c-----------------------------------------------------------------------
 c  Create all the convolvers.
 c-----------------------------------------------------------------------
@@ -1089,7 +1092,7 @@ c***********************************************************************
 
       integer npnt,nx,ny,mnx,mny,x0(npnt),y0(npnt),pbObj(npnt)
       character MapNam(npnt)*(*)
-      integer pMap
+      ptrdiff pMap
       real rms(npnt)
 c-----------------------------------------------------------------------
       include 'maxdim.h'
@@ -1102,7 +1105,7 @@ c
       call xyopen(lMap,MapNam(1),'old',2,nsize)
       nx = nsize(1)
       ny = nsize(2)
-      call memAlloc(pMap,nx*ny*npnt,'r')
+      call memAllop(pMap,nx*ny*npnt,'r')
 c
 c  Process the first image.
 c

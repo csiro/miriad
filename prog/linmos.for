@@ -65,7 +65,7 @@ c         gain         Rather than a mosaiced image, produce an image
 c                      giving the effective gain across the field.  If
 c                      options=taper is used, this will be a smooth
 c                      function.  Otherwise it will be 1 or 0 (blanked).
-c$Id: linmos.for,v 1.16 2011/06/06 23:33:45 wie017 Exp $
+c$Id: linmos.for,v 1.17 2011/10/31 00:37:30 wie017 Exp $
 c--
 c
 c  History:
@@ -137,7 +137,8 @@ c-----------------------------------------------------------------------
       logical   defrms, dosen, dogain, docar, exact, taper
       integer   axLen(3,MAXIN), i, itemp, k1(MAXIN), k2(MAXIN), length,
      *          lIn(MAXIN), lOut, lScr, lWts, nIn, nOpen, nOut(4),
-     *          naxis, offset, pOut, pWts
+     *          naxis, offset
+      ptrdiff   pOut, pWts
       real      blctrc(4,MAXIN), extent(4), rms(MAXIN), sigt, xoff,
      *          yoff, bw
       character inName*64, inbuf*(MAXLEN), outNam*64, version*80
@@ -147,8 +148,8 @@ c-----------------------------------------------------------------------
       external  len1, versan
 c-----------------------------------------------------------------------
       version = versan ('linmos',
-     *                  '$Revision: 1.16 $',
-     *                  '$Date: 2011/06/06 23:33:45 $')
+     *                  '$Revision: 1.17 $',
+     *                  '$Date: 2011/10/31 00:37:30 $')
 
 c     Get and check inputs.
       call keyini
@@ -274,8 +275,8 @@ c     Correct blctrc for the extent of the image.
       enddo
 
 c     Allocate memory.
-      call MemAlloc(pOut,nOut(1)*nOut(2),'r')
-      call MemAlloc(pWts,nOut(1)*nOut(2),'r')
+      call MemAllop(pOut,nOut(1)*nOut(2),'r')
+      call MemAllop(pWts,nOut(1)*nOut(2),'r')
 
 c     Process each of the files.
       call scrOpen(lScr)
@@ -306,8 +307,8 @@ c     change in the weights, and writing out the final data.
      *              nOut(1),nOut(2),nOut(3),dosen)
 
 c     Free memory.
-      call MemFree(pOut,nOut(1)*nOut(2),'r')
-      call MemFree(pWts,nOut(1)*nOut(2),'r')
+      call MemFrep(pOut,nOut(1)*nOut(2),'r')
+      call MemFrep(pWts,nOut(1)*nOut(2),'r')
 
 c     Close down.
       call scrClose(lScr)

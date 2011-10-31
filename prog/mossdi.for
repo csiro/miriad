@@ -35,7 +35,7 @@ c       Extra processing options:
 c         positive   Constrain the deconvolved image to be positive
 c                    valued.
 c
-c$Id: mossdi.for,v 1.7 2010/11/22 05:34:28 cal103 Exp $
+c$Id: mossdi.for,v 1.8 2011/10/31 00:37:30 wie017 Exp $
 c--
 c  History:
 c    rjs 31oct94 - Original version.
@@ -48,6 +48,7 @@ c    rjs 28nov97 - Increase max number of boxes.
 c    rjs 29jan99 - Correct user message only.
 c    gmx 07mar04 - Changed optimum gain determination to handle
 c                   negative components
+c    mhw  27oct11  Use ptrdiff type for memory allocations
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -60,8 +61,9 @@ c-----------------------------------------------------------------------
       integer   blc(3), Boxes(MAXBOXES), i, imax, imin, jmax, jmin, k,
      *          kmax, kmin, lBeam, lMap, lModel, lOut, maxniter, nAlloc,
      *          naxis, nbeam(3), ncomp, niter, nMap(3), nModel(3),
-     *          nout(MAXNAX), nPoint, nRun, pEst, pRes, pStep, pStepR,
-     *          pWt, Run(3,MAXRUN), trc(3), xmax, xmin, ymax, ymin
+     *          nout(MAXNAX), nPoint, nRun,  Run(3,MAXRUN), trc(3),
+     *          xmax, xmin, ymax, ymin
+      ptrdiff   pEst, pRes, pStep, pStepR, pWt
       real      clip, cutoff, dmax, dmin, drms, flux, gain
       character BeamNam*64, line*64, MapNam*64, ModelNam*64, OutNam*64,
      *          version*80
@@ -70,8 +72,8 @@ c-----------------------------------------------------------------------
       external  itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('mossdi',
-     *                 '$Revision: 1.7 $',
-     *                 '$Date: 2010/11/22 05:34:28 $')
+     *                 '$Revision: 1.8 $',
+     *                 '$Date: 2011/10/31 00:37:30 $')
 c
 c  Get the input parameters.
 c
@@ -156,18 +158,18 @@ c
         if (nPoint.gt.0) then
           if (nPoint.gt.nAlloc) then
             if (nAlloc.gt.0) then
-              call memFree(pStep, nAlloc,'r')
-              call memFree(pStepR,nAlloc,'r')
-              call memFree(pEst,  nAlloc,'r')
-              call memFree(pRes,  nAlloc,'r')
-              call memFree(pWt,   nAlloc,'r')
+              call memFrep(pStep, nAlloc,'r')
+              call memFrep(pStepR,nAlloc,'r')
+              call memFrep(pEst,  nAlloc,'r')
+              call memFrep(pRes,  nAlloc,'r')
+              call memFrep(pWt,   nAlloc,'r')
             endif
             nAlloc = nPoint
-            call memAlloc(pStep, nAlloc,'r')
-            call memAlloc(pStepR,nAlloc,'r')
-            call memAlloc(pEst,  nAlloc,'r')
-            call memAlloc(pRes,  nAlloc,'r')
-            call memAlloc(pWt,   nAlloc,'r')
+            call memAllop(pStep, nAlloc,'r')
+            call memAllop(pStepR,nAlloc,'r')
+            call memAllop(pEst,  nAlloc,'r')
+            call memAllop(pRes,  nAlloc,'r')
+            call memAllop(pWt,   nAlloc,'r')
           endif
 c
 c  Get the Map.
@@ -227,11 +229,11 @@ c
 c  Free up memory.
 c
       if (nAlloc.gt.0) then
-        call memFree(pStep, nAlloc,'r')
-        call memFree(pStepR,nAlloc,'r')
-        call memFree(pEst,  nAlloc,'r')
-        call memFree(pRes,  nAlloc,'r')
-        call memFree(pWt,   nAlloc,'r')
+        call memFrep(pStep, nAlloc,'r')
+        call memFrep(pStepR,nAlloc,'r')
+        call memFrep(pEst,  nAlloc,'r')
+        call memFrep(pRes,  nAlloc,'r')
+        call memFrep(pWt,   nAlloc,'r')
       endif
 c
 c  Close up the files. Ready to go home.

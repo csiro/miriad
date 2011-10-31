@@ -135,7 +135,7 @@ c         verbose    Give lots of messages during the iterations.  The
 c                    default is to give a one line message at each
 c                    iteration.
 c
-c$Id: mosmem.for,v 1.4 2010/11/22 05:35:52 cal103 Exp $
+c$Id: mosmem.for,v 1.5 2011/10/31 00:37:30 wie017 Exp $
 c--
 c  History:
 c    rjs  23nov94  Adapted from MAXEN.
@@ -167,6 +167,7 @@ c    rjs  10feb99  Get measure=cornwell to work by setting initial
 c                  estimate to zero.
 c    nebk 07sep04  Add some words about the output information mosmem
 c                  spits out as it goes
+c    mhw  27oct11  Use ptrdiff type for memory allocations
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -179,15 +180,16 @@ c-----------------------------------------------------------------------
       parameter (gull=1,cornwell=2)
 
       logical   converge, dofac, doflux, dosingle, positive, verbose
-      integer   blc(3), Boxes(maxBoxes), Cnvl, i, icentre, imax, imin,
+      integer   blc(3), Boxes(maxBoxes), i, icentre, imax, imin,
      *          jcentre, jmax, jmin, k, kmax, kmin, lBeama, lBeamb,
      *          lDef, lMapa, lMapb, lModel, lOut, maxniter, maxPoint,
      *          measure, n1, n2, naxis, nBeam(3), nDef(3), nfret,
      *          niter, nMap(3), nMapb(3), nModel(3), nOut(MAXNAX),
-     *          nPoint, nRun, pDef, pEst, pMapa, pMapb, pNewEst,
-     *          pNewResa, pNewResb, pResa, pResb, pWta, pWtb,
-     *          Run(3,MaxRun), trc(3), xdoff, xmax, xmin, xmoff, ydoff,
+     *          nPoint, nRun, Run(3,MaxRun), trc(3), xdoff,
+     *          xmax, xmin, xmoff, ydoff,
      *          ymax, ymin, ymoff, zdoff, zmoff
+      ptrdiff   Cnvl, pDef, pEst, pMapa, pMapb, pNewEst,
+     *          pNewResa, pNewResb, pResa, pResb, pWta, pWtb
       real      Alpha, Beta, De, Df, fac, ffacDef, ffacSD, Flux,
      *          fluxlist(maxdim), Grad11, GradEE, GradEF, GradEH,
      *          GradEJ, GradFF, GradFH, GradFJ, GradHH, GradJJ, Immax,
@@ -203,8 +205,8 @@ c-----------------------------------------------------------------------
       external  hdprsnt, itoaf, len1, versan
 c-----------------------------------------------------------------------
       version = versan('mosmem',
-     *                 '$Revision: 1.4 $',
-     *                 '$Date: 2010/11/22 05:35:52 $')
+     *                 '$Revision: 1.5 $',
+     *                 '$Date: 2011/10/31 00:37:30 $')
 c
 c  Get and check the input parameters.
 c
@@ -407,33 +409,33 @@ c  Allocate arrays to hold everything.
 c
         if (nPoint.gt.maxPoint) then
           if (maxPoint.gt.0) then
-            call memFree(pEst,maxPoint,'r')
-            call memFree(pDef,maxPoint,'r')
-            call memFree(pNewEst,maxPoint,'r')
-            call memFree(pMapa,maxPoint,'r')
-            call memFree(pWta,maxPoint,'r')
-            call memFree(pResa,maxPoint,'r')
-            call memFree(pNewResa,maxPoint,'r')
+            call memFrep(pEst,maxPoint,'r')
+            call memFrep(pDef,maxPoint,'r')
+            call memFrep(pNewEst,maxPoint,'r')
+            call memFrep(pMapa,maxPoint,'r')
+            call memFrep(pWta,maxPoint,'r')
+            call memFrep(pResa,maxPoint,'r')
+            call memFrep(pNewResa,maxPoint,'r')
             if (dosingle) then
-              call memFree(pMapb,maxPoint,'r')
-              call memFree(pWtb,maxPoint,'r')
-              call memFree(pResb,maxPoint,'r')
-              call memFree(pNewResb,maxPoint,'r')
+              call memFrep(pMapb,maxPoint,'r')
+              call memFrep(pWtb,maxPoint,'r')
+              call memFrep(pResb,maxPoint,'r')
+              call memFrep(pNewResb,maxPoint,'r')
             endif
           endif
           maxPoint = nPoint
-          call memAlloc(pEst,maxPoint,'r')
-          call memAlloc(pDef,maxPoint,'r')
-          call memAlloc(pNewEst,maxPoint,'r')
-          call memAlloc(pMapa,maxPoint,'r')
-          call memAlloc(pWta,maxPoint,'r')
-          call memAlloc(pResa,maxPoint,'r')
-          call memAlloc(pNewResa,maxPoint,'r')
+          call memAllop(pEst,maxPoint,'r')
+          call memAllop(pDef,maxPoint,'r')
+          call memAllop(pNewEst,maxPoint,'r')
+          call memAllop(pMapa,maxPoint,'r')
+          call memAllop(pWta,maxPoint,'r')
+          call memAllop(pResa,maxPoint,'r')
+          call memAllop(pNewResa,maxPoint,'r')
           if (dosingle) then
-            call memAlloc(pMapb,maxPoint,'r')
-            call memAlloc(pWtb,maxPoint,'r')
-            call memAlloc(pResb,maxPoint,'r')
-            call memAlloc(pNewResb,maxPoint,'r')
+            call memAllop(pMapb,maxPoint,'r')
+            call memAllop(pWtb,maxPoint,'r')
+            call memAllop(pResb,maxPoint,'r')
+            call memAllop(pNewResb,maxPoint,'r')
           else
             pMapb = pMapa
             pWtb = pWta
@@ -701,18 +703,18 @@ c
 c  Release memory.
 c
       if (maxPoint.le.0) call bug('f','No data deconvolved')
-      call memFree(pEst,maxPoint,'r')
-      call memFree(pDef,maxPoint,'r')
-      call memFree(pNewEst,maxPoint,'r')
-      call memFree(pMapa,maxPoint,'r')
-      call memFree(pWta,maxPoint,'r')
-      call memFree(pResa,maxPoint,'r')
-      call memFree(pNewResa,maxPoint,'r')
+      call memFrep(pEst,maxPoint,'r')
+      call memFrep(pDef,maxPoint,'r')
+      call memFrep(pNewEst,maxPoint,'r')
+      call memFrep(pMapa,maxPoint,'r')
+      call memFrep(pWta,maxPoint,'r')
+      call memFrep(pResa,maxPoint,'r')
+      call memFrep(pNewResa,maxPoint,'r')
       if (dosingle) then
-        call memFree(pMapb,maxPoint,'r')
-        call memFree(pWtb,maxPoint,'r')
-        call memFree(pResb,maxPoint,'r')
-        call memFree(pNewResb,maxPoint,'r')
+        call memFrep(pMapb,maxPoint,'r')
+        call memFrep(pWtb,maxPoint,'r')
+        call memFrep(pResb,maxPoint,'r')
+        call memFrep(pNewResb,maxPoint,'r')
       endif
 c
 c  Thats all folks.
@@ -1472,13 +1474,15 @@ c***********************************************************************
 
       subroutine SDConIni(Cnvl,lBeam,n1,n2,ic,jc,nx,ny)
 
-      integer Cnvl,lBeam,n1,n2,ic,jc,nx,ny
+      ptrdiff Cnvl
+      integer lBeam,n1,n2,ic,jc,nx,ny
 c-----------------------------------------------------------------------
 c  Initialise the routines that convolve with the dirty beam.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mem.h'
-      integer na,nb,pData
+      integer na,nb
+      ptrdiff pData
 c-----------------------------------------------------------------------
 c
 c  Determine the size of the beam that we need to feed to the
@@ -1492,10 +1496,10 @@ c
       else if (na.le.2*n1 .and. nb.le.2*n2) then
         call CnvlIniF(Cnvl,lBeam,n1,n2,ic,jc,0.0,'e')
       else
-        call memAlloc(pData,na*nb,'r')
+        call memAllop(pData,na*nb,'r')
         call SDConLod(lBeam,n1,n2,memr(pData),na,nb)
         call CnvlIniA(Cnvl,memr(pData),na,nb,ic,jc,0.0,' ')
-        call memFree(pData,na*nb,'r')
+        call memFrep(pData,na*nb,'r')
       endif
 
       end
@@ -1531,7 +1535,8 @@ c***********************************************************************
       subroutine SDConDif(cnvl,Est,Map,fac,Res,Wt,nPoint,Run,nRun,
      *                                        nx,ny)
 
-      integer cnvl,nPoint,nRun,Run(3,nRun),nx,ny
+      integer nPoint,nRun,Run(3,nRun),nx,ny
+      ptrdiff cnvl
       real Est(nPoint),Map(nPoint),Res(nPoint),Wt(nPoint),fac
 c-----------------------------------------------------------------------
 c  Determine the convolution of the estimate with the single dish beam.
