@@ -12,13 +12,13 @@
 # after this one.
 #
 # Original: 2006/09/13, Mark Calabretta, ATNF
-# $Id: GNUmakedefs,v 1.6 2011/05/26 08:44:44 cal103 Exp $
+# $Id: GNUmakedefs,v 1.7 2011/10/31 22:57:03 wie017 Exp $
 #=============================================================================
 # ratty flags.
-RATFLAGS := -s gfortran
+RATFLAGS := -s gfortran -p 'integer(kind=8)'
 
 # intf2c flags.
-F2CFLAGS := -s linux
+F2CFLAGS := -s linux -p long
 
 # Additional GNU C preprocessor defines.
 CPPSTD   := -Dlinux
