@@ -110,8 +110,8 @@ c
 	call output(version)
 	call keyini
 	call GetOpt(nocal,nopol,nopass,nowide,nochan,doall)
-	lflags = 2
-	uvflags(1:2) = 'ds'
+	lflags = 3
+	uvflags(1:3) = 'dsl'
 	if(.not.nocal)then
 	  lflags = lflags + 1
 	  uvflags(lflags:lflags) = 'c'
