@@ -102,7 +102,7 @@ c         verbose    Give lots of messages during the iterations.  The
 c                    default is to give a one line message at each
 c                    iteration.
 c
-c$Id: pmosmem.for,v 1.5 2011/10/31 00:43:12 wie017 Exp $
+c$Id: pmosmem.for,v 1.6 2011/11/02 06:59:40 cal103 Exp $
 c--
 c  History:
 c    rjs  23nov94  Adapted from MAXEN.
@@ -159,12 +159,12 @@ c-----------------------------------------------------------------------
 
       logical   hdprsnt
       integer   len1
-      character itoaf*4, versan*80
+      character itoaf*4, versan*72
       external  hdprsnt, itoaf, len1, versan
 c-----------------------------------------------------------------------
       version = versan('pmosmem',
-     *                 '$Revision: 1.5 $',
-     *                 '$Date: 2011/10/31 00:43:12 $')
+     *                 '$Revision: 1.6 $',
+     *                 '$Date: 2011/11/02 06:59:40 $')
 c
 c  Get and check the input parameters.
 c
@@ -1409,9 +1409,9 @@ c
 c-----------------------------------------------------------------------
       integer   iax, lblc, ltrc
       double precision crpix
-      character cin*1, line*72, txtblc*32, txttrc*32
+      character cax*2, line*72, txtblc*32, txttrc*32
 
-      character itoaf*8
+      character itoaf*2
       external  itoaf
 c-----------------------------------------------------------------------
 c     Start by making a verbatim copy of the input header.
@@ -1420,10 +1420,10 @@ c     Start by making a verbatim copy of the input header.
 c     Update parameters that may have changed.
       do iax = 1, 3
         if (blc(iax).ne.1) then
-          cin = itoaf(iax)
-          call rdhdd(lMap, 'crpix'//cin, crpix, 1d0)
-          crpix = crpix - dble(blc(iax) + 1)
-          call wrhdd(lOut, 'crpix'//cin, crpix)
+          cax = itoaf(iax)
+          call rdhdd(lMap, 'crpix'//cax, crpix, 1d0)
+          crpix = crpix - dble(blc(iax) - 1)
+          call wrhdd(lOut, 'crpix'//cax, crpix)
         endif
       enddo
 
