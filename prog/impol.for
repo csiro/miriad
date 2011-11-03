@@ -103,7 +103,7 @@ c       make this bias plot without actually working on any data if you
 c       wish. See also VLA memo no. 161 by Patrick Leahy.
 c       Default is no plot.
 c
-c$Id: impol.for,v 1.19 2011/11/03 02:16:12 cal103 Exp $
+c$Id: impol.for,v 1.20 2011/11/03 04:42:13 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -137,8 +137,8 @@ c-----------------------------------------------------------------------
       data tIn, lpout, lmout, lpaout /3*0, 2*0, 2*0, 2*0/
 c-----------------------------------------------------------------------
       version = versan('impol',
-     *                 '$Revision: 1.19 $',
-     *                 '$Date: 2011/11/03 02:16:12 $')
+     *                 '$Revision: 1.20 $',
+     *                 '$Date: 2011/11/03 04:42:13 $')
 
 c     Get user inputs.
       call keyini
@@ -569,7 +569,7 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine axstrip(iax, naxes, naxis, axmap, crval, crpix, cdelt,
+      subroutine axstrip(iax, naxes, axmap, naxis, crval, crpix, cdelt,
      *                   ctype)
 
       integer iax, naxes, axmap(naxes), naxis(naxes)
@@ -581,12 +581,13 @@ c
 c  Input:
 c    iax        Axis to strip
 c  Input/output
-c    naxes      Number of axes
+c    naxes      Number of axes.
+c    axmap      Axis mapping.
 c    naxis      Number of pixels on each axis.
-c    crval      Ref. values
-c    crpix      Ref. pixels
-c    cdelt      Increments
-c    ctype      Axis types
+c    crval      Reference values.
+c    crpix      Reference pixels.
+c    cdelt      Increments.
+c    ctype      Axis types.
 c-----------------------------------------------------------------------
       integer i
 c-----------------------------------------------------------------------
@@ -626,6 +627,7 @@ c  Input
 c    lin        Image to copy keywords from.
 c    naxes      Number of axes.
 c    naxis      Number of pixels on each axis.
+c    axmap      Axis mapping.
 c    out        Name of output image.
 c    btype      The type of image being opened.
 c                 'fractional_polarization'
