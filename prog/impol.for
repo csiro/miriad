@@ -103,7 +103,7 @@ c       make this bias plot without actually working on any data if you
 c       wish. See also VLA memo no. 161 by Patrick Leahy.
 c       Default is no plot.
 c
-c$Id: impol.for,v 1.18 2011/10/06 07:18:56 cal103 Exp $
+c$Id: impol.for,v 1.19 2011/11/03 02:16:12 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -137,8 +137,8 @@ c-----------------------------------------------------------------------
       data tIn, lpout, lmout, lpaout /3*0, 2*0, 2*0, 2*0/
 c-----------------------------------------------------------------------
       version = versan('impol',
-     *                 '$Revision: 1.18 $',
-     *                 '$Date: 2011/10/06 07:18:56 $')
+     *                 '$Revision: 1.19 $',
+     *                 '$Date: 2011/11/03 02:16:12 $')
 
 c     Get user inputs.
       call keyini
@@ -352,13 +352,13 @@ c***********************************************************************
 
       logical debias, radians, relax, zero
 c-----------------------------------------------------------------------
-c     Decode options array into named variables.
+c  Decode options array into named variables.
 c
-c   Output:
-c     debias    Debias the polarized intensity image
-c     radians   Output position nagle in radians
-c     relax     Warnings only for axis descriptor mismatches
-c     zero      Output zeros rather than setting flagging mask
+c  Output:
+c    debias     Debias the polarized intensity image
+c    radians    Output position nagle in radians
+c    relax      Warnings only for axis descriptor mismatches
+c    zero       Output zeros rather than setting flagging mask
 c-----------------------------------------------------------------------
       integer maxopt
       parameter (maxopt = 4)
@@ -386,7 +386,7 @@ c***********************************************************************
       real epoch
       character*(*) ctype(maxnax), in, bflag
 c-----------------------------------------------------------------------
-c     Open an image and return some information about it
+c  Open an image and return some information about it
 c
 c  Input
 c    bflag      Bug flag
@@ -442,18 +442,18 @@ c***********************************************************************
       double precision cdelt(naxes), crval(naxes), crpix(naxes)
       character ctype(naxes)*(*)
 c-----------------------------------------------------------------------
-c     Get some header keywords from the image associated with LUN
+c  Get some header keywords from the image associated with LUN
 c
-c     Input
-c       lun      Handle of image
-c       naxes    Number of axes in image
-c       naxis    Number of pixels on each axis.
-c     Output
-c       epoch    Epoch of image
-c       crpix    Array of image reference pixels
-c       cdelt    Array of image increments (natural inits; rad)
-c       crval    Array of image reference values (natural units)
-c       ctype    Array of image axis types
+c  Input
+c    lun        Handle of image
+c    naxes      Number of axes in image
+c    naxis      Number of pixels on each axis.
+c  Output
+c    epoch      Epoch of image
+c    crpix      Array of image reference pixels
+c    cdelt      Array of image increments (natural inits; rad)
+c    crval      Array of image reference values (natural units)
+c    ctype      Array of image axis types
 c
 c-----------------------------------------------------------------------
       integer i
@@ -483,16 +483,16 @@ c-----------------------------------------------------------------------
 c  Check axis descriptors for consistency.
 c
 c  Input:
-c   im     Images
-c   naxes  Number of axes
-c   naxis  Number of pixels on each axis.
-c   crpix  Reference pixels
-c   cdelt  Increments
-c   crval  Refernce values
-c   ctype  types of axes
-c   epoch  Epochs
+c    im         Images
+c    naxes      Number of axes
+c    naxis      Number of pixels on each axis.
+c    crpix      Reference pixels
+c    cdelt      Increments
+c    crval      Refernce values
+c    ctype      Axis types.
+c    epoch      Epochs
 c  Output
-c   stkax  Stokes axis
+c    stkax      Stokes axis
 c-----------------------------------------------------------------------
       integer k, l1, l2, len1
       character line*130
@@ -576,18 +576,17 @@ c***********************************************************************
       double precision crval(naxes), cdelt(naxes), crpix(naxes)
       character*(*) ctype(naxes)
 c-----------------------------------------------------------------------
-c     Strip an axis from the header items
+c  Strip an axis from the header items
 c
 c  Input:
-c   iax    Axis to strip
+c    iax        Axis to strip
 c  Input/output
-c   naxes  Number of axes
-c   naxis  Number of pixels on each axis.
-c   crval  Ref. values
-c   crpix  Ref. pixels
-c   cdelt  Increments
-c   ctype  Axis types
-c
+c    naxes      Number of axes
+c    naxis      Number of pixels on each axis.
+c    crval      Ref. values
+c    crpix      Ref. pixels
+c    cdelt      Increments
+c    ctype      Axis types
 c-----------------------------------------------------------------------
       integer i
 c-----------------------------------------------------------------------
@@ -597,7 +596,6 @@ c-----------------------------------------------------------------------
      *   'This image has only one dimension; cannot strip it')
 
       naxes = naxes - 1
-      if (iax.eq.naxes+1) return
 
       do i = 1, iax-1
         axmap(i) = i
@@ -622,21 +620,20 @@ c***********************************************************************
       integer   lin, naxes, naxis(naxes), axmap(naxes), lout
       character out*(*), btype*(*), version*(*)
 c-----------------------------------------------------------------------
-c     Open an output image, copy header and write the history.
+c  Open an output image, copy header and write the history.
 c
 c  Input
-c   lin      Image to copy keywords from.
-c   naxes    Number of axes.
-c   naxis    Number of pixels on each axis.
-c   out      Name of output image.
-c   btype    The type of image being opened.
-c              'fractional_polarization'
-c              'polarized_intensity'
-c              'position_angle'
-c   version  Version of this program.
+c    lin        Image to copy keywords from.
+c    naxes      Number of axes.
+c    naxis      Number of pixels on each axis.
+c    out        Name of output image.
+c    btype      The type of image being opened.
+c                 'fractional_polarization'
+c                 'polarized_intensity'
+c                 'position_angle'
+c    version    Version of this program.
 c  Output
-c   lout     Handle for output image
-c
+c    lout       Handle for output image
 c-----------------------------------------------------------------------
       character aline*80
 
@@ -646,7 +643,7 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 c     Create the output image and copy header from input.
       call xyopen(lout, out, 'new', naxes, naxis)
-      call headcp(lin, lout, axmap, naxes, 0, 0)
+      call headcp(lin, lout, naxes, axmap, 0, 0)
       call wrbtype(lout, btype)
 
       call hisopen(lout, 'append')
@@ -674,8 +671,8 @@ c***********************************************************************
       logical   iflags(*), qflags(*), uflags(*), pflags(*), mflags(*),
      *          paflags(*), epflags(*), emflags(*), epaflags(*), zero
 c-----------------------------------------------------------------------
-c     Compute some combination of polarized intensity, position angle
-c     image and associated error images
+c  Compute some combination of polarized intensity, position angle
+c  image and associated error images
 c-----------------------------------------------------------------------
       include 'mirconst.h'
 
@@ -906,7 +903,7 @@ c***********************************************************************
 
       character device*(*)
 c-----------------------------------------------------------------------
-c     Make a plot of the biases  in different estimators
+c  Make a plot of the biases  in different estimators
 c-----------------------------------------------------------------------
       integer maxrun, maxpol
       parameter (maxrun = 15000, maxpol = 1000)
@@ -1040,8 +1037,7 @@ c***********************************************************************
       integer nruns
       real qu, qunoise(*), pobs(*)
 c-----------------------------------------------------------------------
-c     Make some Gaussian noise and add it to the signal
-c
+c  Make some Gaussian noise and add it to the signal
 c-----------------------------------------------------------------------
       integer i
 c-----------------------------------------------------------------------
@@ -1059,10 +1055,10 @@ c***********************************************************************
       real ppobs, ppml
       logical conv
 c-----------------------------------------------------------------------
-c     Maximum likelihood method
-c     P = estimate of real polarization from measured polarization P'
+c  Maximum likelihood method
+c  P = estimate of real polarization from measured polarization P'
 c
-c     PP'/sig**2=(P/sig)**2  * I1(PP'/sig**2) / I0(PP'/sig**2)
+c  PP'/sig**2=(P/sig)**2  * I1(PP'/sig**2) / I0(PP'/sig**2)
 c-----------------------------------------------------------------------
       integer itmax
       double precision tol
@@ -1074,9 +1070,8 @@ c-----------------------------------------------------------------------
       pobs = ppobs
       pmlold = pobs
       di = 1.0
-c
-c  Iterate solution of Pml/sigma at value of Pobs/sigma
-c
+
+c     Iterate solution of Pml/sigma at value of Pobs/sigma.
       i = 1
       do while (i.le.itmax .and. di.gt.tol)
         argi = pmlold * pobs
@@ -1095,13 +1090,13 @@ c
 c***********************************************************************
 
       subroutine firstord(pobs, pfo)
-c-----------------------------------------------------------------------
-c     First order
-c     P = sqrt(P'**2 - sigma**2)
-c     P = estimate of real polarization from measured polarization P'
-c-----------------------------------------------------------------------
+
       real pobs, pfo
-cc
+c-----------------------------------------------------------------------
+c  First order
+c  P = sqrt(P'**2 - sigma**2)
+c  P = estimate of real polarization from measured polarization P'
+c-----------------------------------------------------------------------
       real fac
 c-----------------------------------------------------------------------
       fac = pobs**2 - 1.0
@@ -1119,11 +1114,10 @@ c***********************************************************************
 
       real dmin, dmax
 c-----------------------------------------------------------------------
-c     Stretch limits by 5%
+c  Stretch limits by 5%
 c
-c     Input/output:
-c       dmin,max    Minimum and maximum
-c
+c  Input/output:
+c    dmin,max   Minimum and maximum
 c-----------------------------------------------------------------------
       real absmax, delta
 c-----------------------------------------------------------------------
