@@ -72,6 +72,10 @@ c       respectively) can be given.  If only one value is given, the
 c       suppression area is made square.  The default is to suppress
 c       sidelobes in an area as large as the field being mapped.
 c
+c       Note that uniform weighting can produce images with spuriously
+c       high noise, especially for mfs imaging. It is recommended
+c       to use robust~0.5 if sup is non zero or unset.
+c
 c       The suppression area is essentially an alternate way of
 c       specifying the weighting scheme being used.  Suppressing
 c       sidelobes in the entire field corresponds to uniform weighting
@@ -80,15 +84,17 @@ c       weighting gives the best signal to noise ratio, at the expense
 c       of no sidelobe suppression.  Natural weighting corresponds to
 c       SUP=0.  Values between these extremes give a tradeoff between
 c       signal to noise and sidelobe suppression, and roughly correspond
-c       to AIPS "super-uniform" weighting.
+c       to AIPS "super-uniform" weighting. [A better way to move between
+c       these extremes is to leave sup unset and vary the robust 
+c       parameter from -2 to 2.]
 c@ robust
 c       Brigg's visibility weighting robustness parameter.  This
 c       parameter can be used to down-weight excessive weight being
 c       given to visibilities in relatively sparsely filled regions of
-c       the $u-v$ plane.  Most useful settings are in the range [-2,2],
-c       with values less than -2 corresponding to very little down-
-c       weighting, and values greater than +2 reducing the weighting to
-c       natural weighting.
+c       the $u-v$ plane when using uniform weighting.  Most useful 
+c       settings are in the range [-2,2], with values less than -2 
+c       corresponding to very little down-weighting, and values greater 
+c       than +2 reducing the weighting to natural weighting.
 c
 c       Sidelobe levels and beam-shape degrade with increasing values of
 c       robustness, but the theoretical noise level will also decrease.
@@ -203,7 +209,7 @@ c       replaced with 0, or to be estimated by linear interpolation of
 c       two adjacent good channels.  See the Users Guide for the merits
 c       and evils of the two approaches.  The default is 'zero'.
 c
-c$Id: invert.for,v 1.10 2010/05/18 05:06:42 cal103 Exp $
+c$Id: invert.for,v 1.11 2011/11/07 00:17:11 wie017 Exp $
 c--
 c  History
 c    rjs        89  Initial version
@@ -373,8 +379,8 @@ c
       data slops/'zero        ','interpolate '/
 c-----------------------------------------------------------------------
       version = versan ('invert',
-     :                  '$Revision: 1.10 $',
-     :                  '$Date: 2010/05/18 05:06:42 $')
+     :                  '$Revision: 1.11 $',
+     :                  '$Date: 2011/11/07 00:17:11 $')
 c
 c  Get the input parameters. Convert all angular things into
 c  radians as soon as possible!!
@@ -427,6 +433,9 @@ c
         supy = 0
         defWt = .false.
       endif
+      if (robust.eq.-10.and.(supx.gt.0.or.defWt)) call bug('i',
+     *  'Using uniform weighting with robust unset is not recommended') 
+      if (mfs) call bug('i',' especially not for mfs data')
       call keyr('slop',slop,0.)
       if(slop.lt.0.or.slop.gt.1)call bug('f','Invalid slop value')
       call keymatch('slop',nslop,slops,1,slopmode,nout)
@@ -513,7 +522,7 @@ c
       ny = min(ny,MAXDIM)
       if(double)then
         if(2*max(nx,ny)-1.gt.MAXDIM)call bug('w',
-     *    'Reducing beam size of be maximum image size')
+     *    'Reducing beam size to be maximum image size')
         bnx = min(2*nx - 1,MAXDIM)
         bny = min(2*ny - 1,MAXDIM)
         if (nextpow2(bnx).gt.MAXDIM) bnx = nx
