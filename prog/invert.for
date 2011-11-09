@@ -209,7 +209,7 @@ c       replaced with 0, or to be estimated by linear interpolation of
 c       two adjacent good channels.  See the Users Guide for the merits
 c       and evils of the two approaches.  The default is 'zero'.
 c
-c$Id: invert.for,v 1.11 2011/11/07 00:17:11 wie017 Exp $
+c$Id: invert.for,v 1.12 2011/11/09 02:43:08 wie017 Exp $
 c--
 c  History
 c    rjs        89  Initial version
@@ -379,8 +379,8 @@ c
       data slops/'zero        ','interpolate '/
 c-----------------------------------------------------------------------
       version = versan ('invert',
-     :                  '$Revision: 1.11 $',
-     :                  '$Date: 2011/11/07 00:17:11 $')
+     :                  '$Revision: 1.12 $',
+     :                  '$Date: 2011/11/09 02:43:08 $')
 c
 c  Get the input parameters. Convert all angular things into
 c  radians as soon as possible!!
@@ -433,9 +433,11 @@ c
         supy = 0
         defWt = .false.
       endif
-      if (robust.eq.-10.and.(supx.gt.0.or.defWt)) call bug('i',
+      if (robust.eq.-10.and.(supx.gt.0.or.defWt)) then
+        call bug('i',
      *  'Using uniform weighting with robust unset is not recommended') 
-      if (mfs) call bug('i',' especially not for mfs data')
+        if (mfs) call bug('i',' especially not for mfs data')
+      endif
       call keyr('slop',slop,0.)
       if(slop.lt.0.or.slop.gt.1)call bug('f','Invalid slop value')
       call keymatch('slop',nslop,slops,1,slopmode,nout)
