@@ -105,7 +105,7 @@ c	           If an output is being created, the default is to make
 c	           this the fitted model.
 c         
 c
-c$Id: uvfit.for,v 1.6 2011/11/17 04:57:24 wie017 Exp $
+c$Id: uvfit.for,v 1.7 2011/11/17 21:10:33 wie017 Exp $
 c--
 c  History:
 c    rjs  13dec90  Original version.
@@ -150,8 +150,8 @@ c
         external FUNCTION,FUNCTION1
 c-----------------------------------------------------------------------
       version = versan ('uvfit',
-     :                  '$Revision: 1.6 $',
-     :                  '$Date: 2011/11/17 04:57:24 $')
+     :                  '$Revision: 1.7 $',
+     :                  '$Date: 2011/11/17 21:10:33 $')
 c
 c  Get the inputs.
 c
@@ -1083,7 +1083,7 @@ c
               Shigh=Shigh+flx(i,nfreq+1-j)
             enddo
             alpha = log(Shigh/Slow)/(Fhigh-Flow)
-            salpha = sflux(i)/flux(i)/(Fhigh-Flow)
+            salpha = sqrt(2.0)*sflux(i)/flux(i)/(Fhigh-Flow)
             write(line,21) alpha,salpha
             call output(line)
    21       format('  Spectral index:               ',f6.3,' +/- ',f6.3)
