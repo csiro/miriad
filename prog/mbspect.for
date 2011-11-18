@@ -141,7 +141,7 @@ c@ comment
 c       A one-line comment which is written into the logfile and any
 c       plot.
 c
-c$Id: mbspect.for,v 1.12 2011/10/06 07:18:56 cal103 Exp $
+c$Id: mbspect.for,v 1.13 2011/11/18 00:36:21 cal103 Exp $
 c--
 c
 c  History:
@@ -176,12 +176,12 @@ c-----------------------------------------------------------------------
       external  hangle, itoaf, keyprsnt, len1, pgbeg, rangle, versan
       logical   keyprsnt
       integer   len1, pgbeg
-      character hangle*32, itoaf*3, rangle*32, versan*80
+      character hangle*12, itoaf*3, rangle*12, versan*80
 c-----------------------------------------------------------------------
 c     Don't report the ID so that gif and ps output can be piped.
       version = versan ('-mbspect',
-     *                  '$Revision: 1.12 $',
-     *                  '$Date: 2011/10/06 07:18:56 $')
+     *                  '$Revision: 1.13 $',
+     *                  '$Date: 2011/11/18 00:36:21 $')
 
 c     Get inputs.
       call keyini
@@ -470,6 +470,7 @@ c     Fit for position.
         if (width(1).le.1 .and. width(2).le.1) then
           call bug('f','width parameter too small')
         endif
+
         if (vaxis.eq.3) then
           imax=abs(ptrc(1)-pblc(1))+1
           jmax=abs(ptrc(2)-pblc(2))+1
@@ -477,9 +478,10 @@ c     Fit for position.
           imax=abs(ptrc(2)-pblc(2))+1
           jmax=abs(ptrc(3)-pblc(3))+1
         endif
-        call pfit(lIn,naxis,pblc,ptrc,nchan,vaxis,imax,jmax,
-     *            cdelt1,cdelt2,cdelt3,bmaj,bmin,bpa,pixcen,ra2,
-     *            dec2,none,ierr)
+
+        call pfit(lIn,naxis,pblc,ptrc,vaxis,imax,jmax,
+     *            cdelt1,cdelt2,cdelt3,bmaj,bmin,bpa,pixcen,ra2,dec2,
+     *            none,ierr)
         if (none) call bug('f','No good pixels in selected region')
       endif
       call coFin(lIn)
@@ -735,8 +737,8 @@ c     Write ascii spectrum if desired.
         if (iostat.ne.0) call bug('f', 'Error opening output file')
         call txtwrite(lOut,'#File: '//In,7+len1(In),iostat)
         txt = '#Robust polynomial order: none'
-        if (poly.ge.0) write(txt(27:30),*) poly
-        call txtwrite(lOut,txt(1:30),30,iostat)
+        if (poly.ge.0) write(txt(27:),'(i4)') poly
+        call txtwrite(lOut,txt(:30),30,iostat)
         call txtwrite(lOut,'#Spectral  axis = '//xaxis(1:9),
      *                32,iostat)
         call txtwrite(lOut,'#Intensity axis = '//unit0,
@@ -745,7 +747,7 @@ c     Write ascii spectrum if desired.
         call txtwrite(lOut,'#  Channel     Spectral axis '//
      *     '   Intensity',41,iostat)
         do i = 1, nchan
-          write(txt,'(1pe12.5, 3x, 1pe12.5, 3x, 1pe12.5)')
+          write(txt,'(1pe12.5,3x,1pe12.5,3x,1pe12.5)')
      *                                        chan(i),value(i),spec(i)
           call txtwrite(lOut, txt, 45, iostat)
           if (iostat.ne.0) call bug('f', 'Error writing output file')
@@ -760,24 +762,23 @@ c     All done.
 
 c***********************************************************************
 
-      subroutine pfit(lIn,naxis,blc,trc,nchan,vaxis,imax,jmax,
+      subroutine pfit(lIn,NAXIS,blc,trc,vaxis,imax,jmax,
      *                cdelt1,cdelt2,cdelt3,bmaj,bmin,bpa,pixcen,rac,
      *                dec,none,ierr)
 
-      integer lIn,naxis,blc(naxis),trc(naxis),nchan,vaxis
-      integer imax,jmax
-      real bmaj,bmin,bpa,cdelt1,cdelt2,cdelt3
+      integer   lIn, NAXIS, blc(NAXIS), trc(NAXIS), vaxis, imax, jmax
+      real      cdelt1, cdelt2, cdelt3, bmaj, bmin, bpa
       double precision pixcen(*)
-      character rac*13,dec*13
-      logical none
+      character rac*13, dec*13
+      logical   none
+      integer   ierr
 c-----------------------------------------------------------------------
-c  get moment map for vaxis=1 or 3
+c  Get moment map for vaxis=1 or 3.
 c
 c  Inputs:
 c    lIn        The handle of the image.
-c    naxis      Number of image axes.
+c    NAXIS      Number of image axes.
 c    blc,trc    Corners of region of interest.
-c    nchan      Number of channels.
 c    vaxis      Velocity axis
 c    imax       Maximum spatial pixels
 c    jmax       Maximum spatial pixels
@@ -803,7 +804,7 @@ c-----------------------------------------------------------------------
       character line*80
       logical flags(maxdim), flagpos
       integer i,j,k, indx, jndx, kndx, i1,i2
-      integer m, npar, ifail1, ifail2, ierr
+      integer m, npar, ifail1, ifail2
       character ract*13,dect*13
 
 c     Number of free parameters.
@@ -811,7 +812,7 @@ c     Number of free parameters.
       real xf(npar), covar(npar,npar), exf(npar), rms
 
       external  hangle, mbgauss, rangle
-      character hangle*32, rangle*32
+      character hangle*12, rangle*12
 c-----------------------------------------------------------------------
       none = .true.
       ierr=0
@@ -1058,23 +1059,24 @@ c
 c***********************************************************************
 
       subroutine mbgauss(m,n,xf,fvec,iflag)
-      integer i,m,n,iflag
-      real xf(n), fvec(m)
+
+      integer   i, m, n, iflag
+      real      xf(n), fvec(m)
 c-----------------------------------------------------------------------
 c  Trig functions need more precision for minimization code.
 c-----------------------------------------------------------------------
       include 'mbspect.h'
       include 'mirconst.h'
 
-      double precision cospa,sinpa,xscal,yscal,xx,yy,xp,yp,t
-      double precision xmaj, xmin
+      double precision cospa, sinpa, t, xmaj, xmin, xp, xscal, xx, yp,
+     *          yscal, yy
 c-----------------------------------------------------------------------
-      xmaj=dble(xf(4))
-      xmin=dble(xf(5))
-      cospa = cos(d2r*dble(xf(6)))
-      sinpa = sin(d2r*dble(xf(6)))
-      xscal = 4.0*log(2d0)/(xmaj**2)
-      yscal = 4.0*log(2d0)/(xmin**2)
+      xmaj  = dble(xf(4))
+      xmin  = dble(xf(5))
+      cospa = cos(DD2R*dble(xf(6)))
+      sinpa = sin(DD2R*dble(xf(6)))
+      xscal = 4d0*log(2d0)/(xmaj**2)
+      yscal = 4d0*log(2d0)/(xmin**2)
 
       do i = 1, m
         xx = -(xdata(i) - xf(2))
@@ -1082,9 +1084,11 @@ c-----------------------------------------------------------------------
         xp =  xx*sinpa + yy*cospa
         yp = -xx*cospa + yy*sinpa
         t = xscal*(xp*xp) + yscal*(yp*yp)
-        if (t.lt.70) fvec(i) = xf(7) + xf(1) * real(exp(-t))
-        fvec(i)=pdata(i)-fvec(i)
+        if (t.lt.70d0) fvec(i) = xf(7) + xf(1) * real(exp(-t))
+        fvec(i) = pdata(i) - fvec(i)
       enddo
+
+      iflag = 0
 
       end
 
