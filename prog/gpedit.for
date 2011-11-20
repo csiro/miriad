@@ -80,7 +80,7 @@ c
 	character vis*64
 	logical domult,dorep,doflag,doamp,dophas,dorefl,dozm,doscal
 	logical dogain,doleak,dup,doinv
-	integer iostat,tVis,itGain,itLeak,nants,nfeeds,nsols,ntau,i
+	integer iostat,tVis,itLeak,nants,nfeeds,nsols,ntau,i
 	integer numfeed,feeds(MAXFEED),nleaks,nfbin,ngains,maxgains
 	complex gain,Leaks(2,MAXANT)
 	real amp,phi,sels(MAXSELS)
@@ -212,7 +212,7 @@ c	  call GainWr(itGain,dup,nsols,nants,nfeeds,
 c     *				memd(pTimes),memc(pGains))
 	  call memFree(pTimes,nsols,'d')
 	  call memFree(pGains,nfeeds*nants*nsols,'c')
-	  call hdaccess(itGain,iostat)
+c	  call hdaccess(itGain,iostat)
 	  if(dup)then
 	    call wrhdi(tVis,'nfeeds',2)
 	    call wrhdi(tVis,'ngains',2*nants)
