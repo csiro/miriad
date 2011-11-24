@@ -43,6 +43,9 @@ c	  clobber   If a dataset exists with the same name as one that
 c	            uvsplit would create, then delete that dataset before
 c	            creating uvsplit's output.
 c         calcode   If splitting by source, take calcode into account
+c         ifchain   If splitting by freq, take ifchain into account. This
+c                   can be used to separate two identical frequency
+c                   setups differing only in the online signal path.
 c	The following three options determine which data-set characteristics
 c	result in UVSPLIT generating different output data-sets.
 c	  nosource  Do not produce new data-sets based on source name. That
@@ -59,6 +62,7 @@ c@ maxwidth
 c        The maximum bandwidth (in GHz) for each output frequency band.
 c        Default is no subdivision of input bands. The maxwidth limit
 c        is only applied when splitting by frequency.
+c $Id: uvsplit.for,v 1.11 2011/11/24 03:30:40 wie017 Exp $
 c--
 c  History:
 c    rjs  13oct93 Original version.
@@ -78,6 +82,8 @@ c    rjs  28jan05 Added clobber option.
 c    mhw  19may08 Added maxwidth parameter
 c    mhw  29sep09 Fix freq axis mislabeling bug
 c    mhw  14oct09 Separate out identical freqs on different IFs
+c    mhw  06jun11 Split by calcode
+c    mhw  23nov11 Split by ifchain, pass ifchain variable along
 c  Bugs:
 c   the full xtsys and ytsys variables are passed to split files,
 c   but for the systemp variable only the appropriate data (if) is copied
@@ -85,26 +91,30 @@ c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer MAXSELS
 	parameter(MAXSELS=256)
-	character version*(*)
-	parameter(version='UvSplit: version 1.0 19-May-08')
 c
+	character version*80
 	character vis*64,dtype*1
 	integer tvis
 	real sels(MAXSELS),maxwidth
 	integer length,i
 	logical dosource,dofreq,dowin,updated,dowide,docomp,docopy
-	logical docalcd,mosaic,clobber
+	logical docalcd,mosaic,clobber,doifc
 	logical more,first,winsel,selwins(MAXWIN)
 c
 c  Externals.
 c
 	logical SelProbe
+        character versan*80
+c------------------------------------------------------------------------
+        version = versan ('uvsplit',
+     *                    '$Revision: 1.11 $',
+     *                    '$Date: 2011/11/24 03:30:40 $')
 c
 c  Get the input parameters.
 c
-	call output(version)
 	call keyini
-	call GetOpt(dosource,dofreq,dowin,docopy,mosaic,clobber,docalcd)
+	call GetOpt(dosource,dofreq,dowin,docopy,mosaic,clobber,docalcd,
+     *              doifc)
 	call keyf('vis',vis,' ')
         call keyr('maxwidth',maxwidth,0.0)
 	call SelInput('select',sels,MAXSELS)
@@ -161,7 +171,7 @@ c
 c  Read through the file.
 c
 	  call Process(tVis,dosource,dofreq,dowin,dowide,mosaic,
-     *      maxwidth,clobber,docalcd)
+     *      maxwidth,clobber,docalcd,doifc)
 c
 	  first = .false.
 	  call FileFin(docopy,more)
@@ -171,11 +181,12 @@ c
 	end
 c************************************************************************
 	subroutine Process(tVis,dosource,dofreq,dowin,dowide,mosaic,
-     *			    maxwidth,clobber,docalcd)
+     *			    maxwidth,clobber,docalcd,doifc)
 c
 	implicit none
 	integer tVis
-	logical dosource,dofreq,dowin,dowide,mosaic,clobber,docalcd
+	logical dosource,dofreq,dowin,dowide,mosaic,clobber,docalcd,
+     *    doifc
         real maxwidth
 c
 c  Do a pass through the data file.
@@ -208,7 +219,8 @@ c
 c  Create a handle to track those things that cause us to have to
 c  re-check the indices.
 c
-	call HanGen(tVis,vCheck,dosource,docalcd,dofreq,dowin,dowide)
+	call HanGen(tVis,vCheck,dosource,docalcd,doifc,dofreq,dowin,
+     *    dowide)
 c
 c  Loop the loop.
 c
@@ -220,7 +232,7 @@ c  Update the indices if necessary.
 c
 	  if(uvVarUpd(vCheck))then
 	    call GetIndx(tVis,dosource,dofreq,dowin,dowide,mosaic,
-     *	      maxwidth,clobber,docalcd,indx,nschan,onchan,oschan,
+     *	      maxwidth,clobber,docalcd,doifc,indx,nschan,onchan,oschan,
      *        nIndx,MAXINDX)
 	    skip = .true.
 	    do i=1,nIndx
@@ -249,13 +261,14 @@ c
 	end
 c************************************************************************
 	subroutine GetIndx(tVis,dosource,dofreq,dowin,dowide,mosaic,
-     *	  maxwidth,clobber,docalcd,Indx,nschan,onchan,oschan,nIndx,
-     *    MAXINDX)
+     *	  maxwidth,clobber,docalcd,doifc,Indx,nschan,onchan,oschan,
+     *    nIndx,MAXINDX)
 c
 	implicit none
 	integer tVis,nIndx,MAXINDX,nschan(MAXINDX),Indx(MAXINDX)
         integer onchan(MAXINDX),oschan(MAXINDX)
-	logical dosource,dofreq,dowin,dowide,mosaic,clobber,docalcd
+	logical dosource,dofreq,dowin,dowide,mosaic,clobber,docalcd,
+     *    doifc
         real maxwidth
 c  Inputs:
 c       tVis - the handle to the visibility file
@@ -267,6 +280,7 @@ c       mosaic   - don't split mosaic fields if splitting by source
 c       maxwidth - max bandwidth of the output files - further freq split
 c       clobber  - destroy existing files with same names
 c       docalcd  - add calcode to source name
+c       doifc    - split by ifchain if splitting by freq
 c   Outputs:
 c       Indx     - index to translate from output name to file
 c       nschan   - number of channels in each input spectral window
@@ -278,11 +292,12 @@ c  Determine the current indices of interest.
 c
 c------------------------------------------------------------------------
 	include 'maxdim.h'
-	character base*32,source*32,c*1,calcode*32
+	character base*32,source*32,c*1,calcode*32,typ*1
 	integer maxi,n,nchan,ichan,nwide,length,lenb,i,ii,nsub,j,nindx1
+        integer ifc(MAXWIN)
 	double precision sdf(MAXWIN),sfreq(MAXWIN)
 	real wfreq(MAXWIN)
-	logical discard,duplicate
+	logical discard,duplicate,present
 c
 c  Externals.
 c
@@ -292,6 +307,7 @@ c
 c  Initialise.
 c
 	maxi = min(MAXINDX,MAXWIN)
+        present = .false.
 c
 c  Generate the base name.
 c
@@ -357,6 +373,9 @@ c
 	      call uvrdvrd(tVis,'sfreq',sfreq,0.d0)
 	      call uvrdvrd(tVis,'sdf',sdf,0.d0)
 	      call uvrdvri(tVis,'nschan',nschan,1)
+              call uvprobvr(tVis,'ifchain',typ,n,present)
+              present=typ.eq.'i'
+              if (present) call uvrdvri(tVis,'ifchain',ifc,1)
 	      nindx = 1
 	    else
 	      call uvrdvri(tVis,'nspect',nindx,1)
@@ -364,15 +383,21 @@ c
 	      call uvgetvrd(tVis,'sdf',sdf,nindx)
 	      call uvgetvrd(tVis,'sfreq',sfreq,nindx)
 	      call uvgetvri(tVis,'nschan',nschan,nindx)
+              call uvprobvr(tVis,'ifchain',typ,n,present)
+              present=typ.eq.'i'.and.n.eq.nindx
+              if (present) call uvgetvri(tVis,'ifchain',ifc,nindx)
 	    endif
 c            
-c Check for data with identical center frequencies         
+c Check for data with identical center frequencies (and ifchains)        
 c
             duplicate=.false.
             do i=1,nindx-1
               do j=i+1,nindx
                 if (sfreq(i)+sdf(i)*(nschan(i)/2) .eq.
-     *              sfreq(j)+sdf(j)*(nschan(j)/2)) duplicate=.true.
+     *              sfreq(j)+sdf(j)*(nschan(j)/2)) then
+                  duplicate=duplicate.or..not.doifc.or..not.present.or.
+     *                ifc(i).eq.ifc(j)
+                endif
               enddo
             enddo
                   
@@ -384,6 +409,10 @@ c onschan = # output channels for each output spectrum
 c chan = channel offset in input spectrum for current output spectrum
 c
 	    do i=1,nindx
+              if (doifc.and.present) then
+                if (i.eq.1) length = length + 2
+                base(length-1:length)='.'//itoaf(ifc(i))
+              endif
               nsub=1
               if (maxwidth.gt.0.0.and.
      *            abs(sdf(i)*nschan(i)).gt.maxwidth) then
@@ -449,12 +478,12 @@ c
 c
 	end
 c************************************************************************
-	subroutine HanGen(tVis,vCheck,dosource,docalcd,
+	subroutine HanGen(tVis,vCheck,dosource,docalcd,doifc,
      *                    dofreq,dowin,dowide)
 c
 	implicit none
 	integer tVis,vCheck
-	logical dosource,dofreq,dowin,dowide,docalcd
+	logical dosource,dofreq,dowin,dowide,docalcd,doifc
 c
 c  Determine which variables we have to track changes.
 c
@@ -471,6 +500,7 @@ c------------------------------------------------------------------------
 	    call uvVarSet(vCheck,'sfreq')
 	    call uvVarSet(vCheck,'sdf')
 	    call uvVarSet(vCheck,'nschan')
+            if (doifc) call uvVarset(vCheck,'ifchain')
 	  endif
 	else if(dowin)then
 	  if(dowide)then
@@ -483,10 +513,11 @@ c
 	end
 c************************************************************************
 	subroutine GetOpt(dosource,dofreq,dowin,docopy,mosaic,clobber,
-     *   docalcd)
+     *   docalcd,doifc)
 c
 	implicit none
-	logical dosource,dofreq,dowin,docopy,mosaic,clobber,docalcd
+	logical dosource,dofreq,dowin,docopy,mosaic,clobber,docalcd,
+     *    doifc
 c
 c  Determine extra processing options.
 c
@@ -498,11 +529,11 @@ c    docopy
 c    mosaic
 c------------------------------------------------------------------------
 	integer NOPTS
-	parameter(NOPTS=7)
+	parameter(NOPTS=8)
 	logical present(NOPTS)
 	character opts(NOPTS)*8
 	data opts/'nosource','nofreq  ','nowindow','nocopy  ',
-     *		  'mosaic  ','clobber ','calcode'/
+     *		  'mosaic  ','clobber ','calcode ','ifchain '/
 c
 	call options('options',opts,present,NOPTS)
 	dosource = .not.present(1)
@@ -512,6 +543,7 @@ c
 	mosaic   =      present(5)
 	clobber  =      present(6)
         docalcd  =      present(7)
+        doifc    =      present(8)
 c
 	end
 c************************************************************************
@@ -642,15 +674,21 @@ c    nchan
 c    ifno
 c------------------------------------------------------------------------
 	include 'maxdim.h'
-	integer nspect
+	integer nspect,ifchain(MAXWIN),n
 	double precision sdf(MAXWIN),sfreq(MAXWIN)
 	double precision restfreq(MAXWIN)
+        logical doifc
+        character*1 typ
 c
 	call uvrdvri(lVis,'nspect',nspect,1)
 	if(ifno.gt.nspect)call bug('f','Something is screwy')
 	call uvgetvrd(lVis,'sdf',sdf,nspect)
 	call uvgetvrd(lVis,'sfreq',sfreq,nspect)
 	call uvgetvrd(lVis,'restfreq',restfreq,nspect)
+        call uvprobvr(lVis,'ifchain',typ,n,doifc)
+        doifc=typ.eq.'i'.and.n.eq.nspect
+        if (doifc) call uvgetvri(lVis,'ifchain',ifchain,nspect)
+        
 c
 	call uvputvri(lOut,'nspect',1,1)
 	call uvputvri(lOut,'nschan',nchan,1)
@@ -658,6 +696,7 @@ c
 	call uvputvrd(lOut,'sdf',sdf(ifno),1)
 	call uvputvrd(lOut,'sfreq',sfreq(ifno)+offset*sdf(ifno),1)
 	call uvputvrd(lOut,'restfreq',restfreq(ifno),1)
+        if (doifc) call uvputvri(lOut,'ifchain',ifchain(ifno),1)
 c
 c  Update the system temperature and the XY phase.
 c
@@ -790,7 +829,7 @@ c------------------------------------------------------------------------
 	character line*64
 c
 	integer NCOPY,NSCHECK,NWCHECK
-	parameter(NCOPY=98,NSCHECK=8,NWCHECK=3)
+	parameter(NCOPY=97,NSCHECK=9,NWCHECK=3)
 	character copy(NCOPY)*8,scheck(NSCHECK)*8,wcheck(NWCHECK)*8
         data copy/    'airtemp ','antaz   ','antdiam ','antel   ',
      *     'antpos  ','atten   ','axismax ','axisrms ','bin     ',
@@ -798,7 +837,7 @@ c
      *     'corbw   ','corfin  ','cormode ','coropt  ','cortaper',
      *     'ddec    ','dec     ','delay   ','delay0  ','deldec  ',
      *     'delra   ','dewpoint','dra     ','epoch   ','evector ',
-     *     'focus   ','freq    ','freqif  ','ifchain ','inttime ',
+     *     'focus   ','freq    ','freqif  ','inttime ',
      *     'ivalued ','jyperk  ','jyperka ','latitud ','longitu ',
      *     'lo1     ','lo2     ','lst     ','mount   ','name    ',
      *     'nants   ','nbin    ','ntemp   ','ntpower ','obsdec  ',
@@ -815,7 +854,7 @@ c
      *     'npol    ','pol     '/
 c
 	data SCheck/  'nspect  ','restfreq','ischan  ','nschan  ',
-     *     'sfreq   ','sdf     ','systemp ','xyphase '/
+     *     'sfreq   ','sdf     ','systemp ','xyphase ','ifchain '/
         data WCheck/  'wfreq   ','wwidth  ','wsystemp'/
 c
 c  Open the file, and set the correlation type.
