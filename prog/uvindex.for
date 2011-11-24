@@ -21,6 +21,8 @@ c@ options
 c	Extra processing options. Currently there is but one of these:
 c	  mosaic  Do not generate messages for different pointings
 c	          of a mosaic.
+c
+c $Id: uvindex.for,v 1.5 2011/11/24 03:30:11 wie017 Exp $
 c--
 c
 c  History:
@@ -57,30 +59,30 @@ c    rjs  18oct96  Don't output a line when just dra/ddec changes.
 c    rjs  08jan97  options=mosaic
 c    rjs  08jun97  Fix bug in error message
 c    rjs  15jun00  Simple handling of blank source name.
+c    mhw  23nov11  Display rest frequency and ifchain
 c
-c $Id: uvindex.for,v 1.4 2010/06/05 03:04:25 wie017 Exp $
 c----------------------------------------------------------------------c
 	include 'mirconst.h'
 	include 'maxdim.h'
-	character*(*) version
 	integer MAXSRC,MAXFREQ,MAXSPECT
 	integer PolMin,PolMax,PolI
 	parameter(MAXSRC=8192,MAXFREQ=128,MAXSPECT=18)
 	parameter(PolMin=-8,PolMax=4,PolI=1)
-	parameter(version='UVINDEX: version 1.0 15-Jun-00')
 c
 	integer pols(PolMin:PolMax),pol
 	integer lIn,i,j,j1,nvis,nants,l
 	character vis*64,logf*64,date*18,line*80,ras*14,decs*14
+        character version*80
 	double precision time,tprev,total
 	real dra,ddec,interval,inttime
 c
 	integer ifreq,nfreq,vfreq
 	logical newfreq,mosaic
 	integer nwide(MAXFREQ),nchan(MAXFREQ),nspect(MAXFREQ)
-	integer nschan(MAXSPECT,MAXFREQ)
+	integer nschan(MAXSPECT,MAXFREQ),ifchain(MAXSPECT,MAXFREQ)
 	real wfreqs(MAXSPECT,3,MAXFREQ)
 	double precision sfreqs(MAXSPECT,3,MAXFREQ)
+        double precision restfreq(MAXSPECT,MAXFREQ)
 c
 	integer isrc,nsrc,vsource
 	logical newsrc,solar(MAXSRC)
@@ -93,12 +95,15 @@ c
 c  Externals
 c
 	integer len1,uvscan
-	character rangle*14,hangle*14,PolsC2P*2,itoaf*8
+	character rangle*14,hangle*14,PolsC2P*2,itoaf*8,versan*80
 	logical uvvarupd
+c----------------------------------------------------------------------c
+        version = versan ('uvindex',
+     *                    '$Revision: 1.5 $',
+     *                    '$Date: 2011/11/24 03:30:11 $')
 c
 c  Get the parameters given by the user.
 c
-	call output(version)
 	call keyini
 	call keya('vis',vis,' ')
         call keyr('interval',interval,0.0)
@@ -154,6 +159,8 @@ c
 	call uvvarset(vfreq,'nschan')
 	call uvvarset(vfreq,'sfreq')
 	call uvvarset(vfreq,'sdf')
+        call uvvarset(vfreq,'restfreq')
+        call uvvarset(vfreq,'ifchain')
 	call uvvarset(vfreq,'nwide')
 	call uvvarset(vfreq,'wfreq')
 	call uvvarset(vfreq,'wwidth')
@@ -190,8 +197,8 @@ c
 	  if(uvvarupd(vsource))call GetSrc(lIn,mosaic,newsrc,isrc,nsrc,
      *		sources,ra0,dec0,pntoff,solar,calcodes,MAXSRC)
 	  if(uvvarupd(vfreq))  call GetFreq(lIn,newfreq,ifreq,nfreq,
-     *		nchan,nspect,nschan,sfreqs,nwide,wfreqs,
-     *		MAXFREQ,MAXSPECT)
+     *		nchan,nspect,nschan,sfreqs,nwide,wfreqs,restfreq,
+     *		ifchain,MAXFREQ,MAXSPECT)
 c
 c  If something has changed, give a summary of things.
 c
@@ -240,7 +247,8 @@ c
 	  call LogWrit(' ')
 	  call logwrit('Frequency Configuration '//itoaf(ifreq))
 	  if(nchan(ifreq).gt.0)call SpecSum(
-     *	    nspect(ifreq),nschan(1,ifreq),sfreqs(1,1,ifreq),MAXSPECT)
+     *	    nspect(ifreq),nschan(1,ifreq),sfreqs(1,1,ifreq),
+     *      restfreq(1,ifreq),ifchain(1,ifreq),MAXSPECT)
 	  if(nwide(ifreq).gt.0)call WideSum(
      *	    nwide(ifreq),wfreqs(1,1,ifreq),MAXSPECT)
 	enddo
@@ -512,13 +520,15 @@ c
 c************************************************************************
 	subroutine GetFreq(lIn,newfreq,ifreq,nfreq,
      *		nchan,nspect,nschan,sfreqs,nwide,
-     *		wfreqs,MAXFREQ,MAXSPECT)
+     *		wfreqs,restfreq,ifchain,MAXFREQ,MAXSPECT)
 c
 	implicit none
 	integer MAXFREQ,MAXSPECT
-	integer lIn,ifreq,nfreq,nchan(MAXFREQ),nspect(MAXFREQ)
+	integer lIn,ifreq,nfreq,nchan(MAXFREQ),nspect(MAXFREQ),n
 	integer nschan(MAXSPECT,MAXFREQ),nwide(MAXFREQ)
+        integer ifchain(MAXSPECT,MAXFREQ)
 	double precision sfreqs(MAXSPECT,3,MAXFREQ)
+        double precision restfreq(MAXSPECT,MAXFREQ)
 	real wfreqs(MAXSPECT,3,MAXFREQ)
 	logical newfreq
 c
@@ -534,7 +544,8 @@ c  The start frequency in the first and last record can differ, owing to
 c  slow changes in the frequency caused by Doppler tracking and the like.
 c------------------------------------------------------------------------
 	integer itmp,i
-	logical more
+	logical more,doifc
+        character*1 typ
 c
 c  Externals.
 c
@@ -559,6 +570,17 @@ c
 	  call uvgetvrr(lIn,'wfreq', wfreqs(1,1,itmp),nwide(itmp))
 	  call uvgetvrr(lIn,'wwidth',wfreqs(1,2,itmp),nwide(itmp))
 	endif
+        call uvprobvr(lIn,'ifchain',typ,n,doifc)
+        doifc=typ.eq.'i'.and.n.eq.nspect(itmp)
+        if (doifc) then
+          call uvgetvri(lIn,'ifchain',ifchain(1,itmp),
+     *    nspect(itmp))
+        else
+          do i=1,nspect(itmp)
+            ifchain(i,itmp)=1
+          enddo
+        endif
+        call uvgetvrd(lIn,'restfreq',restfreq(1,itmp),nspect(itmp))
 c
 c  Is it a new frequency/correlator setup?
 c
@@ -566,7 +588,7 @@ c
 	  newfreq = .true.
 	else
 	  newfreq = .not.FreqEq(ifreq,itmp,nchan,nspect,nschan,sfreqs,
-     *			nwide,wfreqs,MAXSPECT,MAXFREQ)
+     *			nwide,wfreqs,restfreq,ifchain,MAXSPECT,MAXFREQ)
 	endif
 c
 c  Process a new frequency.
@@ -576,7 +598,7 @@ c
 	  more = .true.
 	  dowhile(ifreq.le.nfreq.and.more)
 	    more = .not.FreqEq(ifreq,itmp,nchan,nspect,nschan,sfreqs,
-     *			nwide,wfreqs,MAXSPECT,MAXFREQ)
+     *			nwide,wfreqs,restfreq,ifchain,MAXSPECT,MAXFREQ)
 	    if(more)ifreq = ifreq + 1
 	  enddo
 c
@@ -598,13 +620,15 @@ c
 	end
 c************************************************************************
 	logical function FreqEq(i1,i2,nchan,nspect,nschan,sfreqs,
-     *		nwide,wfreqs,MAXSPECT,MAXFREQ)
+     *		nwide,wfreqs,restfreq,ifchain,MAXSPECT,MAXFREQ)
 c
 	implicit none
 	integer MAXSPECT,MAXFREQ
 	integer i1,i2,nchan(MAXFREQ),nspect(MAXFREQ)
 	integer nschan(MAXSPECT,MAXFREQ),nwide(MAXFREQ)
+        integer ifchain(MAXSPECT,MAXFREQ)
 	double precision sfreqs(MAXSPECT,3,MAXFREQ)
+        double precision restfreq(MAXSPECT,MAXFREQ)
 	real wfreqs(MAXSPECT,3,MAXFREQ)
 c
 c  Determine whether two correlator/frequency setups are the same.
@@ -626,6 +650,8 @@ c
 	  w = abs(sfreqs(i,2,i1))
 	  if(abs(sfreqs(i,2,i1)-sfreqs(i,2,i2)).gt.0.01*w)return
 	  if(abs(sfreqs(i,3,i1)-sfreqs(i,1,i2)).gt.0.5*w)return
+          if(abs(restfreq(i,i1)-restfreq(i,i2)).gt.0.5*w)return
+          if(ifchain(i,i1).ne.ifchain(i,i2)) return
 	enddo
 c
 	do i=1,nwide(i1)
@@ -637,11 +663,12 @@ c
 	FreqEq = .true.
 	end
 c************************************************************************
-	subroutine SpecSum(nspect,nschan,sfreqs,MAXSPECT)
+	subroutine SpecSum(nspect,nschan,sfreqs,restfreq,ifchain,
+     *    MAXSPECT)
 c
 	implicit none
-	integer nspect,nschan(nspect),MAXSPECT
-	double precision sfreqs(MAXSPECT,3)
+	integer nspect,nschan(nspect),MAXSPECT, ifchain(MAXSPECT)
+	double precision sfreqs(MAXSPECT,3),restfreq(MAXSPECT)
 c
 c  Write a summary about this spectral correlator configuration.
 c  Assume Doppler tracking is being used if the difference between
@@ -650,15 +677,17 @@ c------------------------------------------------------------------------
 	character line*80,vary*16
 	integer i
 c
-	call logwrit('  Spectral Channels  Freq(chan=1)  Increment')
+	call logwrit('  Channels  Freq(chan=1)  Increment  Restfreq'//
+     *   '     IFChain')
 	do i=1,nspect
 	  if(abs(sfreqs(i,1)-sfreqs(i,3)).gt.0.1*abs(sfreqs(i,2)))then
 	    vary = ' Doppler tracked'
 	  else
 	    vary = ' '
 	  endif
-	  write(line,'(i17,f14.5,f13.7,a,a)')
-     *		nschan(i),sfreqs(i,1),sfreqs(i,2),' GHz',vary
+	  write(line,'(i8,f14.5,f13.7,f10.5,a,i6,a)')
+     *		nschan(i),sfreqs(i,1),sfreqs(i,2),restfreq(i),
+     *          ' GHz',ifchain(i),vary
 	  call logwrit(line)
 	enddo
 	end
