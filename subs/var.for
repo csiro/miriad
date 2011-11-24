@@ -97,13 +97,13 @@ c
 	integer i
 c
 	integer nvar,nline,nwide,nvelo
-	parameter(nvar=96,nline=8,nwide=3,nvelo=4)
+	parameter(nvar=95,nline=9,nwide=3,nvelo=4)
         character var(nvar)*8,line(nline)*8,wide(nwide)*8,velo(nvelo)*8
 c
 c  Variables to check for a change, for line=channel.
 c
 	data line/    'nspect  ','restfreq','ischan  ','nschan  ',
-     *	   'sfreq   ','sdf     ','systemp ','xyphase '/
+     *	   'sfreq   ','sdf     ','systemp ','xyphase ','ifchain '/
 c
 c  Variables to check for a change, for line=wide.
 c
@@ -121,7 +121,7 @@ c
      *     'corbw   ','corfin  ','cormode ','coropt  ','cortaper',
      *     'ddec    ','dec     ','delay   ','delay0  ','deldec  ',
      *     'delra   ','dewpoint','dra     ','epoch   ','evector ',
-     *     'focus   ','freq    ','freqif  ','ifchain ','inttime ',
+     *     'focus   ','freq    ','freqif  ','inttime ',
      *     'ivalued ','jyperk  ','jyperka ','latitud ','longitu ',
      *     'lo1     ','lo2     ','lst     ','mount   ','name    ',
      *     'nants   ','nbin    ','ntemp   ','ntpower ','obsdec  ',
@@ -414,7 +414,8 @@ c    ischan
 c    sdf					  
 c    sfreq					
 c    restfreq		
-c    systemp		
+c    systemp
+c    ifchain		
 c
 c  Inputs:
 c    tvis	Handle of the input uv data file.
@@ -433,11 +434,12 @@ c
 	double precision rfreq0(MAXWIN),sdf0(MAXWIN)
 	double precision sfreq0(MAXWIN),sfreq(MAXWIN)
 	integer ischan0(MAXWIN),nschan0(MAXWIN)
+        integer ifchain(MAXWIN),ifchain0(MAXWIN)
 	integer nschan(MAXWIN),trn(MAXWIN)
 	integer ispect,ospect,nspect,n,i,j,k,l,nants,start
 	integer nsystemp,nxyphase
 	character type*1
-	logical upd
+	logical upd,doif
 c
 c  Get the various window-related variables from the uvdata.
 c
@@ -451,6 +453,9 @@ c
 	call uvgetvrd(tVis,'sdf',sdf,nspect)
 	call uvgetvrd(tVis,'sfreq',sfreq,nspect)
 	call uvgetvrd(tVis,'restfreq',rfreq,nspect)
+        call uvprobvr(tVis,'ifchain',type,n,upd)
+        doif=type.eq.'i'.and.n.eq.nspect
+        if (doif) call uvgetvri(tVis,'ifchain',ifchain,nspect)
 	call uvrdvri(tVis,'nants',nants,0)
 c
 c  Generate the window description parameters for the output.
@@ -469,6 +474,7 @@ c
      *		(start-1)*sdf(ispect) + 0.5*(lwidth-1)*sdf(ispect)
 	  nschan0(ospect) = min((nschan(ispect)-start)/lstep + 1,n)
 	  rfreq0(ospect) = rfreq(ispect)
+          ifchain0(ospect) = ifchain(ispect)
 	  trn(ospect) = ispect
 	  if(nschan0(ospect).eq.1)then
 	    sdf0(ospect) = lwidth*sdf(ispect)
@@ -567,6 +573,7 @@ c
 	call uvputvrd(tOut,'sdf',sdf0,ospect)
 	call uvputvrd(tOut,'sfreq',sfreq0,ospect)
 	call uvputvrd(tOut,'restfreq',rfreq0,ospect)
+        if (doif) call uvputvri(tOut,'ifchain',ifchain0,ospect)
 c
 	if(nsystemp.gt.0)
      *	  call uvputvrr(tOut,'systemp',systemp0,nsystemp)
