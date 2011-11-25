@@ -18,8 +18,12 @@ c	The names of the input uv data sets. No default.
 c@ out
 c	The name of the output uv data set. No default.
 c@ tsysif
-c       The IF number used to provide the Tsys correction values.
-c       Default is 1.
+c       The IF numbers used to provide the Tsys correction values.
+c       Multiple values can be specified, one for each spectral window.
+c       E.g., 1,1,3,3 will overwrite the 2nd and 4th set of tsys values
+c       with the 1st and 3rd. This parameter is only used with the redo
+c       option. Default value is 1, which applies the tsys for the 1st
+c       IF to all following IFs.
 c@ options
 c	Extra processing options. Several options can be given,
 c	separated by commas. Minimum match is supported. Possible values
@@ -36,38 +40,48 @@ c	            you copy or split a dataset. If you are going to use
 c	            options=auto, you generally have to do it on the file
 c	            resulting from atlod.
 c         redo      Remove the existing Tsys correction from all IFs and
-c                   reapply the Tsys from the specified IF to all.
+c                   reapply the Tsys from the IFs specified in tsysif.
 c                   This can be used for certain CABB observations where
 c                   the zoom bands have no valid Tsys information.
 c                   This option cannot be combined with any others.
+c $Id: attsys.for,v 1.3 2011/11/25 03:41:59 wie017 Exp $
 c--
 c  History:
 c    17jul00 rjs  Original version.
 c    25may02 rjs  Added options=auto
 c    20jul11 mhw  Incorporate tsysfix program by jra
+c    25nov11 mhw  Make tsysif an array and update tsys variables
 c------------------------------------------------------------------------
 	include 'maxdim.h'
-	character version*(*)
-	parameter(version='AtTsys: version 1.1 20-Jul-11')
-c
-	integer lVis,lOut,vupd,pol,npol,i1,i2
-	logical updated,doapply,auto,redo
+	character version*80
+	integer lVis,lOut,vupd,pol,npol,i1,i2,i,j,k
+	logical updated,doapply,auto,redo,update
 	character vis*64,out*64,type*1
-	integer nschan(MAXWIN),nif,nchan,nants,length,tcorr,na,tsysif
+	integer nschan(MAXWIN),nif,nchan,nants,length,tcorr,na
+        integer tsysif(MAXWIN),n
 	real xtsys(MAXANT*MAXWIN),ytsys(MAXANT*MAXWIN)
+        real nxtsys(MAXANT*MAXWIN),nytsys(MAXANT*MAXWIN)
+        real systemp(MAXANT*MAXWIN)
 	complex data(MAXCHAN)
-	logical flags(MAXCHAN)
+	logical flags(MAXCHAN),first
 	double precision preamble(5)
 c
 c  Externals.
 c
 	logical uvvarUpd
+        character versan*80
 c
-	call output(version)
+	version = versan('attsys',
+     *                   '$Revision: 1.3 $',
+     *                   '$Date: 2011/11/25 03:41:59 $')
 	call keyini
 	call keya('vis',vis,' ')
 	call keya('out',out,' ')
-        call keyi('tsysif',tsysif,1)
+        call mkeyi('tsysif',tsysif,MAXWIN,n)
+        if (n.eq.0) then
+          tsysif(1)=1
+          n=1
+        endif
 	call GetOpt(doapply,auto,redo)
 	call keyfin
 c
@@ -112,16 +126,29 @@ c
      *		'Required info for options=auto is missing')
 	endif
 	call uvrdvri(lVis,'nants',na,0)
+        first=.true.
 c
 	dowhile(nchan.gt.0)
+          update=.false.
 	  call uvrdvri(lVis,'pol',pol,0)
 	  call uvrdvri(lVis,'npol',npol,0)
 c
 	  if(uvvarUpd(vupd))then
 	    call uvprobvr(lVis,'nschan',type,length,updated)
 	    nif = length
-	    if(tsysif.lt.1.or.tsysif.gt.nif)
-     *	      call bug('f','Invalid tsysif parameter')	
+            if (first.and.redo) then
+              first=.false.
+              n=min(n,nif)
+              do i=1,n
+                if (tsysif(i).lt.1.or.tsysif(i).gt.nif)
+     *	          call bug('f','Invalid tsysif parameter')
+              enddo	
+              if (n.lt.nif) then
+                do i=n+1,nif
+                  tsysif(i)=tsysif(n)
+                enddo
+              endif
+            endif
 	    if(type.ne.'i'.or.length.le.0.or.length.gt.MAXWIN)
      *	      call bug('f','Invalid nschan parameter')
 	    call uvgetvri(lVis,'nschan',nschan,nif)
@@ -137,6 +164,7 @@ c
 	    if(nants*nif.ne.length.or.type.ne.'r')
      *			      call bug('f','Invalid ytsys parameter')
 	    call uvgetvrr(lVis,'ytsys',ytsys,nants*nif)
+            update=.true.
 	  endif
 c
 	  call basant(preamble(5),i1,i2)
@@ -158,6 +186,20 @@ c
 	    call uvputvri(lOut,'npol',npol,1)
 	    call uvputvri(lOut,'pol',pol,1)
 	  endif
+          if (redo.and.update) then
+            k=0
+            do i=1,nif
+              do j=1,nants 
+                k=k+1
+                nxtsys(k)=xtsys(j+(tsysif(i)-1)*nants)
+                nytsys(k)=ytsys(j+(tsysif(i)-1)*nants)
+                systemp(k)=sqrt(nxtsys(k)*nytsys(k))
+              enddo
+            enddo
+            call uvputvrr(lOut,'xtsys',nxtsys,nants*nif)
+            call uvputvrr(lOut,'ytsys',nytsys,nants*nif)
+            call uvputvrr(lOut,'systemp',systemp,nants*nif)      
+          endif
 	  call uvwrite(lOut,preamble,data,flags,nchan)
 	  call uvread(lVis,preamble,data,flags,MAXCHAN,nchan)
 	enddo
