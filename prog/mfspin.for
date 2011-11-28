@@ -62,7 +62,7 @@ c       the linearly polarized intensity spectral index image, and the
 c       second will receive an estimate of the rotation measure (units
 c       of rad/m**2).
 c
-c$Id: mfspin.for,v 1.6 2011/10/31 00:37:30 wie017 Exp $
+c$Id: mfspin.for,v 1.7 2011/11/28 01:19:24 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -94,8 +94,8 @@ c-----------------------------------------------------------------------
       common dat
 c-----------------------------------------------------------------------
       version = versan('mfspin',
-     *                 '$Revision: 1.6 $',
-     *                 '$Date: 2011/10/31 00:37:30 $')
+     *                 '$Revision: 1.7 $',
+     *                 '$Date: 2011/11/28 01:19:24 $')
 c
 c  Get the input parameters.
 c
@@ -393,7 +393,7 @@ c     Determine the frequency of channel 1.
       nu0 = 0.0
       call coInit(lMod)
       call coSpcSet(lMod, 'FREQ', ' ', ifrq, algo)
-      if (ifrq.eq.0) then
+      if (ifrq.ne.0) then
         call coCvt1(lMod, ifrq, 'ap', 1d0, 'aw', nu0)
       endif
       call coFin(lMod)
