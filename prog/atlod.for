@@ -76,8 +76,9 @@ c                   for xy phase and amplitude are skipped for 3mm data
 c                   (as there is no noise calibration signal).
 c         'mmrelax' This option is ignored, it is only present for
 c                   historical reasons.
-c         'unflag'  Save any data that is flagged.  By default ATLOD
-c                   discards most data that is flagged.
+c         'unflag'  Save any data that is flagged and also keep it's 
+c                   syscal info.  By default ATLOD discards most data 
+c                   that is flagged.
 c         'opcorr'  Correct for atmospheric opacity.  This option is
 c                   possible for data measured after October 2003.
 c                   Because of the way system temperature is measured at
@@ -171,7 +172,7 @@ c       For concatenated spectra the width of a single zoom is used.
 c       Note that noise and artefacts go up quickly towards the band 
 c       edge so making this much smaller will not gain you much.
 c
-c$Id: atlod.for,v 1.35 2011/02/06 22:46:40 wie017 Exp $
+c$Id: atlod.for,v 1.36 2011/11/30 04:24:30 wie017 Exp $
 c--
 c
 c  Program Structure:
@@ -328,8 +329,9 @@ c    mhw  19oct10 Update 20/13 band - now 1-3 GHz
 c    mhw  26oct10 Fix birdie flagging in 20/13 cm band
 c    mhw  11nov10 Record scan direction for otfmos scans
 c    mhw  23nov10 Fix for CABB 33 channel (64MHz) mode
+c    mhw  07feb11 Add edge keyword to control birdie/edge flagging
 c
-c $Id: atlod.for,v 1.35 2011/02/06 22:46:40 wie017 Exp $
+c $Id: atlod.for,v 1.36 2011/11/30 04:24:30 wie017 Exp $
 c-----------------------------------------------------------------------
 
         integer MAXFILES,MAXTIMES,MAXSIM
@@ -350,8 +352,8 @@ c
         character itoaf*8, rperr*32, versan*80
 c-----------------------------------------------------------------------
       version = versan ('atlod',
-     :                  '$Revision: 1.35 $',
-     :                  '$Date: 2011/02/06 22:46:40 $')
+     :                  '$Revision: 1.36 $',
+     :                  '$Date: 2011/11/30 04:24:30 $')
 c
 c  Get the input parameters.
 c
@@ -1354,7 +1356,10 @@ c
 c
 c  Undo online Tsys correction/calibration if needed
 c        
-        if (.not.dotsys) then
+        if (.not.dotsys.and.xsdo(if,i1).gt.0.and.xsdo(if,i2).gt.0.and.
+     *       ysdo(if,i1).gt.0.and.ysdo(if,i2).gt.0.and.
+     *       xcaljy(if,i1).gt.0.and.xcaljy(if,i2).gt.0.and.
+     *       ycaljy(if,i1).gt.0.and.ycaljy(if,i2).gt.0) then
           do i=1,nfreq(if)
             data(pnt(if,iXX,bl,bin)+i-1)=data(pnt(if,iXX,bl,bin)+i-1)*
      *         sqrt(xsdo(if,i1)*xsdo(if,i2)/
@@ -2615,7 +2620,7 @@ c
               utprevsc = sc_ut
             endif
             call SetSC(scinit,scbuf,MAX_IF,ANT_MAX,sc_q,sc_if,sc_ant,
-     *          sc_cal,if_invert,polflag,
+     *          sc_cal,if_invert,polflag,unflag,
      *          xyphase,xyamp,xtsys,ytsys,xsamp,ysamp,
      *          xgtp,ygtp,xsdo,ysdo,xcaljy,ycaljy,
      *          chi,tcorr,pntrms,pntmax,
@@ -3283,7 +3288,7 @@ c
         end
 c***********************************************************************
         subroutine SetSC(scinit,scbuf,MAXIF,MAXANT,nq,nif,nant,
-     *          syscal,invert,polflag,
+     *          syscal,invert,polflag,unflag,
      *          xyphase,xyamp,xtsys,ytsys,xsamp,ysamp,
      *          xgtp,ygtp,xsdo,ysdo,xcaljy,ycaljy,
      *          chi,tcorr,pntrms,pntmax,nxyp,xyp,ptag,xya,atag,MAXXYP,
@@ -3292,7 +3297,7 @@ c
         integer MAXIF,MAXANT,MAXXYP,nq,nif,nant,invert(MAXIF)
         integer tcorr,mcount
         real syscal(nq,nif,nant),mdata(9)
-        logical polflag
+        logical polflag,unflag
         logical scinit(MAXIF,MAXANT),scbuf(MAXIF,MAXANT)
         real xyphase(MAXIF,MAXANT),xyamp(MAXIF,MAXANT)
         real xtsys(MAXIF,MAXANT),ytsys(MAXIF,MAXANT)
@@ -3322,7 +3327,7 @@ c
             ij = nint(syscal(2,j,k))
             ok = ij.gt.0.and.ik.gt.0.and.ij.le.maxif.and.ik.le.maxant
             if(ok.and.nq.ge.13) ok = syscal(13,j,k).eq.0
-            if(ok)then
+            if(ok.or.unflag)then
               scinit(ij,ik) = .true.
               scbuf(ij,ik)  = .true.
               xyphase(ij,ik) = invert(ij)*syscal(3,j,k)
