@@ -26,29 +26,32 @@ c	  gpbreak vis=cyga times=20:30,21:15 ants=1,2 feeds=X
 c--
 c  History:
 c    rjs      4sep91 Original version.
-c    rjs     16sep91 Fixed bugs which affected applying multiple breaks at
-c		     a time.
+c    rjs     16sep91 Fixed bugs which affected applying multiple breaks
+c		     at a time.
 c    rjs     30aug93 Increase MAXTIMES.
 c    rjs     16sep93 Rename bsrch to binsrch.
 c    rjs     13oct93 Changed the keyword "times" to "break".
 c    rjs     25nov93 Use library version of mkeyt.
 c    rjs     31jan97 Fix "feeds" keyword, which could never have worked.
 c    rjs      5mar97 Check that there are no delays in the gain table.
+c    mhw      1dec11 Handle freq bins (gainsf table)
 c  Bugs and Shortcomings:
 c------------------------------------------------------------------------
 	include 'maxdim.h'
-	integer MAXFEED,MAXTIME,MAXSOLN
+        include 'mem.h'
+	integer MAXFEED,MAXTIME,MAXFBIN
 	character version*(*)
 	parameter(version='GpBreak: version 1.0 05-Mar-97')
-	parameter(MAXFEED=2,MAXTIME=64,MAXSOLN=4096)
+	parameter(MAXFEED=2,MAXTIME=64,MAXFBIN=16)
 c
 	character vis*64
-	integer iostat,tVis,itGain,nants,nfeeds,nsols,i
-	integer numtime,numant,numfeed,ntau
-	double precision btimes(MAXTIME),times(MAXSOLN)
+	integer iostat,tVis,itGain,nants,nfeeds,nsols,i,ngains
+	integer numtime,numant,numfeed,ntau,maxgains,nfbin,maxsols
+	double precision btimes(MAXTIME)
 	integer ants(MAXANT),feeds(MAXFEED)
-	complex gains(2*MAXANT*MAXSOLN)
 	logical mask(2*MAXANT)
+        integer pGains,pGains2,pTimes
+        double precision freq(MAXFBIN)
 c
 c  Externals.
 c
@@ -91,8 +94,7 @@ c  See if we have enough space.
 c
 	if(nants.gt.MAXANT)
      *	  call bug('f','Too many antennae for me to cope with')
-	if(nsols+numtime.gt.MAXSOLN)
-     *	  call bug('f','Too many solution intervals for my small brain')
+	maxsols = nsols + numtime
 c
 c  Check the given antenna numbers, and set the default antenna numbers
 c  if needed.
@@ -131,26 +133,37 @@ c
 c
 c  Open the gains file. Mode=='append' so that we can overwrite it.
 c
-	call haccess(tVis,itGain,'gains','append',iostat)
-	if(iostat.ne.0)call BreakBug(iostat,'Error accessing gains')
+c	call haccess(tVis,itGain,'gains','append',iostat)
+c	if(iostat.ne.0)call BreakBug(iostat,'Error accessing gains')
 c
 c  Read the gains.
 c
-	call GainRd(itGain,nsols,nants,nfeeds,times,Gains)
+c	call GainRd(itGain,nsols,nants,nfeeds,times,Gains)
+        maxgains = maxsols*nants*2*maxfbin
+        call memAlloc(pGains,maxgains,'c')
+        call memAlloc(pGains2,maxgains,'c')
+        call memAlloc(pTimes,maxsols,'d')
+        call uvGnRead(tVis,memc(pGains),memd(pTimes),freq,ngains,nfeeds,
+     *    ntau,nsols,nfbin,maxgains,maxsols,maxfbin)
 c
 c  Sort the times, and delete unnecessary ones.
 c
-	call tsort(times,nsols,btimes,numtime)
+	call tsort(memd(pTimes),nsols,btimes,numtime)
 c
 c  Edit the gains.
 c
-	call GainEdt(nsols+numtime,nsols,nants*nfeeds,times,Gains,
-     *			mask,btimes,numtime)
+	call GainEdt(nsols+numtime,nsols,nants*nfeeds,memd(pTimes),
+     *	             memc(pGains),memc(pGains2),mask,btimes,numtime)
 c
 c  Write out the gains.
 c
 	call wrhdi(tVis,'nsols',nsols)
-	call GainWr(itGain,nsols,nants,nfeeds,times,Gains)
+c	call GainWr(itGain,nsols,nants,nfeeds,times,Gains)
+        call uvGnWrit(tVis,memc(pGains2),memd(pTimes),freq,ngains,
+     *                nsols,nfbin,maxgains,maxsols,maxfbin)
+        call memFree(pTimes,maxsols,'d')
+        call memFree(pGains,maxgains,'c')
+        call memFree(pGains2,maxgains,'c')
 c
 c  Write out some history now.
 c
@@ -202,43 +215,13 @@ c
 c
 	end
 c************************************************************************
-	subroutine GainRd(itGain,nsols,nants,nfeeds,times,Gains)
+	subroutine GainEdt(maxsols,nsols,nants,nfbin,times,iGains,
+     *			   oGains,mask,btimes,numtime)
 c
 	implicit none
-	integer itGain,nsols,nants,nfeeds
-	complex Gains(nfeeds*nants,nsols)
-	double precision times(nsols)
-c
-c  Read the gains from the gains table.
-c
-c  Input:
-c    itGain	The item handle of the gains table.
-c    nsols	Number of solutions.
-c    nants	Number of antennae
-c    nfeeds	Number of feeds.
-c  Output:
-c    times	The read times.
-c    gains	The gains.
-c------------------------------------------------------------------------
-	integer offset,iostat,k
-c
-	offset = 8
-	do k=1,nsols
-	  call hreadd(itGain,times(k),offset,8,iostat)
-	  if(iostat.ne.0)call BreakBug(iostat,'Error reading gain time')
-	  offset = offset + 8
-	  call hreadr(itGain,Gains(1,k),offset,8*nfeeds*nants,iostat)
-	  if(iostat.ne.0)call BreakBug(iostat,'Error reading gains')
-	  offset = offset + 8*nfeeds*nants
-	enddo
-	end
-c************************************************************************
-	subroutine GainEdt(maxsols,nsols,nants,times,Gains,mask,
-     *			btimes,numtime)
-c
-	implicit none
-	integer maxsols,nsols,nants,numtime
-	complex Gains(nants,maxsols)
+	integer maxsols,nsols,nants,numtime,nfbin
+	complex iGains(nants,nsols,0:nfbin)
+        complex oGains(nants,maxsols,0:nfbin)
 	double precision times(maxsols),btimes(numtime)
 	logical mask(nants)
 c
@@ -251,6 +234,7 @@ c  Input:
 c    maxsols	Max number of solutions.
 c    nants	Number of antennae times the number of feeds.
 c    btimes	Times for the breakpoints.
+c    igains     The input gain table
 c    numtime	Number of times.
 c    ants	Ants to apply the breakpoint to.
 c    numant	Number of antennae.
@@ -259,9 +243,9 @@ c    numfeed	Number of feeds.
 c  Input/Output:
 c    nsols	Number of solutions.
 c    times	The read times.
-c    gains	The gains.
+c    ogains	The ouput gains.
 c------------------------------------------------------------------------
-	integer kout,kin,kb
+	integer kout,kin,kb,i,k
 c
 	kb = numtime
 	kout = nsols + numtime
@@ -269,7 +253,9 @@ c
 c
 	dowhile(kb.gt.0)
 	  dowhile(kin.gt.0.and.times(kin).gt.btimes(kb))
-	    call BrMove(gains(1,kin),gains(1,kout),nants)
+            do i=0,nfbin
+	      call BrCopy(igains(1,kin,i),ogains(1,kout,i),nants)
+            enddo
 	    times(kout) = times(kin)
 	    kin = kin - 1
 	    kout = kout - 1
@@ -278,17 +264,30 @@ c
 	  times(kout) = btimes(kb)
 c
 	  if(kout.eq.nsols+numtime)then
-	    call BrFlag(gains(1,kin),mask,gains(1,kout),nants)
+            do i=0,nfbin
+	      call BrFlag(igains(1,kin,i),mask,ogains(1,kout,i),nants)
+            enddo
 	  else if(kin.eq.0)then
-	    call BrFlag(gains(1,kout+1),mask,gains(1,kout),nants)
+            do i=0,nfbin
+	      call BrFlag(igains(1,kout+1,i),mask,ogains(1,kout,i),
+     *                    nants)
+            enddo
 	  else
-	    call BrInterp(times(kin),gains(1,kin),
-     *			  times(kout+1),gains(1,kout+1),
-     *			  times(kout),gains(1,kout),mask,nants)
+            do i=0,nfbin
+	      call BrInterp(times(kin),igains(1,kin,i),
+     *			    times(kout+1),ogains(1,kout+1,i),
+     *			    times(kout),ogains(1,kout,i),mask,nants)
+            enddo
 	  endif
 	  kout = kout - 1
 	  kb = kb - 1
 	enddo
+        
+        do k=1,kin
+          do i=0,nfbin
+            call BrCopy(igains(1,k,i),ogains(1,k,i),nants)
+          enddo
+        enddo
 c
 c  Correct the number of solutions.
 c
@@ -391,7 +390,7 @@ c
 	enddo
 	end
 c************************************************************************
-	subroutine BrMove(Gin,Gout,nants)
+	subroutine BrCopy(Gin,Gout,nants)
 c
 	implicit none
 	integer nants
@@ -403,36 +402,6 @@ c------------------------------------------------------------------------
 c
 	do i=1,nants
 	  Gout(i) = Gin(i)
-	enddo
-	end
-c************************************************************************
-	subroutine GainWr(itGain,nsols,nants,nfeeds,times,Gains)
-c
-	implicit none
-	integer itGain,nsols,nants,nfeeds
-	complex Gains(nfeeds*nants,nsols)
-	double precision times(nsols)
-c
-c  Write the gains from the gains table.
-c
-c  Input:
-c    itGain	The item handle of the gains table.
-c    nsols	Number of solutions.
-c    nants	Number of antennae
-c    nfeeds	Number of feeds.
-c    times	The read times.
-c    gains	The gains.
-c------------------------------------------------------------------------
-	integer offset,iostat,k
-c
-	offset = 8
-	do k=1,nsols
-	  call hwrited(itGain,times(k),offset,8,iostat)
-	  if(iostat.ne.0)call BreakBug(iostat,'Error writing gain time')
-	  offset = offset + 8
-	  call hwriter(itGain,Gains(1,k),offset,8*nfeeds*nants,iostat)
-	  if(iostat.ne.0)call BreakBug(iostat,'Error writing gains')
-	  offset = offset + 8*nfeeds*nants
 	enddo
 	end
 c************************************************************************
