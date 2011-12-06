@@ -62,7 +62,7 @@ c       the linearly polarized intensity spectral index image, and the
 c       second will receive an estimate of the rotation measure (units
 c       of rad/m**2).
 c
-c$Id: mfspin.for,v 1.7 2011/11/28 01:19:24 cal103 Exp $
+c$Id: mfspin.for,v 1.8 2011/12/06 06:52:47 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -82,7 +82,8 @@ c-----------------------------------------------------------------------
      *          yBeam
       ptrdiff   Alpha1, Alpha2, Flux1, Flux2, Gaus, handle
       real      cdelt1, cdelt2, clip(2), crpix1, crpix2, dat(MAXBUF),
-     *          fwhm1, fwhm2, nu0, pa, Patch(NP*NP)
+     *          fwhm1, fwhm2, pa, Patch(NP*NP)
+      double precision nu0
       character beam*128, line*72, modl1*128, modl2*128, out1*128,
      *          out2*128, pbtype*16, version*72
 
@@ -94,8 +95,8 @@ c-----------------------------------------------------------------------
       common dat
 c-----------------------------------------------------------------------
       version = versan('mfspin',
-     *                 '$Revision: 1.7 $',
-     *                 '$Date: 2011/11/28 01:19:24 $')
+     *                 '$Revision: 1.8 $',
+     *                 '$Date: 2011/12/06 06:52:47 $')
 c
 c  Get the input parameters.
 c
@@ -202,7 +203,7 @@ c  Final checks for sensibleness.
 c
         if (pol1.ne.POLQ .and. pol2.ne.POLU) call bug('f',
      *    'The two models do not seem to be Q and U')
-        if (out2.ne.' ' .and. nu0.le.0.0) call bug('f',
+        if (out2.ne.' ' .and. nu0.le.0d0) call bug('f',
      *    'Unable to determine reference frequency')
       else if (pol1.eq.POLQ .or. pol1.eq.POLU) then
         call bug('w',
@@ -356,7 +357,8 @@ c***********************************************************************
       subroutine GetInfo(lMod,nx,ny,pol,nu0,cdelt1,cdelt2,crpix1,crpix2)
 
       integer lMod, nx, ny, pol
-      real    nu0, cdelt1, cdelt2, crpix1, crpix2
+      double precision nu0
+      real    cdelt1, cdelt2, crpix1, crpix2
 c-----------------------------------------------------------------------
 c  Determine various info about the model.
 c
@@ -366,7 +368,7 @@ c    nx,ny      Model size.
 c  Output:
 c    pol        The polarisation type of the model.  If this info is
 c               missing then Stokes-I is assumed.
-c    nu0        Reference frequency of the model.  Default is 0.0.
+c    nu0        Reference frequency of the model, default 0.
 c    crpix1,crpix2 Reference pixel -- assumed to be the pointing centre.
 c               Default is the model centre.
 c    cdelt1,cdelt2 Pixel increments -- No default.
@@ -390,7 +392,7 @@ c     The first two axes are assumed to be RA and DEC.
      *  call bug('f','Model pixel increment missing')
 
 c     Determine the frequency of channel 1.
-      nu0 = 0.0
+      nu0 = 0d0
       call coInit(lMod)
       call coSpcSet(lMod, 'FREQ', ' ', ifrq, algo)
       if (ifrq.ne.0) then
@@ -422,10 +424,11 @@ c     Determine the polarisation.
 
 c***********************************************************************
 
-      subroutine CorrRM(npix,Data,nu0)
+      subroutine CorrRM(npix,rdat,nu0)
 
       integer npix
-      real Data(npix),nu0
+      real    rdat(npix)
+      double precision nu0
 c-----------------------------------------------------------------------
 c  Scale the rotation measure, to get it into units of rad/m**2
 c
@@ -433,16 +436,17 @@ c  Input:
 c    npix       Number of pixels.
 c    nu0        Reference frequency, in GHz.
 c  Input/Output:
-c    Data       Rotation measure.
+c    rdat       Rotation measure.
 c-----------------------------------------------------------------------
       include 'mirconst.h'
+
       integer i
-      real factor
+      real    factor
 c-----------------------------------------------------------------------
-      factor = -nu0*nu0*1e18 / (4*CMKS*CMKS)
+      factor = -nu0*nu0*1d18 / (4d0*DCMKS*DCMKS)
 
       do i = 1, npix
-        Data(i) = factor * Data(i)
+        rdat(i) = factor * rdat(i)
       enddo
 
       end
