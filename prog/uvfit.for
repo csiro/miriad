@@ -105,7 +105,7 @@ c	           If an output is being created, the default is to make
 c	           this the fitted model.
 c         
 c
-c$Id: uvfit.for,v 1.7 2011/11/17 21:10:33 wie017 Exp $
+c$Id: uvfit.for,v 1.8 2011/12/09 00:43:18 wie017 Exp $
 c--
 c  History:
 c    rjs  13dec90  Original version.
@@ -150,8 +150,8 @@ c
         external FUNCTION,FUNCTION1
 c-----------------------------------------------------------------------
       version = versan ('uvfit',
-     :                  '$Revision: 1.7 $',
-     :                  '$Date: 2011/11/17 21:10:33 $')
+     :                  '$Revision: 1.8 $',
+     :                  '$Date: 2011/12/09 00:43:18 $')
 c
 c  Get the inputs.
 c
@@ -227,6 +227,8 @@ c
 c
 c  Now do the binned solutions if requested        
 c
+        ntime=1
+        nfreq=1
         if(nvar.gt.0.and.(dt.gt.0.or.df.gt.0)) then
 c
 c         Determine time, freq, ranges to solve for
