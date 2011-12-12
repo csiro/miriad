@@ -172,7 +172,7 @@ c       For concatenated spectra the width of a single zoom is used.
 c       Note that noise and artefacts go up quickly towards the band 
 c       edge so making this much smaller will not gain you much.
 c
-c$Id: atlod.for,v 1.36 2011/11/30 04:24:30 wie017 Exp $
+c$Id: atlod.for,v 1.37 2011/12/12 02:32:58 wie017 Exp $
 c--
 c
 c  Program Structure:
@@ -331,7 +331,7 @@ c    mhw  11nov10 Record scan direction for otfmos scans
 c    mhw  23nov10 Fix for CABB 33 channel (64MHz) mode
 c    mhw  07feb11 Add edge keyword to control birdie/edge flagging
 c
-c $Id: atlod.for,v 1.36 2011/11/30 04:24:30 wie017 Exp $
+c $Id: atlod.for,v 1.37 2011/12/12 02:32:58 wie017 Exp $
 c-----------------------------------------------------------------------
 
         integer MAXFILES,MAXTIMES,MAXSIM
@@ -352,8 +352,8 @@ c
         character itoaf*8, rperr*32, versan*80
 c-----------------------------------------------------------------------
       version = versan ('atlod',
-     :                  '$Revision: 1.36 $',
-     :                  '$Date: 2011/11/30 04:24:30 $')
+     :                  '$Revision: 1.37 $',
+     :                  '$Date: 2011/12/12 02:32:58 $')
 c
 c  Get the input parameters.
 c
@@ -3326,8 +3326,8 @@ c
             ik = nint(syscal(1,j,k))
             ij = nint(syscal(2,j,k))
             ok = ij.gt.0.and.ik.gt.0.and.ij.le.maxif.and.ik.le.maxant
-            if(ok.and.nq.ge.13) ok = syscal(13,j,k).eq.0
-            if(ok.or.unflag)then
+            if(ok.and.nq.ge.13) ok = syscal(13,j,k).eq.0.or.unflag
+            if(ok)then
               scinit(ij,ik) = .true.
               scbuf(ij,ik)  = .true.
               xyphase(ij,ik) = invert(ij)*syscal(3,j,k)
