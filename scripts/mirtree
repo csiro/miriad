@@ -5,7 +5,7 @@
 # Construct a workspace for Miriad software development.
 #
 # Original: 2007/03/06 Mark Calabretta, ATNF
-# $Id: mirtree,v 1.4 2010/09/29 02:29:28 cal103 Exp $
+# $Id: mirtree,v 1.5 2011/12/13 04:29:12 cal103 Exp $
 #-----------------------------------------------------------------------------
   trap 'exit 1' 1 2 3 15
 
@@ -67,7 +67,7 @@
         else
           ln -s "$MIR" "$PGMRROOT/SRC"
         fi
-        ln -s "SRC/GNUmakefile"
+        ln -s "SRC/GNUmakefile" "$PGMRROOT$SUBDIR/GNUmakefile"
       fi
     fi
   done
