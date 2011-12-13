@@ -141,7 +141,7 @@ c@ comment
 c       A one-line comment which is written into the logfile and any
 c       plot.
 c
-c$Id: mbspect.for,v 1.13 2011/11/18 00:36:21 cal103 Exp $
+c$Id: mbspect.for,v 1.14 2011/12/13 06:06:16 cal103 Exp $
 c--
 c
 c  History:
@@ -155,10 +155,10 @@ c-----------------------------------------------------------------------
 
       logical   deriv1, deriv2, histo, measure, minicube, none, posfit,
      *          pstyle1, pstyle2, subpoly
-      integer   blc(MAXNAX), daxis, i, ierr, ifrq, imax, iostat, j,
+      integer   blc(MAXNAX), i, ierr, ilat, ilng, imax, iostat, ispc, j,
      *          jmax, k, lIn, lOut, naxis, nchan, nmask, nsize(MAXNAX),
-     *          nsmth, pblc(MAXNAX), poly, ptrc(MAXNAX), raxis,
-     *          trc(MAXNAX), vaxis, width(2)
+     *          nsmth, pblc(MAXNAX), poly, ptrc(MAXNAX), trc(MAXNAX),
+     *          width(2)
       real      bmaj, bmin, bpa, cdelt1, cdelt2, cdelt3, cdeltd, cdeltr,
      *          chan(maxdim), clip(2), coeffs(MAXCO), csize(2), epoch,
      *          fac, fit(maxdim), hwork(MAXCO), lab1, lab2,
@@ -170,8 +170,8 @@ c-----------------------------------------------------------------------
       double precision coord(2), pixcen(3), pixcrd(3), world(3)
       character algo*3, comment*80, cpoly*64, dec1*13, dec2*13,
      *          device*64, in*132, logf*132, object*9, out*132, ra1*13,
-     *          ra2*13, str*3, txt*72, unit0*16, vctype*9, version*80,
-     *          xaxis*64, xlabel*64, yaxis*64, ylabel*64
+     *          ra2*13, str*3, txt*72, unit0*16, version*80, xaxis*64,
+     *          xlabel*64, yaxis*64, ylabel*64
 
       external  hangle, itoaf, keyprsnt, len1, pgbeg, rangle, versan
       logical   keyprsnt
@@ -180,8 +180,8 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 c     Don't report the ID so that gif and ps output can be piped.
       version = versan ('-mbspect',
-     *                  '$Revision: 1.13 $',
-     *                  '$Date: 2011/11/18 00:36:21 $')
+     *                  '$Revision: 1.14 $',
+     *                  '$Date: 2011/12/13 06:06:16 $')
 
 c     Get inputs.
       call keyini
@@ -262,20 +262,19 @@ c     Check inputs.
 
 c     Find longitude (RA), latitude (DEC), and spectral (Velocity) axes.
       call coInit(lIn)
-      call coFindAx(lIn, 'longitude', raxis)
-      call coFindAx(lIn, 'latitude',  daxis)
-      call coFindAx(lIn, 'spectral',  vaxis)
-      if (raxis.eq.0) call bug('f','Longitude axis was not found')
-      if (daxis.eq.0) call bug('f','Latitude axis was not found')
-      if (vaxis.eq.0) call bug('f','Spectral axis was not found')
-      call rdhda(lIn, 'ctype'//itoaf(vaxis), vctype, ' ')
+      call coFindAx(lIn, 'longitude', ilng)
+      call coFindAx(lIn, 'latitude',  ilat)
+      call coFindAx(lIn, 'spectral',  ispc)
+      if (ilng.eq.0) call bug('f','Longitude axis was not found')
+      if (ilat.eq.0) call bug('f','Latitude axis was not found')
+      if (ispc.eq.0) call bug('f','Spectral axis was not found')
 
 c     Find beam size.
       call rdhdr(lIn,'bmaj',bmaj,0.0)
       call rdhdr(lIn,'bmin',bmin,0.0)
       call rdhdr(lIn,'bpa',bpa,0.0)
-      call rdhdr(lIn,'cdelt'//itoaf(raxis),cdeltr,0.0)
-      call rdhdr(lIn,'cdelt'//itoaf(daxis),cdeltd,0.0)
+      call rdhdr(lIn,'cdelt'//itoaf(ilng),cdeltr,0.0)
+      call rdhdr(lIn,'cdelt'//itoaf(ilat),cdeltd,0.0)
       call rdhdr(lIn,'cdelt1',cdelt1,0.0)
       call rdhdr(lIn,'cdelt2',cdelt2,0.0)
       call rdhdr(lIn,'cdelt3',cdelt3,0.0)
@@ -301,7 +300,10 @@ c     Find equinox.
       call rdhdr(lin,'epoch',epoch,0.0)
 
 c     X-axis.
-      if (xaxis.eq.' ') xaxis = vctype(1:4)
+      if (xaxis.eq.' ') then
+        call rdhda(lIn, 'ctype'//itoaf(ispc), xaxis, ' ')
+        xaxis(5:) = ' '
+      endif
 
 c     Find the pixel coordinate of the requested position.
       if (coord(1).eq.0d0 .or. coord(2).eq.0d0) then
@@ -310,26 +312,26 @@ c       No coordinates given, use centre of image.
           pixcen(i) = dble(nsize(i)/2 + 1)
         enddo
         call coCvt(lIn,'ap/ap/ap',pixcen,'aw/aw/aw',world)
-        coord(1) = world(raxis)
-        coord(2) = world(daxis)
+        coord(1) = world(ilng)
+        coord(2) = world(ilat)
       else
 c       Coordinate given, get pixel coordinates.
-        world(raxis) = coord(1)
-        world(daxis) = coord(2)
-        world(vaxis) = 0.0
+        world(ilng) = coord(1)
+        world(ilat) = coord(2)
+        world(ispc) = 0d0
         call coCvt(lIn,'aw/aw/aw',world,'ap/ap/ap',pixcen)
       endif
 
 c     Check that it's inside the cube.
-      if (nint(pixcen(raxis)).lt.1 .or.
-     *    nint(pixcen(raxis)).gt.nsize(raxis) .or.
-     *    nint(pixcen(daxis)).lt.1 .or.
-     *    nint(pixcen(daxis)).gt.nsize(daxis))
+      if (nint(pixcen(ilng)).lt.1 .or.
+     *    nint(pixcen(ilng)).gt.nsize(ilng) .or.
+     *    nint(pixcen(ilat)).lt.1 .or.
+     *    nint(pixcen(ilat)).gt.nsize(ilat))
      *  call bug('f','Requested region not inside cube')
 
 c     Formatted value for requested coordinate.
-      ra1  = ' ' // hangle(world(raxis))
-      dec1 = ' ' // rangle(world(daxis))
+      ra1  = ' ' // hangle(world(ilng))
+      dec1 = ' ' // rangle(world(ilat))
 
 c     Formatted value for actual coordinate, if yaxis is sum or average.
       if (yaxis.eq.'point' .and.
@@ -341,20 +343,20 @@ c     Formatted value for actual coordinate, if yaxis is sum or average.
           pixcrd(i) = dble(nint(pixcen(i)))
         enddo
         call coCvt(lIn,'ap/ap/ap',pixcrd,'aw/aw/aw',world)
-        ra2  = ' ' // hangle(world(raxis))
-        dec2 = ' ' // rangle(world(daxis))
+        ra2  = ' ' // hangle(world(ilng))
+        dec2 = ' ' // rangle(world(ilat))
       endif
 
 
 c     Set spatial and spectral range.
-      blc(raxis) = nint(pixcen(raxis)) - width(1)/2
-      trc(raxis) = nint(pixcen(raxis)) + width(1)/2
-      blc(daxis) = nint(pixcen(daxis)) - width(2)/2
-      trc(daxis) = nint(pixcen(daxis)) + width(2)/2
+      blc(ilng) = nint(pixcen(ilng)) - width(1)/2
+      trc(ilng) = nint(pixcen(ilng)) + width(1)/2
+      blc(ilat) = nint(pixcen(ilat)) - width(2)/2
+      trc(ilat) = nint(pixcen(ilat)) + width(2)/2
 
-      blc(vaxis) = 1
-      trc(vaxis) = nsize(vaxis)
-      if (xaxis.ne.'channel') call coSpcSet(lIn, xaxis, ' ', ifrq, algo)
+      blc(ispc) = 1
+      trc(ispc) = nsize(ispc)
+      if (xaxis.ne.'channel') call coSpcSet(lIn, xaxis, ' ', ispc, algo)
       if (xrange(1).ne.0.0 .or. xrange(2).ne.0.0) then
         if (xaxis.eq.'FREQ' .or. xaxis.eq.'frequency') then
           fac = 1000.0
@@ -363,46 +365,46 @@ c     Set spatial and spectral range.
         endif
 
         if (xaxis.eq.'channel') then
-          blc(vaxis) = int(xrange(1))
-          trc(vaxis) = int(xrange(2))
+          blc(ispc) = int(xrange(1))
+          trc(ispc) = int(xrange(2))
         else
-          call coCvt1(lIn,vaxis,'aw',dble(xrange(1)/fac),'ap',pixcrd)
-          blc(vaxis) = int(pixcrd(1))
-          call coCvt1(lIn,vaxis,'aw',dble(xrange(2)/fac),'ap',pixcrd)
-          trc(vaxis) = int(pixcrd(1))
-          if (trc(vaxis).gt.blc(vaxis)) then
-            blc(vaxis) = blc(vaxis) + 1
+          call coCvt1(lIn,ispc,'aw',dble(xrange(1)/fac),'ap',pixcrd)
+          blc(ispc) = int(pixcrd(1))
+          call coCvt1(lIn,ispc,'aw',dble(xrange(2)/fac),'ap',pixcrd)
+          trc(ispc) = int(pixcrd(1))
+          if (trc(ispc).gt.blc(ispc)) then
+            blc(ispc) = blc(ispc) + 1
           else
-            trc(vaxis) = trc(vaxis) + 1
+            trc(ispc) = trc(ispc) + 1
           endif
         endif
       endif
 
 
 c     Adjust ranges if necessary.
-      if (blc(raxis).lt.1 .or. blc(daxis).lt.1 .or.
-     *    trc(raxis).gt.nsize(raxis) .or.
-     *    trc(daxis).gt.nsize(daxis)) then
+      if (blc(ilng).lt.1 .or. blc(ilat).lt.1 .or.
+     *    trc(ilng).gt.nsize(ilng) .or.
+     *    trc(ilat).gt.nsize(ilat)) then
         call bug('w', 'Region partially outside image - adjusting ' //
      *                'spatial range')
-        if (blc(raxis).lt.1) blc(raxis) = 1
-        if (blc(daxis).lt.1) blc(daxis) = 1
-        if (trc(raxis).gt.nsize(raxis)) trc(raxis)=nsize(raxis)
-        if (trc(daxis).gt.nsize(daxis)) trc(daxis)=nsize(daxis)
+        if (blc(ilng).lt.1) blc(ilng) = 1
+        if (blc(ilat).lt.1) blc(ilat) = 1
+        if (trc(ilng).gt.nsize(ilng)) trc(ilng)=nsize(ilng)
+        if (trc(ilat).gt.nsize(ilat)) trc(ilat)=nsize(ilat)
       endif
 
-      if (blc(vaxis).gt.trc(vaxis)) then
+      if (blc(ispc).gt.trc(ispc)) then
 c       Swap spectral limits.
-        temp = blc(vaxis)
-        blc(vaxis) = trc(vaxis)
-        trc(vaxis) = temp
+        temp = blc(ispc)
+        blc(ispc) = trc(ispc)
+        trc(ispc) = temp
       endif
 
-      if (blc(vaxis).lt.1 .or. trc(vaxis).gt.nsize(vaxis)) then
-         call bug('w', 'Region partially outside image - adjusting ' //
+      if (blc(ispc).lt.1 .or. trc(ispc).gt.nsize(ispc)) then
+        call bug('w', 'Region partially outside image - adjusting ' //
      *                 'spectral range')
-        if (blc(vaxis).lt.1) blc(vaxis) = 1
-        if (trc(vaxis).gt.nsize(vaxis)) trc(vaxis) = nsize(vaxis)
+        if (blc(ispc).lt.1) blc(ispc) = 1
+        if (trc(ispc).gt.nsize(ispc)) trc(ispc) = nsize(ispc)
       endif
 
 c     Find pixel range for spectral profile range.
@@ -429,39 +431,39 @@ c     Find pixel range for spectral profile range.
         endif
 
         if (xaxis.eq.'channel') then
-          pblc(vaxis) = int(profile(1))
-          ptrc(vaxis) = int(profile(2))
+          pblc(ispc) = int(profile(1))
+          ptrc(ispc) = int(profile(2))
         else
-          call coCvt1(lIn,vaxis,'aw',dble(profile(1)/fac),'ap',pixcrd)
-          pblc(vaxis) = int(pixcrd(1))
-          call coCvt1(lIn,vaxis,'aw',dble(profile(2)/fac),'ap',pixcrd)
-          ptrc(vaxis) = int(pixcrd(1))
+          call coCvt1(lIn,ispc,'aw',dble(profile(1)/fac),'ap',pixcrd)
+          pblc(ispc) = int(pixcrd(1))
+          call coCvt1(lIn,ispc,'aw',dble(profile(2)/fac),'ap',pixcrd)
+          ptrc(ispc) = int(pixcrd(1))
 
-          if (ptrc(vaxis).gt.pblc(vaxis)) then
-            pblc(vaxis) = pblc(vaxis) + 1
+          if (ptrc(ispc).gt.pblc(ispc)) then
+            pblc(ispc) = pblc(ispc) + 1
           else
-            ptrc(vaxis) = ptrc(vaxis) + 1
+            ptrc(ispc) = ptrc(ispc) + 1
           endif
         endif
       endif
 
 c     Reset spectral boundaries if invalid.
-      if (pblc(vaxis).gt.ptrc(vaxis)) then
-        temp=pblc(vaxis)
-        pblc(vaxis)=ptrc(vaxis)
-        ptrc(vaxis)=temp
+      if (pblc(ispc).gt.ptrc(ispc)) then
+        temp=pblc(ispc)
+        pblc(ispc)=ptrc(ispc)
+        ptrc(ispc)=temp
       endif
-      if (pblc(vaxis).lt.1 .or. ptrc(vaxis).gt.nsize(vaxis))
+      if (pblc(ispc).lt.1 .or. ptrc(ispc).gt.nsize(ispc))
      *   call bug('w', 'Region partially outside image - resetting'//
      *            ' spectral boundary')
-      if (pblc(vaxis).lt.1) pblc(vaxis)=1
-      if (ptrc(vaxis).gt.nsize(vaxis)) ptrc(vaxis)=nsize(vaxis)
+      if (pblc(ispc).lt.1) pblc(ispc)=1
+      if (ptrc(ispc).gt.nsize(ispc)) ptrc(ispc)=nsize(ispc)
 
 c     Set up the region of interest.
-      nchan = trc(vaxis)-blc(vaxis)+1
+      nchan = trc(ispc)-blc(ispc)+1
 
-c     Reject vaxis=2.
-      if (vaxis.eq.2) then
+c     Reject ispc=2.
+      if (ispc.eq.2) then
         call bug('f','this image orientation is not implemented')
       endif
 
@@ -471,7 +473,7 @@ c     Fit for position.
           call bug('f','width parameter too small')
         endif
 
-        if (vaxis.eq.3) then
+        if (ispc.eq.3) then
           imax=abs(ptrc(1)-pblc(1))+1
           jmax=abs(ptrc(2)-pblc(2))+1
         else
@@ -479,7 +481,7 @@ c     Fit for position.
           jmax=abs(ptrc(3)-pblc(3))+1
         endif
 
-        call pfit(lIn,naxis,pblc,ptrc,vaxis,imax,jmax,
+        call pfit(lIn,naxis,pblc,ptrc,ispc,imax,jmax,
      *            cdelt1,cdelt2,cdelt3,bmaj,bmin,bpa,pixcen,ra2,dec2,
      *            none,ierr)
         if (none) call bug('f','No good pixels in selected region')
@@ -487,8 +489,8 @@ c     Fit for position.
       call coFin(lIn)
 
 c     Integrate the spectrum over the specified region.
-      call vaxis13(lIn,naxis,pixcen,blc,trc,cdelt1,cdelt2,cdelt3,bmaj,
-     *             bmin,yaxis,nchan,vaxis,chan,spec,wpix,none)
+      call spcax13(lIn,naxis,pixcen,blc,trc,cdelt1,cdelt2,cdelt3,bmaj,
+     *             bmin,yaxis,nchan,ispc,chan,spec,wpix,none)
       if (none) call bug('f','No good pixels in selected region')
 
 c     Optionally Hanning smooth spectrum..
@@ -498,7 +500,7 @@ c     Optionally Hanning smooth spectrum..
       endif
 
 c     Get plot axes, convert units, and write labels.
-      call axes(lIn,vaxis,xaxis,yaxis,nchan,naxis,wpix,
+      call axes(lIn,ispc,xaxis,yaxis,nchan,naxis,wpix,
      *          xlabel,ylabel,chan,value,spec,unit0)
 
 c     Optionally take derivatives.
@@ -715,7 +717,7 @@ c     Write output miriad spectrum if desired.
         endif
 
         call xyopen(lOut,out,'new',naxis,nsize)
-        call mkHead(lIn,lOut,raxis,daxis,vaxis,blc(vaxis),coord,unit0)
+        call mkHead(lIn,lOut,ilng,ilat,ispc,blc(ispc),coord,unit0)
         do i = 1, nsize(2)
           do j = 1, nsize(3)
             k=1+(j-1)+(i-1)*nsize(3)
@@ -762,24 +764,24 @@ c     All done.
 
 c***********************************************************************
 
-      subroutine pfit(lIn,NAXIS,blc,trc,vaxis,imax,jmax,
+      subroutine pfit(lIn,NAXIS,blc,trc,ispc,imax,jmax,
      *                cdelt1,cdelt2,cdelt3,bmaj,bmin,bpa,pixcen,rac,
      *                dec,none,ierr)
 
-      integer   lIn, NAXIS, blc(NAXIS), trc(NAXIS), vaxis, imax, jmax
+      integer   lIn, NAXIS, blc(NAXIS), trc(NAXIS), ispc, imax, jmax
       real      cdelt1, cdelt2, cdelt3, bmaj, bmin, bpa
       double precision pixcen(*)
       character rac*13, dec*13
       logical   none
       integer   ierr
 c-----------------------------------------------------------------------
-c  Get moment map for vaxis=1 or 3.
+c  Get moment map for ispc=1 or 3.
 c
 c  Inputs:
 c    lIn        The handle of the image.
 c    NAXIS      Number of image axes.
 c    blc,trc    Corners of region of interest.
-c    vaxis      Velocity axis
+c    ispc       Spectral axis
 c    imax       Maximum spatial pixels
 c    jmax       Maximum spatial pixels
 c    cdelt1     Increment on 1-axis
@@ -847,7 +849,7 @@ c
               indx=i-blc(1)+1
               jndx=j-blc(2)+1
               kndx=k-blc(3)+1
-              if (vaxis.eq.3) then
+              if (ispc.eq.3) then
                  pmom(indx,jndx)=pmom(indx,jndx)+buf(i)
               else
                  pmom(jndx,kndx)=pmom(jndx,kndx)+buf(i)
@@ -873,7 +875,7 @@ c
       xf(1)=pmom(i1,i2)
       xf(2)=real(i1)
       xf(3)=real(i2)
-      if (vaxis.eq.3) then
+      if (ispc.eq.3) then
         if (bmaj.eq.0.0 .or. bmin.eq.0.0) then
           xf(4)=2.0
           xf(5)=2.0
@@ -927,7 +929,7 @@ c
       do i = 1, 3
         xmom(i)=blc(i)
       enddo
-      if (vaxis.eq.3) then
+      if (ispc.eq.3) then
          xmom(1)=blc(1)-1.0+xf(2)
          xmom(2)=blc(2)-1.0+xf(3)
          dwtrc(1)=dble(xmom(1))
@@ -943,7 +945,7 @@ c  Real coordinates
 c
       call coCvt(lIn,'ap/ap/ap',xmom,'aw/aw/aw',coord)
 
-      if (vaxis.eq.3) then
+      if (ispc.eq.3) then
         ract=hangle(coord(1))
         dect=rangle(coord(2))
         xf(1)=xf(1)*abs(cdelt3)
@@ -987,7 +989,7 @@ c
 c
 c  Errors in real coordinates
 c
-      if (vaxis.eq.3) then
+      if (ispc.eq.3) then
         exf(1)=exf(1)*abs(cdelt3)
         exf(2)=exf(2)*abs(cdelt1)
         exf(3)=exf(3)*abs(cdelt2)
@@ -1045,7 +1047,7 @@ c
       else
         rac=ract
         dec=dect
-        if (vaxis.eq.3) then
+        if (ispc.eq.3) then
            pixcen(1) = dwtrc(1)
            pixcen(2) = dwtrc(2)
         else
@@ -1094,17 +1096,17 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine vaxis13(lIn,naxis,pixcen,blc,trc,cdelt1,cdelt2,cdelt3,
-     *             bmaj,bmin,yaxis,nchan,vaxis,chan,spec,wpix,none)
+      subroutine spcax13(lIn,naxis,pixcen,blc,trc,cdelt1,cdelt2,cdelt3,
+     *             bmaj,bmin,yaxis,nchan,ispc,chan,spec,wpix,none)
 
-      integer lIn,naxis,blc(naxis),trc(naxis),nchan,vaxis
+      integer lIn,naxis,blc(naxis),trc(naxis),nchan,ispc
       real chan(nchan),spec(nchan),wpix(nchan)
       real dr,dd,fac,bmaj,bmin,cdelt1,cdelt2,cdelt3
       double precision pixcen(*)
       character*(*) yaxis
       logical none
 c-----------------------------------------------------------------------
-c  get integrated spectrum for vaxis=1 or 3
+c  get integrated spectrum for ispc=1 or 3
 c
 c  Inputs:
 c    lIn        The handle of the image.
@@ -1118,7 +1120,7 @@ c    cdelt3     Axis 3 increment
 c    bmaj       Major axis in radians
 c    bmin       Minor axis in radians
 c    nchan      Number of channels.
-c    vaxis      Velocity axis
+c    ispc       Spectral axis
 c  Output:
 c    chan       Array of channel numbers.
 c    spec       Integrated spectrum.
@@ -1132,7 +1134,7 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
       do i = 1, nchan
         spec(i) = 0.0
-        chan(i) = i + blc(vaxis) -1
+        chan(i) = i + blc(ispc) -1
         wpix(i) = 0.0
       enddo
       none = .true.
@@ -1145,7 +1147,7 @@ c-----------------------------------------------------------------------
           do i = blc(1), trc(1)
             if (flags(i)) then
               if (yaxis.eq.'point') then
-                if (vaxis.eq.3) then
+                if (ispc.eq.3) then
                   dr = (real(i) - real(pixcen(1)))*cdelt1
                   dd = (real(j) - real(pixcen(2)))*cdelt2
                 else
@@ -1156,10 +1158,10 @@ c-----------------------------------------------------------------------
               else
                 fac=1.0
               endif
-              if (vaxis.eq.3) then
-                indx = k-blc(vaxis)+1
+              if (ispc.eq.3) then
+                indx = k-blc(ispc)+1
               else
-                indx = i-blc(vaxis)+1
+                indx = i-blc(ispc)+1
               endif
               spec(indx) = spec(indx) + fac*buf(i)
               wpix(indx) = wpix(indx) + fac**2
@@ -1173,10 +1175,10 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine axes(lIn,vaxis,xaxis,yaxis,nchan,naxis,wpix,
+      subroutine axes(lIn,ispc,xaxis,yaxis,nchan,naxis,wpix,
      *                xlabel,ylabel,chan,value,spec,unit0)
 
-      integer   lIn, vaxis
+      integer   lIn, ispc
       character xaxis*(*), yaxis*(*)
       integer   nchan, naxis
       real      wpix(nchan)
@@ -1188,7 +1190,7 @@ c  Get plot axes and write labels.
 c
 c  Inputs:
 c    lIn        The handle of the image.
-c    vaxis      The velocity or frequency axis.
+c    ispc       Spectral axis.
 c    xaxis      X-axis type.  Can be 'channel', 'frequency', 'radio',
 c               'optical', or (default) units in image.
 c    yaxis      Units for yaxis.  Can be 'average' (default), 'sum', or
@@ -1209,7 +1211,7 @@ c    - Could be much fancier by converting internal units 'JY' 'JY/BEAM'
 c    etc. to requested units 'JY' 'JY/BEAM' 'K' etc. calling GetBeam
 c    to get beam oversampling factor.
 c-----------------------------------------------------------------------
-      integer   i, ifrq
+      integer   i, jspc
       real      bmaj, bmin,cbof, omega
       double precision dtemp
       character algo*3, bunit*16, ctype*16
@@ -1219,7 +1221,7 @@ c-----------------------------------------------------------------------
       character itoaf*1
 c-----------------------------------------------------------------------
 c     Construct x-axis label.
-      call rdhda(lIn,'ctype'//itoaf(vaxis),ctype,' ')
+      call rdhda(lIn,'ctype'//itoaf(ispc),ctype,' ')
       if (xaxis.eq.'channel') then
         xlabel = 'Channel'
       else if (xaxis.eq.'FREQ' .or.
@@ -1246,9 +1248,9 @@ c     Convert x-axis units.
 
       else
         call coInit(lIn)
-        call coSpcSet(lIn, xaxis, ' ', ifrq, algo)
+        call coSpcSet(lIn, xaxis, ' ', jspc, algo)
         do i = 1, nchan
-          call coCvt1(lIn, vaxis, 'ap', dble(chan(i)), 'aw', dtemp)
+          call coCvt1(lIn, jspc, 'ap', dble(chan(i)), 'aw', dtemp)
           value(i) = dtemp
         enddo
         call coFin(lIn)
@@ -2119,9 +2121,9 @@ c
 
 c***********************************************************************
 
-      subroutine mkHead(lIn,lOut,raxis,daxis,vaxis,vblc,coord,bunit)
+      subroutine mkHead(lIn,lOut,ilng,ilat,ispc,sblc,coord,bunit)
 
-      integer   lin, lOut, raxis, daxis, vaxis, vblc
+      integer   lin, lOut, ilng, ilat, ispc, sblc
       double precision coord(*)
       character bunit*(*)
 c-----------------------------------------------------------------------
@@ -2129,10 +2131,10 @@ c  Create the header for the output file.
 c
 c  Inputs:
 c    lIn,lOut   Handle of input and output files.
-c    raxis      RA axis on input cube.
-c    daxis      DEC axis on input cube.
-c    vaxis      Velocity axis on input cube.
-c    vblc       First pixel of velocity axis.
+c    ilng       Longitude (RA) axis on input cube.
+c    ilat       Latitude (DEC) axis on input cube.
+c    ispc       Spectral axis on input cube.
+c    sblc       First pixel of spectral axis.
 c    bunit      Brightness units.
 c-----------------------------------------------------------------------
       integer   axmap(3), blc(3)
@@ -2142,11 +2144,11 @@ c-----------------------------------------------------------------------
       external  itoaf, len1
 c-----------------------------------------------------------------------
 c     Copy the header with axis permutation and partial subimaging.
-      axmap(1) = vaxis
-      axmap(2) = raxis
-      axmap(3) = daxis
+      axmap(1) = ispc
+      axmap(2) = ilng
+      axmap(3) = ilat
 
-      blc(1) = vblc
+      blc(1) = sblc
       blc(2) = 1
       blc(3) = 1
 
