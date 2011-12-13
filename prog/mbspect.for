@@ -4,8 +4,8 @@ c= MBSPECT - Make spectrum and measure velocities from a Miriad image.
 c& lss
 c: image analysis and display.
 c+
-c       MBSPECT makes a spectrum of the velocity or frequency axis of a
-c       Miriad image.  The spectrum is integrated, averaged or beam-
+c       MBSPECT makes a spectrum of the velocity or frequency axis of
+c       a Miriad image.  The spectrum is integrated, averaged or beam-
 c       weighted, over the width specified, for the other image axes.
 c       Robust spectral baselines can be fitted, and the profile
 c       parameterised (velocities, widths, moments).  The output
@@ -141,9 +141,11 @@ c@ comment
 c       A one-line comment which is written into the logfile and any
 c       plot.
 c
-c$Id: mbspect.for,v 1.14 2011/12/13 06:06:16 cal103 Exp $
-c--
+c Note that this program does not report its version number so that gif
+c and ps output can be piped.
 c
+c$Id: mbspect.for,v 1.15 2011/12/13 06:22:43 cal103 Exp $
+c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c-----------------------------------------------------------------------
@@ -180,8 +182,8 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 c     Don't report the ID so that gif and ps output can be piped.
       version = versan ('-mbspect',
-     *                  '$Revision: 1.14 $',
-     *                  '$Date: 2011/12/13 06:06:16 $')
+     *                  '$Revision: 1.15 $',
+     *                  '$Date: 2011/12/13 06:22:43 $')
 
 c     Get inputs.
       call keyini
@@ -318,7 +320,7 @@ c       No coordinates given, use centre of image.
 c       Coordinate given, get pixel coordinates.
         world(ilng) = coord(1)
         world(ilat) = coord(2)
-        world(ispc) = 0d0
+        call rdhdd(lIn, 'crval'//itoaf(ispc), world(ispc), 0d0)
         call coCvt(lIn,'aw/aw/aw',world,'ap/ap/ap',pixcen)
       endif
 
