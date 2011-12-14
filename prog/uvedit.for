@@ -53,6 +53,7 @@ c    rjs   08may00    Change incorrect call of keyf to keya.
 c    rjs   05sep00    Use double precision to avoid rounding of coords.
 c    rjs   19sep04    Copy across sensitivity model, if appropriate.
 c    rjs   18sep05    Correct incorrect type of keyd call.
+c    rjs   14dec11    Copy across nbpsols item.
 c***********************************************************************
 c= Uvedit - Editing of the baseline of a UV data set.
 c& jm
@@ -218,7 +219,7 @@ c
       character PROG*(*)
       parameter (PROG = 'UVEDIT: ')
       character VERSION*(*)
-      parameter (VERSION = 'version 1.8 19-Sep-04')
+      parameter (VERSION = 'version 1.8 14-Dec-2011')
 c
       double precision SECRAD, ASECRAD
 c  -------------(SECRAD = DPI / (12.d0 * 3600.d0))
@@ -1100,6 +1101,7 @@ c
           call hdcopy(Lin,Lout,'freqs')
           call hdcopy(Lin,Lout,'nspect0')
           call hdcopy(Lin,Lout,'nchan0')
+	  call hdcopy(Lin,lOut,'nbpsols')
 	endif
 c
 	if(hdprsnt(Lin,'cgains'))then
