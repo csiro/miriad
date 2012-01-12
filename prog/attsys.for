@@ -43,19 +43,22 @@ c         redo      Remove the existing Tsys correction from all IFs and
 c                   reapply the Tsys from the IFs specified in tsysif.
 c                   This can be used for certain CABB observations where
 c                   the zoom bands have no valid Tsys information.
-c                   This option cannot be combined with any others.
-c $Id: attsys.for,v 1.3 2011/11/25 03:41:59 wie017 Exp $
+c                   This option cannot be combined with the previous ones.
+c         inverse   Apply the inverse correction for redo
+c
+c $Id: attsys.for,v 1.4 2012/01/12 03:46:33 wie017 Exp $
 c--
 c  History:
 c    17jul00 rjs  Original version.
 c    25may02 rjs  Added options=auto
 c    20jul11 mhw  Incorporate tsysfix program by jra
 c    25nov11 mhw  Make tsysif an array and update tsys variables
+c    12jan12 mhw  Fix array indexing and add inverse option
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*80
 	integer lVis,lOut,vupd,pol,npol,i1,i2,i,j,k
-	logical updated,doapply,auto,redo,update
+	logical updated,doapply,auto,redo,update,inv
 	character vis*64,out*64,type*1
 	integer nschan(MAXWIN),nif,nchan,nants,length,tcorr,na
         integer tsysif(MAXWIN),n
@@ -72,8 +75,8 @@ c
         character versan*80
 c
 	version = versan('attsys',
-     *                   '$Revision: 1.3 $',
-     *                   '$Date: 2011/11/25 03:41:59 $')
+     *                   '$Revision: 1.4 $',
+     *                   '$Date: 2012/01/12 03:46:33 $')
 	call keyini
 	call keya('vis',vis,' ')
 	call keya('out',out,' ')
@@ -82,7 +85,7 @@ c
           tsysif(1)=1
           n=1
         endif
-	call GetOpt(doapply,auto,redo)
+	call GetOpt(doapply,auto,redo,inv)
 	call keyfin
 c
 c  Check the inputs.
@@ -175,10 +178,10 @@ c
 	      call uvrdvri(lVis,'tcorr',tcorr,1)
 	    endif
 	    if(doapply.eqv.(tcorr.eq.0))call tsysap(data,nchan,nschan,
-     *		xtsys,ytsys,nants,nif,doapply,redo,i1,i2,pol,1)
+     *		xtsys,ytsys,nants,nif,doapply,redo,inv,i1,i2,pol,tsysif)
 	  else
 	    call tsysap(data,nchan,nschan,xtsys,ytsys,nants,nif,
-     *			doapply,redo,i1,i2,pol,tsysif)
+     *			doapply,redo,inv,i1,i2,pol,tsysif)
 	  endif
 c
 	  call varCopy(lVis,lOut)
@@ -209,12 +212,12 @@ c
 	end
 c************************************************************************
 	subroutine tsysap(data,nchan,nschan,xtsys,ytsys,nants,nif,
-     *					doapply,redo,i1,i2,pol,tsysif)
+     *			doapply,redo,inv,i1,i2,pol,tsysif)
 c
 	implicit none
-	integer nchan,nants,nif,tsysif,nschan(nif),i1,i2,pol
+	integer nchan,nants,nif,tsysif(nif),nschan(nif),i1,i2,pol
 	real xtsys(nants,nif),ytsys(nants,nif)
-	logical doapply,redo
+	logical doapply,redo,inv
 	complex data(nchan)
 c
 c------------------------------------------------------------------------
@@ -230,22 +233,28 @@ c
 	    i = i + 1
 	    if(pol.eq.XX)then
 	      T1T2 = xtsys(i1,k)*xtsys(i2,k)
-	      new_T1T2 = xtsys(i1,tsysif)*xtsys(i2,tsysif)
+	      new_T1T2 = xtsys(i1,tsysif(k))*xtsys(i2,tsysif(k))
 	    else if(pol.eq.YY)then
 	      T1T2 = ytsys(i1,k)*ytsys(i2,k)
-              new_T1T2 = ytsys(i1,tsysif)*ytsys(i2,tsysif)
+              new_T1T2 = ytsys(i1,tsysif(k))*ytsys(i2,tsysif(k))
 	    else if(pol.eq.XY)then
               T1T2 = xtsys(i1,k)*ytsys(i2,k)
-              new_T1T2 = xtsys(i1,tsysif)*ytsys(i2,tsysif)
+              new_T1T2 = xtsys(i1,tsysif(k))*ytsys(i2,tsysif(k))
 	    else if(pol.eq.YX)then
 	      T1T2 = ytsys(i1,k)*xtsys(i2,k)
-              new_T1T2 = ytsys(i1,tsysif)*xtsys(i2,tsysif)
+              new_T1T2 = ytsys(i1,tsysif(k))*xtsys(i2,tsysif(k))
 	    else
 	      call bug('f','Invalid polarization code')
 	    endif
 c
 	    if (redo) then
-	     data(i) = data(i)*sqrt(new_T1T2/T1T2)         
+              if (k.ne.tsysif(k)) then
+                if (inv) then
+                  data(i) = data(i)/sqrt(new_T1T2/T1T2) 
+                else
+                  data(i) = data(i)*sqrt(new_T1T2/T1T2)               
+                endif  
+              endif      
             else if(doapply)then
 	      data(i) = data(i)*sqrt(T1T2)/50.0
 	    else
@@ -256,17 +265,18 @@ c
 c
 	end
 c************************************************************************
-	subroutine getopt(doapply,auto,redo)
+	subroutine getopt(doapply,auto,redo,inv)
 c
 	implicit none
-	logical doapply,auto,redo
+	logical doapply,auto,redo,inv
 c------------------------------------------------------------------------
 	integer NOPTS
-	parameter(NOPTS=4)
+	parameter(NOPTS=5)
 	character opts(NOPTS)*10
 	logical present(NOPTS)
 c
-	data opts/'apply     ','unapply   ','automatic ','redo      '/
+	data opts/'apply     ','unapply   ','automatic ','redo      ',
+     *   'inverse   '/
 c
 	call options('options',opts,present,NOPTS)
 	if(present(1).and.present(2))call bug('f',
@@ -275,6 +285,8 @@ c
 	auto    = present(3)
         redo = present(4)
         if (present(4).and.(present(1).or.present(2).or.present(3)))
-     *    call bug('f','Option redo must be used on its own')
+     *    call bug('f',
+     *      'Option redo cannot be combined with (un)apply or auto')
+        inv = present(5)
 c
 	end
