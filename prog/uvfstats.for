@@ -48,12 +48,12 @@ c------------------------------------------------------------------------
 	parameter(MAXSELS=256,MAXPARM=MAXCHAN,POLMIN=-8,MAXIN=64)
 c
 	real lstart,lwidth,lstep,sels(MAXSELS)
-	integer tno,nchan,ngood(MAXPARM),nbad(MAXPARM),npnt,nout
-	integer pol,i1,i2,i,j,offset,nIn,nval
-	double precision preamble(4)
+	integer tno,nchan,npnt,nout
+	integer pol,i1,i2,i,j,offset,nIn
+	double precision preamble(4),ngood(MAXPARM),nbad(MAXPARM),nval
 	real x(MAXPARM),y(MAXPARM)
 	complex data(MAXCHAN)
-	character line*32,vis(MAXIN)*80,device*64,val1*8,val2*8
+	character line*32,vis(MAXIN)*80,device*64,val1*8,val2*12
 	logical dogood,doabs,flags(MAXCHAN)
 c
 	integer NMODES,NOPTS
@@ -152,7 +152,7 @@ c
 	    if(doabs)then
 	      y(npnt) = nval
 	    else
-	      y(npnt) = real(100*nval)/real(ngood(i)+nbad(i))
+	      y(npnt) = 100.0*nval/(ngood(i)+nbad(i))
 	    endif
 	  endif
 	enddo
@@ -188,9 +188,9 @@ c
 	      write(val1,'(i4)')nint(x(i))
 	    endif
 	    if(doabs)then
-	      write(val2,'(i8)')nint(y(i))
+	      write(val2,'(i12)')nint(y(i))
 	    else
-	      write(val2,'(f7.1,a)')y(i),'%'
+	      write(val2,'(1x,f7.1,a)')y(i),'%'
 	    endif
 	    call output('     '//val1//'  '//val2)
 	  enddo
@@ -218,10 +218,10 @@ c
 c
 	if(dogood)then
 	  line1(18:) = 'Unflagged'
-	  line2(18:) = '---------'
+	  line2(18:) = '----------'
 	else
-	  line1(18:) = 'Flagged'
-	  line2(18:) = '-------'
+	  line1(18:) = ' Flagged '
+	  line2(18:) = '----------'
 	endif
 	call output(line1)
 	call output(line2)
@@ -251,7 +251,7 @@ c************************************************************************
 c
 	implicit none
 	integer indx,nchan,nparm
-	integer ngood(nparm),nbad(nparm)
+	double precision ngood(nparm),nbad(nparm)
 	logical flags(nchan)
 c------------------------------------------------------------------------
 	integer i
