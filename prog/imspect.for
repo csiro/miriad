@@ -51,7 +51,7 @@ c       Write spectrum to this ascii file.  Default is no output file.
 c@ comment
 c       A one-line comment which is written into the logfile.
 c
-c$Id: imspect.for,v 1.3 2011/10/06 04:49:49 cal103 Exp $
+c$Id: imspect.for,v 1.4 2012/01/16 04:05:14 wie017 Exp $
 c--
 c
 c  History:
@@ -82,8 +82,8 @@ c-----------------------------------------------------------------------
       character itoaf*3, versan*72
 c-----------------------------------------------------------------------
       version = versan('imspect',
-     *                 '$Revision: 1.3 $',
-     *                 '$Date: 2011/10/06 04:49:49 $')
+     *                 '$Revision: 1.4 $',
+     *                 '$Date: 2012/01/16 04:05:14 $')
 
 c     Get inputs.
       call keyini
@@ -394,7 +394,7 @@ c     Get xlabel.
       else if (ctype.eq.'VRAD' .or. ctype(1:4).eq.'VELO') then
         xlabel = 'Radio velocity (km/s)'
       else if (ctype.eq.'VOPT-F2W' .or. ctype(1:4).eq.'FELO') then
-        xlabel = 'Optical felocity (km/s)'
+        xlabel = 'Optical velocity (km/s)'
       else
         xlabel = ctype(1:len1(ctype))
       endif

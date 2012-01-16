@@ -144,7 +144,7 @@ c
 c Note that this program does not report its version number so that gif
 c and ps output can be piped.
 c
-c$Id: mbspect.for,v 1.15 2011/12/13 06:22:43 cal103 Exp $
+c$Id: mbspect.for,v 1.16 2012/01/16 04:05:14 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -182,8 +182,8 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 c     Don't report the ID so that gif and ps output can be piped.
       version = versan ('-mbspect',
-     *                  '$Revision: 1.15 $',
-     *                  '$Date: 2011/12/13 06:22:43 $')
+     *                  '$Revision: 1.16 $',
+     *                  '$Date: 2012/01/16 04:05:14 $')
 
 c     Get inputs.
       call keyini
@@ -1237,7 +1237,7 @@ c     Construct x-axis label.
       else if (xaxis.eq.'VOPT' .or.
      *         xaxis.eq.'FELO' .or.
      *         xaxis.eq.'optical') then
-        xlabel = 'Optical felocity, \ficz\fr (km s\u-1\d)'
+        xlabel = 'Optical velocity, \ficz\fr (km s\u-1\d)'
       else
         xlabel = ctype(1:len1(ctype))
       endif
