@@ -475,7 +475,8 @@ c------------------------------------------------------------------------
 	integer MAXPOL,MAXITER,NOOFF
 	parameter(MAXPOL=4,tol=1e-4,MAXITER=30,NOOFF=1)
 c
-	integer i,j,k,iter,offset,npt
+	integer i,j,k,iter,npt
+        ptrdiff offset
 	real epsi
 	logical first
 	character string*64
@@ -596,7 +597,8 @@ c************************************************************************
 	subroutine SpecGet(lScr,offset,nchan,j,data,dflags)
 c
 	implicit none
-	integer lScr,offset,nchan,j
+	integer lScr,nchan,j
+        ptrdiff offset
 	complex data(nchan)
 	logical dflags(nchan)
 c
@@ -661,7 +663,8 @@ c------------------------------------------------------------------------
 	include 'mirconst.h'
 	integer PolMin,PolMax
 	parameter(PolMin=-8,PolMax=4)
-	integer pindx(PolMin:PolMax),i,j,offset,vupd,nread,pol
+	integer pindx(PolMin:PolMax),i,j,vupd,nread,pol
+        ptrdiff offset
 	complex data(MAXCHAN),w(MAXCHAN),unit(MAXCHAN)
 	logical dflags(MAXCHAN),doshift
 	real d(3*MAXCHAN+1),t

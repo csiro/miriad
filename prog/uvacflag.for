@@ -22,7 +22,7 @@ c
 c       full    Instructs UVACFLAG to tell you about every record
 c               it flags.  The default is a summary at the end.
 c
-c$Id: uvacflag.for,v 1.5 2010/04/30 08:23:28 cal103 Exp $
+c$Id: uvacflag.for,v 1.6 2012/01/17 03:47:09 wie017 Exp $
 c--
 c
 c     mhw  19nov07 Original version, adapted uvpflag into uvacflag
@@ -40,19 +40,21 @@ c
       integer nchanlist(maxfreq)
       real scratch(maxchan)
       integer lin, lins, npol, i, nchan, nscr, irec,
-     +  offset, ant1, ant2, nant, nbin, nif, lastit, it
+     +  ant1, ant2, nant, nbin, nif, lastit, it
+      ptrdiff offset
       integer ibin,iif,ipol,iant1,iant2,b,r,pol,bin,ifno
       character in*40, ctime*18
       logical flags(maxchan), some, brief
-      integer flagoff(2,maxrec), offauto(MAXANT,maxpol,MAXWIN,maxbin)
+      ptrdiff flagoff(2,maxrec)
+      ptrdiff offauto(MAXANT,maxpol,MAXWIN,maxbin)
       integer recnum(MAXBASE,maxpol,MAXWIN,maxbin),polidx(4)
       character  aline*100
       integer ntot,ngood,ngood2,ngood3,nflag
 c
 c-----------------------------------------------------------------------
       version = versan ('uvacflag',
-     :                  '$Revision: 1.5 $',
-     :                  '$Date: 2010/04/30 08:23:28 $')
+     :                  '$Revision: 1.6 $',
+     :                  '$Date: 2012/01/17 03:47:09 $')
 
       ntot=0
       ngood=0

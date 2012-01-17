@@ -152,6 +152,7 @@ c
       real Buff(maxdim)
       integer Boxes(maxboxes)
       character perr(4)*40,bunit*9
+      ptrdiff off
 c
 c  Externals.
 c
@@ -287,10 +288,11 @@ c  Copy the subwindows to scratch files
 c
         do j = blc(2), trc(2)
           call xyread(lu(1), j, Buff)
-          call scrwrite(lIn1, Buff(blc(1)),(j-blc(2))*no1,no1)
+          off = (j-blc(2))*no1
+          call scrwrite(lIn1, Buff(blc(1)),off,no1)
 c
           call xyread(lu(2), j, Buff)
-          call scrwrite(lIn2, Buff(blc(1)), (j-blc(2))*no1,no1)
+          call scrwrite(lIn2, Buff(blc(1)),off,no1)
         enddo
 c
 c  Do the minimisation
@@ -519,6 +521,7 @@ c-----------------------------------------------------------------------
       real RBuf(8*maxdim), In1(maxdim), In2(maxdim)
       integer indices(4), IBuf(2*maxdim), nints
       integer i, j, xmin, xmax, ymin, ymax
+      ptrdiff off
 c
 c  Intialise various rubbish.
 c
@@ -543,7 +546,8 @@ c
       do j = ymin, ymax
         call Intp(lIn2, j, xmin, xmax, no1, no2, indices,
      *             IBuf, nints, RBuf, In2)
-        call scrread(lIn1, In1, (j-1)*no1, no1)
+        off = (j-1)*no1
+        call scrread(lIn1, In1, off, no1)
         do i = xmin, xmax
           sx = sx + In2(i)
           sxx = sxx + In2(i)*In2(i)
@@ -634,6 +638,7 @@ c-----------------------------------------------------------------------
       integer IBuf(2*maxdim)
       integer indices(4), nints
       integer i, j, xmin, xmax, ymin, ymax
+      ptrdiff off
 c
 c  Intialise various rubbish.
 c
@@ -662,7 +667,8 @@ c
       do j = ymin, ymax
         call Intp(lIn2, j, xmin, xmax, no1, no2, indices,
      *             IBuf, nints, RBuf, out)
-        call scrread(lIn1, In1, (j-1)*no1, no1)
+        off = (j-1)*no1
+        call scrread(lIn1, In1, off, no1)
 c
         do i = xmin, xmax
           out(i) = In1(i) - (a*out(i) + b)
@@ -842,6 +848,7 @@ c  the earliest row, and read the row in from disk.
 c
 c-----------------------------------------------------------------------
       integer k,l
+      ptrdiff off
       k = 1
       l = 1
       do while (l.le.dims .and. indices(l).ne.j)
@@ -856,7 +863,8 @@ c-----------------------------------------------------------------------
           call bug('f','Problem may be ill-posed or'//
      *      ' guard band needs to be increased')
         endif
-        call scrread(lu,Data(1,l),(j-1)*n1,n1)
+        off = (j-1)*n1
+        call scrread(lu,Data(1,l),off,n1)
       endif
       indx = (l-1)*n1 + 1
       end

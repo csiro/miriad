@@ -35,6 +35,7 @@
 /*    mrc  14jul06   Compile with 'gcc -Wall' without warnings.         */
 /*    rjs  01apr09   Add scrRecSz routine.				*/
 /*    rjs  16jul09   Add a caste to the htell routine.			*/
+/*    mhw  17jan12   Use ptrdiff for scr routines to handle large files */
 /************************************************************************/
 #include <limits.h>
 #include <unistd.h>
@@ -68,13 +69,13 @@ fortran subroutine scrrecsz(integer handle, integer recsize)
 }
 /************************************************************************/
 fortran subroutine scrread(integer handle,real buffer,
-	integer offset,integer length)
+	ptrdiff offset,integer length)
 {
   scrread_c(handle.val,buffer.addr,(off_t)offset.val,(size_t)length.val);
 }
 /************************************************************************/
 fortran subroutine scrwrite(integer handle,real buffer,
-	integer offset,integer length)
+	ptrdiff offset,integer length)
 {
   scrwrite_c(handle.val,buffer.addr,(off_t)offset.val,(size_t)length.val);
 }

@@ -38,7 +38,8 @@ c
       character in*80, out*80, name*90, line*80
       double precision preamble(5)
       integer nchani, nchano, lin, lins, lout, nread, irec, ichan,
-     +  offset, ioff, npol, pol, nfiles, j, k, ifile
+     +  ioff, npol, pol, nfiles, j, k, ifile
+      ptrdiff offset
       logical gflags(maxchan), first
       complex data(maxchan)
       real scratch(maxchan*3)
@@ -119,7 +120,8 @@ c
 c
 c Write scratch file
 c
-          offset = (irec-1)*nchano*3 + (ifile-1)*nchani*3
+          offset = (irec-1)
+          offset = offset*nchano*3 + (ifile-1)*nchani*3
           call scrwrite (lins, scratch, offset, nchani*3)
 c
           call uvread (lin, preamble, data, gflags, maxchan, nread)
@@ -165,7 +167,8 @@ c
 c Fish out spectrum from scratch file
 c
         irec = irec + 1
-        offset = (irec-1)*nchano*3
+        offset = (irec-1)
+        offset = offset*nchano*3
         call scrread (lins, scratch, offset, nchano*3)
         do ichan = 1, nchano
           ioff = (ichan-1)*3

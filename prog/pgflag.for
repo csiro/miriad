@@ -229,7 +229,7 @@ c       nocal   Do not apply antenna gain calibration.
 c       nopass  Do not apply bandpass correction.
 c       nopol   Do not apply polarisation leakage correction.
 c
-c$Id: pgflag.for,v 1.13 2011/08/23 23:20:28 ste616 Exp $
+c$Id: pgflag.for,v 1.14 2012/01/17 03:47:09 wie017 Exp $
 c--
 c
 c  History:
@@ -360,8 +360,8 @@ c
       logical uvDatOpn
 
       version = versan ('pgflag',
-     :                  '$Revision: 1.13 $',
-     :                  '$Date: 2011/08/23 23:20:28 $')
+     :                  '$Revision: 1.14 $',
+     :                  '$Date: 2012/01/17 03:47:09 $')
 
 c
 c Get user inputs
@@ -2775,7 +2775,8 @@ c
       real t1(ntime),array(nchan,ntime,2)
       double precision day0
       include 'maxdim.h'
-      integer i,j,k,offset,length,pnt,bl,i0
+      integer i,j,k,length,pnt,bl,i0
+      ptrdiff offset
       real buf(2*MAXCHAN+3),t
 c      character status*80
 
@@ -3101,7 +3102,8 @@ c-----------------------------------------------------------------------
       double precision preamble(4),line(6),day1
       real buf(2*MAXCHAN+3),t,tprev,maxgap
       logical torder
-      integer vsrc,nread,length,offset,ant1,ant2,i,bl,i0
+      integer vsrc,nread,length,ant1,ant2,i,bl,i0
+      ptrdiff offset
 c
 c  Externals.
 c

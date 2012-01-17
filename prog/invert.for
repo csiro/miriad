@@ -209,7 +209,7 @@ c       replaced with 0, or to be estimated by linear interpolation of
 c       two adjacent good channels.  See the Users Guide for the merits
 c       and evils of the two approaches.  The default is 'zero'.
 c
-c$Id: invert.for,v 1.12 2011/11/09 02:43:08 wie017 Exp $
+c$Id: invert.for,v 1.13 2012/01/17 03:47:09 wie017 Exp $
 c--
 c  History
 c    rjs        89  Initial version
@@ -379,8 +379,8 @@ c
       data slops/'zero        ','interpolate '/
 c-----------------------------------------------------------------------
       version = versan ('invert',
-     :                  '$Revision: 1.12 $',
-     :                  '$Date: 2011/11/09 02:43:08 $')
+     :                  '$Revision: 1.13 $',
+     :                  '$Date: 2012/01/17 03:47:09 $')
 c
 c  Get the input parameters. Convert all angular things into
 c  radians as soon as possible!!
@@ -886,6 +886,7 @@ c-----------------------------------------------------------------------
       parameter(Maxrun=8*MAXCHAN+20)
       integer i,id,j,VispBuf, VisSize,u,v,k,ktot,l,ltot,ipnt
       real Visibs(Maxrun)
+      ptrdiff offset
 c
 c  Determine the number of visibilities perr buffer.
 c
@@ -910,7 +911,8 @@ c
       ktot = nvis
       dowhile(k.lt.ktot)
         ltot = min(VispBuf,ktot-k)
-        call scrread(tvis,Visibs,k,ltot)
+        offset = k
+        call scrread(tvis,Visibs,offset,ltot)
         do l=1,ltot*VisSize,VisSize
           if(Visibs(l+InU).lt.0)then
             u = nint(-Visibs(l+InU)/wdu) + 1
@@ -1131,6 +1133,7 @@ c
       real Wts(maxrun/(InData+2)),Vis(maxrun),logFreq0,Wt,SumWt,t
       integer i,j,k,l,size,step,n,u,v,offcorr,nbeam,ncorr,ipnt
       logical doshift
+      ptrdiff offset
 c
 c  Miscellaneous initialisation.
 c
@@ -1160,7 +1163,8 @@ c
       call scrrecsz(tscr,size)
       do l=1,nvis,step
         n = min(nvis-l+1,step)
-        call scrread(tscr,Vis,l-1,n)
+        offset = l-1
+        call scrread(tscr,Vis,offset,n)
 c
 c  Calculate the basic weight, either natural or pseudo-uniform.
 c
@@ -1289,7 +1293,8 @@ c
 c
 c  All done. Write out the results.
 c
-        call scrwrite(tscr,Vis,l-1,n)
+        offset = l-1
+        call scrwrite(tscr,Vis,offset,n)
       enddo
 c
 c  Finish up the RMS noise estimates.
@@ -1433,7 +1438,8 @@ c-----------------------------------------------------------------------
       include 'maxdim.h'
       integer MAXPOL,MAXLEN
       parameter(MAXPOL=4,MAXLEN=4+MAXPOL*MAXCHAN)
-      integer tno,pnt,nzero,nread,i,j,offset,nbad,nrec,ncorr,VisSize
+      integer tno,pnt,nzero,nread,i,j,nbad,nrec,ncorr,VisSize
+      ptrdiff offset
       complex data(MAXCHAN,MAXPOL),out(MAXLEN),ctemp
       logical flags(MAXCHAN,MAXPOL),more
       real uumax,vvmax,rms2,Wt,SumWt

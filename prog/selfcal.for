@@ -90,7 +90,7 @@ c       the linetype parameters used to construct the map.  If you wish
 c       to override this, or if the info is not in the header, or if you
 c       are using a point source model, this parameter can be useful.
 c
-c$Id: selfcal.for,v 1.8 2012/01/16 00:05:36 wie017 Exp $
+c$Id: selfcal.for,v 1.9 2012/01/17 03:47:09 wie017 Exp $
 c--
 c
 c  History:
@@ -147,7 +147,7 @@ c    rjs  01dec98 Added extra warning message.
 c    rjs  30aug99 Increase maxmod to 64
 c    rjs  14dec99 Ability to use model visibility datasets.
 c    dpr  17apr01 Increase MaxMod to 128
-c    mhw  16jan12 Use rec size for scr routines to handle larger files
+c    mhw  16jan12 Use ptrdiff for scr routines to handle larger files
 c
 c  Bugs/Shortcomings:
 c   * Selfcal should check that the user is not mixing different
@@ -172,8 +172,8 @@ c     Externals.
       external  hdprsnt, header, versan
 c-----------------------------------------------------------------------
       version = versan('selfcal',
-     *                 '$Revision: 1.8 $',
-     *                 '$Date: 2012/01/16 00:05:36 $')
+     *                 '$Revision: 1.9 $',
+     *                 '$Date: 2012/01/17 03:47:09 $')
 c
 c  Get the input parameters.
 c
@@ -655,6 +655,7 @@ c-----------------------------------------------------------------------
       parameter (NHEAD = 3, MAXLEN = NHEAD + 5*MAXCHAN)
 
       integer   i, i1, i2, iBl, ihash, itime, j, k, length, sCount
+      ptrdiff   off
       real      mm, out(MAXLEN), sMM, sTime, sVV, vv, wgt
       complex   sVM, vm
 c-----------------------------------------------------------------------
@@ -662,7 +663,9 @@ c-----------------------------------------------------------------------
       length = NHEAD + 5*nchan
 
       do j = 1, nvis
-        call scrread(tscr,Out,(j-1),1)
+        off = j-1
+        off = off * length
+        call scrread(tscr,Out,off,length)
         itime = nint(Out(2)/interval)
         ihash = 2*itime + 1
         i = mod(itime,nHash)

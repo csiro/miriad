@@ -125,7 +125,7 @@ c    rjs  01dec98 More warning messages.
 c    rjs  22mar00 Relax implicit assumption that XX/YY much stronger than XY/YX.
 c    rjs   8jan01 Fix buggy error message
 c    pjt  11feb02 Fix double + sign some complilers don't grok
-c    mhw  16jan12 Use rec size for scr routines to handle larger files
+c    mhw  16jan12 Use ptrdiff for scr routines to handle larger files
 c------------------------------------------------------------------------
 	include 'gpscal.h'
 	character version*(*)
@@ -1413,7 +1413,8 @@ c    flags	Flags.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	real In(5*MAXCHAN+5)
-	integer npol,pol,offset,length,ifile,ipol,i,j
+	integer npol,pol,length,ifile,ipol,i,j
+        ptrdiff offset
 	logical hit(4)
 c
 	do ipol=1,4
@@ -1424,7 +1425,8 @@ c  Read the first record in the first file.
 c
 	length = 5*nchan + 5
 	offset = ivis
-	call scrread(tscr(1),In,offset,1)
+        offset = offset * length
+	call scrread(tscr(1),In,offset,length)
 c
 	npol = nint(In(1))
 	dbl = In(3)
@@ -1434,10 +1436,11 @@ c
 c  Read and process all the records.
 c
 	do ifile=1,nfiles
-	  offset = ivis*length
+	  offset = ivis
+          offset = offset * length
 	  do ipol=1,npol
 	    if(ipol.ne.1.or.ifile.ne.1)
-     *		call scrread(tscr(ifile),In,offset,1)
+     *		call scrread(tscr(ifile),In,offset,length)
 	    pol = nint(In(2))
 	    offset = offset + length
 	    if(ifile.eq.1)then

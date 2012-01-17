@@ -337,7 +337,7 @@ c       XSIZ and YSIZ are the spatial half-sizes in ARCSEC over which
 c       each spectrum is spatially averaged.  These are optional and
 c       default to 0 (no binning, just a spectrum at each spatial pixel)
 c
-c$Id: cgspec.for,v 1.10 2011/04/05 07:37:02 cal103 Exp $
+c$Id: cgspec.for,v 1.11 2012/01/17 03:50:36 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -417,8 +417,8 @@ c-----------------------------------------------------------------------
       data axC /'xyzabcd'/
 c-----------------------------------------------------------------------
       version = versan ('cgspec',
-     *                  '$Revision: 1.10 $',
-     *                  '$Date: 2011/04/05 07:37:02 $')
+     *                  '$Revision: 1.11 $',
+     *                  '$Date: 2012/01/17 03:50:36 $')
 
 c     Get user inputs.
       call inputs(MAXLEV, MAXCON, MAXSPEC, MAXTYP, ltypes, ncon, nspec,
@@ -1783,7 +1783,8 @@ c    allgood Means that none of the displayed spatial pixels had all
 c            displayed images blanked.  So don't mess around with masks
 c            anymore.
 c-----------------------------------------------------------------------
-      integer i, j, k, l, off, nim, nblim
+      integer i, j, k, l, nim, nblim
+      ptrdiff off
       real data(2)
 c-----------------------------------------------------------------------
 c     How many images did we display?
@@ -1871,7 +1872,8 @@ c     Input
 c       norm       0 -> blanked
 c-----------------------------------------------------------------------
       real data(2)
-      integer off, i, j, k, isiz, jsiz
+      integer i, j, k, isiz, jsiz
+      ptrdiff off
 c-----------------------------------------------------------------------
       isiz = (trc(1)-blc(1)+1)
       jsiz = (trc(2)-blc(2)+1)

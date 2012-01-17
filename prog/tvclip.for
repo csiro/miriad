@@ -175,7 +175,7 @@ c
 c< select
 c     NOTE: The default is to use all visibilities.
 c
-c$Id: tvclip.for,v 1.8 2010/04/30 08:23:28 cal103 Exp $
+c$Id: tvclip.for,v 1.9 2012/01/17 03:47:09 wie017 Exp $
 c--
 c
 c  History:
@@ -308,8 +308,8 @@ c-----------------------------------------------------------------------
 c  Announce program.
 c
       version = versan ('tvclip',
-     :                  '$Revision: 1.8 $',
-     :                  '$Date: 2010/04/30 08:23:28 $')
+     :                  '$Revision: 1.9 $',
+     :                  '$Date: 2012/01/17 03:47:09 $')
 c-----------------------------------------------------------------------
 c  Use the key routines to get the user input parameters.
 c
@@ -812,7 +812,8 @@ c    array	The gridded data.
 c    iflag	Flag for the gridded data.
 c-----------------------------------------------------------------------
 	include 'maxdim.h'
-	integer i,j,k,offset,length,pnt,bl,i0
+	integer i,j,k,length,pnt,bl,i0
+        ptrdiff offset
 	real buf(2*MAXCHAN+3),t
 c
 	if(nchan.gt.MAXCHAN)call bug('f','Too many channels')
@@ -1149,7 +1150,8 @@ c-----------------------------------------------------------------------
 	double precision preamble(4),line(6),day1
 	real buf(2*MAXCHAN+3),t,tprev
 	logical torder
-	integer vsrc,nread,length,offset,ant1,ant2,i,bl,i0
+	integer vsrc,nread,length,ant1,ant2,i,bl,i0
+        ptrdiff offset
 c
 c  Externals.
 c

@@ -56,8 +56,9 @@ c
       double precision pream(4), datum
       real scratch(maxchan+3)
       integer lin, lins, npol, i, j, nread, polidx, nscr, nrec, irec,
-     +  offset, ntpol, nspol, nflag(-8:4), ntot(-8:4), nftot(-8:4),
+     +  ntpol, nspol, nflag(-8:4), ntot(-8:4), nftot(-8:4),
      +  found(-8:4), icnt
+      ptrdiff offset
       character in*40, tpol(4)*2, spol(4)*2
       logical gflags(maxchan,maxpol), agflags(maxchan), psel, some,
      +  wantpi(-8:4), wantpo(-8:4), none, ini, brief, doand
