@@ -190,11 +190,7 @@ void scrwrite_c(int handle,Const float *buffer,off_t offset,size_t length)
 
   hwriteb_c(myhandle,(char *)buffer,myoff,mylen,&iostat);
   if(iostat){
-    if (offset<0) {
-      bug_c('w',"Scratch file offset too large, please report this");
-    } else {
-      bug_c(  'w',"Error writing to scratch file; check your $TMPDIR");
-    }
+    bug_c(  'w',"Error writing to scratch file; check your $TMPDIR");
     bugno_c('f',iostat);
   }
 }
