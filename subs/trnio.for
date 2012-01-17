@@ -116,7 +116,8 @@ c		on output.
 c-----------------------------------------------------------------------
 	include 'trnio.h'
 	integer work(MAXDIM)
-	integer n1,n2,n3,pnt,k,j,i,offset,length,ifail
+	integer n1,n2,n3,k,j,i,length,ifail
+        ptrdiff pnt,offset
 c
 	n1 = size(1,lu)
 	n2 = size(2,lu)
@@ -134,7 +135,8 @@ c
 c  Case of an in memory transpose.
 c
 	if(inmem(lu))then
-	  pnt = (p(lu)-1)*n1*n2 + buf(lu)
+	  pnt = (p(lu)-1)
+          pnt = pnt*n1*n2 + buf(lu)
 	  do k=1,n1*n2
 	    ref(pnt) = Data(k)
 	    pnt = pnt + 1
@@ -155,7 +157,8 @@ c
 	  enddo
 c
 	  if(p(lu).eq.n3.or.mod(p(lu),blk(lu)).eq.0)then
-	    offset = ((p(lu)-1)/blk(lu)) * n1*n2*blk(lu)
+	    offset = ((p(lu)-1)/blk(lu))
+            offset = offset * n1*n2*blk(lu)
 	    length = n1*n2*blk(lu)
 	    call ScrWrite(lScr(lu),ref(buf(lu)),offset,length)
 	  endif
@@ -164,7 +167,8 @@ c  Case of a disk-based transpose, without a "major" step.
 c
 	else
 	  length = n1*n2
-	  offset = (p(lu)-1)*n1*n2
+	  offset = (p(lu)-1)
+          offset = offset*n1*n2
 	  call ScrWrite(lScr(lu),Data,offset,length)
 	endif
 c
@@ -192,7 +196,8 @@ c    Data
 c--
 c-----------------------------------------------------------------------
 	include 'trnio.h'
-	integer i,j,k,ktot,ltot,pnt,n1,n2,n3,ifail,offset,length,pd,n3d
+	integer i,j,k,ktot,ltot,n1,n2,n3,ifail,length,pd,n3d
+        ptrdiff pnt,offset
 	integer work(MAXDIM)
 c
 	n1 = size(1,lu)
@@ -263,7 +268,8 @@ c  No major step.
 c
 	  else
 	    length = n1*n2
-	    offset = (pd-1)*n1*n2
+	    offset = (pd-1)
+            offset = offset*n1*n2
 	    call ScrRead(lScr(lu),Data,offset,length)
 	  endif
 	endif

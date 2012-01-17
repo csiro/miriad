@@ -61,9 +61,9 @@ c    rjs  12oct99 Change in subroutine name only.
 c    rjs  14dec99 Support for visibility datasets as models.
 c    rjs  14aug00 Re-Added "sources" file support.
 c    rjs  18sep05 Type mismatch error.
-c    mhw  16jan12 Use large record size to handle large files
+c    mhw  17jan12 Use ptrdiff for scr routines to handle larger files
 c
-c $Id: model.for,v 1.7 2012/01/15 23:43:30 wie017 Exp $
+c $Id: model.for,v 1.8 2012/01/17 03:43:37 wie017 Exp $
 c***********************************************************************
 c*ModelIni -- Ready the uv data file for processing by the Model routine
 c&rjs
@@ -302,6 +302,7 @@ c-----------------------------------------------------------------------
       logical domodl
       complex In(maxchan),Intp(maxchan+1)
       double precision sfreq(maxchan),freq0
+      ptrdiff offset
 
 c     Externals.
       logical hdprsnt
@@ -383,7 +384,6 @@ c  Loop the loop.
 c
       nread = nchan
       length = nhead + 5*nread
-      call scrrecsz(tscr,length)
       do while (nread.eq.nchan)
         call header(tvis,preamble,In,flags,nread,accept,Out,nhead)
         if (accept) then
@@ -456,7 +456,9 @@ c
 c  Copy the data to the output, and determine statistics.
 c
           call ModPCvt(polm,tvis,In,Intp,flags,Out(nhead+1),nread)
-          call scrwrite(tscr,Out,nvis,1)
+          offset = nvis
+          offset = offset * length
+          call scrwrite(tscr,Out,offset,length)
           nvis = nvis + 1
         endif
         call uvread(tvis,preamble,In,flags,maxchan,nread)
@@ -946,6 +948,7 @@ c-----------------------------------------------------------------------
       complex din(MAXCHAN),dmod(MAXCHAN)
       logical flin(MAXCHAN),flmod(MAXCHAN),accept,more
       real out(maxlen)
+      ptrdiff offset
 c-----------------------------------------------------------------------
 
       nvis = 0
@@ -958,7 +961,6 @@ c-----------------------------------------------------------------------
       length = nhead + 5*nchan
       if (length.gt.maxlen) call bug('f','Too many bits and pieces')
 
-      call scrrecsz(tscr,length)
       do while (nread.eq.nchan)
         call header(tin,pin,din,flin,nchan,accept,Out,nhead)
         if (accept) then
@@ -978,7 +980,9 @@ c
 c  Weave the data and model visibility records into one.
 c
           call modwve(nchan,out(nhead+1),din,flin,dmod,flmod)
-          call scrwrite(tscr,Out,nvis,1)
+          offset = nvis
+          offset = offset * length
+          call scrwrite(tscr,Out,offset,length)
           nvis = nvis + 1
         endif
         call uvread(tin,pin,din,flin,MAXCHAN,nread)
@@ -1034,6 +1038,7 @@ c-----------------------------------------------------------------------
       double precision flux, l, lmn(3), m, n, n_1, off(2), preamble(6),
      *          skyfreq(MAXCHAN), theta, thetai, u, v, w
       complex   vis(MAXCHAN), modVis(MAXCHAN)
+      ptrdiff offs
 
       equivalence (l, lmn(1))
       equivalence (m, lmn(2))
@@ -1066,7 +1071,6 @@ c     Compute model visibilities and copy to the scratch file.
       nread  = nChan
       length = nhead + 5*nChan
 
-      call scrrecsz(tscr,length)
       do while (nread.eq.nChan)
         call header(tvis,preamble,vis,flags,nChan,accept,outBuf,nhead)
         if (accept) then
@@ -1092,7 +1096,9 @@ c             Only the ratio matters - skyfreq(iChan) / skyfreq(1).
           endif
 
           call modPCvt(polm,tvis,vis,modVis,flags,outBuf(nhead+1),nChan)
-          call scrWrite(tScr,outBuf,nvis,1)
+          offs = nvis
+          offs = offs*length
+          call scrWrite(tScr,outBuf,offs,length)
           nvis = nvis + 1
         endif
 

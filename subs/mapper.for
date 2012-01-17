@@ -433,6 +433,7 @@ c------------------------------------------------------------------------
 	integer maxrun,maxwidth
 	parameter(maxrun=8*MAXCHAN+20,maxwidth=8)
 	integer i,j,k,ktot,ltot,VispBuf,pnt
+        ptrdiff off
 	integer poff(maxwidth**2),qoff(maxwidth**2),goff(maxwidth**2)
 	real Visibs(maxrun)
 c
@@ -468,7 +469,8 @@ c
 	ktot = nvis
 	dowhile(k.lt.ktot)
 	  ltot = min(VispBuf,ktot-k)
-	  call scrread(tvis,Visibs,k,ltot)
+          off = k
+	  call scrread(tvis,Visibs,off,ltot)
 	  call Mapit(Visibs,ltot,nstart,ncount,npnt,VisSize,
      *	    Grd,nu,nv,u0,v0,n1,n2,Cgf,ncgf,width,poff,qoff,goff)
 	  k = k + ltot
@@ -829,6 +831,7 @@ c------------------------------------------------------------------------
 	real Vis(MAXRUN)
 	double precision temp
 	integer k,ktot,l,ltot,l0,VispBuf
+        ptrdiff off
 c
 c  Determine the number of visibilities we can fit into a buffer.
 c
@@ -842,7 +845,8 @@ c
 	ktot = nvis
 	dowhile(k.lt.ktot)
 	  ltot = min(VispBuf,ktot-k)
-	  call scrread(tscr,Vis,k,ltot)
+          off = k
+	  call scrread(tscr,Vis,off,ltot)
 	  l0 = offcorr
 	  do l=1,ltot
 	    temp = temp + Vis(l0)
@@ -872,6 +876,7 @@ c------------------------------------------------------------------------
 	parameter(MAXRUN=1024)
 	real Vis(MAXRUN),theta
 	integer VispBuf,k,ktot,l,ltot,l0,i0,j0,i,j
+        ptrdiff off
 	double precision dtemp
 c
 c  Determine the number of visibilities that we can fit in per
@@ -886,7 +891,8 @@ c
 	ktot = nvis
 	dowhile(k.lt.ktot)
 	  ltot = min(VispBuf,ktot-k)
-	  call scrread(tscr,Vis,k,ltot)
+          off = k
+	  call scrread(tscr,Vis,off,ltot)
 	  l0 = 0
 	  do l=1,ltot
 	    Dat(1,k+l) = Vis(l0+1)
