@@ -16,6 +16,7 @@ c pjt/sally 31-mar-97  defined MAXVAL and increased from 8 to 16
 c       pjt 17-aug-99  added tabular time dependant input, substantial rewrite
 c       tw   4-nov-02  table can now give non-ascii array values
 c       pjt 16-jan-03  fix array input from varval= keyword
+c       mhw 24-jan-12  keep output correlations same type as input
 c          
 c  unfinished:
 c       - array values for tables
@@ -74,21 +75,27 @@ c    Default: not used, in which case the offset is 0, in which case
 c    fractional days are really Julian Days.
 c@ out
 c    Name of the output dataset. No default.
+c$Id: uvputhd.for,v 1.2 2012/01/24 01:47:40 wie017 Exp $
 c-----------------------------------------------------------------------
 	include 'uvputhd.h'
-	character VERSION*(*)
-	parameter(VERSION='(Version 16-jan-03 pjt)')
+	character version*80
 	character varval(MAXVAL)*30,hdvar*10,time0*32
         character outfile*80,infile*80,tabfile*80
-        character except(20)*10,newtype*1,line*256
+        character except(20)*10,newtype*1,line*256,ctype*1
 	integer nread,inset,outset,nexcept,nwread,newlong,nval
 	double precision preamble(4), jd0, jd1
 	complex data(MAXCHAN),wdata(MAXCHAN)
-	logical flags(MAXCHAN),wflags(MAXCHAN),there,first
-	integer len1,ncols,i
+	logical flags(MAXCHAN),wflags(MAXCHAN),there,first,updated
+	integer len1,ncols,i,l
 	logical keyprsnt
 c
-	call output('UVPUTHD: '//version)
+c Externals
+c
+        character*80 versan
+c-----------------------------------------------------------------------
+        version = versan ('uvputhd',
+     :                    '$Revision: 1.2 $',
+     :                    '$Date: 2012/01/24 01:47:40 $')
 	call keyini
 	call keyf('vis',infile,' ')
 	call keya('hdvar',hdvar,' ')
@@ -190,12 +197,14 @@ c
 c  Read the first record in visfile
 c
 	first = .true.
+        call uvprobvr(inset,'corr',ctype,l,updated)
 	call uvread(inset,preamble,data,flags,maxchan,nread) 
 	if(nread.le.0) call bug('f','No data in input vis file')
 c
 c  Open the output and copy history
 c
         call uvopen(outset,outfile,'new')
+        if (ctype.ne.' ') call uvset(outset,'corr',ctype,0,0.,0.,0.)
         call hdcopy(inset,outset,'history') 
 	write(line,'('' Writing data out to file: '',a)') outfile
 	call output(line)
