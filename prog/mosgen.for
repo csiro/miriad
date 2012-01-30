@@ -22,6 +22,10 @@ c       to produce a plot.
 c@ log
 c       Output file listing the pointing centres.  Default is the
 c       terminal.
+c@ olay
+c       Output file listing the pointing centres in a form suitable for
+c       display with the task cgdisp. If unset, no overlay is output.
+c
 c@ mode
 c       Format of the output file:
 c         atmosaic  Mosaic file format understood by the ATCA on-line
@@ -48,7 +52,7 @@ c       lmc_1, lmc_2, etc.  The full name must be 9 characters or less.
 c@ cycles
 c       For mode=atmosaic, the number of cycles spent on each pointing.
 c
-c$Id: mosgen.for,v 1.5 2011/10/11 03:56:01 cal103 Exp $
+c$Id: mosgen.for,v 1.6 2012/01/30 00:37:52 wie017 Exp $
 c--
 c
 c  History:
@@ -59,23 +63,31 @@ c-----------------------------------------------------------------------
       integer    MAXPNT, NMODES
       parameter (MAXPNT = 9999, NMODES = 2)
 
-      logical   first, more
-      integer   cycles, i, j, l, l2, lu, nout, npnt, nx, ny, pbObj, s
+      logical   first, more, olay
+      integer   cycles, i, iostat, j, k, ku, l, l2, lu, nout, npnt,
+     *          nx, ny, pbObj, s
       real      cutoff, h, maxrad, pbfwhm, v, widthx, widthy,
      *          x(MAXPNT), y(MAXPNT)
       double precision dec, freq, ra, x1(2), x2(2)
-      character device*64, line*16, line1*80, logf*80, mode*8,
-     *          modes(NMODES)*8, name*12, num*6, telescop*16, version*72
+      character device*64, fldnam*12,
+     *          line*16, line1*80, logf*80, line2*80,
+     *          mode*8, modes(NMODES)*8, name*12, num*6, olayf*80, 
+     *          rdstr*80, telescop*16, version*72
 
       external  hangleh, itoaf, len1, pgbeg, rangleh, stcat, versan
       integer   len1, pgbeg
       character hangleh*32, itoaf*4, rangleh*32, stcat*70, versan*72
 
       data modes /'atmosaic', 'uvgen   '/
+c
+c     Externals
+c
+      logical   keyprsnt
+
 c-----------------------------------------------------------------------
       version = versan('mosgen',
-     *                 '$Revision: 1.5 $',
-     *                 '$Date: 2011/10/11 03:56:01 $')
+     *                 '$Revision: 1.6 $',
+     *                 '$Date: 2012/01/30 00:37:52 $')
 
       call keyini
       call keyt('radec',ra, 'hms',0d0)
@@ -87,6 +99,8 @@ c-----------------------------------------------------------------------
       call keyd('freq',freq,1.4d0)
       call keya('device',device,' ')
       call keya('log',logf,' ')
+      olay = keyprsnt('olay')
+      if (olay) call keya('olay',olayf,' ')
       call keymatch('mode',NMODES,modes,1,mode,nout)
       if (nout.eq.0) mode = modes(1)
       call keya('telescop',telescop,'atca')
@@ -97,6 +111,11 @@ c-----------------------------------------------------------------------
       l = len1(name)
 
       call logOpen(logf,' ')
+
+      if (olay) then
+        call txtopen(ku,olayf,'new',iostat)
+        if(iostat.ne.0)call bugno('f',iostat)
+      endif
 
       call coCreate(3, lu)
       call coAxSet(lu, 1, 'RA---SIN', 0d0,   ra, 1d0)
@@ -129,6 +148,11 @@ c-----------------------------------------------------------------------
           line1 = stcat('# Reference position is '//hangleh(x2(1)),
      *                                         ','//rangleh(x2(2)))
           call logWrite(line1,more)
+
+          write(line1,'(a,f8.2,a)') '# Primary Beam FWHM taken to be:',
+     *      pbfwhm*R2D*3600.0, ' arcsec'
+          call logWrite(line1,more)
+
           call logInput('mosgen')
           first = .false.
         endif
@@ -137,6 +161,15 @@ c-----------------------------------------------------------------------
         if (npnt.gt.MAXPNT) call bug('f','Too many pointings')
         x(npnt) = x1(1)*R2D
         y(npnt) = x1(2)*R2D
+
+        if (olay) then
+c         store the ra & dec in string form
+          rdstr = stcat(hangleh(x2(1)),'  '//rangleh(x2(2)))
+c         replace : with ' '
+          do k = 1,len(rdstr)
+            if (rdstr(k:k).eq.':') rdstr(k:k) = ' '
+          enddo
+        endif
 
         x2(1) = x2(1) - ra
         x2(2) = x2(2) - dec
@@ -155,6 +188,29 @@ c-----------------------------------------------------------------------
      *                                name(1:l)//'_'//itoaf(npnt)
         else
           write(line1,'(2f10.1)') x1(1)*R2AS, x1(2)*R2AS
+        endif
+
+        if (olay) then
+          if (mode.eq.'atmosaic') then
+            fldnam = '$'//name(1:l)//'_'//itoaf(npnt)
+          else
+            fldnam = itoaf(npnt)
+          endif
+
+c         show an open circle for the primary beam
+          k=len1(rdstr)
+          write(line2,'(a,a,a,a,f8.2,a)')
+     *      'ocircle hms dms ', fldnam, '  no ', rdstr(1:k),
+     *      pbfwhm*0.5*R2D*3600.0, ' 0 0'
+          call txtwrite(ku,line2,len1(line2),iostat)
+          if(iostat.ne.0)call bugno('f',iostat)
+
+c         and draw the field name in the centre of each beam
+          write(line2,'(a,a,a,a,a)')
+     *      'clear   hms dms ', fldnam, ' yes ', rdstr(1:k), ' 0 0'
+          call txtwrite(ku,line2,len1(line2),iostat)
+          if(iostat.ne.0)call bugno('f',iostat)
+
         endif
 
         call logwrite(line1,more)
@@ -192,6 +248,10 @@ c-----------------------------------------------------------------------
       endif
 
       call output('Total number of pointings: '//itoaf(npnt))
+      if (olay) then
+        call output('Mosaic overlay written to: '//olayf)
+        call txtclose(ku)
+      endif 
       call logClose
 
       end
