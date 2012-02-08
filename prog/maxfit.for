@@ -1,126 +1,97 @@
-c************************************************************************
       program maxfit
-      implicit none
-c
+
 c= MAXFIT - Fits a 2-D parabola to a 3x3 region of an image
 c& nebk
 c: image analysis
 c+
-c	MAXFIT finds the maximum value of a region of an image.
-c	This region may be three dimensional.  It then fits a
-c	parabola to a 3x3 array extracted from the first two
-c	dimensions of the image and centred on the maximum pixel
-c	in the specified region.  MAXFIT then returns the location
-c	and value of the maximum pixel and the fitted pixel.
-c
+c       MAXFIT finds the maximum value of a region of an image.
+c       This region may be three dimensional.  It then fits a
+c       parabola to a 3x3 array extracted from the first two
+c       dimensions of the image and centred on the maximum pixel
+c       in the specified region.  MAXFIT then returns the location
+c       and value of the maximum pixel and the fitted pixel.
 c@ in
-c	The input image.
+c       The input image.
 c@ region
-c	Region of interest in which to search for the maximum pixel.
-c	The default is the whole image.
+c       Region of interest in which to search for the maximum pixel.
+c       The default is the whole image.
 c@ options
-c	"abs"  means that MAXFIT search for the maximum absolute
-c	       pixel value rather than the default, which is just
-c	       the maximum pixel value.
+c       "abs"  means that MAXFIT search for the maximum absolute
+c              pixel value rather than the default, which is just
+c              the maximum pixel value.
 c@ log
-c	Write results to this log file as well as screen.
+c       Write results to this log file as well as screen.
 c
-c$Id: maxfit.for,v 1.3 2010/04/30 08:23:28 cal103 Exp $
+c$Id: maxfit.for,v 1.4 2012/02/08 06:24:39 cal103 Exp $
 c--
-c
 c  History:
-c    nebk 28Aug91  Original version nicked from Werong version.
-c    nebk 02Sep91  Don't restrict REGION to a plane
-c    mjs  04sep91  Call output with ' ' string (not '') for Cray.
-c    nebk 20may92  Improve documentation
-c    nebk 02dec92  Add RA and DEC format output
-c    rjs  04jan93  Rename "pad" to "pader" to avoid conflict.
-c    mjs  12mar93  Use maxnax.h file instead of setting own value.
-c    nebk 22jun93  Increase the size of STR
-c    nebk 26aug93  Include new "absdeg" and "reldeg" axis types
-c    nebk 16sep93  Add keyword log
-c    nebk 09jan94  Convert CRPIX to double precision
-c    rjs  24jan94  Small typo in doc (appease pjt and bpw's "doc").
-c    nebk 22mar94  Twiddle about with output format
-c    nebk 18aug94  Revise to use COCVT coord. transformation routines
-c    nebk 16nov95  New calls to some "co" routines
-c    nebk 29nov95  New call for CTYPECO
-c    rjs  03jul96  In "abs" mode, print out the value of the pixel (not
-c		   absolute value).
-c    rjs  23jul99  Break out "solve" routine to new subroutine pkfit.for
+c    Refer to the RCS log, v1.1 includes prior revision information.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
       include 'mirconst.h'
-c
-      integer maxboxes, maxruns
-c
-      parameter (maxboxes = 2048, maxruns =3*maxdim)
-c
-      double precision pixmax(maxnax)
-      real data(maxdim), dmax, fit(9), coeffs(6), fmax, dd
-      integer nsize(maxnax), blc(maxnax), trc(maxnax), boxes(maxboxes),
-     +  runs(3,maxruns), ploc(maxnax), strlen(maxnax), nruns, lun,
-     +  naxis, i, j, k, l, ip, il, len1
-      character ctype*9, typesi(maxnax)*9, typeso(maxnax)*9,
-     +  strout(maxnax)*50, infile*128, text*132, logf*132
-      logical doabs
+
+      integer    MAXBOXES, MAXRUNS
+      parameter (MAXBOXES = 2048, MAXRUNS = 3*MAXDIM)
+
+      logical   doabs
+      integer   blc(MAXNAX), boxes(MAXBOXES), i, il, ip, j, k, l, lun,
+     *          naxis, nruns, nsize(MAXNAX), ploc(MAXNAX),
+     *          runs(3,MAXRUNS), strlen(MAXNAX), trc(MAXNAX)
+      real      coeffs(6), data(MAXDIM), dd, dmax, fit(9), fmax
+      double precision pixmax(MAXNAX)
+      character ctype*9, infile*128, logf*132, strout(MAXNAX)*50,
+     *          text*132, typesi(MAXNAX)*9, typeso(MAXNAX)*9
+
+      external  len1
+      integer   len1
 c-----------------------------------------------------------------------
-      call output ('MAXFIT: version 29-Nov-95')
-c
-c  Get inputs
-c
+      call output('MAXFIT: version 29-Nov-95')
+
+c     Get inputs.
       call keyini
-      call keya ('in', infile, ' ')
-      if (infile.eq.' ') call bug ('f', 'Input file must be given')
-      call boxinput ('region', infile, boxes, maxboxes)
-      call keya ('log', logf, ' ')
-      call getopt (doabs)
+      call keya('in', infile, ' ')
+      if (infile.eq.' ') call bug('f', 'Input file must be given')
+      call boxinput('region', infile, boxes, MAXBOXES)
+      call keya('log', logf, ' ')
+      call getopt(doabs)
       call keyfin
-c
-c  Open file
-c
-      call xyopen (lun, infile, 'old', maxnax, nsize)
-      call rdhdi (lun, 'naxis', naxis, 0)
-      if (naxis.eq.0) call bug ('f', 'Zero dimensions in image')
+
+c     Open file.
+      call xyopen(lun, infile, 'old', MAXNAX, nsize)
+      call rdhdi(lun, 'naxis', naxis, 0)
+      if (naxis.eq.0) call bug('f', 'Zero dimensions in image')
       naxis = min(3,naxis)
-      if (nsize(1).gt.maxdim) call bug ('f','Input file too big for me')
-c
-c  Set up the region of interest.
-c
-      call boxmask (lun, boxes, maxboxes)
-      call boxset (boxes, maxnax, nsize, ' ')
-      call boxinfo (boxes, maxnax, blc, trc)
-c
-c Open log file
-c
-      if (logf.ne.' ') call logopen (logf, ' ')
-c
-c  Read in region, and  find the maximum pixel in that region
-c  taking account of blanked pixels.
-c
-      dmax = -1.0e30
-c
-c  Loop over planes
-c
+      if (nsize(1).gt.MAXDIM) call bug('f','Input file too big for me')
+
+c     Set up the region of interest.
+      call boxmask(lun, boxes, MAXBOXES)
+      call boxset(boxes, MAXNAX, nsize, ' ')
+      call boxinfo(boxes, MAXNAX, blc, trc)
+
+c     Open log file.
+      if (logf.ne.' ') call logopen(logf, ' ')
+
+c     Read in region and find the maximum pixel therein taking account
+c     of blanked pixels.
+      dmax = -1e30
+
+c     Loop over planes.
       do k = blc(3), trc(3)
-        call xysetpl (lun, 1, k)
-        call boxruns (1, k, ' ', boxes, runs, maxruns,
-     +                nruns, blc(1), trc(1), blc(2), trc(2))
-c
+        call xysetpl(lun, 1, k)
+        call boxruns(1, k, ' ', boxes, runs, MAXRUNS,
+     *               nruns, blc(1), trc(1), blc(2), trc(2))
+
         if (nruns.gt.0) then
           j = 0
           do l = 1, nruns
-c
-c  Read new row, if needed, from current plane
-c
+c           Read new row, if needed, from current plane.
             if (runs(1,l).ne.j) then
               j = runs(1,l)
-              call xyread (lun, j, data)
-            end if
-c
-c  Loop over all good pixels in row
-c
+              call xyread(lun, j, data)
+            endif
+
+c           Loop over all good pixels in row.
             do i = runs(2,l), runs(3,l)
               dd = data(i)
               if (doabs) dd = abs(data(i))
@@ -130,197 +101,192 @@ c
                 ploc(1) = i
                 ploc(2) = j
                 ploc(3) = k
-              end if
-            end do
-          end do
-        end if
-      end do
-c
-c  Make sure the peak estimate is not on the edge of the image
-c
+              endif
+            enddo
+          enddo
+        endif
+      enddo
+
+c     Make sure the peak estimate is not on the edge of the image.
       do i = 1, min(2,naxis)
         if (ploc(i).eq.1 .or. ploc(i).eq.nsize(1)) then
-          write (text, 10) i, ploc(i)
-10        format ('Axis ', i1, ' max. pixel at ', i4,
-     +            ' is too close to the image edge')
-          call bug ('f', text)
-        end if
-      end do
-c
-c Now pick out the 3x3 region for fitting.  Blanked pixels are not
-c dealt with in this step.
-c
-      call xysetpl (lun, 1, ploc(3))
+          write(text, 10) i, ploc(i)
+ 10       format('Axis ', i1, ' max. pixel at ', i4,
+     *           ' is too close to the image edge')
+          call bug('f', text)
+        endif
+      enddo
+
+c     Pick out the 3x3 region for fitting.  Blanked pixels are not
+c     dealt with in this step.
+      call xysetpl(lun, 1, ploc(3))
       k = 0
-c
+
       do j = ploc(2)-1, ploc(2)+1
-        call xyread (lun, j, data)
+        call xyread(lun, j, data)
         do i = ploc(1)-1, ploc(1)+1
           k = k + 1
           fit(k) = data(i)
-        end do
-      end do
+        enddo
+      enddo
       dmax = fit(5)
-c
-c  Do the fit
-c
+
+c     Do the fit.
       call pkfit(fit, 3, fmax, pixmax, coeffs)
-c
-c  Change the x and y to image pixel coordinates and add the z location
-c
+
+c     Change x and y to image pixel coordinates and add the z location.
       pixmax(1) = ploc(1) + pixmax(1)
       pixmax(2) = ploc(2) + pixmax(2)
       pixmax(3) = ploc(3)
-c
-c  Tell user of maxfit's endeavours
-c
-      call output (' ')
-      if (logf.ne.' ') call logwrit (' ')
-c
-c Peak pixel location and value
-c
+
+c     Tell user of maxfit's endeavours.
+      call output(' ')
+      if (logf.ne.' ') call logwrit(' ')
+
+c     Peak pixel location and value.
       text = 'Peak pixel   : ('
       ip = len1(text) + 1
       do i = 1, naxis
-        call strfi (ploc(i), '(i4)', text(ip:), il)
+        call strfi(ploc(i), '(i4)', text(ip:), il)
         ip = ip + il
         text(ip:ip) = ','
         ip = ip + 1
-      end do
+      enddo
       text(ip-1:) = ') = '
       ip = len1(text) + 2
-c
-      call strfr (dmax, '(1pe12.4)', text(ip:), il)
+
+      call strfr(dmax, '(1pe12.4)', text(ip:), il)
       call  output(text)
-      if (logf.ne.' ') call logwrit (text)
-c
-c Fitted location and fitted value
-c
-      call output (' ')
-      if (logf.ne.' ') call logwrit (' ')
+      if (logf.ne.' ') call logwrit(text)
+
+c     Fitted location and fitted value.
+      call output(' ')
+      if (logf.ne.' ') call logwrit(' ')
       text = 'Fitted pixel : ('
       ip = len1(text) + 1
       do i = 1, naxis
         if (i.le.2) then
-          call strfd (pixmax(i), '(f7.2)', text(ip:), il)
+          call strfd(pixmax(i), '(f7.2)', text(ip:), il)
         else
-          call strfi (ploc(i), '(i4)', text(ip:), il)
-        end if
+          call strfi(ploc(i), '(i4)', text(ip:), il)
+        endif
         ip = ip + il
         text(ip:ip) = ','
         ip = ip + 1
-      end do
+      enddo
       text(ip-1:) = ') = '
       ip = len1(text) + 2
-c
-      call strfr (fmax, '(1pe12.4)', text(ip:), il)
+
+      call strfr(fmax, '(1pe12.4)', text(ip:), il)
       call  output(text)
-      if (logf.ne.' ') call logwrit (text)
-c
-c Find offsets of fitted pixel from reference pixel
-c
-      call initco (lun)
-c
-      call output (' ')
-      if (logf.ne.' ') call logwrit (' ')
-      call output ('Offsets from reference pixel :')
-      if (logf.ne.' ') call logwrit ('Offsets from reference pixel :')
-c
-c Convert coordinates
-c
+      if (logf.ne.' ') call logwrit(text)
+
+c     Find offsets of fitted pixel from reference pixel.
+      call initco(lun)
+
+      call output(' ')
+      if (logf.ne.' ') call logwrit(' ')
+      call output('Offsets from reference pixel :')
+      if (logf.ne.' ') call logwrit('Offsets from reference pixel :')
+
+c     Convert coordinates.
       do i = 1, naxis
         typesi(i) = 'abspix'
-      end do
-      call setoaco (lun, 'off', naxis, 0, typeso)
-      call w2wfco (lun, naxis, typesi, ' ', pixmax, typeso, ' ',
-     +             .false., strout, strlen)
-c
-c Tell user
-c
-       do i = 1, naxis
-        if (i.lt.3) then
-          write (text,70) i, strout(i)(1:strlen(i))
-70        format ('  Axis ', i1, ': Fitted pixel offset = ', a)
-        else
-          write (text, 75) i, strout(i)(1:strlen(i))
-75        format ('  Axis ', i1, ':        pixel offset = ', a)
-        end if
-        call output (text)
-        if (logf.ne.' ') call logwrit (text)
-      end do
-c
-c Compute world coordinate
-c
-      call output (' ')
-      if (logf.ne.' ') call logwrit (' ')
-      call output ('Coordinate:')
-      if (logf.ne.' ') call logwrit ('Coordinate:')
-c
-c Convert coordinates
-c
-      call setoaco (lun, 'abs', naxis, 0, typeso)
-      call w2wfco (lun, naxis, typesi, ' ', pixmax, typeso, ' ',
-     +             .false., strout, strlen)
-c
-c Tell user
-c
+      enddo
+      call setoaco(lun, 'off', naxis, 0, typeso)
+      call w2wfco(lun, naxis, typesi, ' ', pixmax, typeso, ' ',
+     *             .false., strout, strlen)
+
+c     Tell user.
       do i = 1, naxis
-        call pader (typeso(i), strout(i), strlen(i))
-c
-        call ctypeco (lun, i, ctype, il)
         if (i.lt.3) then
-          write (text,80) i, ctype, strout(i)(1:strlen(i))
-80        format ('  Axis ', i1, ': Fitted ', a, ' = ', a)
+          write(text,20) i, strout(i)(1:strlen(i))
+ 20       format('  Axis ', i1, ': Fitted pixel offset = ', a)
         else
-          write (text, 85) i, ctype, strout(i)(1:strlen(i))
-85        format ('  Axis ', i1, ':        ', a, ' = ', a)
-        end if
-        call output (text)
-        if (logf.ne.' ') call logwrit (text)
-      end do
-c
-      call xyclose (lun)
+          write(text, 30) i, strout(i)(1:strlen(i))
+ 30       format('  Axis ', i1, ':        pixel offset = ', a)
+        endif
+        call output(text)
+        if (logf.ne.' ') call logwrit(text)
+      enddo
+
+c     Compute world coordinate.
+      call output(' ')
+      if (logf.ne.' ') call logwrit(' ')
+      call output('Coordinate:')
+      if (logf.ne.' ') call logwrit('Coordinate:')
+
+c     Convert coordinates.
+      call setoaco(lun, 'abs', naxis, 0, typeso)
+      call w2wfco(lun, naxis, typesi, ' ', pixmax, typeso, ' ',
+     *            .false., strout, strlen)
+
+c     Tell user.
+      do i = 1, naxis
+        call pader(typeso(i), strout(i), strlen(i))
+
+        call ctypeco(lun, i, ctype, il)
+        if (i.lt.3) then
+          write(text,40) i, ctype, strout(i)(1:strlen(i))
+ 40       format('  Axis ', i1, ': Fitted ', a, ' = ', a)
+        else
+          write(text,50) i, ctype, strout(i)(1:strlen(i))
+ 50       format('  Axis ', i1, ':        ', a, ' = ', a)
+        endif
+        call output(text)
+        if (logf.ne.' ') call logwrit(text)
+      enddo
+
+      call xyclose(lun)
       if (logf.ne.' ') call logclose
-      call finco (lun)
-c
+      call finco(lun)
+
       end
-c************************************************************************
-      subroutine pader (type, str, ilen)
-      implicit none
-      character str*(*), str2*132, type*(*)
-      integer len1, ilen, it
-c
+
+c***********************************************************************
+
+      subroutine pader(type, str, ilen)
+
+      character type*(*), str*(*)
+      integer   ilen
+c-----------------------------------------------------------------------
+      integer   it
+      character str2*132
+
+      external  len1
+      integer   len1
+c-----------------------------------------------------------------------
       if (type.eq.'hms' .or. type.eq.'dms') then
         str2 = str
         it = index(str2,':')
         str = ' '
         str(3-it+2:) = str2(1:len1(str2))
         ilen = len1(str)
-      end if
-c
+      endif
+
       end
-c************************************************************************
-      subroutine getopt (doabs)
-c
-c     Decode options array into named variables.
-c
-c   Output:
-c     doabs     Search for absolute maximum pixel
-c
+
+c***********************************************************************
+
+      subroutine getopt(doabs)
+
+      logical   doabs
 c-----------------------------------------------------------------------
-      implicit none
+c  Decode options array into named variables.
 c
-      logical doabs
-cc
-      integer maxopt
-      parameter (maxopt = 1)
-c
-      character opshuns(maxopt)*3
-      logical present(maxopt)
+c  Output:
+c     doabs     Search for absolute maximum pixel
+c-----------------------------------------------------------------------
+      integer    MAXOPT
+      parameter (MAXOPT = 1)
+
+      logical   present(MAXOPT)
+      character opshuns(MAXOPT)*3
+
       data opshuns /'abs'/
 c-----------------------------------------------------------------------
-      call options ('options', opshuns, present, maxopt)
-c
+      call options('options', opshuns, present, MAXOPT)
+
       doabs = present(1)
-c
+
       end
