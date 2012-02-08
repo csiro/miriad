@@ -10,10 +10,6 @@ c    prog: cgcurs.for, cgdisp.for, cgslice.for, cgspec.for, gpcomb.for,
 c          gpdof.for, impos.for, maxfit.for, sfind.for
 c
 c  User callable routines are:
-c
-c   initco  : Initialize coordinate object
-c   finco   : Free coordinate object
-c
 c   axfndco : Find axis of specified generic type
 c   axtypco : Return generic axis type
 c   chkaxco : Check axis CTYPE and axis label type for consistency
@@ -35,7 +31,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: cosubs.for,v 1.11 2011/10/06 07:10:02 cal103 Exp $
+c $Id: cosubs.for,v 1.12 2012/02/08 07:10:59 cal103 Exp $
 c***********************************************************************
 
 c* axfndCO -- Find a specified generic axis in an image
@@ -361,7 +357,7 @@ c+
       integer iax, lun, il
       character*(*) ctype
 c  ---------------------------------------------------------------------
-c     Return CTYPE for one axis
+c  Return CTYPE for one axis.
 c
 c  Input
 c    lun    Handle
@@ -383,43 +379,6 @@ c-----------------------------------------------------------------------
         il = il + 1
       enddo
       il = il - 1
-
-      end
-
-c***********************************************************************
-
-c* finCO -- Finish up after coordinate conversion routines
-c& nebk
-c: coordinates
-c+
-      subroutine finco (lun)
-
-      integer lun
-c  ---------------------------------------------------------------------
-c     Tidy up after coordinate conversion routines have been accessed
-c
-c  Input
-c    lun    Handle of image
-c-----------------------------------------------------------------------
-      call coFin(lun)
-
-      end
-
-c***********************************************************************
-c* initCO -- Initialize coordinate conversion routines
-c& nebk
-c: coordinates
-c+
-      subroutine initco (lun)
-
-      integer lun
-c  ---------------------------------------------------------------------
-c     Initialize coordinate conversion routine
-c
-c  Input
-c    lun    Handle of image
-c-----------------------------------------------------------------------
-      call coInit(lun)
 
       end
 
