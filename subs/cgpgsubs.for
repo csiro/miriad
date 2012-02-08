@@ -39,7 +39,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: cgpgsubs.for,v 1.8 2011/10/05 05:36:16 cal103 Exp $
+c $Id: cgpgsubs.for,v 1.9 2012/02/08 07:05:37 cal103 Exp $
 c***********************************************************************
 
 c* annboxCG -- Annotate plot with information from a box image
@@ -48,9 +48,9 @@ c: plotting
 c+
       subroutine annboxcg (lb, bin, bfac, yinc, xpos, ypos)
 
-      integer lb
-      real bfac(5), yinc, xpos, ypos
-      character*(*) bin
+      integer   lb
+      character bin*(*)
+      real      bfac(5), yinc, xpos, ypos
 c  ---------------------------------------------------------------------
 c  Annotate plot with box image information
 c
@@ -129,9 +129,9 @@ c+
       subroutine annconcg (lc, cin, slev, nlevs, levs, srtlev, dmm,
      *                     yinc, xpos, ypos)
 
-      integer nlevs, lc, srtlev(nlevs)
-      real slev, xpos, ypos, yinc, levs(nlevs), dmm(2)
-      character*(*) cin
+      integer   nlevs, lc, srtlev(nlevs)
+      real      slev, xpos, ypos, yinc, levs(nlevs), dmm(2)
+      character cin*(*)
 c  ---------------------------------------------------------------------
 c  Annotate plot with contour image information
 c
@@ -334,10 +334,11 @@ c+
       subroutine anninicg (lh, no3, vymin, pcs, ydispb, labtyp,
      *                     xpos, ypos, yinc)
 
-      integer lh
-      real xpos, ypos, yinc, pcs, ydispb, vymin
-      character*(*) labtyp(2)
-      logical no3
+      integer   lh
+      logical   no3
+      real      vymin, pcs, ydispb
+      character labtyp(2)*(*)
+      real      xpos, ypos, yinc
 c  ---------------------------------------------------------------------
 c  Do some set up chores for the full plot annotation and
 c  write the reference values to the plot.  The window is
@@ -358,10 +359,7 @@ c  Output
 c    x,ypos   World coordinate of next line of text to be written
 c    yinc     World increment between lines of text
 c-----------------------------------------------------------------------
-      include 'mirconst.h'
       include 'maxnax.h'
-      double precision rd
-      parameter (rd = 180.0/dpi)
 
       double precision win(maxnax)
       real xht, yht, xhta, yhta, acs, ychinc, yoff, ygap
@@ -434,11 +432,11 @@ c
       ip = len1(str1)
       str1(ip:) = ' = '
 
-      call initco(lh)
+      call coInit(lh)
       call setoaco(lh, 'abs', maxis, 0, typeo)
       call w2wfco(lh, maxis, typei, ' ', win, typeo, ' ', .false.,
      *             refstr, ir)
-      call finco(lh)
+      call coFin(lh)
       do i = 1, maxis
         ip = len1(str1) + 2
         write(str1(ip:),'(a)') refstr(i)(1:ir(i))//','
@@ -1225,7 +1223,7 @@ c
 c Prepare value label.  The units depend upon what type of axis the
 c third axis is, and what the units of the complementary axis is
 c
-      call initco(lun)
+      call coInit(lun)
       if (doval) then
         call axtypco(lun, 3, 0, types)
         if (types(3).eq.'VELO') then
@@ -1273,7 +1271,7 @@ c Now compute the value of the third axis in the desired units
 c and format it
 c
         call w2wsco(lun, 3, 'abspix', ' ', pix, ltype, ' ', val3)
-        call finco(lun)
+        call coFin(lun)
 c
 c Format value
 c
@@ -1366,9 +1364,6 @@ c    grid      Draw on grid instead of just ticks
 c-----------------------------------------------------------------------
       include 'mirconst.h'
 
-      double precision st2r
-      parameter (st2r=dpi/3600d0/12d0)
-
       double precision wwi(3), wblc(3), wtrc(3), wbrc(3), wtlc(3),
      * tickd(2), xmin, xmax, ymin, ymax, zp, ticklp(2), dp, dw,
      * blcd(2), trcd(2), wrap
@@ -1411,7 +1406,7 @@ c
 c Convert spatial coordinates of all 4 corners of the current plane
 c from absolute pixels to world coordinates given by label type
 c
-      call initco(lun)
+      call coInit(lun)
       call rdhdi(lun, 'naxis', naxis, 0)
       naxis = min(3,naxis)
       do i = 1, naxis
@@ -1441,7 +1436,7 @@ c absdeg or absnat.
 c
       if (zero(1)) then
         if (labtyp(1).eq.'hms' .or. labtyp(1).eq.'absnat') then
-          wrap = 2.0*dpi
+          wrap = DTWOPI
         else
           wrap = 360.0
         endif
@@ -1459,7 +1454,7 @@ c
       endif
       if (zero(2)) then
         if (labtyp(2).eq.'hms' .or. labtyp(2).eq.'absnat') then
-          wrap = 2.0*dpi
+          wrap = DTWOPI
         else
           wrap = 360.0
         endif
@@ -1673,7 +1668,7 @@ c
 c
 c Free coordinate object
 c
-      call finco(lun)
+      call coFin(lun)
 c
 c Restore original pixel window
 c
@@ -1707,6 +1702,7 @@ c    ydispb   Displacement in character heights from bottom x-axis
 c             for X label
 c-----------------------------------------------------------------------
       include 'mirconst.h'
+
       double precision ymin, ymax, win(2), wout1(2), wout2(2)
       real dely, xch, ych, xl, yl
       character str*60, stypeo*8, typei(2)*6
@@ -1740,22 +1736,22 @@ c
         typei(1) = 'abspix'
         typei(2) = 'abspix'
 
-        call initco(lh)
+        call coInit(lh)
         win(1) = blc(1) - 0.5
         win(2) = blc(2) - 0.5
         call w2wco(lh, 2, typei, ' ', win, labtyp, stypeo, wout1)
         win(2) = trc(2) + 0.5
         call w2wco(lh, 2, typei, ' ', win, labtyp, stypeo, wout2)
-        call finco(lh)
+        call coFin(lh)
 c
 c Allow for RA axis zero crossing
 c
         call razerocg(lh, blc, trc, zero)
         if (zero(2)) then
           if (wout1(2).lt.wout2(2)) then
-            wout1(2) = wout1(2) + 2*dpi
+            wout1(2) = wout1(2) + DTWOPI
           else
-            wout2(2) = wout2(2) + 2*dpi
+            wout2(2) = wout2(2) + DTWOPI
           endif
         endif
 c
@@ -1782,6 +1778,7 @@ c
         else
           str = '1O05\uh\dO'
         endif
+
         il = len1(str)
         if (ymin.lt.0.0 .or. ymax.lt.0.0) then
           str(il+1:il+1) = '-'
