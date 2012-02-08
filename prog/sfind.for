@@ -1,7 +1,7 @@
       program sfind
 
 c= SFIND - Automatically or interactively find sources in images
-c& nebk
+c& amh
 c: plotting
 c+
 c       SFIND has been updated to incorporate a new statistically
@@ -470,106 +470,10 @@ c       3) Check the rms of the background. If this is high then firstly
 c          the fit may not be good (as per 1), and secondly the source
 c          is in a noisy area and should be treated with caution anyway.
 c
-c$Id: sfind.for,v 1.14 2010/11/22 05:24:30 cal103 Exp $
+c$Id: sfind.for,v 1.15 2012/02/08 06:52:43 cal103 Exp $
 c--
-c
 c  History:
-c    amh  28sep95  Major hacks to turn into SFIND from CGCURS, using
-c                  source finding algorithm from AIPS task SMFND (by
-c                  Taisheng Ye).
-c    amh  23jan96  Added routine from imfit to do elliptical gaussian
-c                  source fitting of identified sources.
-c    amh  24jan96  Added options nofit and asciiart, for avoiding
-c                  gaussian fits and sending ascii images of sources to
-c                  screen.
-c    nebk 12feb96  Massaged to fix subroutine call mismatches, remove
-c                  unused variables, remove hangovers from cgcurs that
-c                  were not needed, gave unvalued variables a value,
-c                  remove unused subroutines.  Made no default for
-c                  "cutoff" and xrms.  Put some protection into BASECAL
-c                  for bad rms values.  Change structure of code in
-c                  subroutine SEARCH deal with blanks in BASECAL.
-c    amh  05mar96  added iterative section to subroutine FITTING,
-c                  whereby sources with fwhm comparable to area used for
-c                  selecting pixels are re-calculated with a larger
-c                  area.  Also deal with blanks in SEARCH and LOADDAT
-c                  (blanks now correctly dealt with throughout).  Tidied
-c                  up subroutine descriptions, etc.
-c    rjs  18mar96  Some FORTRAN standardisation.
-c    amh  21apr97  added "auto" option, to give user choice of
-c                  interactive flagging of sources or not.
-c    amh  28apr97  added "negative" option, to give user ability to
-c                  detect negative sources without having to seperately
-c                  use MATHS.
-c    amh  14may97  fixed bug concerning accidental "exit" button press.
-c                  If this was accidental, user previously had no way
-c                  (other than rerunning program) of accepting source
-c                  detected when button was accidentally pressed.
-c    rjs  21aug97  Move calls to initco and finco.
-c    amh  20apr98  Add line when writing to log to indicate which image
-c                  is being analysed.  Also added hash marks before each
-c                  line of header output for ease of later file
-c                  interpretation.
-c    amh  16oct98  bug causing the 'region' option to give incorrect
-c                  source parameters has been fixed.
-c    amh  09nov98  added option 'pbcorr' to correct for primary beam
-c                  attenuation in images, including mosaics.  Uses the
-c                  mosLoad and mosVal routines written by rjs.
-c    amh  01dec00  Major changes, to incorporate the pixel histogram
-c                  fitting routine from imsad (in the new 'basecal'
-c                  routine) for providing more robust estimates of
-c                  background mean and rms in the presence of nearby
-c                  sources (actually the method used was surprisingly
-c                  good, but this is still more robust).
-c    amh  09feb01  Many changes between previous entry and here,
-c                  primarily to implement the FDR formalism in choosing
-c                  pixels to pass to the source fitting routine.  The
-c                  new parameter 'alpha' has been added to facilitate
-c                  this, as well as new options oldsfind, fdrimg,
-c                  sigmaimg, normimg, and kvannot.  Also, corresponding
-c                  to the new 'img' options, several output image
-c                  routines have been included.  Regarding program
-c                  structure, the oldsfind option has been implemented
-c                  by retaining the original subroutines (with marginal
-c                  alterations as needed) but renaming them as xxx_old
-c                  (these being search_old, basecal_old, fitting_old and
-c                  LoadDat_old).  Old routines which are not modified
-c                  (either not used in 'FDR' mode, or are unchanged in
-c                  either mode) have not undergone this change.
-c    amh  26aug01  Added 'fdrpeak' option to give user ability to choose
-c                  whether to fit sources using all contiguous,
-c                  monotonically decreasing pixels, rather than just
-c                  those above the FDR threshold.
-c    amh  26oct01  Minor fixes to correct untyped variables and remove
-c                  unused ones.
-c    amh  28oct01  Added printout of sigma corresponding to the p-value
-c                  selected by FDR.
-c   nebk  14nov01  Track change to readimcg interface
-c    amh  08mar02  Fix bug with array sizes (boxsize-> boxsize+1) in
-c                  subroutines fitting and LoadDat.
-c    amh  18mar02  Added 'allpix' option to allow fitting of all FDR
-c                  pixels, not just monotonically decreasing ones.
-c    amh  20mar02  Added 'psfsize' option to restrict source minimum
-c                  size to the size of the synthesised beam (PSF).
-c    amh  08aug02  Added 'rmsimg' option for outputting rms image.  Also
-c                  fixed minor bug in the way the box sizes were
-c                  calculated in subroutines fdr and basecal.
-c    amh  29aug02  Fixed minor bug which could cause 'psfsize' point
-c                  source fits to return peak and integrated fluxes too
-c                  low for bright sources.
-c    pjt  20feb03  defined alpha (implicit undefined)
-c    amh  10jun04  Fixed bug which caused erroneously low rms's in
-c                  rmsboxes with blanked pixels at the bottom left,
-c                  leading to many spurious sources at the edges of non-
-c                  square images.
-c    amh  28may08  Fixed bug in subroutine basecal which does the rms
-c                  background calculation. This bug resulted from the
-c                  rms estimates from the gaussian fitting process, on
-c                  occasion, being ridiculously high.  Code now checks
-c                  for this against brute force rms, and adopts the
-c                  brute force value if the gaussian fitted estimate is
-c                  well off.
-c
+c    Refer to the RCS log, v1.1 includes prior revision information.
 c
 c To do:
 c
@@ -625,8 +529,8 @@ c-----------------------------------------------------------------------
       character versan*80, version*80
 c-----------------------------------------------------------------------
       version = versan('sfind',
-     *                  '$Revision: 1.14 $',
-     *                  '$Date: 2010/11/22 05:24:30 $')
+     *                 '$Revision: 1.15 $',
+     *                 '$Date: 2012/02/08 06:52:43 $')
 c
 c Get user inputs
 c
@@ -652,13 +556,13 @@ c
 c Open image
 c
       call opimcg(maxnax, in, lin, size, naxis)
-      call initco(lin)
+      call coInit(lin)
       if (pbcor) call mosLoad(lin,npnt)
 c
 c Finish key inputs for region of interest now
 c
       call region(in, naxis, size, ibin, jbin, kbin, blc, trc,
-     *             win, ngrps, grpbeg, ngrp)
+     *            win, ngrps, grpbeg, ngrp)
 c
 c Try to allocate memory for images.
 c
@@ -679,10 +583,10 @@ c Compute contour levels or check pixel map for log offset
 c
        if (dopixel) then
         call grfixcg(pixr, lin, naxis, size, trfun, pixr2,
-     *                groff, blank)
+     *               groff, blank)
        else
         call conlevcg(.false., maxlev, lin, levtyp, slev, nlevs,
-     *                 levs, srtlev)
+     *                levs, srtlev)
         blank = -99999999.0
        endif
 c
@@ -703,8 +607,8 @@ c Open plot device
 c
        ierr = pgbeg (0, pdev, 1, 1)
        if (ierr.ne.1) then
-        call pgldev
-        call bug('f', 'Error opening plot device')
+         call pgldev
+         call bug('f', 'Error opening plot device')
        endif
 c
        call pgpage
@@ -776,7 +680,7 @@ c
            if (wedcod.eq.1 .or. wedcod.eq.2) then
             call pgsch(cs(1))
             call wedgecg(wedcod, wedwid, jj, trfun, groff, nbins,
-     *                    cumhis, wdgvp, pixr(1), pixr(2))
+     *                   cumhis, wdgvp, pixr(1), pixr(2))
            endif
          endif
 c
@@ -786,7 +690,7 @@ c
          if (dopixel) then
            if (k.eq.1) call ofmcol(1, pixr2(1), pixr2(2))
            call pgimag(memr(ipim), win(1), win(2), 1, win(1), 1,
-     *                  win(2), pixr2(1), pixr2(2), tr)
+     *                 win(2), pixr2(1), pixr2(2), tr)
          else
 c
 c Draw contours
@@ -800,17 +704,17 @@ c for this subplot
 c
          call pgsch(cs(1))
          call dolabcg(gaps, dotr, nx, ny, ngrps, nlast, k,
-     *                 labtyp, doaxlab, doaylab, donxlab, donylab)
+     *                labtyp, doaxlab, doaylab, donxlab, donylab)
 c
 c Write ascii axis labels
 c
          call aaxlabcg(doaxlab, doaylab, xdispl, ydispb,
-     *                             xlabel, ylabel)
+     *                 xlabel, ylabel)
 c
 c Draw frame, write numeric labels, ticks and optional grid
 c
          call naxlabcg(lin, .true., blc, trc, krng, labtyp,
-     *                  donxlab, donylab, .false., grid)
+     *                 donxlab, donylab, .false., grid)
 c
 c Draw wedge inside subplots and overwrite label ticks
 c
@@ -823,7 +727,7 @@ c
 c Modify lookup table
 c
          if (dofid) call ofmmod(tfvp, win(1)*win(2), memr(ipim),
-     *                           memi(ipnim), pixr2(1), pixr2(2))
+     *                          memi(ipnim), pixr2(1), pixr2(2))
 c
 c Write velocity or channel label
 c
@@ -831,7 +735,7 @@ c
            call pgsch(cs(2))
            call pgsci(1)
            call lab3cg(lin, doerase, do3val, do3pix, labtyp,
-     *                  grpbeg(k), ngrp(k))
+     *                 grpbeg(k), ngrp(k))
          endif
 c
 c Interactive graphical source finding routine
@@ -843,7 +747,7 @@ c
 c Increment sub-plot viewport locations and row counter
 c
          call subinccg(k, nx, ny, vxmin, vymax, vxsize, vysize,
-     *                  vxgap, vygap, vx, vy)
+     *                 vxgap, vygap, vx, vy)
 c
 c Page plot device
 c
@@ -855,7 +759,7 @@ c
        call memfree(ipim,  win(1)*win(2), 'r')
        call memfree(ipnim, win(1)*win(2), 'i')
 c
-       call finco(lin)
+       call coFin(lin)
        call xyclose(lin)
        call txtclose(llog)
        call pgend
@@ -902,7 +806,7 @@ c
       end
 c
 c
-      subroutine cgcur (x, y, ans)
+      subroutine cgcur(x, y, ans)
       real x, y
       character ans*1
       call pgupdt
@@ -1063,7 +967,7 @@ c Determine beam parameters, including determining if the beam doesn't
 c exist.
 c
       call BeamPar(lIn, k, bvol, bvolp, bmaj, bmin, bpa,
-     *              bmajp, bminp, bpap, nobeam)
+     *             bmajp, bminp, bpap, nobeam)
 
 c Check that rmsbox is big enough.
       write(line, '(a,f6.2,a)') 'Beam exclusion radius:', 1.5*bmajp,
@@ -1123,10 +1027,9 @@ c
         if (.not.nofit) then
           fitok = .true.
           call fitting_old(lIn, krng, sigma, nx, ny, image, rms, xpos,
-     *     xposerr, ypos, yposerr, pkfl, pkflerr, intfl, amaj, amin,
-     *     posa, posns, blc, bin, l, m, asciiart, bvol, bvolp, bmajp,
-     *     bminp, bpap, nobeam, nimage, fitok, auto, xrms, psfsize,
-     *     base0)
+     *      xposerr, ypos, yposerr, pkfl, pkflerr, intfl, amaj, amin,
+     *      posa, posns, blc, bin, l, m, asciiart, bvol, bvolp, bmajp,
+     *      bminp, bpap, nobeam, nimage, fitok, auto, psfsize, base0)
           if (.not.fitok) goto 60
 c
           typei(1) = 'hms'
@@ -1143,7 +1046,7 @@ c
 c Convert location (peak or fitted) to formatted coordinate string
 c
         call w2wfco(lin, 2, typei, ' ', posns,  typeo, ' ',
-     *               .true., radec, radeclen)
+     *              .true., radec, radeclen)
 c
 c if 'pbcor' selected, correct the flux densities (peak and integrated)
 c by the gain (primary beam attenuation) at the position of the source
@@ -1235,7 +1138,7 @@ c
           else if (cch.eq.'X') then
             call output('Are you sure you want to quit here?')
             call output('(press again to confirm, or other key '//
-     *                    'for corresponding action)')
+     *                  'for corresponding action)')
             call cgcur(ww(1), ww(2), cch)
             if (cch.eq.'X') then
              goto 70
@@ -1273,7 +1176,7 @@ c
       end
 c
 c
-      subroutine peakfit (l, m, x, y, nx, ny, peak, image)
+      subroutine peakfit(l, m, x, y, nx, ny, peak, image)
 c-----------------------------------------------------------------------
 c    Perform a bi-parabolic fit to the position l,m and return fitted
 c    coordinates x,y and flux density, peak. Parabolas are fitted along
@@ -1426,7 +1329,7 @@ c
       subroutine fitting_old (lIn, krng, sigma, nx, ny, image, rms,
      *   xpos, xposerr, ypos, yposerr, pkfl, pkflerr, intfl, amaj,
      *   amin, posa, posns, blc, bin, lx, my, asciiart, bvol, bvolp,
-     *   bmajp, bminp, bpap, nobeam, nimage, fitok, auto, xrms, psfsize,
+     *   bmajp, bminp, bpap, nobeam, nimage, fitok, auto, psfsize,
      *   base0)
 c-----------------------------------------------------------------------
 c  Do elliptical Gaussian fit to source. First the pixels to be used in
@@ -1484,7 +1387,7 @@ c
       logical dofit, asciiart, nobeam, fitok, ok, auto, psfsize
       integer ifail1,ifail2,lIn, i, blc(2), bin(2), maxline, boxsz4
       integer k,m,nvar,lx,my, nx,ny, krng(2), nimage(nx,ny), fiterr
-      real image(nx,ny), dumm, xrms
+      real image(nx,ny), dumm
       real clip,xvar(MAXVAR),covar(MAXVAR*MAXVAR),rms
       real bvol,bvolp, xpos, ypos, pkfl, intfl
       real sigma, amaj, amin, posa, bmajp, bminp, bpap, boxsize
@@ -1532,8 +1435,8 @@ c  Load the data. Ie, choose the pixels in the region of the source to
 c  be used in the fitting procedure, and encode them in a format ready
 c  to do so.
 c
-1200  call LoadDat_old (clip,m,nx,ny,xpos,ypos,blc,bin,image,xrms,
-     *  boxsize,lx,my,nimage,asciiart,ascpic,maxline,fitok,base0)
+1200  call LoadDat_old (clip,m,nx,ny,xpos,ypos,blc,bin,image,
+     *  boxsize,lx,my,nimage,ascpic,maxline,fitok,base0)
       if (.not.fitok) return
       if (m.eq.0) then
        fitok = .false.
@@ -1671,8 +1574,8 @@ c
       end
 c
 c
-      subroutine LoadDat_old(clip,m,nx,ny,xpos,ypos,blc,bin,image,xrms,
-     *     boxsize,lx,my,nimage,asciiart,ascpic,maxline,fitok,base0)
+      subroutine LoadDat_old(clip,m,nx,ny,xpos,ypos,blc,bin,image,
+     *     boxsize,lx,my,nimage,ascpic,maxline,fitok,base0)
 c-----------------------------------------------------------------------
 c  Load the relevant data for this plane.  The relevant data are those
 c  pixels to which to fit the elliptical gaussians, and they are
@@ -1686,9 +1589,9 @@ c-----------------------------------------------------------------------
       include 'sfind.h'
       integer m,nx,ny,lmn,lmx,mmn,mmx,nimage(nx,ny)
       integer i,xt,yt,ll,mm, blc(2),bin(2), lx,my, maxline
-      real clip,xpos,ypos,image(nx,ny),boxsize,xrms,base0
+      real clip,xpos,ypos,image(nx,ny),boxsize,base0
       double precision wa(2)
-      logical incirc,fainter,asciiart,fitok
+      logical incirc,fainter,fitok
       character ascpic(1000)*80
 c-----------------------------------------------------------------------
 c
@@ -1727,13 +1630,12 @@ c
        do ll = lmx,lmn,-1
         incirc = ((ll-xpos)**2 + (mm-ypos)**2).lt.(4*boxsize**2)
         call slopey(ll,mm,lx,my,nx,ny,image,fainter)
-c        if ((image(ll,mm).gt.xrms*clip).and.incirc.and.fainter.and.
         if ((image(ll,mm).gt.clip) .and. incirc .and. fainter .and.
      *      (nimage(ll,mm).gt.0)) then
          if ((ll.eq.lx) .and. (mm.eq.my)) then
-          ascpic(mm-mmn+2) = 'O'//ascpic(mm-mmn+2)
+          ascpic(mm-mmn+2) = 'O'//ascpic(mm-mmn+2)(:79)
          else
-          ascpic(mm-mmn+2) = '*'//ascpic(mm-mmn+2)
+          ascpic(mm-mmn+2) = '*'//ascpic(mm-mmn+2)(:79)
          endif
          i = i + 1
          data(i) = image(ll,mm) - base0
@@ -1749,7 +1651,7 @@ c
          xt = xt + x(i)
          yt = yt + y(i)
         else
-         ascpic(mm-mmn+2) = ' '//ascpic(mm-mmn+2)
+         ascpic(mm-mmn+2) = ' '//ascpic(mm-mmn+2)(:79)
         endif
        enddo
       enddo
@@ -1761,7 +1663,7 @@ c
       end
 c
 c
-      subroutine search (lin, nx, ny, image, nimage, blc, ibin, jbin,
+      subroutine search(lin, nx, ny, image, nimage, blc, ibin, jbin,
      *   krng, llog, rmsbox, alpha, xrms, auto, negative, pbcor, in,
      *   fdrimg, sigmaimg, rmsimg, normimg, kvannot, fdrpeak, allpix,
      *   psfsize, size)
@@ -1907,10 +1809,9 @@ c
 c Now do the source fitting, in the original image, using the pixels
 c selected by FDR to be above the background.
 c
-      call fdrfit(nx,ny,image,nimage,bvol,bpap,bvolp,bmajp,
-     *      bminp,pcut,memr(ip2im),lin,krng,blc,bin,negative,pbcor,
-     *      llog,kvannot,fdrpeak,allpix,psfsize,alpha,nfdrpix,
-     *      memr(ip3im),memr(ip4im))
+      call fdrfit(nx,ny,image,nimage,bvol,bpap,bvolp,bmajp,bminp,pcut,
+     *  memr(ip2im),lin,krng,blc,bin,negative,pbcor,llog,kvannot,
+     *  fdrpeak,allpix,psfsize,memr(ip3im),memr(ip4im))
 c free meanimg and sgimg memory
       call memfree(ip3im,nx*ny,'r')
       call memfree(ip4im,nx*ny,'r')
@@ -1918,12 +1819,12 @@ c
       call memfree(ipim,nx*ny,'r')
       call memfree(ip2im,nx*ny,'r')
 c
-70    call output(' ')
+      call output(' ')
 c
       end
 c
 c
-      subroutine basecal (nx, ny, l, m, base0, sigma, rmsbox, image,
+      subroutine basecal(nx, ny, l, m, base0, sigma, rmsbox, image,
      *                    nimage, boxsize, ok, mask, image2, auto)
 c-----------------------------------------------------------------------
 c    Calculate the base level around the found source using "imsad's"
@@ -2337,14 +2238,14 @@ c circumvent possible irritating bug of ascii pictures being printed out
 c in auto mode by overriding asciiart parameter.
 c
       if (auto .and. asciiart) then
-       asciiart = .FALSE.
-       call output('Auto mode: Asciiart option being overridden.')
+        asciiart = .FALSE.
+        call output('Auto mode: Asciiart option being overridden.')
       endif
 c
       end
 c
 c
-      subroutine inputs (maxlev, in, ibin, jbin, kbin, levtyp, slev,
+      subroutine inputs(maxlev, in, ibin, jbin, kbin, levtyp, slev,
      *   levs, nlevs, pixr, trfun, pdev, labtyp, logfil, do3val, do3pix,
      *   eqscale, nx, ny, cs, dopixel, mark, doerase, dowedge, dofid,
      *   grid, cut, rmsbox, alpha, xrms, nofit, asciiart, auto,
@@ -2518,22 +2419,24 @@ c
       call keyi('rmsbox',rmsbox,20)
       if (rmsbox.lt.20) then
         rmsbox = 20
-        call bug('w','rmsbox must be at least 20. Setting it to 20 now')
+        call bug('w',
+     *    'rmsbox must be at least 20.  Setting it to 20 now')
       endif
+
       call keyr('alpha',alpha,2.0)
       if ((alpha.le.0.0) .and. (.not.oldsfind))
      *  call bug('f','You must use a positive value for alpha.')
       call keyr('xrms',xrms,0.0)
       if (xrms.le.0.0) then
-       if ((oldsfind) .or. (sigmaimg)) then
-        call bug('f','Invalid value for keyword "xrms"')
-       endif
+        if ((oldsfind) .or. (sigmaimg)) then
+          call bug('f','Invalid value for keyword "xrms"')
+        endif
       endif
 
       end
 
 
-      subroutine setlgc (labcol, poscol, statcol, regcol)
+      subroutine setlgc(labcol, poscol, statcol, regcol)
 c-----------------------------------------------------------------------
 c     Set line graphics colours
 c
@@ -2576,7 +2479,7 @@ c
       end
 c
 c
-      subroutine region (in, naxis, size, ibin, jbin, kbin, blc, trc,
+      subroutine region(in, naxis, size, ibin, jbin, kbin, blc, trc,
      *                   win, ngrps, grpbeg, ngrp)
 c-----------------------------------------------------------------------
 c     Finish key routine inputs for region of interest now.
@@ -2637,7 +2540,7 @@ c
       end
 c
 c
-      subroutine fitting (lIn, krng, nx, ny, image, rms, xpos,
+      subroutine fitting(lIn, krng, nx, ny, image, rms, xpos,
      *    xposerr, ypos, yposerr, pkfl, pkflerr, intfl, amaj,
      *    amin, posa, posns, blc, bin, lx, my, bvol, bpap,
      *    bvolp, bmajp, bminp, nimage, boxsize, image2, pcut, fitok,
@@ -2813,8 +2716,8 @@ c temporarily setting the fdrpeak variable to true.
 c
        fdrpeakdum = .true.
        call LoadDat(m,nx,ny,xpos,ypos,blc,bin,image,boxsize,lx,my,
-     *  nimage,maxline,image2,pcut,fitok,meml(ipim),meml(ip2im),
-     *  xpixused,ypixused,meanimg,sgimg,nfdrused,fdrpeakdum,allpix)
+     *   nimage,maxline,image2,pcut,fitok,meml(ipim),meml(ip2im),
+     *   xpixused,ypixused,meanimg,sgimg,nfdrused,fdrpeakdum,allpix)
        call memfree(ipim,(boxsize+1)*(boxsize+1),'l')
        call memfree(ip2im,(boxsize+1)*(boxsize+1),'l')
        if (.not.fitok) return
@@ -3057,16 +2960,16 @@ c (and maybe whether the pixel is FDR-selected)
         if (allpix) then
          slopearry(i,j) = image2(ll,mm).le.pcut
         else
-         call slopey(ll,mm,lx,my,nx,ny,image,slopearry(i,j))
+          call slopey(ll,mm,lx,my,nx,ny,image,slopearry(i,j))
 c ensures that only pixels >= 1-sigma are used in fit
-         if (slopearry(i,j)) then
-          slopearry(i,j) = image(ll,mm).ge.sgimg(ll,mm)
-         endif
+          if (slopearry(i,j)) then
+            slopearry(i,j) = image(ll,mm).ge.sgimg(ll,mm)
+          endif
 c use this if *all* the pixels in the source are to be above the FDR
 c threshold, not just the peak pixel.
-         if (.not.fdrpeak) then
-          if (slopearry(i,j)) slopearry(i,j) = image2(ll,mm).le.pcut
-         endif
+          if (.not.fdrpeak) then
+            if (slopearry(i,j)) slopearry(i,j) = image2(ll,mm).le.pcut
+          endif
         endif
        enddo
       enddo
@@ -3332,8 +3235,7 @@ c-----------------------------------------------------------------------
 c
 c  Copy the estimates to the variables.
 c
-      if (nvar+ncurr.gt.MAXVAR)
-     *      call bug('f','Too many free parameters')
+      if (nvar+ncurr.gt.MAXVAR) call bug('f','Too many free parameters')
       do j = 1, ncurr
         nvar = nvar + 1
         var(nvar) = tmp(j)
@@ -3383,8 +3285,7 @@ c-----------------------------------------------------------------------
         spa = covar(n,n)
       endif
 
-      if (n.ne.nvar)
-     *        call bug('f','Inconsistency in UPackCov')
+      if (n.ne.nvar) call bug('f','Inconsistency in UPackCov')
 
       end
 
@@ -3431,8 +3332,7 @@ c-----------------------------------------------------------------------
         pa = var(n)
       endif
 
-      if (n.ne.nvar)
-     *        call bug('f','Inconsistency in UPackVar')
+      if (n.ne.nvar) call bug('f','Inconsistency in UPackVar')
 
       end
 
@@ -3442,6 +3342,7 @@ c-----------------------------------------------------------------------
 c
 c-----------------------------------------------------------------------
       include 'sfind.h'
+
       integer m,nvar,iflag
       real var(nvar)
       real fvec(m)
@@ -3457,9 +3358,9 @@ c  Evaluate the model. Assume it's a 2-D gaussian, unless otherwise
 c specified.
 c
       if (gdim.eq.1) then
-       call Eval1(xd,fvec,m)
+        call Eval1(xd,fvec,m)
       else
-       call Eval(x,y,fvec,m)
+        call Eval(x,y,fvec,m)
       endif
 c
 c  Compute the residuals now.
@@ -3471,7 +3372,7 @@ c
           fvec(i) = data(i) - fvec(i)
         endif
       enddo
-c
+
       end
 c
 c
@@ -3544,7 +3445,7 @@ c     Loop over the various model types.
       end
 
 
-      subroutine gaucvt (lIn, k, bvol, bvolp, xposerr, yposerr, pkfl,
+      subroutine gaucvt(lIn, k, bvol, bvolp, xposerr, yposerr, pkfl,
      *  pkflerr, intfl, amaj, amin, posa, awpos)
 c-----------------------------------------------------------------------
 c  Convert the source component parameters from pixel coordinates to
@@ -3674,12 +3575,12 @@ c
       call rdhdr(lIn,'bpa',bpa,0.0)
       bpa =bpa * R2D
         if ((bmaj.eq.0.0) .or. (bmin.eq.0.0)) then
-         call bug('w','Beam not detected in map -')
-         call bug('w','Using arbitrary value of 5 pixels.')
-         nobeam = .true.
-         bvol = 0.0
-         bvolp = 0.0
-         goto 1111
+          call bug('w','Beam not detected in map -')
+          call bug('w','Using arbitrary value of 5 pixels.')
+          nobeam = .true.
+          bvol = 0.0
+          bvolp = 0.0
+          goto 1111
         endif
 c
       if (bmaj*bmin.gt.0.0) then
@@ -3687,10 +3588,10 @@ c
         x(2) = 0
         x(3) = 0
         call coGauCvt(lIn,'op/op/op',x,'w',bmaj,bmin,bpa,
-     *                               'p',bmajp,bminp,bpap)
+     *                'p',bmajp,bminp,bpap)
         x(3) = k
         call coGauCvt(lIn,'op/op/ap',x,'p',bmajp,bminp,bpap,
-     *                               'w',bmaj,bmin,bpa)
+     *                'w',bmaj,bmin,bpa)
       endif
 c
 c  Determine the beam value, in radians**2
@@ -4094,10 +3995,9 @@ c     Done writing to lOut1, close it if it was open.
       end
 
 
-      subroutine fdrfit(nx,ny,image,nimage,bvol,bpap,bvolp,
-     *            bmajp,bminp,pcut,image2,lin,krng,blc,bin,negative,
-     *            pbcor,llog,kvannot,fdrpeak,allpix,psfsize,alpha,
-     *            nfdrpix,meanimg,sgimg)
+      subroutine fdrfit(nx,ny,image,nimage,bvol,bpap,bvolp,bmajp,bminp,
+     *  pcut,image2,lin,krng,blc,bin,negative,pbcor,llog,kvannot,
+     *  fdrpeak,allpix,psfsize,meanimg,sgimg)
 c-----------------------------------------------------------------------
 c
 c  Input:
@@ -4119,7 +4019,6 @@ c    fdrpeak    true to use all pixels in source fits
 c    allpix     true to use all pixels, not just monotonically
 c               decreasing ones
 c    psfsize    true to restrict minimum source size to that of the psf
-c    alpha      FDR percentage of false pixel detections
 c    nfdrpix    number of pixels detected by FDR
 c    meanimg    image of background mean values
 c    sgimg      image of background sigma values
@@ -4133,9 +4032,9 @@ c
 c
       integer ii,jj,kk,nx,ny,l,m
       integer lin,llog,lann,krng(2),len1
-      real image(nx,ny),pcut,alpha
+      real image(nx,ny),pcut
       real bvol,bpap,bvolp,bmajp,bminp
-      integer boxsize, nfdrpix, dumcount
+      integer boxsize, dumcount
       integer nimage(nx,ny),bin(2),blc(2),imin,jmin,imax,jmax
       logical fitok,negative,pbcor,kvannot,fdrpeak,allpix,psfsize
 c
@@ -4155,11 +4054,11 @@ c-----------------------------------------------------------------------
       sources = 0
       dumcount = 0
       if (kvannot) then
-       call txtopen(lann, 'sfind.ann', 'append', iostat)
-       if (iostat.ne.0)
-     *  call bug('f', 'Error opening text file "sfind.ann"')
-       write(line,'("color green")')
-       call txtwrite(lann, line, len1(line), iostat)
+        call txtopen(lann, 'sfind.ann', 'append', iostat)
+        if (iostat.ne.0)
+     *    call bug('f', 'Error opening text file "sfind.ann"')
+        write(line,'("color green")')
+        call txtwrite(lann, line, len1(line), iostat)
       endif
 c
       usedpixels = 0
@@ -4261,7 +4160,7 @@ c
           typeo(1) = 'hms'
           typeo(2) = 'dms'
           call w2wfco(lin, 2, typei, ' ', posns,  typeo, ' ',
-     *                 .true., radec, radeclen)
+     *                .true., radec, radeclen)
 c
 c if 'pbcor' selected, correct the flux densities (peak and integrated)
 c by the gain (primary beam attenuation) at the position of the source
@@ -4318,27 +4217,5 @@ c
       call output(' ')
       write(line,'("A total of ",i6," sources were detected.")') sources
       call output(line)
-c      write(line,'("giving an average of ",f5.1,
-c     +      " pixels per source.")') float(usedpixels)/float(sources)
-c      call output(line)
-c      call output('On average, the maximum possible number of')
-c      write(line,'("falsely-detected sources would be ",f5.1)')
-c     +  min(
-c     +  (float(nfdrpix)*alpha/100.)/(float(usedpixels)/float(sources)),
-c     +  sources)
-c      call output(line)
-c      if ((float(nfdrpix)*alpha/100.).le.(nfdrpix-usedpixels)) then
-c       call output('In the best-case scenario, none of the falsely')
-c       call output('detected pixels were used in fitting sources.')
-c      else
-c       nflse = (float(nfdrpix)*alpha/100.) - float(nfdrpix-usedpixels)
-c       nflse = nflse/(float(usedpixels)/float(sources))
-c       call output('In the best-case scenario, (the maximum number')
-c       call output('of falsely-detected pixels were excluded from')
-c       call output('the source-fitting process):')
-c       write(line,'(f5.1," sources may have been falsely-detected.")')
-c     +              nflse
-c       call output(line)
-c      end if
-      return
+
       end
