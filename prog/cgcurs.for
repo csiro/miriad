@@ -195,7 +195,7 @@ c       (which is ~ 1/40 of the view surface height) for the plot axis
 c       labels and the velocity/channel labels.
 c       Defaults choose something sensible.
 c
-c$Id: cgcurs.for,v 1.7 2012/02/08 05:31:52 cal103 Exp $
+c$Id: cgcurs.for,v 1.8 2012/02/08 05:35:35 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -239,8 +239,8 @@ c-----------------------------------------------------------------------
       data gaps, doabut /.false., .false./
 c-----------------------------------------------------------------------
       version = versan ('cgcurs',
-     *                  '$Revision: 1.7 $',
-     *                  '$Date: 2012/02/08 05:31:52 $')
+     *                  '$Revision: 1.8 $',
+     *                  '$Date: 2012/02/08 05:35:35 $')
 
 c     Get user inputs.
       call inputs(MAXLEV, img, ibin, jbin, kbin, levtyp, slev, levs,
@@ -251,7 +251,7 @@ c     Get user inputs.
 
 c     Open image(s).
       call opimcg(maxnax, img(1), img1, size, naxis)
-      call initco(img1)
+      call coInit(img1)
 
       img2  = img1
       dotwo = .false.
@@ -573,7 +573,7 @@ c
         call memfree(ipims, 1, 'r')
       endif
 
-      call finco(img1)
+      call coFin(img1)
       call xyclose(img1)
       if (dotwo) call xyclose(img2)
       if (dolog) then
@@ -658,17 +658,12 @@ c    doabs  Output region in absolute pixels instead of offset arcsec
 c  Output
 c    redisp Have another go after redisplaying the image
 c-----------------------------------------------------------------------
-      include 'mirconst.h'
+      integer    NVMAX, SYMB
+      parameter (NVMAX = 100, SYMB = 17)
 
-      double precision rtoa
-      parameter (rtoa = 3600d0*180d0/dpi)
-
-      integer nvmax, symb
-      parameter (nvmax = 100, symb = 17)
-
-      double precision vert(2,nvmax),  pix(3), pixbs(2),
+      double precision vert(2,NVMAX),  pix(3), pixbs(2),
      *  win(3), wout(3)
-      real vx(nvmax), vy(nvmax)
+      real vx(NVMAX), vy(NVMAX)
       character str1*30, str2*30, str*60, line*500, ans*1, typei(3)*6,
      *  typeo(3)*6
       integer il1, il2, i, ip, il, maxlen, nv, irad(2), iostat, bin(2),
@@ -719,10 +714,10 @@ c
 c
 c Get vertices with cursor; coordinates in absolute pixels
 c
-        call pgolin(nvmax, nv, vx, vy, symb)
+        call pgolin(NVMAX, nv, vx, vy, SYMB)
 
-        if (nv.gt.nvmax) then
-          write(line,10) nv, nvmax
+        if (nv.gt.NVMAX) then
+          write(line,10) nv, NVMAX
 10        format('Too many (', i4, ') vertices, max. = ', i4)
           call bug('w', line(1:len1(line)))
         else if (nv.le.1) then
@@ -738,7 +733,7 @@ c Rub out old points
 c
             call pgqci(ci)
             call pgsci(0)
-            call pgpt(nv, vx, vy, symb)
+            call pgpt(nv, vx, vy, SYMB)
             do i = 1, nv
               pix(1) = vx(i)
               pix(2) = vy(i)
@@ -750,7 +745,7 @@ c
 c Draw new points
 c
             call pgsci(ci)
-            call pgpt(nv, vx, vy, symb)
+            call pgpt(nv, vx, vy, SYMB)
           endif
           call pgsfs(2)
           call pgslw(2)
@@ -770,7 +765,7 @@ c
 c
 c Eliminate redundant vertices
 c
-          call elimrvd(nvmax, nv, vert)
+          call elimrvd(NVMAX, nv, vert)
 c
 c Convert unbinned full image pixels to true arcsec offsets if desired
 c
@@ -1138,14 +1133,14 @@ c  Output:
 c    redisp Redisplay the image
 c    smore  Do more statistics options
 c-----------------------------------------------------------------------
-      integer symb, nvmax, maxruns
-      parameter (symb = 17, nvmax = 100, maxruns = 50)
+      integer    MAXRUNS, NVMAX, SYMB
+      parameter (MAXRUNS = 50, NVMAX = 100, SYMB = 17)
 
-      integer vert(2,nvmax), runs(maxruns), nruns, nv, i, j, k, iostat,
+      integer vert(2,NVMAX), runs(MAXRUNS), nruns, nv, i, j, k, iostat,
      *  npix, iymin, iymax, kd, t, len1, ci, bin(2), naxis, wl(3)
       double precision cdelt1, cdelt2, imin, jmin, imax, jmax,
      *  pix(3), pixbs(2)
-      real vx(nvmax), vy(nvmax), sum, sumsq, mean, var, rms,
+      real vx(NVMAX), vy(NVMAX), sum, sumsq, mean, var, rms,
      *  dmin, dmax, bmin, bmaj, barea, ival
       character line*80, ans*1, bunit*16, typei(3)*6, typeo(3)*6,
      *  wstr(3)*132, bunit2*16, tmp*16
@@ -1189,7 +1184,7 @@ c Get vertices with cursor; corrdinates in absolute pixels
 c
         nv = 0
         call pgupdt
-        call pgolin(nvmax-1, nv, vx, vy, symb)
+        call pgolin(NVMAX-1, nv, vx, vy, SYMB)
         call pgupdt
 c
 c Go on with enough vertices
@@ -1204,7 +1199,7 @@ c Rub out old points
 c
             call pgqci(ci)
             call pgsci(0)
-            call pgpt(nv, vx, vy, symb)
+            call pgpt(nv, vx, vy, SYMB)
 c
 c Find nearest unbinned pixel
 c
@@ -1219,7 +1214,7 @@ c
 c Draw new points
 c
             call pgsci(ci)
-            call pgpt(nv, vx, vy, symb)
+            call pgpt(nv, vx, vy, SYMB)
           endif
 c
 c Join up the vertices of the polygon
@@ -1268,7 +1263,7 @@ c
 c Eliminate redundant vertices
 c
           if (good) then
-            call elimrvi(nvmax, nv, vert)
+            call elimrvi(NVMAX, nv, vert)
             nv = nv + 1
             vert(1,nv) = vert(1,1)
             vert(2,nv) = vert(2,1)
@@ -1304,7 +1299,7 @@ c
             npix = 0
 
             do j = iymin, iymax
-              call polyruns(runs, maxruns, j, nv, vert, nruns)
+              call polyruns(runs, MAXRUNS, j, nv, vert, nruns)
 
               if (nruns.gt.0) then
                 do k = 1, nruns, 2

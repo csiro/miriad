@@ -589,7 +589,7 @@ c       The OFFSET directive is not applied to ANY position fields in
 c       succeeding directives that have %OTYPEs that are "hms" or "dms".
 c       I am too lazy to code it.
 c
-c$Id: cgdisp.for,v 1.15 2011/08/29 02:18:13 cal103 Exp $
+c$Id: cgdisp.for,v 1.16 2012/02/08 05:39:02 cal103 Exp $
 c--
 c
 c  History:
@@ -661,8 +661,8 @@ c     Plotting parameters.
       data getvsc /.true./
 c-----------------------------------------------------------------------
       version = versan ('cgdisp',
-     *                  '$Revision: 1.15 $',
-     *                  '$Date: 2011/08/29 02:18:13 $')
+     *                  '$Revision: 1.16 $',
+     *                  '$Date: 2012/02/08 05:39:02 $')
 c
 c Get user inputs
 c
@@ -1104,23 +1104,23 @@ c
       if (mskin.ne.' ') call memfree(ipimm, win(1)*win(2), 'i')
 
       do i = 1, ncon
-        call finco(lc(i))
+        call coFin(lc(i))
         call xyclose(lc(i))
       enddo
       if (gin.ne.' ') then
-        call finco(lg)
+        call coFin(lg)
         call xyclose(lg)
       endif
       if (vin(1).ne.' ') then
-        call finco(lv(1))
+        call coFin(lv(1))
         call xyclose(lv(1))
       endif
       if (vin(2).ne.' ') then
-        call finco(lv(2))
+        call coFin(lv(2))
         call xyclose(lv(2))
       endif
       if (mskin.ne.' ') then
-        call finco(lm)
+        call coFin(lm)
         call xyclose(lm)
       endif
 
@@ -4002,58 +4002,52 @@ c-----------------------------------------------------------------------
       logical hdprsnt
       integer i
 c-----------------------------------------------------------------------
-c Open contour images as required
-c
+c     Open contour images as required.
       if (ncon.gt.0)  then
         do i = 1, ncon
           call opimcg(maxnax, cin(i), lc(i), csize(1,i), cnaxis(i))
-          call initco(lc(i))
+          call coInit(lc(i))
           cmm(1,i) = 1e30
           cmm(2,i) = -1e30
         enddo
       endif
-c
-c Open pixel map image as required
-c
+
+c     Open pixel map image as required.
       if (gin.ne.' ') then
         call opimcg(maxnax, gin, lg, gsize, gnaxis)
-        call initco(lg)
+        call coInit(lg)
         gmm(1) = 1e30
         gmm(2) = -1e30
       endif
-c
-c Open vector images as required
-c
+
+c     Open vector images as required.
       if (vin(1).ne.' ' .and. vin(2).ne.' ') then
         do i = 1, 2
           call opimcg(maxnax, vin(i), lv(i), vsize(1,i), vnaxis(i))
-          call initco(lv(i))
+          call coInit(lv(i))
         enddo
       endif
-c
-c Open box image as required
-c
+
+c     Open box image as required.
       if (bin.ne.' ') then
         call opimcg(maxnax, bin, lb, bsize, bnaxis)
-        call initco(lb)
+        call coInit(lb)
       endif
-c
-c Open mask image as required
-c
+
+c     Open mask image as required.
       if (mskin.ne.' ') then
         call opimcg(maxnax, mskin, lm, msize, mnaxis)
-        call initco(lm)
+        call coInit(lm)
         maskm = hdprsnt (lm, 'mask')
         if (.not.maskm)  then
           call bug('w', 'The mask image does not have a mask')
-          call finco(lm)
+          call coFin(lm)
           call xyclose(lm)
           mskin = ' '
         endif
       endif
-c
-c Check consistency of input images
-c
+
+c     Check consistency of input images.
       call chkim(maxnax, ncon, cin, lc, csize, gin, lg, gsize, vin,
      *             lv, vsize, bin, lb, bsize, mskin, lm, msize, relax)
 
