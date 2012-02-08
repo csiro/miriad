@@ -22,7 +22,7 @@ c              the maximum pixel value.
 c@ log
 c       Write results to this log file as well as screen.
 c
-c$Id: maxfit.for,v 1.4 2012/02/08 06:24:39 cal103 Exp $
+c$Id: maxfit.for,v 1.5 2012/02/08 06:27:28 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -41,12 +41,15 @@ c-----------------------------------------------------------------------
       real      coeffs(6), data(MAXDIM), dd, dmax, fit(9), fmax
       double precision pixmax(MAXNAX)
       character ctype*9, infile*128, logf*132, strout(MAXNAX)*50,
-     *          text*132, typesi(MAXNAX)*9, typeso(MAXNAX)*9
+     *          text*132, typesi(MAXNAX)*9, typeso(MAXNAX)*9, version*72
 
-      external  len1
+      external  len1, versan
       integer   len1
+      character versan*72
 c-----------------------------------------------------------------------
-      call output('MAXFIT: version 29-Nov-95')
+      version = versan('maxfit',
+     *                 '$Revision: 1.5 $',
+     *                 '$Date: 2012/02/08 06:27:28 $')
 
 c     Get inputs.
       call keyini
@@ -182,7 +185,7 @@ c     Fitted location and fitted value.
       if (logf.ne.' ') call logwrit(text)
 
 c     Find offsets of fitted pixel from reference pixel.
-      call initco(lun)
+      call coInit(lun)
 
       call output(' ')
       if (logf.ne.' ') call logwrit(' ')
@@ -239,7 +242,7 @@ c     Tell user.
 
       call xyclose(lun)
       if (logf.ne.' ') call logclose
-      call finco(lun)
+      call coFin(lun)
 
       end
 
