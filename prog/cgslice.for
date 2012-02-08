@@ -300,7 +300,7 @@ c       already exists, new models are appended to it.  The columns of
 c       the file are the slice number, the model peak, centre, FWHM,
 c       baseline offset and baseline slope.
 c
-c$Id: cgslice.for,v 1.9 2012/02/08 06:06:15 cal103 Exp $
+c$Id: cgslice.for,v 1.10 2012/02/08 06:07:01 cal103 Exp $
 c--
 c  Notes:
 c   SLice abcissa values are still in linear world coordiantes as
@@ -369,8 +369,8 @@ c-----------------------------------------------------------------------
       data xdispls, ydispbs /3.5, 3.5/
 c-----------------------------------------------------------------------
       version = versan ('cgslice',
-     *                  '$Revision: 1.9 $',
-     *                  '$Date: 2012/02/08 06:06:15 $')
+     *                  '$Revision: 1.10 $',
+     *                  '$Date: 2012/02/08 06:07:01 $')
 c
 c Get user inputs
 c
@@ -384,7 +384,7 @@ c
 c Open image and see if axes in radians
 c
       call opimcg(maxnax, in, lin, size, naxis)
-      call initco(lin)
+      call coInit(lin)
       call rdhda(lin, 'bunit', units, ' ')
       radians = .false.
       call axfndco(lin, 'RAD', 0, 1, iax)
@@ -834,7 +834,7 @@ c
       call memfree(ipnim, win(1)*win(2), 'i')
       if (.not.noimage .and. dopixel .and. trfun.ne.'lin')
      *   call memfree(ipims, win(1)*win(2), 'i')
-      call finco(lin)
+      call coFin(lin)
       call xyclose(lin)
       if (fslval.ne.' ') call txtclose(lval)
       if (fslposo.ne.' ') call txtclose(lposo)

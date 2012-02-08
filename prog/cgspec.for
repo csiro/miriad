@@ -337,7 +337,7 @@ c       XSIZ and YSIZ are the spatial half-sizes in ARCSEC over which
 c       each spectrum is spatially averaged.  These are optional and
 c       default to 0 (no binning, just a spectrum at each spatial pixel)
 c
-c$Id: cgspec.for,v 1.11 2012/01/17 03:50:36 wie017 Exp $
+c$Id: cgspec.for,v 1.12 2012/02/08 06:08:45 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -378,7 +378,7 @@ c-----------------------------------------------------------------------
      *          gsize(MAXNAX), his(NBINS), i, ibin(2), iblc, ierr, ilen,
      *          imsp, insp, ipim, ipimb, ipnim, ipsp, iside(MAXSPEC),
      *          iwsp, ixsp, iysp, j, jbin(2), krng(2), labcol, lb,
-     *          lc(MAXCON), lcn(MAXCON), lg, lgn, lh, ls, 
+     *          lc(MAXCON), lcn(MAXCON), lg, lgn, lh, ls,
      *          nblnkc(MAXCON), nblnkcs, nblnkg, ncon, ngrp(MAXCHAN),
      *          ngrps, nlevs(MAXCON), nofile, npos, npts, nspec,
      *          sblc(MAXNAX), sgrps(2,MAXDIM), size(MAXNAX), sizespec,
@@ -417,8 +417,8 @@ c-----------------------------------------------------------------------
       data axC /'xyzabcd'/
 c-----------------------------------------------------------------------
       version = versan ('cgspec',
-     *                  '$Revision: 1.11 $',
-     *                  '$Date: 2012/01/17 03:50:36 $')
+     *                  '$Revision: 1.12 $',
+     *                  '$Date: 2012/02/08 06:08:45 $')
 
 c     Get user inputs.
       call inputs(MAXLEV, MAXCON, MAXSPEC, MAXTYP, ltypes, ncon, nspec,
@@ -444,7 +444,7 @@ c     Open contour images as required.
       if (ncon.gt.0)  then
         do i = 1, ncon
           call opimcg(MAXNAX, cin(i), lc(i), csize(1,i), cnaxis(i))
-          call initco(lc(i))
+          call coInit(lc(i))
           cmm(1,i) =  1e30
           cmm(2,i) = -1e30
           cmm(3,i) = -1.0
@@ -459,7 +459,7 @@ c     Open contour images as required.
 c     Open pixel map image as required.
       if (gin.ne.' ') then
         call opimcg(MAXNAX, gin, lg, gsize, gnaxis)
-        call initco(lg)
+        call coInit(lg)
         gmm(1) =  1e30
         gmm(2) = -1e30
         gmm(3) = -1.0
@@ -477,12 +477,12 @@ c       Check pixel map range and deal with log transfer function.
 c     Open mask image as required.
       if (bin.ne.' ') then
         call opimcg(MAXNAX, bin, lb, bsize, bnaxis)
-        call initco(lb)
+        call coInit(lb)
         call chkax(lb, .false., bin)
         maskb = hdprsnt (lb, 'mask')
         if (.not.maskb)  then
           call bug('w', 'The mask image does not have a mask')
-          call finco(lb)
+          call coFin(lb)
           call xyclose(lb)
           bin = ' '
         endif
@@ -572,7 +572,7 @@ c     Read in mask image as required.
            call readbcg(init, lb, ibin, jbin, krng, blc, trc,
      *                  meml(ipimb), doblnkb)
         enddo
-        call finco(lb)
+        call coFin(lb)
         call xyclose(lb)
       endif
 
@@ -704,12 +704,12 @@ c     Plot annotation.
 
 c     Close files and free memory.
       if (gin.ne.' ') then
-        call finco(lg)
+        call coFin(lg)
         call xyclose(lg)
       endif
       if (ncon.gt.0) then
         do i = 1, ncon
-          call finco(lc(i))
+          call coFin(lc(i))
           call xyclose(lc(i))
         enddo
       endif
@@ -752,7 +752,7 @@ c     header we use for coordinate transformations in OLAYDEC because
 c     xyz and xy can cannot exist together.
 c
       call xyopen(lh, hin, 'old', MAXNAX, size)
-      call initco(lh)
+      call coInit(lh)
       if (nofile.eq.1) then
         if (grid(1)) then
           call genpos(lh, ofile(1), blc, trc, MAXPOS, npos, opos)
@@ -824,7 +824,7 @@ c       Read overlay locations if one file per spectrum image.
 
 c       Open image.
         call opimxyz(MAXNAX, spin(i), ls, ssize, snaxis)
-        call initco(ls)
+        call coInit(ls)
         call chkax(ls, .true., spin(i))
 
 c       Find spectral axis (again; checked to exist in OPNCHK).
@@ -924,10 +924,10 @@ c       Close spectrum image and free up memory for next image.
         call memfree(ipsp, sizespec, 'r')
         call memfree(imsp, sizespec, 'l')
         if (iside(i).gt.0) call memfree(iwsp, sizespec, 'r')
-        call finco(ls)
+        call coFin(ls)
         call xyzclose(ls)
       enddo
-      call finco(lh)
+      call coFin(lh)
       call xyclose(lh)
 
 c     Free merged mask memory and close PGPLOT device.
@@ -2112,7 +2112,7 @@ c-----------------------------------------------------------------------
         call output(line)
 
         call xyopen(lh, spin(i), 'old', MAXNAX, size)
-        call initco(lh)
+        call coInit(lh)
         call rdhdi(lh, 'naxis', naxis, 0)
 
         call imminmax(lh, naxis, size, limin, limax)
@@ -2137,7 +2137,7 @@ c       Find spectral axis.
         lvmax = max(v1,v2)
         vmin = min(vmin, lvmin)
         vmax = max(vmax, lvmax)
-        call finco(lh)
+        call coFin(lh)
         call xyclose(lh)
       enddo
 
