@@ -10,35 +10,44 @@ c	visibility dataset based on the flag status of matching
 c	correlations in a template dataset.
 c
 c	The template dataset should be a subset of the visibility dataset
-c	being flagged, and the order of records in the two datasets should
-c	be the same. Normally correlations in the template and visibility
-c	datasets are matched by comparing time, polarisation, baseline and
-c	frequency. However options `nopol' and `nofreq' can turn off the
-c	matching of polarisation and frequency.
+c	being flagged, and the order of records in the two datasets 
+c	should be the same. Normally correlations in the template and 
+c	visibility datasets are matched by comparing time, polarisation, 
+c	baseline, bin and frequency. However options `nopol',`nofreq' 
+c	and 'nobin' can turn off the matching of polarisation, frequency
+c       and bin  number.
 c@ vis
 c	The input visibility file to be flagged. No default.
 c@ tvis
 c	The template input visibility file. The default is the same
-c	as the `vis' dataset. This default makes no sense without the `nopol'
-c	or `nofreq' options. Several files can be given. Wildcards
-c	are supported.
+c	as the `vis' dataset. This default makes no sense without the 
+c	`nopol' or `nofreq' options. Several files can be given. 
+c	Wildcards are supported.
 c@ select
 c	Normal visibility selection, which is applied to the template
 c	dataset. See the help on "select" for more information.
 c@ options
-c	Extra processing options. Several can be given, separated by commas.
+c	Extra processing options. Several can be given, separated by 
+c       commas.
 c	Minimum match is supported. Possible values are:
 c	  nopol  The polarisation of the records in the template are
 c	         ignored. If any polarisation in the template is
-c	         flagged, then all polarisations in the input are flagged.
+c	         flagged, then all polarisations in the input are flagged
 c	         This can be useful when applying flagging based on one
-c	         polarisation type (e.g. stokes V) to the other polarisations.
+c	         polarisation type (e.g. stokes V) to the other 
+c                polarisations.
 c	  nofreq The frequency of the correlations in the template are
 c	         ignored. If any channel in the template is flagged, then
-c	         all channels in the input are flagged. This can be useful
-c	         when applying flagging based on a `channel-0' dataset.
+c	         all channels in the input are flagged. This can be 
+c                useful when applying flagging based on a `channel-0'
+c	         dataset.
+c         nobin  The bin numbers of the correlations in the template are
+c                ignored. If any bin in the template is flagged, then
+c                all bins in the inputs are flagged. This can be useful
+c                when applying flagging based on a bin averaged dataset.
 c	  noapply Do not apply the flagging, just report the statistics
 c	         about what would be flagged.
+c$Id: uvaflag.for,v 1.3 2012/02/09 02:52:48 wie017 Exp $
 c--
 c  History:
 c     nebk 25may89 Original program
@@ -50,21 +59,26 @@ c     rjs   7nov97 Handle multiple templates.
 c     rjs  22oct98 noapply option.
 c     rjs  27apr09 Fix spurious warning when using options=nofreq. Change
 c		   print output message format.
-c---------------------------------------------------------------------------
+c     mhw  03feb12 Add nobin option
+c------------------------------------------------------------------------
 	implicit none
 	include 'maxdim.h'
-	integer MAXSELS,MAXFILES
+        include 'mem.h'
+	integer MAXSELS,MAXFILES,MAXPOL
 	character version*(*)
-	parameter(version='Uvaflag: version 1.0 27-Apr-09')
-	parameter(MAXSELS=512,MAXFILES=64)
+	parameter(version='Uvaflag: $Revision: 1.3 $, '//
+     *             '$Date: 2012/02/09 02:52:48 $')
+	parameter(MAXSELS=512,MAXFILES=64,MAXPOL=4)
 c
 	complex data(maxchan)
-	double precision ttbp(3),vtbp(3)
+	double precision ttbp(4,MAXPOL,MAXBASE),vtbp(4)
 	real sels(MAXSELS)
 	integer lVis,lTmp,vVis,vTmp,ntot,ngood,nflag,i,npol,nt,nv,offset
-	integer nfiles,k
+	integer nfiles,k,ib,ip,nbl,npol1,off
 	character in1(MAXFILES)*64,in2*64,line*64
-	logical vflags(MAXCHAN),tflags(MAXCHAN),nofreq,nopol,match,doapp
+	logical vflags(MAXCHAN)
+        logical nofreq,nopol,nobin,doapp,match,eof,skip
+        ptrdiff pFlag
 c
 c  Externals.
 c
@@ -82,9 +96,9 @@ c
 	  nfiles = 1
 	endif
 	call selInput('select',sels,MAXSELS)
-	call getopt(nofreq,nopol,doapp)
+	call getopt(nofreq,nopol,nobin,doapp)
 	if(nfiles.eq.1.and.in1(1).eq.in2.and.
-     *	  .not.nofreq.and..not.nopol)
+     *	  .not.nofreq.and..not.nopol.and..not.nobin)
      *	  call bug('f','Requested operation makes no sense')
 	call keyfin
 c
@@ -92,9 +106,9 @@ c Open files
 c
 	do k=1,nfiles
 	  call uvopen(lVis,in2,'old')
-	  call uvset(lVis,'preamble','time/baseline/pol',0,0.,0.,0.)
+	  call uvset(lVis,'preamble','time/baseline/pol/bin',0,0.,0.,0.)
 	  call uvopen(lTmp,in1(k),'old')
-	  call uvset(lTmp,'preamble','time/baseline/pol',0,0.,0.,0.)
+	  call uvset(lTmp,'preamble','time/baseline/pol/bin',0,0.,0.,0.)
 	  call selApply(lTmp,sels,.true.)
 	  if(nopol.and.selProbe(sels,'polarization?',0.d0))call bug('f',
      *	    'Polarisation selection cannot be used with options=nopol')
@@ -103,59 +117,78 @@ c
 	  ntot  = 0
 	  ngood = 0
 	  nflag = 0
+          skip = .false.
 c
 c Loop over visibilities and set flags
 c
-	  call getrec(lTmp,nopol,nofreq,ttbp,tflags,MAXCHAN,nt)
-	  dowhile(nt.gt.0)
-	    call uvread(lVis,vtbp,data,vflags,MAXCHAN,nv)
+	  call getrec(lTmp,nopol,nofreq,ttbp,pFlag,MAXPOL,
+     *      MAXBASE,nbl,npol,nt,eof)
+          nv = 1
+	  do while (nv.gt.0)
 	    match = .false.
-	    if(nv.eq.0)then
+            if(.not.skip) call uvread(lVis,vtbp,data,vflags,MAXCHAN,nv)
+            skip = .false.
+ 	    if(nv.eq.0.and..not.eof)then
 	      call bug('w','Unexpected end of visibility dataset')
-	    else if(abs(vtbp(1)-ttbp(1)).lt.1./86400.0.and.
-     *	       nint(vtbp(2)-ttbp(2)).eq.0.and.
-     *	       nopol)then
-	      match = .true.
-	      if(.not.nofreq)
-     *		call offGet(lVis,vVis,nv,lTmp,vTmp,nt,offset)
-	      call flagit(tflags,nt,vflags,nv,offset,
-     *				nofreq,ntot,ngood,nflag)
-	      if(doapp)call uvflgwr(lVis,vflags)
-	      call uvrdvri(lVis,'npol',npol,1)
-	      do i=2,npol
-	        call uvread(lVis,vtbp,data,vflags,MAXCHAN,nv)
-	        call flagit(tflags,nt,vflags,nv,offset,
-     *				nofreq,ntot,ngood,nflag)
-	        if(doapp)call uvflgwr(lVis,vflags)
-	      enddo
-	    else if(abs(vtbp(1)-ttbp(1)).lt.1./86400.0.and.
-     *		nint(vtbp(2)-ttbp(2)).eq.0.and.
-     *		nint(vtbp(3)-ttbp(3)).eq.0)then
-	      match = .true.
-	      if(.not.nofreq)
-     *		call offGet(lVis,vVis,nv,lTmp,vTmp,nt,offset)
-	      call flagit(tflags,nt,vflags,nv,offset,
-     *				nofreq,ntot,ngood,nflag)
-	      if(doapp)call uvflgwr(lVis,vflags)
-	    else
-	      call countit(vflags,nv,ntot,ngood)
+	    else if(abs(vtbp(1)-ttbp(1,1,1)).lt.1./86400.0.and.
+     *              (nobin.or.nint(vtbp(4)-ttbp(4,1,1)).eq.0)) then
+c
+c matching time + bin found
+c
+              ib=1
+              ip=1
+              off=0
+              match=.false.
+              do while (.not.match.and.ib.le.nbl)
+                if (nint(vtbp(2)-ttbp(2,ip,ib)).eq.0..and.
+     *                (nopol.or.nint(vtbp(3)-ttbp(3,ip,ib)).eq.0)) then
+c                      
+c matching baseline + pol found
+c
+                  match = .true.
+	          if(.not.nofreq)
+     *		    call offGet(lVis,vVis,nv,lTmp,vTmp,nt,offset)
+	          call flagit(memL(pFlag+off),nt,vflags,nv,offset,
+     *		              nofreq,ntot,ngood,nflag)
+	          if(doapp)call uvflgwr(lVis,vflags)
+                  if (nopol) then
+	            call uvrdvri(lVis,'npol',npol1,1)
+                    do i=2,npol1
+	              call uvread(lVis,vtbp,data,vflags,MAXCHAN,nv)
+	              call flagit(memL(pFlag+off),nt,vflags,nv,
+     *	                          offset,nofreq,ntot,ngood,nflag)
+	              if(doapp)call uvflgwr(lVis,vflags)
+	            enddo
+                  endif
+                else
+                  ip=ip+1
+                  if (ip.gt.npol) then
+                    ip=1
+                    ib=ib+1
+                  endif
+                  off = off + nt
+                endif
+              enddo
+            else
+c             
+c Time or bin doesn't match, read next template
+c             
+              skip=.false.
+              do while
+     *         (.not.eof.and.((vtbp(1)-ttbp(1,1,1)).gt.1./86400.
+     *          .or.(.not.nobin.and.nint(vtbp(4)-ttbp(4,1,1)).ne.0)))
+                call getrec(lTmp,nopol,nofreq,ttbp,pFlag,MAXPOL,
+     *                      MAXBASE,nbl,npol,nt,eof)
+                skip = .true.
+              enddo
 	    endif
+	    if (.not.match.and..not.skip) 
+     *        call countit(vflags,nv,ntot,ngood)
 c
 c  Go back for more.
 c
-	    if(nv.eq.0)then
-	      nt = 0
-	    else if(match)then
-	      call getrec(lTmp,nopol,nofreq,ttbp,tflags,MAXCHAN,nt)
-	    endif
 	  enddo
 c
-c  Finish counting the flags in the main visibility file.
-c
-	  dowhile(nv.gt.0)
-	    call uvread(lVis,vtbp,data,vflags,MAXCHAN,nv)
-	    call countit(vflags,nv,ntot,ngood)
-	  enddo
 	  call uvclose(lTmp)
 	  if(k.eq.nfiles.and.doapp)then
 	    call hisopen(lVis,'append')
@@ -236,66 +269,132 @@ c
 c
 	end
 c************************************************************************
-	subroutine GetOpt(nofreq,nopol,doapp)
+	subroutine GetOpt(nofreq,nopol,nobin,doapp)
 c
 	implicit none
-	logical nofreq,nopol,doapp
+	logical nofreq,nopol,nobin,doapp
 c------------------------------------------------------------------------
 	integer NOPTS
-	parameter(NOPTS=3)
+	parameter(NOPTS=4)
 	character opts(NOPTS)*8
 	logical present(NOPTS)
-	data opts/'nofreq  ','nopol   ','noapply '/
+	data opts/'nofreq  ','nopol   ','nobin   ','noapply '/
 c
 	call options('options',opts,present,NOPTS)
 	nofreq =      present(1)
 	nopol  =      present(2)
-	doapp  = .not.present(3)
+        nobin  =      present(3)
+	doapp  = .not.present(4)
 c
 	end
 c************************************************************************
-	subroutine getrec(lTmp,nopol,nofreq,ttbp,tflags,mchan,nt)
+	subroutine getrec(lTmp,nopol,nofreq,ttbp,pFlag,mpol,
+     *                    mbase,nbase,npol,nt,eof)
 c
 	implicit none
-	integer lTmp,mchan,nt
-	logical nopol,nofreq,tflags(mchan)
-	double precision ttbp(3)
+	integer lTmp,mbase,mpol,nbase,npol,nt
+        ptrdiff pFlag
+	logical nopol,nofreq,eof
+	double precision ttbp(4,mpol,mbase)
 c
 c  Get another record from the input.
 c
 c------------------------------------------------------------------------
 	include 'maxdim.h'
-	logical flags(MAXCHAN),flags2(MAXCHAN),f
-	integer nchan,i,j,npol
+        include 'mem.h'
+        integer MAXPOL
+        PARAMETER (MAXPOL=4)
+	logical flags(MAXCHAN,MAXPOL),flags2(MAXCHAN),sflags(MAXCHAN)
+        logical f,init,more
+	integer nchan,i,nchan1,ib,ip,snchan,nFlags,off,nant
 	complex data(MAXCHAN)
+        double precision savetbp(4)
+        common /last/ savetbp, sflags, snchan, init, nFlags
+        data init/.true./, nFlags/0/
 c
-	call uvread(lTmp,ttbp,data,flags,MAXCHAN,nchan)
-	if(nopol)then
+        ib = 1
+        more = .true.
+        ip = 1
+        off = 0
+	if (init) then
+          savetbp(1)=0.d0
+          call uvread(lTmp,ttbp(1,ip,ib),data,flags,MAXCHAN,nchan)
+          call uvrdvri(lTmp,'nants',nant,1)
+          call uvrdvri(lTmp,'npol',npol,1)
+          i = nFlags
+          nFlags = (nant*(nant+1))/2
+          if (.not.nofreq) nFlags = nFlags * nchan
+          if (.not.nopol) nFlags = nFlags * npol
+          if (i.lt.nFlags) then
+            if (i.ne.0) call memFrep(pFlag,i,'l')
+            call memAllop(pFlag,nFlags,'l')
+          else
+            nFlags=i
+          endif
+          init = .false.
+        else
+          nchan = snchan
+          do i=1,4
+            ttbp(i,ip,ib) = savetbp(i)
+          enddo
+          do i=1,nchan
+            flags(i,1) = sflags(i)
+          enddo
+        endif
+        do while (more)
 	  call uvrdvri(lTmp,'npol',npol,1)
-	  do j=2,npol
-	    call uvread(lTmp,ttbp,data,flags2,MAXCHAN,nchan)
+	  do ip=2,npol
+	    call uvread(lTmp,ttbp(1,ip,ib),data,flags2,MAXCHAN,nchan)
 	    do i=1,nchan
-	      flags(i) = flags(i).and.flags2(i)
+	      if (nopol) then 
+                flags(i,1) = flags(i,1).and.flags2(i)
+              else 
+                flags(i,ip) = flags2(i)
+              endif
 	    enddo
 	  enddo
-	endif
-c
-	if(nchan.eq.0)then
-	  nt = 0
-	else if(nofreq)then
-	  f = flags(1)
-	  do i=2,nchan
-	    f = f.and.flags(i)
-	  enddo
-	  tflags(1) = f
-	  nt = 1
-	else
-	  if(nchan.gt.mchan)call bug('f','Too many flags for me')
-	  do i=1,nchan
-	    tflags(i) = flags(i)
-	  enddo
-	  nt = nchan
-	endif
+          if (nopol) npol = 1
+          do ip=1,npol
+	    if(nchan.eq.0)then
+	      nt = 0
+	    else if(nofreq)then
+	      f = flags(1,ip)
+	      do i=2,nchan
+	        f = f.and.flags(i,ip)
+	      enddo
+	      memL(pFlag+off) = f
+              off = off + 1
+	      nt = 1
+	    else
+	      do i=1,nchan
+	        memL(pFlag+off) = flags(i,ip)  
+                off = off + 1                 
+	      enddo
+	      nt = nchan
+	    endif
+          enddo
+          ib = ib+1
+          ip = 1
+          call uvread(lTmp,ttbp(1,ip,ib),data,flags,MAXCHAN,nchan1)
+          more = nchan1.gt.0.and.nchan1.eq.nchan.and.
+     *      abs(ttbp(1,1,ib)-ttbp(1,1,ib-1)).lt.1./86400.and.
+     *      nint(ttbp(4,1,ib)-ttbp(4,ib-1,1)).eq.0
+          if (off.gt.nFlags) 
+     *      call bug('f','Internal flag storage exceeded')
+        enddo
+        eof = nchan1.le.0
+        if (eof) then
+          init=.true.
+        else
+          do i=1,4
+            savetbp(i) = ttbp(i,1,ib)
+          enddo
+          do i=1,nchan1
+            sflags(i) = flags(i,ip)
+          enddo
+          snchan = nchan1
+        endif
+        nbase = ib -1
 c
 	end
 c************************************************************************
