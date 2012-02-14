@@ -53,7 +53,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: co.for,v 1.30 2012/02/14 06:47:30 cal103 Exp $
+c $Id: co.for,v 1.31 2012/02/14 07:47:49 cal103 Exp $
 c***********************************************************************
 
 c* coInit -- Initialise coordinate conversion routines.
@@ -505,8 +505,8 @@ c     Convert to absolute pixels.
         xp(iax) = crpix(iax,icrd)
         xw(iax) = crval(iax,icrd)
       enddo
-      call coCvt(lu,in,x1,'aw/...',xw)
       call coCvt(lu,in,x1,'ap/...',xp)
+      call coCvt(lu,in,x1,'aw/...',xw)
 
 c     Increment by one pixel in all directions.
       do iax = 1, naxis(icrd)
@@ -1542,7 +1542,6 @@ c-----------------------------------------------------------------------
       double precision CKMS
       parameter (CKMS = DCMKS * 1d-3)
 
-      logical   ok
       integer   icrd, ispc, itype
       double precision x2(MAXNAX)
 
@@ -1553,11 +1552,11 @@ c-----------------------------------------------------------------------
 
 c     Check validity.
       ispc = spcax(icrd)
-      ok = ispc.gt.0 .and.
-     *       (restfrq(icrd).gt.0d0 .or.
-     *        cotype(spcax(icrd),icrd).eq.FRQTYP)
-      if (.not.ok)
+      if (ispc.eq.0)
      *  call bug('f','No spectral coordinate axis in coFreq')
+
+      if (restfrq(icrd).eq.0d0 .and. cotype(ispc,icrd).ne.FRQTYP)
+     *  call bug('f','Can''t convert to frequency in coFreq')
 
 c     Convert the user's coordinate to absolute world coordinates.
 c     Fill in the reference location in the output, just in case the
@@ -1643,7 +1642,8 @@ c       Convert a longitude axis.
      *    cosrot(icrd),sinrot(icrd),
      *    crpix(ilng,icrd),cdelt(ilng,icrd),
      *    crpix(ilat,icrd),cdelt(ilat,icrd),
-     *    x1pix,x1pix,x2pix,x2pix,x1off,.true.,x2off,.true.,valid)
+     *    x1pix,x1pix,x1off,.true.,
+     *    x2pix,x2pix,x2off,.true.,valid)
 
       else if (cotype(iax,icrd).eq.LATTYP) then
 c       Convert a latitude axis.
@@ -1653,12 +1653,14 @@ c       Convert a latitude axis.
      *    cosrot(icrd),sinrot(icrd),
      *    crpix(ilng,icrd),cdelt(ilng,icrd),
      *    crpix(ilat,icrd),cdelt(ilat,icrd),
-     *    x1pix,x1pix,x2pix,x2pix,.true.,x1off,.true.,x2off,valid)
+     *    x1pix,x1pix,.true.,x1off,
+     *    x2pix,x2pix,.true.,x2off,valid)
 
       else if (cotype(iax,icrd).eq.FELTYP) then
 c       Convert a FELO axis.
-        call coFelo(x1,x2,crval(iax,icrd),crpix(iax,icrd),
-     *    cdelt(iax,icrd),x1pix,x1off,x2pix,x2off)
+        call coFelo(x1,x2,
+     *    crpix(iax,icrd),cdelt(iax,icrd),crval(iax,icrd),
+     *    x1pix,x1off, x2pix,x2off)
       endif
 
       if (.not.valid) call bug('f',
@@ -1785,13 +1787,15 @@ c     Convert each of the axes.
      *        x1pix(iax),x1off(iax),x2pix(iax),x2off(iax),bscal,bzero)
           x2(iax) = bscal * x1(iax) + bzero
 
-        else if (cotype(iax,icrd).eq.FELTYP) then
-          call coFelo(x1(iax),x2(iax),crval(iax,icrd),crpix(iax,icrd),
-     *     cdelt(iax,icrd),x1pix(iax),x1off(iax),x2pix(iax),x2off(iax))
-
         else if (cotype(iax,icrd).eq.LNGTYP .or.
      *           cotype(iax,icrd).eq.LATTYP) then
           docelest = .true.
+
+        else if (cotype(iax,icrd).eq.FELTYP) then
+          call coFelo(x1(iax),x2(iax),
+     *      crpix(iax,icrd),cdelt(iax,icrd),crval(iax,icrd),
+     *      x1pix(iax),x1off(iax), x2pix(iax),x2off(iax))
+
         else
           call bug('f','Internal software bug in coCvt')
         endif
@@ -1806,9 +1810,9 @@ c       Determine the frequency-dependent scale factor.
         if (ispc.eq.0 .or. ispc.gt.n .or. .not.frqscl(icrd)) then
           fqfac = 1d0
         else
-          call coFqFac(x1(ispc),ctype(ispc,icrd),crval(ispc,icrd),
-     *      crpix(ispc,icrd),cdelt(ispc,icrd),vobs(icrd),
-     *      x1off(ispc),x1pix(ispc),fqfac)
+          call coFqFac(ctype(ispc,icrd), x1(ispc), crpix(ispc,icrd),
+     *      cdelt(ispc,icrd),crval(ispc,icrd),vobs(icrd),
+     *      x1pix(ispc),x1off(ispc),fqfac)
         endif
 
 c       Do the conversion.  If longitude or latitude is missing use the
@@ -1818,22 +1822,22 @@ c       reference pixel as the corresponding value.
      *      x2(ilat), cosrot(icrd),sinrot(icrd),
      *      crpix(ilng,icrd),fqfac*cdelt(ilng,icrd),
      *      crpix(ilat,icrd),fqfac*cdelt(ilat,icrd),
-     *      x1pix(ilng),x1pix(ilat),x2pix(ilng),x2pix(ilat),
-     *      x1off(ilng),x1off(ilat),x2off(ilng),x2off(ilat),valid)
+     *      x1pix(ilng),x1pix(ilat),x1off(ilng),x1off(ilat),
+     *      x2pix(ilng),x2pix(ilat),x2off(ilng),x2off(ilat),valid)
         else if (ilat.le.n) then
           call coCel(cel(1,icrd), 0d0,x1(ilat),temp,x2(ilat),
      *      cosrot(icrd),sinrot(icrd),
      *      crpix(ilng,icrd),fqfac*cdelt(ilng,icrd),
      *      crpix(ilat,icrd),fqfac*cdelt(ilat,icrd),
-     *      .true.,x1pix(ilat),.true.,x2pix(ilat),
-     *      .true.,x1off(ilat),.true.,x2off(ilat),valid)
+     *      .true.,x1pix(ilat),.true.,x1off(ilat),
+     *      .true.,x2pix(ilat),.true.,x2off(ilat),valid)
         else
           call coCel(cel(1,icrd), x1(ilng),0d0,x2(ilng),temp,
      *      cosrot(icrd),sinrot(icrd),
      *      crpix(ilng,icrd),fqfac*cdelt(ilng,icrd),
      *      crpix(ilat,icrd),fqfac*cdelt(ilat,icrd),
-     *      x1pix(ilng),.true.,x2pix(ilng),.true.,
-     *      x1off(ilng),.true.,x2off(ilng),.true.,valid)
+     *      x1pix(ilng),.true.,x1off(ilng),.true.,
+     *      x2pix(ilng),.true.,x2off(ilng),.true.,valid)
         endif
       endif
 
@@ -1902,9 +1906,9 @@ c     Get the factors to scale cdelt1 and cdelt2 for this coordinate.
      *    cotype(2,icrd).eq.LATTYP) then
         ispc = spcax(icrd)
         if (ispc.ne.0 .and. ispc.le.n .and. frqscl(icrd)) then
-          call coFqFac(x1(ispc),ctype(ispc,icrd),crval(ispc,icrd),
-     *      crpix(ispc,icrd),cdelt(ispc,icrd),vobs(icrd),x1off(ispc),
-     *      x1pix(ispc),fqfac)
+          call coFqFac(ctype(ispc,icrd), x1(ispc), crpix(ispc,icrd),
+     *      cdelt(ispc,icrd),crval(ispc,icrd),vobs(icrd),
+     *      x1pix(ispc),x1off(ispc), fqfac)
 
           if (cotype(1,icrd).eq.LNGTYP .or.
      *        cotype(1,icrd).eq.LATTYP) then
@@ -2784,8 +2788,8 @@ c     Try to identify the first part.
       if (k.eq.1) then
 c       Dispense with this weirdness.
         k = len1(ctypei)
-        umsg = 'Assuming the ' // ctypei(1:k) // ' axis is linear.'
-        call bug('w',umsg)
+        umsg = 'Assuming the '//ctypei(:k)//' axis is linear.'
+        call bug('w', umsg)
         return
       endif
 
@@ -2840,26 +2844,24 @@ c***********************************************************************
 c-----------------------------------------------------------------------
 c  Decompose ctype into the world coordinate type and algorithm code.
 c-----------------------------------------------------------------------
-      logical   docode
       integer   i, j
-
-      external  len1
-      integer   len1
 c-----------------------------------------------------------------------
-      wtype = ' '
-      algo  = ' '
-      docode = .false.
+      i = index(ctype, '-')
+      if (i.eq.0) then
+        wtype = ctype
+        algo  = ' '
+        return
+      else if (i.eq.1) then
+        wtype = ' '
+      else
+        wtype = ctype(:i-1)
+      endif
 
-      j = 0
-      do i = 1, len1(ctype)
-        j = j + 1
-        if (ctype(i:i).eq.'-') then
-          j = 0
-          docode = .true.
-        else if (docode) then
-          algo(j:j)  = ctype(i:i)
-        else
-          wtype(j:j) = ctype(i:i)
+      algo = ' '
+      do j = i+1, len(ctype)
+        if (ctype(j:j).ne.'-') then
+          algo = ctype(j:)
+          return
         endif
       enddo
 
@@ -2998,13 +3000,12 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine coFqFac(x1,stype,crval,crpix,cdelt,vobs,x1off,x1pix,
-     *  fqfac)
+      subroutine coFqFac(stype,x1,crpix,cdelt,crval,vobs,
+     *  x1pix,x1off,fqfac)
 
-      double precision x1
       character stype*4
-      double precision crval, crpix, cdelt, vobs
-      logical   x1off, x1pix
+      double precision x1, crpix, cdelt, crval, vobs
+      logical   x1pix, x1off
       double precision fqfac
 c-----------------------------------------------------------------------
 c  Determine the frequency-dependent scale factor for the celestial
@@ -3104,19 +3105,19 @@ c     Convert from offset to absolute units, if needed.
 
 c***********************************************************************
 
-      subroutine coFelo(x10,x2,crval,crpix,cdelt,x1pix,x1off,x2pix,
-     *  x2off)
+      subroutine coFelo(x1,x2, crpix,cdelt,crval,
+     *  x1pix,x1off,x2pix,x2off)
 
-      double precision x10, x2, crval, crpix, cdelt
-      logical   x1pix,  x1off,  x2pix,  x2off
+      double precision x1, x2, crpix, cdelt, crval
+      logical   x1pix, x1off, x2pix, x2off
 c-----------------------------------------------------------------------
 c  Convert between pixels and velocities, to a axes in the optical
 c  velocity convention (but derived from data measured at equal
 c  frequency increments).
 c
 c  Input:
-c    x10        Input pixel or world coordinate.
-c    crval,crpix,cdelt
+c    x1         Input pixel or world coordinate.
+c    crpix,cdelt,crval
 c               WCS parameters for the spectral axis.
 c    x1pix      True if a  pixel  coordinate has been given.
 c    x1off      True if an offset coordinate has been given.
@@ -3130,31 +3131,31 @@ c-----------------------------------------------------------------------
       double precision CKMS
       parameter (CKMS = DCMKS * 1d-3)
 
-      double precision t, x1
+      double precision t, x
 c-----------------------------------------------------------------------
 c     Convert from absolute to offset units, if required.
       if (.not.x1off) then
         if (x1pix) then
-          x1 = x10 - crpix
+          x = x1 - crpix
         else
-          x1 = x10 - crval
+          x = x1 - crval
         endif
       else
-        x1 = x10
+        x = x1
       endif
 
 c     Do the conversion.
       t = CKMS + crval
       if (x1pix.eqv.x2pix) then
-        x2 = x1
+        x2 = x
 
 c     Convert from pixels to optical velocity.
       else if (x1pix) then
-        x2 = cdelt * x1 / (1d0 - cdelt*x1/t)
+        x2 = cdelt * x / (1d0 - cdelt*x/t)
 
 c     Convert from optical velocity to pixels.
       else
-        x2 = x1 / cdelt * t / (CKMS + x1 + crval)
+        x2 = x / cdelt * t / (CKMS + x + crval)
       endif
 
 c     Convert from offset to absolute units, if required.
@@ -3172,13 +3173,14 @@ c***********************************************************************
 
       subroutine coCel(cel, x10,y10, x2,y2,
      *  cosrot,sinrot,crpixx,cdeltx,crpixy,cdelty,
-     *  x1pix,y1pix,x2pix,y2pix,x1off,y1off,x2off,y2off,valid)
+     *  x1pix,y1pix,x1off,y1off,
+     *  x2pix,y2pix,x2off,y2off, valid)
 
       integer   cel(*)
       double precision x10,y10,x2,y2
       double precision cosrot,sinrot,crpixx,crpixy,cdeltx,cdelty
-      logical   x1pix,y1pix,x2pix,y2pix
-      logical   x1off,y1off,x2off,y2off,valid
+      logical   x1pix,y1pix,x1off,y1off
+      logical   x2pix,y2pix,x2off,y2off,valid
 c-----------------------------------------------------------------------
 c  Convert between pixel coordinates and celestial coordinates.
 c
@@ -3192,10 +3194,10 @@ c    crpixy,cdelty
 c               crpix and cdelt values for the latitude axis.
 c    x1pix,y1pix
 c               True if the input element is a pixel coordinate.
-c    x2pix,y2pix
-c               True if the output element is a pixel coordinate.
 c    x1off,y1off
 c               True if the input element is an offset.
+c    x2pix,y2pix
+c               True if the output element is a pixel coordinate.
 c    x2off,y2off
 c               True if the output element is an offset.
 c  Output:
