@@ -4,7 +4,7 @@ c-----------------------------------------------------------------------
 c  Include file for the coordinate conversion routines.  Intended for
 c  the exclusive use of co.for.
 c
-c  $Id: co.h,v 1.7 2011/10/06 07:10:02 cal103 Exp $
+c  $Id: co.h,v 1.8 2012/02/14 06:44:43 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxnax.h'
       include 'wcslib/cel.inc'
@@ -29,8 +29,8 @@ c     most of the remaining variables will be replaced by wcsprm.
 
       logical   defs(4,MAXCRD), frqscl(MAXCRD)
       integer   cel(CELLEN,MAXCRD), cotype(MAXNAX,MAXCRD),
-     *          frqax(MAXCRD), latax(MAXCRD), lngax(MAXCRD),
-     *          lus(MAXCRD), nalloc(MAXCRD), naxis(MAXCRD)
+     *          latax(MAXCRD), lngax(MAXCRD), lus(MAXCRD),
+     *          nalloc(MAXCRD), naxis(MAXCRD), spcax(MAXCRD)
       double precision cdelt(MAXNAX,MAXCRD), cosrot(MAXCRD),
      *          crpix(MAXNAX,MAXCRD), crval(MAXNAX,MAXCRD),
      *          eqnox(MAXCRD), obstime(MAXCRD), restfrq(MAXCRD),
@@ -41,5 +41,5 @@ c     N.B. though declared as an integer array, cel must be aligned on
 c     a double precision boundary.  Especially important on Suns.
       common /cocom/  crpix, cdelt, crval, cosrot, sinrot, restfrq,
      *                vobs, eqnox, obstime, cel, lus, nalloc, naxis,
-     *                lngax, latax, frqax, cotype, defs, frqscl
+     *                lngax, latax, spcax, cotype, defs, frqscl
       common /cocomc/ ctype, specsys
