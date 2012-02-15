@@ -80,7 +80,7 @@ c------------------------------------------------------------------------
 	parameter(version='Uvdump: version 1.0 26-May-09')
 	parameter(MAXVARS=16)
 c
-	character logf*50,uvflags*16,vars(MAXVARS)*8,line*256
+	character logf*50,uvflags*16,vars(MAXVARS)*8,line*1024
 	complex data(MAXCHAN),d
 	double precision preamble(5),toff,freq(MAXCHAN),f
 	real poff
