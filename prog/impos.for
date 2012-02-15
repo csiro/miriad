@@ -42,12 +42,12 @@ c                        pixel
 c
 c       The default is "abspix".
 c@ stype
-c       'radio', 'optical', or 'frequency'.  If you specify a spectral
-c       axis coordinate, this indicates what convention it is in.  For
-c       example, you might give an optical velocity with "type=abskms",
-c       but the header indicates a frequency axis.  If unset, it is
-c       assumed the coordinate is in the convention defined by the image
-c       header.
+c       'FREQ' (or 'frequency'), 'VOPT' (or 'optical'), 'VRAD' (or
+c       'radio') - the velocity convention for a spectral coordinate.
+c       For example, the header might indicate a frequency axis but you
+c       could request an optical velocity with "type=abskms".  If unset,
+c       the velocity convention must be defined by the image header,
+c       i.e. either VOPT or VRAD.
 c@ options
 c       Extra processing options.  Several can be given, separated by
 c       commas, with minimum-match.
@@ -60,7 +60,7 @@ c                      RA = (p1 - CRPIX1)*CDELT1/cos(CRVAL2).
 c                   This interpretation differs significantly from the
 c                   FITS standard when lat0 (i.e. CRVAL2) is non-zero.
 c
-c$Id: impos.for,v 1.8 2011/10/06 04:20:38 cal103 Exp $
+c$Id: impos.for,v 1.9 2012/02/15 06:08:06 cal103 Exp $
 c--
 c
 c  History:
@@ -74,32 +74,36 @@ c-----------------------------------------------------------------------
       parameter (MAXTYP = 13)
 
       logical   altPrj, doim, dospec, off
-      integer   i, il, iostat, ipix(MAXNAX), lIn, naxis, nco,
-     *          nsize(MAXNAX), nstypes, ntypei, sax, strlen1(MAXNAX),
+      integer   iax, ielem, il, iostat, ipix(MAXNAX), ispc, lIn, naxis,
+     *          nelem, nsize(MAXNAX), nstypes, ntypei, strlen1(MAXNAX),
      *          strlen2(MAXNAX), strlen3(MAXNAX)
       real      data(MAXDIM), value
       double precision rfreq, pixel(MAXNAX), win(MAXNAX)
-      character bunit*9, ctypes(MAXNAX)*9, file*80, labtyp(MAXTYP)*6,
+      character bunit*9, ctypes(MAXNAX)*8, file*80, labtyp(MAXTYP)*6,
      *          sctypes(3)*8, str1*132, strout1(MAXNAX)*80,
      *          strout2(MAXNAX)*80, strout3(MAXNAX)*80, stypei*9,
-     *          stypes(3)*9, text*132, typei(MAXNAX)*6, typeo(MAXNAX)*6,
-     *          typeo2(MAXNAX)*6, typeo3(MAXNAX)*6, version*80
+     *          stypes(8)*12, text*132, typei(MAXNAX)*6,
+     *          typeo(MAXNAX)*6, typeo2(MAXNAX)*6, typeo3(MAXNAX)*6,
+     *          version*80
 
-      external  hdprsnt, versan
+      external  hdprsnt, itoaf, versan
       logical   hdprsnt
-      character versan*80
+      character itoaf*2, versan*80
 
       data labtyp /'hms   ', 'dms   ', 'abspix', 'relpix',
      *             'arcsec', 'absghz', 'relghz', 'abskms',
      *             'relkms', 'abslin', 'rellin', 'absdeg',
      *             'reldeg'/
-      data stypes /'frequency', 'radio', 'optical'/
+      data stypes /'FREQ', 'frequency',
+     *             'VOPT', 'optical',
+     *             'VRAD', 'radio',
+     *             'VELO', 'relativistic'/
       data typei /MAXNAX*' '/
-      data nco, ipix /0, MAXNAX*1/
+      data nelem, ipix /0, MAXNAX*1/
 c-----------------------------------------------------------------------
       version = versan ('impos',
-     *                  '$Revision: 1.8 $',
-     *                  '$Date: 2011/10/06 04:20:38 $')
+     *                  '$Revision: 1.9 $',
+     *                  '$Date: 2012/02/15 06:08:06 $')
 
 c     Get inputs.
       call keyini
@@ -107,24 +111,24 @@ c     Get inputs.
       if (file.eq.' ') call bug('f', 'Input file must be given')
       call keymatch('type', MAXTYP, labtyp, MAXNAX, typei, ntypei)
 
-      do i = 1, MAXNAX
+      do iax = 1, MAXNAX
 c       Set type defaults.
-        if (typei(i).eq.' ') typei(i) = 'abspix'
+        if (typei(iax).eq.' ') typei(iax) = 'abspix'
 
-c       Get coordinate.
-        if (typei(i).eq.'hms' .or. typei(i).eq.'dms') then
-          call keyt('coord', win(i), typei(i), -123456789d0)
-          if (win(i).ne.-123456789d0) nco = nco + 1
+c       Get coordinate elements.
+        if (typei(iax).eq.'hms' .or. typei(iax).eq.'dms') then
+          call keyt('coord', win(iax), typei(iax), -123456789d0)
+          if (win(iax).ne.-123456789d0) nelem = nelem + 1
         else
-          call keyd('coord', win(i), -123456789d0)
-          if (win(i).ne.-123456789d0) nco = nco + 1
+          call keyd('coord', win(iax), -123456789d0)
+          if (win(iax).ne.-123456789d0) nelem = nelem + 1
         endif
       enddo
 
-      if (nco.eq.0) call bug('f', 'You must give a coordinate')
+      if (nelem.eq.0) call bug('f', 'You must give a coordinate')
 
 c     Get spectral-axis type.
-      call keymatch('stype', 3, stypes, 1, stypei, nstypes)
+      call keymatch('stype', 8, stypes, 1, stypei, nstypes)
 
 c     Get options.
       call options('options', 'altprj', altPrj, 1)
@@ -153,16 +157,17 @@ c     Open file.
       call coGetD(lIn, 'restfreq', rfreq)
 
 c     Initialize coordinate transformation routines and fish out CTYPES.
-      do i = 1, naxis
-        call ctypeco(lIn, i, ctypes(i), il)
+      do iax = 1, naxis
+        call coGetA(lIn, 'ctype'//itoaf(iax), ctypes(iax))
+        if (ctypes(iax).eq.' ') ctypes(iax) = 'Axis '//itoaf(iax)
       enddo
 
 c     Check spectral-axis type, set default value if needed and
 c     convention order in which spectral axes will be listed.
-      call sstdef(lIn, nco, typei, stypei, sax)
-      dospec = sax.ne.0 .and. nco.ge.sax
-      if (sax.gt.0) then
-        sctypes(1) = ctypes(sax)
+      call sstdef(lIn, nelem, typei, stypei, ispc)
+      dospec = ispc.ne.0 .and. nelem.ge.ispc
+      if (ispc.gt.0) then
+        sctypes(1) = ctypes(ispc)
         if (sctypes(1)(:4).eq.'VELO') sctypes(1) = 'VRAD'
         if (sctypes(1)(:4).eq.'FELO') sctypes(1) = 'VOPT-F2W'
 
@@ -170,21 +175,21 @@ c     convention order in which spectral axes will be listed.
           if (sctypes(1).eq.'FREQ') then
             sctypes(2) = 'VRAD'
             sctypes(3) = 'VOPT-F2W'
-            stypes(1) = 'frequency'
-            stypes(2) = 'radio'
-            stypes(3) = 'optical'
+            stypes(1) = 'FREQ'
+            stypes(2) = 'VRAD'
+            stypes(3) = 'VOPT'
           else if (sctypes(1).eq.'VRAD') then
             sctypes(2) = 'VOPT-F2W'
             sctypes(3) = 'FREQ'
-            stypes(1) = 'radio'
-            stypes(2) = 'optical'
-            stypes(3) = 'frequency'
+            stypes(1) = 'VRAD'
+            stypes(2) = 'VOPT'
+            stypes(3) = 'FREQ'
           else if (sctypes(1).eq.'VOPT-F2W') then
             sctypes(2) = 'VRAD'
             sctypes(3) = 'FREQ'
-            stypes(1) = 'optical'
-            stypes(2) = 'radio'
-            stypes(3) = 'frequency'
+            stypes(1) = 'VOPT'
+            stypes(2) = 'VRAD'
+            stypes(3) = 'FREQ'
           endif
         else
           dospec = .false.
@@ -197,36 +202,39 @@ c     convention order in which spectral axes will be listed.
 c     -----------------
 c     World coordinate.
 c     -----------------
-      call setoaco(lIn, 'abs', nco, 0, typeo)
+      call setoaco(lIn, 'abs', nelem, 0, typeo)
 
 c     Convert & format and inform.
-      call w2wfco(lIn, nco, typei, stypei, win, typeo, stypes(1),
-     *             .false., strout1, strlen1)
+      call w2wfco(lIn, nelem, typei, stypei, win, typeo, stypes(1),
+     *            .false., strout1, strlen1)
 
       if (dospec) then
-        call repspc(sax, stypes, nco, typeo, typeo2, typeo3)
-        call w2wfco(lIn, nco, typei, stypei, win, typeo2, stypes(2),
+        call repspc(ispc, stypes, nelem, typeo, typeo2, typeo3)
+        call w2wfco(lIn, nelem, typei, stypei, win, typeo2, stypes(2),
      *              .false., strout2, strlen2)
-        call w2wfco(lIn, nco, typei, stypei, win, typeo3, stypes(3),
+        call w2wfco(lIn, nelem, typei, stypei, win, typeo3, stypes(3),
      *              .false., strout3, strlen3)
       endif
 
       call output('World coordinates')
-      do i = 1, nco
-        call pader(typeo(i), strout1(i), strlen1(i))
+      do ielem = 1, nelem
+        il = strlen1(ielem)
+        call pader(typeo(ielem), strout1(ielem), il)
 
-        if (i.eq.sax) then
-          write(text, 100) i, sctypes(1), strout1(i)(1:strlen1(i))
+        if (ielem.eq.ispc) then
+          write(text, 100) ielem, sctypes(1), strout1(ielem)(:il)
           call output(text)
 
           if (dospec) then
-            write(text, 100) i, sctypes(2), strout2(i)(1:strlen2(i))
+            il = strlen2(ielem)
+            write(text, 100) ielem, sctypes(2), strout2(ielem)(:il)
             call output(text)
-            write(text, 100) i, sctypes(3), strout3(i)(1:strlen3(i))
+            il = strlen3(ielem)
+            write(text, 100) ielem, sctypes(3), strout3(ielem)(:il)
             call output(text)
           endif
         else
-          write(text, 100) i, ctypes(i), strout1(i)(1:strlen1(i))
+          write(text, 100) ielem, ctypes(ielem), strout1(ielem)(:il)
 100       format('Axis',i2,': ',a8,' = ',a)
           call output(text)
         endif
@@ -235,33 +243,36 @@ c     Convert & format and inform.
 c     ------------------------
 c     Offset world coordinate.
 c     ------------------------
-      call setoaco(lIn, 'off', nco, 0, typeo)
-      call w2wfco(lIn, nco, typei, stypei, win, typeo, stypes(1),
+      call setoaco(lIn, 'off', nelem, 0, typeo)
+      call w2wfco(lIn, nelem, typei, stypei, win, typeo, stypes(1),
      *            .false., strout1, strlen1)
 
       if (dospec) then
-        call repspc(sax, stypes, nco, typeo, typeo2, typeo3)
-        call w2wfco(lIn, nco, typei, stypei, win, typeo2, stypes(2),
+        call repspc(ispc, stypes, nelem, typeo, typeo2, typeo3)
+        call w2wfco(lIn, nelem, typei, stypei, win, typeo2, stypes(2),
      *              .false., strout2, strlen2)
-        call w2wfco(lIn, nco, typei, stypei, win, typeo3, stypes(3),
+        call w2wfco(lIn, nelem, typei, stypei, win, typeo3, stypes(3),
      *              .false., strout3, strlen3)
       endif
 
       call output(' ')
       call output('Offset world coordinates')
-      do i = 1, nco
-        if (i.eq.sax) then
-          write(text, 100) i, sctypes(1), strout1(i)(1:strlen1(i))
+      do ielem = 1, nelem
+        if (ielem.eq.ispc) then
+          il = strlen1(ielem)
+          write(text, 100) ielem, sctypes(1), strout1(ielem)(:il)
           call output(text)
 
           if (dospec) then
-            write(text, 100) i, sctypes(2), strout2(i)(1:strlen2(i))
+            il = strlen2(ielem)
+            write(text, 100) ielem, sctypes(2), strout2(ielem)(:il)
             call output(text)
-            write(text, 100) i, sctypes(3), strout3(i)(1:strlen3(i))
+            il = strlen3(ielem)
+            write(text, 100) ielem, sctypes(3), strout3(ielem)(:il)
             call output(text)
           endif
         else
-          write(text, 100) i, ctypes(i), strout1(i)(1:strlen1(i))
+          write(text, 100) ielem, ctypes(ielem), strout1(ielem)(:il)
           call output(text)
         endif
       enddo
@@ -270,17 +281,18 @@ c     ----------------
 c     Absolute pixels.
 c     ----------------
       if (doim) then
-        do i = 1, nco
-          typeo(i) = 'abspix'
+        do ielem = 1, nelem
+          typeo(ielem) = 'abspix'
         enddo
-        call w2wco(lIn, nco, typei, stypei, win, typeo, ' ', pixel)
-        call w2wfco(lIn, nco, typei, stypei, win, typeo, stypes(1),
+        call w2wco(lIn, nelem, typei, stypei, win, typeo, ' ', pixel)
+        call w2wfco(lIn, nelem, typei, stypei, win, typeo, stypes(1),
      *              .true., strout1, strlen1)
 
         call output(' ')
         call output('Absolute pixels')
-        do i = 1, nco
-          write(text, 100) i, ctypes(i), strout1(i)(1:strlen1(i))
+        do ielem = 1, nelem
+          il = strlen1(ielem)
+          write(text, 100) ielem, ctypes(ielem), strout1(ielem)(:il)
           call output(text)
         enddo
       endif
@@ -289,16 +301,17 @@ c     --------------
 c     Offset pixels.
 c     --------------
       if (doim) then
-        do i = 1, nco
-          typeo(i) = 'relpix'
+        do ielem = 1, nelem
+          typeo(ielem) = 'relpix'
         enddo
-        call w2wfco(lIn, nco, typei, stypei, win, typeo, stypes(1),
+        call w2wfco(lIn, nelem, typei, stypei, win, typeo, stypes(1),
      *              .true., strout1, strlen1)
 
         call output(' ')
         call output('Offset pixels')
-        do i = 1, nco
-          write(text, 100) i, ctypes(i), strout1(i)(1:strlen1(i))
+        do ielem = 1, nelem
+          il = strlen1(ielem)
+          write(text, 100) ielem, ctypes(ielem), strout1(ielem)(:il)
           call output(text)
         enddo
       endif
@@ -307,9 +320,10 @@ c     Find nearest pixel to coordinate location.
       if (doim) then
         if (nsize(1).le.MAXDIM) then
           off = .false.
-          do i = 1, nco
-            ipix(i) = nint(pixel(i))
-            if (ipix(i).lt.1 .or. ipix(i).gt.nsize(i)) off = .true.
+          do ielem = 1, nelem
+            ipix(ielem) = nint(pixel(ielem))
+            if (ipix(ielem).lt.1 .or.
+     *          ipix(ielem).gt.nsize(ielem)) off = .true.
           enddo
 
 c         Find value if on image.
@@ -319,7 +333,7 @@ c         Find value if on image.
             value = data(ipix(1))
 
             call output(' ')
-            call mitoaf(ipix, nco, str1, il)
+            call mitoaf(ipix, nelem, str1, il)
             write(text, 200) str1(1:il), value, bunit
 200         format('Nearest pixel = ',a,'.  Value = ',1pe13.6,' ',a)
             call output(text)
@@ -348,11 +362,14 @@ c***********************************************************************
 
       subroutine pader (type, str, ilen)
 
-      character str*(*), type*(*)
+      character type*(*), str*(*)
       integer   ilen
 c-----------------------------------------------------------------------
+      integer   it
       character str2*132
-      integer len1, it
+
+      external  len1
+      integer   len1
 c-----------------------------------------------------------------------
       if (type.eq.'hms' .or. type.eq.'dms') then
         str2 = str
@@ -366,125 +383,117 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine sstdef (lIn, n, typei, stypei, sax)
+      subroutine sstdef (lIn, NAXIS, typei, stypei, ispc)
 
-      integer   lIn, n, sax
-      character typei(n)*(*), stypei*(*)
+      integer   lIn, NAXIS
+      character typei(NAXIS)*(*), stypei*(*)
+      integer   ispc
 c-----------------------------------------------------------------------
 c  Check consistency of spectral-axis type and set a default if needed.
 c
 c  Input
+c    lIn       Handle of input image.
+c    NAXIS     Number of image axes.
 c    typei     User specified coordinate types ('hms' etc)
+c  In/out:
+c    stypei    stype specified by user, 'FREQ', 'VOPT', or 'VRAD'.
+c              If blank (user has not given a coordinate for the
+c              spectral axis) will be set here.  Will be returned blank
+c              if there is no spectral axis.
 c  Output
-c    stypei    Will be ' ' if the user has not given a coordinate for
-c              the spectral axis.  Else 'radio', 'optical'
-c              or 'frequency'
-c    sax       Spectral axis number of image
+c    ispc      Spectral axis number of image
 c-----------------------------------------------------------------------
-      integer   i
-      character ltype*3, dstype*9, line*80
+      integer   iax
+      character algo*16, axtype*9, line*80, ltype*3, units*6, wtype*16
 c-----------------------------------------------------------------------
-c     First set a default spectral axis type based upon the header.
-      dstype = ' '
-      sax = 0
-      i = 1
-      do while (i.le.n .and. dstype.eq.' ')
-c       See if this axis is spectral.
-        call specco(lIn, i, dstype)
-        if (dstype.ne.' ') sax = i
-        i = i + 1
-      enddo
+c     Look for the spectral axis.
+      call coFindAx(lIn, 'spectral', ispc)
+      if (ispc.eq.0) then
+        stypei = ' '
+        return
+      endif
 
-c     Has user given a spectral coordinate for a non-spectral axis?
-      do i = 1, n
-        if (typei(i)(4:6).eq.'ghz' .or. typei(i)(4:6).eq.'kms') then
-          if (i.ne.sax) call bug('f',
+c     Get spectral axis type from header.
+      call coAxType(lIn, ispc, axtype, wtype, algo, units)
+
+c     Was a spectral coordinate requested for a non-spectral axis?
+      do iax = 1, NAXIS
+        if (iax.ne.ispc) then
+          ltype = typei(iax)(4:6)
+          if (ltype.eq.'ghz' .or. ltype.eq.'kms') call bug('f',
      *      'Spectral coordinate given for non-spectral axis')
         endif
       enddo
 
-c     Now, if the image has a spectral axis, continue on to see what
-c     the user is offering for that axis.
-      if (sax.ne.0 .and. sax.le.n) then
-c       Fish out latter half of user given coordinate type and check
-c       given spectral-axis type, or set one if not given.
-        ltype = typei(sax)(4:6)
+c     Check user-specified spectral units and against requested type.
+      ltype = typei(ispc)(4:6)
+      if (ltype.eq.'kms') then
+c       User requests coordinate in km/s.
+        if (stypei.eq.'FREQ') then
+c         Inconsistent, must give VOPT, VRAD, or VELO.
+          line = 'Coord. type "'//typei(ispc)//'" & spectral type "'
+     *            //stypei//'" do not match'
+          call bug('f', line)
 
-        if (ltype.eq.'kms') then
-c         User says coordinate in km/s.
-          if (stypei.eq.' ') then
-            if (dstype.ne.'frequency') then
-c             Default to whatever type of velocity definition we have.
-              stypei = dstype
-            else
-c             Frequency axis, can't work out what type of velocity user
-c             wants.
-              call bug('f', 'You must give keyword "stype" as '//
-     *                 'the axis is frequency')
-            endif
+        else if (stypei.eq.' ') then
+          if (wtype.eq.'FREQ') then
+c           Can't determine velocity convention for frequency axes.
+            call bug('f', 'You must give keyword "stype" as '//
+     *               'the axis is frequency')
           else
-c           Inconsistent, must give radio or optical.
-            if (stypei.eq.'frequency') then
-              line = 'Coord. type "'//typei(sax)//'" & spectral type "'
-     *                //stypei//'" do not match'
-              call bug('f', line)
-            endif
+c           Set spectral type to header value.
+            stypei = wtype
           endif
-
-        else if (ltype.eq.'ghz') then
-c         User says coordinate in GHz.
-          if (stypei.eq.' ') then
-c           Give them frequency.
-            stypei = 'frequency'
-          else
-c           Inconsistent, must be frequency.
-            if (stypei.ne.'frequency') then
-              line = 'Coordinate type '//typei(sax)//
-     *               ' & spectral type '//stypei//' do not match'
-              call bug('f', line)
-            endif
-          endif
-
-        else
-c         Make spectral axis type that indicated by header.
-          stypei = dstype
         endif
+
+      else if (ltype.eq.'ghz') then
+c       User requests coordinate in GHz.
+        if (stypei.eq.' ') then
+c         Give them frequency.
+          stypei = 'FREQ'
+        else if (stypei.ne.'FREQ') then
+c         Inconsistent, must be frequency.
+          line = 'Coordinate type '//typei(ispc)//
+     *           ' & spectral type '//stypei//' do not match'
+          call bug('f', line)
+        endif
+
       else
-        stypei = ' '
+c       Set spectral type to header value.
+        stypei = wtype
       endif
 
       end
 
 c***********************************************************************
 
-      subroutine repspc (sax, stypes, n, typeo, typeo2, typeo3)
+      subroutine repspc (ispc, stypes, NAXIS, typeo, typeo2, typeo3)
 
-      integer   n, sax
-      character stypes(3)*(*), typeo(n)*(*), typeo2(n)*(*),
-     *          typeo3(n)*(*)
+      integer   NAXIS, ispc
+      character stypes(3)*(*), typeo(NAXIS)*(*), typeo2(NAXIS)*(*),
+     *          typeo3(NAXIS)*(*)
 c-----------------------------------------------------------------------
-c  See if any of the axes is a spectral axis.  If so, then we want to
-c  list the spectral axis in frequency, radio and optical velocities.
+c  List a spectral axis in frequency, and radio and optical velocity.
 c-----------------------------------------------------------------------
-      integer i
-      character*3 lstype(3)
+      integer   iax
+      character lstype(3)*3
 c-----------------------------------------------------------------------
-      do i = 1, n
-        typeo2(i) = typeo(i)
-        typeo3(i) = typeo(i)
+      do iax = 1, NAXIS
+        typeo2(iax) = typeo(iax)
+        typeo3(iax) = typeo(iax)
       enddo
 
-      if (sax.gt.0) then
-        do i = 1, 3
-          if (stypes(i).eq.'optical' .or. stypes(i).eq.'radio') then
-            lstype(i) = 'kms'
+      if (ispc.gt.0) then
+        do iax = 1, 3
+          if (stypes(iax).eq.'VOPT' .or. stypes(iax).eq.'VRAD') then
+            lstype(iax) = 'kms'
           else
-            lstype(i) = 'ghz'
+            lstype(iax) = 'ghz'
           endif
         enddo
 
-        typeo2(sax)(4:6) = lstype(2)
-        typeo3(sax)(4:6) = lstype(3)
+        typeo2(ispc)(4:6) = lstype(2)
+        typeo3(ispc)(4:6) = lstype(3)
       endif
 
       end
