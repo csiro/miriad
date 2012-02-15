@@ -37,7 +37,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: cgsubs.for,v 1.7 2011/02/14 06:09:58 cal103 Exp $
+c $Id: cgsubs.for,v 1.8 2012/02/15 03:23:50 cal103 Exp $
 c***********************************************************************
 
 c* angconCG -- Convert radians to and from seconds of time/arc
@@ -1672,13 +1672,14 @@ c    doepoch  DO we want epoch in string ?
 c  Output
 c    x,ylabel Labels
 c-----------------------------------------------------------------------
-      real epoch
-      character estr*5, ctype*32, str*20, label*100
-      integer ipos, iax, l2, len1, irad, ifrq, iuv, ivel
+      integer   iax, k
+      real      epoch
+      character algo*3, axtype*9, estr*5, label*100, units*6, wtype*9
+
+      external  len1
+      integer   len1
 c-----------------------------------------------------------------------
-c
-c Write epoch string for label
-c
+c     Write epoch string for label.
       call rdhdr(lh, 'epoch', epoch, 0.0)
       if (doepoch .and. epoch.gt.0.0) then
         write(estr(2:), 100) nint(epoch)
@@ -1691,84 +1692,76 @@ c
       else
         estr = ' '
       endif
-c
-c Loop over axes
-c
+
+c     Loop over axes.
       do iax = 1, 2
-        call ctypeco(lh, iax, ctype, ipos)
-        str = ctype(1:ipos)
-        l2 = len1(str)
+        call coAxType(lh, iax, axtype, wtype, algo, units)
+
+        k = len1(wtype)
 
 c       Don't qualify galactic coordinates with an equinox.
-        if (str(1:l2).eq.'GLON' .or. str(1:l2).eq.'GLAT') then
+        if (wtype.eq.'GLON' .or. wtype.eq.'GLAT') then
           estr = ' '
         endif
-c
-c Set the axis label depending on label type
-c
-        call axfndco(lh, 'RAD',  0, iax, irad)
-        call axfndco(lh, 'FREQ', 0, iax, ifrq)
-        call axfndco(lh, 'VELO', 0, iax, ivel)
-        call axfndco(lh, 'UV',   0, iax, iuv)
 
         if (labtyp(iax).eq.'abspix') then
-          label = str(1:l2)//' (pixels; '//estr//')'
-          if (estr.eq.' ') label = str(1:l2)//' (pixels)'
+          label = wtype(:k)//' (pixels; '//estr//')'
+          if (estr.eq.' ') label = wtype(:k)//' (pixels)'
         else if (labtyp(iax).eq.'relpix') then
-          label = str(1:l2)//' offset (pixels; '//estr//')'
-          if (estr.eq.' ') label = str(1:l2)//' offset (pixels)'
+          label = wtype(:k)//' offset (pixels; '//estr//')'
+          if (estr.eq.' ') label = wtype(:k)//' offset (pixels)'
         else if (labtyp(iax).eq.'arcsec') then
-          label = str(1:l2)//' offset (arcsec; '//estr//')'
-          if (estr.eq.' ') label = str(1:l2)//' offset (arcsec)'
+          label = wtype(:k)//' offset (arcsec; '//estr//')'
+          if (estr.eq.' ') label = wtype(:k)//' offset (arcsec)'
         else if (labtyp(iax).eq.'arcmin') then
-          label = str(1:l2)//' offset (arcmin; '//estr//')'
-          if (estr.eq.' ') label = str(1:l2)//' offset (arcmin)'
+          label = wtype(:k)//' offset (arcmin; '//estr//')'
+          if (estr.eq.' ') label = wtype(:k)//' offset (arcmin)'
         else if (labtyp(iax).eq.'arcmas') then
-          label = str(1:l2)//' offset (mas; '//estr//')'
-          if (estr.eq.' ') label = str(1:l2)//' offset (mas)'
+          label = wtype(:k)//' offset (mas; '//estr//')'
+          if (estr.eq.' ') label = wtype(:k)//' offset (mas)'
         else if (labtyp(iax).eq.'absdeg') then
-          label = str(1:l2)//' (degrees; '//estr//')'
-          if (estr.eq.' ') label = str(1:l2)//' (degrees)'
+          label = wtype(:k)//' (degrees; '//estr//')'
+          if (estr.eq.' ') label = wtype(:k)//' (degrees)'
         else if (labtyp(iax).eq.'reldeg') then
-          label = str(1:l2)//' offset (degrees; '//estr//')'
-          if (estr.eq.' ') label = str(1:l2)//' offset (degrees)'
+          label = wtype(:k)//' offset (degrees; '//estr//')'
+          if (estr.eq.' ') label = wtype(:k)//' offset (degrees)'
         else if (labtyp(iax).eq.'hms') then
-          label = str(1:l2)//' ('//estr//')'
-          if (estr.eq.' ') label = str(1:l2)
+          label = wtype(:k)//' ('//estr//')'
+          if (estr.eq.' ') label = wtype(:k)
         else if (labtyp(iax).eq.'dms') then
-          label = str(1:l2)//' ('//estr//')'
-          if (estr.eq.' ') label = str(1:l2)
+          label = wtype(:k)//' ('//estr//')'
+          if (estr.eq.' ') label = wtype(:k)
         else if (labtyp(iax).eq.'absghz') then
-          label = str(1:l2)//' (GHz)'
+          label = wtype(:k)//' (GHz)'
         else if (labtyp(iax).eq.'relghz') then
-          label = str(1:l2)//' offset (GHz)'
+          label = wtype(:k)//' offset (GHz)'
         else if (labtyp(iax).eq.'abskms') then
-          label = str(1:l2)//' (km s\u-1\d)'
+          label = wtype(:k)//' (km s\u-1\d)'
         else if (labtyp(iax).eq.'relkms') then
-          label = str(1:l2)//' offset (km s\u-1\d)'
+          label = wtype(:k)//' offset (km s\u-1\d)'
         else if (labtyp(iax).eq.'relnat') then
-          if (irad.eq.1) then
-            label = str(1:l2)//' offset (radians)'
-          else if (ifrq.eq.1) then
-            label = str(1:l2)//' offset (GHz)'
-          else if (ivel.eq.1) then
-            label = str(1:l2)//' offset (km s\u-1\d)'
-          else if (iuv.eq.1) then
-            label = str(1:l2)//' offset (\gl)'
+          if (units.eq.'rad') then
+            label = wtype(:k)//' offset (radians)'
+          else if (units.eq.'GHz') then
+            label = wtype(:k)//' offset (GHz)'
+          else if (units.eq.'km/s') then
+            label = wtype(:k)//' offset (km s\u-1\d)'
+          else if (units.eq.'lambda') then
+            label = wtype(:k)//' offset (\gl)'
           else
-            label = str(1:l2)//' offset '
+            label = wtype(:k)//' offset '
           endif
         else if (labtyp(iax).eq.'absnat') then
-          if (irad.eq.1) then
-            label = str(1:l2)//' (radians)'
-          else if (ifrq.eq.1) then
-            label = str(1:l2)//' (GHz)'
-          else if (ivel.eq.1) then
-            label = str(1:l2)//' (km s\u-1\d)'
-          else if (iuv.eq.1) then
-            label = str(1:l2)//' (\gl)'
+          if (units.eq.'rad') then
+            label = wtype(:k)//' (radians)'
+          else if (units.eq.'GHz') then
+            label = wtype(:k)//' (GHz)'
+          else if (units.eq.'km/s') then
+            label = wtype(:k)//' (km s\u-1\d)'
+          else if (units.eq.'lambda') then
+            label = wtype(:k)//' (\gl)'
           else
-            label = str(1:l2)
+            label = wtype(:k)
           endif
         else if (labtyp(iax).eq.'none') then
           label = ' '
