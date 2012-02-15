@@ -51,13 +51,13 @@ c    trc        List of top-right-corners of input image region.
 c               Can be specified as 0 (scalar) meaning
 c               (naxis1,naxis2,...) for the input image.
 c
-c $Id: headcopy.for,v 1.10 2010/12/08 00:33:27 cal103 Exp $
+c $Id: headcopy.for,v 1.11 2012/02/15 06:40:01 cal103 Exp $
 c-----------------------------------------------------------------------
       integer   CRPIX, CDELT, CRVAL, CTYPE
       parameter (CRPIX = 1, CDELT = 2, CRVAL = 3, CTYPE = 4)
 
       integer   NKEYW
-      parameter (NKEYW = 26)
+      parameter (NKEYW = 27)
 
       logical   noPerm, verbtm
       integer   axLen, iAxIn, iAxOut, jAxIn, jAxOut, nAxOut, k, m
@@ -81,8 +81,8 @@ c     present in the input image.
      *    'cellscal', 'date-obs', 'epoch   ', 'instrume', 'ltype   ',
      *    'lstart  ', 'lstep   ', 'lwidth  ', 'mostable', 'niters  ',
      *    'object  ', 'observer', 'obsra   ', 'obsdec  ', 'obstime ',
-     *    'pbfwhm  ', 'pbtype  ', 'restfreq', 'telescop', 'vobs    ',
-     *    'history '/
+     *    'pbfwhm  ', 'pbtype  ', 'restfreq', 'specsys',  'telescop',
+     *    'vobs    ', 'history '/
 c-----------------------------------------------------------------------
       call rdhdi(lOut, 'naxis', nAxOut, 0)
 
