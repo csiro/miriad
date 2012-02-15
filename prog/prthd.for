@@ -15,7 +15,7 @@ c       Extra processing options.  Possible values are:
 c         brief   Give one line description of each file.
 c         full    Several line description of each file (default).
 c
-c$Id: prthd.for,v 1.7 2011/10/06 05:10:12 cal103 Exp $
+c$Id: prthd.for,v 1.8 2012/02/15 07:02:40 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -35,8 +35,8 @@ c-----------------------------------------------------------------------
       character versan*80
 c-----------------------------------------------------------------------
       version = versan('prthd',
-     *                 '$Revision: 1.7 $',
-     *                 '$Date: 2011/10/06 05:10:12 $')
+     *                 '$Revision: 1.8 $',
+     *                 '$Date: 2012/02/15 07:02:40 $')
 
 c     Get input parameters.
       call keyini
@@ -313,6 +313,12 @@ c     Rest frequency.
         write(line,'(a,f13.6,a)')
      *    'Rest frequency:         ',dval,' GHz'
         call logwrite(line,more)
+      endif
+
+c     Doppler frame.
+      call rdhda(tno, 'specsys', aval1, ' ')
+      if (aval1.ne.' ') then
+        call logwrite('Doppler reference frame:     '//aval1,more)
       endif
 
 c     Observatory radial velocity.
