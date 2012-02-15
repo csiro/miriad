@@ -589,7 +589,7 @@ c       The OFFSET directive is not applied to ANY position fields in
 c       succeeding directives that have %OTYPEs that are "hms" or "dms".
 c       I am too lazy to code it.
 c
-c$Id: cgdisp.for,v 1.16 2012/02/08 05:39:02 cal103 Exp $
+c$Id: cgdisp.for,v 1.17 2012/02/15 03:31:11 cal103 Exp $
 c--
 c
 c  History:
@@ -661,8 +661,8 @@ c     Plotting parameters.
       data getvsc /.true./
 c-----------------------------------------------------------------------
       version = versan ('cgdisp',
-     *                  '$Revision: 1.16 $',
-     *                  '$Date: 2012/02/08 05:39:02 $')
+     *                  '$Revision: 1.17 $',
+     *                  '$Date: 2012/02/15 03:31:11 $')
 c
 c Get user inputs
 c
@@ -1130,16 +1130,16 @@ c***********************************************************************
 
       subroutine beamfac(in, lin, bmin, bmaj, bpa, pres)
 
-      character*(*) in
-      integer lin
-      real    bmin, bmaj, bpa
-      logical pres
+      character in*(*)
+      integer   lIn
+      real      bmin, bmaj, bpa
+      logical   pres
 c-----------------------------------------------------------------------
 c  Drag the beam out of the header.
 c
 c  Input
 c   in          Image name
-c   lin         Image handle
+c   lIn         Image handle
 c  Output
 c   bmin        FWHMin of beam in image
 c   bmaj        FWHMax of beam
@@ -1149,31 +1149,30 @@ c   pres        True if beam present in header
 c-----------------------------------------------------------------------
       include 'mirconst.h'
 
-      integer il, len1, irad1, irad2
-      real lrot
-      character line*80
-c-----------------------------------------------------------------------
+      real      lrot
+      character algo*3, axtype*9, line*80, units*6, wtype*9
 
-      call rdhdr(lin, 'bmin', bmin, -1.0)
-      call rdhdr(lin, 'bmaj', bmaj, -1.0)
-      call rdhdr(lin, 'bpa',  bpa,   0.0)
-      call rdhdr(lin, 'llrot',lrot,  0.0)
+      external  len1
+      integer   len1
+c-----------------------------------------------------------------------
+      call rdhdr(lIn, 'bmin', bmin, -1.0)
+      call rdhdr(lIn, 'bmaj', bmaj, -1.0)
+      call rdhdr(lIn, 'bpa',  bpa,   0.0)
+      call rdhdr(lIn, 'llrot',lrot,  0.0)
       bpa = bpa + lrot*DR2D
 
       if (bmin.gt.0.0 .and. bmaj.gt.0.0) then
-c
-c Find if axes are those that have radian pixel increments. These are
-c the only ones for which we can convert the beam size in radians
-c to world coordinates
-c
-        call axfndco(lin, 'RAD', 0, 1, irad1)
-        call axfndco(lin, 'RAD', 0, 2, irad2)
+c       Do the axes have radian units?  These are the only ones for
+c       which we can convert the beam size in radians to world
+c       coordinates.
+        pres = .true.
+        call coAxType(lIn, 1, axtype, wtype, algo, units)
+        if (units.ne.'rad') pres = .false.
+        call coAxType(lIn, 2, axtype, wtype, algo, units)
+        if (units.ne.'rad') pres = .false.
 
-        if (irad1*irad2.ne.0) then
-          pres = .true.
-        else
-          il = len1(in)
-          line = 'Axes for image '//in(1:il)//
+        if (.not.pres) then
+          line = 'Axes for image '//in(:len1(in))//
      *           ' are not recognized as having'
           call bug('w', line)
           call bug('w', 'increments in radians. Cannot plot beam')
@@ -3309,16 +3308,15 @@ c-----------------------------------------------------------------------
       integer maxnum, nFigs
       parameter (maxnum = 20, nFigs = 10)
 
-      integer   i, icomm(maxnum), ifac, il, ipt, isym, j, lat, lena,
-     *          lng, naxis, nOpt, nPres, nReqd, nUsed, nVtx, sgn(2),
+      integer   i, icomm(maxnum), ifac, il, ilat, ilng, ipt, isym, j,
+     *          lena, naxis, nOpt, nPres, nReqd, nUsed, nVtx, sgn(2),
      *          slen, spos
       double precision cosrho, dpx, dpy, nums(maxnum), off(2), oPix(2),
      *          pa, phi, pix(3), r, rmaj, rmin, scl, sinrho, theta,
      *          vlen, wabs(3), wCen(3), width(2), wIn(3), x, y
       real      ssize
-      character absdeg(3)*6, abspix(3)*6, ctype(2)*4, oFigs(nFigs)*8,
-     *          oType(2)*6, pType(3)*6, str*4, relpix(3)*6, wover*3,
-     *          yesno(2)*3
+      character absdeg(3)*6, abspix(3)*6, oFigs(nFigs)*8, oType(2)*6,
+     *          pType(3)*6, str*4, relpix(3)*6, wover*3, yesno(2)*3
 
 c     Externals.
       integer len1
@@ -3626,29 +3624,18 @@ c       Get vector length and position angle.
         ipt  = ipt + 2
 
 c       Do we have a longitude/latitude pair?
-        lng = 0
-        lat = 0
-        call axtypco(lun, 2, 1, ctype)
-        if (ctype(1).eq.'RA' .or. ctype(1).eq.'LNG') then
-          if (ctype(2).eq.'DEC' .or. ctype(2).eq.'LAT') then
-            lng = 1
-            lat = 2
-          endif
-        else if (ctype(1).eq.'DEC' .or. ctype(1).eq.'LAT') then
-          if (ctype(1).eq.'RA' .or. ctype(1).eq.'LNG') then
-            lng = 2
-            lat = 1
-          endif
-        endif
+        call coFindAx(lun, 'longitude', ilng)
+        call coFindAx(lun, 'latitude',  ilat)
+        if (ilng.gt.2 .or. ilat.gt.2) ilng = 0
 
-        if (lng.ne.0) then
+        if (ilng.ne.0) then
 c         Celestial axis pair.
           call w2wcov (lun, naxis, pType, ' ', wCen, absdeg, ' ', wabs,
      *      ok)
           if (.not.ok) return
 
-          call sphpad(1, wabs(lng), wabs(lat), 0.1d0, pa, wIn(lng),
-     *      wIn(lat))
+          call sphpad(1, wabs(ilng), wabs(ilat), 0.1d0, pa, wIn(ilng),
+     *      wIn(ilat))
 
           pType(1) = 'absdeg'
           pType(2) = 'absdeg'
@@ -3722,24 +3709,13 @@ c         and position angle in degrees.
         endif
 
 c       Do we have a longitude/latitude pair?
-        lng = 0
-        lat = 0
-        call axtypco(lun, 2, 1, ctype)
-        if (ctype(1).eq.'RA' .or. ctype(1).eq.'LNG') then
-          if (ctype(2).eq.'DEC' .or. ctype(2).eq.'LAT') then
-            lng = 1
-            lat = 2
-          endif
-        else if (ctype(1).eq.'DEC' .or. ctype(1).eq.'LAT') then
-          if (ctype(1).eq.'RA' .or. ctype(1).eq.'LNG') then
-            lng = 2
-            lat = 1
-          endif
-        endif
+        call coFindAx(lun, 'longitude', ilng)
+        call coFindAx(lun, 'latitude',  ilat)
+        if (ilng.gt.2 .or. ilat.gt.2) ilng = 0
 
 c       Generate poly-line coordinates for ellipse.
         nVtx = 181
-        if (lng.ne.0) then
+        if (ilng.ne.0) then
 c         Celestial axis pair.
           if (pType(1).eq.'arcsec') then
             rmaj = rmaj / 3600d0
@@ -3760,8 +3736,8 @@ c         Celestial axis pair.
             r = sqrt(x*x + y*y)
             phi = pa + atan2(y, x)*DR2D
 
-            call sphpad(1, wabs(lng), wabs(lat), r, phi, wIn(lng),
-     *        wIn(lat))
+            call sphpad(1, wabs(ilng), wabs(ilat), r, phi, wIn(ilng),
+     *        wIn(ilat))
 
             call w2wcov(lun, naxis, pType, ' ', wIn, abspix, ' ', pix,
      *        ok)
