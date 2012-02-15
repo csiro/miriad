@@ -69,6 +69,7 @@ c    rjs  26may05 Add pntra,pntdec to list of know variables.
 c    rjs  19jun05 More spaces in log file.
 c    rjs  01jan06 Added definition of ref pointing solution.
 c    rjs  08jan07 Added knowledge of chi2.
+c    rjs  06jun11 Support for some new variables written by CABB.
 c
 c  Bugs:
 c    ?? Perfect?
@@ -886,7 +887,7 @@ c  in the table.
 c
 	integer nvars
 	double precision rad2deg,rad2arc,rad2hr
-	parameter(nvars=66)
+	parameter(nvars=72)
 	parameter(rad2deg=180.d0/pi,rad2arc=3600.d0*rad2deg)
 	parameter(rad2hr=12.d0/pi)
 c
@@ -942,7 +943,7 @@ c
      *	  'phaselo2','degrees ',	1, rad2deg,
      *	  'phasem1 ','degrees ',	1, rad2deg,
      *	  'plangle ','degrees ',	1, 1.d0/
-	data (names(i),units(i),dim2s(i),scales(i),i=35,53)/
+	data (names(i),units(i),dim2s(i),scales(i),i=35,51)/
      *	  'plmaj   ','arcsec  ',	1, 1.d0,
      *	  'plmin   ','arcsec  ',	1, 1.d0,
      *	  'pltb    ','Kelvin  ',	1, 1.d0,
@@ -959,10 +960,10 @@ c
      *	  'systemp ','Kelvin  ',   NSPECT, 1.d0,
      *	  'temp    ','celsius ',    NTEMP, 1.d0,
      *	  'time    ','hours   ',	1, 0.d0,
-     *	  'tpower  ','volts   ',  NTPOWER, 1.d0,
+     *	  'tpower  ','volts   ',  NTPOWER, 1.d0/
+	data (names(i),units(i),dim2s(i),scales(i),i=52,68)/
      *	  'ut      ','hours   ',	1, rad2hr,
-     *	  'veldop  ','km/sec  ',	1, 1.d0/
-	data (names(i),units(i),dim2s(i),scales(i),i=54,nvars)/
+     *	  'veldop  ','km/sec  ',	1, 1.d0,
      *	  'vsource ','km/sec  ',	1, 1.d0,
      *	  'wfreq   ','GHz     ',	1, 1.d0,
      *	  'wind    ','km/h    ',        1, 1.d0,
@@ -970,11 +971,18 @@ c
      *	  'windmph ','mph     ',	1, 1.d0,
      *	  'wsystemp','Kelvin  ',    NWIDE, 1.d0,
      *	  'wwidth  ','GHz     ',	1, 1.d0,
+     *	  'xcaljy  ','Jansky  ',   NSPECT, 1.d0,
+     *	  'xgtp    ',' ',          NSPECT, 1.d0,
      *    'xsampler','percent ',   NSPECT, 1.d0,
+     *    'xsdo    ',' ',          NSPECT, 1.d0,
      *	  'xtsys   ','Kelvin  ',   NSPECT, 1.d0,
      *    'xyamp   ','Jy      ',   NSPECT, 1.d0,
      *	  'xyphase ','degrees ',   NSPECT, rad2deg,
+     *	  'ycaljy  ','Jansky  ',   NSPECT, 1.d0/
+	data (names(i),units(i),dim2s(i),scales(i),i=69,nvars)/
+     *	  'ygtp    ',' ',          NSPECT, 1.d0,
      *    'ysampler','percent ',   NSPECT, 1.d0,
+     *    'ysdo    ',' ',          NSPECT, 1.d0,
      *	  'ytsys   ','Kelvin  ',   NSPECT, 1.d0/
 c
 	ndim1 = 0
