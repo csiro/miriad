@@ -22,7 +22,7 @@ c              the maximum pixel value.
 c@ log
 c       Write results to this log file as well as screen.
 c
-c$Id: maxfit.for,v 1.5 2012/02/08 06:27:28 cal103 Exp $
+c$Id: maxfit.for,v 1.6 2012/02/15 03:40:46 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -35,21 +35,21 @@ c-----------------------------------------------------------------------
       parameter (MAXBOXES = 2048, MAXRUNS = 3*MAXDIM)
 
       logical   doabs
-      integer   blc(MAXNAX), boxes(MAXBOXES), i, il, ip, j, k, l, lun,
-     *          naxis, nruns, nsize(MAXNAX), ploc(MAXNAX),
+      integer   blc(MAXNAX), boxes(MAXBOXES), i, iax, il, ip, j, k, l,
+     *          lun, naxis, nruns, nsize(MAXNAX), ploc(MAXNAX),
      *          runs(3,MAXRUNS), strlen(MAXNAX), trc(MAXNAX)
       real      coeffs(6), data(MAXDIM), dd, dmax, fit(9), fmax
       double precision pixmax(MAXNAX)
       character ctype*9, infile*128, logf*132, strout(MAXNAX)*50,
      *          text*132, typesi(MAXNAX)*9, typeso(MAXNAX)*9, version*72
 
-      external  len1, versan
+      external  itoaf, len1, versan
       integer   len1
-      character versan*72
+      character itoaf*2, versan*72
 c-----------------------------------------------------------------------
       version = versan('maxfit',
-     *                 '$Revision: 1.5 $',
-     *                 '$Date: 2012/02/08 06:27:28 $')
+     *                 '$Revision: 1.6 $',
+     *                 '$Date: 2012/02/15 03:40:46 $')
 
 c     Get inputs.
       call keyini
@@ -111,10 +111,10 @@ c           Loop over all good pixels in row.
       enddo
 
 c     Make sure the peak estimate is not on the edge of the image.
-      do i = 1, min(2,naxis)
-        if (ploc(i).eq.1 .or. ploc(i).eq.nsize(1)) then
-          write(text, 10) i, ploc(i)
- 10       format('Axis ', i1, ' max. pixel at ', i4,
+      do iax = 1, min(2,naxis)
+        if (ploc(iax).eq.1 .or. ploc(iax).eq.nsize(1)) then
+          write(text, 10) iax, ploc(iax)
+ 10       format('Axis ',i1,' max. pixel at ',i4,
      *           ' is too close to the image edge')
           call bug('f', text)
         endif
@@ -127,9 +127,9 @@ c     dealt with in this step.
 
       do j = ploc(2)-1, ploc(2)+1
         call xyread(lun, j, data)
-        do i = ploc(1)-1, ploc(1)+1
+        do iax = ploc(1)-1, ploc(1)+1
           k = k + 1
-          fit(k) = data(i)
+          fit(k) = data(iax)
         enddo
       enddo
       dmax = fit(5)
@@ -149,8 +149,8 @@ c     Tell user of maxfit's endeavours.
 c     Peak pixel location and value.
       text = 'Peak pixel   : ('
       ip = len1(text) + 1
-      do i = 1, naxis
-        call strfi(ploc(i), '(i4)', text(ip:), il)
+      do iax = 1, naxis
+        call strfi(ploc(iax), '(i4)', text(ip:), il)
         ip = ip + il
         text(ip:ip) = ','
         ip = ip + 1
@@ -167,11 +167,11 @@ c     Fitted location and fitted value.
       if (logf.ne.' ') call logwrit(' ')
       text = 'Fitted pixel : ('
       ip = len1(text) + 1
-      do i = 1, naxis
-        if (i.le.2) then
-          call strfd(pixmax(i), '(f7.2)', text(ip:), il)
+      do iax = 1, naxis
+        if (iax.le.2) then
+          call strfd(pixmax(iax), '(f7.2)', text(ip:), il)
         else
-          call strfi(ploc(i), '(i4)', text(ip:), il)
+          call strfi(ploc(iax), '(i4)', text(ip:), il)
         endif
         ip = ip + il
         text(ip:ip) = ','
@@ -193,21 +193,21 @@ c     Find offsets of fitted pixel from reference pixel.
       if (logf.ne.' ') call logwrit('Offsets from reference pixel :')
 
 c     Convert coordinates.
-      do i = 1, naxis
-        typesi(i) = 'abspix'
+      do iax = 1, naxis
+        typesi(iax) = 'abspix'
       enddo
       call setoaco(lun, 'off', naxis, 0, typeso)
       call w2wfco(lun, naxis, typesi, ' ', pixmax, typeso, ' ',
      *             .false., strout, strlen)
 
 c     Tell user.
-      do i = 1, naxis
-        if (i.lt.3) then
-          write(text,20) i, strout(i)(1:strlen(i))
- 20       format('  Axis ', i1, ': Fitted pixel offset = ', a)
+      do iax = 1, naxis
+        if (iax.lt.3) then
+          write(text,20) iax, strout(iax)(1:strlen(iax))
+ 20       format('  Axis ',i1,': Fitted pixel offset = ',a)
         else
-          write(text, 30) i, strout(i)(1:strlen(i))
- 30       format('  Axis ', i1, ':        pixel offset = ', a)
+          write(text, 30) iax, strout(iax)(1:strlen(iax))
+ 30       format('  Axis ',i1,':        pixel offset = ',a)
         endif
         call output(text)
         if (logf.ne.' ') call logwrit(text)
@@ -225,17 +225,20 @@ c     Convert coordinates.
      *            .false., strout, strlen)
 
 c     Tell user.
-      do i = 1, naxis
-        call pader(typeso(i), strout(i), strlen(i))
+      do iax = 1, naxis
+        call pader(typeso(iax), strout(iax), strlen(iax))
 
-        call ctypeco(lun, i, ctype, il)
-        if (i.lt.3) then
-          write(text,40) i, ctype, strout(i)(1:strlen(i))
- 40       format('  Axis ', i1, ': Fitted ', a, ' = ', a)
+        call coGetA(lun, 'ctype'//itoaf(iax), ctype)
+        if (ctype.eq.' ') ctype = 'Axis '//itoaf(iax)
+
+        if (iax.lt.3) then
+          write(text,40) iax, ctype, strout(iax)(1:strlen(iax))
+ 40       format('  Axis ',i1,': Fitted ',a,' = ',a)
         else
-          write(text,50) i, ctype, strout(i)(1:strlen(i))
- 50       format('  Axis ', i1, ':        ', a, ' = ', a)
+          write(text,50) iax, ctype, strout(iax)(1:strlen(iax))
+ 50       format('  Axis ',i1,':        ',a,' = ',a)
         endif
+
         call output(text)
         if (logf.ne.' ') call logwrit(text)
       enddo
