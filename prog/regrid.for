@@ -228,7 +228,7 @@ c       Interpolation tolerance.  Tolerate an error of the specified
 c       amount in converting pixel locations in the input to the output.
 c       Must be less that 0.5.  The default is 0.05.
 c
-c$Id: regrid.for,v 1.12 2011/10/21 01:30:21 cal103 Exp $
+c$Id: regrid.for,v 1.13 2012/02/15 06:49:58 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -270,8 +270,8 @@ c     Projection codes.
      *  'pco', 'tsc', 'csc', 'qsc', 'hpx'/
 c-----------------------------------------------------------------------
       version = versan ('regrid',
-     *                  '$Revision: 1.12 $',
-     *                  '$Date: 2011/10/21 01:30:21 $')
+     *                  '$Revision: 1.13 $',
+     *                  '$Date: 2012/02/15 06:49:58 $')
 
 c     Get the input parameters.
       call keyini
@@ -503,6 +503,7 @@ c     Finished with the template image.
 c     The remaining coordinate parameters come from the input image.
       call coCpyD(lIn, cOut, 'obstime')
       call coCpyD(lIn, cOut, 'restfreq')
+      call coCpyA(lIn, cOut, 'specsys')
       call coCpyD(lIn, cOut, 'vobs')
 
 c     Set up output celestial coordinates.
@@ -975,8 +976,8 @@ c-----------------------------------------------------------------------
 
 c     Follows the list of keywords in HEADCP (headcopy.for) with the
 c     omission of coordinate keywords, cellscal, epoch, obstime,
-c     restfreq, and vobs, which are handled by coWrite, and the addition
-c     of rms (but not datamin or datamax).
+c     restfreq, specsys, and vobs, which are handled by coWrite, and the
+c     addition of rms (but not datamin or datamax).
       integer   NKEYS
       parameter (NKEYS=22)
       character keyw(NKEYS)*8
