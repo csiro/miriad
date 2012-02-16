@@ -195,7 +195,7 @@ c       (which is ~ 1/40 of the view surface height) for the plot axis
 c       labels and the velocity/channel labels.
 c       Defaults choose something sensible.
 c
-c$Id: cgcurs.for,v 1.9 2012/02/15 03:28:31 cal103 Exp $
+c$Id: cgcurs.for,v 1.10 2012/02/16 06:03:44 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -239,8 +239,8 @@ c-----------------------------------------------------------------------
       data gaps, doabut /.false., .false./
 c-----------------------------------------------------------------------
       version = versan ('cgcurs',
-     *                  '$Revision: 1.9 $',
-     *                  '$Date: 2012/02/15 03:28:31 $')
+     *                  '$Revision: 1.10 $',
+     *                  '$Date: 2012/02/16 06:03:44 $')
 
 c     Get user inputs.
       call inputs(MAXLEV, img, ibin, jbin, kbin, levtyp, slev, levs,
@@ -289,8 +289,7 @@ c       Memory for the contour overlay.
         call memalloc(ipim2,  win(1)*win(2), 'r')
       endif
 
-c Open log files
-c
+c     Open log files.
       if (cursor .and. dolog) then
         call txtopen(lcurs, 'cgcurs.curs', 'append', iostat)
         if (iostat.ne.0)
@@ -329,26 +328,21 @@ c       Compute contour levels.
      *                levs, srtlev)
         blank = -99999999.0
       endif
-c
-c Work out coordinate transformation matrix
-c
+
+c     Work out coordinate transformation matrix.
       call limitscg(blc, ibin, jbin, tr)
-c
-c Work out number of plots per page and number of plots
-c
+
+c     Work out number of plots per page and number of plots.
       call nxnycg(NXDEF, NYDEF, ngrps, nx, ny, nlast)
-c
-c Work out if wedge outside or inside subplots. Also work out
-c if plotting one wedge per subplot or one wedge for all
-c
+
+c     Work out if wedge outside or inside subplots. Also work out
+c     if plotting one wedge per subplot or one wedge for all.
       call wedgincg('NO', dofid, dowedge, nx, ny, 1, trfun, wedcod)
-c
-c Work out default character sizes for axis and channel labels
-c
+
+c     Work out default character sizes for axis and channel labels.
       call defchrcg(nx, ny, cs)
-c
-c Open plot device
-c
+
+c     Open plot device.
       ierr = pgbeg (0, pdev, 1, 1)
       if (ierr.ne.1) then
         call pgldev
@@ -366,64 +360,53 @@ c
 
       call pgpage
       call pgscf(2)
-c
-c Set line graphics colour indices
-c
+
+c     Set line graphics colour indices.
       call setlgc(labcol, poscol, statcol, regcol)
-c
-c Init OFM routines
-c
+
+c     Init OFM routines.
       if (dopixel) call ofmini
-c
-c Set axis labels
-c
+
+c     Set axis labels.
       call setlabcg(img1, labtyp, .false., xlabel, ylabel)
-c
-c Set label displacements from axes
-c
+
+c     Set label displacements from axes.
       call setdspcg(img1, labtyp, blc, trc, xdispl, ydispb)
-c
-c Work out view port encompassing all sub-plots. Also return
-c the viewport size of sub-plots.
-c
+
+c     Work out view port encompassing all sub-plots.  Also return
+c     the viewport size of sub-plots.
       call vpsizcg(.false., dofid, 0, ' ', ' ', 0, ' ', MAXLEV,
      *  nlevs, srtlev, levs, slev, nx, ny, cs, xdispl, ydispb,
      *  gaps, doabut, dotr, wedcod, WEDWID, TFDISP, labtyp, vxmin,
      *  vymin, vymax, vxgap, vygap, vxsize, vysize, tfvp, wdgvp)
-c
-c Adjust viewport increments and start locations if equal scales
-c requested or if scales provided by user
-c
+
+c     Adjust viewport increments and start locations if equal scales
+c     requested or if scales provided by user.
       call vpadjcg(img1, 'NO', eqscale, scale, vxmin, vymin, vymax,
      *  nx, ny, blc, trc, tfvp, wdgvp, vxsize, vysize)
-c
-c Set viewport location of first sub-plot
-c
+
+c     Set viewport location of first sub-plot.
       vx = vxmin
       vy = vymax - vysize
-c
-c Loop over number of subplots
-c
+
+c     Loop over number of subplots.
       do k = 1, ngrps
          if (mod(k,nx*ny).eq.1 .or. nx*ny.eq.1) ipage = ipage + 1
          jj = k - (ipage-1)*nx*ny
          krng(1) = grpbeg(k)
          krng(2) = ngrp(k)
-c
-c Redraw this sub-plot until user gets bored
-c
+
+c        Redraw this sub-plot until user gets bored.
          cmore = cursor
          smore = stats
          rmore = doreg
          first = .true.
-c
-c Set viewport and window for current sub-plot
-c
+
+c        Set viewport and window for current sub-plot.
          call pgsvp(vx, vx+vxsize, vy, vy+vysize)
          call pgswin(blc(1)-0.5, trc(1)+0.5, blc(2)-0.5, trc(2)+0.5)
-c
-c Read in image and save it if necessary
-c
+
+c        Read in image and save it if necessary.
          if (dotwo) then
            call readimcg(.true., blank, img2, ibin, jbin, krng,
      *       blc, trc, .true., memi(ipnim), memr(ipim2), doblnk, dmm)
@@ -435,27 +418,24 @@ c
          if (cursor .or. stats) then
            call copyimcg(win(1)*win(2), memr(ipim), memr(ipims))
          endif
-c
-c Apply transfer function
-c
+
+c        Apply transfer function.
          call pgsci(labcol)
          if (dopixel) then
            if (trfun.ne.'lin') call apptrfcg(pixr, trfun, groff,
      *        win(1)*win(2), memi(ipnim), memr(ipim), NBINS,
      *        his, cumhis)
-c
-c Draw wedge outside of redisplay loop if it will be outside subplots
-c and will not get erased
-c
+
+c          Draw wedge outside of redisplay loop if it will be outside
+c          subplots and will not get erased.
            if (wedcod.eq.1 .or. wedcod.eq.2) then
             call pgsch(cs(1))
             call wedgecg(wedcod, WEDWID, jj, trfun, groff, NBINS,
      *                   cumhis, wdgvp, pixr(1), pixr(2))
            endif
          endif
-c
-c Loop while user wants to redraw plot
-c
+
+c        Loop while user wants to redraw plot.
          display = .true.
          do while (display)
            call pgsci(labcol)
@@ -471,55 +451,45 @@ c            Draw contours.
              call conturcg(.false., blank, .false., win(1), win(2),
      *         doblnk, memr(ipim2), nlevs, levs, tr, 0.0, 0, 0)
            endif
-c
-c Label and draw axes
-c
+
+c          Label and draw axes.
            call pgsch(cs(1))
-c
-c Determine if the axes need ascii or numeric labelling
-c for this subplot
-c
+
+c          Determine if the axes need ascii or numeric labelling
+c          for this subplot.
            call dolabcg(gaps, dotr, nx, ny, ngrps, nlast, k,
      *                  labtyp, doaxlab, doaylab, donxlab, donylab)
-c
-c Write on ascii axis labels
-c
+
+c          Write on ascii axis labels.
            if (first) call aaxlabcg(doaxlab, doaylab, xdispl, ydispb,
      *                              xlabel, ylabel)
-c
-c Draw frame, write numeric labels, ticks and optional grid
-c
+
+c          Draw frame, write numeric labels, ticks and optional grid.
            call naxlabcg(img1, first, blc, trc, krng, labtyp,
      *                   donxlab, donylab, .false., grid)
-c
-c Draw wedge inside subplots and overwrite label ticks
-c
+
+c          Draw wedge inside subplots and overwrite label ticks.
            if (wedcod.eq.3) then
             call pgsch(cs(1))
             call wedgecg(wedcod, WEDWID, jj, trfun, groff, NBINS,
      *                   cumhis, wdgvp, pixr(1), pixr(2))
            endif
-c
-c Modify lookup table
-c
+
+c          Modify lookup table.
            if (dofid) call ofmmod(tfvp, win(1)*win(2), memr(ipim),
      *                            memi(ipnim), pixr2(1), pixr2(2))
-c
-c Write velocity or channel label
-c
+
+c          Write velocity or channel label.
            if (do3val .or. do3pix) then
              call pgsch(cs(2))
              call pgsci(1)
              call lab3cg(img1, doerase, do3val, do3pix, labtyp,
      *                   grpbeg(k), ngrp(k), val3form)
            endif
-c
-c Cursor options
-c
+
+c          Cursor options.
            if (cmore .and. intdev) then
-c
-c Read value and location under cursor
-c
+c            Read value and location under cursor.
              call pgsci(poscol)
              call curpos(img1, win(1), win(2), memr(ipims),
      *         memi(ipnim), blc, ibin, jbin, krng, dolog, lcurs,
@@ -529,9 +499,7 @@ c
 
            display = .false.
            if (smore .and. intdev) then
-c
-c Find image statistics in polygonal region defined by cursor
-c
+c            Find image statistics in polygonal region defined by cursor.
              call pgsci(statcol)
              call curstat(img1, blc, win(1), win(2), memr(ipims),
      *         memi(ipnim), ibin, jbin, krng, doreg, display,
@@ -539,32 +507,26 @@ c
            endif
 
            if (.not.display .and. rmore .and. intdev) then
-c
-c Define polygonal region with cursor
-c
+c            Define polygonal region with cursor.
              call pgsci(regcol)
              call cureg(img1, blc, ibin, jbin, krng, near, doabs,
      *         display, lreg)
            endif
-c
-c Erase subplot
-c
+
+c          Erase subplot.
            if (display) call erswincg(xmin, xmax, ymin, ymax)
            first = .false.
          enddo
-c
-c Increment sub-plot viewport locations and row counter
-c
+
+c        Increment sub-plot viewport locations and row counter.
          call subinccg(k, nx, ny, vxmin, vymax, vxsize, vysize,
      *                 vxgap, vygap, vx, vy)
-c
-c Page plot device
-c
+
+c        Page plot device.
          if (jj.eq.nx*ny .and. k.lt.ngrps) call pgpage
       enddo
-c
-c Close up
-c
+
+c     Close down.
       call memfree(ipim,  win(1)*win(2), 'r')
       call memfree(ipnim, win(1)*win(2), 'i')
       if (trfun.eq.'heq' .and. (cursor .or. stats)) then
@@ -701,16 +663,14 @@ c     offsets otherwise.
       win(3) = (real(2*krng(1)+krng(2))-1.0)/2.0
       call rdhdi(img, 'naxis', naxis, 0)
       naxis = min(3,naxis)
-c
-c Get vertices with cursor and join up the dots
-c
+
+c     Get vertices with cursor and join up the dots.
       more = .true.
       do while (more)
         nv = 0
         call pgupdt
-c
-c Get vertices with cursor; coordinates in absolute pixels
-c
+
+c       Get vertices with cursor; coordinates in absolute pixels.
         call pgolin(NVMAX, nv, vx, vy, SYMB)
 
         if (nv.gt.NVMAX) then
@@ -720,14 +680,10 @@ c
         else if (nv.le.1) then
           call bug('w', 'Not enough vertices for a region')
         else
-c
-c Convert to nearest binned pixel, and then convert to
-c unbinned full image pixels, if desired
-c
+c         Convert to nearest binned pixel, and then convert to
+c         unbinned full image pixels, if desired.
           if (near) then
-c
-c Rub out old points
-c
+c           Rub out old points.
             call pgqci(ci)
             call pgsci(0)
             call pgpt(nv, vx, vy, SYMB)
@@ -738,35 +694,30 @@ c
               vx(i) = pix(1)
               vy(i) = pix(2)
             enddo
-c
-c Draw new points
-c
+
+c           Draw new points.
             call pgsci(ci)
             call pgpt(nv, vx, vy, SYMB)
           endif
           call pgsfs(2)
           call pgslw(2)
-c
-c Join up the dots.
-c
+
+c         Join the dots.
           call pgpoly(nv, vx, vy)
           call pgupdt
           call pgslw(1)
-c
-c Make integer copy of unbinned full image pixel vertices
-c
+
+c         Make integer copy of unbinned full image pixel vertices.
           do i = 1, nv
             vert(1,i) = vx(i)
             vert(2,i) = vy(i)
           enddo
-c
-c Eliminate redundant vertices
-c
+
+c         Eliminate redundant vertices.
           call elimrvd(NVMAX, nv, vert)
-c
-c Convert unbinned full image pixels to true arcsec offsets if desired
-c
+
           if (.not.doabs) then
+c           Convert unbinned full image pixels to true arcsec offsets.
             do i = 1, nv
               win(1) = vert(1,i)
               win(2) = vert(2,i)
@@ -775,9 +726,8 @@ c
               vert(2,i) = wout(2)
             enddo
           endif
-c
-c Write out region of interest
-c
+
+c         Write out region of interest.
           line = ' '
           maxlen = len(line)
           if (doabs) then
@@ -802,9 +752,8 @@ c
             il = len1(str) + 1
             str(il:il) = ','
             if (i.eq.nv) str(il:il) = ')'
-c
-c Write into line if room
-c
+
+c           Write into line if room.
             if (ip+il.gt.maxlen) then
               call bug('w', 'Too many vertices for line length')
               good = .false.
@@ -814,9 +763,8 @@ c
             endif
             i = i + 1
           enddo
-c
-c Add image plane
-c
+
+c         Add image plane.
           call rdhdi(img, 'naxis3', naxis3, 0)
           if (naxis3.gt.1) then
             call strfi(krng(1), '(i6)', str, il)
@@ -832,14 +780,12 @@ c
               line(ip:) = '('//str(1:il)//')'
             endif
           endif
-c
-c Write into log file
-c
+
+c         Write into log file.
           if (good) call txtwrite(lreg, line, len1(line), iostat)
         endif
-c
-c Have another go
-c
+
+c       Have another go.
         call output(' ')
         call output('Draw another region with this display:   A')
         call output('Draw another region after redisplaying:  R')
@@ -890,12 +836,12 @@ c     near    FOrce cursor to nearest pixel
 c     plst,av STart plane and  number of planes averaged
 c
 c-----------------------------------------------------------------------
+      integer   bin(2), ib, iloc, iostat, ipl, jb, k, len1, naxis,
+     *          vl(3), wl(3), wwl(2)
+      real      rval, w(2)
       double precision pix(3), pixbs(2)
-      real w(2), ival
-      integer iostat, len1, iloc, ipl, wl(3), wwl(2), vl(3), k,
-     *  bin(2), ib, jb, naxis
-      character cch*1, line*132, plstr*20, vstr(3)*60, wstr(3)*60,
-     *  wwstr(3)*20, typei(3)*6, typeo(3)*6
+      character cch*1, line*132, plstr*20, typei(3)*6, typeo(3)*6,
+     *          vstr(3)*60, wstr(3)*60, wwstr(3)*20
 c-----------------------------------------------------------------------
       call output(' ')
       call output('****************************')
@@ -912,9 +858,8 @@ c-----------------------------------------------------------------------
       pix(3) = (real(2*krng(1)+krng(2))-1.0)/2.0
       call rdhdi(img, 'naxis', naxis, 0)
       naxis = min(3,naxis)
-c
-c Format channel range for CGDISP log files
-c
+
+c     Format channel range for CGDISP log files.
       call strfi(krng(1), '(i6)', plstr, ipl)
       if (krng(2).ne.1) then
         plstr(ipl+1:) = ' '
@@ -927,10 +872,9 @@ c
       cch = ' '
       iloc = 0
       do while (cch.ne.'X')
-c
-c Read cursor; location in absolute image pixels.  Find
-c location in binned subimage pixels
-c
+
+c       Read cursor; location in absolute image pixels.  Find
+c       location in binned subimage pixels
         call cgcur(w(1), w(2), cch)
         pix(1) = w(1)
         pix(2) = w(2)
@@ -946,18 +890,15 @@ c
         endif
         w(1) = pix(1)
         w(2) = pix(2)
-c
-c Keep an integer copy of binned subimage pixel
-c
+
+c       Keep an integer copy of binned subimage pixel.
         ib = nint(pixbs(1))
         jb = nint(pixbs(2))
 
         if (ib.lt.1 .or. ib.gt.nx .or. jb.lt.1 .or. jb.gt.ny) then
           call bug('w', 'Cursor off image')
         else
-c
-c Mark on plot if desired
-c
+c         Mark on plot if desired.
           if (cch.ne.'X') then
             iloc = iloc + 1
             if (mark) then
@@ -969,21 +910,18 @@ c
             call output(' ')
 
             if (dolog) then
-c
-c Write separator to log file
-c
+c             Write separator to log file.
               if (cgspec .or. cgdisp) then
                 call txtwrite(lcurs, '#', 1, iostat)
               else
                 call txtwrite(lcurs, ' ', 1, iostat)
               endif
             endif
-c
-c Convert absolute pixel to true world coordinate formatted strings
-c with and without units
-c
+
+c           Convert absolute pixel to true world coordinate formatted
+c           strings with and without units.
             call setoaco(img, 'abs', naxis, 0, typeo)
-            call w2wfco(img, naxis, typei, ' ', pix,  typeo, ' ',
+            call w2wfco(img, naxis, typei, ' ', pix, typeo, ' ',
      *                  .true., wstr, wl)
             call w2wfco(img, naxis, typei, ' ', pix, typeo, ' ',
      *                  .false., vstr, vl)
@@ -991,9 +929,8 @@ c
             line = 'World coordinates x,y         : '//
      *              vstr(1)(1:vl(1))//', '//vstr(2)(1:vl(2))
             call output(line)
-c
-c Write log files
-c
+
+c           Write log files.
             if (dolog) then
               if (.not.cgspec .and. .not.cgdisp)
      *          call txtwrite(lcurs, line, len1(line), iostat)
@@ -1019,21 +956,19 @@ c
                 call txtwrite(lcurs, line, len1(line), iostat)
               endif
             endif
-c
-c Convert absolute pixel to true offset world coordinate formatted
-c strings.
-c
+
+c           Convert absolute pixel to true offset world coordinate
+c           formatted strings.
             call setoaco(img, 'off', naxis, 0, typeo)
             call w2wfco(img, naxis, typei, ' ', pix,  typeo, ' ',
-     *                   .false., wstr, wl)
+     *                  .false., wstr, wl)
             line = 'Offset world coordinates x,y  : '//
      *              wstr(1)(1:wl(1))//', '//wstr(2)(1:wl(2))
             call output(line)
             if (dolog .and. (.not.cgspec .and. .not.cgdisp))
      *          call txtwrite(lcurs, line, len1(line), iostat)
-c
-c Absolute pixels.
-c
+
+c           Absolute pixels.
             typeo(1) = 'abspix'
             typeo(2) = 'abspix'
             typeo(3) = 'abspix'
@@ -1051,21 +986,20 @@ c
             call output(line)
             if (dolog .and. (.not.cgspec .and. .not.cgdisp))
      *          call txtwrite(lcurs, line, len1(line), iostat)
-c
-c Image intensity; allow for transfer function taking
-c
+
+c           Image intensity; allow for transfer function taking.
             call strfi(nint(pix(1)), '(i4)', wstr(1), wl(1))
             call strfi(nint(pix(2)), '(i4)', wstr(2), wl(2))
             if (nimage(ib,jb).ne.0) then
-              ival = image(ib,jb)
+              rval = image(ib,jb)
 
               if (naxis.gt.2) then
-                write(line, 40) ival, wstr(1)(1:wl(1)),
+                write(line, 40) rval, wstr(1)(1:wl(1)),
      *             wstr(2)(1:wl(2)), wstr(3)(1:wl(3))
 40              format('Image intensity               :', 1pe12.4,
      *                  ' at pixel (', a, ', ', a, ', ', a, ')')
               else
-                write(line, 45) ival, wstr(1)(1:wl(1)),
+                write(line, 45) rval, wstr(1)(1:wl(1)),
      *             wstr(2)(1:wl(2))
 45              format('Image intensity               :', 1pe12.4,
      *                  ' at pixel (', a, ', ', a, ')')
@@ -1133,6 +1067,7 @@ c-----------------------------------------------------------------------
       integer    MAXRUNS, NVMAX, SYMB
       parameter (MAXRUNS = 50, NVMAX = 100, SYMB = 17)
 
+      logical good, more, perbeam
       integer vert(2,NVMAX), runs(MAXRUNS), nruns, nv, i, j, k, iostat,
      *  npix, iymin, iymax, kd, t, len1, ci, bin(2), naxis, wl(3)
       double precision cdelt1, cdelt2, imin, jmin, imax, jmax,
@@ -1141,7 +1076,6 @@ c-----------------------------------------------------------------------
      *  dmin, dmax, bmin, bmaj, barea, ival
       character line*80, ans*1, bunit*16, typei(3)*6, typeo(3)*6,
      *  wstr(3)*132, bunit2*16, tmp*16
-      logical good, more, perbeam
 c-----------------------------------------------------------------------
       call output(' ')
       call output('**************************')
@@ -1153,9 +1087,8 @@ c-----------------------------------------------------------------------
      *  ('Click middle button (enter D) to delete previous vertex')
       call output('Click right button  (enter X) to finish polygon')
       call output(' ')
-c
-c Get beam if present
-c
+
+c     Get beam if present.
       call rdhdi(img, 'naxis', naxis, 0)
       naxis = min(3,naxis)
       do i = 1, naxis
@@ -1171,35 +1104,27 @@ c
       barea = 1.1331 * bmaj * bmin / abs(cdelt1 * cdelt2)
       bin(1) = ibin
       bin(2) = jbin
-c
-c Open log file as required
-c
+
+c     Open log file as required.
       more = .true.
       do while (more)
-c
-c Get vertices with cursor; corrdinates in absolute pixels
-c
+c       Get vertices with cursor; corrdinates in absolute pixels.
         nv = 0
         call pgupdt
         call pgolin(NVMAX-1, nv, vx, vy, SYMB)
         call pgupdt
-c
-c Go on with enough vertices
-c
+
+c       Go on with enough vertices.
         if (nv.gt.1) then
-c
-c Convert to nearest pixel if desired
-c
+c         Convert to nearest pixel if desired.
+
           if (near) then
-c
-c Rub out old points
-c
+c           Rub out old points.
             call pgqci(ci)
             call pgsci(0)
             call pgpt(nv, vx, vy, SYMB)
-c
-c Find nearest unbinned pixel
-c
+
+c           Find nearest unbinned pixel.
             do i = 1, nv
               pix(1) = vx(i)
               pix(2) = vy(i)
@@ -1207,32 +1132,28 @@ c
               vx(i) = pix(1)
               vy(i) = pix(2)
             enddo
-c
-c Draw new points
-c
+
+c           Draw new points.
             call pgsci(ci)
             call pgpt(nv, vx, vy, SYMB)
           endif
-c
-c Join up the vertices of the polygon
-c
+
+c         Join up the vertices of the polygon.
           call pgsfs(2)
           call pgslw(2)
           call pgpoly(nv, vx, vy)
           call pgupdt
           call pgslw(1)
-c
-c Loop over vertices
-c
+
+c         Loop over vertices.
           i = 1
           iymin = 1000000
           iymax = 0
           good = .true.
 
           do while (i.le.nv .and. good)
-c
-c Convert unbinnned full image pixels to integer binned pixels
-c
+c           Convert unbinnned full image pixels to integer binned
+c           pixels.
             pix(1) = vx(i)
             call ppconcg(1, blc(1), ibin, pix)
             vert(1,i) = nint(pix(1))
@@ -1240,9 +1161,8 @@ c
             pix(2) = vy(i)
             call ppconcg(1, blc(2), jbin, pix(2))
             vert(2,i) = nint(pix(2))
-c
-c Update y pixel extrema
-c
+
+c           Update y pixel extrema.
             iymin = min(iymin,vert(2,i))
             iymax = max(iymax,vert(2,i))
 
@@ -1256,24 +1176,21 @@ c
 
             i = i + 1
           enddo
-c
-c Eliminate redundant vertices
-c
+
+c         Eliminate redundant vertices.
           if (good) then
             call elimrvi(NVMAX, nv, vert)
             nv = nv + 1
             vert(1,nv) = vert(1,1)
             vert(2,nv) = vert(2,1)
-c
-c  Check if polygon in clockwise order.
-c
+
+c           Check if polygon in clockwise order.
             t = 0
             do k = 1, nv-1
               t = t + vert(1,k)*vert(2,k+1) - vert(2,k)*vert(1,k+1)
             enddo
-c
-c  If it's clockwise, convert it to anti-clockwise.
-c
+
+c           If it's clockwise, convert it to anti-clockwise.
             if (t.lt.0) then
               do k = 2, nv/2
                 kd = nv - k + 1
@@ -1285,10 +1202,9 @@ c
                 vert(2,kd) = t
               enddo
             endif
-c
-c Find runs array and accumulate statistics for unblanked
-c pixels in each row
-c
+
+c           Find runs array and accumulate statistics for unblanked
+c           pixels in each row.
             sum = 0.0
             sumsq = 0.0
             dmin = 1e30
@@ -1302,19 +1218,15 @@ c
                 do k = 1, nruns, 2
                   do i = runs(k), runs(k+1)
                     if (nimage(i,j).ne.0) then
-c
-c Pixel unblanked, find value
-c
+c                     Pixel unblanked, find value.
                       ival = image(i,j)
-c
-c Accumulate
-c
+
+c                     Accumulate.
                       sum = sum + ival
                       sumsq = sumsq + ival**2
                       npix = npix + 1
-c
-c Note min and max
-c
+
+c                     Note min and max.
                       if (ival.lt.dmin) then
                         dmin = ival
                         imin = i
@@ -1331,9 +1243,8 @@ c
                 enddo
               endif
             enddo
-c
-c Work out results
-c
+
+c           Work out results.
             if (npix.gt.0) then
               mean = sum / real(npix)
               var = (sumsq/real(npix)) - mean*mean
@@ -1342,9 +1253,8 @@ c
               else
                 rms = 0.0
               endif
-c
-c Tell user
-c
+
+c             Tell user.
               call output(' ')
               if (dolog) call txtwrite(lstat, ' ', 1, iostat)
               call unitdec(bunit, tmp, bunit2, perbeam)
@@ -1374,10 +1284,9 @@ c
      *                ' from ', i8, ' valid pixels')
               call output(line)
               if (dolog) call txtwrite(lstat, line, len1(line), iostat)
-c
-c Give data min and max value locations in offset pixels and
-c in absolute world coordinates
-c
+
+c             Give data min and max value locations in offset pixels and
+c             in absolute world coordinates.
               call ppconcg(2, blc(1), ibin, imin)
               call ppconcg(2, blc(2), jbin, jmin)
               typeo(1) = 'abspix'
@@ -1386,7 +1295,7 @@ c
               pix(1) = imin
               pix(2) = jmin
               call w2wfco(img, naxis, typei, ' ', pix, typeo, ' ',
-     *                     .false., wstr, wl)
+     *                    .false., wstr, wl)
               line = 'Data minimum at '//
      *              wstr(1)(1:wl(1))//', '//wstr(2)(1:wl(2))
               call output(line)
@@ -1397,19 +1306,18 @@ c
               pix(1) = imax
               pix(2) = jmax
               call w2wfco(img, naxis, typei, ' ', pix, typeo, ' ',
-     *                     .false., wstr, wl)
+     *                    .false., wstr, wl)
               line = 'Data maximum at '//
      *              wstr(1)(1:wl(1))//', '//wstr(2)(1:wl(2))
               call output(line)
               if (dolog) call txtwrite(lstat, line, len1(line), iostat)
-c
-c Now give location in absolute world coordinate
-c
+
+c             Now give location in absolute world coordinate.
               call setoaco(img, 'abs', naxis, 0, typeo)
               pix(1) = imin
               pix(2) = jmin
               call w2wfco(img, naxis, typei, ' ', pix, typeo, ' ',
-     *                     .false., wstr, wl)
+     *                    .false., wstr, wl)
               line = 'Data minimum at '//
      *              wstr(1)(1:wl(1))//', '//wstr(2)(1:wl(2))
               call output(line)
@@ -1418,14 +1326,13 @@ c
               pix(1) = imax
               pix(2) = jmax
               call w2wfco(img, naxis, typei, ' ', pix, typeo, ' ',
-     *                     .false., wstr, wl)
+     *                    .false., wstr, wl)
               line = 'Data maximum at '//
      *              wstr(1)(1:wl(1))//', '//wstr(2)(1:wl(2))
               call output(line)
               if (dolog) call txtwrite(lstat, line, len1(line), iostat)
-c
-c Mark location of min and max on plot if desired
-c
+
+c             Mark location of min and max on plot if desired.
               if (mark) then
                 call pgpt(1, real(imin), real(jmin), 2)
                 call pgpt(1, real(imax), real(jmax), 2)
@@ -1440,9 +1347,8 @@ c
           call bug('w',
      *              'A polygon with only one vertex is not very useful')
         endif
-c
-c Have another go
-c
+
+c       Have another go.
         redisp = .false.
         smore = .false.
 
@@ -1575,10 +1481,8 @@ c-----------------------------------------------------------------------
       if (n.lt.3) then
         call bug('w', 'Degenerate polygon in ElimRVr')
       else
-c
-c  Check if the first pixel is colinear. This cannot deal with this, and
-c  craps out.
-c
+c       Check if the first pixel is colinear.  This cannot deal with
+c       this, and craps out.
         if ((v(2,2)-v(2,1))*(v(1,1)-v(1,n)).eq.
      *     (v(2,1)-v(2,n))*(v(1,2)-v(1,1))) then
           v(1,1) = v(1,n)
@@ -1621,14 +1525,13 @@ c-----------------------------------------------------------------------
          v(2,kd) = v(2,k)
        endif
       enddo
+
       n = kd
       if (n.lt.3) then
         call bug('w', 'Degenerate polygon in ElimRVi')
       else
-c
-c  Check if the first pixel is colinear. This cannot deal with this, and
-c  craps out.
-c
+c       Check if the first pixel is colinear.  This cannot deal with
+c       this, and craps out.
         if ((v(2,2)-v(2,1))*(v(1,1)-v(1,n)).eq.
      *     (v(2,1)-v(2,n))*(v(1,2)-v(1,1))) then
           v(1,1) = v(1,n)
@@ -1849,22 +1752,16 @@ c   pixbs    Nearest binned subimage pixel
 c-----------------------------------------------------------------------
       integer k
 c-----------------------------------------------------------------------
-c
-c Loop over axes
-c
+c     Loop over axes.
       do k = 1, 2
-c
-c Convert to binned subimage pixels.
-c
+c       Convert to binned subimage pixels.
         call ppconcg(1, blc(k), bin(k), pix(k))
-c
-c Take nearest subimage pixel and keep copy
-c
+
+c       Take nearest subimage pixel and keep copy.
         pix(k) = nint(pix(k))
         pixbs(k) = pix(k)
-c
-c Convert back to full image unbinned pixels
-c
+
+c       Convert back to full image unbinned pixels.
         call ppconcg(2, blc(k), bin(k), pix(k))
       enddo
 
@@ -1891,30 +1788,26 @@ c  Output
 c   wwstr   Array of formatted pixel increments
 c   wwl     Length of strings
 c-----------------------------------------------------------------------
-      double precision w1(2), w2(2), pix1(2), pix2(2), winc(2)
-      character*6 typei(2), typeo(2)
-      integer i
+      integer   i
+      double precision pix1(2), pix2(2), w1(2), w2(2), winc(2)
+      character typei(2)*6, typeo(2)*6
 c-----------------------------------------------------------------------
-c
-c Work out default offset units for axis
-c
+c     Work out default offset units for axis.
       call setoaco(img, 'off', 2, 0, typeo)
-c
-c Find increments
-c
+
+c     Find increments.
       do i = 1, 2
-       pix1(i) = 0d0
-       pix2(i) = 1d0
-       typei(i) = 'relpix'
+        pix1(i) = 0d0
+        pix2(i) = 1d0
+        typei(i) = 'relpix'
       enddo
 
       call w2wco(img, 2, typei, ' ', pix1, typeo, ' ', w1)
       call w2wco(img, 2, typei, ' ', pix2, typeo, ' ', w2)
       winc(1) = w2(1) - w1(1)
       winc(2) = w2(2) - w1(2)
-c
-c Format
-c
+
+c     Format.
       do i = 1, 2
         call strfd(2*bin(i)*abs(winc(i)), '(1pe13.6)',
      *             wwstr(i), wwl(i))
@@ -1946,23 +1839,19 @@ c-----------------------------------------------------------------------
       real dmax
       integer k, is, ie, js, je, im, jm, ii, jj
 c-----------------------------------------------------------------------
-c
-c Convert unbinned full image pixels to binned subimage pixels
-c
+c     Convert unbinned full image pixels to binned subimage pixels.
       do k = 1, 2
         pixbs(k) = pix(k)
         call ppconcg(1, blc(k), bin(k), pixbs(k))
       enddo
-c
-c Find pixel limits for search
-c
+
+c     Find pixel limits for search.
       is = max(1,nint(pixbs(1))-2)
       ie = min(nx,nint(pixbs(1))+2)
       js = max(1,nint(pixbs(2))-2)
       je = min(ny,nint(pixbs(2))+2)
-c
-c Find peak
-c
+
+c     Find peak.
       dmax = -1e30
       im = -1
       jm = -1
@@ -1975,16 +1864,14 @@ c
           endif
         enddo
       enddo
-c
-c If there is something unblanked return it, else stick with where
-c we started
-c
+
+c     If there is something unblanked return it, else stick with where
+c     we started.
       if (im.ne.-1 .and. jm.ne.-1) then
         pixbs(1) = im
         pixbs(2) = jm
-c
-c Convert back to full image unbinned pixels
-c
+
+c       Convert back to full image unbinned pixels.
         do k = 1, 2
           pix(k) = pixbs(k)
           call ppconcg(2, blc(k), bin(k), pix(k))
@@ -2032,53 +1919,50 @@ c  This is the same as BOXPOLYX in BOXES.FOR.  Itr is an internal
 c  subroutine in BOXES so I am not allowed to call it.
 c  Hence the RJS style.
 c-----------------------------------------------------------------------
-        integer k,kprev,l,t
-        logical more
+      integer k,kprev,l,t
+      logical more
 c-----------------------------------------------------------------------
-        ngoes = 0
-        kprev = nverts-1
-        do k = 1,nverts-1,1
-c
-c  Case of an intersection with a vertex.
-c
-          if (verts(2,k).eq.j0) then
-            t = (j0-verts(2,kprev))*(j0-verts(2,k+1))
+      ngoes = 0
+      kprev = nverts-1
+      do k = 1,nverts-1,1
+        if (verts(2,k).eq.j0) then
+c         Case of an intersection with a vertex.
+          t = (j0-verts(2,kprev))*(j0-verts(2,k+1))
+          if (t.gt.0) then
+            ngoes = ngoes + 2
+            goes(ngoes-1) = verts(1,k)
+            goes(ngoes)   = verts(1,k)
+          else if (t.lt.0) then
+            ngoes = ngoes + 1
+            goes(ngoes) = verts(1,k)
+          else
+            t =   verts(1,kprev)*(verts(2,k)    -verts(2,k+1)  )
+     *          + verts(1,k)    *(verts(2,k+1)  -verts(2,kprev))
+     *          + verts(1,k+1)  *(verts(2,kprev)-verts(2,k)    )
             if (t.gt.0) then
-              ngoes = ngoes + 2
-              goes(ngoes-1) = verts(1,k)
-              goes(ngoes)   = verts(1,k)
-            else if (t.lt.0) then
               ngoes = ngoes + 1
               goes(ngoes) = verts(1,k)
-            else
-              t =   verts(1,kprev)*(verts(2,k)    -verts(2,k+1)  )
-     *            + verts(1,k)    *(verts(2,k+1)  -verts(2,kprev))
-     *            + verts(1,k+1)  *(verts(2,kprev)-verts(2,k)    )
-              if (t.gt.0) then
-                ngoes = ngoes + 1
-                goes(ngoes) = verts(1,k)
-              endif
             endif
-c
-c  Case of an intersection with the line segment between vertices.
-c
-          else if ((j0-verts(2,k))*(verts(2,k+1)-j0).gt.0) then
-            ngoes = ngoes + 1
-            goes(ngoes) =  nint(verts(1,k+1) +
-     *          real((j0-verts(2,k+1)) * (verts(1,k)-verts(1,k+1)))
-     *                  / (verts(2,k)-verts(2,k+1)))
           endif
-          kprev = k
-        enddo
 
-        if (2*(ngoes/2).ne.ngoes)
-     *    call bug('f','Algorithmic failure in BoxRuns(polyx)')
-c
-c  The list of intersections are not in order.  The number of
-c  intersections is also likely to be small (probably only two!).  Sort
-c  the intersections, but use an insert-sort, because its probably
-c  ordered, and small.
-c
+        else if ((j0-verts(2,k))*(verts(2,k+1)-j0).gt.0) then
+c         Case of an intersection with the line segment between
+c         vertices.
+          ngoes = ngoes + 1
+          goes(ngoes) =  nint(verts(1,k+1) +
+     *        real((j0-verts(2,k+1)) * (verts(1,k)-verts(1,k+1)))
+     *                / (verts(2,k)-verts(2,k+1)))
+        endif
+        kprev = k
+      enddo
+
+      if (2*(ngoes/2).ne.ngoes)
+     *  call bug('f','Algorithmic failure in BoxRuns(polyx)')
+
+c       The list of intersections are not in order.  The number of
+c       intersections is also likely to be small (probably only two!).
+c       Sort the intersections, but use an insert-sort, because its
+c       probably ordered, and small.
         do k = 2, ngoes
           l = k
           t = goes(l)
@@ -2091,9 +1975,8 @@ c
           enddo
           goes(l) = t
         enddo
-c
-c  There are possibly redundancies in the list of runs. Eliminate these.
-c
+
+c       Eliminate possible redundancies in the list of runs.
         l = 3
         do k = 3,ngoes,2
           if (goes(k)-goes(l-1).le.1) then
@@ -2146,24 +2029,21 @@ c-----------------------------------------------------------------------
       call boxinput('region', in, boxes, maxbox)
       call boxset(boxes, naxis, size, 's')
       call keyfin
-c
-c Find hyper-rectangle surrounding region of interest
-c
+
+c     Find hyper-rectangle surrounding region of interest.
       call boxinfo(boxes, 3, blc, trc)
       do i = 1, min(3,naxis)
         blc(i) = max(1,blc(i))
         trc(i) = min(size(i),trc(i))
       enddo
-c
-c Adjust spatial window to fit an integral number of bins and
-c find size of binned window
-c
+
+c     Adjust spatial window to fit an integral number of bins and
+c     find size of binned window.
       call winfidcg(size(1), 1, ibin, blc(1), trc(1), win(1))
       call winfidcg(size(2), 2, jbin, blc(2), trc(2), win(2))
-c
-c Find list of start channels and number of channels for each group
-c of channels selected.
-c
+
+c     Find list of start channels and number of channels for each group
+c     of channels selected.
       call chnselcg(blc, trc, kbin, maxbox, boxes, ngrps, grpbeg, ngrp)
 
       end
@@ -2174,38 +2054,30 @@ c***********************************************************************
 
       integer labcol, poscol, statcol, regcol
 c-----------------------------------------------------------------------
-c     Set line graphics colours
+c  Set line graphics colours
 c
-c  OUtput
+c  Output
 c    colour indices to use
 c-----------------------------------------------------------------------
       integer bgcol
 c-----------------------------------------------------------------------
-c
-c See if black or white background
-c
+c     See if black or white background.
       call bgcolcg(bgcol)
-c
-c Labels first
-c
+
+c     Labels first.
       labcol = 7
       if (bgcol.eq.1) then
-c
-c White background
-c
+c       White background.
         labcol = 2
       else if (bgcol.eq.0) then
-c
-c Black background
-c
+c       Black background.
         labcol = 7
       else
         call bug('w', 'Non black/white background colour on device')
         labcol = 7
       endif
-c
-c Now cursor options
-c
+
+c     Now cursor options.
       poscol = 3
       statcol = labcol
       regcol = 8
