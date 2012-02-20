@@ -589,7 +589,7 @@ c       The OFFSET directive is not applied to ANY position fields in
 c       succeeding directives that have %OTYPEs that are "hms" or "dms".
 c       I am too lazy to code it.
 c
-c$Id: cgdisp.for,v 1.18 2012/02/16 06:42:40 cal103 Exp $
+c$Id: cgdisp.for,v 1.19 2012/02/20 07:33:53 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -660,8 +660,8 @@ c     Plotting parameters.
       data getvsc /.true./
 c-----------------------------------------------------------------------
       version = versan ('cgdisp',
-     *                  '$Revision: 1.18 $',
-     *                  '$Date: 2012/02/16 06:42:40 $')
+     *                  '$Revision: 1.19 $',
+     *                  '$Date: 2012/02/20 07:33:53 $')
 
 c     Get user inputs.
       call inputs(maxchan, MAXLEV, MAXCON, MAXTYP, ltypes, ncon, cin,
@@ -1238,10 +1238,11 @@ c    hs              PGPLOT hatching style
 c-----------------------------------------------------------------------
       include 'mirconst.h'
 
+      integer   i, lw
+      real      bbmaj, bbmin, bbpa, cp, pa, sp, xs(0:360), xx,
+     *          ys(0:360), yy
       double precision win(2), wout(2)
-      real xs(0:360), ys(0:360), pa, xx, yy, cp, sp, bbmin, bbmaj, bbpa
-      character*6 typei(2), typeo(2)
-      integer i,lw
+      character typei(2)*6, typeo(2)*6
 c-----------------------------------------------------------------------
       typei(1) = 'arcsec'
       typei(2) = 'arcsec'
@@ -1263,7 +1264,7 @@ c     Work out the beam polygon.
         win(1) = ( xx*cp + yy*sp)*DR2AS
         win(2) = (-xx*sp + yy*cp)*DR2AS
 
-        call w2wco(lun, 2, typei, ' ', win, typeo, ' ', wout)
+        call w2wco(lun, 2, typei, win, typeo, wout)
 
         xs(i) = wout(1) + xcen
         ys(i) = wout(2) + ycen
@@ -1325,13 +1326,13 @@ c    fill            If true fill in the beam patch, else just outline
 c-----------------------------------------------------------------------
       include 'mirconst.h'
 
+      logical   const
+      integer   i, j, sx, sy
       double precision win(2), wout(2)
-      real xmin, xmax, ymin, ymax, xoff, yoff, pa, xx, yy,
-     *  cp, sp, bbmin, bbmaj, bbpa, xlo, xhi, ylo, yhi, xwmax, ywmax,
-     *  bmino, bmajo, bpao
-      character*6 typei(3), typeo(3)
-      integer i, j, sx, sy
-      logical const
+      real      bbmaj, bbmin, bbpa, bmajo, bmino, bpao, cp, pa, sp, xhi,
+     *          xlo, xmax, xmin, xoff, xwmax, xx, yhi, ylo, ymax, ymin,
+     *          yoff, ywmax, yy
+      character typei(3)*6, typeo(3)*6
 c-----------------------------------------------------------------------
       typei(1) = 'arcsec'
       typei(2) = 'arcsec'
@@ -1382,7 +1383,7 @@ c           x,y of ellipse locus in offset arcsec.
             win(2) = (-xx*sp + yy*cp)*DR2AS
 
 c           Convert to absolute pixels.
-            call w2wco(luns(j), 2, typei, ' ', win, typeo, ' ', wout)
+            call w2wco(luns(j), 2, typei, win, typeo, wout)
 
             xmin = min(wout(1),dble(xmin))
             xmax = max(wout(1),dble(xmax))
@@ -3321,7 +3322,7 @@ c       Shape distorts with grid.  Convert centre of overlay into
 c       units given by X/YOTYPE.
         wIn(1) = oPix(1)
         wIn(2) = oPix(2)
-        call w2wcov(lun, naxis, abspix, ' ', wIn, pType, ' ', wCen, ok)
+        call w2wcov(lun, naxis, abspix, wIn, pType, wCen, ok)
         if (.not.ok) return
 
         dpx = 0d0
@@ -3330,10 +3331,10 @@ c       units given by X/YOTYPE.
 c       Shape computed at the centre of the field and translated.
         wIn(1) = 0d0
         wIn(2) = 0d0
-        call w2wcov(lun, naxis, relpix, ' ', wIn, pType, ' ', wCen, ok)
+        call w2wcov(lun, naxis, relpix, wIn, pType, wCen, ok)
         if (.not.ok) return
 
-        call w2wcov(lun, naxis, relpix, ' ', wIn, abspix, ' ', pix, ok)
+        call w2wcov(lun, naxis, relpix, wIn, abspix, pix, ok)
         if (.not.ok) return
         dpx = oPix(1) - pix(1)
         dpy = oPix(2) - pix(2)
@@ -3388,32 +3389,28 @@ c       Get optional parameters.
 
           wIn(1) = wCen(1) - width(1)
           wIn(2) = wCen(2)
-          call w2wcov(lun, naxis, pType, ' ', wIn, abspix, ' ', pix,
-     *      ok)
+          call w2wcov(lun, naxis, pType, wIn, abspix, pix, ok)
           if (.not.ok) return
           xypts(1,1) = pix(1) + dpx
           xypts(1,2) = pix(2) + dpy
 
           wIn(1) = wCen(1) + width(1)
           wIn(2) = wCen(2)
-          call w2wcov(lun, naxis, pType, ' ', wIn, abspix, ' ', pix,
-     *      ok)
+          call w2wcov(lun, naxis, pType, wIn, abspix, pix, ok)
           if (.not.ok) return
           xypts(2,1) = pix(1) + dpx
           xypts(2,2) = pix(2) + dpy
 
           wIn(1) = wCen(1)
           wIn(2) = wCen(2) - width(2)
-          call w2wcov(lun, naxis, pType, ' ', wIn, abspix, ' ', pix,
-     *      ok)
+          call w2wcov(lun, naxis, pType, wIn, abspix, pix, ok)
           if (.not.ok) return
           xypts(3,1) = pix(1) + dpx
           xypts(3,2) = pix(2) + dpy
 
           wIn(1) = wCen(1)
           wIn(2) = wCen(2) + width(2)
-          call w2wcov(lun, naxis, pType, ' ', wIn, abspix, ' ', pix,
-     *      ok)
+          call w2wcov(lun, naxis, pType, wIn, abspix, pix, ok)
           if (.not.ok) return
           xypts(4,1) = pix(1) + dpx
           xypts(4,2) = pix(2) + dpy
@@ -3421,32 +3418,28 @@ c       Get optional parameters.
           nVtx = 5
           wIn(1) = wCen(1) - width(1)
           wIn(2) = wCen(2) - width(2)
-          call w2wcov(lun, naxis, pType, ' ', wIn, abspix, ' ', pix,
-     *      ok)
+          call w2wcov(lun, naxis, pType, wIn, abspix, pix, ok)
           if (.not.ok) return
           xypts(1,1) = pix(1) + dpx
           xypts(1,2) = pix(2) + dpy
 
           wIn(1) = wCen(1) - width(1)
           wIn(2) = wCen(2) + width(2)
-          call w2wcov(lun, naxis, pType, ' ', wIn, abspix, ' ', pix,
-     *      ok)
+          call w2wcov(lun, naxis, pType, wIn, abspix, pix, ok)
           if (.not.ok) return
           xypts(2,1) = pix(1) + dpx
           xypts(2,2) = pix(2) + dpy
 
           wIn(1) = wCen(1) + width(1)
           wIn(2) = wCen(2) + width(2)
-          call w2wcov(lun, naxis, pType, ' ', wIn, abspix, ' ', pix,
-     *      ok)
+          call w2wcov(lun, naxis, pType, wIn, abspix, pix, ok)
           if (.not.ok) return
           xypts(3,1) = pix(1) + dpx
           xypts(3,2) = pix(2) + dpy
 
           wIn(1) = wCen(1) + width(1)
           wIn(2) = wCen(2) - width(2)
-          call w2wcov(lun, naxis, pType, ' ', wIn, abspix, ' ', pix,
-     *      ok)
+          call w2wcov(lun, naxis, pType, wIn, abspix, pix, ok)
           if (.not.ok) return
           xypts(4,1) = pix(1) + dpx
           xypts(4,2) = pix(2) + dpy
@@ -3486,8 +3479,7 @@ c       Do we have a longitude/latitude pair?
 
         if (ilng.ne.0) then
 c         Celestial axis pair.
-          call w2wcov (lun, naxis, pType, ' ', wCen, absdeg, ' ', wabs,
-     *      ok)
+          call w2wcov(lun, naxis, pType, wCen, absdeg, wabs, ok)
           if (.not.ok) return
 
           call sphpad(1, wabs(ilng), wabs(ilat), 0.1d0, pa, wIn(ilng),
@@ -3503,7 +3495,7 @@ c         Some other axis types.  rho is measured from the x-axis.
           wIn(2) = wCen(2) - 0.1d0*sinrho
         endif
 
-        call w2wcov(lun, naxis, pType, ' ', wIn, abspix, ' ', pix, ok)
+        call w2wcov(lun, naxis, pType, wIn, abspix, pix, ok)
         if (.not.ok) return
 
         dpx = pix(1) - oPix(1)
@@ -3578,8 +3570,7 @@ c         Celestial axis pair.
             rmin = rmin / 3600d0
           endif
 
-          call w2wcov (lun, naxis, pType, ' ', wCen, absdeg, ' ', wabs,
-     *      ok)
+          call w2wcov(lun, naxis, pType, wCen, absdeg, wabs, ok)
           if (.not.ok) return
 
           pType(1) = 'absdeg'
@@ -3595,8 +3586,7 @@ c         Celestial axis pair.
             call sphpad(1, wabs(ilng), wabs(ilat), r, phi, wIn(ilng),
      *        wIn(ilat))
 
-            call w2wcov(lun, naxis, pType, ' ', wIn, abspix, ' ', pix,
-     *        ok)
+            call w2wcov(lun, naxis, pType, wIn, abspix, pix, ok)
             if (.not.ok) return
             xypts(j,1) = pix(1) + dpx
             xypts(j,2) = pix(2) + dpy
@@ -3614,8 +3604,7 @@ c         Some other axis types.  rho is measured from the x-axis.
             wIn(1) = wCen(1) + x*cosrho + y*sinrho
             wIn(2) = wCen(2) - x*sinrho + y*cosrho
 
-            call w2wcov(lun, naxis, pType, ' ', wIn, abspix, ' ', pix,
-     *        ok)
+            call w2wcov(lun, naxis, pType, wIn, abspix, pix, ok)
             if (.not.ok) return
             xypts(j,1) = pix(1) + dpx
             xypts(j,2) = pix(2) + dpy
