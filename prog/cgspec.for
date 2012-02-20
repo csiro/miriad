@@ -337,7 +337,7 @@ c       XSIZ and YSIZ are the spatial half-sizes in ARCSEC over which
 c       each spectrum is spatially averaged.  These are optional and
 c       default to 0 (no binning, just a spectrum at each spatial pixel)
 c
-c$Id: cgspec.for,v 1.13 2012/02/15 03:35:38 cal103 Exp $
+c$Id: cgspec.for,v 1.14 2012/02/20 07:35:26 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -417,8 +417,8 @@ c-----------------------------------------------------------------------
       data axC /'xyzabcd'/
 c-----------------------------------------------------------------------
       version = versan ('cgspec',
-     *                  '$Revision: 1.13 $',
-     *                  '$Date: 2012/02/15 03:35:38 $')
+     *                  '$Revision: 1.14 $',
+     *                  '$Date: 2012/02/20 07:35:26 $')
 
 c     Get user inputs.
       call inputs(MAXLEV, MAXCON, MAXSPEC, MAXTYP, ltypes, ncon, nspec,
@@ -2071,9 +2071,9 @@ c    imin,max Min and max intensities from all spectrum images
 c-----------------------------------------------------------------------
       include 'maxnax.h'
 
-      integer size(MAXNAX), lh, i, iostat, len1, ilen, naxis, ispc
+      integer   i, ilen, iostat, ispc, len1, lh, naxis, size(MAXNAX)
+      real      limax, limin, lvmax, lvmin
       double precision v1, v2
-      real limin, limax, lvmin, lvmax
       character line*80
 c-----------------------------------------------------------------------
       call output('Begin file existence checks')
@@ -2131,9 +2131,8 @@ c       Find spectral axis.
           call bug('f', line)
         endif
 
-        call w2wsco(lh, ispc, 'abspix', ' ', 1d0, 'absnat', ' ', v1)
-        call w2wsco(lh, ispc, 'abspix', ' ', dble(size(ispc)),
-     *              'absnat', ' ', v2)
+        call w2wsco(lh, ispc, 'abspix', 1d0, 'absnat', v1)
+        call w2wsco(lh, ispc, 'abspix', dble(size(ispc)), 'absnat', v2)
 
         lvmin = min(v1,v2)
         lvmax = max(v1,v2)
@@ -2699,10 +2698,10 @@ c    allblnk All pixels in the spectrum average area are blank in the
 c            mask
 c    miss    This spectrum falls off the spatial image
 c-----------------------------------------------------------------------
-      integer i1, i2, j1, j2, i, j, bblc(2), ttrc(2)
-
       include 'mirconst.h'
-      double precision  win(2), wout(2), wblc(2), wtrc(2)
+
+      integer   bblc(2), i, i1, i2, j, j1, j2, ttrc(2)
+      double precision wblc(2), win(2), wout(2), wtrc(2)
       character typei(2)*6, typeo(2)*6
 c-----------------------------------------------------------------------
 c     Positions that are centred off the edge of the pixel map/contour
@@ -2721,18 +2720,18 @@ c     spectrum image, so this blanking check is approximate only.
         typeo(i) = 'arcsec'
         win(i) = pos(i)
       enddo
-      call w2wco(lh, 2, typei, ' ', win, typeo, ' ', wout)
+      call w2wco(lh, 2, typei, win, typeo, wout)
 
       do i = 1, 2
         typei(i) = 'arcsec'
         typeo(i) = 'abspix'
         win(i) = wout(i) - pos(i+2)
       enddo
-      call w2wco(lh, 2, typei, ' ', win, typeo, ' ', wblc)
+      call w2wco(lh, 2, typei, win, typeo, wblc)
       do i = 1, 2
         win(i) = wout(i) + pos(i+2)
       enddo
-      call w2wco(lh, 2, typei, ' ', win, typeo, ' ', wtrc)
+      call w2wco(lh, 2, typei, win, typeo, wtrc)
 
       i1 = wblc(1)
       j1 = wblc(2)
@@ -2922,7 +2921,7 @@ c     pixels to world.
         win(i)   = pos(i)
         typeo(i) = 'absnat'
       enddo
-      call w2wco(lh, 2, typei, ' ', win, typeo, ' ', wout)
+      call w2wco(lh, 2, typei, win, typeo, wout)
 
 c     Now work out the centre of the spectrum in spectrum image
 c     coordinates (linear for spectral, arcsec for spatial).
@@ -2940,7 +2939,7 @@ c     coordinates (linear for spectral, arcsec for spatial).
           j = j + 1
         endif
       enddo
-      call w2wco(ls, naxis, typei, ' ', win, typeo, ' ', wcen)
+      call w2wco(ls, naxis, typei, win, typeo, wcen)
 
 c     Now offset to find the BLC of the subcube.
       dv = abs(vrange(2) - vrange(1)) / 2.0
@@ -2955,7 +2954,7 @@ c     Now offset to find the BLC of the subcube.
         typeo(i) = 'abspix'
       enddo
 
-      call w2wco(ls, naxis, typei, ' ', win, typeo, ' ', wout)
+      call w2wco(ls, naxis, typei, win, typeo, wout)
       do i = 1, 3
         sblc(i) = nint(wout(i))
       enddo
@@ -2971,7 +2970,7 @@ c     Offset to find the TRC of the subcube.
         endif
         typeo(i) = 'abspix'
       enddo
-      call w2wco(ls, naxis, typei, ' ', win, typeo, ' ', wout)
+      call w2wco(ls, naxis, typei, win, typeo, wout)
       do i = 1, naxis
         strc(i) = nint(wout(i))
       enddo
