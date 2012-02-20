@@ -39,7 +39,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: cgpgsubs.for,v 1.10 2012/02/15 03:21:16 cal103 Exp $
+c $Id: cgpgsubs.for,v 1.11 2012/02/20 07:25:15 cal103 Exp $
 c***********************************************************************
 
 c* annboxCG -- Annotate plot with information from a box image
@@ -421,8 +421,7 @@ c     Format reference pixels of each axis.
       str1(ip:) = ' = '
 
       call setoaco(lh, 'abs', maxis, 0, typeo)
-      call w2wfco(lh, maxis, typei, ' ', win, typeo, ' ', .false.,
-     *             refstr, ir)
+      call w2wfco(lh, maxis, typei, win, typeo, .false., refstr, ir)
       call coFin(lh)
 
       do iax = 1, maxis
@@ -962,8 +961,8 @@ c  Scratch
 c    x,yline
 c          plot buffers
 c-----------------------------------------------------------------------
-      logical valid
-      integer i, naxis, npt
+      logical   ok
+      integer   i, naxis, npt
       double precision inc, wi(3), po(3)
       character typei(3)*6, typeo(3)*6
 c-----------------------------------------------------------------------
@@ -996,8 +995,8 @@ c
 
       npt = 0
       do i = 1, n
-        call w2wcov(lun, naxis, typei, ' ', wi, typeo, ' ', po, valid)
-        if (.not.valid) then
+        call w2wcov(lun, naxis, typei, wi, typeo, po, ok)
+        if (.not.ok) then
           if (npt.gt.1) call pgline(npt, xline, yline)
           npt = 0
         endif
@@ -1250,7 +1249,7 @@ c         to set label type for 3rd axis value.
 
 c       Compute the value of the third axis in the desired units and
 c       format it.
-        call w2wsco(lun, 3, 'abspix', ' ', pix, ltype, ' ', val3)
+        call w2wsco(lun, 3, 'abspix', pix, ltype, val3)
         call coFin(lun)
 
 c       Format value.
@@ -1340,13 +1339,13 @@ c    grid      Draw on grid instead of just ticks
 c-----------------------------------------------------------------------
       include 'mirconst.h'
 
+      logical   dotime(2), zero(2)
+      integer   i, j, ip, krng(2), naxis, nxsub, nysub
+      real      tick(2),  tickl(2), wpix(4)
       double precision wwi(3), wblc(3), wtrc(3), wbrc(3), wtlc(3),
      * tickd(2), xmin, xmax, ymin, ymax, zp, ticklp(2), dp, dw,
      * blcd(2), trcd(2), wrap
-      real tick(2),  tickl(2), wpix(4)
-      integer nxsub, nysub, i, j, krng(2), ip, naxis
       character xopt*20, yopt*20, typei(3)*6, typeo(3)*6
-      logical zero(2), dotime(2)
 c-----------------------------------------------------------------------
 c
 c Save pixel window
@@ -1394,17 +1393,17 @@ c
       wwi(1) = blcd(1)
       wwi(2) = blcd(2)
       wwi(3) = zp
-      call w2wco(lun, naxis, typei, ' ', wwi, typeo, ' ', wblc)
+      call w2wco(lun, naxis, typei, wwi, typeo, wblc)
       wwi(1) = trcd(1)
       wwi(2) = trcd(2)
-      call w2wco(lun, naxis, typei, ' ', wwi, typeo, ' ', wtrc)
+      call w2wco(lun, naxis, typei, wwi, typeo, wtrc)
 
       wwi(1) = trcd(1)
       wwi(2) = blcd(2)
-      call w2wco(lun, naxis, typei, ' ', wwi, typeo, ' ', wbrc)
+      call w2wco(lun, naxis, typei, wwi, typeo, wbrc)
       wwi(1) = blcd(1)
       wwi(2) = trcd(2)
-      call w2wco(lun, naxis, typei, ' ', wwi, typeo, ' ', wtlc)
+      call w2wco(lun, naxis, typei, wwi, typeo, wtlc)
 c
 c Add 2pi to one end if we cross RA=0.  RA axis units are intrinsically
 c radians but we are concerned here if we are labelling them as hms or
@@ -1679,15 +1678,16 @@ c             for X label
 c-----------------------------------------------------------------------
       include 'mirconst.h'
 
-      double precision ymin, ymax, win(2), wout1(2), wout2(2)
-      real dely, xch, ych, xl, yl
-      character str*60, stypeo*8, typei(2)*6
-      integer len1, il
-      logical zero(2)
+      logical   zero(2)
+      integer   il
+      real      dely, xl, xch, yl, ych
+      double precision win(2), wout1(2), wout2(2), ymin, ymax
+      character str*60, typei(2)*6
+
+      external  len1
+      integer   len1
 c-----------------------------------------------------------------------
-c
-c X axis
-c
+c     X axis.
       if (labtyp(1).eq.'hms') then
         ydispb = 3.6
       else if (labtyp(1).eq.'dms') then
@@ -1697,31 +1697,26 @@ c
       else
         ydispb = 3.1
       endif
-c
-c Y axis.  Have a stab at a correct axis label displacement when using
-c HMS or DMS; it depends upon the number of decimal places in the
-c labels and knowing about the PGTBOX algorithm.  Very modular.
-c Allow for space between numeric label and axis, and between
-c numeric label and axis label.
-c
+
+c     Y axis.  Have a stab at a correct axis label displacement when
+c     using HMS or DMS; it depends upon the number of decimal places in
+c     the labels and knowing about the PGTBOX algorithm.  Very modular.
+c     Allow for space between numeric label and axis, and between
+c     numeric label and axis label.
       if (labtyp(2).eq.'hms' .or. labtyp(2).eq.'dms') then
-c
-c Work out y min and max in radians
-c
-        stypeo = ' '
+c       Work out y min and max in radians.
         typei(1) = 'abspix'
         typei(2) = 'abspix'
 
         call coInit(lh)
         win(1) = blc(1) - 0.5
         win(2) = blc(2) - 0.5
-        call w2wco(lh, 2, typei, ' ', win, labtyp, stypeo, wout1)
+        call w2wco(lh, 2, typei, win, labtyp, wout1)
         win(2) = trc(2) + 0.5
-        call w2wco(lh, 2, typei, ' ', win, labtyp, stypeo, wout2)
+        call w2wco(lh, 2, typei, win, labtyp, wout2)
         call coFin(lh)
-c
-c Allow for RA axis zero crossing
-c
+
+c       Allow for RA axis zero crossing.
         call razerocg(lh, blc, trc, zero)
         if (zero(2)) then
           if (wout1(2).lt.wout2(2)) then
@@ -1730,9 +1725,8 @@ c
             wout2(2) = wout2(2) + DTWOPI
           endif
         endif
-c
-c Convert to seconds of time/arc
-c
+
+c       Convert to seconds of time/arc.
         ymin = wout1(2)
         ymax = wout2(2)
         call angconcg(1, labtyp(2), ymin)
@@ -1760,10 +1754,9 @@ c
           str(il+1:il+1) = '-'
           il = len1(str)
         endif
-c
-c Find the length of this string in mm and convert to
-c displacement to left of axis for vertical axis label
-c
+
+c       Find the length of this string in mm and convert to
+c       displacement to left of axis for vertical axis label.
         call pglen(2, str(1:il), xl, yl)
         call pgqcs(2, xch, ych)
         xdispl = xl / xch
