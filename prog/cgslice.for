@@ -300,7 +300,7 @@ c       already exists, new models are appended to it.  The columns of
 c       the file are the slice number, the model peak, centre, FWHM,
 c       baseline offset and baseline slope.
 c
-c$Id: cgslice.for,v 1.12 2012/02/15 03:34:38 cal103 Exp $
+c$Id: cgslice.for,v 1.13 2012/02/20 07:34:49 cal103 Exp $
 c--
 c  Notes:
 c   SLice abcissa values are still in linear world coordiantes as
@@ -368,8 +368,8 @@ c-----------------------------------------------------------------------
       data xdispls, ydispbs /3.5, 3.5/
 c-----------------------------------------------------------------------
       version = versan ('cgslice',
-     *                  '$Revision: 1.12 $',
-     *                  '$Date: 2012/02/15 03:34:38 $')
+     *                  '$Revision: 1.13 $',
+     *                  '$Date: 2012/02/20 07:34:49 $')
 
 c     Get user inputs.
       call inputs(NLTYPE, ltype, MAXLEV, in, ibin, jbin, kbin,
@@ -3045,13 +3045,14 @@ c  Save the slice locations in a text file.  Coordinates
 c  are converted to true world coordinates
 c
 c  Input
-c    slpos    SLice ends in absolute full image unbinned pixels
+c    slpos    Slice ends in absolute full image unbinned pixels
 c-----------------------------------------------------------------------
-      integer i, ilen, iostat, naxis
+      integer   i, ilen, iostat, naxis
       double precision win(3), wout(3), blcx, blcy, trcx, trcy
       character aline*130, typei(3)*6, typeo(3)*6
 
-      integer len1
+      external  len1
+      integer   len1
 c-----------------------------------------------------------------------
       typei(1) = 'abspix'
       typei(2) = 'abspix'
@@ -3069,12 +3070,13 @@ c-----------------------------------------------------------------------
       naxis = min(3,naxis)
 
       do i = 1, nslice
-c       Convert absolute pixels to output offset units (arcsec or pixels).
+c       Convert absolute pixels to output offset units (arcsec or
+c       pixels).
         win(1) = slpos(1,i)
         call ppconcg(2, blc(1), ibin, win(1))
         win(2) = slpos(2,i)
         call ppconcg(2, blc(2), jbin, win(2))
-        call w2wco(lin, naxis, typei, ' ', win, typeo, ' ', wout)
+        call w2wco(lin, naxis, typei, win, typeo, wout)
         blcx = wout(1)
         blcy = wout(2)
 
@@ -3082,13 +3084,13 @@ c       Convert absolute pixels to output offset units (arcsec or pixels).
         call ppconcg(2, blc(1), ibin, win(1))
         win(2) = slpos(5,i)
         call ppconcg(2, blc(2), jbin, win(2))
-        call w2wco(lin, naxis, typei, ' ', win, typeo, ' ', wout)
+        call w2wco(lin, naxis, typei, win, typeo, wout)
         trcx = wout(1)
         trcy = wout(2)
 
-        write(aline,100) typeo(1), typeo(2), blcx, blcy, trcx, trcy,
+        write(aline,10) typeo(1), typeo(2), blcx, blcy, trcx, trcy,
      *    krng(1), krng(1)+krng(2)-1
-100     format(a6, 1x, a6, 1x, 4(1pe13.6, 1x), i4, 1x, i4)
+ 10     format(a6,1x,a6,1x,4(1pe13.6,1x),i4,1x,i4)
         ilen = len1(aline)
         call txtwrite(lpos, aline, ilen, iostat)
         if (iostat.ne.0) call bug('f',
