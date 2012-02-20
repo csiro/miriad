@@ -60,7 +60,7 @@ c                      RA = (p1 - CRPIX1)*CDELT1/cos(CRVAL2).
 c                   This interpretation differs significantly from the
 c                   FITS standard when lat0 (i.e. CRVAL2) is non-zero.
 c
-c$Id: impos.for,v 1.9 2012/02/15 06:08:06 cal103 Exp $
+c$Id: impos.for,v 1.10 2012/02/20 07:37:27 cal103 Exp $
 c--
 c
 c  History:
@@ -78,13 +78,13 @@ c-----------------------------------------------------------------------
      *          nelem, nsize(MAXNAX), nstypes, ntypei, strlen1(MAXNAX),
      *          strlen2(MAXNAX), strlen3(MAXNAX)
       real      data(MAXDIM), value
-      double precision rfreq, pixel(MAXNAX), win(MAXNAX)
-      character bunit*9, ctypes(MAXNAX)*8, file*80, labtyp(MAXTYP)*6,
-     *          sctypes(3)*8, str1*132, strout1(MAXNAX)*80,
-     *          strout2(MAXNAX)*80, strout3(MAXNAX)*80, stypei*9,
-     *          stypes(8)*12, text*132, typei(MAXNAX)*6,
-     *          typeo(MAXNAX)*6, typeo2(MAXNAX)*6, typeo3(MAXNAX)*6,
-     *          version*80
+      double precision rfreq, pixcrd(MAXNAX), win(MAXNAX)
+      character algo*3, bunit*9, ctypes(MAXNAX)*8, file*80,
+     *          labtyp(MAXTYP)*6, sctypes(3)*8, str1*132,
+     *          strout1(MAXNAX)*80, strout2(MAXNAX)*80,
+     *          strout3(MAXNAX)*80, stypei*9, stypes(8)*12, text*132,
+     *          typei(MAXNAX)*6, typeo(MAXNAX)*6, typeo2(MAXNAX)*6,
+     *          typeo3(MAXNAX)*6, typep(MAXNAX)*6, version*80
 
       external  hdprsnt, itoaf, versan
       logical   hdprsnt
@@ -102,8 +102,8 @@ c-----------------------------------------------------------------------
       data nelem, ipix /0, MAXNAX*1/
 c-----------------------------------------------------------------------
       version = versan ('impos',
-     *                  '$Revision: 1.9 $',
-     *                  '$Date: 2012/02/15 06:08:06 $')
+     *                  '$Revision: 1.10 $',
+     *                  '$Date: 2012/02/20 07:37:27 $')
 
 c     Get inputs.
       call keyini
@@ -199,21 +199,31 @@ c     convention order in which spectral axes will be listed.
         endif
       endif
 
+c     Convert what we have been given into pixel coordinates.
+      call coSpcSet(lIn, stypei, ' ', ispc, algo)
+      do ielem = 1, nelem
+        typep(ielem) = 'abspix'
+      enddo
+      call w2wco(lIn, nelem, typei, win, typep, pixcrd)
+      
+
 c     -----------------
 c     World coordinate.
 c     -----------------
       call setoaco(lIn, 'abs', nelem, 0, typeo)
 
 c     Convert & format and inform.
-      call w2wfco(lIn, nelem, typei, stypei, win, typeo, stypes(1),
-     *            .false., strout1, strlen1)
+      call w2wfco(lIn, nelem, typep, pixcrd, typeo, .false., strout1,
+     *            strlen1)
 
       if (dospec) then
         call repspc(ispc, stypes, nelem, typeo, typeo2, typeo3)
-        call w2wfco(lIn, nelem, typei, stypei, win, typeo2, stypes(2),
-     *              .false., strout2, strlen2)
-        call w2wfco(lIn, nelem, typei, stypei, win, typeo3, stypes(3),
-     *              .false., strout3, strlen3)
+        call coSpcSet(lIn, stypes(2), ' ', ispc, algo)
+        call w2wfco(lIn, nelem, typep, pixcrd, typeo2, .false., strout2,
+     *              strlen2)
+        call coSpcSet(lIn, stypes(3), ' ', ispc, algo)
+        call w2wfco(lIn, nelem, typep, pixcrd, typeo3, .false., strout3,
+     *              strlen3)
       endif
 
       call output('World coordinates')
@@ -222,20 +232,20 @@ c     Convert & format and inform.
         call pader(typeo(ielem), strout1(ielem), il)
 
         if (ielem.eq.ispc) then
-          write(text, 100) ielem, sctypes(1), strout1(ielem)(:il)
+          write(text, 10) ielem, sctypes(1), strout1(ielem)(:il)
           call output(text)
 
           if (dospec) then
             il = strlen2(ielem)
-            write(text, 100) ielem, sctypes(2), strout2(ielem)(:il)
+            write(text, 10) ielem, sctypes(2), strout2(ielem)(:il)
             call output(text)
             il = strlen3(ielem)
-            write(text, 100) ielem, sctypes(3), strout3(ielem)(:il)
+            write(text, 10) ielem, sctypes(3), strout3(ielem)(:il)
             call output(text)
           endif
         else
-          write(text, 100) ielem, ctypes(ielem), strout1(ielem)(:il)
-100       format('Axis',i2,': ',a8,' = ',a)
+          write(text, 10) ielem, ctypes(ielem), strout1(ielem)(:il)
+ 10       format('Axis',i2,': ',a8,' = ',a)
           call output(text)
         endif
       enddo
@@ -243,36 +253,39 @@ c     Convert & format and inform.
 c     ------------------------
 c     Offset world coordinate.
 c     ------------------------
+      call coSpcSet(lIn, stypes(1), ' ', ispc, algo)
       call setoaco(lIn, 'off', nelem, 0, typeo)
-      call w2wfco(lIn, nelem, typei, stypei, win, typeo, stypes(1),
-     *            .false., strout1, strlen1)
+      call w2wfco(lIn, nelem, typep, pixcrd, typeo, .false., strout1,
+     *            strlen1)
 
       if (dospec) then
         call repspc(ispc, stypes, nelem, typeo, typeo2, typeo3)
-        call w2wfco(lIn, nelem, typei, stypei, win, typeo2, stypes(2),
-     *              .false., strout2, strlen2)
-        call w2wfco(lIn, nelem, typei, stypei, win, typeo3, stypes(3),
-     *              .false., strout3, strlen3)
+        call coSpcSet(lIn, stypes(2), ' ', ispc, algo)
+        call w2wfco(lIn, nelem, typep, pixcrd, typeo2, .false., strout2,
+     *              strlen2)
+        call coSpcSet(lIn, stypes(3), ' ', ispc, algo)
+        call w2wfco(lIn, nelem, typep, pixcrd, typeo3, .false., strout3,
+     *              strlen3)
       endif
 
       call output(' ')
       call output('Offset world coordinates')
       do ielem = 1, nelem
+        il = strlen1(ielem)
         if (ielem.eq.ispc) then
-          il = strlen1(ielem)
-          write(text, 100) ielem, sctypes(1), strout1(ielem)(:il)
+          write(text, 10) ielem, sctypes(1), strout1(ielem)(:il)
           call output(text)
 
           if (dospec) then
             il = strlen2(ielem)
-            write(text, 100) ielem, sctypes(2), strout2(ielem)(:il)
+            write(text, 10) ielem, sctypes(2), strout2(ielem)(:il)
             call output(text)
             il = strlen3(ielem)
-            write(text, 100) ielem, sctypes(3), strout3(ielem)(:il)
+            write(text, 10) ielem, sctypes(3), strout3(ielem)(:il)
             call output(text)
           endif
         else
-          write(text, 100) ielem, ctypes(ielem), strout1(ielem)(:il)
+          write(text, 10) ielem, ctypes(ielem), strout1(ielem)(:il)
           call output(text)
         endif
       enddo
@@ -281,18 +294,14 @@ c     ----------------
 c     Absolute pixels.
 c     ----------------
       if (doim) then
-        do ielem = 1, nelem
-          typeo(ielem) = 'abspix'
-        enddo
-        call w2wco(lIn, nelem, typei, stypei, win, typeo, ' ', pixel)
-        call w2wfco(lIn, nelem, typei, stypei, win, typeo, stypes(1),
-     *              .true., strout1, strlen1)
+        call w2wfco(lIn, nelem, typep, pixcrd, typep, .true., strout1,
+     *              strlen1)
 
         call output(' ')
         call output('Absolute pixels')
         do ielem = 1, nelem
           il = strlen1(ielem)
-          write(text, 100) ielem, ctypes(ielem), strout1(ielem)(:il)
+          write(text, 10) ielem, ctypes(ielem), strout1(ielem)(:il)
           call output(text)
         enddo
       endif
@@ -304,14 +313,14 @@ c     --------------
         do ielem = 1, nelem
           typeo(ielem) = 'relpix'
         enddo
-        call w2wfco(lIn, nelem, typei, stypei, win, typeo, stypes(1),
-     *              .true., strout1, strlen1)
+        call w2wfco(lIn, nelem, typep, pixcrd, typeo, .true., strout1,
+     *              strlen1)
 
         call output(' ')
         call output('Offset pixels')
         do ielem = 1, nelem
           il = strlen1(ielem)
-          write(text, 100) ielem, ctypes(ielem), strout1(ielem)(:il)
+          write(text, 10) ielem, ctypes(ielem), strout1(ielem)(:il)
           call output(text)
         enddo
       endif
@@ -321,7 +330,7 @@ c     Find nearest pixel to coordinate location.
         if (nsize(1).le.MAXDIM) then
           off = .false.
           do ielem = 1, nelem
-            ipix(ielem) = nint(pixel(ielem))
+            ipix(ielem) = nint(pixcrd(ielem))
             if (ipix(ielem).lt.1 .or.
      *          ipix(ielem).gt.nsize(ielem)) off = .true.
           enddo
@@ -334,14 +343,14 @@ c         Find value if on image.
 
             call output(' ')
             call mitoaf(ipix, nelem, str1, il)
-            write(text, 200) str1(1:il), value, bunit
-200         format('Nearest pixel = ',a,'.  Value = ',1pe13.6,' ',a)
+            write(text, 20) str1(1:il), value, bunit
+ 20         format('Nearest pixel = ',a,'.  Value = ',1pe13.6,' ',a)
             call output(text)
           endif
         else
           call output(' ')
-          write(text, 210) nsize(1), MAXDIM
-210       format('Image size',i6,' exceeds MAXDIM,',i6,
+          write(text, 30) nsize(1), MAXDIM
+ 30       format('Image size',i6,' exceeds MAXDIM,',i6,
      *           ', skipping pixel value.')
           call output(text)
         endif
