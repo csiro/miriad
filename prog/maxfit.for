@@ -22,7 +22,7 @@ c              the maximum pixel value.
 c@ log
 c       Write results to this log file as well as screen.
 c
-c$Id: maxfit.for,v 1.6 2012/02/15 03:40:46 cal103 Exp $
+c$Id: maxfit.for,v 1.7 2012/02/20 07:36:21 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -48,8 +48,8 @@ c-----------------------------------------------------------------------
       character itoaf*2, versan*72
 c-----------------------------------------------------------------------
       version = versan('maxfit',
-     *                 '$Revision: 1.6 $',
-     *                 '$Date: 2012/02/15 03:40:46 $')
+     *                 '$Revision: 1.7 $',
+     *                 '$Date: 2012/02/20 07:36:21 $')
 
 c     Get inputs.
       call keyini
@@ -197,8 +197,8 @@ c     Convert coordinates.
         typesi(iax) = 'abspix'
       enddo
       call setoaco(lun, 'off', naxis, 0, typeso)
-      call w2wfco(lun, naxis, typesi, ' ', pixmax, typeso, ' ',
-     *             .false., strout, strlen)
+      call w2wfco(lun, naxis, typesi, pixmax, typeso, .false., strout,
+     *            strlen)
 
 c     Tell user.
       do iax = 1, naxis
@@ -221,8 +221,8 @@ c     Compute world coordinate.
 
 c     Convert coordinates.
       call setoaco(lun, 'abs', naxis, 0, typeso)
-      call w2wfco(lun, naxis, typesi, ' ', pixmax, typeso, ' ',
-     *            .false., strout, strlen)
+      call w2wfco(lun, naxis, typesi, pixmax, typeso, .false., strout,
+     *            strlen)
 
 c     Tell user.
       do iax = 1, naxis

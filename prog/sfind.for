@@ -470,7 +470,7 @@ c       3) Check the rms of the background. If this is high then firstly
 c          the fit may not be good (as per 1), and secondly the source
 c          is in a noisy area and should be treated with caution anyway.
 c
-c$Id: sfind.for,v 1.15 2012/02/08 06:52:43 cal103 Exp $
+c$Id: sfind.for,v 1.16 2012/02/20 07:37:00 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -529,8 +529,8 @@ c-----------------------------------------------------------------------
       character versan*80, version*80
 c-----------------------------------------------------------------------
       version = versan('sfind',
-     *                 '$Revision: 1.15 $',
-     *                 '$Date: 2012/02/08 06:52:43 $')
+     *                 '$Revision: 1.16 $',
+     *                 '$Date: 2012/02/20 07:37:00 $')
 c
 c Get user inputs
 c
@@ -820,6 +820,18 @@ c
       subroutine search_old (lin, nx, ny, image, nimage, blc, ibin,
      *   jbin, krng, llog, mark, cut, rmsbox, xrms, nofit, asciiart,
      *   auto, negative, pbcor, in, psfsize)
+
+      integer   lin, nx, ny
+      real      image(nx,ny)
+      integer   blc(2), ibin, jbin, krng(2), llog
+      logical   mark
+      real      cut
+      integer   rmsbox
+      real      xrms
+      logical   nofit, asciiart, auto, negative, pbcor
+      integer   nimage(nx,ny)
+      character in*(*)
+      logical   psfsize
 c-----------------------------------------------------------------------
 c  This is the master subroutine for the detecting of sources and the
 c  interactive decision bit.  It detects bright pixels, determines
@@ -859,21 +871,14 @@ c     pbcor     true to correct fluxes by primary beam attenuation
 c     in        image name
 c
 c-----------------------------------------------------------------------
-c
-      integer nx, ny, blc(2), llog, ibin, jbin, lin, nimage(nx,ny),
-     *  krng(2)
-      real image(nx,ny)
-      logical mark, nofit, asciiart, auto, negative, pbcor, psfsize
-      character in*(*)
-cc
       double precision wa(2), posns(2)
-      real ww(2), wsave(2), cut, xrms, peak, base0
+      real ww(2), wsave(2), peak, base0
       real xpos, ypos, pval, sigma, rms, mult
       real pkfl, intfl, amaj, amin, posa
       real xposerr, yposerr, pkflerr
       real bvol, bmaj, bmin, bpa, bvolp, bmajp, bminp, bpap
       real gain, mvlrms
-      integer iostat, len1, iloc, bin(2), l, m, radeclen(2), rmsbox
+      integer iostat, len1, iloc, bin(2), l, m, radeclen(2)
       integer sources, ysources, k, i, j
       character cch*1, line*160, typei(2)*6, radec(2)*80, typeo(2)*6
       character line1*80, line2*160, line3*160, line4*160
@@ -1045,8 +1050,8 @@ c
 c
 c Convert location (peak or fitted) to formatted coordinate string
 c
-        call w2wfco(lin, 2, typei, ' ', posns,  typeo, ' ',
-     *              .true., radec, radeclen)
+        call w2wfco(lin, 2, typei, posns,  typeo, .true., radec,
+     *              radeclen)
 c
 c if 'pbcor' selected, correct the flux densities (peak and integrated)
 c by the gain (primary beam attenuation) at the position of the source
@@ -4023,13 +4028,12 @@ c    nfdrpix    number of pixels detected by FDR
 c    meanimg    image of background mean values
 c    sgimg      image of background sigma values
 c-----------------------------------------------------------------------
-c
       include 'maxdim.h'
       include 'maxnax.h'
       include 'mem.h'
       include 'mirconst.h'
       include 'sfind.h'
-c
+
       integer ii,jj,kk,nx,ny,l,m
       integer lin,llog,lann,krng(2),len1
       real image(nx,ny),pcut
@@ -4037,13 +4041,13 @@ c
       integer boxsize, dumcount
       integer nimage(nx,ny),bin(2),blc(2),imin,jmin,imax,jmax
       logical fitok,negative,pbcor,kvannot,fdrpeak,allpix,psfsize
-c
+
       integer iii,jjj,pp,off,sources,radeclen(2),iostat, usedpixels
       real image2(nx,ny),meanimg(nx,ny),sgimg(nx,ny)
       real xpos, xposerr, ypos, yposerr, pkfl, pkflerr, intfl, amaj
       real amin, posa, rms, gain, mvlrms
       double precision posns(2),wa(2)
-c
+
       logical blnkannulus,atpeak
       character line*160,typei(2)*6,typeo(2)*6,radec(2)*80
 c-----------------------------------------------------------------------
@@ -4159,8 +4163,8 @@ c
           typei(2) = 'dms'
           typeo(1) = 'hms'
           typeo(2) = 'dms'
-          call w2wfco(lin, 2, typei, ' ', posns,  typeo, ' ',
-     *                .true., radec, radeclen)
+          call w2wfco(lin, 2, typei, posns,  typeo, .true., radec,
+     *                radeclen)
 c
 c if 'pbcor' selected, correct the flux densities (peak and integrated)
 c by the gain (primary beam attenuation) at the position of the source
