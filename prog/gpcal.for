@@ -151,7 +151,7 @@ c                    solution for the observation already exists.  This
 c                    preliminary solution must be formed from a
 c                    calibrator with known Stokes-V.
 c
-c$Id: gpcal.for,v 1.12 2011/10/17 03:17:15 wie017 Exp $
+c$Id: gpcal.for,v 1.13 2012/02/20 04:05:37 wie017 Exp $
 c--
 c  History:
 c    rjs,nebk 1may91 Original version.
@@ -297,8 +297,8 @@ c-----------------------------------------------------------------------
       external  itoaf, keyprsnt, uvDatOpn
 c-----------------------------------------------------------------------
       version = versan('gpcal',
-     *                 '$Revision: 1.12 $',
-     *                 '$Date: 2011/10/17 03:17:15 $')
+     *                 '$Revision: 1.13 $',
+     *                 '$Date: 2012/02/20 04:05:37 $')
 c
 c  Get inputs.
 c
@@ -433,7 +433,8 @@ c  Initialize the flux array.
 c
       if (defflux) then
         do fbin = 0, n
-          call getiquv(source,freq(fbin),oldflx,flux(1,fbin),defflux)
+          if (freq(fbin).gt.0.d0) 
+     *      call getiquv(source,freq(fbin),oldflx,flux(1,fbin),defflux)
         enddo
       endif
 
@@ -454,6 +455,7 @@ c
 c  Iterate until we have converged.
 c
       do fbin = 0, n
+        if (freq(fbin).gt.0.d0) then
         if (fbin.gt.0) then
           write(line,'(a,i2)') 'Solution for freq bin ',fbin
           call output(line)
@@ -597,6 +599,7 @@ c
               call writeo(tIn,line)
             endif
           enddo
+        endif
         endif
       enddo
 c
@@ -963,8 +966,12 @@ c
             if (Indx(k).gt.0) then
               Gx(Indx(k)) = Gains(X,k,soln,fbin)
               Gy(Indx(k)) = Gains(Y,k,soln,fbin) * conjg(xyp(k,fbin))
-              Axy(Indx(k)) = abs(Gains(Y,k,soln,fbin) /
-     *                           Gains(X,k,soln,fbin))
+              if (Gains(X,k,soln,fbin).eq.0) then
+                Axy(Indx(k)) = 1
+              else
+                Axy(Indx(k)) = abs(Gains(Y,k,soln,fbin) /
+     *                             Gains(X,k,soln,fbin))
+              endif
             endif
           enddo
 
@@ -1004,12 +1011,16 @@ c
 c
 c  Refer the solution to the reference antenna.
 c
-            TempX = conjg(Gains(X,refant,soln,fbin)) /
-     *              abs(Gains(X,refant,soln,fbin))
+            TempX = conjg(Gains(X,refant,soln,fbin))
+            if (Gains(X,refant,soln,fbin).ne.0)
+     *        TempX = TempX / abs(Gains(X,refant,soln,fbin))
             TempY = TempX
-            if (.not.xyref) TempY = conjg(Gains(Y,refant,soln,fbin)) /
+            if (.not.xyref) then
+              if (Gains(Y,refant,soln,fbin).ne.0)
+     *          TempY = conjg(Gains(Y,refant,soln,fbin)) /
      *                              abs(Gains(Y,refant,soln,fbin)) *
      *                              xyp(refant,fbin)
+            endif
             do k = 1, nants
               Gains(X,k,soln,fbin) = TempX * Gains(X,k,soln,fbin)
               Gains(Y,k,soln,fbin) = TempY * Gains(Y,k,soln,fbin)
@@ -3316,7 +3327,9 @@ c
      *                conjg(G(b1(i))*G(b2(i))) *
      *      (SumMM(XX,i) + (axy(b1(i))*axy(b2(i)))**2 * SumMM(YY,i))
       enddo
-      alpha = sqrt(abs(SumRVM / SumRMM))
+      alpha = 1
+      if (abs(SumRMM).gt.0)
+     * alpha = sqrt(abs(SumRVM / SumRMM))
 
       do i = 1, nants
         G(i) = alpha * G(i)
@@ -3566,20 +3579,22 @@ c
 c
 c  Evaluate X gain
 c
-          t = 1.0/(Sum2(X,i) + Axy(i)*Axy(i)*Sum2(Y,i))
-          Temp = t * (Sum(X,i) + Axy(i)*Sum(Y,i)) - G(i)
-          G(i) = G(i) + Factor * Temp
-          ChangeX = ChangeX + real(Temp)**2 + aimag(Temp)**2
-          SumWtX = SumWtX + real(G(i))**2  + aimag(G(i))**2
+          if (Sum2(X,i).gt.0.and.Sum2(Y,i).gt.0) then
+            t = 1.0/(Sum2(X,i) + Axy(i)*Axy(i)*Sum2(Y,i))
+            Temp = t * (Sum(X,i) + Axy(i)*Sum(Y,i)) - G(i)
+            G(i) = G(i) + Factor * Temp
+            ChangeX = ChangeX + real(Temp)**2 + aimag(Temp)**2
+            SumWtX = SumWtX + real(G(i))**2  + aimag(G(i))**2
 c
 c  Evaluate Y amplitude.
 c
-          t = real(conjg(G(i))*Sum(Y,i)) /
+            t = real(conjg(G(i))*Sum(Y,i)) /
      *        ((real(G(i))**2+aimag(G(i))**2) * Sum2(Y,i)) - Axy(i)
-          t = max(t,-0.5*Axy(i))
-          Axy(i) = Axy(i) + Factor * t
-          ChangeY = ChangeY + t*t
-          SumWtY = SumWtY + Axy(i)*Axy(i)
+            t = max(t,-0.5*Axy(i))
+            Axy(i) = Axy(i) + Factor * t
+            ChangeY = ChangeY + t*t
+            SumWtY = SumWtY + Axy(i)*Axy(i)
+          endif
 c
 c  Zero the accumulators.
 c
@@ -3588,9 +3603,12 @@ c
           Sum2(X,i) = 0
           Sum2(Y,i) = 0
         enddo
-        t = max(ChangeX/SumWtX,ChangeY/SumWtY)
+        t=0
+        if (SumWtX.gt.0.and.SumWtY.gt.0)
+     *    t = max(ChangeX/SumWtX,ChangeY/SumWtY)
         epsi = max(epsi,t)
         convrg = t.lt.tol
+          
       enddo
 
       end
