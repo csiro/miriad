@@ -27,17 +27,17 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: cosubs.for,v 1.13 2012/02/15 06:12:59 cal103 Exp $
+c $Id: cosubs.for,v 1.14 2012/02/20 07:30:59 cal103 Exp $
 c***********************************************************************
 
 c* chkaxCO -- Check axis type and coordinate type for compatibility
 c& nebk
 c: coordinates
 c+
-      subroutine chkaxco (lun, ltype, iax, stype)
+      subroutine chkaxco (lun, ltype, iax)
 
       integer iax, lun
-      character*(*) ltype, stype
+      character*(*) ltype
 c  ---------------------------------------------------------------------
 c  Check axis type and desired coordinate type are compatible.
 c
@@ -53,11 +53,6 @@ c               'absnat', 'relnat',
 c               'abspix', 'relpix',
 c               'none'
 c    iax    Axis of interest.
-c    stype  Spectral axis descriptor.  If blank, then CTYPE must match
-c           the TYPE (i.e. VELO/abskms is good, FELO/absghz is bad).
-c           Otherwise, it is assumed that the spectral axis is going to
-c           be switched to the desired STYPE so that any spectral CTYPE
-c           is compatible with any spectral TYPE.
 c-----------------------------------------------------------------------
       logical   bads, good
       character algo*3, axtype*9, ctype*32, str*132, units*6, wtype*9
@@ -65,16 +60,6 @@ c-----------------------------------------------------------------------
       external  itoaf
       character itoaf*2
 c-----------------------------------------------------------------------
-c>>>
-      if (stype.ne.' ' .and.
-     *    stype.ne.'FELO' .and. stype.ne.'VELO' .and.
-     *    stype.ne.'FREQ' .and. stype.ne.'frequency' .and.
-     *    stype.ne.'VOPT' .and. stype.ne.'optical' .and.
-     *    stype.ne.'VRAD' .and. stype.ne.'radio') then
-        str = 'CHKAXCO: invalid spectral axis type ('//stype//') given'
-        call bug('f', str)
-      endif
-
 c     Parse the axis type.
       call coAxType(lun, iax, axtype, wtype, algo, units)
 
@@ -94,11 +79,11 @@ c     Compare generic axis type with label type.
 
       else if (ltype.eq.'abskms' .or. ltype.eq.'relkms') then
         good = axtype.eq.'spectral'
-        if (units.ne.'km/s' .and. stype.eq.' ') bads = .true.
+        if (units.ne.'km/s') bads = .true.
 
       else if (ltype.eq.'absghz' .or. ltype.eq.'relghz') then
         good = axtype.eq.'spectral'
-        if (units.ne.'GHz' .and. stype.eq.' ') bads = .true.
+        if (units.ne.'GHz') bads = .true.
 
       else
         good = .true.
@@ -114,12 +99,7 @@ c     Bug out if no good.
         call output(str)
 
         if (bads) then
-          if (stype.eq.' ') then
-            call output('Spectral axis convention unspecified')
-          else
-            str = 'Spectral axis convention = '//stype
-            call output(str)
-          endif
+          call output('Spectral axis convention unspecified')
         endif
 
         call bug('f', 'CHKAXCO: These are inconsistent')
@@ -289,11 +269,11 @@ c* w2wCO -- Convert an array of coordinates
 c& mrc
 c: coordinates
 c+
-      subroutine w2wco (lun, n, typei, stypei, win, typeo, stypeo, wout)
+      subroutine w2wco (lun, n, typei, win, typeo, wout)
 
       integer lun, n
       double precision win(n), wout(n)
-      character*(*) typei(n), typeo(n), stypei, stypeo
+      character*(*) typei(n), typeo(n)
 c  ---------------------------------------------------------------------
 c  For backwards-compatibility, call w2wcov to convert an NEBK-style
 c  coordinate vector and go belly-up if the coordinate conversion fails.
@@ -301,7 +281,7 @@ c  Refer to the prologue of w2wcov for usage information.
 c-----------------------------------------------------------------------
       logical valid
 c-----------------------------------------------------------------------
-      call w2wcov(lun, n, typei, stypei, win, typeo, stypeo, wout,
+      call w2wcov(lun, n, typei, win, typeo, wout,
      *  valid)
       if (.not.valid) then
         call bug('f', 'Invalid coordinate conversion in coCvtv')
@@ -315,29 +295,22 @@ c* w2wCOv -- Convert an array of coordinates, with validation.
 c& nebk
 c: coordinates
 c+
-      subroutine w2wcov (lun, naxis, typei, stypei, win, typeo, stypeo,
-     *  wout, valid)
+      subroutine w2wcov (lun, NAXIS, typei, win, typeo, wout, valid)
 
       logical   valid
-      integer   lun, naxis
-      double precision win(naxis), wout(naxis)
-      character typei(naxis)*(*), stypei*(*), typeo(naxis)*(*),
-     *          stypeo*(*)
+      integer   lun, NAXIS
+      double precision win(NAXIS), wout(NAXIS)
+      character typei(NAXIS)*(*), typeo(NAXIS)*(*)
 c  ---------------------------------------------------------------------
 c  Convert an NEBK-style coordinate vector using the CO routines.
 c
 c  Input
 c    lun     Handle of open file
-c    naxis   Number of axes to convert
+c    NAXIS   Number of axes to convert
 c    typei   Array of input coordinate types, Should be from list
 c               'hms',    'dms',    'arcsec', 'arcmin', 'absdeg',
 c               'reldeg', 'abspix', 'relpix', 'absghz', 'relghz',
 c               'abskms', 'relkms', 'absnat', 'relnat', 'none'
-c    stypei  'FREQ', 'VOPT', 'VRAD'.  Indicates the convention for a
-c            spectral coordinate, regardless of what the header
-c            initially defines.  If ' ', the header prevails, though a
-c            mismatch between typei and ctype (e.g. absghz/VOPT-F2W)
-c            would then result in a fatal error.
 c    win     Array of coordinates to be converted
 c               'hms', 'dms' in radians
 c               '*  deg'     in degrees
@@ -349,46 +322,29 @@ c               '*  kms'     in km/s
 c               '*  nat'     in natural axis coordinates
 c    typeo   Array of output coordinate types from above list
 c            requested.
-c    stypeo  'FREQ', 'VOPT', 'VRAD'.  If a spectral coordinate is given,
-c            this indicates what convention it is to be converted to,
-c            regardless of what the header defined.  If ' ', then it
-c            is assumed that the coordinate is in the convention
-c            indicated by stypei.  If stypei is also blank, then ctype
-c            of the header and typeo must match or a fatal error will
-c            result.
 c  Output
 c    wout    Array of converted output coordinates in same units
-c            as described above
+c            as described above.
+c    valid   True if the coordinate conversion succeeded.
 c-----------------------------------------------------------------------
       include 'maxnax.h'
 
-      logical   done, nix(maxnax), none
-      integer   iax, ifrq, ip
-      double precision wloc(maxnax), xdum
-      character algo*3, cti*21, cto*21, lstype*9, str*2
+      logical   copy(MAXNAX), done, gotone
+      integer   iax, ip
+      double precision wloc(MAXNAX), xdum
+      character cti*21, cto*21, str*2
 c-----------------------------------------------------------------------
 c     There may be nothing to do for some axes.  Make sure we just copy
-c     the coordinates in these cases, rather than converting to and from
-c     pixels, thus losing precision.  Save initial spectral convention
-c     while we are it.
-      none = .true.
-      do iax = 1, naxis
-        nix(iax) = .false.
-
-        if (typei(iax).eq.typeo(iax)) then
-          if (lstype.ne.' ') then
-            if (stypei.eq.stypeo .or. typei(iax)(4:6).eq.'pix')
-     *        nix(iax) = .true.
-          else
-            nix(iax) = .true.
-          endif
-        endif
-
-        if (.not.nix(iax)) none = .false.
+c     the coordinates in these cases rather than converting to and from
+c     pixels, thus losing precision.
+      gotone = .false.
+      do iax = 1, NAXIS
+        copy(iax) = typei(iax).eq.typeo(iax)
+        if (.not.copy(iax)) gotone = .true.
       enddo
 
-      if (none) then
-        do iax = 1, naxis
+      if (.not.gotone) then
+        do iax = 1, NAXIS
           wout(iax) = win(iax)
         enddo
 
@@ -396,16 +352,13 @@ c     while we are it.
         return
       endif
 
-c     Switch spectral axis to type of input coordinate.
-      if (stypei.ne.' ') call coSpcSet(lun, stypei, ' ', ifrq, algo)
-
 c     Convert coordinates to absolute pixels first; loop over axes.
       cti = '  '
       cto = '  '
       ip = 1
-      do iax = 1, naxis
+      do iax = 1, NAXIS
 c       Check input coordinate type consistent with actual axis type.
-        call chkaxco(lun, typei(iax), iax, stypei)
+        call chkaxco(lun, typei(iax), iax)
 
 c       Set coordinate transformation strings and convert angular
 c       units if required to radians.
@@ -426,7 +379,7 @@ c     Check that we need to go on.  The user may want absolute pixels
 c     whereupon we are done.  Note that absolute pixels are the same
 c     regardless of the spectral convention!
       done = .true.
-      do iax = 1, naxis
+      do iax = 1, NAXIS
         if (typeo(iax).ne.'abspix') done = .false.
       enddo
 
@@ -434,16 +387,13 @@ c     regardless of the spectral convention!
 c       Having turned the coordinate into a pixel, we can now convert
 c       it to the desired output coordinate type.
 
-c       Switch spectral axis to type of output coordinate.
-        if (stypeo.ne.' ') call coSpcSet(lun, stypeo, ' ', ifrq, algo)
-
 c       Loop over axes
         cti = '  '
         cto = '  '
         ip = 1
-        do iax = 1, naxis
+        do iax = 1, NAXIS
 c         Check output coordinate type consistent with actual axis type.
-          call chkaxco(lun, typeo(iax), iax, stypeo)
+          call chkaxco(lun, typeo(iax), iax)
 
 c         Set coordinate transformation strings.
           wloc(iax) = wout(iax)
@@ -458,7 +408,7 @@ c       Now convert the absolute pixels to the desired coordinate type.
 
 c       Convert coordinates given in radians to the appropriate output
 c       units (degrees, arcsec etc).
-        do iax = 1, naxis
+        do iax = 1, NAXIS
           call sctoco(typeo(iax), wout(iax))
         enddo
       endif
@@ -466,11 +416,8 @@ c       units (degrees, arcsec etc).
 c     Overwrite any coordinates that did not really need converting by
 c     the input values to improve precision.
       do iax = 1, naxis
-        if (nix(iax)) wout(iax) = win(iax)
+        if (copy(iax)) wout(iax) = win(iax)
       enddo
-
-c     Restore spectral axis type from header.
-      call coSpcSet(lun, ' ', ' ', ifrq, algo)
 
       end
 
@@ -480,29 +427,27 @@ c* w2wfCO -- Convert an array of coordinates and format
 c& nebk
 c: coordinates
 c+
-      subroutine w2wfco (lun, n, typei, stypei, win, typeo, stypeo,
-     *                   nounit, strout, strlen)
+      subroutine w2wfco (lun, NAXIS, typei, win, typeo, nounit, strout,
+     *  strlen)
 
-      integer lun, n, strlen(n)
-      double precision win(n)
-      character*(*) typei(n), typeo(n), strout(n), stypei, stypeo
-      logical nounit
+      integer   lun, NAXIS
+      character typei(NAXIS)*(*)
+      double precision win(NAXIS)
+      character typeo(NAXIS)*(*)
+      logical   nounit
+      character strout(NAXIS)*(*)
+      integer   strlen(NAXIS)
 c  ---------------------------------------------------------------------
 c  Convert an array of NEBK style coordinates with the COCVT routines
 c  and format the results with units into strings
 c
 c  Input
-c    lun     Handle of open file
-c    n       Number of axes
+c    lun     Handle of open file.
+c    NAXIS   Number of axes.
 c    typei   Array of input coordinate types, Should be from list
 c               'hms',    'dms',    'arcsec', 'arcmin', 'absdeg',
 c               'reldeg', 'abspix', 'relpix', 'absghz', 'relghz',
 c               'abskms', 'relkms', 'absnat', 'relnat', 'none'
-c    stypei  'FREQ', 'VOPT', 'VRAD'.  Indicates the convention for a
-c            spectral coordinate, regardless of what the header
-c            initially defines.  If ' ', the header prevails, though a
-c            mismatch between typei and ctype (e.g. absghz/VOPT-F2W)
-c            would then result in a fatal error.
 c    win     Array of coordinates to be converted
 c               'hms', 'dms' in radians
 c               '*  deg'     in degrees
@@ -514,67 +459,72 @@ c               '*  kms'     in km/s
 c               '*  nat'     in natural axis coordinates
 c    typeo   Array of output coordinate types from above list
 c            requested.
-c    stypeo  'FREQ', 'VOPT', 'VRAD'.  If a spectral coordinate is given,
-c            this indicates what convention it is to be converted to,
-c            regardless of what the header defined.  If ' ', then it
-c            is assumed that the coordinate is in the convention
-c            indicated by stypei.  If stypei is also blank, then ctype
-c            of the header and typeo must match or a fatal error will
-c            result.
-c    nounit  Don't append units
+c    nounit  Don't append units.
 c  Output
-c    strout  Array of formatted converted output coordinates
-c    strlen  Length of strings in STROUT
+c    strout  Array of formatted converted output coordinates.
+c    strlen  Length of strings in strout.
 c-----------------------------------------------------------------------
       include 'maxnax.h'
 
-      integer i, len1
+      integer   iax, il
       double precision wout(maxnax)
       character hangleh*30, rangle*30, str*132, units*30
+
+      external  len1
+      integer   len1
 c-----------------------------------------------------------------------
-c
-c Convert coordinates
-c
-      call w2wco(lun, n, typei, stypei, win, typeo, stypeo, wout)
-c
-c Format results
-c
-      do i = 1, n
-        strout(i) = ' '
-        if (typeo(i).eq.'abspix' .or. typeo(i).eq.'relpix' .or.
-     *      typeo(i).eq.'none') then
-          call strfd(wout(i), '(f9.2)', strout(i), strlen(i))
-        else if (typeo(i).eq.'abskms' .or. typeo(i).eq.'relkms') then
-          call strfd(wout(i), '(1pe12.5)', strout(i), strlen(i))
-        else if (typeo(i).eq.'absghz' .or. typeo(i).eq.'relghz') then
-          call strfd(wout(i), '(1pe15.8)', strout(i), strlen(i))
-        else if (typeo(i).eq.'absdeg' .or. typeo(i).eq.'reldeg') then
-          call strfd(wout(i), '(f8.3)', strout(i), strlen(i))
-        else if (typeo(i).eq.'arcsec' .or. typeo(i).eq.'arcmin'
-     *           .or. typeo(i).eq.'arcmas') then
-          call strfd(wout(i), '(1pe15.8)', strout(i), strlen(i))
-        else if (typeo(i).eq.'absnat' .or. typeo(i).eq.'relnat') then
-          call strfd(wout(i), '(1pe15.8)', strout(i), strlen(i))
-        else if (typeo(i).eq.'hms') then
-          strout(i) = hangleh(wout(i))
-          strlen(i) = len1(strout(i))
-        else if (typeo(i).eq.'dms') then
-          strout(i) = rangle(wout(i))
-          strlen(i) = len1(strout(i))
+c     Convert coordinates.
+      call w2wco(lun, NAXIS, typei, win, typeo, wout)
+
+c     Format results.
+      do iax = 1, NAXIS
+        strout(iax) = ' '
+        if (     typeo(iax).eq.'abspix' .or.
+     *           typeo(iax).eq.'relpix' .or.
+     *           typeo(iax).eq.'none') then
+          call strfd(wout(iax), '(f9.2)', strout(iax), il)
+
+        else if (typeo(iax).eq.'abskms' .or.
+     *           typeo(iax).eq.'relkms') then
+          call strfd(wout(iax), '(1pe12.5)', strout(iax), il)
+
+        else if (typeo(iax).eq.'absghz' .or.
+     *           typeo(iax).eq.'relghz') then
+          call strfd(wout(iax), '(1pe15.8)', strout(iax), il)
+
+        else if (typeo(iax).eq.'absdeg' .or.
+     *           typeo(iax).eq.'reldeg') then
+          call strfd(wout(iax), '(f8.3)', strout(iax), il)
+
+        else if (typeo(iax).eq.'arcsec' .or.
+     *           typeo(iax).eq.'arcmin' .or.
+     *           typeo(iax).eq.'arcmas') then
+          call strfd(wout(iax), '(1pe15.8)', strout(iax), il)
+
+        else if (typeo(iax).eq.'absnat' .or.
+     *           typeo(iax).eq.'relnat') then
+          call strfd(wout(iax), '(1pe15.8)', strout(iax), il)
+
+        else if (typeo(iax).eq.'hms') then
+          strout(iax) = hangleh(wout(iax))
+
+        else if (typeo(iax).eq.'dms') then
+          strout(iax) = rangle(wout(iax))
+
         else
-          str = 'W2WFCO: Unrecognized coordinate type ('//typeo(i)//')'
+          str='W2WFCO: Unrecognized coordinate type ('//typeo(iax)//')'
           call bug('f', str)
         endif
-c
-c Work out units
-c
-        if (.not.nounit) then
-          call sunitco(lun, i, typeo(i), units)
-c
-c Add units to formatted number
-c
-          strout(i)(strlen(i)+2:) = units
-          strlen(i) = len1(strout(i))
+
+c       Work out units.
+        if (nounit) then
+          strlen(iax) = il
+        else
+          call sunitco(lun, iax, typeo(iax), units)
+
+c         Add units to formatted number.
+          strout(iax)(il+2:) = units
+          strlen(iax) = len1(strout(iax))
         endif
       enddo
 
@@ -586,12 +536,11 @@ c* w2wsCO -- Convert NEBK style coordinate for a single axis
 c& nebk
 c: coordinates
 c+
-      subroutine w2wsco (lun, iax, typei, stypei, win, typeo, stypeo,
-     *                   wout)
+      subroutine w2wsco (lun, iax, typei, win, typeo, wout)
 
       integer   lun, iax
       double precision win, wout
-      character typei*(*), stypei*(*), typeo*(*), stypeo*(*)
+      character typei*(*), typeo*(*)
 c  ---------------------------------------------------------------------
 c  Convert one NEBK style coordinate with the COCVT routines.
 c  Coordinates for the other axes are assumed to be at the
@@ -604,11 +553,6 @@ c    typei   Input coordinate type, Should be from list
 c               'hms',    'dms',    'arcsec', 'arcmin', 'absdeg',
 c               'reldeg', 'abspix', 'relpix', 'absghz', 'relghz',
 c               'abskms', 'relkms', 'absnat', 'relnat', 'none'
-c    stypei  'FREQ', 'VOPT', 'VRAD'.  Indicates the convention for a
-c            spectral coordinate, regardless of what the header
-c            initially defines.  If ' ', the header prevails, though a
-c            mismatch between typei and ctype (e.g. absghz/VOPT-F2W)
-c            would then result in a fatal error.
 c    win     Coordinate to be converted
 c               'hms', 'dms' in radians
 c               '*  deg'     in degrees
@@ -619,13 +563,6 @@ c               '*  ghz'     in GHz
 c               '*  kms'     in km/s
 c               '*  nat'     in natural axis coordinates
 c    typeo   Output coordinate type from above list
-c    stypeo  'FREQ', 'VOPT', 'VRAD'.  If a spectral coordinate is given,
-c            this indicates what convention it is to be converted to,
-c            regardless of what the header defined.  If ' ', then it
-c            is assumed that the coordinate is in the convention
-c            indicated by stypei.  If stypei is also blank, then ctype
-c            of the header and typeo must match or a fatal error will
-c            result.
 c  Output
 c    wout    Converted output coordinate
 c-----------------------------------------------------------------------
@@ -651,8 +588,7 @@ c     Load axis of interest.
       ltypeo(iax) = typeo
 
 c     Convert.
-      call w2wco(lun, naxis, ltypei, stypei, lwin, ltypeo, stypeo,
-     *           lwout)
+      call w2wco(lun, naxis, ltypei, lwin, ltypeo, lwout)
 
 c     Fish out axis.
       wout = lwout(iax)
@@ -665,12 +601,12 @@ c* w2wfsCO -- Convert a coordinate for a single axis and format
 c& nebk
 c: coordinates
 c+
-      subroutine w2wsfco (lun, iax, typei, stypei, win, typeo, stypeo,
-     *                    nounit, strout, strlen)
+      subroutine w2wsfco (lun, iax, typei, win, typeo, nounit, strout,
+     *                    strlen)
 
       integer   lun, iax, strlen
       double precision win
-      character*(*) typei, typeo, strout, stypei, stypeo
+      character*(*) typei, typeo, strout
       logical   nounit
 c  ---------------------------------------------------------------------
 c  Convert one NEBK style coordinate with the COCVT routines and format
@@ -684,11 +620,6 @@ c    typei   Coordinate type, should be from list
 c               'hms',    'dms',    'arcsec', 'arcmin', 'absdeg',
 c               'reldeg', 'abspix', 'relpix', 'absghz', 'relghz',
 c               'abskms', 'relkms', 'absnat', 'relnat', 'none'
-c    stypei  'FREQ', 'VOPT', 'VRAD'.  Indicates the convention for a
-c            spectral coordinate, regardless of what the header
-c            initially defines.  If ' ', the header prevails, though a
-c            mismatch between typei and ctype (e.g. absghz/VOPT-F2W)
-c            would then result in a fatal error.
 c    win     Coordinate to be converted
 c               'hms', 'dms' in radians
 c               '*  deg'     in degrees
@@ -698,13 +629,6 @@ c               '*  pix'     in pixels
 c               '*  ghz'     in GHz
 c               '*  kms'     in km/s
 c    typeo   Output coordinate type from above list
-c    stypeo  'FREQ', 'VOPT', 'VRAD'.  If a spectral coordinate is given,
-c            this indicates what convention it is to be converted to,
-c            regardless of what the header defined.  If ' ', then it
-c            is assumed that the coordinate is in the convention
-c            indicated by stypei.  If stypei is also blank, then ctype
-c            of the header and typeo must match or a fatal error will
-c            result.
 c    nounit  Don't append units
 c  Output
 c    strout  Formatted converted output coordinate
@@ -732,9 +656,9 @@ c     Load dummy array values and actual value into conversion arrays.
       ltypeo(iax) = typeo
 
 c     Convert and format.
-      call w2wfco(lun, iax, ltypei, stypei, lwin, ltypeo, stypeo,
-     *            nounit, lstrout, lstrlen)
-c
+      call w2wfco(lun, iax, ltypei, lwin, ltypeo, nounit, lstrout,
+     *            lstrlen)
+
 c     Return formatted string.
       strout = lstrout(iax)
       strlen = lstrlen(iax)
@@ -767,10 +691,8 @@ c-----------------------------------------------------------------------
       include 'mirconst.h'
       character*132 str
 c-----------------------------------------------------------------------
-c
-c Set coordinate conversion string and convert units to radian
-c where needed
-c
+c     Set coordinate conversion string and convert units to radians
+c     where needed.
       cti = ' '
 
       if (type.eq.'hms' .or. type.eq.'dms') then
