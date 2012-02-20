@@ -37,7 +37,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: cgsubs.for,v 1.8 2012/02/15 03:23:50 cal103 Exp $
+c $Id: cgsubs.for,v 1.9 2012/02/20 07:27:22 cal103 Exp $
 c***********************************************************************
 
 c* angconCG -- Convert radians to and from seconds of time/arc
@@ -1158,13 +1158,12 @@ c   opos      Output location in pixels for x and y
 c   np        This is the number of locations of the NUMS array used
 c-----------------------------------------------------------------------
       include 'mirconst.h'
+
+      integer   i, ip, naxis
       double precision win(3), wout(3)
-      character*6 typei(3), typeo(3)
-      integer ip, i, naxis
+      character typei(3)*6, typeo(3)*6
 c-----------------------------------------------------------------------
-c
-c Prepare coordinates for conversion
-c
+c     Prepare coordinates for conversion.
       ip = 1
       do i = 1, 2
         if (otype(i).eq.'hms') then
@@ -1187,12 +1186,11 @@ c
       typei(3) = 'abspix'
       typeo(3) = 'abspix'
       win(3) = pix3
-c
-c Convert location to absolute pixels
-c
+
+c     Convert location to absolute pixels.
       call rdhdi(lun, 'naxis', naxis, 0)
       naxis = min(3,naxis)
-      call w2wco(lun, naxis, typei, ' ', win, typeo, ' ', wout)
+      call w2wco(lun, naxis, typei, win, typeo, wout)
       opos(1) = wout(1)
       opos(2) = wout(2)
 
