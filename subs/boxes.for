@@ -64,7 +64,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: boxes.for,v 1.5 2011/10/06 07:10:02 cal103 Exp $
+c $Id: boxes.for,v 1.6 2012/02/22 07:03:11 cal103 Exp $
 c--
 c***********************************************************************
 
@@ -102,15 +102,14 @@ c-----------------------------------------------------------------------
       include 'boxes.h'
       include 'maxnax.h'
 
-      integer   NTYPES
+      integer    NTYPES
       parameter (NTYPES=10)
 
-      logical   coordini, more, units
-      integer   boxtype, i, iax, iax1, iax2, k2, length,k1, lu(3), n,
+      logical   coordini, more, dounit
+      integer   boxtype, i, ilat, ilng, ispc, k2, length,k1, lu(3), n,
      *          nshape, nsize(MAXNAX), offset, spare, tmp(4)
-      double precision cdelt, crpix, crval
-      character algo*3, ctype*9, spec*4096, type*9, types(NTYPES)*9,
-     *          xytype*6, ztype*6
+      character algo*3, spec*4096, type*9, types(NTYPES)*9, units*8,
+     *          wtype*16, xytype*6, ztype*6
 
       external  keyprsnt, len1
       logical   keyprsnt
@@ -155,22 +154,22 @@ c       Determine the subcommand type.
         endif
 
 c       Process unit specification subcommands.
-        units = .false.
+        dounit = .false.
         if (boxtype.eq.ABSPIX) then
           xytype = 'abspix'
           ztype  = 'abspix'
         else if (boxtype.eq.RELPIX) then
           xytype = 'relpix'
-          units = .true.
+          dounit = .true.
         else if (boxtype.eq.RELCEN) then
           xytype = 'relcen'
-          units = .true.
+          dounit = .true.
         else if (boxtype.eq.ARCSEC) then
           xytype = 'arcsec'
-          units = .true.
+          dounit = .true.
         else if (boxtype.eq.KMS) then
           ztype = 'kms'
-          units = .true.
+          dounit = .true.
 
         else if (boxtype.eq.IMAGE .or. boxtype.eq.QUART) then
 c         Process region specification subcommands.
@@ -208,7 +207,7 @@ c       Finish up with this subcommand.
         if (boxtype.eq.ABSPIX) then
           continue
 
-        else if (units) then
+        else if (dounit) then
           if (.not.coordini) then
             coordini = .true.
             if (file.eq.' ') call bug('f',
@@ -221,21 +220,21 @@ c       Finish up with this subcommand.
           endif
 
           if (boxtype.eq.ARCSEC) then
-            call coFindAx(lu,'longitude',iax1)
-            call coFindAx(lu,'latitude',iax2)
-            if (min(iax1,iax2).ne.1 .or. max(iax1,iax2).ne.2)
+            call coFindAx(lu, 'longitude',ilng)
+            call coFindAx(lu, 'latitude', ilat)
+            if (min(ilng,ilat).ne.1 .or. max(ilng,ilat).ne.2)
      *        call BoxBug(spec,'First two axes are not in arcsec')
+
           else if (boxtype.eq.KMS) then
-            call coFindAx(lu, 'spectral', iax)
-            if (iax.ne.3) call BoxBug(spec,'No spectral axis present')
-            call coAxGet(lu, iax, ctype, crpix, crval, cdelt)
-            if (ctype(1:4).ne.'VRAD' .and.
-     *          ctype(1:4).ne.'VOPT' .and.
-     *          ctype(1:4).ne.'VELO' .and.
-     *          ctype(1:4).ne.'FELO') then
-              call coSpcSet(lu, 'VRAD', ' ', iax, algo)
+            ispc = 0
+            call coAxType(lu, ispc, 'spectral', wtype, algo, units)
+            if (ispc.ne.3) call BoxBug(spec,'No spectral axis present')
+
+            if (units.ne.'km/s') then
+              call coSpcSet(lu, 'VRAD', ' ', ispc, algo)
             endif
           endif
+
         else
           boxes(offset+ITYPE) = boxtype
           offset = offset + boxes(offset+SIZE) + HDR
