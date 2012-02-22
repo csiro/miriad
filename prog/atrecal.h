@@ -15,15 +15,15 @@ c  preamble	The accumulated preambles.
 c  cnt		Weights of the things accumulated into the preambles.
 c  
 	include 'maxdim.h'
-	integer MAXAVER,MAXPOL,ATIF,ATANT
-	parameter(MAXAVER=16777216,MAXPOL=4,ATIF=16,ATANT=8)
+	integer MAXAVER,MAXPOL,ATIF,ATANT,ATBASE
+	parameter(MAXAVER=16777216,MAXPOL=4,ATIF=34,ATANT=8,
+     *   ATBASE=(ATANT*(ATANT+1))/2)
 	complex buf(MAXAVER)
         real    bufr(MAXAVER)
-	double precision count(MAXAVER),cnt(MAXBASE)
-	integer pnt(MAXPOL,MAXBASE),nchan(MAXPOL,MAXBASE),free,mbase
-	integer npols(MAXBASE),pols(MAXPOL,MAXBASE)
-c	integer nschans(MAXWIN,MAXPOL,MAXBASE),nwin(MAXPOL,MAXBASE)
-	double precision preamble(6,MAXBASE)
+	double precision count(MAXAVER),cnt(ATBASE)
+	integer pnt(MAXPOL,ATBASE),nchan(MAXPOL,ATBASE),free,mbase
+	integer npols(ATBASE),pols(MAXPOL,ATBASE),nauto
+	double precision preamble(6,ATBASE)
         real xtsys(ATIF,ATANT),ytsys(ATIF,ATANT),xyphase(ATIF,ATANT)
 	common/uvavcom/preamble,count,cnt,buf,bufr,pnt,nchan,npols,
-     *    pols,free,mbase,xtsys,ytsys,xyphase
+     *    pols,free,mbase,xtsys,ytsys,xyphase,nauto

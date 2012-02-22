@@ -2,13 +2,12 @@ c***********************************************************************
         program atrecal
         implicit none
 c
-c= atrecal - Copy and recalibrate a uv dataset.
+c= atrecal - Copy and recalibrate a CABB uv dataset.
 c& rjs
 c: uv analysis
 c+
-c       atrecal copies a uv dataset, performs averaging, both in time
-c       and/or frequency and recomputes the systemp and xyphase 
-c       variables from the autocorrelations.
+c       atrecal copies a uv dataset and recomputes the systemp and
+c       xyphase variables from the autocorrelations.
 c       Useful for CABB data with RFI affected Tsys or when splitting  
 c       wide bands. Invert uses the systemp variable for the data 
 c       weights when options=systemp is used.
@@ -23,10 +22,6 @@ c         line,nchan,start,width,step
 c       The default is all channels (or all wide channels if there are
 c       no spectral channels). The output will consist of only spectral
 c       or wideband data (but not both).
-c@ ref
-c       The normal reference linetype, in the form:
-c         line,start,width
-c       The default is no reference line.
 c@ options
 c       This gives extra processing options. Several options can be 
 c       given, each separated by commas. They may be abbreviated to the 
@@ -43,7 +38,7 @@ c                      all the correlations are bad. This option causes
 c                      atrecal to retain all records.
 c@ out
 c       The name of the output uv data set. No default.
-c$Id: atrecal.for,v 1.1 2012/02/21 03:16:06 wie017 Exp $
+c$Id: atrecal.for,v 1.2 2012/02/22 04:07:30 wie017 Exp $
 c--
 c  Recalibrate CABB data
 c  CABB data has auto correlations with noise cal OFF in bin 1 and ON in
@@ -69,6 +64,7 @@ c  It also recalculates the xyphases from the crosscorrelations.
 c
 c  History:
 c    mhw  08jul10 Original version, based on uvaver.
+c    mhw  22feb12 Cleanup, remove unwanted options
 c
 c------------------------------------------------------------------------
         include 'maxdim.h'
@@ -76,7 +72,7 @@ c------------------------------------------------------------------------
         character uvflags*12,ltype*16,out*64
         integer npol,Snpol,tIn,tOut,vupd,nread,nrec,i,nbin
         real inttime
-        logical dotaver,doflush,buffered,PolVary,ampsc,first
+        logical dotaver,doflush,buffered,PolVary,first
         logical relax,ok,donenpol
         double precision preamble(5),Tmin,Tmax,Tprev,interval
         complex data(MAXCHAN)
@@ -91,20 +87,17 @@ c
 c  Get the input parameters.
 c
         version=versan('atrecal',
-     :                 '$Revision: 1.1 $'//
-     :                 '$Date: 2012/02/21 03:16:06 $')   
+     :                 '$Revision: 1.2 $',
+     :                 '$Date: 2012/02/22 04:07:30 $')   
         call keyini
-        call GetOpt(uvflags,ampsc,relax)
+        call GetOpt(uvflags,relax)
         call uvDatInp('vis',uvflags)
-c       call keyd('interval',interval,1.d0)
         call keya('out',out,' ')
         call keyfin
 c
 c  Check the input parameters.
 c
         if(out.eq.' ')call bug('f','Output file must be specified')
-        if(interval.lt.0)call bug('f','Illegal value for interval')
-        if(ampsc)call output('Amp-scalar averaging used')
 c
 c  Various initialisation.
 c
@@ -189,7 +182,7 @@ c
 c  Flush out the accumulated data -- the case of time averaging.
 c
             if(doflush)then
-              call BufFlush(tOut,ampsc,npol,nspect,nants)
+              call BufFlush(tOut,npol,nspect,nants)
               PolVary = PolVary.or.npol.eq.0.or.
      *          (Snpol.ne.npol.and.Snpol.gt.0)
               Snpol = npol
@@ -226,7 +219,7 @@ c
 c  Flush out anything remaining.
 c
           if(buffered)then
-            call BufFlush(tOut,ampsc,npol,nspect,nants)
+            call BufFlush(tOut,npol,nspect,nants)
             PolVary = PolVary.or.npol.le.0.or.
      *        (Snpol.ne.npol.and.Snpol.gt.0)
             Snpol = npol
@@ -246,24 +239,23 @@ c
         call uvclose(tOut)
         end
 c***********************************************************************
-        subroutine GetOpt(uvflags, ampsc,relax)
+        subroutine GetOpt(uvflags,relax)
 c
         implicit none
-        logical ampsc,relax
+        logical relax
         character uvflags*(*)
 c
 c  Determine the flags to pass to the uvdat routines.
 c
 c  Output:
 c    uvflags    Flags to pass to the uvdat routines.
-c    ampsc      True for amp-scalar averaging
 c    relax      Do not discard bad records.
 c-----------------------------------------------------------------------
         integer nopts
         parameter(nopts=4)
         character opts(nopts)*9
         integer l
-        logical present(nopts),docal,dopol,dopass,vector
+        logical present(nopts),docal,dopol,dopass
         data opts/'nocal    ','nopol    ','nopass   ',
      *            'relax    '/
 c
@@ -272,11 +264,6 @@ c
         dopol = .not.present(2)
         dopass= .not.present(3)
         relax  = present(4)
-c
-c Default averaging is vector
-c
-        ampsc=.false.
-        vector=.true.
 c
 c Set up calibration flags
 c
@@ -308,13 +295,13 @@ c-----------------------------------------------------------------------
         include 'atrecal.h'
         free = 1
         mbase = 0
+        nauto = 0
         end
 c***********************************************************************
-        subroutine BufFlush(tOut,ampsc,npol,nif,nants)
+        subroutine BufFlush(tOut,npol,nif,nants)
 c
         implicit none
         integer tOut,npol,nif,nants
-        logical ampsc
 c
 c  This writes out the averaged data. The accumulated data is in common.
 c  This starts by dividing the accumulated data by "N", and then writes
@@ -322,18 +309,17 @@ c  it out.
 c
 c  Inputs:
 c    tOut       The handle of the output file.
-c    ampsc      True for amp scalar averaging
 c  Output:
 c    npol       The number of polarisations in the output. If this
 c               varies, a zero is returned.
 c-----------------------------------------------------------------------
         include 'atrecal.h'
         complex data(MAXCHAN)
-        real amp,inttime
+        real inttime
         double precision preambl(5),time(MAXBASE)
         logical flags(MAXCHAN)
         integer i,j,jd,k,ngood,nbp,p,idx1(MAXBASE),idx2(MAXBASE)
-        logical PolVary,doamp
+        logical PolVary
 c
 c  Determine the number of good baselines, and sort them so we have an
 c  index of increasing time.
@@ -351,6 +337,7 @@ c
 c
 c  Write out the new Tsys and xyphase values
 c
+        if (nauto.eq.0) call bug('f','No autocorrelations found')
         call Sct(tOut,'systemp',xtsys,ytsys,  
      *           ATIF,ATANT,1,nif,nants)
         call Sco(tOut,'xyphase', xyphase,
@@ -385,24 +372,14 @@ c
           do i=1,npol
             p = pnt(i,j) - 1
             call uvputvri(tOut,'pol',pols(i,j),1)
-            doamp = ampsc
             nbp = nbp + 1
 c
-c  Loop over the channels. If we are doing amp-scalar averaging, and
-c  the average visibility is zero, flag the data. Otherwise just
-c  depend on whether we have good data or not.
+c  Loop over the channels.
 c
             do k=1,nchan(i,j)
-              if(doamp.and.
-     *          abs(real(buf(k+p)))+abs(aimag(buf(k+p))).eq.0)
-     *          count(k+p) = 0
               flags(k) = count(k+p).gt.0
               if(.not.flags(k))then
                 data(k) = 0
-              else if(doamp)then
-                amp = abs(buf(k+p))
-                data(k) = (bufr(k+p) / count(k+p)) *  
-     *                          (buf(k+p) / amp)
               else
                 data(k) = buf(k+p) / count(k+p)
               endif
@@ -552,6 +529,7 @@ c
                 endif  
               enddo
               if (n.gt.0) then
+                nauto = nauto + 1
                 if (pol.eq.PolXX) then
                   xtsys(i,i1)=real(t)/10/n
                 else if (pol.eq.PolYY) then
