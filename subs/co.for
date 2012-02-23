@@ -55,7 +55,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: co.for,v 1.33 2012/02/22 06:52:10 cal103 Exp $
+c $Id: co.for,v 1.34 2012/02/23 23:52:09 cal103 Exp $
 c***********************************************************************
 
 c* coInit -- Initialise coordinate conversion routines.
@@ -2936,11 +2936,11 @@ c-----------------------------------------------------------------------
       else if (axtype.eq.'latitude') then
         itype = LATTYP
       else if (axtype.eq.'spectral') then
-        if (ctypei.eq.'FREQ' .or. ctypei.eq.'FREQUENCY') then
+        if (wtype.eq.'FREQ' .or. wtype.eq.'FREQUENCY') then
           itype = FRQTYP
-        else if (ctypei.eq.'VELO' .or. ctypei.eq.'VELOCITY') then
+        else if (wtype.eq.'VELO' .or. wtype.eq.'VELOCITY') then
           itype = VELTYP
-        else if (ctypei.eq.'FELO' .or. ctypei.eq.'FELOCITY') then
+        else if (wtype.eq.'FELO' .or. wtype.eq.'FELOCITY') then
           itype = FELTYP
         endif
       endif
