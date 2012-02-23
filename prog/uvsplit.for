@@ -62,7 +62,7 @@ c@ maxwidth
 c        The maximum bandwidth (in GHz) for each output frequency band.
 c        Default is no subdivision of input bands. The maxwidth limit
 c        is only applied when splitting by frequency.
-c $Id: uvsplit.for,v 1.11 2011/11/24 03:30:40 wie017 Exp $
+c $Id: uvsplit.for,v 1.12 2012/02/23 04:49:19 wie017 Exp $
 c--
 c  History:
 c    rjs  13oct93 Original version.
@@ -107,8 +107,8 @@ c
         character versan*80
 c------------------------------------------------------------------------
         version = versan ('uvsplit',
-     *                    '$Revision: 1.11 $',
-     *                    '$Date: 2011/11/24 03:30:40 $')
+     *                    '$Revision: 1.12 $',
+     *                    '$Date: 2012/02/23 04:49:19 $')
 c
 c  Get the input parameters.
 c
@@ -701,6 +701,8 @@ c
 c  Update the system temperature and the XY phase.
 c
 	call UpdVar(lVis,lOut,ifno,nspect,'systemp')
+	call UpdVar(lVis,lOut,ifno,nspect,'xtsys')
+	call UpdVar(lVis,lOut,ifno,nspect,'ytsys')        
 	call UpdVar(lVis,lOut,ifno,nspect,'xyphase')
 c
 	end
