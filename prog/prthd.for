@@ -15,7 +15,7 @@ c       Extra processing options.  Possible values are:
 c         brief   Give one line description of each file.
 c         full    Several line description of each file (default).
 c
-c$Id: prthd.for,v 1.8 2012/02/15 07:02:40 cal103 Exp $
+c$Id: prthd.for,v 1.9 2012/02/23 02:15:08 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -28,15 +28,15 @@ c-----------------------------------------------------------------------
 
       logical   full, more
       integer   i, iostat, nin, tno
-      character in(MAXIN)*64, line*80, logf*64, version*72
+      character in(MAXIN)*132, line*80, logf*132, version*80
 
       external  hdprsnt, versan
       logical   hdprsnt
       character versan*80
 c-----------------------------------------------------------------------
       version = versan('prthd',
-     *                 '$Revision: 1.8 $',
-     *                 '$Date: 2012/02/15 07:02:40 $')
+     *                 '$Revision: 1.9 $',
+     *                 '$Date: 2012/02/23 02:15:08 $')
 
 c     Get input parameters.
       call keyini
@@ -139,7 +139,7 @@ c-----------------------------------------------------------------------
       integer   ival, m
       real      rval1, rval2, rval3
       double precision dval
-      character aval1*72, aval2*72, keyw*6, line*80
+      character aval1*72, aval2*72, keyw*6, line*132
 
       external  hfff, hdprsnt, itoaf, spaste
       logical   hdprsnt
@@ -474,7 +474,7 @@ c***********************************************************************
       integer tno
       character in*(*)
 c-----------------------------------------------------------------------
-      character line*80
+      character line*132
       logical more
 c-----------------------------------------------------------------------
       line = 'Filename: '//in
@@ -499,7 +499,7 @@ c-----------------------------------------------------------------------
       real      epoch, wfreq(MAXWIDE), wwidth(MAXWIDE)
       double precision dec, deldec, delra, obsdec, obsra, pntdec, pntra,
      *          ra, restfreq(MAXWIN), sdf(MAXWIN), sfreq(MAXWIN), time
-      character aval1*64, aval2*64, line*80, obstype*32, type*1
+      character aval1*64, aval2*64, line*132, obstype*32, type*1
 
       external  hangleh, hdprsnt, itoaf, len1, polsC2P, rangleh
       logical   hdprsnt
