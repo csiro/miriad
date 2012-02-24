@@ -1,45 +1,47 @@
-	include 'maxdim.h'
+c-----------------------------------------------------------------------
+c  fits.h
+c-----------------------------------------------------------------------
+c  Include file for fits.for.
 c
-	integer EQUATOR,ALTAZ,NASMYTH
-	parameter(EQUATOR=1,ALTAZ=0,NASMYTH=4)
-c
-	integer uvCrval,uvCdelt,uvCrpix
-	integer uvStokes,uvFreq,uvRa,uvDec
-	parameter(uvCrval=1,uvCdelt=2,uvCrpix=3)
-	parameter(uvStokes=1,uvFreq=2,uvRa=3,uvDec=4)
-c
-	integer MAXSRC,MAXIF,MAXFREQ,MAXCONFG
-	parameter(MAXSRC=1000,MAXFREQ=MAXWIN,MAXIF=MAXFREQ,MAXCONFG=40)
-c
-	double precision raepo(MAXSRC),decepo(MAXSRC)
-	double precision raapp(MAXSRC),decapp(MAXSRC)
-	double precision dra(MAXSRC),ddec(MAXSRC)
-	double precision sfreq(MAXIF*MAXFREQ)
-	double precision freqoff(MAXSRC*MAXIF),epoch(MAXSRC)
-	double precision freqref(MAXCONFG)
-	double precision restfreq(MAXSRC*MAXIF),veldop(MAXSRC)
-	double precision antpos(3*MAXANT,MAXCONFG)
-	double precision timeref,eq,timeoff(MAXCONFG)
-	double precision lat(MAXCONFG),long(MAXCONFG),Tprev
-	integer mount(MAXCONFG),nants(MAXCONFG),velsys,config
-	real evec,systemp,jyperk,velref
-	logical llok,emok,systok,jok,mosaic,velcomp,inited
-c
-	double precision sdf(MAXIF*MAXFREQ)
-	real dnu
-	integer nsrc,nif,nchan,nfreq,nconfig
-	integer srcids(MAXSRC),freqids(MAXFREQ),srcid,srcidx
-	integer freqid,freqidx
-	integer sindx(MAXSRC),findx(MAXFREQ)
-	character source(MAXSRC)*20
-c
-	character observer*16,telescop*12
-c
-	common/Tables/raepo,decepo,raapp,decapp,dra,ddec,sfreq,freqoff,
-     *	    restfreq,veldop,antpos,timeoff,freqref,epoch,lat,long,Tprev,
-     *	    timeref,eq,
-     *	  sdf,dnu,evec,systemp,jyperk,velref,
-     *	  nsrc,nif,nchan,nfreq,nconfig,nants,srcids,freqids,
-     *	    srcid,freqid,srcidx,freqidx,sindx,findx,mount,velsys,config,
-     *	  mosaic,velcomp,llok,emok,systok,jok,inited
-	common/TablesC/source,observer,telescop
+c  $Id: fits.h,v 1.5 2012/02/24 03:48:13 cal103 Exp $
+c-----------------------------------------------------------------------
+      include 'maxdim.h'
+
+      integer    ALTAZ,   EQUATOR,   NASMYTH
+      parameter (ALTAZ=0, EQUATOR=1, NASMYTH=4)
+
+      integer    uvCRVAL,   uvCDELT,   uvCRPIX
+      parameter (uvCRVAL=1, uvCDELT=2, uvCRPIX=3)
+
+      integer    uvSTOKES,   uvFREQ,   uvRA,   uvDEC
+      parameter (uvSTOKES=1, uvFREQ=2, uvRA=3, uvDEC=4)
+
+      integer MAXCONFG, MAXFREQ, MAXIF, MAXSRC
+      parameter (MAXCONFG=40,
+     *           MAXSRC=1000,
+     *           MAXFREQ=MAXWIN,
+     *           MAXIF=MAXFREQ)
+
+      logical   emok, inited, jok, llok, mosaic, systok, velcomp
+      integer   config, findx(MAXFREQ), freqid, freqids(MAXFREQ),
+     *          freqidx, mount(MAXCONFG), nants(MAXCONFG), nchan,
+     *          nconfig, nfreq, nif, nsrc, sindx(MAXSRC), srcid,
+     *          srcids(MAXSRC), srcidx, velsys
+      real      dnu, evec, jyperk, systemp, velref
+      double precision antpos(3*MAXANT,MAXCONFG), ddec(MAXSRC),
+     *          decapp(MAXSRC), decepo(MAXSRC), dra(MAXSRC),
+     *          epoch(MAXSRC), eq, freqoff(MAXSRC*MAXIF),
+     *          freqref(MAXCONFG), lat(MAXCONFG), long(MAXCONFG),
+     *          raapp(MAXSRC), raepo(MAXSRC), restfreq(MAXSRC*MAXIF),
+     *          sdf(MAXIF*MAXFREQ), sfreq(MAXIF*MAXFREQ),
+     *          timeoff(MAXCONFG), timeref, tprev, veldop(MAXSRC)
+      character observer*16, source(MAXSRC)*20, telescop*16
+
+      common /tables/ raepo, decepo, raapp, decapp, dra, ddec, sfreq,
+     *          freqoff, restfreq, veldop, antpos, timeoff, freqref,
+     *          epoch, lat, long, tprev, timeref, eq, sdf, dnu, evec,
+     *          systemp, jyperk, velref, nsrc, nif, nchan, nfreq,
+     *          nconfig, nants, srcids, freqids, srcid, freqid, srcidx,
+     *          freqidx, sindx, findx, mount, velsys, config, mosaic,
+     *          velcomp, llok, emok, systok, jok, inited
+      common /tablesc/ observer, source, telescop
