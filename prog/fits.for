@@ -88,13 +88,13 @@ c                  FITS header, and do not require options=rawdss.
 c         nod2     Use the conventions of NOD2 FITS files.
 c@ velocity
 c       Velocity information. This is only used for op=uvin,
-c       and is only relevant for line observations. The default is
-c       to use the information present in the FITS header. The
+c       and is only relevant for line observations.  The default is
+c       to use the information present in the FITS header.  The
 c       "velocity" parameter allows this information to be overriden or
 c       the velocity system to be changed.
 c
 c       Within each line visibility data-set, Miriad stores the velocity
-c       of the observatory wrt a rest frame. This allows account to be
+c       of the observatory wrt a rest frame.  This allows account to be
 c       taken of this when determining channel velocities.
 c
 c       The fits task will determine the observatory velocity either by
@@ -103,15 +103,15 @@ c       by using a model of Earth and solar system motion (accurate to
 c       5 m/s).
 c
 c       The "velocity" parameter can be used to specify the velocity of
-c       a particular channel. The parameter consists of three values:
+c       a particular channel.  The parameter consists of three values:
 c       the velocity system of the reference value, the reference value
 c       and the reference channel, viz:
 c          velocity=velsys,refval,refchan
 c       Possible values for the velocity system are:
 c         lsr     Velocity is the radio definition wrt the LSR frame.
-c         bary    Velocity is the radio definition wrt the barycenter.
+c         bary    Velocity is the radio definition wrt the barycentre.
 c         optlsr  Velocity is the optical definition wrt the LSR frame.
-c         optbary Velocity is the optical definition wrt the barycenter.
+c         optbary Velocity is the optical definition wrt the barycentre.
 c         obs     Velocity wrt the observatory.
 c
 c       The reference value gives the velocity, at the reference
@@ -130,11 +130,11 @@ c         velocity=lsr
 c       indicates that fits is to determine the observatory velocity
 c       wrt the LSR frame using an appropriate model.
 c
-c$Id: fits.for,v 1.22 2012/01/17 03:47:09 wie017 Exp $
+c$Id: fits.for,v 1.23 2012/02/24 03:54:41 cal103 Exp $
 c--
 c
 c  Bugs:
-c    * uvin should check that the phase and pointing center are the
+c    * uvin should check that the phase and pointing centre are the
 c      same.  xyin should generate the Miriad obsra and obsdec
 c      parameters.
 c    * xyin should eliminate dummy Stokes axes in some cases.
@@ -161,11 +161,11 @@ c-----------------------------------------------------------------------
       character in*128, op*8, out*128, uvdatop*12, version*72
 
       external  versan
-      character versan*80
+      character versan*72
 c-----------------------------------------------------------------------
       version = versan('fits',
-     *                 '$Revision: 1.22 $',
-     *                 '$Date: 2012/01/17 03:47:09 $')
+     *                 '$Revision: 1.23 $',
+     *                 '$Date: 2012/02/24 03:54:41 $')
 c
 c  Get the input parameters.
 c
@@ -749,11 +749,10 @@ c    lu         Handle of the FITS file.
 c  Output:
 c    uvU,uvV,uvW,uvT,uvBl,uvSrcid,uvFreqid,uvData
 c-----------------------------------------------------------------------
-      integer i,naxis,nrandom
-      character num*2,type*16
-      character random(7)*8
+      integer   iax, naxis, nrandom
+      character cax*2, ptype*16, random(7)*8
 
-c     Externals.
+      external  itoaf
       character itoaf*2
 c-----------------------------------------------------------------------
       uvU = 1
@@ -769,28 +768,30 @@ c-----------------------------------------------------------------------
       uvW = 0
       uvSrcid = 0
       uvFreqid = 0
-c
-c  Determine whether there is a source-id and freq-id random parameter.
-c
-      call fitrdhdi(lu,'PCOUNT',naxis,0)
-      do i = 1, naxis
-        num = itoaf(i)
-        call fitrdhda(lu,'PTYPE'//num,type,' ')
-        if ((type(1:3).eq.'WW' .or. type(1:3).eq.'WW-') .and.
-     *    uvW.eq.0) then
+
+c     Are the source-id and freq-id random parameters present?
+      call fitrdhdi(lu, 'PCOUNT', naxis, 0)
+      do iax = 1, naxis
+        cax = itoaf(iax)
+        call fitrdhda(lu, 'PTYPE'//cax, ptype, ' ')
+
+        if (uvW.eq.0 .and.
+     *     (ptype(:3).eq.'WW' .or. ptype(:3).eq.'WW-')) then
           nrandom = nrandom + 1
-          uvW = nrandom
+          uvW     = nrandom
           random(nrandom) = 'WW'
         endif
-        if (type.eq.'SOURCE' .and. uvSrcid.eq.0) then
+
+        if (ptype.eq.'SOURCE' .and. uvSrcid.eq.0) then
           nrandom = nrandom + 1
           uvSrcid = nrandom
-          random(nrandom) = type
+          random(nrandom) = 'SOURCE'
         endif
-        if (type.eq.'FREQSEL' .and. uvFreqid.eq.0) then
-          nrandom = nrandom + 1
+
+        if (ptype.eq.'FREQSEL' .and. uvFreqid.eq.0) then
+          nrandom  = nrandom + 1
           uvFreqid = nrandom
-          random(nrandom) = type
+          random(nrandom) = 'FREQSEL'
         endif
       enddo
 
@@ -1423,16 +1424,12 @@ c-----------------------------------------------------------------------
       include 'mirconst.h'
       include 'fits.h'
 
-      logical badapp,badepo,more,found,badmnt,badan
-      double precision Coord(3,4),rfreq,freq
-      double precision veldef
-      character defsrc*16,num*2
-      real defepoch,diff,rsdf(MAXFREQ*MAXIF)
-      integer nval,i,j,t,nxyz,n,naxis,itemp,nd
-      double precision xyz(3,MAXANT),xc,yc,zc,r0,d0
-      double precision eporef,vddef,dtemp
-      character type*1,units*16,ctype*8
-      integer sta(MAXANT)
+      logical   badan, badapp, badepo, badmnt, found, more
+      integer   i, itemp, j, n, naxis, nd, nval, nxyz, sta(MAXANT), t
+      real      defepoch, diff, rsdf(MAXFREQ*MAXIF)
+      double precision coord(3,4), d0, dtemp, eporef, freq, r0, rfreq,
+     *          vddef, veldef, xc, xyz(3,MAXANT), yc, zc
+      character cax*2, ctype*8, defsrc*16, type*1, units*16
 
 c     Externals.
       character itoaf*2
@@ -1485,10 +1482,10 @@ c
       nif = 1
       nchan = 1
       do i = 2, naxis
-        num = itoaf(i)
-        call fitrdhda(lu,'CTYPE'//num,ctype,' ')
-        if (ctype.eq.'IF') call fitrdhdi(lu,'NAXIS'//num,nif,1)
-        if (ctype.eq.'FREQ') call fitrdhdi(lu,'NAXIS'//num,nchan,1)
+        cax = itoaf(i)
+        call fitrdhda(lu,'CTYPE'//cax,ctype,' ')
+        if (ctype.eq.'IF') call fitrdhdi(lu,'NAXIS'//cax,nif,1)
+        if (ctype.eq.'FREQ') call fitrdhdi(lu,'NAXIS'//cax,nchan,1)
       enddo
       if (nif.gt.MAXIF) call bug('f','Too many IFs')
       nif0 = nif
@@ -1542,8 +1539,8 @@ c
         nants(nconfig) = nd
 c
 c  Get the antenna coordinates.
-c  Convert to earth-centered coordinates. The AIPS coordinates have X
-c  being in the direction from the earth center to the Grennwich
+c  Convert to earth-centred coordinates. The AIPS coordinates have X
+c  being in the direction from the earth centre to the Grennwich
 c  meridian, and Z being towards the pole.
 c
         call fitrdhdd(lu,'ARRAYX',xc,0d0)
@@ -1598,8 +1595,7 @@ c
         call ftabLoc(lu,'AIPS OB',found)
         anfound = found
         if (found) then
-          call output('Using orbit parameter table '//
-     *                                ' information')
+          call output('Using orbit parameter table information')
 
           nconfig = 1
           call ftabInfo(lu,'ORBXYZ',type,units,n,nxyz)
@@ -3703,9 +3699,7 @@ c***********************************************************************
       integer   lIn, lOut, naxis
 c-----------------------------------------------------------------------
 c  Copy (with any necessary scaling) FITS keywords to the Miriad image
-c  file.  CUNIT is not interpreted, and we assume that FITS default
-c  units are used, namely degrees, Hz and m/sec.  These are converted to
-c  Miriad's internal units: radian, GHz and km/sec.
+c  file.
 c
 c  Inputs:
 c    lIn        Handle of the input FITS image.
@@ -3716,25 +3710,24 @@ c-----------------------------------------------------------------------
       include 'maxnax.h'
 
       logical   found
-      integer   i, ilat, ilng, k, m, nx, ny, polcode
+      integer   iax, ilat, ilng, k, m, nx, ny, polcode
       real      bmaj, bmin, bpa, epoch, equinox, pbfwhm, rms, vobs
       double precision cdelt(MAXNAX), crpix(MAXNAX), crval(MAXNAX),
      *          dval, llrot, obsdec, obsra, restfreq
-      character atemp*16, btype*32, bunit*32, cax*2, cellscal*16,
+      character atemp*16, btype*24, bunit*32, cax*2, cellscal*16,
      *          ctype(MAXNAX)*8, object*32, observer*16, pbtype*16,
-     *          pv*8, telescop*16, types(5)*25
+     *          pv*8, specsys*16, telescop*16, btypes(5)*24
 
       external  epo2jul, itoaf, len1
       integer   len1
       double precision epo2jul
       character itoaf*2
 
-c                 1234567890123456789012345
-      data types/'polarized_intensity      ',
-     *           'fractional_polarization  ',
-     *           'position_angle           ',
-     *           'spectral_index           ',
-     *           'optical_depth            '/
+      data btypes/'polarized_intensity     ',
+     *            'fractional_polarization ',
+     *            'position_angle          ',
+     *            'spectral_index          ',
+     *            'optical_depth           '/
 c-----------------------------------------------------------------------
 c     Attempt to determine observer and telescope type.
       call fitrdhda(lIn,'USER',atemp,' ')
@@ -3762,30 +3755,21 @@ c     Attempt to determine observer and telescope type.
 c     Get world coordinate information, convert units, and write out.
       call crdLd(lIn,naxis,crpix,cdelt,crval,ctype,llrot,ilng,ilat)
 
-      do i = 1, naxis
-        cax = itoaf(i)
-        if (i.eq.ilng .or. i.eq.ilat .or. ctype(i).eq.'ANGLE') then
-          crval(i) = crval(i) * DD2R
-          cdelt(i) = cdelt(i) * DD2R
-        else if (ctype(i)(1:4).eq.'FREQ') then
-          crval(i) = crval(i) * 1d-9
-          cdelt(i) = cdelt(i) * 1d-9
-        else if (ctype(i)(1:4).eq.'VELO' .or.
-     *           ctype(i)(1:4).eq.'FELO') then
-          crval(i) = crval(i) * 1d-3
-          cdelt(i) = cdelt(i) * 1d-3
-        else if (ctype(i).eq.'STOKES') then
-          polcode = nint(crval(i)+(1-crpix(i))*cdelt(i))
-          if (polcode.lt.-8 .or. polcode.gt.4 .or. polcode.eq.0) then
-            ctype(i) = 'ASTOKES'
-            if (polcode.ge.5 .and. polcode.le.9) btype=types(polcode-4)
+      do iax = 1, naxis
+        if (ctype(iax).eq.'STOKES') then
+c         Translate the Stokes code.
+          polcode = nint(crval(iax)+(1-crpix(iax))*cdelt(iax))
+          if (polcode.lt.-8 .or. polcode.eq.0 .or. 4.lt.polcode) then
+            ctype(iax) = 'ASTOKES'
+            if (polcode.gt.4 .and. polcode.le.9) btype=btypes(polcode-4)
           endif
         endif
 
-        call wrhdd(lOut, 'crpix'//cax, crpix(i))
-        call wrhdd(lOut, 'cdelt'//cax, cdelt(i))
-        call wrhdd(lOut, 'crval'//cax, crval(i))
-        if (ctype(i).ne.' ') call wrhda(lOut,'ctype'//cax,ctype(i))
+        cax = itoaf(iax)
+        call wrhdd(lOut, 'crpix'//cax, crpix(iax))
+        call wrhdd(lOut, 'cdelt'//cax, cdelt(iax))
+        call wrhdd(lOut, 'crval'//cax, crval(iax))
+        if (ctype(iax).ne.' ') call wrhda(lOut,'ctype'//cax,ctype(iax))
       enddo
 
       if (llrot.ne.0d0) then
@@ -3877,7 +3861,7 @@ c       Handle the OBSRA and OBSDEC keywords.
      *        abs(obsdec-crval(ilat)).gt.abs(cdelt(ilat))) then
             call fitrdhdi(lIn, 'NAXIS'//itoaf(ilng), nx, 0)
             call fitrdhdi(lIn, 'NAXIS'//itoaf(ilat), ny, 0)
-            call output('Phase and pointing centers differ ...'//
+            call output('Phase and pointing centres differ ...'//
      *                  ' saving pointing information')
             call mosInit(nx,ny)
             if (rms.le.0) rms = 1
@@ -3911,6 +3895,9 @@ c     Determine dates.
       if (restfreq.eq.0d0) call fitrdhdd(lIn,'RESTFRQ',restfreq,0d0)
       if (restfreq.gt.0d0) call wrhdd(lOut,'restfreq',restfreq*1d-9)
 
+      call fitrdhda(lIn,'SPECSYS',specsys,' ')
+      if (specsys.ne.' ') call wrhda(lOut,'specsys',specsys)
+
       call fitrdhda(lIn,'CELLSCAL',cellscal,'CONSTANT')
       if (cellscal.ne.' ') call wrhda(lOut,'cellscal',cellscal)
 
@@ -3932,124 +3919,134 @@ c***********************************************************************
       double precision crpix(naxis), cdelt(naxis), crval(naxis), llrot
       character ctype(naxis)*(*)
 c-----------------------------------------------------------------------
-c  Load in FITS coordinate system and fiddle it into a Miriad coordinate
-c  system.
+c  Load FITS WCS keyvalues and fiddle them into a Miriad coordinate
+c  system.  CUNIT is not interpreted and we assume that FITS default
+c  units are used, namely degrees, Hz and m/s.  These are converted to
+c  Miriad's internal units: radian, GHz and km/s.
 c-----------------------------------------------------------------------
       include 'mirconst.h'
 
-      logical   more
-      integer   i, j, k, l1, l2
+      integer   iax, j, jax, k
       double precision dtemp
-      character cax*2, cd*2, ctemp*12, ctemp1*12, pc*2
+      character algo*8, axtype*16, cax*2, cd*2, pc*2, units*8, wtype*16
 
-      external  m0ij, mi_j, itoaf, len1
-      integer   len1
+      external  m0ij, mi_j, itoaf
       character m0ij*8, mi_j*8, itoaf*2
 
       data cd, pc /'CD', 'PC'/
 c-----------------------------------------------------------------------
-      ilng  = 0
-      ilat  = 0
+      ilng = 0
+      ilat = 0
 
-      do i = 1, naxis
+      do iax = 1, naxis
+        cax = itoaf(iax)
+
 c       CRPIXj.
-        cax = itoaf(i)
-        call fitrdhdd(lIn, 'CRPIX'//cax, crpix(i), 1d0)
+        call fitrdhdd(lIn, 'CRPIX'//cax, crpix(iax), 1d0)
 
 c       CDELTi.
-        call fitrdhdd(lIn, m0ij(cd,i,i), cdelt(i), 1d0)
-        call fitrdhdd(lIn, mi_j(cd,i,i), dtemp,    cdelt(i))
-        call fitrdhdd(lIn, 'CDELT'//cax, cdelt(i), dtemp)
+        call fitrdhdd(lIn, m0ij(cd,iax,iax), cdelt(iax), 1d0)
+        call fitrdhdd(lIn, mi_j(cd,iax,iax), dtemp,  cdelt(iax))
+        call fitrdhdd(lIn, 'CDELT'//cax, cdelt(iax), dtemp)
 
 c       CRVALi.
-        call fitrdhdd(lIn, 'CRVAL'//cax, crval(i), 0d0)
+        call fitrdhdd(lIn, 'CRVAL'//cax, crval(iax), 0d0)
 
 c       CTYPEi.
-        call fitrdhda(lIn, 'CTYPE'//cax, ctemp1, ' ')
-        ctemp = ' '
-        j = 0
-        do k = 1, len(ctemp1)
-          if (ctemp1(k:k).ne.' ') then
-            j = j + 1
-            ctemp(j:j) = ctemp1(k:k)
-          endif
-        enddo
-        call ucase(ctemp)
+        call fitrdhda(lIn, 'CTYPE'//cax, ctype(iax), ' ')
 
-        if (ctemp.eq.' ') then
-          if (i.eq.1) then
+c       Clean up CTYPEi.
+        if (ctype(iax).eq.' ') then
+          if (iax.eq.1) then
 c           A stab in the dark!
-            ctemp = 'RA---SIN'
-          else if (i.eq.2) then
+            ctype(iax) = 'RA---SIN'
+          else if (iax.eq.2) then
 c           And another one!
-            ctemp = 'DEC--SIN'
+            ctype(iax) = 'DEC--SIN'
           endif
-        else if (ctemp.eq.'VLSR') then
-          ctemp = 'VELO-LSR'
-          cdelt(i) = cdelt(i)*1e3
-          crval(i) = crval(i)*1e3
+        else
+c         Strip off leading blanks if any.
+          if (ctype(iax)(:1).eq.' ') then
+            j = 0
+            do k = 1, len(ctype(iax))
+              if (j.gt.0) then
+                j = j + 1
+                ctype(iax)(j:j) = ctype(iax)(k:k)
+              else if (ctype(iax)(k:k).ne.' ') then
+                j = 1
+                ctype(iax)(j:j) = ctype(iax)(k:k)
+              endif
+            enddo
+            ctype(iax)(j+1:) = ' '
+          endif
+
+          call ucase(ctype(iax))
+
+          if (ctype(iax).eq.'VLSR') then
+c           Assumed to be radio velocity wrt LSRK in km/s.
+            ctype(iax) = 'VELO-LSR'
+            cdelt(iax) = cdelt(iax)*1e3
+            crval(iax) = crval(iax)*1e3
+          endif
         endif
 
-        l1 = index(ctemp,'-') - 1
-        l2 = len1(ctemp)
-        if (l1.le.0) then
-          ctype(i) = ctemp
-        else
-          ctype(i) = ctemp(1:l1)//'------'
-          l1 = l2
-          more = .true.
-          do while (l1.gt.1 .and. more)
-            more = ctemp(l1-1:l1-1).ne.'-'
-            if (more) l1 = l1 - 1
-          enddo
-          ctype(i)(6:8) = ctemp(l1:l2)
+c       Convert units (ignoring CUNITi).
+        call coCtype(ctype(iax), axtype, wtype, algo, units)
+        if (units.eq.'rad') then
+c         FITS degrees -> Miriad radians.
+          cdelt(iax) = cdelt(iax) * DD2R
+          crval(iax) = crval(iax) * DD2R
+        else if (units.eq.'GHz') then
+c         FITS Hz -> Miriad GHz.
+          cdelt(iax) = cdelt(iax) * 1d-9
+          crval(iax) = crval(iax) * 1d-9
+        else if (units.eq.'km/s') then
+c         FITS m/s -> Miriad km/s.
+          cdelt(iax) = cdelt(iax) * 1d-3
+          crval(iax) = crval(iax) * 1d-3
         endif
 
 c       Locate the celestial axes.
-        if (ctype(i).eq.'RA'   .or. ctype(i)(1:5).eq.'RA---' .or.
-     *      ctype(i).eq.'GLON' .or. ctype(i)(1:5).eq.'GLON-' .or.
-     *      ctype(i).eq.'ELON' .or. ctype(i)(1:5).eq.'ELON-') then
-          ilng = i
-        else if (ctype(i).eq.'DEC'  .or. ctype(i)(1:5).eq.'DEC--' .or.
-     *           ctype(i).eq.'GLAT' .or. ctype(i)(1:5).eq.'GLAT-' .or.
-     *           ctype(i).eq.'ELAT' .or. ctype(i)(1:5).eq.'ELAT-') then
-          ilat = i
+        if (axtype.eq.'longitude') then
+          ilng = iax
+        else if (axtype.eq.'latitude') then
+          ilat = iax
         endif
       enddo
 
 c     Check for skew/rotations that cannot be handled.
-      do j = 1, naxis
-        do i = 1, naxis
-          if (i.ne.j .and.
-     *      .not.((i.eq.ilng .and. j.eq.ilat) .or.
-     *            (j.eq.ilng .and. i.eq.ilat))) then
-            call fitrdhdd(lIn, mi_j(pc,i,j), dtemp, 0d0)
+      do jax = 1, naxis
+        do iax = 1, naxis
+          if (iax.ne.jax .and.
+     *      .not.((iax.eq.ilng .and. jax.eq.ilat) .or.
+     *            (jax.eq.ilng .and. iax.eq.ilat))) then
+            call fitrdhdd(lIn, mi_j(pc,iax,jax), dtemp, 0d0)
             if (dtemp.ne.0d0) call bug('w',
      *        'Cannot handle non-zero FITS skewness parameter '//
-     *        mi_j(pc,i,j))
+     *        mi_j(pc,iax,jax))
 
-            call fitrdhdd(lIn, m0ij(pc,i,j), dtemp, 0d0)
+            call fitrdhdd(lIn, m0ij(pc,iax,jax), dtemp, 0d0)
             if (dtemp.ne.0d0) call bug('w',
      *        'Cannot handle non-zero FITS skewness parameter '//
-     *        m0ij(pc,i,j))
+     *        m0ij(pc,iax,jax))
 
-            call fitrdhdd(lIn, m0ij(cd,i,j), dtemp, 0d0)
+            call fitrdhdd(lIn, m0ij(cd,iax,jax), dtemp, 0d0)
             if (dtemp.ne.0d0) call bug('w',
      *        'Cannot handle non-zero FITS skewness parameter '//
-     *        m0ij(cd,i,j))
+     *        m0ij(cd,iax,jax))
 
-            call fitrdhdd(lIn, mi_j(cd,i,j), dtemp, 0d0)
+            call fitrdhdd(lIn, mi_j(cd,iax,jax), dtemp, 0d0)
             if (dtemp.ne.0d0) call bug('w',
      *        'Cannot handle non-zero FITS skewness parameter '//
-     *        mi_j(cd,i,j))
+     *        mi_j(cd,iax,jax))
           endif
         enddo
 
-        if (j.ne.ilat .and. j.ne.ilng) then
-          call fitrdhdd(lIn, 'CROTA'//itoaf(j), dtemp, 0d0)
+        if (jax.ne.ilat .and. jax.ne.ilng) then
+          call fitrdhdd(lIn, 'CROTA'//itoaf(jax), dtemp, 0d0)
           if (dtemp.ne.0d0) call bug('w',
      *        'Cannot handle non-zero FITS rotation parameter '//
-     *        itoaf(j))
+     *        itoaf(jax))
         endif
       enddo
 
@@ -4082,8 +4079,6 @@ c-----------------------------------------------------------------------
 
       data cd, pc /'CD', 'PC'/
 c-----------------------------------------------------------------------
-      call fitrdhdd(lIn,'CDELT'//itoaf(ilng),cdelt1,1d0)
-      call fitrdhdd(lIn,'CDELT'//itoaf(ilat),cdelt2,1d0)
       call fitrdhdd(lIn,'CROTA'//itoaf(ilat),crota2,0d0)
       crota2 = crota2*DD2R
 
@@ -4194,12 +4189,12 @@ c-----------------------------------------------------------------------
       call bug('i','Assuming equinox of coordinates is B1950')
       call bug('i','Assuming TAN projection')
 
-      call rdhdi(lOut, 'naxis1', naxis1, 0)
-      call rdhdi(lOut, 'naxis2', naxis2, 0)
-      call rdhdd(lOut, 'cdelt1', cdelt1, 1d0)
-      call rdhdd(lOut, 'crval1', crval1, 0d0)
-      call rdhdd(lOut, 'cdelt2', cdelt2, 1d0)
-      call rdhdd(lOut, 'crval2', crval2, 0d0)
+      call rdhdi(lIn, 'naxis1', naxis1, 0)
+      call rdhdi(lIn, 'naxis2', naxis2, 0)
+      call rdhdd(lIn, 'cdelt1', cdelt1, 1d0)
+      call rdhdd(lIn, 'crval1', crval1, 0d0)
+      call rdhdd(lIn, 'cdelt2', cdelt2, 1d0)
+      call rdhdd(lIn, 'crval2', crval2, 0d0)
 
       crpix1 = dble(naxis1/2 + 1)
       crpix2 = dble(naxis2/2 + 1)
@@ -4460,20 +4455,21 @@ c-----------------------------------------------------------------------
       include 'mirconst.h'
 
       integer   NKWRD2, NKWRD5, NKWRD8
-      parameter (NKWRD2=1, NKWRD5=6, NKWRD8=19)
+      parameter (NKWRD2=1, NKWRD5=6, NKWRD8=20)
 
       integer   iax, ilat, ilng, iostat, item, ival, m, n, npnt
       real      rms, rval
       double precision cdelt, crota, crpix, crval, dval, obsdec, obsra,
      *          scale
-      character cax*2, ctype*32, cval*32, descr*80, keywrd*12, ktype*16,
-     *          kwrd2(NKWRD2)*2, kwrd5(NKWRD5)*5, kwrd8(NKWRD8)*8,
-     *          telescop*16, text*80, ukey*12
+      character algo*3, axtype*16, cax*2, ctype*32, cval*32, descr*80,
+     *          keywrd*12, ktype*16, kwrd2(NKWRD2)*2, kwrd5(NKWRD5)*5,
+     *          kwrd8(NKWRD8)*8, telescop*16, text*80, ukey*12,
+     *          units*8, wtype*16
 
       external  binsrcha, hdprsnt, itoaf, len1, spaste
       logical   hdprsnt
       integer   binsrcha, len1
-      character itoaf*2, spaste*16
+      character itoaf*2, spaste*12
 
 c     Keywords individually taken care of by kwdOut.  These lists must
 c     be in ALPHABETICAL ORDER.
@@ -4483,7 +4479,7 @@ c     Non-parameterised keywords.
      *  'bmaj    ', 'bmin    ', 'bpa     ', 'bunit   ', 'cellscal',
      *  'history ', 'image   ', 'latpole ', 'llrot   ', 'lonpole ',
      *  'mask    ', 'mostable', 'obstime ', 'phi0    ', 'restfreq',
-     *  'telescop', 'theta0  ', 'vobs    ', 'xyzero  '/
+     *  'specsys ', 'telescop', 'theta0  ', 'vobs    ', 'xyzero  '/
 
 c     Parameterised keywords of length 5.
       data kwrd5 /'cdelt', 'crota', 'crpix', 'crval', 'ctype', 'naxis'/
@@ -4494,7 +4490,7 @@ c-----------------------------------------------------------------------
       call rdhda(lIn, 'bunit', cval, ' ')
       if (cval.ne.' ') call fitwrhda(lOut, 'BUNIT', cval)
 
-      call coGetd(lIn, 'obstime', dval)
+      call coGetD(lIn, 'obstime', dval)
       if (dval.gt.0d0) then
         call julday(dval, 'T', cval)
         call fitwrhda(lOut, 'DATE-OBS', cval)
@@ -4519,25 +4515,26 @@ c     Locate the celestial axes.
 
       do iax = 1, naxis
         call coAxGet(lIn, iax, ctype, crpix, crval, cdelt)
-        cax = itoaf(iax)
 
 c       Determine scale factor.
         scale = 1.0
-        if (iax.eq.ilng .or. iax.eq.ilat .or. ctype.eq.'ANGLE') then
+        call coCtype(ctype, axtype, wtype, algo, units)
+        if (units.eq.'rad') then
           scale = DR2D
-        else if (ctype(1:4).eq.'FREQ') then
+        else if (units.eq.'GHz') then
           scale = 1d9
-        else if (ctype(1:4).eq.'VELO' .or. ctype(1:4).eq.'FELO') then
+        else if (units.eq.'km/s') then
           scale = 1d3
         endif
 
+        cax = itoaf(iax)
         call fitwrhdd(lOut, 'CRPIX'//cax, crpix-dble(blc(iax)-1))
         call fitwrhdd(lOut, 'CDELT'//cax, scale*cdelt)
         call fitwrhdd(lOut, 'CRVAL'//cax, scale*crval)
         if (ctype.ne.' ') call fitwrhda(lOut, 'CTYPE'//cax, ctype)
 
         if (iax.eq.ilat) then
-          call coGetd(lIn, 'llrot', crota)
+          call coGetD(lIn, 'llrot', crota)
           if (crota.ne.0d0) then
             call fitwrhdd(lOut, 'CROTA'//cax, crota*DR2D)
           endif
@@ -4546,18 +4543,18 @@ c       Determine scale factor.
 
 c     LONPOLE and LATPOLE.
       if (hdprsnt(lIn, 'lonpole')) then
-        call coGetd(lIn, 'lonpole', dval)
+        call coGetD(lIn, 'lonpole', dval)
         call fitwrhdd(lOut, 'LONPOLE', dval)
       endif
 
       if (hdprsnt(lIn, 'latpole')) then
-        call coGetd(lIn, 'latpole', dval)
+        call coGetD(lIn, 'latpole', dval)
         call fitwrhdd(lOut, 'LATPOLE', dval)
       endif
 
 c     phi0, theta0, and xyzero.
       if (hdprsnt(lIn, 'xyzero')) then
-        call coGeti(lIn, 'xyzero', ival)
+        call coGetI(lIn, 'xyzero', ival)
         if (ival.ne.0) then
           keywrd = spaste('PV'//itoaf(ilng), '_', '0', ' ')
           call fitwrhdd(lOut, keywrd, dble(ival))
@@ -4565,13 +4562,13 @@ c     phi0, theta0, and xyzero.
       endif
 
       if (hdprsnt(lIn, 'phi0')) then
-        call coGetd(lIn, 'phi0', dval)
+        call coGetD(lIn, 'phi0', dval)
         keywrd = spaste('PV'//itoaf(ilng), '_', '1', ' ')
         call fitwrhdd(lOut, keywrd, dval)
       endif
 
       if (hdprsnt(lIn, 'theta0')) then
-        call coGetd(lIn, 'theta0', dval)
+        call coGetD(lIn, 'theta0', dval)
         keywrd = spaste('PV'//itoaf(ilng), '_', '2', ' ')
         call fitwrhdd(lOut, keywrd, dval)
       endif
@@ -4580,20 +4577,22 @@ c     Projection parameters.
       do m = 0, 29
         keywrd = 'pv' // itoaf(m)
         if (hdprsnt(lIn, keywrd)) then
-          call coGetd(lIn, keywrd, dval)
+          call coGetD(lIn, keywrd, dval)
           keywrd = spaste('PV'//itoaf(ilat), '_', itoaf(m), ' ')
           call fitwrhdd(lOut, keywrd, dval)
         endif
       enddo
 
 c     Write out auxiliary keywords.
-      call coGeta(lIn, 'cellscal', cval)
+      call coGetA(lIn, 'cellscal', cval)
       if (cval.ne.' ') call fitwrhda(lOut, 'CELLSCAL', cval)
 
-      call coGetd(lIn, 'restfreq', dval)
+      call coGetD(lIn, 'restfreq', dval)
       if (dval.gt.0d0) call fitwrhdd(lOut, 'RESTFREQ', dval*1d9)
+      call coGetA(lIn, 'specsys', cval)
+      if (cval.ne.' ') call fitwrhda(lOut, 'SPECSYS', cval)
       call rdhdr(lIn, 'vobs', rval, 0.0)
-      if (rval.ne.0.0) call fitwrhdr(lOut, 'VOBS', rval*R2D)
+      if (rval.ne.0.0) call fitwrhdr(lOut, 'VOBS', rval)
 
 c     N.B. BPA is stored in degrees in the Miriad header!
       call rdhdr(lIn, 'bmaj', rval, 0.0)
@@ -4747,7 +4746,7 @@ c    lOut       Handle of the output Miriad file.
 c    version
 c-----------------------------------------------------------------------
       integer    NHIST, NKWRD8, NKWRD7, NKWRD5, NKWRD2
-      parameter (NHIST=4, NKWRD8=46, NKWRD7=4, NKWRD5=9, NKWRD2=1)
+      parameter (NHIST=4, NKWRD8=45, NKWRD7=5, NKWRD5=9, NKWRD2=1)
 
       logical   found
       integer   i, unrec
@@ -4769,16 +4768,15 @@ c     Non-parameterised keywords.
      *  'BMAJ    ', 'BMIN    ', 'BPA     ', 'BSCALE  ', 'BTYPE   ',
      *  'BUNIT   ', 'BZERO   ', 'CELLSCAL', 'DATAMAX ', 'DATAMIN ',
      *  'DATE    ', 'DATE-MAP', 'DATE-OBS', 'END     ', 'EPOCH   ',
-     *  'EQUINOX ', 'EXTEND  ', 'GCOUNT  ', 'GROUPS  ', 'INSTRUME',
-     *  'LSTART  ', 'LSTEP   ', 'LTYPE   ', 'LWIDTH  ', 'NITERS  ',
-     *  'OBJECT  ', 'OBSDEC  ', 'OBSERVER', 'OBSRA   ', 'ORIGIN  ',
-     *  'PBFWHM  ', 'PBTYPE  ', 'PCOUNT  ', 'RESTFREQ', 'RMS     ',
-     *  'SIMPLE  ', 'TELESCOP', 'VELREF  ', 'VOBS    ', 'XSHIFT  ',
-     *  'YSHIFT  '/
+     *  'EXTEND  ', 'GCOUNT  ', 'GROUPS  ', 'INSTRUME', 'LSTART  ',
+     *  'LSTEP   ', 'LTYPE   ', 'LWIDTH  ', 'NITERS  ', 'OBJECT  ',
+     *  'OBSDEC  ', 'OBSERVER', 'OBSRA   ', 'ORIGIN  ', 'PBFWHM  ',
+     *  'PBTYPE  ', 'PCOUNT  ', 'RESTFREQ', 'RMS     ', 'SIMPLE  ',
+     *  'TELESCOP', 'VELREF  ', 'VOBS    ', 'XSHIFT  ', 'YSHIFT  '/
 
 c     Parameterised keywords of base length 7.
       data kwrd7 /
-     *  'EQUINOX',  'LATPOLE',  'LONPOLE',  'RESTFRQ'/
+     *  'EQUINOX',  'LATPOLE',  'LONPOLE',  'RESTFRQ',  'SPECSYS'/
 
 c     Parameterised keywords of base length 5.
       data kwrd5 /
