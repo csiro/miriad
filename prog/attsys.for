@@ -52,7 +52,7 @@ c         nocal     Do not apply the gains file.
 c         nopass    Do not apply bandpass corrections.
 c         nopol     Do not apply polarization corrections. 
 c
-c $Id: attsys.for,v 1.6 2012/02/27 01:22:32 wie017 Exp $
+c $Id: attsys.for,v 1.7 2012/02/27 03:41:25 wie017 Exp $
 c--
 c  History:
 c    17jul00 rjs  Original version.
@@ -82,8 +82,8 @@ c
         character versan*80
 c
 	version = versan('attsys',
-     *                   '$Revision: 1.6 $',
-     *                   '$Date: 2012/02/27 01:22:32 $')
+     *                   '$Revision: 1.7 $',
+     *                   '$Date: 2012/02/27 03:41:25 $')
 	call keyini
 	call GetOpt(uvflags,doapply,auto,redo,inv,scale)
 	call uvDatInp('vis',uvflags)
@@ -127,7 +127,7 @@ c
 c
 c  Get first record.
 c
-	call uvread(lVis,preamble,data,flags,MAXCHAN,nchan)
+	call uvDatRd(preamble,data,flags,MAXCHAN,nchan)
 c
 c  If auto mode has been requested, check that the "tcorr" variable
 c  is present.
@@ -142,8 +142,9 @@ c
 c
 	dowhile(nchan.gt.0)
           update=.false.
-	  call uvrdvri(lVis,'pol',pol,0)
-	  call uvrdvri(lVis,'npol',npol,0)
+	  call uvDatGti('pol',pol)
+          write(*,*) 'pol = ',pol
+	  call uvDatGti('npol',npol)
 c
 	  if(uvvarUpd(vupd))then
 	    call uvprobvr(lVis,'nschan',type,length,updated)
@@ -200,10 +201,8 @@ c
 	  endif
 c
 	  call varCopy(lVis,lOut)
-	  if(npol.gt.0)then
-	    call uvputvri(lOut,'npol',npol,1)
-	    call uvputvri(lOut,'pol',pol,1)
-	  endif
+	  call uvputvri(lOut,'pol',pol,1)
+	  call uvputvri(lOut,'npol',npol,1)
           if ((redo.or.scale).and.update) then
             k=0
             do i=1,nif
@@ -223,10 +222,10 @@ c
             call uvputvrr(lOut,'systemp',systemp,nst)      
           endif
 	  call uvwrite(lOut,preamble,data,flags,nchan)
-	  call uvread(lVis,preamble,data,flags,MAXCHAN,nchan)
+	  call uvDatRd(preamble,data,flags,MAXCHAN,nchan)
 	enddo
 c
-	call uvclose(lVis)
+	call uvDatCls()
 	call uvclose(lOut)
 	end
 c************************************************************************
@@ -320,8 +319,8 @@ c
 c
 c Set up calibration flags
 c
-        uvflags = 'dslr3'
-        l = 5
+        uvflags = '3'
+        l = 1
         if(.not.present(7))then
           l = l + 1
           uvflags(l:l) = 'c'
