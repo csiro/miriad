@@ -55,7 +55,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: co.for,v 1.34 2012/02/23 23:52:09 cal103 Exp $
+c $Id: co.for,v 1.35 2012/02/27 02:43:55 cal103 Exp $
 c***********************************************************************
 
 c* coInit -- Initialise coordinate conversion routines.
@@ -490,7 +490,7 @@ c               form suitable for reporting, e.g. 'VOPT-F2W' would
 c               yield 'km/s'.
 c-----------------------------------------------------------------------
       integer    NWTYPE, NPCODE
-      parameter (NWTYPE = 20, NPCODE = 29)
+      parameter (NWTYPE = 21, NPCODE = 29)
 
       integer   i, k
       character axtypes(NWTYPE)*9, cunits(NWTYPE)*6, pcodes(NPCODE)*3,
@@ -517,6 +517,7 @@ c     Recognised wtypes; this list MUST be in alphabetic order.
      *  'RA       ', 'longitude', 'rad   ',
      *  'SDBEAM   ', 'linear   ', '      ',
      *  'STOKES   ', 'linear   ', '      ',
+     *  'TIME     ', 'linear   ', 's     ',
      *  'UU       ', 'linear   ', 'lambda',
      *  'VELO     ', 'spectral ', 'km/s  ',
      *  'VELOCITY ', 'spectral ', 'km/s  ',
@@ -986,6 +987,9 @@ c     Parse parameterized keywords.
           cVal = 'CONSTANT'
         endif
 
+      else if (obj.eq.'specsys') then
+        cVal = specsys(icrd)
+
       else
         call bug('f','Unrecognised object in coGetA: '//obj)
       endif
@@ -1224,6 +1228,10 @@ c     Parse parameterized keywords.
         else
           call bug('f','Unrecognised value for cellscal in coSetA')
         endif
+
+      else if (obj.eq.'specsys') then
+        specsys(icrd) = value
+
       else
         call bug('f','Unrecognised object in coSetA: '//obj)
       endif
