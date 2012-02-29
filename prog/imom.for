@@ -72,7 +72,7 @@ c@ log
 c       The output log file. The default is the terminal. Output to
 c       the terminal is paged.
 c
-c$Id: imom.for,v 1.4 2012/02/29 05:21:32 cal103 Exp $
+c$Id: imom.for,v 1.5 2012/02/29 05:35:00 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -94,8 +94,8 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 c     Get input parameters.
       version = versan('imom',
-     *                 '$Revision: 1.4 $',
-     *                 '$Date: 2012/02/29 05:21:32 $')
+     *                 '$Revision: 1.5 $',
+     *                 '$Date: 2012/02/29 05:35:00 $')
 
       call keyini
       call keya('in', In, ' ')
@@ -219,10 +219,12 @@ c        doskew     Compute the skew statistic
 c        clipmean   Set lower clip limit to region mean
 c        clip1sig   Set lower clip limit to region mean+rms
 c-----------------------------------------------------------------------
-      integer axis, length, plane
-      real    cbof, momx(3), momy(3), stats(3)
-      double precision value
-      character ctype*9, label*13, line*80, units*13
+      integer   axis, length, plane
+      real      cbof, momx(3), momy(3), stats(3)
+      character cax*2, ctype*9, line*80
+
+      external  itoaf
+      character itoaf*2
 c-----------------------------------------------------------------------
 c     Write title lines.
       call LogWrit(' ')
@@ -233,7 +235,8 @@ c     List moments for each plane in each axis in selected region.
       if (naxis.ge.3) then
         axis = 3
         do while (axis.le.naxis)
-          call AxisType(lIn,axis,plane,ctype,label,value,units)
+          cax = itoaf(axis)
+          call rdhda(lIn, 'ctype'//cax, ctype, ' ')
           write(line,'(a,i5,5x,a)') 'Axis: ',axis,ctype
           length=6+5+5+10
           call LogWrit(' ')
@@ -243,7 +246,6 @@ c         Do a separate estimate for each hyperplane.
           plane = blc(axis)
           do while (plane.le.trc(axis))
             call xysetpl(lIn,1,plane)
-            call AxisType(lIn,axis,plane,ctype,label,value,units)
 
             call momit(lin,naxis,imlo,imhi,blc,trc,rlo,rhi,
      *                 getmin,getmax,doskew,clipmean,clip1sig,
