@@ -23,7 +23,7 @@ c    label      A nice label for this axis.
 c    value      The value at the plane along this axis.
 c    valstr     value as a formatted string.
 c--
-c $Id: axistype.for,v 1.4 2012/02/22 07:01:49 cal103 Exp $
+c $Id: axistype.for,v 1.5 2012/02/29 05:12:18 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'mirconst.h'
 
@@ -40,7 +40,7 @@ c     Get coordinate type and value for input plane.
       if (axis.le.naxis) then
         call coInit(lIn)
         call coCvt1(lIn, axis, 'ap', dble(plane), 'aw', value)
-        call coGetA(lIn, 'ctype'//cax, ctype, ' ')
+        call coGetA(lIn, 'ctype'//cax, ctype)
         call coCtype(ctype, axtype, wtype, algo, units)
 
 c       Convert to user friendly label and formatted value.
