@@ -72,19 +72,17 @@ c@ log
 c       The output log file. The default is the terminal. Output to
 c       the terminal is paged.
 c
-c$Id: imom.for,v 1.3 2011/03/23 05:39:37 cal103 Exp $
+c$Id: imom.for,v 1.4 2012/02/29 05:21:32 cal103 Exp $
 c--
-c  vjm  20aug99  Cannibalise imlist
-c  vjm  23aug99  Revise & expand
-c  vjm  01oct99  Fix up cube handling and clip limit handling
-c  rjs  01oct99  Tivial FORTRAN standardization.
+c  History:
+c    Refer to the RCS log, v1.1 includes prior revision information.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
 
       integer   MAXBOXES, MAXNAX
       parameter (MAXBOXES=2048, MAXNAX=3)
 
-      logical   clip1sig, clipmean, doskew, getmax, getmin, more
+      logical   clip1sig, clipmean, doskew, getmax, getmin
       integer   blc(MAXNAX), boxes(MAXBOXES), lin, naxis, nsize(MAXNAX),
      *          trc(MAXNAX)
       real      imhi, imlo, rhi, rlo
@@ -96,8 +94,8 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 c     Get input parameters.
       version = versan('imom',
-     *                 '$Revision: 1.3 $',
-     *                 '$Date: 2011/03/23 05:39:37 $')
+     *                 '$Revision: 1.4 $',
+     *                 '$Date: 2012/02/29 05:21:32 $')
 
       call keyini
       call keya('in', In, ' ')
@@ -119,8 +117,7 @@ c     Open the output text file.
 
 c     Open input image and check dimensions.
       call xyopen(lIn,In,'old',MAXNAX,nsize)
-      if (nsize(1).gt.maxbuf)
-     *     call bug('f','Image too big for buffer')
+      if (nsize(1).gt.maxbuf) call bug('f','Image too big for buffer')
       call rdhdi(lIn,'naxis',naxis,0)
       naxis = min(naxis,MAXNAX)
 
@@ -131,32 +128,28 @@ c     Determine portion of image to list.
 c     Determine the min and max value, if needed.
       call ImMinMax(lIn,naxis,nsize,imlo,imhi)
       if (getmin .or. getmax) then
-         if (imlo.eq.imhi) then
-            call xyclose(lIn)
-            write(line,'(''All pixels are '',1pg10.3)') rlo
-            call output(line)
-            stop
-         endif
+        if (imlo.eq.imhi) then
+          call xyclose(lIn)
+          write(line,'(''All pixels are '',1pg10.3)') rlo
+          call output(line)
+        endif
 
-c        rlo,rhi are set to user's value if one is given, else 0.0.
-c        Reset them to image low, high if user gave no value.
-         if (getmin) rlo=imlo
-         if (getmax) rhi=imhi
+c       rlo,rhi are set to user's value if one is given, else 0.0.
+c       Reset them to image low, high if user gave no value.
+        if (getmin) rlo=imlo
+        if (getmax) rhi=imhi
 
-         if (rlo.gt.rhi) then
-            call xyclose(lIn)
-            write(line,
-     *          '(''Minimum '',1pg10.3,'' greater than max '',g10.3)')
-     *           rlo,rhi
-            call bug('f',line)
-            stop
-         endif
+        if (rlo.gt.rhi) then
+          call xyclose(lIn)
+          write(line,
+     *        '(''Minimum '',1pg10.3,'' greater than max '',g10.3)')
+     *         rlo,rhi
+          call bug('f',line)
+        endif
       endif
 
 c     Title line.
-      call LogWrite('Moments for image '//In,more)
-c     write(line,'("Intensity range=",1pg10.3,x,g10.3)') rlo,rhi
-      call LogWrit(line)
+      call LogWrit('Moments for image '//In)
 
       if (clip1sig) then
         call LogWrit('Will clip pixels below (RoI mean + 1 sigma)')
@@ -226,11 +219,10 @@ c        doskew     Compute the skew statistic
 c        clipmean   Set lower clip limit to region mean
 c        clip1sig   Set lower clip limit to region mean+rms
 c-----------------------------------------------------------------------
+      integer axis, length, plane
+      real    cbof, momx(3), momy(3), stats(3)
       double precision value
-      integer axis,plane,length
-      character line*80,label*13,units*13,ctype*9
-      real cbof
-      real momx(3),momy(3),stats(3)
+      character ctype*9, label*13, line*80, units*13
 c-----------------------------------------------------------------------
 c     Write title lines.
       call LogWrit(' ')
@@ -242,8 +234,7 @@ c     List moments for each plane in each axis in selected region.
         axis = 3
         do while (axis.le.naxis)
           call AxisType(lIn,axis,plane,ctype,label,value,units)
-          write(line,'(a,i5,5x,a)')
-     *    'Axis: ',axis,ctype
+          write(line,'(a,i5,5x,a)') 'Axis: ',axis,ctype
           length=6+5+5+10
           call LogWrit(' ')
           call LogWrit(line(1:length))
@@ -272,9 +263,9 @@ c         Do a separate estimate for each hyperplane.
             call LogWrit(line(1:80))
 
             if (doskew) then
-               write(line,'(a,x,i4,2x,a10,1p,2(x,e12.5),x,a)')
-     *           'Plane:',plane,'Skew:',momx(3),momy(3),' '
-               call LogWrit(line(1:80))
+              write(line,'(a,x,i4,2x,a10,1p,2(x,e12.5),x,a)')
+     *          'Plane:',plane,'Skew:',momx(3),momy(3),' '
+              call LogWrit(line(1:80))
             endif
             plane = plane + 1
           enddo
