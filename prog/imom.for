@@ -6,8 +6,8 @@ c: image analysis
 c+
 c       IMOM finds the 'centroid' of a Miriad image, and the 'spread'
 c       about that centroid, by evaluating the expressions
-c           mom1 = SUM{ I(x)*x } / SUM{ I(x) }
-c           mom2 = sqrt( SUM{ I(x)*(x-mom1)**2 } / SUM{ I(x) } )
+c         mom1 = SUM{I(x)*x} / SUM{I(x)}
+c         mom2 = sqrt(SUM{I(x)*(x-mom1)**2} / SUM{I(x)})
 c       along the first two axes of an image.
 c
 c       Notes:
@@ -16,16 +16,16 @@ c       * mom2 is equivalent to the standard deviation, not the FWHM,
 c         for a gaussian intensity distribution.
 c       * mom2 shows the spread along the directions parallel to the
 c         *image axes*. So if your object of interest is elongated along
-c         some random angle, the mom2 values returned will be a combination
-c         of the major and minor-axis sizes, projected onto the x- and y-axes.
-c       * If all pixels in the region are blank, moments of -1.0 are returned
-c         and a warning is printed.
+c         some random angle, the mom2 values returned will be a
+c         combination of the major and minor-axis sizes, projected onto
+c         the x- and y-axes.
+c       * If all pixels in the region are blank, moments of -1.0 are
+c         returned and a warning is printed.
 c       * In case of a rounding error etc, moments of 0.0 are returned
 c         and a warning is printed.
 c
 c@ in
 c       Input image name. No default.
-c
 c@ options
 c       The following options can be given (minimum match applies):
 c         skew
@@ -49,9 +49,8 @@ c           computed using only the values within the selected range.
 c         clip1sigma
 c           Forms moments using just the pixels brighter than
 c           local_mean + local_rms.
-c           If a min or max value is specified, the mean and rms are computed
-c           using only the values within the selected range.
-c
+c           If a min or max value is specified, the mean and rms are
+c           computed using only the values within the selected range.
 c@ region
 c       The region of interest. See the help on "region" for more
 c       information. This gives the region of pixels to calculate the
@@ -59,20 +58,17 @@ c       moments within. Only rectangular regions are supported.
 c       The default is the entire image.
 c       If a cube is given as the input image, the program computes
 c       moments for each plane along axis 3 (within the selected range).
-c
 c@ min
 c       The minimum pixel value for inclusion in the moment calculation.
 c       The default is the image minimum.
-c
 c@ max
 c       The maximum pixel value for inclusion in the moment calculation
 c       The default is the image maximum.
-c
 c@ log
 c       The output log file. The default is the terminal. Output to
 c       the terminal is paged.
 c
-c$Id: imom.for,v 1.5 2012/02/29 05:35:00 cal103 Exp $
+c$Id: imom.for,v 1.6 2012/02/29 23:54:44 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -94,8 +90,8 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 c     Get input parameters.
       version = versan('imom',
-     *                 '$Revision: 1.5 $',
-     *                 '$Date: 2012/02/29 05:35:00 $')
+     *                 '$Revision: 1.6 $',
+     *                 '$Date: 2012/02/29 23:54:44 $')
 
       call keyini
       call keya('in', In, ' ')
@@ -247,7 +243,7 @@ c         Do a separate estimate for each hyperplane.
           do while (plane.le.trc(axis))
             call xysetpl(lIn,1,plane)
 
-            call momit(lin,naxis,imlo,imhi,blc,trc,rlo,rhi,
+            call momit(lin,naxis,blc,trc,imlo,imhi,rlo,rhi,
      *                 getmin,getmax,doskew,clipmean,clip1sig,
      *                 momx,momy,stats)
 
@@ -276,7 +272,7 @@ c         Do a separate estimate for each hyperplane.
         enddo
 
       else if (naxis.eq.2) then
-        call momit(lin,naxis,imlo,imhi,blc,trc,rlo,rhi,getmin,getmax,
+        call momit(lin,naxis,blc,trc,imlo,imhi,rlo,rhi,getmin,getmax,
      *             doskew,clipmean,clip1sig,momx,momy,stats)
 
         write(line,'(x,a10,x,1pe12.5,2x,a,x,1pe12.5,x,a,x,1pe12.5))')
@@ -302,14 +298,14 @@ c         Do a separate estimate for each hyperplane.
 
 c***********************************************************************
 
-      subroutine momit(lin,naxis,imlo,imhi,blc,trc,rlo,rhi,
+      subroutine momit(lin,naxis,blc,trc,imlo,imhi,rlo,rhi,
      *                 getmin,getmax,doskew,clipmean,clip1sig,
      *                 momx,momy,stats)
 
-      integer lIn,naxis,blc(naxis),trc(naxis)
-      real    imlo,imhi,rlo,rhi
-      real    momx(3),momy(3),stats(3)
-      logical doskew,clipmean,clip1sig,getmin,getmax
+      integer lIn, naxis, blc(naxis), trc(naxis)
+      real    imlo, imhi, rlo, rhi
+      logical getmin, getmax, doskew, clipmean, clip1sig
+      real    momx(3), momy(3), stats(3)
 c-----------------------------------------------------------------------
 c  Compute image moments within a bounding box.
 c
@@ -340,12 +336,11 @@ c Doesn't yet handle a user-fixed min or max; it recomputes rlo,rhi.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
 
-      real    wt(maxbuf)
-      logical flags(maxbuf),apply
-      integer i,j,num
-      real    sum,sumsq,lo,hi,avg,rms,olo,ohi
-      real    ri,rj,sumi,sumsqi,sumj,sumsqj,sumrow,sumcbi,sumcbj
-      real    epsilon,nrmi,nrmj,val,offset
+      logical   apply, flags(MAXBUF)
+      integer   i, j, num
+      real      avg, epsilon, nrmi, nrmj, offset, ri, rj, rms, sum,
+     *          sumcbi, sumcbj, sumi, sumj, sumrow, sumsq, sumsqi,
+     *          sumsqj, val, vmax, vmin, wt(MAXBUF)
 c-----------------------------------------------------------------------
       epsilon = 1e-12
 
@@ -356,12 +351,11 @@ c     Sentinel values; these mean "no unflagged pixels"
         stats(i) = -1.0
       enddo
 
-c  We need the local minimum value to get the moments right -
-c  the weights must be +ve, and the minimum weight should be zero,
-c  to avoid biasing the result.
-c  So get the min,max, mean & rms of all unmasked pixels.
-c  The mean and rms are needed for clipping so we get the right
-c  answer when finding peaks at low s/n.
+c     We need the local minimum value to get the moments right - the
+c     weights must be +ve, and the minimum weight should be zero, to
+c     avoid biasing the result.  So get the min,max, mean & rms of all
+c     unmasked pixels.  The mean and rms are needed for clipping so we
+c     get the right answer when finding peaks at low s/n.
 
 c     Get statistics for the current region.
       num   = 0
@@ -369,8 +363,8 @@ c     Get statistics for the current region.
       sumsq = 0.0
       avg   = 0.0
       rms   = 0.0
-      lo    = imhi
-      hi    = imlo
+      vmin  = imhi
+      vmax  = imlo
 
       if (getmin .and. getmax) then
 c       No user-specified limits.
@@ -380,11 +374,11 @@ c       No user-specified limits.
           do i = blc(1), trc(1)
             val = wt(i)
             if (flags(i)) then
-              lo    = min(lo,val)
-              hi    = max(hi,val)
-              sum   = sum    + val
-              sumsq = sumsq  + val*val
-              num   = num    + 1
+              vmin  = min(vmin,val)
+              vmax  = max(vmax,val)
+              num   = num   + 1
+              sum   = sum   + val
+              sumsq = sumsq + val*val
             endif
           enddo
         enddo
@@ -398,11 +392,11 @@ c         User has fixed range; clip pixels outside it.
             do i = blc(1), trc(1)
               val = wt(i)
               if (flags(i) .and. val.gt.rlo .and. val.lt.rhi) then
-                lo    = min(lo,val)
-                hi    = max(hi,val)
-                sum   = sum    + val
-                sumsq = sumsq  + val*val
-                num   = num    + 1
+                vmin  = min(vmin,val)
+                vmax  = max(vmax,val)
+                num   = num   + 1
+                sum   = sum   + val
+                sumsq = sumsq + val*val
               endif
             enddo
           enddo
@@ -416,11 +410,11 @@ c           User has fixed minimum only: clip pixels below rlo.
               do i = blc(1), trc(1)
                 val = wt(i)
                 if (flags(i) .and. val.gt.rlo) then
-                  lo    = min(lo,val)
-                  hi    = max(hi,val)
-                  sum   = sum    + val
-                  sumsq = sumsq  + val*val
-                  num   = num    + 1
+                  vmin  = min(vmin,val)
+                  vmax  = max(vmax,val)
+                  num   = num   + 1
+                  sum   = sum   + val
+                  sumsq = sumsq + val*val
                 endif
               enddo
             enddo
@@ -432,11 +426,11 @@ c           User has fixed maximum; clip pixels above rhi.
               do i = blc(1), trc(1)
                 val = wt(i)
                 if (flags(i) .and. val.lt.rhi) then
-                  lo    = min(lo,val)
-                  hi    = max(hi,val)
-                  sum   = sum    + val
-                  sumsq = sumsq  + val*val
-                  num   = num    + 1
+                  vmin  = min(vmin,val)
+                  vmax  = max(vmax,val)
+                  num   = num   + 1
+                  sum   = sum   + val
+                  sumsq = sumsq + val*val
                 endif
               enddo
             enddo
@@ -460,11 +454,9 @@ c     Don't waste time if no data
       endif
 
 c     Set up intensity range of interest.
-      offset = -1.0*lo
-      olo = lo + offset
-      ohi = hi + offset
-      if (clipmean) olo = avg + offset
-      if (clip1sig) olo = avg + offset + rms
+      offset = -1.0*vmin
+      if (clipmean) vmin = avg
+      if (clip1sig) vmin = avg + rms
 
       apply = (.not.getmin) .or. (.not.getmax)
       apply = apply .or. (clipmean .or. clip1sig)
@@ -486,17 +478,15 @@ c     Accumulate moment statistics for unflagged data.
       if (doskew) then
         if (apply) then
           do j = trc(2),blc(2),-1
-            rj   = real(j)*nrmj
             call xyread(lIn,j,wt)
             call xyflgrd(lIn,j,flags)
             sumrow = 0.0
             do i = blc(1), trc(1)
               if (flags(i)) then
-                val = wt(i) + offset
-                if (val.gt.olo .and. val.le.ohi) then
+                if (wt(i).gt.vmin .and. wt(i).le.vmax) then
+                  val    = wt(i) + offset
                   ri     = real(i)*nrmi
                   num    = num    + 1
-                  sum    = sum    + val
                   sumrow = sumrow + val
                   sumi   = sumi   + val*ri
                   sumsqi = sumsqi + val*ri*ri
@@ -506,6 +496,8 @@ c     Accumulate moment statistics for unflagged data.
             enddo
 
 c           Since rj constant for each row, we can do this for y-moment:
+            rj     = real(j)*nrmj
+            sum    = sum    + sumrow
             sumj   = sumj   + sumrow*rj
             sumsqj = sumsqj + sumrow*rj*rj
             sumcbj = sumcbj + sumrow*rj*rj*rj
@@ -513,7 +505,6 @@ c           Since rj constant for each row, we can do this for y-moment:
 
         else
           do j = trc(2),blc(2),-1
-            rj   = real(j)*nrmj
             call xyread(lIn,j,wt)
             call xyflgrd(lIn,j,flags)
             sumrow = 0.0
@@ -529,6 +520,8 @@ c           Since rj constant for each row, we can do this for y-moment:
                 sumcbi = sumcbi + val*ri*ri*ri
               endif
             enddo
+
+            rj     = real(j)*nrmj
             sumj   = sumj   + sumrow*rj
             sumsqj = sumsqj + sumrow*rj*rj
             sumcbj = sumcbj + sumrow*rj*rj*rj
@@ -539,29 +532,30 @@ c           Since rj constant for each row, we can do this for y-moment:
 c       Only first 2 moments.
         if (apply) then
           do j = trc(2),blc(2),-1
-            rj   = real(j)*nrmj
             call xyread(lIn,j,wt)
             call xyflgrd(lIn,j,flags)
             sumrow = 0.0
             do i = blc(1), trc(1)
               if (flags(i)) then
-                val     = wt(i) + offset
-                if (val.gt.olo .and. val.le.ohi) then
-                  ri      = real(i)*nrmi
-                  num     = num    + 1
-                  sum     = sum    + val
-                  sumrow  = sumrow + val
-                  sumi    = sumi   + val*ri
-                  sumsqi  = sumsqi + val*ri*ri
+                if (wt(i).gt.vmin .and. wt(i).le.vmax) then
+                  val    = wt(i) + offset
+                  ri     = real(i)*nrmi
+                  num    = num    + 1
+                  sumrow = sumrow + val
+                  sumi   = sumi   + val*ri
+                  sumsqi = sumsqi + val*ri*ri
                 endif
               endif
             enddo
+
+            rj     = real(j)*nrmj
+            sum    = sum    + sumrow
             sumj   = sumj   + sumrow*rj
             sumsqj = sumsqj + sumrow*rj*rj
           enddo
+
         else
           do j = trc(2),blc(2),-1
-            rj   = real(j)*nrmj
             call xyread(lIn,j,wt)
             call xyflgrd(lIn,j,flags)
             sumrow = 0.0
@@ -570,48 +564,50 @@ c       Only first 2 moments.
                 ri      = real(i)*nrmi
                 num     = num    + 1
                 val     = wt(i)  + offset
-                sum     = sum    + val
                 sumrow  = sumrow + val
                 sumi    = sumi   + val*ri
                 sumsqi  = sumsqi + val*ri*ri
               endif
             enddo
+
+            rj     = real(j)*nrmj
+            sum    = sum    + sumrow
             sumj   = sumj   + sumrow*rj
             sumsqj = sumsqj + sumrow*rj*rj
           enddo
         endif
       endif
 
-c  Calculate moments:
-c
-c     mom1 = sum[ x(i)*wt(i) ] / sum[wt(i)]
-c     mom2 = sqrt(  sum[ wt(i) * (x(i)-mom1)**2 ] / sum[wt(i)] )
-c
-c          = sqrt(   sum[          wt(i)*x(i)*x(i)] / sum[wt(i)]
-c                  - sum[   2*mom1*wt(i)*x(i)]      / sum[wt(i)]
-c                  + sum[mom1*mom1*wt(i)]           / sum[wt(i)] )
-c
-c     mom3 = cbrt ( sum [ wt(i) * (x(i)-mom1)**3 ] / sum[ wt(i) ] )
-c     skew =        sum [ wt(i) * (x(i)-mom1)**3 ] / mom2**3
-c
-c  Numerical Details:
-c    You don't get the right answer for the first or third moments if the
-c    data cross zero.
-c
-c    For the first moment, this can be done after the summation at the cost
-c    of summimg the pixel numbers (ri, rj).
-c    However for higher moments, sums of rj**3 etc have to be accumulated,
-c    so it's cheaper to offset every pixel; only 1 extra addition is needed,
-c    once the offset is known.
-
       if (num.eq.0) then
         call bug('w','No valid data in chosen range')
         return
       endif
 
+c     Calculate moments:
+c
+c       mom1 = sum[ x(i)*wt(i) ] / sum[wt(i)]
+c       mom2 = sqrt(  sum[ wt(i) * (x(i)-mom1)**2 ] / sum[wt(i)] )
+c
+c            = sqrt(   sum[          wt(i)*x(i)*x(i)] / sum[wt(i)]
+c                    - sum[   2*mom1*wt(i)*x(i)]      / sum[wt(i)]
+c                    + sum[mom1*mom1*wt(i)]           / sum[wt(i)] )
+c
+c       mom3 = cbrt ( sum [ wt(i) * (x(i)-mom1)**3 ] / sum[ wt(i) ] )
+c       skew =        sum [ wt(i) * (x(i)-mom1)**3 ] / mom2**3
+c
+c     Numerical Details:
+c       You don't get the right answer for the first or third moments if
+c       the data cross zero.
+c
+c       For the first moment, this can be done after the summation at
+c       the cost of summimg the pixel numbers (ri, rj).
+c       However for higher moments, sums of rj**3 etc have to be
+c       accumulated, so it's cheaper to offset every pixel; only 1 extra
+c       addition is needed, once the offset is known.
+
       stats(1) = real(num)
-      stats(2) = olo - offset
-      stats(3) = ohi - offset
+      stats(2) = vmin
+      stats(3) = vmax
 
       if (abs(sum).gt.epsilon) then
         momx(1) = sumi / sum
@@ -645,6 +641,7 @@ c    once the offset is known.
             momy(3) = momy(3)/(momy(2)**3)
           endif
         endif
+
         momy(1) = momy(1) / nrmj
         momy(2) = momy(2) / nrmj
       endif
