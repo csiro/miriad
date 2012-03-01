@@ -1553,7 +1553,8 @@ static void p2c( int pix_off, int *axlen, int *cubesize, int naxis, int *coords 
 
 static void fill_buffer( int tno, int start, int last )
 {
-    int length, begin;
+    size_t length;
+    off_t begin;
     int bufstart, *buf;
     int i,iostat;
 
@@ -1561,8 +1562,8 @@ static void fill_buffer( int tno, int start, int last )
     if(itest) printf( "Read %d values: %d to %d\n", last-start+1, start, last );
 
     if( !imgs[tno].nocopy ) bufstart=0; else bufstart=bufs[tno].bufstart;
-    length = H_REAL_SIZE * ( last - start + 1 );
-    begin  = H_REAL_SIZE * start + ITEM_HDR_SIZE;
+    length = H_REAL_SIZE * (size_t)( last - start + 1 );
+    begin  = H_REAL_SIZE * (off_t)start + ITEM_HDR_SIZE;
 /*  hgrab_c(  imgs[tno].itno,(char *)(buffer+bufstart),begin,length,&iostat );*/
     hreadr_c( imgs[tno].itno,(char *)(buffer+bufstart),begin,length,&iostat );
     check(iostat);
@@ -1583,7 +1584,8 @@ static void fill_buffer( int tno, int start, int last )
 
 static void empty_buffer( int tno, int start, int last )
 {
-    int length, begin;
+    size_t length;
+    off_t begin;
     int bufstart;
     int iostat;
 
@@ -1591,8 +1593,8 @@ static void empty_buffer( int tno, int start, int last )
     if(itest) printf( "Write %d values: %d to %d\n", last-start+1,start,last );
 
     if( !imgs[tno].nocopy ) bufstart=0; else bufstart=bufs[tno].bufstart;
-    length = H_REAL_SIZE * ( last - start + 1 );
-    begin  = H_REAL_SIZE * start + ITEM_HDR_SIZE;
+    length = H_REAL_SIZE * (size_t)( last - start + 1 );
+    begin  = H_REAL_SIZE * (off_t)start + ITEM_HDR_SIZE;
 /*  hdump_c(  imgs[tno].itno,(char *)(buffer+bufstart),begin,length,&iostat );*/
     hwriter_c(imgs[tno].itno,(char *)(buffer+bufstart),begin,length,&iostat );
     if( imgs[tno].lastwritten < last ) imgs[tno].lastwritten = last;
