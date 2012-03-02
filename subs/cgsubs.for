@@ -37,7 +37,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: cgsubs.for,v 1.9 2012/02/20 07:27:22 cal103 Exp $
+c $Id: cgsubs.for,v 1.10 2012/03/02 00:46:56 cal103 Exp $
 c***********************************************************************
 
 c* angconCG -- Convert radians to and from seconds of time/arc
@@ -1672,7 +1672,7 @@ c    x,ylabel Labels
 c-----------------------------------------------------------------------
       integer   iax, k
       real      epoch
-      character algo*3, axtype*9, estr*5, label*100, units*6, wtype*9
+      character axtype*16, estr*5, label*100, units*8, wtype*16
 
       external  len1
       integer   len1
@@ -1693,7 +1693,7 @@ c     Write epoch string for label.
 
 c     Loop over axes.
       do iax = 1, 2
-        call coAxType(lh, iax, axtype, wtype, algo, units)
+        call coAxType(lh, iax, axtype, wtype, units)
 
         k = len1(wtype)
 

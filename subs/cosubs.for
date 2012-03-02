@@ -27,7 +27,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: cosubs.for,v 1.14 2012/02/20 07:30:59 cal103 Exp $
+c $Id: cosubs.for,v 1.15 2012/03/02 00:46:56 cal103 Exp $
 c***********************************************************************
 
 c* chkaxCO -- Check axis type and coordinate type for compatibility
@@ -55,13 +55,13 @@ c               'none'
 c    iax    Axis of interest.
 c-----------------------------------------------------------------------
       logical   bads, good
-      character algo*3, axtype*9, ctype*32, str*132, units*6, wtype*9
+      character axtype*16, ctype*32, str*132, units*8, wtype*16
 
       external  itoaf
       character itoaf*2
 c-----------------------------------------------------------------------
 c     Parse the axis type.
-      call coAxType(lun, iax, axtype, wtype, algo, units)
+      call coAxType(lun, iax, axtype, wtype, units)
 
 c     Compare generic axis type with label type.
       bads = .false.
@@ -137,7 +137,7 @@ c-----------------------------------------------------------------------
       include 'maxnax.h'
 
       integer   j, jax, jax1, jax2
-      character algo*3, axtype*9, units*6, wtype*9
+      character axtype*16, units*8, wtype*16
 c-----------------------------------------------------------------------
       if (NAXIS.eq.0) then
         jax1 = iax
@@ -149,7 +149,7 @@ c-----------------------------------------------------------------------
 
       do jax = jax1, jax2
 c       Get generic axis type and set default.
-        call coAxType(lun, jax, axtype, wtype, algo, units)
+        call coAxType(lun, jax, axtype, wtype, units)
 
         j = 1
         if (NAXIS.ne.0) j = jax
@@ -219,7 +219,7 @@ c    utype  User requested coordinate type
 c  Output:
 c    units  Axis units
 c-----------------------------------------------------------------------
-      character algo*3, axtype*9, str*132, wtype*9
+      character axtype*16, str*132, wtype*16
 c-----------------------------------------------------------------------
       if (utype.eq.'hms' .or. utype.eq.'dms' .or. utype.eq.'none') then
         units = ' '
@@ -246,7 +246,7 @@ c-----------------------------------------------------------------------
       else if (utype.eq.'relkms') then
         units = 'offset km/s'
       else if (utype.eq.'absnat' .or. utype.eq.'relnat') then
-        call coAxType(lun, iax, axtype, wtype, algo, units)
+        call coAxType(lun, iax, axtype, wtype, units)
         if (units.eq.'lambda') then
           units = 'wavelengths'
         else if (units.eq.'rad') then
