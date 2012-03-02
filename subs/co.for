@@ -3,6 +3,10 @@ c
 c  A set of routines to convert between different coordinate systems.
 c  User callable routines are as follows.
 c
+c    Get information on a world coordinate ctype (coInit not required):
+c      coCtype(ctype,axtype,wtype,algo,units,scl)
+c      coCname(wtype,cname)
+c
 c    Create a coordinate object (call coFin to release it):
 c      coInit(lu)
 c      coDup(lin,lout)
@@ -15,7 +19,6 @@ c
 c    Enquire about a coordinate object:
 c      coCompar(lu1,lu2,match)
 c      coFindAx(lu,axis,iax)
-c      coCtype(ctype,axtype,wtype,algo,units,scl) - coInit not required.
 c      coAxType(lu,iax,axtype,wtype,units)
 c      coLin(lu1,in,x1,n,ctype,crpix,crval,cdelt)
 c      coAxGet(lu,iax,ctype,crpix,crval,cdelt)
@@ -55,7 +58,218 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: co.for,v 1.36 2012/03/02 00:33:17 cal103 Exp $
+c $Id: co.for,v 1.37 2012/03/02 07:25:57 cal103 Exp $
+c***********************************************************************
+
+c* coCtype -- Parse a world coordinate ctype.
+c& mrc
+c: coordinates
+c+
+      subroutine coCtype(ctypei, axtype, wtype, algo, units, scl)
+
+      character ctypei*(*), axtype*(*)
+      character wtype*(*), algo*(*), units*(*)
+      double precision scl
+c  ---------------------------------------------------------------------
+c  Parse a world coordinate ctype returning the generic type and other
+c  information.  Does not require coInit.
+c
+c  Input:
+c    ctypei     The FITS-style ctype of the world coordinate.  AIPS-
+c               convention spectral types will be translated (however,
+c               the Doppler frame will be discarded).
+c  Output:
+c    axtype     Generic world coordinate type:
+c                 'linear'     for simple linear axes other than
+c                              celestial or spectral.
+c                 'longitude'  for RA,  GLON and ELON axes.
+c                 'latitude'   for DEC, GLAT and ELAT axes.
+c                 'spectral'   for spectral axes.
+c    wtype      World coordinate type, i.e. ctype with the algorithm
+c               code stripped off, e.g. 'RA---NCP' yields 'RA', and
+c               'VOPT-F2W' yields 'VOPT'.
+c    algo       World coordinate algorithm code, e.g. 'RA---NCP' yields
+c               'NCP', and 'VOPT-F2W' yields 'F2W'.  Blank for linear
+c               axes or if the code is unrecognized.
+c    units      Miriad internal units for this world coordinate in a
+c               form suitable for reporting, e.g. 'VOPT-F2W' would
+c               yield 'km/s'.  May be used to identify angular,
+c               frequency, velocity, etc. axes.
+c    scl        Factor to convert from Miriad to FITS/WCSLIB internal
+c               units.
+c-----------------------------------------------------------------------
+      include 'mirconst.h'
+
+      integer    NWTYPE, NPCODE
+      parameter (NWTYPE = 21, NPCODE = 29)
+
+      integer   i, k
+      character axtypes(NWTYPE)*9, cunits(NWTYPE)*6, pcodes(NPCODE)*3,
+     *          umsg*64, wtypes(NWTYPE)*9
+
+      external  binsrcha, len1
+      integer   binsrcha, len1
+
+c     Recognised wtypes; this list must be in alphabetical order.
+      data (wtypes(i),axtypes(i),cunits(i),i=1,NWTYPE)/
+     *  'ANGLE    ', 'linear   ', 'rad   ',
+     *  'DEC      ', 'latitude ', 'rad   ',
+     *  'ELAT     ', 'latitude ', 'rad   ',
+     *  'ELON     ', 'longitude', 'rad   ',
+     *  'FELO     ', 'spectral ', 'km/s  ',
+     *  'FELOCITY ', 'spectral ', 'km/s  ',
+     *  'FREQ     ', 'spectral ', 'GHz   ',
+     *  'FREQUENCY', 'spectral ', 'GHz   ',
+     *  'GLAT     ', 'latitude ', 'rad   ',
+     *  'GLON     ', 'longitude', 'rad   ',
+     *  'LL       ', 'longitude', 'rad   ',
+     *  'MM       ', 'latitude ', 'rad   ',
+     *  'POINTING ', 'linear   ', '      ',
+     *  'RA       ', 'longitude', 'rad   ',
+     *  'SDBEAM   ', 'linear   ', '      ',
+     *  'STOKES   ', 'linear   ', '      ',
+     *  'TIME     ', 'linear   ', 's     ',
+     *  'UU       ', 'linear   ', 'lambda',
+     *  'VELO     ', 'spectral ', 'km/s  ',
+     *  'VELOCITY ', 'spectral ', 'km/s  ',
+     *  'VV       ', 'linear   ', 'lambda'/
+
+c     Recognized celestial projection codes.
+      data pcodes /
+     *  'AZP', 'SZP', 'TAN', 'STG', 'SIN', 'NCP', 'ARC', 'ZPN',
+     *  'ZEA', 'AIR', 'CYP', 'CEA', 'CAR', 'MER', 'COP', 'COE',
+     *  'COD', 'COO', 'SFL', 'GLS', 'PAR', 'MOL', 'AIT', 'BON',
+     *  'PCO', 'TSC', 'CSC', 'QSC', 'HPX'/
+c-----------------------------------------------------------------------
+c     Assume linear unless recognized as otherwise.
+      axtype = 'linear'
+      wtype  = ' '
+      algo   = ' '
+      units  = ' '
+
+      if (ctypei.eq.' ') return
+
+c     Parse ctype.
+      call coExt(ctypei, wtype, algo)
+
+      i = binsrcha(wtype, wtypes, NWTYPE)
+
+      if (i.eq.0) then
+c       Unrecognized, assumed linear.
+        wtype = ctypei
+        algo  = ' '
+
+        k = len1(ctypei)
+        umsg = 'Assuming the '//ctypei(:k)//' axis is linear.'
+        call bug('w', umsg)
+        return
+      endif
+
+      axtype = axtypes(i)
+      units  = cunits(i)
+      if (units.eq.'rad') then
+        scl = DR2D
+      else if (units.eq.'GHz') then
+        scl = 1d9
+      else if (units.eq.'km/s') then
+        scl = 1d3
+      else
+        scl = 1d0
+      endif
+
+      if (axtype.eq.'longitude' .or. axtype.eq.'latitude') then
+c       Celestial axis, check the projection code.
+        if (algo.eq.' ') then
+c         No projection code = simple linear axis, not CAR!  But still
+c         needs to be recorded as LNGTYP or LATTYP.
+          return
+        endif
+
+c       Is it a recognized projection code?
+        do i = 1, NPCODE
+          if (algo.eq.pcodes(i)) then
+c           It's recognized.
+            return
+          endif
+        enddo
+
+c       Unrecognized projection code, revert to linear.
+        axtype = 'linear'
+        wtype  = ctypei
+        algo   = ' '
+
+        k = len1(ctypei)
+        umsg = 'Assuming the '//ctypei(:k)//' axis is linear.'
+        call bug('w', umsg)
+      endif
+
+      end
+
+c***********************************************************************
+
+c* coCname -- Get a name for a coordinate ctype suitable for labelling.
+c& mrc
+c: coordinates
+c+
+      subroutine coCname(ctypei, cname)
+
+      character ctypei*(*), cname*(*)
+c  ---------------------------------------------------------------------
+c  Get a name for a world coordinate ctype suitable for labelling.
+c
+c  Input:
+c    ctypei     The FITS-style ctype of the world coordinate.  AIPS-
+c               convention spectral types will be translated.
+c  Output:
+c    cname      Coordinate name suitable for labelling purposes.
+c-----------------------------------------------------------------------
+      integer    NWTYPE
+      parameter (NWTYPE = 21)
+
+      integer   i
+      character algo*8, cnames(NWTYPE)*18, wtype*16, wtypes(NWTYPE)*9
+
+      external  binsrcha
+      integer   binsrcha
+
+c     Recognised wtypes; this list must be in alphabetical order.
+      data (wtypes(i),cnames(i),i=1,NWTYPE)/
+     *  'ANGLE    ', 'Angle             ',
+     *  'DEC      ', 'Declination       ',
+     *  'ELAT     ', 'Ecliptic latitude ',
+     *  'ELON     ', 'Ecliptic longitude',
+     *  'FELO     ', 'Optical velocity  ',
+     *  'FELOCITY ', 'Optical velocity  ',
+     *  'FREQ     ', 'Frequency         ',
+     *  'FREQUENCY', 'Frequency         ',
+     *  'GLAT     ', 'Galactic latitude ',
+     *  'GLON     ', 'Galactic longitude',
+     *  'LL       ', 'l-direction cosine',
+     *  'MM       ', 'm-direction cosine',
+     *  'POINTING ', 'Pointing          ',
+     *  'RA       ', 'Right ascension   ',
+     *  'SDBEAM   ', 'Single-dish beam  ',
+     *  'STOKES   ', 'Stokes parameter  ',
+     *  'TIME     ', 'Time              ',
+     *  'UU       ', 'u                 ',
+     *  'VELO     ', 'Radio velocity    ',
+     *  'VELOCITY ', 'Velocity          ',
+     *  'VV       ', 'v                 '/
+c-----------------------------------------------------------------------
+c     Parse ctype.
+      call coExt(ctypei, wtype, algo)
+
+      i = binsrcha(wtype, wtypes, NWTYPE)
+
+      if (i.eq.0) then
+c       Unrecognized.
+        cname = wtype
+      else
+        cname = wtypes(i)
+      endif
+
+      end
+
 c***********************************************************************
 
 c* coInit -- Initialise coordinate conversion routines.
@@ -455,152 +669,6 @@ c     Do the special cases.
             if (match) iax = jax
           endif
         enddo
-      endif
-
-      end
-
-c***********************************************************************
-
-c* coCtype -- Parse a world coordinate ctype.
-c& mrc
-c: coordinates
-c+
-      subroutine coCtype(ctypei, axtype, wtype, algo, units, scl)
-
-      character ctypei*(*), axtype*(*)
-      character wtype*(*), algo*(*), units*(*)
-      double precision scl
-c  ---------------------------------------------------------------------
-c  Parse a world coordinate ctype returning the generic type and other
-c  information.  Does not require coInit.
-c
-c  Input:
-c    ctypei     The FITS-style ctype of the world coordinate.  AIPS-
-c               convention spectral types will be translated (however,
-c               the Doppler frame will be discarded).
-c  Output:
-c    axtype     Generic world coordinate type:
-c                 'linear'     for simple linear axes other than
-c                              celestial or spectral.
-c                 'longitude'  for RA,  GLON and ELON axes.
-c                 'latitude'   for DEC, GLAT and ELAT axes.
-c                 'spectral'   for spectral axes.
-c    wtype      World coordinate type, i.e. ctype with the algorithm
-c               code stripped off, e.g. 'RA---NCP' yields 'RA', and
-c               'VOPT-F2W' yields 'VOPT'.
-c    algo       World coordinate algorithm code, e.g. 'RA---NCP' yields
-c               'NCP', and 'VOPT-F2W' yields 'F2W'.  Blank for linear
-c               axes or if the code is unrecognized.
-c    units      Miriad internal units for this world coordinate in a
-c               form suitable for reporting, e.g. 'VOPT-F2W' would
-c               yield 'km/s'.  May be used to identify angular,
-c               frequency, velocity, etc. axes.
-c    scl        Factor to convert from Miriad to FITS/WCSLIB internal
-c               units.
-c-----------------------------------------------------------------------
-      include 'mirconst.h'
-
-      integer    NWTYPE, NPCODE
-      parameter (NWTYPE = 21, NPCODE = 29)
-
-      integer   i, k
-      character axtypes(NWTYPE)*9, cunits(NWTYPE)*6, pcodes(NPCODE)*3,
-     *          umsg*64, wtypes(NWTYPE)*9
-
-      external  binsrcha, len1
-      integer   binsrcha, len1
-
-c     Recognised wtypes; this list must be in alphabetical order.
-      data (wtypes(i),axtypes(i),cunits(i),i=1,NWTYPE)/
-     *  'ANGLE    ', 'linear   ', 'rad   ',
-     *  'DEC      ', 'latitude ', 'rad   ',
-     *  'ELAT     ', 'latitude ', 'rad   ',
-     *  'ELON     ', 'longitude', 'rad   ',
-     *  'FELO     ', 'spectral ', 'km/s  ',
-     *  'FELOCITY ', 'spectral ', 'km/s  ',
-     *  'FREQ     ', 'spectral ', 'GHz   ',
-     *  'FREQUENCY', 'spectral ', 'GHz   ',
-     *  'GLAT     ', 'latitude ', 'rad   ',
-     *  'GLON     ', 'longitude', 'rad   ',
-     *  'LL       ', 'longitude', 'rad   ',
-     *  'MM       ', 'latitude ', 'rad   ',
-     *  'POINTING ', 'linear   ', '      ',
-     *  'RA       ', 'longitude', 'rad   ',
-     *  'SDBEAM   ', 'linear   ', '      ',
-     *  'STOKES   ', 'linear   ', '      ',
-     *  'TIME     ', 'linear   ', 's     ',
-     *  'UU       ', 'linear   ', 'lambda',
-     *  'VELO     ', 'spectral ', 'km/s  ',
-     *  'VELOCITY ', 'spectral ', 'km/s  ',
-     *  'VV       ', 'linear   ', 'lambda'/
-
-c     Recognized celestial projection codes.
-      data pcodes /
-     *  'AZP', 'SZP', 'TAN', 'STG', 'SIN', 'NCP', 'ARC', 'ZPN',
-     *  'ZEA', 'AIR', 'CYP', 'CEA', 'CAR', 'MER', 'COP', 'COE',
-     *  'COD', 'COO', 'SFL', 'GLS', 'PAR', 'MOL', 'AIT', 'BON',
-     *  'PCO', 'TSC', 'CSC', 'QSC', 'HPX'/
-c-----------------------------------------------------------------------
-c     Assume linear unless recognized as otherwise.
-      axtype = 'linear'
-      wtype  = ' '
-      algo   = ' '
-      units  = ' '
-
-      if (ctypei.eq.' ') return
-
-c     Parse ctype.
-      call coExt(ctypei, wtype, algo)
-
-      i = binsrcha(wtype, wtypes, NWTYPE)
-
-      if (i.eq.0) then
-c       Unrecognized, assumed linear.
-        wtype = ctypei
-        algo  = ' '
-
-        k = len1(ctypei)
-        umsg = 'Assuming the '//ctypei(:k)//' axis is linear.'
-        call bug('w', umsg)
-        return
-      endif
-
-      axtype = axtypes(i)
-      units  = cunits(i)
-      if (units.eq.'rad') then
-        scl = DR2D
-      else if (units.eq.'GHz') then
-        scl = 1d9
-      else if (units.eq.'km/s') then
-        scl = 1d3
-      else
-        scl = 1d0
-      endif
-
-      if (axtype.eq.'longitude' .or. axtype.eq.'latitude') then
-c       Celestial axis, check the projection code.
-        if (algo.eq.' ') then
-c         No projection code = simple linear axis, not CAR!  But still
-c         needs to be recorded as LNGTYP or LATTYP.
-          return
-        endif
-
-c       Is it a recognized projection code?
-        do i = 1, NPCODE
-          if (algo.eq.pcodes(i)) then
-c           It's recognized.
-            return
-          endif
-        enddo
-
-c       Unrecognized projection code, revert to linear.
-        axtype = 'linear'
-        wtype  = ctypei
-        algo   = ' '
-
-        k = len1(ctypei)
-        umsg = 'Assuming the '//ctypei(:k)//' axis is linear.'
-        call bug('w', umsg)
       endif
 
       end
