@@ -15,7 +15,7 @@ c       Extra processing options.  Possible values are:
 c         brief   Give one line description of each file.
 c         full    Several line description of each file (default).
 c
-c$Id: prthd.for,v 1.9 2012/02/23 02:15:08 wie017 Exp $
+c$Id: prthd.for,v 1.10 2012/03/02 06:13:02 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -28,15 +28,15 @@ c-----------------------------------------------------------------------
 
       logical   full, more
       integer   i, iostat, nin, tno
-      character in(MAXIN)*132, line*80, logf*132, version*80
+      character in(MAXIN)*132, line*80, logf*132, version*72
 
       external  hdprsnt, versan
       logical   hdprsnt
-      character versan*80
+      character versan*72
 c-----------------------------------------------------------------------
       version = versan('prthd',
-     *                 '$Revision: 1.9 $',
-     *                 '$Date: 2012/02/23 02:15:08 $')
+     *                 '$Revision: 1.10 $',
+     *                 '$Date: 2012/03/02 06:13:02 $')
 
 c     Get input parameters.
       call keyini
@@ -66,7 +66,8 @@ c       Full listing.
             call hclose(tno)
             call visHead(in(i))
           else if (hdprsnt(tno,'rdata')) then
-            call calHead(tno,in(i))
+            call logwrite('Filename: '//in(i),more)
+            call logwrite('Calibration Data Set',more)
             call hclose(tno)
           else
             call bug('w','Unrecognised format for '//in(i))
@@ -137,74 +138,74 @@ c-----------------------------------------------------------------------
 
       logical   more
       integer   ival, m
-      real      rval1, rval2, rval3
-      double precision dval
-      character aval1*72, aval2*72, keyw*6, line*132
+      real      rVal1, rVal2, rVal3
+      double precision dVal
+      character aVal1*72, aVal2*72, keyw*72, line*132
 
       external  hfff, hdprsnt, itoaf, spaste
       logical   hdprsnt
-      character hfff*32, itoaf*12, spaste*80
+      character hfff*32, itoaf*12, spaste*72
 c-----------------------------------------------------------------------
       line = 'Filename: '//in
       call logwrite(line,more)
 
 c     Telescope/observer/object parameters.
-      call rdhda(tno, 'instrume', aval1, ' ')
-      call rdhda(tno, 'telescop', aval2, ' ')
-      if (aval1.ne.' ') then
-        if (aval2.ne.' ') then
-          call logwrite('Instrument: '//aval1(1:15)//
-     *                  ' Telescope: '//aval2, more)
+      call rdhda(tno, 'instrume', aVal1, ' ')
+      call rdhda(tno, 'telescop', aVal2, ' ')
+      if (aVal1.ne.' ') then
+        if (aVal2.ne.' ') then
+          call logwrite('Instrument: '//aVal1(1:15)//
+     *                  ' Telescope: '//aVal2, more)
         else
-          call logwrite('Instrument: '//aval1, more)
+          call logwrite('Instrument: '//aVal1, more)
         endif
-      else if (aval2.ne.' ') then
-        call logwrite('Telescope: '//aval2, more)
+      else if (aVal2.ne.' ') then
+        call logwrite('Telescope: '//aVal2, more)
       endif
 
-      call rdhda(tno, 'object',   aval1, ' ')
-      call rdhda(tno, 'observer', aval2, ' ')
-      if (aval1.ne.' ') then
-        if (aval2.ne.' ') then
-          call logwrite('Object: '//aval1(1:19)//
-     *                  ' Observer: '//aval2, more)
+      call rdhda(tno, 'object',   aVal1, ' ')
+      call rdhda(tno, 'observer', aVal2, ' ')
+      if (aVal1.ne.' ') then
+        if (aVal2.ne.' ') then
+          call logwrite('Object: '//aVal1(1:19)//
+     *                  ' Observer: '//aVal2, more)
         else
-          call logwrite('Object: '//aval1, more)
+          call logwrite('Object: '//aVal1, more)
         endif
-      else if (aval2.ne.' ') then
-        call logwrite('Observer: '//aval2, more)
+      else if (aVal2.ne.' ') then
+        call logwrite('Observer: '//aVal2, more)
       endif
 
 c     Image type.
-      call rdhda(tno,'btype',aval1,' ')
-      if (aval1.ne.' ') call logwrite('Image type: '//aval1,more)
+      call rdhda(tno,'btype',aVal1,' ')
+      if (aVal1.ne.' ') call logwrite('Image type: '//aVal1,more)
 
 c     Min, max values and units.
-      call rdhdr(tno,'datamax',rval1,0.0)
-      call rdhdr(tno,'datamin',rval2,rval1+1.0)
-      call rdhda(tno,'bunit',aval1, ' ')
-      if (rval1.ge.rval2) then
-        write(line, 10) rval1, rval2, aval1(:16)
+      call rdhdr(tno,'datamax',rVal1,0.0)
+      call rdhdr(tno,'datamin',rVal2,rVal1+1.0)
+      call rdhda(tno,'bunit',aVal1, ' ')
+      if (rVal1.ge.rVal2) then
+        write(line, 10) rVal1, rVal2, aVal1(:16)
  10     format('Maximum: ',1pe15.8,4x,'Minimum: ',1pe15.8,2x,a)
         call logwrite(line,more)
       else
-        call logwrite('Map flux units: '//aval1,more)
+        call logwrite('Map flux units: '//aVal1,more)
       endif
 
 c     Synthesised beam parameters.
-      call rdhdr(tno, 'bmaj', rval1, 0.0)
-      call rdhdr(tno, 'bmin', rval2, 0.0)
-      call rdhdr(tno, 'bpa',  rval3, 0.0)
-      if (rval1.gt.0.0 .and. rval2.gt.0.0) then
-        if (max(rval1,rval2)*R2AS.lt.1000.0) then
+      call rdhdr(tno, 'bmaj', rVal1, 0.0)
+      call rdhdr(tno, 'bmin', rVal2, 0.0)
+      call rdhdr(tno, 'bpa',  rVal3, 0.0)
+      if (rVal1.gt.0.0 .and. rVal2.gt.0.0) then
+        if (max(rVal1,rVal2)*R2AS.lt.1000.0) then
           write(line,'(a,f7.2,a,f7.2,a)')
-     *      'Beam Size:',rval1*R2AS,' by',rval2*R2AS,' arcsec.'
+     *      'Beam Size:',rVal1*R2AS,' by',rVal2*R2AS,' arcsec.'
         else
           write(line,'(a,f7.2,a,f7.2,a)')
-     *      'Beam Size:',rval1*R2D*60.0,' by',rval2*R2D*60.0,' arcmin.'
+     *      'Beam Size:',rVal1*R2D*60.0,' by',rVal2*R2D*60.0,' arcmin.'
         endif
         call logwrite(line,more)
-        write(line,'(a,f7.1,a)')'Position angle:',rval3,' degrees.'
+        write(line,'(a,f7.1,a)')'Position angle:',rVal3,' degrees.'
         call logwrite(line,more)
       endif
 
@@ -215,53 +216,53 @@ c     Summarise axis coordinate info.
       call doaxes(tno,ival)
 
 c     Parameters related to coordinates.
-      call rdhdd(tno, 'llrot', dval, 0d0)
-      if (dval.ne.0d0) then
+      call rdhdd(tno, 'llrot', dVal, 0d0)
+      if (dVal.ne.0d0) then
         write(line,'(a,f6.1,a)')
-     *    'Image/Sky Rotation Angle:',dval*R2D,' degrees'
+     *    'Image/Sky Rotation Angle:',dVal*DR2D,' degrees'
         call logwrite(line, more)
       endif
 
 c     lonpole and latpole.
       if (hdprsnt(tno,'lonpole')) then
-        call rdhdd(tno, 'lonpole', dval, 0d0)
-        aval1 = hfff(dval, 0.1d0, 1d3, 1, 'f10.2', '1pe10.2')
+        call rdhdd(tno, 'lonpole', dVal, 0d0)
+        aVal1 = hfff(dVal, 0.1d0, 1d3, 1, 'f10.2', '1pe10.2')
 
         if (hdprsnt(tno,'latpole')) then
-          line = spaste('lonpole,latpole: (', '//', aval1, ' ')
+          line = spaste('lonpole,latpole: (', '//', aVal1, ' ')
 
-          call rdhdd(tno, 'latpole', dval, 0d0)
-          aval1 = hfff(dval, 1d0, 1d3, 1, 'f10.2', '1pe10.2')
-          line = spaste(line, ',', aval1, ') deg')
+          call rdhdd(tno, 'latpole', dVal, 0d0)
+          aVal1 = hfff(dVal, 1d0, 1d3, 1, 'f10.2', '1pe10.2')
+          line = spaste(line, ',', aVal1, ') deg')
         else
-          line = spaste('lonpole:', ' ', aval1, ' deg')
+          line = spaste('lonpole:', ' ', aVal1, ' deg')
         endif
 
         call logwrite(line, more)
       else if (hdprsnt(tno,'latpole')) then
-        call rdhdd(tno, 'latpole', dval, 0d0)
-        aval1 = hfff(dval, 1d0, 1d3, 1, 'f10.2', '1pe10.2')
-        line = spaste('latpole:', ' ', aval1, ' deg')
+        call rdhdd(tno, 'latpole', dVal, 0d0)
+        aVal1 = hfff(dVal, 1d0, 1d3, 1, 'f10.2', '1pe10.2')
+        line = spaste('latpole:', ' ', aVal1, ' deg')
         call logwrite(line, more)
       endif
 
 c     phi0, theta0, and xyzero.
       if (hdprsnt(tno,'phi0') .or. hdprsnt(tno,'theta0')) then
         if (hdprsnt(tno,'phi0')) then
-          call rdhdd(tno, 'phi0', dval, 0d0)
-          aval1 = hfff(dval, 1d0, 1d3, 1, 'f10.2', '1pe10.2')
+          call rdhdd(tno, 'phi0', dVal, 0d0)
+          aVal1 = hfff(dVal, 1d0, 1d3, 1, 'f10.2', '1pe10.2')
           if (hdprsnt(tno,'theta0')) then
-            line = spaste('phi0,theta0: (', '//', aval1, ' ')
-            call rdhdd(tno, 'theta0', dval, 0d0)
-            aval1 = hfff(dval, 1d0, 1d3, 1, 'f10.2', '1pe10.2')
-            line = spaste(line, ',', aval1, ') deg')
+            line = spaste('phi0,theta0: (', '//', aVal1, ' ')
+            call rdhdd(tno, 'theta0', dVal, 0d0)
+            aVal1 = hfff(dVal, 1d0, 1d3, 1, 'f10.2', '1pe10.2')
+            line = spaste(line, ',', aVal1, ') deg')
           else
-            line = spaste('phi0:', ' ', aval1, '  deg')
+            line = spaste('phi0:', ' ', aVal1, '  deg')
           endif
         else if (hdprsnt(tno,'theta0')) then
-          call rdhdd(tno, 'theta0', dval, 0d0)
-          aval1 = hfff(dval, 1d0, 1d3, 1, 'f10.2', '1pe10.2')
-          line = spaste('theta0:', ' ', aval1, ' deg')
+          call rdhdd(tno, 'theta0', dVal, 0d0)
+          aVal1 = hfff(dVal, 1d0, 1d3, 1, 'f10.2', '1pe10.2')
+          line = spaste('theta0:', ' ', aVal1, ' deg')
         endif
 
         call rdhdi(tno, 'xyzero', ival, 0)
@@ -278,74 +279,74 @@ c     Projection parameters.
       do m = 0, 29
         keyw = 'pv' // itoaf(m)
         if (hdprsnt(tno,keyw)) then
-          call rdhdd(tno, keyw, dval, 0d0)
+          call rdhdd(tno, keyw, dVal, 0d0)
           keyw = spaste(keyw, '//', ':', ' ')
-          line = keyw // hfff(dval, 1d-3, 1d3, 1, 'f13.8', '1pe17.8')
+          line = keyw(:6) // hfff(dVal,1d-3,1d3,1,'f13.8','1pe17.8')
           call logwrite(line, more)
         endif
       enddo
 
 c     Time of observation.
-      call rdhdd(tno, 'obstime', dval, 0d0)
-      if (dval.gt.0) then
-        call julday(dval,'H',aval1)
-        line = 'Average time of observation: '//aval1
+      call rdhdd(tno, 'obstime', dVal, 0d0)
+      if (dVal.gt.0) then
+        call julday(dVal,'H',aVal1)
+        line = 'Average time of observation: '//aVal1
         call logwrite(line,more)
       endif
 
 c     Equinox.
-      call rdhdr(tno, 'epoch', rval1, 0.0)
-      if (rval1.gt.0) then
-        if (rval1.lt.1984.0) then
-          aval1 = 'B'
+      call rdhdr(tno, 'epoch', rVal1, 0.0)
+      if (rVal1.gt.0) then
+        if (rVal1.lt.1984.0) then
+          aVal1 = 'B'
         else
-          aval1 = 'J'
+          aVal1 = 'J'
         endif
 
         write(line, '(a,a,f6.1,a)')
-     *    'Equinox:                     ',aval1(1:1),rval1
+     *    'Equinox:                     ',aVal1(1:1),rVal1
         call logwrite(line,more)
       endif
 
 c     Rest frequency.
-      call rdhdd(tno,'restfreq',dval,0d0)
-      if (dval.gt.0d0) then
+      call rdhdd(tno,'restfreq',dVal,0d0)
+      if (dVal.gt.0d0) then
         write(line,'(a,f13.6,a)')
-     *    'Rest frequency:         ',dval,' GHz'
+     *    'Rest frequency:         ',dVal,' GHz'
         call logwrite(line,more)
       endif
 
 c     Doppler frame.
-      call rdhda(tno, 'specsys', aval1, ' ')
-      if (aval1.ne.' ') then
-        call logwrite('Doppler reference frame:     '//aval1,more)
+      call rdhda(tno, 'specsys', aVal1, ' ')
+      if (aVal1.ne.' ') then
+        call logwrite('Doppler reference frame:     '//aVal1,more)
       endif
 
 c     Observatory radial velocity.
       if (hdprsnt(tno,'vobs')) then
-        call rdhdr(tno,'vobs',rval1,0.0)
+        call rdhdr(tno,'vobs',rVal1,0.0)
         write(line,'(a,f8.2,a)')
-     *    'Observatory radial velocity:',rval1,' km/s'
+     *    'Observatory radial velocity:',rVal1,' km/s'
         call logwrite(line,more)
       endif
 
 c     Rms noise.
-      call rdhdr(tno, 'rms', rval1, -1.0)
-      if (rval1.gt.0) then
+      call rdhdr(tno, 'rms', rVal1, -1.0)
+      if (rVal1.gt.0) then
         write(line,'(a,1pe10.3)')
-     *    'Nominal Theoretical Rms:    ',rval1
+     *    'Nominal Theoretical Rms:    ',rVal1
         call logwrite(line,more)
       endif
 
 c     Primary beam parameters.
-      call rdhda(tno, 'pbtype', aval1, ' ')
-      if (aval1.ne.' ') then
-        call logwrite('Primary beam type: '//aval1,more)
+      call rdhda(tno, 'pbtype', aVal1, ' ')
+      if (aVal1.ne.' ') then
+        call logwrite('Primary beam type: '//aVal1,more)
       else
-        call rdhdr(tno, 'pbfwhm', rval1, -1.0)
-        if (rval1.gt.0) then
+        call rdhdr(tno, 'pbfwhm', rVal1, -1.0)
+        if (rVal1.gt.0) then
           write(line,'(a,1pg10.3)')
-     *      'Primary beam size (arcsec): ',rval1
+     *      'Primary beam size (arcsec): ',rVal1
           call logwrite(line,more)
         endif
       endif
@@ -376,13 +377,14 @@ c-----------------------------------------------------------------------
       include 'mirconst.h'
 
       logical   more
-      integer   i, j, length, n, p
-      double precision cdelt, crpix, crval
-      character ctype*72, line*80, pols*32, radec*12, str*2, units*12
+      integer   iax, ipol, j, length, naxisj
+      double precision cdelt, crpix, crval, scl
+      character algo*8, axtype*16, cax*2, ctype*72, line*80, pols*32,
+     *          radec*13, units*8, wtype*16
 
       external  itoaf, hangleh, len1, polsC2P, rangleh
       integer   len1
-      character itoaf*2, hangleh*32, polsC2P*2, rangleh*32
+      character itoaf*2, hangleh*13, polsC2P*2, rangleh*13
 c-----------------------------------------------------------------------
       call logwrite('--------------------------------'//
      *              '--------------------------------',more)
@@ -390,72 +392,60 @@ c-----------------------------------------------------------------------
      * 'Type     Pixels  Coord Value  at  Pixel     Coord Incr   Units',
      * more)
 
-      do i = 1, naxis
-        units = ' '
-        str = itoaf(i)
-        call rdhdi(tno, 'naxis'//str, n, 0)
-        call rdhda(tno, 'ctype'//str, ctype, 'none')
-        call rdhdd(tno, 'crval'//str, crval, 0d0)
-        call rdhdd(tno, 'crpix'//str, crpix, 0d0)
-        call rdhdd(tno, 'cdelt'//str, cdelt, 0d0)
+      do iax = 1, naxis
+        cax = itoaf(iax)
+        call rdhdi(tno, 'naxis'//cax, naxisj, 0)
+        call rdhda(tno, 'ctype'//cax, ctype, 'none')
+        call rdhdd(tno, 'crval'//cax, crval, 0d0)
+        call rdhdd(tno, 'crpix'//cax, crpix, 0d0)
+        call rdhdd(tno, 'cdelt'//cax, cdelt, 0d0)
 
-        if (ctype(1:4).eq.'RA--' .or. ctype.eq.'RA') then
+        call coCtype(ctype, axtype, wtype, algo, units, scl)
+        if (wtype.eq.'RA') then
 c         RA.
           radec = hangleh(crval)
-          write(line, 10) ctype(1:8), n, radec, crpix, cdelt*R2AS
- 10       format(a8, i7, 3x, a11, f10.2, 1pe16.6, '  arcsec')
+          write(line, 10) ctype(:8), naxisj, radec, crpix, cdelt*R2AS
+ 10       format(a8, i7, 3x, a12, f9.2, 1pe16.6, '  arcsec')
 
-        else if (ctype(1:4).eq.'DEC-' .or. ctype.eq.'DEC') then
+        else if (wtype.eq.'DEC') then
 c         Dec.
           radec = rangleh(crval)
-          write(line, 20) ctype(1:8), n, radec, crpix, cdelt*R2AS
- 20       format(a8, i7, 2x, a12, f10.2, 1pe16.6, '  arcsec')
-        else if (ctype(1:4).eq.'GLON' .or. ctype(1:4).eq.'GLAT' .or.
-     *           ctype(1:4).eq.'ELON' .or. ctype(1:4).eq.'ELAT') then
-c         Galactic and Ecliptic coordinates.
-          write(line,30) ctype(1:8), n, crval*DR2D, crpix, cdelt*DR2D
- 30       format(a8,i7,f14.6,f10.2,1pe16.6,'  deg')
+          write(line, 20) ctype(:8), naxisj, radec, crpix, cdelt*R2AS
+ 20       format(a8, i7, 2x, a13, f9.2, 1pe16.6, '  arcsec')
 
         else if (ctype.eq.'ANGLE') then
 c         Angles on the sky.
-          write(line, 40) ctype(1:8), n, crval*DR2D, crpix, cdelt*DR2AS,
-      *     'arcsec'
+          write(line, 40) ctype(:8), naxisj, crval*DR2D, crpix,
+      *     cdelt*DR2AS, 'arcsec'
+
+        else if (units.eq.'rad') then
+c         Galactic and Ecliptic coordinates.
+          write(line,30) ctype(:8), naxisj, crval*DR2D, crpix,
+      *     cdelt*DR2D
+ 30       format(a8,i7,f14.6,f10.2,1pe16.6,'  deg')
 
         else if (ctype.eq.'STOKES') then
 c         Stokes.
           length = 0
-          do j = 1, n
+          do j = 1, naxisj
             if (length+5.lt.len(pols)) then
-              p = nint(crval + cdelt*(j-crpix))
-              if (p.eq.0) then
+              ipol = nint(crval + cdelt*(j-crpix))
+              if (ipol.eq.0) then
                 pols(length+1:length+5) = ',beam'
                 length = length + 5
               else
-                pols(length+1:length+3) = ','//polsC2P(p)
+                pols(length+1:length+3) = ','//polsC2P(ipol)
                 length = len1(pols(1:length+3))
               endif
             endif
           enddo
 
-          write(line,40) ctype(1:8), n, pols(2:length)
+          write(line,40) ctype(:8), naxisj, pols(2:length)
  40       format(a8,i7,8x,a)
 
         else
 c         Others.
-          if (ctype(1:4).eq.'FREQ') then
-            units = 'GHz'
-          else if (ctype(:5).eq.'VRAD-' .or. ctype.eq.'VRAD' .or.
-     *             ctype(:5).eq.'VOPT-' .or. ctype.eq.'VOPT' .or.
-     *             ctype(:5).eq.'VELO-' .or.
-     *             ctype(:5).eq.'FELO-') then
-            units = 'km/s'
-          else if (ctype(:3).eq.'UU-' .or. ctype(:3).eq.'VV-') then
-            units = 'lambda'
-          else if (ctype.eq.'TIME') then
-            units = 's'
-          endif
-
-          write(line,50) ctype(1:8), n, crval, crpix, cdelt, units
+          write(line,50) ctype(:8), naxisj, crval, crpix, cdelt, units
  50       format(a8,i7,2x,1pe13.6,0pf9.2,3x,1pe13.6,2x,a)
         endif
 
@@ -464,22 +454,6 @@ c         Others.
 
       call logwrite('--------------------------------'//
      *              '--------------------------------',more)
-
-      end
-
-c***********************************************************************
-
-      subroutine calHead(tno,in)
-
-      integer tno
-      character in*(*)
-c-----------------------------------------------------------------------
-      character line*132
-      logical more
-c-----------------------------------------------------------------------
-      line = 'Filename: '//in
-      call logwrite(line,more)
-      call logwrite('Calibration Data Set',more)
 
       end
 
@@ -499,7 +473,7 @@ c-----------------------------------------------------------------------
       real      epoch, wfreq(MAXWIDE), wwidth(MAXWIDE)
       double precision dec, deldec, delra, obsdec, obsra, pntdec, pntra,
      *          ra, restfreq(MAXWIN), sdf(MAXWIN), sfreq(MAXWIN), time
-      character aval1*64, aval2*64, line*132, obstype*32, type*1
+      character aVal1*64, aVal2*64, line*132, obstype*32, type*1
 
       external  hangleh, hdprsnt, itoaf, len1, polsC2P, rangleh
       logical   hdprsnt
@@ -514,55 +488,55 @@ c     Close and reopen the file as a visibility file.
       call logwrite(line,more)
 
 c     Telescope/observer/object parameters.
-      call uvrdvra(tno,'instrume',aval1,' ')
-      call uvrdvra(tno,'telescop',aval2,' ')
-      il1 = len1(aval1)
-      il2 = len1(aval2)
+      call uvrdvra(tno,'instrume',aVal1,' ')
+      call uvrdvra(tno,'telescop',aVal2,' ')
+      il1 = len1(aVal1)
+      il2 = len1(aVal2)
       if (il1.gt.0 .and. il2.gt.0) then
-        call logwrite('Instrument: '//aval1(1:15)//
-     *                ' Telescope: '//aval2(1:il2),more)
+        call logwrite('Instrument: '//aVal1(1:15)//
+     *                ' Telescope: '//aVal2(1:il2),more)
       else if (il1.gt.0) then
-        call logwrite('Instrument: '//aval1(1:il1),more)
+        call logwrite('Instrument: '//aVal1(1:il1),more)
       else if (il2.gt.0) then
-        call logwrite('Telescope: '//aval2(1:il2),more)
+        call logwrite('Telescope: '//aVal2(1:il2),more)
       endif
 
-      call uvrdvra(tno,'source',aval1,' ')
-      call uvrdvra(tno,'observer',aval2,' ')
-      il1 = len1(aval1)
-      il2 = len1(aval2)
+      call uvrdvra(tno,'source',aVal1,' ')
+      call uvrdvra(tno,'observer',aVal2,' ')
+      il1 = len1(aVal1)
+      il2 = len1(aVal2)
       if (il1.gt.0 .and. il2.gt.0) then
-        call logwrite('Object: '//aval1(1:19)
-     *               //' Observer: '//aval2(1:il2),more)
+        call logwrite('Object: '//aVal1(1:19)
+     *               //' Observer: '//aVal2(1:il2),more)
       else if (il1.gt.0) then
-        call logwrite('Object: '//aval1(1:il1),more)
+        call logwrite('Object: '//aVal1(1:il1),more)
       else if (il2.gt.0) then
-        call logwrite('Observer: '//aval2(1:il2),more)
+        call logwrite('Observer: '//aVal2(1:il2),more)
       endif
 
 c     Get the start time.
       call uvrdvrd(tno,'time',time,0d0)
-      call JulDay(time,'H',aval1)
-      call logwrite('First time: '//aval1,more)
+      call JulDay(time,'H',aVal1)
+      call logwrite('First time: '//aVal1,more)
 
 c     Antennae.
       call uvrdvri(tno,'nants',nants,0)
       call logwrite('Number of antennae: '//itoaf(nants),more)
 
 c     Determine the polarisations present.
-      aval1 = 'Polarisations Present: '
+      aVal1 = 'Polarisations Present: '
       il1 = len('Polarisations Present: ')
       call uvrdvri(tno,'npol',npol,1)
       call uvrdvri(tno,'pol',pol,1)
-      aval1(il1+1:il1+2) = polsC2P(pol)
-      il1 = len1(aval1(1:il1+2))
+      aVal1(il1+1:il1+2) = polsC2P(pol)
+      il1 = len1(aVal1(1:il1+2))
       do i = 2, npol
         call uvnext(tno)
         call uvrdvri(tno,'pol',pol,1)
-        aval1(il1+1:il1+3) = ','//polsC2P(pol)
-        il1 = len1(aval1(1:il1+3))
+        aVal1(il1+1:il1+3) = ','//polsC2P(pol)
+        il1 = len1(aVal1(1:il1+3))
       enddo
-      call logwrite(aval1(1:il1),more)
+      call logwrite(aVal1(1:il1),more)
 
 c     Give message about whether its auto/cross or whatever
       call rdhda(tno,'obstype',obstype,' ')
@@ -640,13 +614,13 @@ c     RA and DEC.
       call uvrdvrr(tno,'epoch',epoch,2000.0)
       ival = nint(epoch)
       if (ival.eq.1950) then
-        aval1(1:9) = 'B1950'
+        aVal1(1:9) = 'B1950'
       else if (ival.eq.2000) then
-        aval1(1:9) = 'J2000'
+        aVal1(1:9) = 'J2000'
       else
-        aval1(1:9) = itoaf(nint(epoch))
+        aVal1(1:9) = itoaf(nint(epoch))
       endif
-      line = aval1(1:9)//'Source RA: '//hangleh(ra)//
+      line = aVal1(1:9)//'Source RA: '//hangleh(ra)//
      *                       '  Dec: '//rangleh(dec)
       call logwrite(line,more)
 
@@ -687,7 +661,7 @@ c     RA and DEC.
       if (present) call logwrite(
      *  'This may be a multi-pointing data-set',more)
 
-c     Tell about which other tables are present.
+c     Report which other tables are present.
       call logwrite(' ',more)
       if (hdprsnt(tno,'gains'))
      *  call logwrite('Antenna gains table is present',more)
