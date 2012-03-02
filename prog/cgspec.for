@@ -337,7 +337,7 @@ c       XSIZ and YSIZ are the spatial half-sizes in ARCSEC over which
 c       each spectrum is spatially averaged.  These are optional and
 c       default to 0 (no binning, just a spectrum at each spatial pixel)
 c
-c$Id: cgspec.for,v 1.14 2012/02/20 07:35:26 cal103 Exp $
+c$Id: cgspec.for,v 1.15 2012/03/02 00:55:01 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -417,8 +417,8 @@ c-----------------------------------------------------------------------
       data axC /'xyzabcd'/
 c-----------------------------------------------------------------------
       version = versan ('cgspec',
-     *                  '$Revision: 1.14 $',
-     *                  '$Date: 2012/02/20 07:35:26 $')
+     *                  '$Revision: 1.15 $',
+     *                  '$Date: 2012/03/02 00:55:01 $')
 
 c     Get user inputs.
       call inputs(MAXLEV, MAXCON, MAXSPEC, MAXTYP, ltypes, ncon, nspec,
@@ -984,7 +984,7 @@ c    doSpc   Look for spectral axis too
 c    inp     Image name
 c-----------------------------------------------------------------------
       integer   iax, ispc, naxis
-      character algo*3, axtype*9, line*80, units*6, wtype*9
+      character axtype*16, line*80, units*8, wtype*16
 
       external  itoaf, len1
       integer   len1
@@ -1006,7 +1006,7 @@ c       Look for spectral axis.
 c       Look for radian axes.
         do iax = 1, min(3,naxis)
           if (iax.ne.ispc) then
-            call coAxType(lIn, iax, axtype, wtype, algo, units)
+            call coAxType(lIn, iax, axtype, wtype, units)
             if (units.ne.'rad') then
               line = 'Spectrum image '//inp(1:len1(inp))//
      *               ' axis '//itoaf(iax)//
@@ -1019,7 +1019,7 @@ c       Look for radian axes.
       else
 c       Just check radian increments on first two axes
         do iax = 1, min(2,naxis)
-          call coAxType(lIn, iax, axtype, wtype, algo, units)
+          call coAxType(lIn, iax, axtype, wtype, units)
           if (units.ne.'rad') then
             line = 'Image '//inp(1:len1(inp))//' axis '//itoaf(iax)//
      *             ' doesn''t have radian pixel increments'
@@ -2891,18 +2891,17 @@ c-----------------------------------------------------------------------
       integer   axtype, i, i1, i2, j, naxis, pt(3)
       real      dv
       double precision wcen(3), win(3), wout(3)
-      character algo*3, iwtype(2)*8, swtype*8, typei(3)*6, typeo(3)*6,
-     *          units*6
+      character iwtype(2)*16, swtype*16, typei(3)*6, typeo(3)*6, units*8
 c-----------------------------------------------------------------------
 c     World coordinate types for the spatial image.
-      call coAxType(lh, 1, axtype, iwtype(1), algo, units)
-      call coAxType(lh, 2, axtype, iwtype(2), algo, units)
+      call coAxType(lh, 1, axtype, iwtype(1), units)
+      call coAxType(lh, 2, axtype, iwtype(2), units)
 
 c     Work out the order of the spatial axes in the spectral cube with
 c     respect to the spatial image.
       do i = 1, 3
         if (i.ne.ispc) then
-          call coAxType(ls, i, axtype, swtype, algo, units)
+          call coAxType(ls, i, axtype, swtype, units)
           if (swtype.eq.iwtype(1)) then
             pt(i) = 1
           else if (swtype.eq.iwtype(2)) then

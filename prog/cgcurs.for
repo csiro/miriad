@@ -195,7 +195,7 @@ c       (which is ~ 1/40 of the view surface height) for the plot axis
 c       labels and the velocity/channel labels.
 c       Defaults choose something sensible.
 c
-c$Id: cgcurs.for,v 1.11 2012/02/20 07:32:53 cal103 Exp $
+c$Id: cgcurs.for,v 1.12 2012/03/02 00:55:01 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -239,8 +239,8 @@ c-----------------------------------------------------------------------
       data gaps, doabut /.false., .false./
 c-----------------------------------------------------------------------
       version = versan ('cgcurs',
-     *                  '$Revision: 1.11 $',
-     *                  '$Date: 2012/02/20 07:32:53 $')
+     *                  '$Revision: 1.12 $',
+     *                  '$Date: 2012/03/02 00:55:01 $')
 
 c     Get user inputs.
       call inputs(MAXLEV, img, ibin, jbin, kbin, levtyp, slev, levs,
@@ -628,8 +628,8 @@ c-----------------------------------------------------------------------
      *          naxis3, nv
       real      vx(NVMAX), vy(NVMAX)
       double precision pix(3), pixbs(2), vert(2,NVMAX), win(3), wout(3)
-      character algo*3, ans*1, axtype*9, line*500, str*60, str1*30,
-     *          str2*30, typei(3)*6, typeo(3)*6, units*6, wtype*9
+      character ans*1, axtype*16, line*500, str*60, str1*30, str2*30,
+     *          typei(3)*6, typeo(3)*6, units*8, wtype*16
 
       integer len1, ci
 c-----------------------------------------------------------------------
@@ -646,9 +646,9 @@ c-----------------------------------------------------------------------
 
 c     Are the axes in radians?  Can't output locations in arcsecond
 c     offsets otherwise.
-      call coAxType(img, 1, axtype, wtype, algo, units)
+      call coAxType(img, 1, axtype, wtype, units)
       if (units.ne.'rad') doabs = .true.
-      call coAxType(img, 2, axtype, wtype, algo, units)
+      call coAxType(img, 2, axtype, wtype, units)
       if (units.ne.'rad') doabs = .true.
 
       bin(1) = ibin

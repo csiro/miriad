@@ -300,7 +300,7 @@ c       already exists, new models are appended to it.  The columns of
 c       the file are the slice number, the model peak, centre, FWHM,
 c       baseline offset and baseline slope.
 c
-c$Id: cgslice.for,v 1.13 2012/02/20 07:34:49 cal103 Exp $
+c$Id: cgslice.for,v 1.14 2012/03/02 00:55:01 cal103 Exp $
 c--
 c  Notes:
 c   SLice abcissa values are still in linear world coordiantes as
@@ -347,11 +347,10 @@ c-----------------------------------------------------------------------
      *          vtrc(2,2), vx, vxgap, vxsize, vy, vygap, vysize,
      *          wdgvp(4), xdispl, xdispls, xrange(2), ydispb, ydispbs,
      *          yrange(2)
-      character algo*3, axtype*9, fslmod*80, fslposi*80, fslposo*80,
-     *          fslval*80, hard*20, in*64, labtyp(3)*6, levtyp*1,
-     *          ltype(NLTYPE)*6, pdev*64, trfun*3, units*16,
-     *          val3form*20, wtype*9, version*72, xlabel*40, xlabel2*40,
-     *          ylabel*40, ylabel2*40
+      character axtype*16, fslmod*80, fslposi*80, fslposo*80, fslval*80,
+     *          hard*20, in*64, labtyp(3)*6, levtyp*1, ltype(NLTYPE)*6,
+     *          pdev*64, trfun*3, units*8, val3form*20, wtype*16,
+     *          version*72, xlabel*40, xlabel2*40, ylabel*40, ylabel2*40
 
       external len1, versan
       integer  len1
@@ -368,8 +367,8 @@ c-----------------------------------------------------------------------
       data xdispls, ydispbs /3.5, 3.5/
 c-----------------------------------------------------------------------
       version = versan ('cgslice',
-     *                  '$Revision: 1.13 $',
-     *                  '$Date: 2012/02/20 07:34:49 $')
+     *                  '$Revision: 1.14 $',
+     *                  '$Date: 2012/03/02 00:55:01 $')
 
 c     Get user inputs.
       call inputs(NLTYPE, ltype, MAXLEV, in, ibin, jbin, kbin,
@@ -384,9 +383,9 @@ c     Open image and see if axes in radians.
       call coInit(lin)
 
       radians = .true.
-      call coAxType(lIn, 1, axtype, wtype, algo, units)
+      call coAxType(lIn, 1, axtype, wtype, units)
       if (units.ne.'rad') radians = .false.
-      call coAxType(lIn, 2, axtype, wtype, algo, units)
+      call coAxType(lIn, 2, axtype, wtype, units)
       if (units.ne.'rad') radians = .false.
 
 c     Finish key inputs for region of interest now.
