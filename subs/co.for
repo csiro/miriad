@@ -15,8 +15,8 @@ c
 c    Enquire about a coordinate object:
 c      coCompar(lu1,lu2,match)
 c      coFindAx(lu,axis,iax)
-c      coCtype(ctype,axtype,wtype,algo,units) - coInit not required.
-c      coAxType(lu,iax,axtype,wtype,algo,units)
+c      coCtype(ctype,axtype,wtype,algo,units,scl) - coInit not required.
+c      coAxType(lu,iax,axtype,wtype,units)
 c      coLin(lu1,in,x1,n,ctype,crpix,crval,cdelt)
 c      coAxGet(lu,iax,ctype,crpix,crval,cdelt)
 c      coGetD(lu,object,value)
@@ -55,7 +55,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: co.for,v 1.35 2012/02/27 02:43:55 cal103 Exp $
+c $Id: co.for,v 1.36 2012/03/02 00:33:17 cal103 Exp $
 c***********************************************************************
 
 c* coInit -- Initialise coordinate conversion routines.
@@ -461,17 +461,23 @@ c     Do the special cases.
 
 c***********************************************************************
 
-      subroutine coCtype(ctypei, axtype, wtype, algo, units)
+c* coCtype -- Parse a world coordinate ctype.
+c& mrc
+c: coordinates
+c+
+      subroutine coCtype(ctypei, axtype, wtype, algo, units, scl)
 
       character ctypei*(*), axtype*(*)
       character wtype*(*), algo*(*), units*(*)
-c-----------------------------------------------------------------------
+      double precision scl
+c  ---------------------------------------------------------------------
 c  Parse a world coordinate ctype returning the generic type and other
-c  information.
+c  information.  Does not require coInit.
 c
 c  Input:
 c    ctypei     The FITS-style ctype of the world coordinate.  AIPS-
-c               convention spectral types will be translated.
+c               convention spectral types will be translated (however,
+c               the Doppler frame will be discarded).
 c  Output:
 c    axtype     Generic world coordinate type:
 c                 'linear'     for simple linear axes other than
@@ -484,11 +490,16 @@ c               code stripped off, e.g. 'RA---NCP' yields 'RA', and
 c               'VOPT-F2W' yields 'VOPT'.
 c    algo       World coordinate algorithm code, e.g. 'RA---NCP' yields
 c               'NCP', and 'VOPT-F2W' yields 'F2W'.  Blank for linear
-c               axes.
+c               axes or if the code is unrecognized.
 c    units      Miriad internal units for this world coordinate in a
 c               form suitable for reporting, e.g. 'VOPT-F2W' would
-c               yield 'km/s'.
+c               yield 'km/s'.  May be used to identify angular,
+c               frequency, velocity, etc. axes.
+c    scl        Factor to convert from Miriad to FITS/WCSLIB internal
+c               units.
 c-----------------------------------------------------------------------
+      include 'mirconst.h'
+
       integer    NWTYPE, NPCODE
       parameter (NWTYPE = 21, NPCODE = 29)
 
@@ -499,7 +510,7 @@ c-----------------------------------------------------------------------
       external  binsrcha, len1
       integer   binsrcha, len1
 
-c     Recognised wtypes; this list MUST be in alphabetic order.
+c     Recognised wtypes; this list must be in alphabetical order.
       data (wtypes(i),axtypes(i),cunits(i),i=1,NWTYPE)/
      *  'ANGLE    ', 'linear   ', 'rad   ',
      *  'DEC      ', 'latitude ', 'rad   ',
@@ -556,6 +567,15 @@ c       Unrecognized, assumed linear.
 
       axtype = axtypes(i)
       units  = cunits(i)
+      if (units.eq.'rad') then
+        scl = DR2D
+      else if (units.eq.'GHz') then
+        scl = 1d9
+      else if (units.eq.'km/s') then
+        scl = 1d3
+      else
+        scl = 1d0
+      endif
 
       if (axtype.eq.'longitude' .or. axtype.eq.'latitude') then
 c       Celestial axis, check the projection code.
@@ -591,13 +611,14 @@ c* coAxType -- Get information about the world coordinates on an axis.
 c& mrc
 c: coordinates
 c+
-      subroutine coAxType(lu,iax,axtype,wtype,algo,units)
+      subroutine coAxType(lu,iax,axtype,wtype,units)
 
       integer   lu, iax
-      character axtype*(*), wtype*(*), algo*(*), units*(*)
+      character axtype*(*), wtype*(*), units*(*)
 c  ---------------------------------------------------------------------
 c  Get information about the world coordinates on an axis.  Provides a
-c  convenient interface to coCtype.
+c  convenient interface to coCtype, returning only the information that
+c  should be required by the outside world.
 c
 c  Input:
 c    lu         Handle of the coordinate object.
@@ -611,19 +632,21 @@ c                 'spectral'   for spectral axes.
 c               Not reset if iax was zero on input.
 c  Output:
 c    wtype      World coordinate type, i.e. ctype with the algorithm
-c               code stripped off, e.g. 'RA---NCP' would yield 'RA', and
-c               'VOPT-F2W' would yield 'VOPT'.
+c               code stripped off, e.g. 'RA---NCP' yields 'RA', and
+c               'VOPT-F2W' yields 'VOPT'.
 c    algo       World coordinate algorithm code, e.g. 'RA---NCP' would
 c               yield 'NCP', and 'VOPT-F2W' would yield 'F2W'.  Blank
 c               for linear axes.
 c    units      Miriad internal units for this world coordinate in a
 c               form suitable for reporting, e.g. 'VOPT-F2W' would
-c               yield 'km/s'.
+c               yield 'km/s'.  May be used to identify angular,
+c               frequency, velocity, etc. axes.
 c-----------------------------------------------------------------------
       include 'co.h'
 
       integer   icrd
-      character dummy*16
+      double precision scl
+      character algo*8, dummy*16
 
       external  coLoc
       integer   coLoc
@@ -632,7 +655,6 @@ c-----------------------------------------------------------------------
 
       axtype = ' '
       wtype  = ' '
-      algo   = ' '
       units  = ' '
 
       if (iax.lt.0 .or. naxis(icrd).lt.iax) return
@@ -643,10 +665,10 @@ c-----------------------------------------------------------------------
 
 c       Don't alter axtype - it might be given as a character constant.
         dummy = axtype
-        call coCtype(ctype(iax,icrd), dummy, wtype, algo, units)
+        call coCtype(ctype(iax,icrd), dummy, wtype, algo, units, scl)
 
       else
-        call coCtype(ctype(iax,icrd), axtype, wtype, algo, units)
+        call coCtype(ctype(iax,icrd), axtype, wtype, algo, units, scl)
       endif
 
       end
@@ -971,7 +993,7 @@ c     Parse parameterized keywords.
       if (obj(:5).eq.'ctype' .and. len1(obj).eq.6) then
         iax = ichar(obj(6:6)) - ichar('0')
         if (1.le.iax .and. iax.le.MAXNAX) then
-          obj(6:6) = ' '
+          obj(6:) = ' '
         else
           iax = 0
         endif
@@ -2101,10 +2123,8 @@ c     Determine the operation to be performed.
 c     Get the factors to scale cdelt1 and cdelt2 for this coordinate.
       cdelt1 = cdelt(1,icrd)
       cdelt2 = cdelt(2,icrd)
-      if (cotype(1,icrd).eq.LNGTYP .or.
-     *    cotype(1,icrd).eq.LATTYP .or.
-     *    cotype(2,icrd).eq.LNGTYP .or.
-     *    cotype(2,icrd).eq.LATTYP) then
+      if (cotype(1,icrd).eq.LNGTYP .or. cotype(1,icrd).eq.LATTYP .or.
+     *    cotype(2,icrd).eq.LNGTYP .or. cotype(2,icrd).eq.LATTYP) then
         ispc = spcax(icrd)
         if (ispc.ne.0 .and. ispc.le.n .and. frqscl(icrd)) then
           call coFqFac(ctype(ispc,icrd), x1(ispc), crpix(ispc,icrd),
@@ -2499,7 +2519,7 @@ c-----------------------------------------------------------------------
       include 'mirconst.h'
 
       integer   iax, icrd, p
-      double precision cdelti, crpixi, crvali
+      double precision cdelti, crpixi, crvali, scl
       character algo*8, axtype*16, ctypei*16, line*80, pols*4, radec*12,
      *          units*8, wtype*16
 
@@ -2515,7 +2535,7 @@ c-----------------------------------------------------------------------
         crvali = crval(iax,icrd)
         ctypei = ctype(iax,icrd)
 
-        call coCtype(ctypei, axtype, wtype, algo, units)
+        call coCtype(ctypei, axtype, wtype, algo, units, scl)
 
         if (wtype.eq.'RA') then
 c         Time.
@@ -2576,7 +2596,8 @@ c-----------------------------------------------------------------------
       double precision dval, pv(0:29), ref(4)
       character dummy*8, num*2, pcode*4
 
-      external  coLoc, itoaf
+      external  coLoc, hdprsnt, itoaf
+      logical   hdprsnt
       integer   coLoc
       character itoaf*2
 c-----------------------------------------------------------------------
@@ -2675,7 +2696,8 @@ c     The remaining parameters.
         call wrhdd(tno, 'restfreq', restfrq(icrd))
       endif
 
-      if (vobs(icrd).ne.0d0) then
+c     Write vobs only if already present.
+      if (hdprsnt(lu, 'vobs')) then
         call wrhdd(tno, 'vobs', vobs(icrd))
       endif
 
@@ -2777,7 +2799,7 @@ c-----------------------------------------------------------------------
 
       integer   iax, lu, m, n, prj(PRJLEN), status
       double precision dval
-      character cscal*16, keywrd*8, num*2
+      character ctemp*16, keywrd*8, num*2
 
       external  hdprsnt, itoaf
       logical   hdprsnt
@@ -2852,16 +2874,17 @@ c     Projection parameters.
 
       status = celpti(cel(1,icrd), CEL_PRJ, prj, 0)
 
-
+c     Others.
       call rdhdd(lu, 'restfreq', restfrq(icrd), 0d0)
       call rdhdd(lu, 'epoch',    eqnox(icrd),   0d0)
       call rdhdd(lu, 'obstime',  obstime(icrd), 0d0)
       call rdhdd(lu, 'vobs',     vobs(icrd),    0d0)
-      call rdhda(lu, 'specsys',  specsys(icrd), ' ')
-      call rdhda(lu, 'cellscal', cscal, '1/F')
-      frqscl(icrd) = cscal.eq.'1/F'
-      if (.not.frqscl(icrd) .and. cscal.ne.'CONSTANT') call bug('w',
-     *  'Unrecognised cellscal value: '//cscal)
+      call rdhda(lu, 'specsys',  ctemp, ' ')
+      specsys(icrd) = ctemp(:8)
+      call rdhda(lu, 'cellscal', ctemp, '1/F')
+      frqscl(icrd) = ctemp.eq.'1/F'
+      if (.not.frqscl(icrd) .and. ctemp.ne.'CONSTANT') call bug('w',
+     *  'Unrecognised cellscal value: '//ctemp)
 
       end
 
@@ -2933,9 +2956,10 @@ c-----------------------------------------------------------------------
 c     Only needed to define the type codes.
       include 'co.h'
 
+      double precision scl
       character algo*8, axtype*16, units*8, wtype*16
 c-----------------------------------------------------------------------
-      call coCtype(ctypei, axtype, wtype, algo, units)
+      call coCtype(ctypei, axtype, wtype, algo, units, scl)
 
       if (axtype.eq.'linear') then
         itype = LINEAR
@@ -2962,6 +2986,7 @@ c***********************************************************************
       character ctype*(*), wtype*(*), algo*(*)
 c-----------------------------------------------------------------------
 c  Decompose ctype into the world coordinate type and algorithm code.
+c  Not fussy about the number of '-' separating them.
 c-----------------------------------------------------------------------
       integer   i, j
 c-----------------------------------------------------------------------
@@ -3090,30 +3115,34 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine coGetVel(raepo,decepo,eqnox,vel)
+      subroutine coGetVel(ra,dec,eqnox,vel)
 
-      double precision raepo,decepo,eqnox,vel
-c  ---------------------------------------------------------------------
-c  Determine the Sun's LSR velocity component in a given direction.
+      double precision ra, dec, eqnox, vel
 c-----------------------------------------------------------------------
-      integer i
-      double precision dec2000, ra2000, lmn2000(3), velsun(3)
+c  Determine the Sun's LSRK velocity component in a given direction.
+c-----------------------------------------------------------------------
+      double precision dec2000, lmn2000(3), ra2000, velsun(3)
 
       external  epo2jul
       double precision epo2jul
 c-----------------------------------------------------------------------
+c     Compute source direction cosines in J2000 frame.
       if (abs(eqnox-2000d0).gt.0.001d0) then
-        call precess(epo2jul(eqnox,' '),raepo,decepo,
+c       Precess to J2000.
+        call precess(epo2jul(eqnox,' '),ra,dec,
      *               epo2jul(2000d0,'J'),ra2000,dec2000)
         call sph2lmn(ra2000,dec2000,lmn2000)
       else
-        call sph2lmn(raepo,decepo,lmn2000)
+        call sph2lmn(ra,dec,lmn2000)
       endif
+
+c     Sun's LSRK velocity in J2000 frame (a constant vector).
       call vsun(velsun)
-      vel = 0d0
-      do i = 1, 3
-        vel = vel + lmn2000(i)*velsun(i)
-      enddo
+
+c     Compute the dot product.
+      vel = lmn2000(1)*velsun(1) +
+     *      lmn2000(2)*velsun(2) +
+     *      lmn2000(3)*velsun(3)
 
       end
 
