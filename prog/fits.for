@@ -130,7 +130,7 @@ c         velocity=lsr
 c       indicates that fits is to determine the observatory velocity
 c       wrt the LSR frame using an appropriate model.
 c
-c$Id: fits.for,v 1.23 2012/02/24 03:54:41 cal103 Exp $
+c$Id: fits.for,v 1.24 2012/03/02 00:56:37 cal103 Exp $
 c--
 c
 c  Bugs:
@@ -164,8 +164,8 @@ c-----------------------------------------------------------------------
       character versan*72
 c-----------------------------------------------------------------------
       version = versan('fits',
-     *                 '$Revision: 1.23 $',
-     *                 '$Date: 2012/02/24 03:54:41 $')
+     *                 '$Revision: 1.24 $',
+     *                 '$Date: 2012/03/02 00:56:37 $')
 c
 c  Get the input parameters.
 c
@@ -3921,13 +3921,11 @@ c***********************************************************************
 c-----------------------------------------------------------------------
 c  Load FITS WCS keyvalues and fiddle them into a Miriad coordinate
 c  system.  CUNIT is not interpreted and we assume that FITS default
-c  units are used, namely degrees, Hz and m/s.  These are converted to
-c  Miriad's internal units: radian, GHz and km/s.
+c  units are used, namely degrees, Hz, and m/s.  These are converted to
+c  Miriad's internal units: radian, GHz, and km/s.
 c-----------------------------------------------------------------------
-      include 'mirconst.h'
-
       integer   iax, j, jax, k
-      double precision dtemp
+      double precision dtemp, scl
       character algo*8, axtype*16, cax*2, cd*2, pc*2, units*8, wtype*16
 
       external  m0ij, mi_j, itoaf
@@ -3985,26 +3983,15 @@ c         Strip off leading blanks if any.
           if (ctype(iax).eq.'VLSR') then
 c           Assumed to be radio velocity wrt LSRK in km/s.
             ctype(iax) = 'VELO-LSR'
-            cdelt(iax) = cdelt(iax)*1e3
-            crval(iax) = crval(iax)*1e3
+            cdelt(iax) = cdelt(iax)*1d3
+            crval(iax) = crval(iax)*1d3
           endif
         endif
 
-c       Convert units (ignoring CUNITi).
-        call coCtype(ctype(iax), axtype, wtype, algo, units)
-        if (units.eq.'rad') then
-c         FITS degrees -> Miriad radians.
-          cdelt(iax) = cdelt(iax) * DD2R
-          crval(iax) = crval(iax) * DD2R
-        else if (units.eq.'GHz') then
-c         FITS Hz -> Miriad GHz.
-          cdelt(iax) = cdelt(iax) * 1d-9
-          crval(iax) = crval(iax) * 1d-9
-        else if (units.eq.'km/s') then
-c         FITS m/s -> Miriad km/s.
-          cdelt(iax) = cdelt(iax) * 1d-3
-          crval(iax) = crval(iax) * 1d-3
-        endif
+c       Convert to Miriad units (ignoring CUNITi).
+        call coCtype(ctype(iax), axtype, wtype, algo, units, scl)
+        cdelt(iax) = cdelt(iax) / scl
+        crval(iax) = crval(iax) / scl
 
 c       Locate the celestial axes.
         if (axtype.eq.'longitude') then
@@ -4460,7 +4447,7 @@ c-----------------------------------------------------------------------
       integer   iax, ilat, ilng, iostat, item, ival, m, n, npnt
       real      rms, rval
       double precision cdelt, crota, crpix, crval, dval, obsdec, obsra,
-     *          scale
+     *          scl
       character algo*3, axtype*16, cax*2, ctype*32, cval*32, descr*80,
      *          keywrd*12, ktype*16, kwrd2(NKWRD2)*2, kwrd5(NKWRD5)*5,
      *          kwrd8(NKWRD8)*8, telescop*16, text*80, ukey*12,
@@ -4517,20 +4504,12 @@ c     Locate the celestial axes.
         call coAxGet(lIn, iax, ctype, crpix, crval, cdelt)
 
 c       Determine scale factor.
-        scale = 1.0
-        call coCtype(ctype, axtype, wtype, algo, units)
-        if (units.eq.'rad') then
-          scale = DR2D
-        else if (units.eq.'GHz') then
-          scale = 1d9
-        else if (units.eq.'km/s') then
-          scale = 1d3
-        endif
+        call coCtype(ctype, axtype, wtype, algo, units, scl)
 
         cax = itoaf(iax)
         call fitwrhdd(lOut, 'CRPIX'//cax, crpix-dble(blc(iax)-1))
-        call fitwrhdd(lOut, 'CDELT'//cax, scale*cdelt)
-        call fitwrhdd(lOut, 'CRVAL'//cax, scale*crval)
+        call fitwrhdd(lOut, 'CDELT'//cax, scl*cdelt)
+        call fitwrhdd(lOut, 'CRVAL'//cax, scl*crval)
         if (ctype.ne.' ') call fitwrhda(lOut, 'CTYPE'//cax, ctype)
 
         if (iax.eq.ilat) then
