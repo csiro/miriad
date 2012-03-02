@@ -144,7 +144,7 @@ c
 c Note that this program does not report its version number so that gif
 c and ps output can be piped.
 c
-c$Id: mbspect.for,v 1.16 2012/01/16 04:05:14 wie017 Exp $
+c$Id: mbspect.for,v 1.17 2012/03/02 08:04:20 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -182,8 +182,8 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 c     Don't report the ID so that gif and ps output can be piped.
       version = versan ('-mbspect',
-     *                  '$Revision: 1.16 $',
-     *                  '$Date: 2012/01/16 04:05:14 $')
+     *                  '$Revision: 1.17 $',
+     *                  '$Date: 2012/03/02 08:04:20 $')
 
 c     Get inputs.
       call keyini
@@ -502,8 +502,8 @@ c     Optionally Hanning smooth spectrum..
       endif
 
 c     Get plot axes, convert units, and write labels.
-      call axes(lIn,ispc,xaxis,yaxis,nchan,naxis,wpix,
-     *          xlabel,ylabel,chan,value,spec,unit0)
+      call axes(lIn,ispc,naxis,nchan,wpix,chan,xaxis,yaxis,
+     *  xlabel,ylabel,value,spec,unit0)
 
 c     Optionally take derivatives.
       if (deriv1 .or. deriv2) call der(deriv1, nchan, spec, work)
@@ -1177,15 +1177,14 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine axes(lIn,ispc,xaxis,yaxis,nchan,naxis,wpix,
-     *                xlabel,ylabel,chan,value,spec,unit0)
+      subroutine axes(lIn,ispc,naxis,NCHAN,wpix,chan,xaxis,yaxis,
+     *  xlabel,ylabel,value,spec,unit0)
 
-      integer   lIn, ispc
+      integer   lIn, ispc, naxis, NCHAN
+      real      wpix(NCHAN), chan(NCHAN)
       character xaxis*(*), yaxis*(*)
-      integer   nchan, naxis
-      real      wpix(nchan)
       character xlabel*(*), ylabel*(*)
-      real      chan(nchan), value(nchan), spec(nchan)
+      real      value(NCHAN), spec(NCHAN)
       character unit0*(*)
 c-----------------------------------------------------------------------
 c  Get plot axes and write labels.
@@ -1193,15 +1192,15 @@ c
 c  Inputs:
 c    lIn        The handle of the image.
 c    ispc       Spectral axis.
+c    naxis      Number of image axes.
+c    NCHAN      Number of channels.
+c    wpix       Number or weight of good pixels in integrated spectrum
+c               for each channel.
+c    chan       Array of channel numbers
 c    xaxis      X-axis type.  Can be 'channel', 'frequency', 'radio',
 c               'optical', or (default) units in image.
 c    yaxis      Units for yaxis.  Can be 'average' (default), 'sum', or
 c               'point'.
-c    nchan      Number of channels.
-c    naxis      Number of image axes.
-c    wpix       Number or weight of good pixels in integrated spectrum
-c               for each channel.
-c    chan       Array of channel numbers
 c  Output:
 c    xlabel     Label for xaxis.
 c    ylabel     Label for yaxis.
@@ -1215,51 +1214,57 @@ c    to get beam oversampling factor.
 c-----------------------------------------------------------------------
       integer   i, jspc
       real      bmaj, bmin,cbof, omega
-      double precision dtemp
-      character algo*3, bunit*16, ctype*16
+      double precision dVal
+      character algo*8, axtype*16, bunit*16, cname*32, units*8, wtype*16
 
       external  itoaf, len1
       integer   len1
       character itoaf*1
 c-----------------------------------------------------------------------
 c     Construct x-axis label.
-      call rdhda(lIn,'ctype'//itoaf(ispc),ctype,' ')
+
       if (xaxis.eq.'channel') then
         xlabel = 'Channel'
-      else if (xaxis.eq.'FREQ' .or.
-     *         xaxis.eq.'frequency') then
-        xlabel = 'Frequency (MHz)'
-      else if (xaxis.eq.'VRAD' .or.
-     *         xaxis.eq.'VELO' .or.
-     *         xaxis.eq.'radio') then
-        xlabel = 'Radio velocity, ' //
-     *           '\ficz(1+z)\u-1\d\fr (km s\u-1\d)'
-      else if (xaxis.eq.'VOPT' .or.
-     *         xaxis.eq.'FELO' .or.
-     *         xaxis.eq.'optical') then
-        xlabel = 'Optical velocity, \ficz\fr (km s\u-1\d)'
-      else
-        xlabel = ctype(1:len1(ctype))
-      endif
 
-c     Convert x-axis units.
-      if (xaxis.eq.'channel') then
-        do i = 1, nchan
+        do i = 1, NCHAN
           value(i) = chan(i)
         enddo
 
       else
         call coInit(lIn)
         call coSpcSet(lIn, xaxis, ' ', jspc, algo)
-        do i = 1, nchan
-          call coCvt1(lIn, jspc, 'ap', dble(chan(i)), 'aw', dtemp)
-          value(i) = dtemp
+        call coAxType(lIn, ispc, axtype, wtype, units)
+
+        if (wtype.eq.'FREQ') then
+c         Units will be converted later.
+          xlabel = 'Frequency (MHz)'
+        else if (wtype.eq.'VRAD') then
+          xlabel = 'Radio velocity, ' //
+     *             '\ficz(1+z)\u-1\d\fr (km s\u-1\d)'
+        else if (xaxis.eq.'VOPT') then
+          xlabel = 'Optical velocity, \ficz\fr (km s\u-1\d)'
+        else if (xaxis.eq.'VELO') then
+          xlabel = 'Relativistic velocity (km s\u-1\d)'
+        else
+          call coCname(wtype, cname)
+          if (units.ne.' ') then
+            i = len1(cname) + 1
+            cname(i:) = ' ('//units(:len1(units))//')'
+          endif
+
+          xlabel = cname
+        endif
+
+c       Convert x-axis units.
+        do i = 1, NCHAN
+          call coCvt1(lIn, jspc, 'ap', dble(chan(i)), 'aw', dVal)
+          value(i) = dVal
         enddo
         call coFin(lIn)
 
-        if (xaxis.eq.'FREQ' .or. xaxis.eq.'frequency') then
+        if (wtype.eq.'FREQ') then
 c         Convert frequency to MHz.
-          do i = 1, nchan
+          do i = 1, NCHAN
             value(i) = 1000.0*value(i)
           enddo
         endif
@@ -1270,7 +1275,7 @@ c     Get units and beam oversampling factor from image header.
 
 c     Normalize the spectra and get the yaxis.
       if (yaxis.eq.'average' .or. yaxis.eq.'point') then
-        do i = 1, nchan
+        do i = 1, NCHAN
           if (wpix(i).gt.0.0) then
              spec(i) = spec(i)/wpix(i)
           else
@@ -1295,7 +1300,7 @@ c     Normalize the spectra and get the yaxis.
         ylabel = 'Total Intensity (Jy)'
 
       else if (bunit(1:7).eq.'JY/BEAM' .and. bmaj*bmin*omega.ne.0) then
-        do i = 1, nchan
+        do i = 1, NCHAN
           spec(i) = spec(i)/cbof
         enddo
         unit0='Jy'
