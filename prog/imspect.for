@@ -51,7 +51,7 @@ c       Write spectrum to this ascii file.  Default is no output file.
 c@ comment
 c       A one-line comment which is written into the logfile.
 c
-c$Id: imspect.for,v 1.4 2012/01/16 04:05:14 wie017 Exp $
+c$Id: imspect.for,v 1.5 2012/03/02 07:29:17 cal103 Exp $
 c--
 c
 c  History:
@@ -82,8 +82,8 @@ c-----------------------------------------------------------------------
       character itoaf*3, versan*72
 c-----------------------------------------------------------------------
       version = versan('imspect',
-     *                 '$Revision: 1.4 $',
-     *                 '$Date: 2012/01/16 04:05:14 $')
+     *                 '$Revision: 1.5 $',
+     *                 '$Date: 2012/03/02 07:29:17 $')
 
 c     Get inputs.
       call keyini
@@ -160,8 +160,8 @@ c     Make title.
       if (deriv2) title = title(1:len1(title))//', D2'
 
 c     Get plot axes, convert units, and write labels.
-      call axes(lIn,vaxis,xaxis,yaxis,nchan,naxis,npix,
-     *          xlabel,ylabel,chan,value,spec)
+      call axes(lIn,vaxis,naxis,nchan,npix,chan,xaxis,yaxis,
+     *  xlabel,ylabel,value,spec)
 
 c     Optionally take derivatives.
       if (deriv1 .or. deriv2) call der(deriv1, nchan, spec, work)
@@ -345,12 +345,14 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine axes(lIn,vaxis,xaxis,yaxis,nchan,naxis,npix,
-     *                                xlabel,ylabel,chan,value,spec)
+      subroutine axes(lIn,vaxis,naxis,NCHAN,npix,chan,xaxis,yaxis,
+     *  xlabel,ylabel,value,spec)
 
-      integer lIn,vaxis,naxis,nchan,npix(nchan)
-      character*(*) xaxis,yaxis,xlabel,ylabel
-      real chan(nchan),spec(nchan),value(nchan)
+      integer   lIn, vaxis, naxis, NCHAN, npix(NCHAN)
+      character xaxis*(*), yaxis*(*)
+      real      chan(NCHAN)
+      character xlabel*(*), ylabel*(*)
+      real      value(NCHAN), spec(NCHAN)
 c-----------------------------------------------------------------------
 c  Get plot axes and write labels.
 c
@@ -358,19 +360,19 @@ c  Inputs:
 c    lIn        The handle of the image.
 c    vaxis      The velocity or frequency axis.
 c    naxis      Number of image axes.
+c    npix       Number of good pixels in integrated spectrum for each
+c               channel
+c    NCHAN      Number of channels.
+c    chan       Array of channel numbers.
 c    xaxis      Units for xaxis.  Can be 'channel' or (default) units in
 c               image.
 c    yaxis      Units for yaxis.  Can be 'average' or 'sum'.  Default is
 c               average.
-c    npix       Number of good pixels in integrated spectrum for each
-c               channel
-c    nchan      Number of channels.
-c    chan       Array of channel numbers.
 c  Output:
-c    value      Array of xaxis values.
-c    spec       Spectrum (with converted units).
 c    xlabel     Label for xaxis.
 c    ylabel     Label for yaxis.
+c    value      Array of xaxis values.
+c    spec       Spectrum (with converted units).
 c
 c    - Could be much fancier by converting internal units 'JY',
 c    'JY/BEAM', etc. to requested units 'JY', 'JY/BEAM', 'K', etc.
@@ -378,32 +380,32 @@ c    calling GetBeam to get beam oversampling factor.
 c-----------------------------------------------------------------------
       integer   i
       real      bmaj, bmin, cbof, omega
-      double precision dtemp
-      character bunit*16, ctype*16
+      double precision dVal
+      character axtype*16, bunit*16, cname*32, units*8, wtype*16
 
       external  itoaf, len1
       integer   len1
       character itoaf*1
 c-----------------------------------------------------------------------
 c     Get xlabel.
-      call rdhda(lIn, 'ctype'//itoaf(vaxis), ctype, ' ')
+      call coInit(lIn)
       if (xaxis.eq.'channel') then
         xlabel = 'Channel'
-      else if (ctype(1:4).eq.'FREQ') then
-        xlabel = 'Frequency (GHz)'
-      else if (ctype.eq.'VRAD' .or. ctype(1:4).eq.'VELO') then
-        xlabel = 'Radio velocity (km/s)'
-      else if (ctype.eq.'VOPT-F2W' .or. ctype(1:4).eq.'FELO') then
-        xlabel = 'Optical velocity (km/s)'
       else
-        xlabel = ctype(1:len1(ctype))
+        call coAxType(lIn, vaxis, axtype, wtype, units)
+        call coCname(wtype, cname)
+        if (units.ne.' ') then
+          i = len1(cname) + 1
+          cname(i:) = ' ('//units(:len1(units))//')'
+        endif
+
+        xlabel = cname
       endif
 
 c     Convert xaxis units.
-      call coInit(lIn)
-      do i = 1, nchan
-        call coCvt1(lIn,vaxis,'ap',dble(chan(i)),'aw',dtemp)
-        value(i) = dtemp
+      do i = 1, NCHAN
+        call coCvt1(lIn,vaxis,'ap',dble(chan(i)),'aw',dVal)
+        value(i) = dVal
       enddo
       call coFin(lIn)
 
@@ -412,7 +414,7 @@ c     Get units and beam oversampling factor from image header.
 
 c     Normalize the spectra and get the yaxis.
       if (yaxis.eq.'average') then
-        do i = 1, nchan
+        do i = 1, NCHAN
           if (npix(i).gt.0) then
              spec(i) = spec(i)/npix(i)
           else
@@ -423,7 +425,7 @@ c     Normalize the spectra and get the yaxis.
       else if (bunit.eq.'JY/PIXEL') then
         ylabel = 'Total Intensity (JY)'
       else if (bunit.eq.'JY/BEAM' .and. bmaj*bmin*omega.ne.0) then
-        do i = 1, nchan
+        do i = 1, NCHAN
           spec(i) = spec(i)/cbof
         enddo
         ylabel = 'Total Intensity (JY)'
