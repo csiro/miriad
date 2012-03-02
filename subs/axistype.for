@@ -23,12 +23,12 @@ c    label      A nice label for this axis.
 c    value      The value at the plane along this axis.
 c    valstr     value as a formatted string.
 c--
-c $Id: axistype.for,v 1.5 2012/02/29 05:12:18 cal103 Exp $
+c $Id: axistype.for,v 1.6 2012/03/02 00:46:56 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'mirconst.h'
 
       integer   k, naxis
-      character algo*3, axtype*16, cax*2, units*8, wtype*16
+      character axtype*16, cax*2, units*8, wtype*16
 
       external  angles, itoaf, len1
       integer   len1
@@ -41,7 +41,7 @@ c     Get coordinate type and value for input plane.
         call coInit(lIn)
         call coCvt1(lIn, axis, 'ap', dble(plane), 'aw', value)
         call coGetA(lIn, 'ctype'//cax, ctype)
-        call coCtype(ctype, axtype, wtype, algo, units)
+        call coAxType(lIn, axis, axtype, wtype, units)
 
 c       Convert to user friendly label and formatted value.
         k = (13 - len1(wtype))/2 + 1
