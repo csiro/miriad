@@ -1,225 +1,229 @@
 c***********************************************************************
+c  A set of routines for formatting angles and times.
 c
 c  History:
+c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c     ??oct88  wh  Original version (called angles).
-c     ??jul90 pxt  Fix the position of the minus sign and add round off.
-c      5feb91  jm  Convert routine into Miriad format and added the
-c                  functions rangle and hangle.
-c     3sep93 nebk  Add dangleh (h=high precision)
-c    17aug94 nebk  Add hangleh (h=high precision)
-c    18apr96 rjs   Added rangleh (h=high precision).
-c    14jun96 mchw  Corrected doc for hangleh
-c
+c $Id: angles.for,v 1.2 2012/03/02 06:06:17 cal103 Exp $
 c***********************************************************************
-c* Dangle - Convert degrees/hours value into a formatted string.
+
+c* dangle - Convert degrees/hours value into a formatted string.
 c& jm
 c: utilities
 c+
       character*(*) function dangle(theta)
-c
-      implicit none
+
       double precision theta
-c
-c  Converts an angle expressed in degrees or hours into a string.
+c  ---------------------------------------------------------------------
+c  Convert an angle expressed in degrees or hours into a string.
 c
 c  Inputs:
 c    theta    Angle in decimal degrees or hours.
-
+c
 c  Output:
 c    dangle   Angle formated into a string with format:
 c               [+/-]DD:MM:SS.SS
-c
-c--
 c-----------------------------------------------------------------------
       double precision ROUND
-      parameter (ROUND=0.5/360000.0d0)
-c
-      integer n
-      character line*13, string*13
+      parameter (ROUND=0.5d0/3600d2)
+
       double precision deg
-c
-      deg = abs(theta) + round
-      n = 0
-      if (theta .lt. 0) then
-        n = n + 1
-        string(n:n) = '-'
-      end if
-c
-      write (line,'(i3,'':'',i2.2,'':'',i2.2,''.'',i2.2)')
-     *  int(deg), mod(int(60*deg),60), mod(int(3600*deg),60),
-     *  mod(int(3600*100*deg),100)
-      if (line(1:1) .ne. ' ') then
-        string(n+1:n+2) = line(1:2)
-        n = n + 2
-      else if (line(2:2) .ne. ' ') then
-        string(n+1:n+1) = line(2:2)
-        n = n + 1
-      end if
-      string(n+1:n+10) = line(3:12)
-      n = n + 10
-      dangle = string(1:n)
-      return
+      character text*12
+c-----------------------------------------------------------------------
+      deg = abs(theta) + ROUND
+      write(text,10) int(deg), mod(int(60d0*deg),60),
+     *  mod(int(3600d0*deg),60), mod(int(3600d2*deg),100)
+ 10   format(i3.2,':',i2.2,':',i2.2,'.',i2.2)
+
+      if (theta.lt.0d0) then
+        dangle = '-'
+      else
+        dangle = '+'
+      endif
+
+      if (text(1:1).ne.' ') then
+        dangle(2:) = text
+      else if (text(2:2).ne.' ') then
+        dangle(2:) = text(2:)
+      else
+        dangle(2:) = text(3:)
+      endif
+
       end
+
 c***********************************************************************
-c* Dangleh - Convert degrees/hours value into a formatted string
+
+c* dangleh - Convert degrees/hours value into a formatted string
 c& jm
 c: utilities
 c+
       character*(*) function dangleh(theta)
-c
-      implicit none
+
       double precision theta
-c
-c  Converts an angle expressed in degrees or hours into a string.
+c  ---------------------------------------------------------------------
+c  Convert an angle expressed in degrees or hours into a string.
 c  Gives one more decimal place than dangle in the seconds string.
 c
 c  Inputs:
 c    theta    Angle in decimal degrees or hours.
-
+c
 c  Output:
 c    dangleh  Angle formated into a string with format:
 c               [+/-]DD:MM:SS.SSS
-c
-c--
 c-----------------------------------------------------------------------
       double precision ROUND
-      parameter (ROUND=0.5/3600000.0d0)
-c
-      integer n
-      character line*14, string*14
+      parameter (ROUND=0.5d0/3600d3)
+
       double precision deg
-c
-      deg = abs(theta) + round
-      n = 0
-      if (theta .lt. 0) then
-        n = n + 1
-        string(n:n) = '-'
-      end if
-c
-      write (line,'(i3,'':'',i2.2,'':'',i2.2,''.'',i3.3)')
-     *  int(deg), mod(int(60*deg),60), mod(int(3600*deg),60),
-     *  mod(int(3600*1000*deg),1000)
-      if (line(1:1) .ne. ' ') then
-        string(n+1:n+2) = line(1:2)
-        n = n + 2
-      else if (line(2:2) .ne. ' ') then
-        string(n+1:n+1) = line(2:2)
-        n = n + 1
-      end if
-      string(n+1:n+11) = line(3:13)
-      n = n + 11
-      dangleh = string(1:n)
-      return
+      character text*13
+c-----------------------------------------------------------------------
+      deg = abs(theta) + ROUND
+      write(text,10) int(deg), mod(int(60d0*deg),60),
+     *  mod(int(3600d0*deg),60), mod(int(3600d3*deg),1000)
+ 10   format(i3.2,':',i2.2,':',i2.2,'.',i3.3)
+
+      if (theta.lt.0d0) then
+        dangleh = '-'
+      else
+        dangleh = '+'
+      endif
+
+      if (text(1:1).ne.' ') then
+        dangleh(2:) = text
+      else if (text(2:2).ne.' ') then
+        dangleh(2:) = text(2:)
+      else
+        dangleh(2:) = text(3:)
+      endif
+
       end
+
 c***********************************************************************
-c* Rangle - Convert degrees value (in radians) into a formatted string.
+
+c* rangle - Convert degrees value (in radians) into a formatted string.
 c& jm
 c: utilities
 c+
       character*(*) function rangle(theta)
-c
-      implicit none
+
       double precision theta
-c
-c  Converts an angle expressed in radians into a string.
+c  ---------------------------------------------------------------------
+c  Convert an angle expressed in radians into a string.
 c
 c  Inputs:
 c    theta    Angle in radians.
-
+c
 c  Output:
 c    rangle   Angle formated into a string with format:
 c               [+/-]DD:MM:SS.SS
-c
-c--
 c-----------------------------------------------------------------------
       include 'mirconst.h'
-      character Dangle*13
-c
-      rangle = Dangle((180.0 * theta) / DPI)
-      return
-      end
-c***********************************************************************
-c* Hangle - Convert hours value (in radians) into a formatted string.
-c& jm
-c: utilities
-c+
-      character*(*) function hangle(theta)
-c
-      implicit none
-      double precision theta
-c
-c  Converts an angle expressed in radians into a string.
-c
-c  Inputs:
-c    theta    Angle in radians.
 
-c  Output:
-c    rangle   Angle formated into a string with format:
-c               [+/-]HH:MM:SS.SS
-c
-c--
+      external  dangle
+      character dangle*13
 c-----------------------------------------------------------------------
-      include 'mirconst.h'
-      character Dangle*13
-c
-      hangle = Dangle((12.0 * theta) / DPI)
-      return
-      end
-c***********************************************************************
-c* Hangleh - Convert hours value (in radians) into a formatted string.
-c& jm
-c: utilities
-c+
-      character*(*) function hangleh(theta)
-c
-      implicit none
-      double precision theta
-c
-c  Converts an angle expressed in radians into a string.
-c  Gives one more decimal place than hangle in the seconds string.
-c
-c  Inputs:
-c    theta    Angle in radians.
+      rangle = dangle(theta*DR2D)
 
-c  Output:
-c    rangle   Angle formated into a string with format:
-c               [+/-]HH:MM:SS.SSS
-c
-c--
-c-----------------------------------------------------------------------
-      include 'mirconst.h'
-      character Dangleh*13
-c
-      hangleh = Dangleh((12.0d0 * theta) / DPI)
-      return
       end
+
 c***********************************************************************
-c* Rangleh - Convert degrees value (in radians) into a formatted string.
+
+c* rangleh - Convert degrees value (in radians) into a formatted string.
 c& jm
 c: utilities
 c+
       character*(*) function rangleh(theta)
-c
-      implicit none
+
       double precision theta
-c
-c  Converts an angle expressed in radians into a string.
-c  Gives one more decimal place than rangle in the seconds string.
+c  ---------------------------------------------------------------------
+c  Convert an angle expressed in radians into a string.  Gives one more
+c  decimal place than rangle in the seconds string.
 c
 c  Inputs:
 c    theta    Angle in radians.
-
+c
 c  Output:
 c    rangleh  Angle formated into a string with format:
 c               [+/-]DD:MM:SS.SSS
-c
-c--
 c-----------------------------------------------------------------------
       include 'mirconst.h'
-      character Dangleh*14
-c
-      rangleh = Dangleh((180.0d0 * theta) / DPI)
-      return
+
+      external  dangleh
+      character dangleh*14
+c-----------------------------------------------------------------------
+      rangleh = dangleh(theta*DR2D)
+
       end
 
+c***********************************************************************
+
+c* hangle - Convert hours value (in radians) into a formatted string.
+c& jm
+c: utilities
+c+
+      character*(*) function hangle(theta)
+
+      double precision theta
+c  ---------------------------------------------------------------------
+c  Convert an angle expressed in radians into a string.
+c
+c  Inputs:
+c    theta    Angle in radians.
+c
+c  Output:
+c    rangle   Angle formated into a string with format:
+c               [+/-]HH:MM:SS.SS
+c-----------------------------------------------------------------------
+      include 'mirconst.h'
+
+      character text*13
+
+      external  dangle
+      character dangle*13
+c-----------------------------------------------------------------------
+      text = dangle(theta*DR2D/15d0)
+
+      if (text(:1).eq.'+') then
+        hangle = text(2:)
+      else
+        hangle = text
+      endif
+
+      end
+
+c***********************************************************************
+
+c* hangleh - Convert hours value (in radians) into a formatted string.
+c& jm
+c: utilities
+c+
+      character*(*) function hangleh(theta)
+
+      double precision theta
+c  ---------------------------------------------------------------------
+c  Convert an angle expressed in radians into a string.  Gives one more
+c  decimal place than hangle in the seconds string.
+c
+c  Inputs:
+c    theta    Angle in radians.
+c
+c  Output:
+c    rangle   Angle formated into a string with format:
+c               [+/-]HH:MM:SS.SSS
+c-----------------------------------------------------------------------
+      include 'mirconst.h'
+
+      character text*13
+
+      external  dangle
+      character dangleh*13
+c-----------------------------------------------------------------------
+      text = dangleh(theta*DR2D/15d0)
+
+      if (text(:1).eq.'+') then
+        hangleh = text(2:)
+      else
+        hangleh = text
+      endif
+
+      end
