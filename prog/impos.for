@@ -63,7 +63,7 @@ c                      RA = (p1 - CRPIX1)*CDELT1/cos(CRVAL2).
 c                   This interpretation differs significantly from the
 c                   FITS standard when lat0 (i.e. CRVAL2) is non-zero.
 c
-c$Id: impos.for,v 1.11 2012/03/02 02:26:23 cal103 Exp $
+c$Id: impos.for,v 1.12 2012/03/03 03:52:08 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -101,8 +101,8 @@ c-----------------------------------------------------------------------
       data nelem, ipix /0, MAXNAX*1/
 c-----------------------------------------------------------------------
       version = versan ('impos',
-     *                  '$Revision: 1.11 $',
-     *                  '$Date: 2012/03/02 02:26:23 $')
+     *                  '$Revision: 1.12 $',
+     *                  '$Date: 2012/03/03 03:52:08 $')
 
 c     Get inputs.
       call keyini
@@ -198,8 +198,10 @@ c     Set order in which spectral axes will be listed.
 
 
 c     World coordinate.
-      call coSpcSet(lIn, sctypes(1), ' ', ispc, algo)
-      if (algo.ne.' ') sctypes(1)(5:) = '-'//algo
+      if (dospec) then
+        call coSpcSet(lIn, sctypes(1), ' ', ispc, algo)
+        if (algo.ne.' ') sctypes(1)(5:) = '-'//algo
+      endif
       call setoaco(lIn, 'abs', nelem, 0, typeo)
       call w2wfco(lIn, nelem, typep, pixcrd, typeo, .false., strout,
      *            strlen)
@@ -228,7 +230,9 @@ c     World coordinate.
 
 
 c     Offset world coordinate.
-      call coSpcSet(lIn, sctypes(1)(:4), ' ', ispc, algo)
+      if (dospec) then
+        call coSpcSet(lIn, sctypes(1)(:4), ' ', ispc, algo)
+      endif
       call setoaco(lIn, 'off', nelem, 0, typeo)
       call w2wfco(lIn, nelem, typep, pixcrd, typeo, .false., strout,
      *            strlen)
