@@ -58,7 +58,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: co.for,v 1.37 2012/03/02 07:25:57 cal103 Exp $
+c $Id: co.for,v 1.38 2012/03/03 01:16:23 cal103 Exp $
 c***********************************************************************
 
 c* coCtype -- Parse a world coordinate ctype.
@@ -2765,7 +2765,7 @@ c     The remaining parameters.
       endif
 
 c     Write vobs only if already present.
-      if (hdprsnt(lu, 'vobs')) then
+      if (vobs(icrd).ne.0d0) then
         call wrhdd(tno, 'vobs', vobs(icrd))
       endif
 
