@@ -11,7 +11,7 @@ c
 c       If a rest frequency is stored in the header, then in addition to
 c       the type specified in the header, spectral axes are converted
 c       to frequency (FREQ), radio velocity (VRAD), optical velocity
-c       (VOPT).
+c       (VOPT), redshift (ZOPT), and relativistic velocity (VELO).
 c
 c       If the input is an image and the specified coordinate represents
 c       a valid pixel, its value is reported as well.
@@ -46,11 +46,12 @@ c
 c       The default for unspecified axes is the type of the previous
 c       axis.  The default for the first axis is "relpix".
 c@ stype
-c       'VRAD' (or 'radio') or 'VOPT' (or 'optical') - the velocity
-c       convention for a spectral coordinate.  For example, the header
-c       might define a frequency axis but you could provide a velocity
-c       with "type=abskms", in which case you must qualify the velocity
-c       convention via stype, i.e. VRAD or VOPT.
+c       'VRAD' (or 'radio'), 'VOPT' (or 'optical'), 'VELO' (or
+c       'relativistic') - the velocity convention for a spectral
+c       coordinate.  For example, the header might define a frequency
+c       axis but you could provide a velocity with "type=abskms", in
+c       which case you must qualify the velocity convention via stype,
+c       i.e. VRAD, VOPT, or VELO.
 c@ options
 c       Extra processing options.  Several can be given, separated by
 c       commas, with minimum-match.
@@ -63,7 +64,7 @@ c                      RA = (p1 - CRPIX1)*CDELT1/cos(CRVAL2).
 c                   This interpretation differs significantly from the
 c                   FITS standard when lat0 (i.e. CRVAL2) is non-zero.
 c
-c$Id: impos.for,v 1.12 2012/03/03 03:52:08 cal103 Exp $
+c$Id: impos.for,v 1.13 2012/03/05 03:39:20 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -81,9 +82,9 @@ c-----------------------------------------------------------------------
      *          strlen(MAXNAX)
       real      map(MAXDIM), value
       double precision rfreq, pixcrd(MAXNAX), win(MAXNAX)
-      character algo*3, axtype*16, bunit*9, ctypes(MAXNAX)*8, file*80,
-     *          labtyp(MAXTYP)*6, sctypes(3)*16, str1*132,
-     *          strout(MAXNAX)*80, stypei*16, stypes(4)*16, text*132,
+      character algo*8, axtype*16, bunit*9, ctypes(MAXNAX)*8, file*80,
+     *          labtyp(MAXTYP)*6, sctypes(5)*16, str1*132,
+     *          strout(MAXNAX)*80, stypei*16, stypes(6)*16, text*132,
      *          typei(MAXNAX)*6, typeo(MAXNAX)*6, typep(MAXNAX)*6,
      *          units*8, version*72
 
@@ -96,13 +97,14 @@ c-----------------------------------------------------------------------
      *             'relkms', 'abslin', 'rellin', 'absdeg',
      *             'reldeg'/
       data stypes /'VRAD', 'radio',
-     *             'VOPT', 'optical'/
+     *             'VOPT', 'optical',
+     *             'VELO', 'relativistic'/
       data typei /MAXNAX*' '/
       data nelem, ipix /0, MAXNAX*1/
 c-----------------------------------------------------------------------
       version = versan ('impos',
-     *                  '$Revision: 1.12 $',
-     *                  '$Date: 2012/03/03 03:52:08 $')
+     *                  '$Revision: 1.13 $',
+     *                  '$Date: 2012/03/05 03:39:20 $')
 
 c     Get inputs.
       call keyini
@@ -128,7 +130,7 @@ c       Get coordinate elements.
       if (nelem.eq.0) call bug('f', 'You must give a coordinate')
 
 c     Get spectral-axis type.
-      call keymatch('stype', 4, stypes, 1, stypei, nstypes)
+      call keymatch('stype', 6, stypes, 1, stypei, nstypes)
 
 c     Get options.
       call options('options', 'altprj', altPrj, 1)
@@ -182,12 +184,18 @@ c     Set order in which spectral axes will be listed.
           if (sctypes(1).eq.'FREQ') then
             sctypes(2) = 'VRAD'
             sctypes(3) = 'VOPT'
+            sctypes(4) = 'ZOPT'
+            sctypes(5) = 'VELO'
           else if (sctypes(1).eq.'VRAD') then
             sctypes(2) = 'VOPT'
-            sctypes(3) = 'FREQ'
+            sctypes(3) = 'ZOPT'
+            sctypes(4) = 'VELO'
+            sctypes(5) = 'FREQ'
           else if (sctypes(1).eq.'VOPT') then
-            sctypes(2) = 'VRAD'
-            sctypes(3) = 'FREQ'
+            sctypes(2) = 'ZOPT'
+            sctypes(3) = 'VRAD'
+            sctypes(4) = 'VELO'
+            sctypes(5) = 'FREQ'
           else
             dospec = .false.
           endif
@@ -213,7 +221,7 @@ c     World coordinate.
         call output(text)
 
         if (dospec .and. ielem.eq.ispc) then
-          do j = 2, 3
+          do j = 2, 5
             call coSpcSet(lIn, sctypes(j), ' ', ispc, algo)
             if (algo.ne.' ') sctypes(j)(5:) = '-'//algo
             call setoaco(lIn, 'abs', nelem, 0, typeo)
@@ -245,7 +253,7 @@ c     Offset world coordinate.
         call output(text)
 
         if (dospec .and. ielem.eq.ispc) then
-          do j = 2, 3
+          do j = 2, 5
             call coSpcSet(lIn, sctypes(j)(:4), ' ', ispc, algo)
             call setoaco(lIn, 'off', nelem, 0, typeo)
             call w2wfco(lIn, nelem, typep, pixcrd, typeo, .false.,
@@ -348,10 +356,10 @@ c    lIn       Handle of input image.
 c    NAXIS     Number of image axes.
 c    typei     User specified coordinate types ('hms' etc)
 c  In/out:
-c    stypei    stype specified by user, 'VRAD' or 'VOPT'.  If blank
-c              (user has not given a coordinate for the spectral axis)
-c              will be set here.  Will be returned blank if there is no
-c              spectral axis.
+c    stypei    stype specified by user, 'VRAD', 'VOPT', or 'VELO'.
+c              If blank (user has not given a coordinate for the
+c              spectral axis) will be set here.  Will be returned blank
+c              if there is no spectral axis.
 c  Output
 c    ispc      Spectral axis number of image
 c-----------------------------------------------------------------------
