@@ -63,8 +63,11 @@ c                   e.g.
 c                      RA = (p1 - CRPIX1)*CDELT1/cos(CRVAL2).
 c                   This interpretation differs significantly from the
 c                   FITS standard when lat0 (i.e. CRVAL2) is non-zero.
+c         altspc    Report FREQ-{HEL,LSR} axes as is, namely
+c                   topocentric, i.e. don't Doppler shift to barycentric
+c                   or LSRK (see help for velsw).
 c
-c$Id: impos.for,v 1.13 2012/03/05 03:39:20 cal103 Exp $
+c$Id: impos.for,v 1.14 2012/03/05 05:08:45 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -73,25 +76,27 @@ c-----------------------------------------------------------------------
       include 'maxnax.h'
       include 'mirconst.h'
 
-      integer    MAXTYP
-      parameter (MAXTYP = 13)
+      integer    NOPTS, MAXTYP
+      parameter (NOPTS = 2, MAXTYP = 13)
 
-      logical   altPrj, doim, dospec, off
+      logical   altPrj, altSpc, doim, dospec, off, present(NOPTS)
       integer   iax, ielem, il, iostat, ipix(MAXNAX), ispc, lIn, j,
      *          naxis, nelem, nsize(MAXNAX), nstypes, ntypei,
      *          strlen(MAXNAX)
       real      map(MAXDIM), value
       double precision rfreq, pixcrd(MAXNAX), win(MAXNAX)
       character algo*8, axtype*16, bunit*9, ctypes(MAXNAX)*8, file*80,
-     *          labtyp(MAXTYP)*6, sctypes(5)*16, str1*132,
-     *          strout(MAXNAX)*80, stypei*16, stypes(6)*16, text*132,
-     *          typei(MAXNAX)*6, typeo(MAXNAX)*6, typep(MAXNAX)*6,
-     *          units*8, version*72
+     *          labtyp(MAXTYP)*6, opts(NOPTS)*8, sctypes(5)*16,
+     *          specsys*16, str1*132, strout(MAXNAX)*80, stypei*16,
+     *          stypes(6)*16, text*132, typei(MAXNAX)*6,
+     *          typeo(MAXNAX)*6, typep(MAXNAX)*6, units*8, version*72
 
-      external  hdprsnt, itoaf, versan
+      external  hdprsnt, itoaf, len1, versan
       logical   hdprsnt
+      integer   len1
       character itoaf*2, versan*72
 
+      data opts   /'altprj', 'altspc'/
       data labtyp /'hms   ', 'dms   ', 'abspix', 'relpix',
      *             'arcsec', 'absghz', 'relghz', 'abskms',
      *             'relkms', 'abslin', 'rellin', 'absdeg',
@@ -103,8 +108,8 @@ c-----------------------------------------------------------------------
       data nelem, ipix /0, MAXNAX*1/
 c-----------------------------------------------------------------------
       version = versan ('impos',
-     *                  '$Revision: 1.13 $',
-     *                  '$Date: 2012/03/05 03:39:20 $')
+     *                  '$Revision: 1.14 $',
+     *                  '$Date: 2012/03/05 05:08:45 $')
 
 c     Get inputs.
       call keyini
@@ -133,7 +138,9 @@ c     Get spectral-axis type.
       call keymatch('stype', 6, stypes, 1, stypei, nstypes)
 
 c     Get options.
-      call options('options', 'altprj', altPrj, 1)
+      call options('options', opts, present, NOPTS)
+      altPrj = present(1)
+      altSpc = present(2)
       call keyfin
 
 c     Open file.
@@ -159,6 +166,16 @@ c     Initialize coordinate transformation routines.
 
 c     Check and set required spectral-axis type.
       call sstdef(lIn, nelem, typei, stypei, ispc)
+      if (ispc.ne.0 .and. altSpc) then
+        call coGetA(lIn, 'ctype'//itoaf(ispc), ctypes(ispc))
+        if (ctypes(ispc).eq.'FREQ-HEL' .or.
+     *      ctypes(ispc).eq.'FREQ-LSR') then
+c         Change ctype and specsys to match crval and cdelt.
+          call coSetA(lIn, 'ctype'//itoaf(ispc), 'FREQ')
+          call coSetA(lIn, 'specsys', 'TOPOCENT')
+          call coSetD(lIn, 'vobs', 0d0)
+        endif
+      endif
       call coSpcSet(lIn, stypei, ' ', ispc, algo)
 
 c     Convert what we have been given into pixel coordinates.
@@ -204,6 +221,16 @@ c     Set order in which spectral axes will be listed.
         endif
       endif
 
+c     Get Doppler frame and reformat for reporting purposes.
+      call coGetA(lIn, 'specsys', specsys)
+      if (specsys.eq.'TOPOCENT') then
+        specsys = ' (topocentric)'
+      else if (specsys.eq.'BARYCENT') then
+        specsys = ' (barycentric)'
+      else if (specsys.eq.'LSRK') then
+        specsys = ' (LSRK)'
+      endif
+
 
 c     World coordinate.
       if (dospec) then
@@ -218,6 +245,10 @@ c     World coordinate.
       do ielem = 1, nelem
         call pader(strout(ielem), il)
         write(text, 10) ielem, ctypes(ielem), strout(ielem)(:il)
+        if (ielem.eq.ispc .and. specsys.ne.' ') then
+          il = len1(text) + 1
+          text(il:) = specsys
+        endif
         call output(text)
 
         if (dospec .and. ielem.eq.ispc) then
@@ -250,6 +281,10 @@ c     Offset world coordinate.
       do ielem = 1, nelem
         call pader(strout(ielem), il)
         write(text, 10) ielem, ctypes(ielem), strout(ielem)(:il)
+        if (ielem.eq.ispc .and. specsys.ne.' ') then
+          il = len1(text) + 1
+          text(il:) = specsys
+        endif
         call output(text)
 
         if (dospec .and. ielem.eq.ispc) then
