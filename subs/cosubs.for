@@ -27,7 +27,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: cosubs.for,v 1.15 2012/03/02 00:46:56 cal103 Exp $
+c $Id: cosubs.for,v 1.16 2012/03/05 01:25:28 cal103 Exp $
 c***********************************************************************
 
 c* chkaxCO -- Check axis type and coordinate type for compatibility
@@ -507,9 +507,11 @@ c     Format results.
 
         else if (typeo(iax).eq.'hms') then
           strout(iax) = hangleh(wout(iax))
+          il = len1(strout(iax))
 
         else if (typeo(iax).eq.'dms') then
           strout(iax) = rangle(wout(iax))
+          il = len1(strout(iax))
 
         else
           str='W2WFCO: Unrecognized coordinate type ('//typeo(iax)//')'
