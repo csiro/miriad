@@ -58,7 +58,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: co.for,v 1.40 2012/03/05 05:46:07 cal103 Exp $
+c $Id: co.for,v 1.41 2012/03/06 06:34:35 cal103 Exp $
 c***********************************************************************
 
 c* coCtype -- Parse a world coordinate ctype.
@@ -371,8 +371,9 @@ c-----------------------------------------------------------------------
 
       if (nalloc(icrd).gt.1) return
 
-c     Initialize the celprm struct.
+c     Initialize the celprm and spcprm structs.
       status = celini(cel(1,icrd))
+      status = spcini(spc(1,icrd))
 
 c     Image or visibility data set?
       if (hdprsnt(lus(icrd),'visdata')) then
@@ -518,7 +519,7 @@ c-----------------------------------------------------------------------
 
 c     Initialize the celprm and spcprm structs.
       status = celini(cel(1,icrd))
-      status = spcini(cel(1,icrd))
+      status = spcini(spc(1,icrd))
 
       cosrot(icrd)  = 1d0
       sinrot(icrd)  = 0d0
@@ -2890,7 +2891,7 @@ c-----------------------------------------------------------------------
       integer   iax, icrd, ilat, ilng, ival, m, prj(PRJLEN), pvrng,
      *          status
       double precision dval, pv(0:29), ref(4), restfrq
-      character dummy*8, num*2, pcode*4
+      character dummy*8, num*2, pcode*3
 
       external  coLoc, hdprsnt, itoaf
       logical   hdprsnt
