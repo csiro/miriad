@@ -58,7 +58,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: co.for,v 1.41 2012/03/06 06:34:35 cal103 Exp $
+c $Id: co.for,v 1.42 2012/03/07 14:08:52 cal103 Exp $
 c***********************************************************************
 
 c* coCtype -- Parse a world coordinate ctype.
@@ -3685,7 +3685,7 @@ c         Pixel coordinates are required.
           endif
 
 c         Note the conversion from Miriad to WCSLIB units and back.
-          status = spcs2x(spc, 1, 1, 1, s*spcvt(icrd), x, stat)
+          status = spcs2x(spc(1,icrd), 1, 1, 1, s*spcvt(icrd), x, stat)
           x2 = (x / spcvt(icrd)) / cdelt(ispc,icrd)
 
           if (.not.x2off) x2 = x2 + crpix(ispc,icrd)
