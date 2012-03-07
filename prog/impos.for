@@ -67,7 +67,7 @@ c         altspc    Report FREQ-{HEL,LSR} axes as is, namely
 c                   topocentric, i.e. don't Doppler shift to barycentric
 c                   or LSRK (see help for velsw).
 c
-c$Id: impos.for,v 1.14 2012/03/05 05:08:45 cal103 Exp $
+c$Id: impos.for,v 1.15 2012/03/07 13:14:02 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -108,8 +108,8 @@ c-----------------------------------------------------------------------
       data nelem, ipix /0, MAXNAX*1/
 c-----------------------------------------------------------------------
       version = versan ('impos',
-     *                  '$Revision: 1.14 $',
-     *                  '$Date: 2012/03/05 05:08:45 $')
+     *                  '$Revision: 1.15 $',
+     *                  '$Date: 2012/03/07 13:14:02 $')
 
 c     Get inputs.
       call keyini
@@ -310,7 +310,7 @@ c     Absolute pixels.
         call output(' ')
         call output('Absolute pixels')
         do ielem = 1, nelem
-          il = strlen(ielem)
+          call pader(strout(ielem), il)
           write(text, 10) ielem, ctypes(ielem), strout(ielem)(:il)
           call output(text)
         enddo
@@ -328,7 +328,7 @@ c     Offset pixels.
         call output(' ')
         call output('Offset pixels')
         do ielem = 1, nelem
-          il = strlen(ielem)
+          call pader(strout(ielem), il)
           write(text, 10) ielem, ctypes(ielem), strout(ielem)(:il)
           call output(text)
         enddo
@@ -474,8 +474,8 @@ c-----------------------------------------------------------------------
       if (k.gt.0) then
         str2(5-k:) = str(1:len1(str))
       else
-        k = index(str,'.')
-        str2(4-k:) = str(1:len1(str))
+        k = min(index(str,'.'),4)
+        str2(5-k:) = str(1:len1(str))
       endif
 
       str = str2
