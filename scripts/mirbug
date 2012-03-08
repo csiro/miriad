@@ -78,9 +78,9 @@
     set hostname = `uname -n`
     set hostdetails = (`uname -a`)
   endif
-  @ dosubject = ( $hosttype == SunOS || $hosttype == ConvexOS )
+  @ dosubject = ( $hosttype == SunOS || $hosttype == Linux || $hosttype == Darwin )
 
-# Determine when the host was lat updated.
+# Determine when the host was last updated.
 
   if ( -r $MIR/changes.txt ) \
     set hostupdate = `grep '^[0-9]' $MIR/changes.txt|tail -1|awk '{print $1}'`
