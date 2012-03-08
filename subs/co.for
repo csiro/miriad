@@ -58,7 +58,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: co.for,v 1.42 2012/03/07 14:08:52 cal103 Exp $
+c $Id: co.for,v 1.43 2012/03/08 02:39:16 cal103 Exp $
 c***********************************************************************
 
 c* coCtype -- Parse a world coordinate ctype.
@@ -2970,8 +2970,6 @@ c             Record all parameters, including zero-valued ones.
             enddo
           endif
         endif
-
-        status = celpti(cel(1,icrd), CEL_PRJ, prj, 0)
       endif
 
 c     The remaining parameters.
