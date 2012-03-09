@@ -51,7 +51,7 @@ c       Write spectrum to this ascii file.  Default is no output file.
 c@ comment
 c       A one-line comment which is written into the logfile.
 c
-c$Id: imspect.for,v 1.5 2012/03/02 07:29:17 cal103 Exp $
+c$Id: imspect.for,v 1.6 2012/03/09 01:56:00 cal103 Exp $
 c--
 c
 c  History:
@@ -82,8 +82,8 @@ c-----------------------------------------------------------------------
       character itoaf*3, versan*72
 c-----------------------------------------------------------------------
       version = versan('imspect',
-     *                 '$Revision: 1.5 $',
-     *                 '$Date: 2012/03/02 07:29:17 $')
+     *                 '$Revision: 1.6 $',
+     *                 '$Date: 2012/03/09 01:56:00 $')
 
 c     Get inputs.
       call keyini
@@ -381,18 +381,18 @@ c-----------------------------------------------------------------------
       integer   i
       real      bmaj, bmin, cbof, omega
       double precision dVal
-      character axtype*16, bunit*16, cname*32, units*8, wtype*16
+      character bunit*16, cname*32, txt*16, units*8, wtype*16
 
       external  itoaf, len1
       integer   len1
-      character itoaf*1
+      character itoaf*16
 c-----------------------------------------------------------------------
 c     Get xlabel.
       call coInit(lIn)
       if (xaxis.eq.'channel') then
         xlabel = 'Channel'
       else
-        call coAxType(lIn, vaxis, axtype, wtype, units)
+        call coAxType(lIn, vaxis, txt, wtype, units)
         call coCname(wtype, cname)
         if (units.ne.' ') then
           i = len1(cname) + 1
@@ -412,23 +412,30 @@ c     Convert xaxis units.
 c     Get units and beam oversampling factor from image header.
       call GetBeam(lIn,naxis,bunit,bmaj,bmin,omega,cbof)
 
-c     Normalize the spectra and get the yaxis.
+c     Get the yaxis.
       if (yaxis.eq.'average') then
+c       Normalize the spectra.
         do i = 1, NCHAN
           if (npix(i).gt.0) then
-             spec(i) = spec(i)/npix(i)
+            spec(i) = spec(i)/npix(i)
           else
-             call bug('f', 'Error normalizing integrated spectrum')
+            spec(i) = 0.0
+            txt = itoaf(i)
+            call bug('w','Channel '//txt(:len1(txt))//
+     *        ' is completely flagged in this region')
           endif
         enddo
         ylabel = 'Average Intensity ('//bunit(1:len1(bunit))//')'
+
       else if (bunit.eq.'JY/PIXEL') then
-        ylabel = 'Total Intensity (JY)'
-      else if (bunit.eq.'JY/BEAM' .and. bmaj*bmin*omega.ne.0) then
+        ylabel = 'Total Intensity (Jy)'
+
+      else if (bunit.eq.'JY/BEAM' .and. bmaj*bmin*omega.ne.0.0) then
         do i = 1, NCHAN
           spec(i) = spec(i)/cbof
         enddo
-        ylabel = 'Total Intensity (JY)'
+        ylabel = 'Total Intensity (Jy)'
+
       else
         ylabel =
      *    'Total Intensity ('//bunit(1:len1(bunit))//' x pixels)'
