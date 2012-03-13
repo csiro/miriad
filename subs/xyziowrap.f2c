@@ -68,7 +68,7 @@ fortran subroutine xyzsetup(integer tno, character subcube,
   iface_c2f_icvt(tvircubesize,vircubesize.addr,naxis);
 #else
   xyzsetup_c(tno.val,subcube.zterm,blc.addr,trc.addr,
-	viraxlen.addr,vircubesize.addr);
+	viraxlen.addr,(size_t *)vircubesize.addr);
 #endif
 }
 /************************************************************************/
@@ -93,7 +93,7 @@ fortran subroutine xyzc2s( integer tno, integer coords, ptrdiff subcubenr )
   xyzc2s_c( tno.val, tcoords, &tsubcubenr);
   *(subcubenr.addr) = tsubcubenr + 1;
 #else
-  xyzc2s_c( tno.val, coords.addr, subcubenr.addr ); *(subcubenr.addr) += 1;
+  xyzc2s_c( tno.val, coords.addr,(off_t *)subcubenr.addr ); *(subcubenr.addr) += 1;
 #endif
 }
 /************************************************************************/
