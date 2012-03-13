@@ -337,7 +337,7 @@ c       XSIZ and YSIZ are the spatial half-sizes in ARCSEC over which
 c       each spectrum is spatially averaged.  These are optional and
 c       default to 0 (no binning, just a spectrum at each spatial pixel)
 c
-c$Id: cgspec.for,v 1.15 2012/03/02 00:55:01 cal103 Exp $
+c$Id: cgspec.for,v 1.16 2012/03/13 02:21:33 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -384,7 +384,8 @@ c-----------------------------------------------------------------------
      *          sblc(MAXNAX), sgrps(2,MAXDIM), size(MAXNAX), sizespec,
      *          slines(2,MAXSPEC), snaxis, srtlev(MAXLEV,MAXCON),
      *          ssize(MAXNAX), strc(MAXNAX), tflen(0:2), trc(3),
-     *          vircsiz(MAXNAX), virsiz(MAXNAX), win(MAXNAX)
+     *          virsiz(MAXNAX), win(MAXNAX)
+      ptrdiff   vircsiz(MAXNAX)
       real      blankc, blankg, break(MAXCON), cmm(3,MAXCON), cs(2),
      *          cumhis(NBINS), gmm(3), groff, imax, imin, irange(2),
      *          iscale(MAXSPEC), levs(MAXLEV,MAXCON), pixr(2),
@@ -417,8 +418,8 @@ c-----------------------------------------------------------------------
       data axC /'xyzabcd'/
 c-----------------------------------------------------------------------
       version = versan ('cgspec',
-     *                  '$Revision: 1.15 $',
-     *                  '$Date: 2012/03/02 00:55:01 $')
+     *                  '$Revision: 1.16 $',
+     *                  '$Date: 2012/03/13 02:21:33 $')
 
 c     Get user inputs.
       call inputs(MAXLEV, MAXCON, MAXSPEC, MAXTYP, ltypes, ncon, nspec,

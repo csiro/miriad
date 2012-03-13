@@ -38,7 +38,8 @@ c***********************************************************************
       parameter         (BADMAX=32)
       integer           badchan(BADMAX), nchans, k, next, ndata
       integer           axlen(MAXNAX), blc(MAXNAX), trc(MAXNAX)
-      integer           virax(MAXNAX), vircsize(MAXNAX)
+      integer           virax(MAXNAX)
+      ptrdiff           vircsize(MAXNAX)
       character         inp*80, out*80
       integer           dat1, dat2, msk
 

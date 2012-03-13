@@ -25,7 +25,7 @@ c@ width
 c        The number of channels over which to smooth.  Must be an odd
 c        number.  Default is 3.
 c
-c$Id: hanning.for,v 1.4 2011/04/04 02:50:34 cal103 Exp $
+c$Id: hanning.for,v 1.5 2012/03/13 02:21:33 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -40,7 +40,8 @@ c-----------------------------------------------------------------------
       integer   axlen(MAXNAX), boxes(MAXBOXES), i, iblc(MAXNAX),
      *          itrc(MAXNAX), j, lIn, lOut, naxis, nchan, nprofiles,
      *          oblc(MAXNAX), otrc(MAXNAX), spcAxI, viraxlen(MAXNAX),
-     *          vircsz(MAXNAX), width
+     *          width
+      ptrdiff   vircsz(MAXNAX)
       real      coeffs(MAXWIDTH*2+1), rdat(MAXDIM), work(MAXWIDTH*2+1)
       character axC*7, inp*1024, object*8, outp*1024, spcAxC, version*72
 
@@ -50,8 +51,8 @@ c-----------------------------------------------------------------------
       data axC /'xyzabcd'/
 c-----------------------------------------------------------------------
       version = versan('hanning',
-     *                 '$Revision: 1.4 $',
-     *                 '$Date: 2011/04/04 02:50:34 $')
+     *                 '$Revision: 1.5 $',
+     *                 '$Date: 2012/03/13 02:21:33 $')
 
 c     Get and check the inputs.
       call keyini
@@ -97,6 +98,7 @@ c     Set up for reading the spectral axis.
       call xyzsetup(lIn, spcAxC, iblc, itrc, viraxlen, vircsz)
       nchan     = viraxlen(1)
       nprofiles = vircsz(naxis) / vircsz(1)
+      if (nprofiles.lt.0) call bug('f','Integer overflow in hanning')
 
 c     Open the output image and set up for writing.
       do i = 1, naxis

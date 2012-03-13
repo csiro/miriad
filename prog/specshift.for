@@ -33,7 +33,7 @@ c        doblank    Don't wrap profile around; blank if out of range.
 c                   By default the edge channels are assumed to be
 c                   noise so the profile is wrapped when shifting
 c                   beyond edges.
-c$Id: specshift.for,v 1.6 2011/10/06 07:25:04 cal103 Exp $
+c$Id: specshift.for,v 1.7 2012/03/13 02:21:33 wie017 Exp $
 c--
 c   History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -49,7 +49,8 @@ c-----------------------------------------------------------------------
       integer   axlen(MAXNAX), boxes(MAXBOXES), coords(MAXNAX), i,
      *          iblc(MAXNAX), ictrpx, itrc(MAXNAX), ivelpx, j, jold,
      *          lIn, lOut, lTem, naxis, nchan, nprofs, spcAxI,
-     *          taxlen(MAXNAX), viraxlen(MAXNAX), vircsz(MAXNAX)
+     *          taxlen(MAXNAX), viraxlen(MAXNAX)
+      ptrdiff   vircsz(MAXNAX),pix
       real      rdat(MAXDIM), fracshift, refpix, tdat(MAXDIM),
      *          work(MAXDIM)
       double precision b(MAXDIM), c(MAXDIM), d(MAXDIM), seval, u, vel,
@@ -65,8 +66,8 @@ c-----------------------------------------------------------------------
       data axC  /'xyzabcd'/
 c-----------------------------------------------------------------------
       version = versan('specshift',
-     *                 '$Revision: 1.6 $',
-     *                 '$Date: 2011/10/06 07:25:04 $')
+     *                 '$Revision: 1.7 $',
+     *                 '$Date: 2012/03/13 02:21:33 $')
 
 c     Get and check the inputs.
       call keyini
@@ -146,7 +147,8 @@ c     Set velocity reference pixel.
 
       do i = 1, nprofs
 c       Read the profile.
-        call xyzs2c(lIn, i, coords)
+        pix = i
+        call xyzs2c(lIn, pix, coords)
         call xyzread(lIn, coords, rdat, mask, nchan)
 
 c       Read the velocity from the image.

@@ -128,7 +128,7 @@ c@ log
 c       If specified, output is written to the file given by log=
 c       instead of to the terminal.
 c
-c$Id: imstat.for,v 1.7 2011/07/28 05:58:43 cal103 Exp $
+c$Id: imstat.for,v 1.8 2012/03/13 02:21:33 wie017 Exp $
 c--
 c  IMSPEC - plots spectra from image data
 c& bpw
@@ -303,8 +303,8 @@ c-----------------------------------------------------------------------
       character versan*72
 c-----------------------------------------------------------------------
       version = versan('imstat',
-     *                 '$Revision: 1.7 $',
-     *                 '$Date: 2011/07/28 05:58:43 $')
+     *                 '$Revision: 1.8 $',
+     *                 '$Date: 2012/03/13 02:21:33 $')
 
       call inputs(lIn,naxis,dim,corners,boxes,cut,counts,beaminfo,
      *  axlabel,device,MAXBOXES)
@@ -355,7 +355,8 @@ c-----------------------------------------------------------------------
       character*1024     file
       integer            axlen(MAXNAX)
       integer            blc(MAXNAX), trc(MAXNAX)
-      integer            viraxlen(MAXNAX), vircsz(MAXNAX)
+      integer            viraxlen(MAXNAX)
+      ptrdiff            vircsz(MAXNAX)
       character*(MAXNAX) subcube
 c-----------------------------------------------------------------------
       call keyini
@@ -771,7 +772,8 @@ c-----------------------------------------------------------------------
       logical   beamprs, keyprsnt, mask, ok
       integer   axlen(MAXNAX), axlenx, axleny, bmblc(MAXNAX), bmctr(2),
      *          bmsiz(2), bmtrc(MAXNAX), i, iostat, j, latAx, lngAx,
-     *          naxis, tbm, viraxlen(MAXNAX), vircsz(MAXNAX)
+     *          naxis, tbm, viraxlen(MAXNAX)
+      ptrdiff   vircsz(MAXNAX),pix
       real      value
       double precision frln2, grid(2), ratio(2), restfreq
       character axC*7, plane*2, string*80, units*10
@@ -892,8 +894,8 @@ c       Set beamset region.
 
 c       Integrate beam.
         beaminfo(SUMBM) = 0d0
-        do i = 1, vircsz(2)
-          call xyzpixrd(tbm, i, value, mask)
+        do pix = 1, vircsz(2)
+          call xyzpixrd(tbm, pix, value, mask)
           if (mask) beaminfo(SUMBM) = beaminfo(SUMBM) + dble(value)
         enddo
 
@@ -1180,6 +1182,7 @@ c-----------------------------------------------------------------------
       integer          MAXRUNS
       parameter (MAXRUNS=3*MAXDIM)
 
+      ptrdiff          pix
       integer          subcube, i
       integer          iloop, nloop
       integer          coo(MAXNAX)
@@ -1214,7 +1217,8 @@ c       Open the plot device.
 
 c     Loop over all subcubes for which statistics are to be calculated.
       do subcube = 1, counts(nlevels)
-        call xyzs2c(lIn, subcube, coo)
+        pix = subcube
+        call xyzs2c(lIn, pix, coo)
 
         if (abs(dim).eq.2) then
           call boxruns(naxis,coo,'r',boxes,runs,MAXRUNS,nruns,
@@ -1326,6 +1330,7 @@ c-----------------------------------------------------------------------
 
       logical   dotail
       integer   coo(MAXNAX), level, nlevels
+      ptrdiff pix
       double precision coords(MAXNAX)
       character cvalues(MAXNAX)*12
 c-----------------------------------------------------------------------
@@ -1343,7 +1348,8 @@ c         Convert the subcube number to pixels numbers (coo) and then to
 c         real coordinates (coords) and string-encoded coordinates
 c         (cvalues).
           if (level.lt.nlevels) then
-            call xyzs2c(lIn, subcube, coo)
+            pix = subcube
+            call xyzs2c(lIn, pix, coo)
             call getcoo(axlabel, nlevels, coo, coords, cvalues)
           endif
 

@@ -123,7 +123,8 @@ c Get inputs
       double precision     inpaxlen(MAXNAX), outaxlen(MAXNAX)
       double precision     inpblc(MAXNAX),   inptrc(MAXNAX)
       double precision     outblc(MAXNAX),   outtrc(MAXNAX), outoff
-      integer              viraxlen(MAXNAX), vircubsz(MAXNAX)
+      integer              viraxlen(MAXNAX)
+      ptrdiff              vircubsz(MAXNAX)
 
       integer              MAXBOXES
       parameter            (MAXBOXES = 1024)

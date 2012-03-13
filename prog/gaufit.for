@@ -229,7 +229,7 @@ c@ log
 c       If the name of a file is given, the results of the fitting are
 c       written to this file instead of to the terminal
 c
-c$Id: gaufit.for,v 1.11 2011/04/04 07:59:58 cal103 Exp $
+c$Id: gaufit.for,v 1.12 2012/03/13 02:21:33 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -292,8 +292,8 @@ c-----------------------------------------------------------------------
       character versan*72
 c-----------------------------------------------------------------------
       version = versan ('gaufit',
-     *                  '$Revision: 1.11 $',
-     *                  '$Date: 2011/04/04 07:59:58 $')
+     *                  '$Revision: 1.12 $',
+     *                  '$Date: 2012/03/13 02:21:33 $')
 
       call inputs(units,prfinfo,runs,ngauss,limlist,cmpsort,prnm)
       call work(units,prfinfo,runs,ngauss,limlist,cmpsort,prnm)
@@ -491,8 +491,8 @@ c Or create output dataset.
 c-----------------------------------------------------------------------
       include 'maxnax.h'
 
-      integer   blc(MAXNAX), i, trc(MAXNAX), viraxl(MAXNAX),
-     *          vircsz(MAXNAX)
+      integer   blc(MAXNAX), i, trc(MAXNAX), viraxl(MAXNAX)
+      ptrdiff   vircsz(MAXNAX)
       character axC*8, fitAxC*1, fitAxis*9
 
       external  len1
@@ -552,6 +552,7 @@ c     Set up xyzio routines for input dataset.
 
 c     Number of profiles and their length.
       prfinfo(1) = vircsz(naxis) / vircsz(1)
+      if (prfinfo(1).lt.0) call bug('f','Integer overflow in setopen')
       prfinfo(2) = viraxl(1)
 
       end
@@ -1006,6 +1007,7 @@ c***********************************************************************
 
       subroutine setrms(units, profnr, limlist, limlst, rmsest)
       integer units, profnr
+      ptrdiff pix
       real    limlist(*), limlst(*)
       real    rmsest
       logical rmsmsk
@@ -1014,7 +1016,8 @@ c***********************************************************************
       data    first / .true. /
 
       if (units.ne.0) then
-        call xyzpixrd(units, profnr, rmsest, rmsmsk)
+        pix = profnr
+        call xyzpixrd(units, pix, rmsest, rmsmsk)
       else
         rmsest = limlist(20)
       endif
@@ -2970,7 +2973,7 @@ c                                       vv
       real        coord
 
       integer     unit1, unit2
-      integer     profnr
+      ptrdiff     profnr
 
       integer     i, j
       character*8 keyw
@@ -3066,7 +3069,7 @@ c        copy # channels to crval(naxg+2)
       else if (mode.eq.6) then
          unit1  = intpar1
          unit2  = intpar2
-         profnr = nint(realpar)
+         profnr = anint(realpar)
          if (unit1.ne.0) call xyzs2c(unit1, profnr, coo)
          if (unit1.eq.0) call xyzs2c(unit2, profnr, coo)
 
