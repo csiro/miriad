@@ -67,12 +67,13 @@ c@ log
 c  If specified, output is written to the file given by log= instead
 c  of to the terminal.
 c
-c$Id: imhist.for,v 1.3 2011/07/04 00:59:16 cal103 Exp $
+c$Id: imhist.for,v 1.4 2012/03/13 00:39:48 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c-----------------------------------------------------------------------
-      integer   naxis, npixels, tinp
+      integer   naxis,  tinp
+      ptrdiff   npixels
       real      cut(2), xrange(2)
       character device*80, version*72
 
@@ -80,8 +81,8 @@ c-----------------------------------------------------------------------
       character versan*72
 c-----------------------------------------------------------------------
       version = versan('imhist',
-     *                 '$Revision: 1.3 $',
-     *                 '$Date: 2011/07/04 00:59:16 $')
+     *                 '$Revision: 1.4 $',
+     *                 '$Date: 2012/03/13 00:39:48 $')
 
       call output('IMHIST: ' // version)
       call inputs(tinp, cut, xrange, npixels, naxis, device)
@@ -98,7 +99,8 @@ c***********************************************************************
       integer            tinp
       real               cut(2)
       real               xrange(2)
-      integer            npixels, naxis
+      ptrdiff            npixels
+      integer            naxis
       character*(*)      device
 c-----------------------------------------------------------------------
       include 'imhist.h'
@@ -110,7 +112,8 @@ c-----------------------------------------------------------------------
       integer            axlen(MAXNAX)
       integer            boxes(MAXBOXES)
       integer            blc(MAXNAX), trc(MAXNAX)
-      integer            viraxlen(MAXNAX), vircsz(MAXNAX)
+      integer            viraxlen(MAXNAX)
+      ptrdiff            vircsz(MAXNAX)
 
       logical            rangeisset
 c-----------------------------------------------------------------------
@@ -402,7 +405,8 @@ c***********************************************************************
       integer       tinp
       real          cut(2)
       real          xrange(2)
-      integer       npixels, naxis
+      integer       naxis
+      ptrdiff       npixels 
       character*(*) device
 c-----------------------------------------------------------------------
       include 'imhist.h'
@@ -438,12 +442,12 @@ c***********************************************************************
       integer          tinp
       real             cut(2)
       real             xrange(2)
-      integer          npixels
+      ptrdiff          npixels
       integer          HLEN, binmax
 c-----------------------------------------------------------------------
       include 'imhist.h'
 
-      integer          npoints
+      ptrdiff          npoints
       double precision sum, sumsq, calcrms
       real             minval, maxval
       logical          ok
@@ -479,14 +483,13 @@ c***********************************************************************
       integer          tinp
       real             cut(2)
       real             xrange(2)
-      integer          npixels
-      integer          npoints
+      ptrdiff          npixels,npoints
       double precision sum, sumsq
       real             maxval, minval
 c-----------------------------------------------------------------------
       include 'imhist.h'
 
-      integer          i
+      ptrdiff          i
       real             data
       logical          mask
       logical          unmasked, init
@@ -543,12 +546,13 @@ c***********************************************************************
       integer          binmax
       real             cut(2)
       real             xrange(2)
-      integer          npixels
+      ptrdiff          npixels
       real             xvals(0:*), hist(0:*)
 c-----------------------------------------------------------------------
       include 'imhist.h'
 
-      integer          bin, i
+      integer          bin
+      ptrdiff          i
       real             data
       logical          mask, unmasked
       real             rbin
@@ -625,6 +629,7 @@ c-----------------------------------------------------------------------
       parameter     (EXTEND = 0.05)
 
       integer       bin, i
+      ptrdiff       ny
       character*80  line
       integer       astlen
       parameter     (astlen = 50)
@@ -659,16 +664,18 @@ c-----------------------------------------------------------------------
         call logwrit(line)
         do bin = 1, n
           i = (yarr(bin) / ymax) * astlen
+          ny = yarr(bin)
           if (i.ge.1) then
             write(line, '(i5, 4x, 1pg10.3, i8, 1x, a)')
-     *            bin, xarr(bin), int(yarr(bin)), asterisk(:i)
+     *            bin, xarr(bin), ny, asterisk(:i)
           else
             write(line, '(i5, 4x, 1pg10.3, i8)')
-     *            bin, xarr(bin), int(yarr(bin))
+     *            bin, xarr(bin), ny
           endif
           call logwrit(line)
         enddo
-        write(line, '(''       Overflow    '', i8)') int(yarr(n+1))
+        ny = yarr(n+1)
+        write(line, '(''       Overflow    '', i11)') ny
         call logwrit(line)
       endif
 
@@ -684,6 +691,7 @@ c-----------------------------------------------------------------------
       include 'imhist.h'
 
       integer          i, len1
+      ptrdiff          n
       character*80     line
 c-----------------------------------------------------------------------
       call logwrit(' ')
@@ -695,9 +703,10 @@ c-----------------------------------------------------------------------
       if (histvar(MEDIANP).le.xmin) line(i:) = 'below'
       if (histvar(MEDIANP).ge.xmax) line(i:) = 'above'
       call logwrit(line)
+      n = histvar(NPTS)
 
       write(line, '(i11, 3x, 1pe14.7,1x, 1pe14.7)')
-     *       int(histvar(NPTS)), histvar(MEANP), histvar(RMSP)
+     *       n, histvar(MEANP), histvar(RMSP)
 
       i = len1(line) + 5
       if (histvar(MEDIANP).le.xmin .or.

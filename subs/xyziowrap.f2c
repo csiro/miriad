@@ -53,10 +53,11 @@ fortran subroutine xyzmkbuf()
 }
 /************************************************************************/
 fortran subroutine xyzsetup(integer tno, character subcube,
-	integer blc, integer trc, integer viraxlen, integer vircubesize )
+	integer blc, integer trc, integer viraxlen, ptrdiff vircubesize )
 {
 #if FORTRAN_CVT_INT
-  int tblc[MAXNAX],ttrc[MAXNAX],tviraxlen[MAXNAX],tvircubesize[MAXNAX];
+  int tblc[MAXNAX],ttrc[MAXNAX],tviraxlen[MAXNAX];
+  ptrdiff tvircubesize[MAXNAX];
   int naxis,dimsub;
 
   xyzdim_c(tno.val,&naxis,&dimsub);
@@ -71,7 +72,7 @@ fortran subroutine xyzsetup(integer tno, character subcube,
 #endif
 }
 /************************************************************************/
-fortran subroutine xyzs2c( integer tno, integer subcubenr, integer coords )
+fortran subroutine xyzs2c( integer tno, ptrdiff subcubenr, integer coords )
 {
 #if FORTRAN_CVT_INT
   int dimsub,naxis,tcoords[MAXNAX+1];
@@ -79,11 +80,11 @@ fortran subroutine xyzs2c( integer tno, integer subcubenr, integer coords )
   xyzs2c_c( tno.val, subcubenr.val-1, tcoords );
   iface_c2f_icvt(tcoords,coords.addr,naxis-dimsub);
 #else
-  xyzs2c_c( tno.val, subcubenr.val-1, coords.addr );
+  xyzs2c_c( tno.val, (off_t)(subcubenr.val-1), coords.addr );
 #endif
 }
 /************************************************************************/
-fortran subroutine xyzc2s( integer tno, integer coords, integer subcubenr )
+fortran subroutine xyzc2s( integer tno, integer coords, ptrdiff subcubenr )
 {
 #if FORTRAN_CVT_INT
   int dimsub,naxis,tcoords[MAXNAX+1],tsubcubenr;
@@ -114,11 +115,11 @@ fortran subroutine xyzread( integer tno, integer coords, real data,
 #endif
 }
 /************************************************************************/
-fortran subroutine xyzpixrd( integer tno, integer pixelnr,
+fortran subroutine xyzpixrd( integer tno, ptrdiff pixelnr,
 	real data, logical mask )
 {
   int temp;
-  xyzpixrd_c(tno.val,pixelnr.val,data.addr,&temp);
+  xyzpixrd_c(tno.val,(off_t)pixelnr.val,data.addr,&temp);
   *(mask.addr) = temp;
 }
 /************************************************************************/
@@ -173,12 +174,12 @@ fortran subroutine xyzwrite( integer tno, integer coords,
 #endif
 }
 /************************************************************************/
-fortran subroutine xyzpixwr( integer tno, integer pixelnr,
+fortran subroutine xyzpixwr( integer tno, ptrdiff pixelnr,
 	real data, logical mask )
 {
   int temp;
   temp = *(mask.addr);
-  xyzpixwr_c(tno.val,pixelnr.val,data.addr,&temp);
+  xyzpixwr_c(tno.val,(off_t)pixelnr.val,data.addr,&temp);
 }
 /************************************************************************/
 fortran subroutine xyzprfwr( integer tno, integer profilenr,
