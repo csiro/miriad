@@ -12,13 +12,13 @@
 # after this one.
 #
 # Original: 2011/03/23, Mark Calabretta, ATNF
-# $Id: GNUmakedefs,v 1.3 2011/05/26 08:43:49 cal103 Exp $
+# $Id: GNUmakedefs,v 1.4 2012/03/14 02:57:37 wie017 Exp $
 #=============================================================================
 # ratty flags.
-RATFLAGS := -s gfortran
+RATFLAGS := -s gfortran -p 'integer(kind=8)'
 
 # intf2c flags.
-F2CFLAGS := -s linux
+F2CFLAGS := -s linux -p long
 
 # Object library utilities.  Assuming that gfortran is used to compile and
 # link, it may be important to generate an unsorted table-of-contents to
