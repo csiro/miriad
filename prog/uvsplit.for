@@ -62,7 +62,7 @@ c@ maxwidth
 c        The maximum bandwidth (in GHz) for each output frequency band.
 c        Default is no subdivision of input bands. The maxwidth limit
 c        is only applied when splitting by frequency.
-c $Id: uvsplit.for,v 1.12 2012/02/23 04:49:19 wie017 Exp $
+c $Id: uvsplit.for,v 1.13 2012/03/19 06:23:13 wie017 Exp $
 c--
 c  History:
 c    rjs  13oct93 Original version.
@@ -107,8 +107,8 @@ c
         character versan*80
 c------------------------------------------------------------------------
         version = versan ('uvsplit',
-     *                    '$Revision: 1.12 $',
-     *                    '$Date: 2012/02/23 04:49:19 $')
+     *                    '$Revision: 1.13 $',
+     *                    '$Date: 2012/03/19 06:23:13 $')
 c
 c  Get the input parameters.
 c
@@ -203,7 +203,7 @@ c    clobber
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer MAXINDX
-	parameter(MAXINDX=99)
+	parameter(MAXINDX=1025)
 c
 	complex data(MAXCHAN)
 	logical flags(MAXCHAN),skip
