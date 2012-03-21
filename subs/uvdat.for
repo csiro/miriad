@@ -1369,7 +1369,8 @@ c
 c  Input:
 c    object	This is a string describing the information to return.
 c		Possible values are:
-c		 'variance'Returns variance of the data.
+c		 'variance' Returns variance of the data.
+c		 'jyperk' Returns Jy/K value for the data
 c  Output:
 c    rval	Real valued output.
 c--
@@ -1398,6 +1399,47 @@ c
 	  endif
 	else
 	  call bug('f','Unrecognised object in uvDatGtr')
+	endif
+	end
+c************************************************************************
+c* uvDatGtv -- Get real array information about the uvDat routines.
+c& rjs
+c: uv-i/o,uv-data,uv-selection
+c+
+	subroutine uvDatGtv(object,rval,n)
+c
+	implicit none
+        integer n
+	character object*(*)
+	real rval(n)
+c
+c  This returns miscellaneous information about what is going on inside
+c  the UVDAT routines.
+c
+c  Input:
+c    object	This is a string describing the information to return.
+c		Possible values are:
+c		 'variancef' Returns variance spectrum of the data.
+c  Output:
+c    rval	Real array valued output.
+c--
+c------------------------------------------------------------------------
+	include 'uvdat.h'
+        integer i
+	double precision variance(MAXCHAN)
+c
+	if(object.eq.'variancef')then
+	  call uvinfo(tno,'variancef',variance)
+	  do i=1,n
+            rval(i) = variance(i)
+	    if(WillPol)then
+	      rval(i) = SumWts(iPol,0) * rval(i)
+	    elseif(dogsv)then
+	      rval(i) = GWt * rval(i)
+	    endif
+          enddo
+	else
+	  call bug('f','Unrecognised object in uvDatGtv')
 	endif
 	end
 c************************************************************************

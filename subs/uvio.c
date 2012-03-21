@@ -252,8 +252,9 @@
 *  rjs  09jul06 uvread_updated_uvw checks no. of antennas.
 *  mhw  08oct07 add selection on seeing using variable smonrms.
 *  mhw  25jan11 increase MAXVHANDS to 1024
+*  mhw  06mar12 add spectrum version of variance - variancef
 *
-* $Id: uvio.c,v 1.6 2011/01/25 01:28:01 wie017 Exp $
+* $Id: uvio.c,v 1.7 2012/03/21 00:29:24 wie017 Exp $
 *===========================================================================*/
 #define VERSION_ID "14-Feb-08 MRC"
 
@@ -435,6 +436,10 @@ typedef struct { double *table;
 		 int vhan,nants,missing;
 		 } SIGMA2;
 
+typedef struct { double *table;
+		 int vhan,nants,nchan, missing;
+		 } SIGMA2F;
+
 typedef struct select {
 		int ants[MAXANT*(MAXANT+1)/2];
 		int selants;
@@ -485,6 +490,7 @@ typedef struct {
 	int apply_amp,apply_win;
 	AMP *amp;
 	SIGMA2 sigma2;
+        SIGMA2F sigma2f;
 	UVW *uvw;
 	WINDOW *win;
 		} UV;
@@ -497,7 +503,7 @@ static WINDOW truewin;
 static AMP noamp;
 static int first=TRUE;
 
-private void uvinfo_chan(),uvinfo_variance(),uvbasant_c();
+private void uvinfo_chan(),uvinfo_variance(),uvinfo_variancef(),uvbasant_c();
 private void uv_init(),uv_freeuv(),uv_free_select();
 private void uvread_defline(),uvread_init(),uvread_velocity(),uvread_flags();
 private void uvread_defvelline();
@@ -935,6 +941,7 @@ private void uv_freeuv(UV *uv)
   if(uv->corr_flags.flags != NULL) free((char *)uv->corr_flags.flags);
   if(uv->wcorr_flags.flags != NULL ) free((char *)uv->wcorr_flags.flags);
   if(uv->sigma2.table != NULL)free((char *)uv->sigma2.table);
+  if(uv->sigma2f.table != NULL)free((char *)uv->sigma2f.table);
   uv_free_select(uv->select);
   if(uv->uvw != NULL) free((char *)(uv->uvw));
   free((char *)uv);
@@ -1019,6 +1026,11 @@ private UV *uv_getuv(int tno)
   uv->sigma2.table = NULL;
   uv->sigma2.nants = 0;
   uv->sigma2.missing = FALSE;
+
+  uv->sigma2f.table = NULL;
+  uv->sigma2f.nants = 0;
+  uv->sigma2f.nchan = 0;
+  uv->sigma2f.missing = FALSE;
 
   uv->corr = NULL;
   uv->wcorr = NULL;
@@ -2980,7 +2992,7 @@ private double uv_getskyfreq(UV *uv,WINDOW *win)
   if(! (uv->flags & UVF_UPDATED_SKYFREQ) && start == uv->skyfreq_start)
     return(uv->skyfreq);
 
-/* We have to recompute. First indicate that we have doe that already */
+/* We have to recompute. First indicate that we have done that already */
 
   uv->skyfreq_start = start;
   uv->flags &= ~UVF_UPDATED_SKYFREQ;
@@ -3821,6 +3833,12 @@ private void uvread_init(int tno)
     uv->sigma2.table = NULL;
     uv->sigma2.nants = 0;
   }
+  if(uv->sigma2f.table != NULL){
+    free((char *)(uv->sigma2f.table));
+    uv->sigma2f.table = NULL;
+    uv->sigma2f.nants = 0;
+    uv->sigma2f.nchan = 0;
+  }
 
 /* Determine the max visibility that the user is interested in. */
 
@@ -4448,6 +4466,9 @@ void uvinfo_c(int tno,Const char *object,double *data)
 		'variance' returns the variance (based on system temp)
 			   of the first channel. If this cannot be determined
 			   it returns 0.
+		'variancef' returns nread numbers, giving the variance
+			   of each channel. If this cannot be determined
+			   it returns 0.
   Output:
     data	The actual information returned.			*/
 /*--									*/
@@ -4472,6 +4493,11 @@ void uvinfo_c(int tno,Const char *object,double *data)
 
   } else if(!strcmp(object,"variance")){
     uvinfo_variance(uv,data);
+
+    /* Return the variance of the data in each channel. */
+
+  } else if(!strcmp(object,"variancef")){
+    uvinfo_variancef(uv,data);
 
 /* Return information about the amplitude selection. */
 
@@ -4651,6 +4677,167 @@ private void uvinfo_variance(UV *uv,double *data)
 /* If its a Stokes parameter, multiply the variance by one half. */
 
   if(uv->pol != NULL && *((int*)(uv->pol->buf)) > 0) *data *= 0.5;
+}
+/************************************************************************/
+private void uvinfo_variancef(UV *uv,double *data)
+/*
+  Determine the variance of each channel of the last data read with
+  uvread. This requires the systempf variable to be present.
+
+  For raw polarisation parameters,
+
+  variance = JyperK**2 * T1*T2/(2*Bandwidth*IntTime)
+
+  where
+
+  JyperK = 2*k/eta*A
+
+  where A is the antenna area, eta is an efficiency (both surface efficiency
+  and correlator efficiency), and k is Boltzmans constant.
+
+  For Stokes parameters, the variance returned is half the above variance,
+  as its assumed that two things have been summed to get the Stokes
+  parameter.
+------------------------------------------------------------------------*/
+{
+  double *restfreq,*tab;
+  float bw,inttime,jyperk,*syst,*t1,*t2,*t1c,*t2c,factor;
+  int i,j,k,l,n,bl,i1,i2,nants,offset,nsyst,*nschan,start,nchan;
+  LINE_INFO *line;
+  VARIABLE *tsys;
+
+/* Miscellaneous. */
+
+  line = &(uv->actual_line);
+  n = line->n;
+  *data = 0;
+
+/* Have we initialised the table? If not, intialise as much as possible. */
+
+  if(!uv->sigma2f.missing && uv->sigma2f.table == NULL){
+    if( (uv->pol = uv_locvar(uv->tno,"pol") ) != NULL)
+      (void)uv_checkvar(uv->tno,"pol",H_INT);
+    uvvarini_c(uv->tno,&(uv->sigma2f.vhan));
+    uvvarset_c(uv->sigma2f.vhan,"nants");
+    uvvarset_c(uv->sigma2f.vhan,"nchan");
+    uvvarset_c(uv->sigma2f.vhan,"inttime");
+    uvvarset_c(uv->sigma2f.vhan,"jyperk");
+    uv->sigma2f.missing = (uv_locvar(uv->tno,"inttime") == NULL) |
+			 (uv_locvar(uv->tno,"jyperk")  == NULL) |
+			 (uv_locvar(uv->tno,"nants")   == NULL);
+    if(line->linetype == LINE_CHANNEL){
+      uvvarset_c(uv->sigma2f.vhan,"systempf");
+      uvvarset_c(uv->sigma2f.vhan,"sdf");
+      uvvarset_c(uv->sigma2f.vhan,"nschan");
+      uv->sigma2f.missing |= (uv_locvar(uv->tno,"systempf") == NULL) |
+			    (uv_locvar(uv->tno,"sdf")     == NULL) |
+			    (uv_locvar(uv->tno,"nschan")  == NULL);
+      /*
+    } else if(line->linetype == LINE_VELOCITY){
+     
+      uvvarset_c(uv->sigma2f.vhan,"systempf");
+      uvvarset_c(uv->sigma2f.vhan,"restfreq");
+      uv->sigma2f.missing |= (uv_locvar(uv->tno,"systempf") == NULL) |
+			    (uv_locvar(uv->tno,"restfreq")== NULL);
+      */
+    } else {
+      uv->sigma2f.missing = 1;
+    }
+  }
+
+/* Return if we do not have enough info to determine the variance. */
+
+  if(uv->sigma2f.missing) return;
+
+/* Is the table of variances out of date? If so recompute it. */
+
+  if(uvvarupd_c(uv->sigma2f.vhan)){
+    nants = *(int *)(uv_checkvar(uv->tno,"nants",H_INT)->buf);
+    nchan = *(int *)(uv_checkvar(uv->tno,"nchan",H_INT)->buf);
+    inttime = *(float *)(uv_checkvar(uv->tno,"inttime",H_REAL)->buf);
+    jyperk  = *(float *)(uv_checkvar(uv->tno,"jyperk",H_REAL)->buf);
+    if(line->linetype == LINE_CHANNEL){
+      nschan = (int *)(uv_checkvar(uv->tno,"nschan",H_INT)->buf);
+      start = line->start;
+      offset = 0;
+      while(start >= *nschan){
+	start -= *nschan++;
+	offset++;
+      }
+      bw = *((double *)(uv_checkvar(uv->tno,"sdf",H_DBLE)->buf) + offset)
+	* line->width;
+      tsys = uv_checkvar(uv->tno,"systempf",H_REAL);
+    } else if(line->linetype == LINE_WIDE){
+    /*  offset = line->start;
+      bw = *((float *)(uv_checkvar(uv->tno,"wwidth",H_REAL)->buf) + offset)
+	* line->width;
+      tsys = uv_checkvar(uv->tno,"wsystempf",H_REAL);
+    */
+    } else if(line->linetype == LINE_VELOCITY){
+     /*
+      offset = uv->win->first;
+      restfreq = (double *)(uv_checkvar(uv->tno,"restfreq",H_DBLE)->buf) +
+		offset;
+      bw = *restfreq * line->fwidth / CKMS;
+      tsys = uv_checkvar(uv->tno,"systempf",H_REAL);
+    */
+    }
+    if(bw < 0) bw = - bw;
+
+/* We have everything we ever wanted: jyperk,inttime,bw and Tsys. Compute
+   variance. */
+
+    if((nants*(nants+1))/2*n > (uv->sigma2f.nants*(uv->sigma2f.nants+1))/2*
+        uv->sigma2f.nchan){
+      if(uv->sigma2f.table != NULL)free((char *)(uv->sigma2f.table));
+      uv->sigma2f.table = (double *)Malloc(sizeof(double)*
+          (n*nants*(nants+1))/2);
+    }
+
+    uv->sigma2f.nants = nants;
+    uv->sigma2f.nchan = n;
+    nsyst = VARLEN(tsys);
+    syst = (float *)(tsys->buf);
+    factor = jyperk*jyperk/inttime/(2.0e9*bw) * uv->plscale;
+    tab = uv->sigma2f.table;
+    if(nsyst < nants*nchan){
+      factor *= *syst * *syst;
+      for(i=0; i < (n*nants*(nants+1))/2; i++)*tab++ = factor;
+    } else {
+      t2 = syst;
+      for(j=0; j < nants; j++){
+	t1 = syst;
+        for(i=0; i <= j; i++){
+          /* for LINE_CHANNEL */
+          t1c=t1+line->start;
+          t2c=t2+line->start;
+          for (k=0; k<n; k++) {
+            *tab = factor * *t1c * *t2c;
+            if (line->width>1) {
+              for (l=1 ; l<line->width; l++) *tab += factor * t1c[l] * t2c[l];
+              *tab /=line->width;
+            }
+            t1c+=line->step; t2c+=line->step;
+            tab++;
+          }             
+          t1+=nchan;
+	}
+	t2+=nchan;
+      }
+    }
+  }
+
+/* All is up to date and OK. Return the result. */
+
+  bl = *((float *)(uv->bl->buf)) + 0.5;
+  uvbasant_c(bl,&i1,&i2);
+  if(i1 < 1 || i2 > uv->sigma2.nants)return;
+  bl = (i2*(i2-1))/2+i1-1;
+/* If its a Stokes parameter, multiply the variance by one half. */
+  factor=1;
+  if(uv->pol != NULL && *((int*)(uv->pol->buf)) > 0) factor= 0.5;
+  for (i=0; i<n; i++) data[i]=uv->sigma2f.table[i+bl*n]*factor;
+
 }
 /************************************************************************/
 private void uvinfo_chan(UV *uv,double *data,int mode)
