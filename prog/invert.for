@@ -141,6 +141,12 @@ c                   in proportion to integration time.  Weighting based
 c                   on the noise variance optimises the signal-to-noise
 c                   ratio (provided the measures of the system
 c                   temperature are reliable!).
+c         fsystemp  Like systemp, but use frequency dependent Tsys.
+c                   You need to run atrecal before invert to create the
+c                   systempf variable containing the Tsys spectrum.
+c                   Atrecal requires autocorrelations to be present.
+c                   This option only works in combination with the 
+c                   mfs option.
 c         mfs       Perform multi-frequency synthesis.  The causes all
 c                   the channel data to be used in forming a single map.
 c                   The frequency dependence of the uv coordinate is
@@ -209,7 +215,7 @@ c       replaced with 0, or to be estimated by linear interpolation of
 c       two adjacent good channels.  See the Users Guide for the merits
 c       and evils of the two approaches.  The default is 'zero'.
 c
-c$Id: invert.for,v 1.13 2012/01/17 03:47:09 wie017 Exp $
+c$Id: invert.for,v 1.14 2012/03/21 00:33:14 wie017 Exp $
 c--
 c  History
 c    rjs        89  Initial version
@@ -339,6 +345,9 @@ c    rjs   29jun05  Handle changes in calling sequence to mostab/hdtab
 c                   routines.
 c    rjs   03apr09  Change way of accessing scrio to help access larger
 c                   files.
+c    mhw   07nov11  Add warning for uniform weighting and mfs
+c    mhw   17jan12  Handle larger files by using ptrdiff type more
+c    mhw   06mar12  Add fsystemp option
 c  Bugs:
 c-----------------------------------------------------------------------
       include 'mirconst.h'
@@ -357,7 +366,7 @@ c
       integer i,j,k,nmap,tscr,nvis,nchan,npol,npnt,coObj,pols(MAXPOL)
       integer nx,ny,bnx,bny,mnx,mny,wnu,wnv
       integer nbeam,nsave,ndiscard,offcorr,nout
-      logical defWt,Natural,doset,systemp,mfs,doimag,mosaic,sdb,idb
+      logical defWt,Natural,doset,systemp(2),mfs,doimag,mosaic,sdb,idb
       logical double,doamp,dophase,dosin
 c
       integer tno,tvis
@@ -379,8 +388,8 @@ c
       data slops/'zero        ','interpolate '/
 c-----------------------------------------------------------------------
       version = versan ('invert',
-     :                  '$Revision: 1.13 $',
-     :                  '$Date: 2012/01/17 03:47:09 $')
+     :                  '$Revision: 1.14 $',
+     :                  '$Date: 2012/03/21 00:33:14 $')
 c
 c  Get the input parameters. Convert all angular things into
 c  radians as soon as possible!!
@@ -1356,13 +1365,14 @@ c***********************************************************************
      *        doamp,dophase,dosin,mode)
 c
       character uvflags*(*),mode*(*)
-      logical systemp,mfs,sdb,doimag,mosaic,double,doamp,dophase,dosin
+      logical systemp(2),mfs,sdb,doimag,mosaic,double,doamp,dophase,
+     * dosin
 c
 c  Get extra processing options.
 c
 c-----------------------------------------------------------------------
       integer NOPTS, NMODES
-      parameter (NOPTS=12, NMODES=3)
+      parameter (NOPTS=13, NMODES=3)
 
       integer nmode
       logical present(NOPTS)
@@ -1370,7 +1380,8 @@ c-----------------------------------------------------------------------
 
       data opts/'nocal    ','nopol    ','nopass   ','double   ',
      *          'systemp  ','mfs      ','sdb      ','mosaic   ',
-     *          'imaginary','amplitude','phase    ','sin      '/
+     *          'imaginary','amplitude','phase    ','sin      ',
+     *          'fsystemp '/
       data modes/'fft     ','dft     ','median  '/
 c-----------------------------------------------------------------------
       call options('options',opts,present,NOPTS)
@@ -1383,7 +1394,7 @@ c     Processing flags for the uvDat routines.
 
 c     Extra processing options.
       double  = present(4)
-      systemp = present(5)
+      systemp(1) = present(5)
       mfs     = present(6)
       sdb     = present(7)
       mosaic  = present(8)
@@ -1391,6 +1402,7 @@ c     Extra processing options.
       doamp   = present(10)
       dophase = present(11)
       dosin   = present(12)
+      systemp(2) = present(13).and.mfs
 
 c     Check options.
       if(sdb.and..not.mfs)call bug('f',
@@ -1398,6 +1410,10 @@ c     Check options.
 
       if(doimag.and.sdb)call bug('f',
      *  'I cannot cope with options=imaginary,sdb simultaneously')
+      if(systemp(1).and.systemp(2)) call bug('f',
+     *  'Please choose only one of systemp and fsystemp')
+      if(present(13).and..not.mfs) call bug('w',
+     *  'The fsystemp option is ignored unless mfs is specified')
 
 c     Imaging algorithm.
       call keymatch('mode',NMODES,modes,1,mode,nmode)
@@ -1408,7 +1424,7 @@ c***********************************************************************
       subroutine GetVis(doimag,systemp,mosaic,mfs,npol,tscr,slop,
      *        slopmode,vis,nvis,nchan,umax,vmax,ChanWt,mchan,freq0)
 c
-      logical doimag,systemp,mosaic,mfs
+      logical doimag,systemp(2),mosaic,mfs
       integer npol,tscr,nvis,nchan,mchan
       real umax,vmax,freq0,slop,ChanWt(npol*mchan)
       character vis*(*),slopmode*(*)
@@ -1419,7 +1435,7 @@ c
 c
 c  Input:
 c    doimag     Make imaginary map.
-c    systemp    Use weights proportional to 1/rms**2
+c    systemp    Use weights proportional to 1/rms**2 (1:scalar,2:spectr)
 c    mosaic     Accept multiple pointings.
 c    mfs        Multi-frequency synthesis option.
 c    slop       Slop factor.
@@ -1442,7 +1458,7 @@ c-----------------------------------------------------------------------
       ptrdiff offset
       complex data(MAXCHAN,MAXPOL),out(MAXLEN),ctemp
       logical flags(MAXCHAN,MAXPOL),more
-      real uumax,vvmax,rms2,Wt,SumWt
+      real uumax,vvmax,rms2,Wt,SumWt,rms2f(MAXCHAN),Wtf(MAXCHAN)
       double precision uvw(5),dSumWt,dfreq0
       character num*8
 c
@@ -1502,12 +1518,21 @@ c
       dowhile(more)
 c
         call uvDatGtr('variance',rms2)
-        if(systemp)then
+        if (systemp(2)) call uvDatGtv('variancef',rms2f,nchan)
+        if(systemp(1))then
           if(rms2.gt.0)then
             Wt = 1/rms2
           else
             Wt = 0
           endif
+        else if (systemp(2)) then
+          do i=1,nchan
+            if (rms2f(i).gt.0) then
+               Wtf(i) = 1/rms2f(i)
+            else
+              Wtf(i) = 0
+            endif
+          enddo
         else
           call uvrdvrr(tno,'inttime',Wt,0.0)
         endif
@@ -1526,7 +1551,7 @@ c
 c  Process it all.
 c
         if(mfs)then
-          call ProcMFS (tno,uvw,Wt,rms2,data,flags,
+          call ProcMFS (tno,uvw,Wt,rms2,Wtf,rms2f,systemp(2),data,flags,
      *        npol,MAXCHAN,nread,nvis,nbad,out,MAXLEN,nrec,ncorr,
      *        uumax,vvmax,umax,vmax,dSumWt,dfreq0)
         else
@@ -1592,16 +1617,16 @@ c
 c
       end
 c***********************************************************************
-      subroutine ProcMFS(tno,uvw,Wt,rms2,data,flags,
+      subroutine ProcMFS(tno,uvw,Wt,rms2,Wtf,rms2f,systempf,data,flags,
      *        npol,mchan,nchan,nvis,nbad,out,MAXLEN,nrec,ncorr,
      *        uumax,vvmax,umax,vmax,SumWt,freq0)
 c
       integer tno,nchan,npol,mchan,nvis,nbad,MAXLEN,nrec,ncorr
       double precision uvw(3)
-      real rms2,uumax,vvmax,umax,vmax,Wt
+      real rms2,rms2f(nchan),uumax,vvmax,umax,vmax,Wt,Wtf(nchan)
       double precision freq0,SumWt
       complex data(mchan,npol),out(MAXLEN)
-      logical flags(mchan,npol)
+      logical flags(mchan,npol),systempf
 c
 c  Process a visibility spectrum in MFS mode.
 c
@@ -1613,7 +1638,10 @@ c    mchan      First dim of data and flags.
 c    Data       Visibility data.
 c    flags      Flags associated with the visibility data.
 c    Wt         Basic weight.
+c    Wtf        Weight spectrum
 c    rms2       Noise variance.
+c    rms2f      Noise variance spectrum
+c    systempf   Use variance and weight spectrum 
 c    uumax,vvmax u,v limits.
 c    ncorr      Number of correlations in each output record.
 c  Input/Output:
@@ -1661,16 +1689,25 @@ c
           f = sfreq(i)
           u = abs(uu * f)
           v = abs(vv * f)
-          if(flags(i,1).and.u.lt.uumax.and.v.lt.vvmax)then
+          ok = (.not.systempf).or.Wtf(i).gt.0
+          ok = ok.and.flags(i,1).and.u.lt.uumax.and.v.lt.vvmax
+          if(ok)then
             if(nlen+4+npol.gt.MAXLEN)call bug('f',
      *                'Buffer overflow, in ProcMFS')
             t = log(f)
             out(nlen+1) = cmplx(uu*f,vv*f)
             out(nlen+2) = cmplx(ww*f,1.0)
-            out(nlen+3) = cmplx(rms2,t)
-            out(nlen+4) = Wt
-            freq0 = freq0 + Wt * t
-            SumWt = SumWt + Wt
+            if (systempf)then
+              out(nlen+3) = cmplx(rms2f(i),t)
+              out(nlen+4) = Wtf(i)
+              freq0 = freq0 + Wtf(i) * t
+              SumWt = SumWt + Wtf(i)
+            else
+              out(nlen+3) = cmplx(rms2,t)
+              out(nlen+4) = Wt
+              freq0 = freq0 + Wt * t
+              SumWt = SumWt + Wt
+            endif
             umax = max(u,umax)
             vmax = max(v,vmax)
 c
