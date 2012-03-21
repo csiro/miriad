@@ -36,9 +36,14 @@ c                      atrecal corrects for polarization cross-talk.
 c          relax       Normally atrecal discards a correlation record if
 c                      all the correlations are bad. This option causes
 c                      atrecal to retain all records.
+c          spectrum    Store a tsys spectrum in addition to the normal
+c                      systemp variable.
+c@ naver
+c       The number of channels to average together to derive a point for
+c       the tsys spectrum. Defaults to 1.
 c@ out
 c       The name of the output uv data set. No default.
-c$Id: atrecal.for,v 1.2 2012/02/22 04:07:30 wie017 Exp $
+c$Id: atrecal.for,v 1.3 2012/03/21 00:32:59 wie017 Exp $
 c--
 c  Recalibrate CABB data
 c  CABB data has auto correlations with noise cal OFF in bin 1 and ON in
@@ -59,25 +64,26 @@ c  when on a calibrator, so the gain change can be calibrated out.
 c
 c  This task assumes the data has been flux calibrated and recalculates
 c  Tsys using the non-flagged part of the autocorrelation
-c  spectrum. The tsys formula used is just: Vis(Jy)/10 (nominal Jy/K).
+c  spectrum. The tsys formula used is: Vis(Jy)/JyperK (nominal Jy/K).
 c  It also recalculates the xyphases from the crosscorrelations.
 c
 c  History:
 c    mhw  08jul10 Original version, based on uvaver.
 c    mhw  22feb12 Cleanup, remove unwanted options
+c    mhw  06mar12 Use JyperK from uv file for conversion
 c
 c------------------------------------------------------------------------
         include 'maxdim.h'
         character version*80
         character uvflags*12,ltype*16,out*64
-        integer npol,Snpol,tIn,tOut,vupd,nread,nrec,i,nbin
-        real inttime
+        integer npol,Snpol,tIn,tOut,vupd,nread,nrec,i,nbin,naver
+        real inttime,jyperk
         logical dotaver,doflush,buffered,PolVary,first
-        logical relax,ok,donenpol
+        logical relax,ok,donenpol,spect
         double precision preamble(5),Tmin,Tmax,Tprev,interval
         complex data(MAXCHAN)
         logical flags(MAXCHAN)
-        integer ischan(MAXWIN),nspect,nants
+        integer ischan(MAXWIN),nspect,nants,lastnread
 c
 c  Externals.
 c
@@ -87,11 +93,12 @@ c
 c  Get the input parameters.
 c
         version=versan('atrecal',
-     :                 '$Revision: 1.2 $',
-     :                 '$Date: 2012/02/22 04:07:30 $')   
+     :                 '$Revision: 1.3 $',
+     :                 '$Date: 2012/03/21 00:32:59 $')   
         call keyini
-        call GetOpt(uvflags,relax)
+        call GetOpt(uvflags,relax,spect)
         call uvDatInp('vis',uvflags)
+        call keyi('naver',naver,0)
         call keya('out',out,' ')
         call keyfin
 c
@@ -182,7 +189,7 @@ c
 c  Flush out the accumulated data -- the case of time averaging.
 c
             if(doflush)then
-              call BufFlush(tOut,npol,nspect,nants)
+              call BufFlush(tOut,npol,nspect,nants,nread,spect)
               PolVary = PolVary.or.npol.eq.0.or.
      *          (Snpol.ne.npol.and.Snpol.gt.0)
               Snpol = npol
@@ -199,8 +206,9 @@ c
               call uvgetvri(tIn,'nspect',nspect,1)
               call uvgetvri(tIn,'ischan',ischan,nspect)
               call uvgetvri(tIn,'nants',nants,1)
-              call BufAcc(preamble,inttime,data,flags,nread,ischan,
-     *                    nspect)
+              call uvgetvrr(tIn,'jyperk',jyperk,1)            
+              call BufAcc(preamble,inttime,jyperk,data,flags,nread,
+     *                    ischan,nspect,spect,naver)
               buffered = .true.
               call VarCopy(tIn,tOut)
               if(nbin.gt.1)call uvputvri(tOut,'nbin',1,1)
@@ -213,13 +221,14 @@ c
               Tmin = min(Tmin,Tprev)
               Tmax = max(Tmax,Tprev)
             endif
+            lastnread=nread
             call uvDatRd(preamble,data,flags,maxchan,nread)
           enddo
 c
 c  Flush out anything remaining.
 c
           if(buffered)then
-            call BufFlush(tOut,npol,nspect,nants)
+            call BufFlush(tOut,npol,nspect,nants,lastnread,spect)
             PolVary = PolVary.or.npol.le.0.or.
      *        (Snpol.ne.npol.and.Snpol.gt.0)
             Snpol = npol
@@ -239,10 +248,10 @@ c
         call uvclose(tOut)
         end
 c***********************************************************************
-        subroutine GetOpt(uvflags,relax)
+        subroutine GetOpt(uvflags,relax,spect)
 c
         implicit none
-        logical relax
+        logical relax,spect
         character uvflags*(*)
 c
 c  Determine the flags to pass to the uvdat routines.
@@ -252,18 +261,19 @@ c    uvflags    Flags to pass to the uvdat routines.
 c    relax      Do not discard bad records.
 c-----------------------------------------------------------------------
         integer nopts
-        parameter(nopts=4)
+        parameter(nopts=5)
         character opts(nopts)*9
         integer l
         logical present(nopts),docal,dopol,dopass
         data opts/'nocal    ','nopol    ','nopass   ',
-     *            'relax    '/
+     *            'relax    ','spectrum '/
 c
         call options('options',opts,present,nopts)
         docal = .not.present(1)
         dopol = .not.present(2)
         dopass= .not.present(3)
         relax  = present(4)
+        spect  = present(5)
 c
 c Set up calibration flags
 c
@@ -298,10 +308,11 @@ c-----------------------------------------------------------------------
         nauto = 0
         end
 c***********************************************************************
-        subroutine BufFlush(tOut,npol,nif,nants)
+        subroutine BufFlush(tOut,npol,nif,nants,nread,spect)
 c
         implicit none
-        integer tOut,npol,nif,nants
+        integer tOut,npol,nif,nants,nread
+        logical spect
 c
 c  This writes out the averaged data. The accumulated data is in common.
 c  This starts by dividing the accumulated data by "N", and then writes
@@ -340,6 +351,8 @@ c
         if (nauto.eq.0) call bug('f','No autocorrelations found')
         call Sct(tOut,'systemp',xtsys,ytsys,  
      *           ATIF,ATANT,1,nif,nants)
+        if (spect) call Sct2(tOut,'systempf',xtsysf,ytsysf,  
+     *           MAXCHAN,ATANT,nread,nants)
         call Sco(tOut,'xyphase', xyphase,
      *           ATIF,ATANT,1,nif,nants)
         call Sco(tOut,'xtsys', xtsys,
@@ -398,14 +411,15 @@ c
         if(PolVary) npol = 0
         end
 c***********************************************************************
-        subroutine BufAcc(preambl,inttime,data,flags,nread,ischan,nwin)
+        subroutine BufAcc(preambl,inttime,jyperk,data,flags,nread,nwin,
+     *                    ischan,spect,nsmooth)
 c
         implicit none
-        integer nread,nwin,ischan(nwin)
+        integer nread,nwin,ischan(nwin),nsmooth
         double precision preambl(5)
-        real inttime
+        real inttime,jyperk
         complex data(nread)
-        logical flags(nread)
+        logical flags(nread),spect
 c
 c  This accumulates the visibility data. The accumulated data is left
 c  in common.
@@ -417,8 +431,9 @@ c    flags      The data flags.
 c    nread      The number of channels.
 c-----------------------------------------------------------------------
         include 'atrecal.h'
-        integer i,i1,i2,p,bl,pol,j,n,iend
+        integer i,i1,i2,p,bl,pol,j,k,n,iend
         integer PolXX,PolYY,PolXY,PolYX
+        real Wt,WtSum
         complex t
         parameter(PolXX=-5,PolYY=-6,PolXY=-7,PolYX=-8)
 c
@@ -512,6 +527,7 @@ c
 c
 c  Process auto correlations
 c
+        if (jyperk.le.0) jyperk=10
         if (i1.eq.i2) then
           if (pol.eq.PolXX.or.pol.eq.PolYY.or.pol.eq.PolYX) then
             do i=1,nwin
@@ -524,6 +540,28 @@ c
               n=0
               do j=ischan(i),iend
                 if(flags(j)) then
+                  if (spect) then
+                    if (pol.eq.PolXX) xtsysf(j,i1)=0
+                    if (pol.eq.PolYY) ytsysf(j,i1)=0
+                    WtSum=0
+                    do k=max(ischan(i),j-nsmooth/2),
+     *                   min(iend,j+nsmooth/2)
+                      if (flags(k)) then
+                        Wt = 1.0/(1+abs(k-j))
+                        if (pol.eq.PolXX) 
+     *                    xtsysf(j,i1)=xtsysf(j,i1)+Wt*real(data(k))
+                        if (pol.eq.PolYY) 
+     *                    ytsysf(j,i1)=ytsysf(j,i1)+Wt*real(data(k))
+                        WtSum=WtSum+Wt
+                      endif
+                    enddo
+                    if (WtSum.gt.0) then
+                      if (pol.eq.PolXX) 
+     *                  xtsysf(j,i1)=xtsysf(j,i1)/WtSum/jyperk
+                      if (pol.eq.PolYY) 
+     *                  ytsysf(j,i1)=ytsysf(j,i1)/WtSum/jyperk
+                    endif
+                  endif
                   t=t+data(j)
                   n=n+1
                 endif  
@@ -531,9 +569,9 @@ c
               if (n.gt.0) then
                 nauto = nauto + 1
                 if (pol.eq.PolXX) then
-                  xtsys(i,i1)=real(t)/10/n
+                  xtsys(i,i1)=real(t)/jyperk/n
                 else if (pol.eq.PolYY) then
-                  ytsys(i,i1)=real(t)/10/n
+                  ytsys(i,i1)=real(t)/jyperk/n
                 else
                   xyphase(i,i1)=atan2(aimag(t),real(t))
                 endif
@@ -561,6 +599,31 @@ c
           do ant=1,nants
             cnt = cnt + 1
             buf(cnt) = sqrt(xtsys(if,ant)*ytsys(if,ant))
+          enddo
+        enddo
+c
+        call uvputvrr(tno,var,buf,cnt)
+c
+        end
+
+c***********************************************************************
+        subroutine Sct2(tno,var,xtsysf,ytsysf,MAXCHAN,ATANT,nchan,nants)
+c
+        integer tno,MAXCHAN,ATANT,nchan,nants
+        character var*(*)
+        real xtsysf(MAXCHAN,ATANT),ytsysf(MAXCHAN,ATANT)
+c
+c  Write out the SYSTEMPF variable, which we fudge to be the geometric
+c  mean of the xtsys and ytsys variables.
+c-----------------------------------------------------------------------
+        integer ant,i,cnt
+        real buf(MAXCHAN*ATANT)
+c
+        cnt = 0
+        do ant=1,nants
+          do i=1,nchan
+            cnt = cnt + 1
+            buf(cnt) = sqrt(xtsysf(i,ant)*ytsysf(i,ant))
           enddo
         enddo
 c

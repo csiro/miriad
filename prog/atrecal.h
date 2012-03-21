@@ -25,5 +25,6 @@ c
 	integer npols(ATBASE),pols(MAXPOL,ATBASE),nauto
 	double precision preamble(6,ATBASE)
         real xtsys(ATIF,ATANT),ytsys(ATIF,ATANT),xyphase(ATIF,ATANT)
+        real xtsysf(MAXCHAN,ATANT),ytsysf(MAXCHAN,ATANT)
 	common/uvavcom/preamble,count,cnt,buf,bufr,pnt,nchan,npols,
-     *    pols,free,mbase,xtsys,ytsys,xyphase,nauto
+     *    pols,free,mbase,nauto,xtsys,ytsys,xyphase,xtsysf,ytsysf
