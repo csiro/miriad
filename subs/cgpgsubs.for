@@ -39,7 +39,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: cgpgsubs.for,v 1.12 2012/03/02 00:46:56 cal103 Exp $
+c $Id: cgpgsubs.for,v 1.13 2012/03/22 05:57:05 cal103 Exp $
 c***********************************************************************
 
 c* annboxCG -- Annotate plot with information from a box image
@@ -363,9 +363,8 @@ c-----------------------------------------------------------------------
       integer   iax, il, ip, ir(MAXNAX), maxis, naxis
       real      acs, xht, xhta, ychinc, ygap, yht, yhta, yoff
       double precision win(MAXNAX)
-      character axtype*16, gentyp*4, refstr(MAXNAX)*30, str1*132,
-     *          str2*132, typei(MAXNAX)*6, typeo(MAXNAX)*6, units*8,
-     *          wtype*16
+      character axtype*16, refstr(MAXNAX)*30, str1*132, str2*132,
+     *          typei(MAXNAX)*6, typeo(MAXNAX)*6, units*8, wtype*16
 
       external  itoaf, len1
       integer   len1
@@ -414,7 +413,7 @@ c     Format reference pixels of each axis.
         call coAxType(lh, iax, axtype, wtype, units)
 
         il = min(4,len1(wtype))
-        str1(ip:) = gentyp(:il)//','
+        str1(ip:) = wtype(:il)//','
         ip = len1(str1) + 2
       enddo
       ip = len1(str1)
