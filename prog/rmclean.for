@@ -56,7 +56,7 @@ c       Number of CLEAN iterations per pixel. Default 'niters'.
 c@ debug
 c       Debug mode? 0=no, 1=yes. Default 0.
 c
-c $Id: rmclean.for,v 1.1 2011/06/16 05:07:05 cal103 Exp $
+c $Id: rmclean.for,v 1.2 2012/03/25 23:54:20 wie017 Exp $
 c--
 c  History:
 c    ghh   28nov07  Initial version [1.0]. Based on matlab version.
@@ -436,7 +436,7 @@ c         Note, we only want the _location_ of the peak from xcorr...
 c         We are looking at the P spectrum itself (standard method)
           call findmax(numphi,absp,maxabsp,maxabspi)
         endif
-        if(maxabspi.eq.0) call bug('f','Error finding Pmax')
+        if(maxabspi.eq.0) goto 10
 c       If it's below the cutoff, exit the loop
         if(maxabsp.lt.cut) goto 10
         n = n+1
