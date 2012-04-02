@@ -70,6 +70,7 @@ c    rjs  19jun05 More spaces in log file.
 c    rjs  01jan06 Added definition of ref pointing solution.
 c    rjs  08jan07 Added knowledge of chi2.
 c    rjs  06jun11 Support for some new variables written by CABB.
+c    vjm  29mar12 Support longer names of vis files, consistent with var*.for
 c
 c  Bugs:
 c    ?? Perfect?
@@ -79,7 +80,8 @@ c------------------------------------------------------------------------
 	parameter(MAXPNTS=1000000)
 	parameter(version='VarPlt: version 1.1 08-Jan-07')
 	logical doplot,dolog,dotime,dounwrap
-	character vis*64,device*64,logfile*64,xaxis*16,yaxis*16
+        character vis*132,logfile*132
+	character device*64,xaxis*16,yaxis*16
 	character xtype*1,ytype*1,xunit*16,yunit*16,calday*24
 	real xrange(2),yrange(2),xvals(MAXPNTS),yvals(MAXPNTS)
 	double precision xscale,xoff,yscale,yoff

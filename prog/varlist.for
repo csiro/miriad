@@ -28,6 +28,7 @@ c    lgm  12nov89    Fix so printed variable lengths are non-zero
 c    pjt  30jun93    Wow, 2.5 years of bugfree riding, but now added MAXCHAN
 c    rjs  16sep93    Call logclose.
 c    rjs  27apr95    Distinguish between zero-length and unset 
+c    vjm  29mar12    Handle longer dataset names
 c  ToDo
 c    * fix questionable practice to find all uv vars (at most 300 now)
 c      (there is a subroutine for this...)
@@ -35,13 +36,14 @@ c-----------------------------------------------------------------------
 	integer MAXVAR
 	parameter(MAXVAR=300)
 	logical eof, more
-	character var(MAXVAR)*11,dataset*40,outfile*40,option*8
+	character var(MAXVAR)*11,option*8
 	character line*80
+        character dataset*132,outfile*132
 	integer iostat,tno,item,ivar,iv,jv,nvar,l
 	logical update
 	character*1 type(MAXVAR)
 	character*4 length(MAXVAR)
-        character*80 umsg
+        character*180 umsg
 C
 C  call key routines to get user inputs
 C

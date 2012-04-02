@@ -8,7 +8,9 @@ c& rjs
 c: uv analysis
 c+
 c@ vis
+c       The input visibility data set
 c@ out
+c       The output visibility data set, with the new variable added
 c@ var
 c	The name of the variable to be merged in.
 c@ data
@@ -17,6 +19,7 @@ c	of a time stamp followed by the variable.
 c--
 c  History:
 c  07jun05 rjs	Original version
+c  29mar12 vjm	Support longer filenames, consistent with var*.for
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
@@ -26,7 +29,7 @@ c
 	complex data(MAXCHAN)
 	logical flags(MAXCHAN)
 	integer lVis,lOut,pol,npol,nchan
-	character daz*80,vis*80,out*80,var*16
+        character daz*132,out*132,vis*132,var*16
 	double precision preamble(5),ptime
 	real val
 c
