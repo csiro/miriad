@@ -75,7 +75,7 @@ c    Default: not used, in which case the offset is 0, in which case
 c    fractional days are really Julian Days.
 c@ out
 c    Name of the output dataset. No default.
-c$Id: uvputhd.for,v 1.2 2012/01/24 01:47:40 wie017 Exp $
+c$Id: uvputhd.for,v 1.3 2012/04/04 01:26:27 mci156 Exp $
 c-----------------------------------------------------------------------
 	include 'uvputhd.h'
 	character version*80
@@ -94,8 +94,8 @@ c
         character*80 versan
 c-----------------------------------------------------------------------
         version = versan ('uvputhd',
-     :                    '$Revision: 1.2 $',
-     :                    '$Date: 2012/01/24 01:47:40 $')
+     :                    '$Revision: 1.3 $',
+     :                    '$Date: 2012/04/04 01:26:27 $')
 	call keyini
 	call keyf('vis',infile,' ')
 	call keya('hdvar',hdvar,' ')
@@ -191,7 +191,7 @@ c   read ascii input of user header variable values and stick them
 c   into the appropriate arrays (non-table input)
 c
 	if (tabfile .eq. ' ') then
-	   call readval(hdvar,varval,nval)
+	   call readval(varval,nval)
 	endif
 c
 c  Read the first record in visfile
@@ -469,13 +469,13 @@ c           write(*,*) 'Updating not there ',vtype,nvals
 	ENDIF
 	END
 c***********************************************************************
-        subroutine readval(hdvar,varval,nvals)
+        subroutine readval(varval,nvals)
 c
 c   read ascii input of user header variable values and stick them
 c   into the appropriate arrays
 c
 	integer nvals
-	character hdvar*(*),varval(nvals)*(*)
+	character varval(nvals)*(*)
 c
         include 'uvputhd.h'
 	character vtype*1
