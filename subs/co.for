@@ -58,7 +58,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: co.for,v 1.43 2012/03/08 02:39:16 cal103 Exp $
+c $Id: co.for,v 1.44 2012/04/10 03:23:53 cal103 Exp $
 c***********************************************************************
 
 c* coCtype -- Parse a world coordinate ctype.
@@ -2033,7 +2033,6 @@ c-----------------------------------------------------------------------
       include 'co.h'
       include 'mirconst.h'
 
-      logical   ok
       integer   icrd, ispc, status
       double precision x2(MAXNAX)
       character algo*8, stype*4
@@ -2053,9 +2052,7 @@ c     Find the spectral axis type.
 
       if (stype.ne.'FREQ') then
 c       Switch it to frequency.
-        call coSpcSet(lu, 'FREQ', ' ', ispc, algo, ok)
-        if (.not.ok)
-     *    call bug('f','Can''t convert to frequency in coFreq')
+        call coSpcSet(lu, 'FREQ', ' ', ispc, algo)
       endif
 
 c     Convert the user's coordinate to absolute world coordinates.
