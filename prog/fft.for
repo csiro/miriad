@@ -38,7 +38,7 @@ c       Output amplitude image.  Default is not to write it.
 c@ phase
 c       Output phase image.  Default is not to write it.
 c
-c$Id: fft.for,v 1.4 2011/10/27 05:51:15 cal103 Exp $
+c$Id: fft.for,v 1.5 2012/04/11 06:34:50 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -61,8 +61,8 @@ c-----------------------------------------------------------------------
       character versan*72
 c-----------------------------------------------------------------------
       version = versan('fft',
-     *                 '$Revision: 1.4 $',
-     *                 '$Date: 2011/10/27 05:51:15 $')
+     *                 '$Revision: 1.5 $',
+     *                 '$Date: 2012/04/11 06:34:50 $')
 
 c     Get the input parameters.
       call keyini
@@ -392,7 +392,7 @@ c  Create the output header for the transformed file.
 c-----------------------------------------------------------------------
       integer   iax
       double precision cdelt, crpix, crval
-      character algo*3, bunit*32, cax*2, ctype*16
+      character algo*3, bunit*32, cax*2, ctype*16, text*64
 
       external  itoaf
       character itoaf*2
@@ -460,9 +460,11 @@ c     Determine the correct bunit.
 
 c     Update history.
       call hisopen(lOut,'append')
-      call hiswrite(lOut, 'FFT: Miriad ' // version)
+      text = 'FFT: Miriad ' // version
+      call hiswrite(lOut, text)
       call hisinput(lOut, 'FFT')
-      call hiswrite(lOut, 'FFT: File is ' // otype // ' data.')
+      text = 'FFT: File is ' // otype // ' data.'
+      call hiswrite(lOut, text)
       call hisclose(lOut)
 
       end
