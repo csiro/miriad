@@ -284,7 +284,7 @@ c@ log
 c       If specified, output is written to the file given by log=
 c       instead of to the terminal.
 c
-c$Id: imspec.for,v 1.8 2012/03/13 02:21:33 wie017 Exp $
+c$Id: imspec.for,v 1.9 2012/04/11 08:12:34 wie017 Exp $
 c--
 c
 c  History:
@@ -303,8 +303,8 @@ c-----------------------------------------------------------------------
       character versan*72
 c-----------------------------------------------------------------------
       version = versan('imspec',
-     *                 '$Revision: 1.8 $',
-     *                 '$Date: 2012/03/13 02:21:33 $')
+     *                 '$Revision: 1.9 $',
+     *                 '$Date: 2012/04/11 08:12:34 $')
 
       call inputs(lIn,naxis,dim,corners,boxes,cut,counts,beaminfo,
      *  axlabel,device,MAXBOXES)
@@ -1419,7 +1419,7 @@ c         Celestial axis?
             coords(i) = coords(i)*R2D
           endif
 
-          write(cvalues(i), '(f10.1,2x)') coords(i)
+          write(cvalues(i), '(f11.2,1x)') coords(i)
         endif
       enddo
 
@@ -1672,7 +1672,6 @@ c         Construct the output line for the typed list.
             write(fmt,30) nstat-1
  30         format('(',i1,'(1pg10.3),i8)')
           endif
-
           write(temp, fmt=fmt) (statarr(j,i),j=1,nstat-1),
      *      nint(statarr(nstat,i))
 
