@@ -42,6 +42,7 @@ c
 c     To act upon this selection, or the plot itself, the user
 c     should press one of the following keys while the cursor is
 c     inside the main plot area:
+c     abcCdfFgGhHjJkKlLmMnpPqrsStTRuvVxzZ ,<.?;[]12=!@*
 c
 c     Exiting PGFLAG:
 c       a                Abort the editing procedure and quit
@@ -51,6 +52,8 @@ c       q                Apply any flagging that was requested
 c                        and then exit PGFLAG.
 c
 c     Editing data:
+c       b                Blow away the dust: flag all visibilities
+c                        with less than 3 good neighbours
 c       f                Flag the selected range of data on the
 c                        currently displayed baseline only.
 c       F                Flag the selected range of data on all
@@ -83,6 +86,10 @@ c       V                Flag all visibilities that have values
 c                        greater than the current maximum on the
 c                        scale on the displayed baseline, for all
 c                        baselines.
+c       <                Flag using SumThreshold method, using
+c                        the parameters in flagpar
+c       T                Change the Threshold and other parameters 
+c                        of the SumThreshold algorithm
 c       rr               Remove all current user-specified flags
 c                        on this baseline; r must be pressed twice
 c                        in a row for safety as this procedure
@@ -149,11 +156,16 @@ c                        each time value. When the time average is being
 c                        subtracted, the time average box at the right
 c                        of the plot will be outlined in red, otherwise
 c                        it will be outlined in white.
+c       *                Subtract off a convolved version of the plot,
+c                        the convolution parameters are specified by
+c                        the flagpar parameters 2 and 3
 c       ,                Fiddle the amplitude scale; press this key
 c                        then click the left mouse button in the colour
 c                        wedge to set the maximum value, or the right
 c                        mouse button to set the minimum value.
 c       .                Reset the user-set colour amplitude scale.
+c       =                Autoscale plot from -10 to +10 times the
+c                        median absolute deviation
 c       [                Enable switch to use only the currently
 c                        displayed points when deciding the colour
 c                        amplitude scale.
@@ -199,7 +211,13 @@ c@ stokes
 c     Select Stokes parameter(s) or polarization(s) from:
 c       xx, yy, xy, yx,  i, q, u, v,
 c       rr, ll, rl, lr
-c     Default is all polarizations or Stokes parameters present
+c     Default is Stokes i.
+c     If more than one polarization is specified only the LAST one is 
+c     displayed.
+c     If one 'raw' polarization is specified, only that one is flagged.
+c     If multiple 'raw' polarizations or one or more 'converted' 
+c     polarizations are specified, all polarizations in the data are 
+c     flagged.
 c@ device
 c     PGPLOT plot device/type, which must be interactive. No default.
 c@ device2
@@ -209,6 +227,31 @@ c     region, if requested.
 c@ mode
 c     Display ``amplitude'' or ``phase''. By default, ``amplitude''
 c     is selected. For mode=``phase'', the phase is in degrees.
+c@ flagpar
+c     Parameters for SumThreshold flagging (and dusting)
+c     (see Offringa et al,2010, MNRAS 405,155)
+c     1 : Threshold in estimated sigma's (estimated using the 
+c         median absolute deviation), default 7
+c     2 : Convolution size for channel direction (in channels), used
+c         to generate a smooth background, default 1. Zero disables
+c         convolution in the channel direction.
+c     3 : Convolution size for time direction (in integrations), used
+c         to generate a smooth background, default 1. Zero disables
+c         convolution in the time direction
+c     4 : Number of iterations of the convolve/subtract/threshold
+c         operation.The threshold level decreases by a factor of two
+c         each iteration. Default 3
+c     5 : Power of two of the maximum number of points used in the
+c         SumThreshold operation (e.g., 5 -> 32 points). Default 5.
+c     6 : Dust the plot - flag points with less than flagpar(6) 
+c         unflagged neighbours. Useful range 1-4, default 3.
+c@ command
+c     Specify a series of commands for non-interactive flagging.
+c     E.g., '<b' will apply SumThreshold flagging for each baseline,
+c      followed by blowing away the dust;
+c     '=vvx=v' will autoscale the data, do two clip operations, then
+c      subtract the channel average, autoscale and clip again before
+c      moving on to the next baseline. Default is no command.
 c@ options
 c     Task enrichment parameters. Several can be given, separated by
 c     commas. Minimum match is used. Possible values are:
@@ -224,12 +267,14 @@ c       nosrc   Do not cause a break in the display when the source
 c               changes. Normally PGFLAG puts a gap in the display
 c               whenever the source changes.
 c       noapply Do not apply the flagging.
+c       nodisp  Do not use the display, just use the flagpar parameters
+c               to flag all baselines in the dataset.
 c     The following options can be used to disable calibration.
 c       nocal   Do not apply antenna gain calibration.
 c       nopass  Do not apply bandpass correction.
 c       nopol   Do not apply polarisation leakage correction.
 c
-c$Id: pgflag.for,v 1.14 2012/01/17 03:47:09 wie017 Exp $
+c$Id: pgflag.for,v 1.15 2012/04/13 04:10:19 wie017 Exp $
 c--
 c
 c  History:
@@ -311,14 +356,16 @@ c                 time break boundaries. Made a common task to handle
 c                 conversion to a string representation of the time.
 c                 Now possible to plot an average spectrum of the
 c                 selected region on another specified PGPLOT device.
+c    mhw 30Mar12  Add selected features from the AOFlagger and
+c                 non interactive mode.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mirconst.h'
       include 'maxnax.h'
       include 'mem.h'
 c
-      integer MAXDAT,MAXTIME,MAXEDIT
-      parameter(MAXDAT=5000000,MAXTIME=10000,MAXEDIT=5000)
+      integer MAXTIME,MAXEDIT
+      parameter(MAXTIME=10000,MAXEDIT=10000000)
 c
       character versan*80, version*80
       character device*80,xaxis*12,yaxis*12,uvflags*12,val*16
@@ -331,9 +378,9 @@ c Data storage.
 c
       double precision day0,cfreq(MAXCHAN)
       integer lScr,nchan,ntime,nvis,chanoff,chanw,nbl,cbl
-      integer newbl,tbl
+      integer newbl,tbl,mbl,mant
       real t1(MAXTIME),ttol,curs_x,curs_y
-      logical blpres(MAXBASE),nosrc,needplot,needread
+      logical blpres(MAXBASE),nosrc,nodisp,needplot,needread
       logical firstread(MAXBASE)
       parameter(ttol=1.0/86400.0)
       integer iFlg,iDat,curr_zooms(2,2),points(2,2)
@@ -341,27 +388,30 @@ c
       character pressed*2,previous_pressed*2
       integer meas_channel,shift_x,shift_y,f_a1,f_a2,f_mode
       real meas_freq,meas_amp,meas_maxval
-      character meas_time*20,yn*20,status*60
+      character meas_time*20,yn*20,status*60,promp*30,string*20
+      character*80 command
+      integer icmd,ncmd,previous_bl
       logical plot_top,plot_average,plot_main,plot_points
-      logical do_flag,do_unflag,do_undoflag,subavgc,subavgt
+      logical do_flag,do_unflag,do_undoflag,subavgc,subavgt,subbkgnd
       integer times(2,MAXEDIT)
-      integer chans(2,MAXEDIT),nflags,aflags,nthis
-      integer region_width,meastype
-      logical bases(MAXBASE,MAXEDIT)
+      integer chans(2,MAXEDIT),nflags,aflags,nthis,last_nflags
+      integer region_width,meastype,nIter,l,iresult
+      integer bases(2,MAXEDIT)
       logical flagval(MAXEDIT),some_unflagged,scale_locked
       logical going_forward,going_backward,fiddle_active
       logical use_fiddle,keep_looping,colour_from_window
-      logical colour_from_region,max_makeregion
+      logical colour_from_region,max_makeregion,ok
       real fiddle_min,fiddle_max,datamin,datamax,fiddlefraction
+      real flagpar(6),level,result
 c
 c Externals
 c
-      integer pgopen
+      integer pgopen,len1
       logical uvDatOpn
 
       version = versan ('pgflag',
-     :                  '$Revision: 1.14 $',
-     :                  '$Date: 2012/01/17 03:47:09 $')
+     :                  '$Revision: 1.15 $',
+     :                  '$Date: 2012/04/13 04:10:19 $')
 
 c
 c Get user inputs
@@ -371,14 +421,22 @@ c
       call keya('device2',device2,' ')
       if (device.eq.' ') call bug('f','A PGPLOT device must be given')
       call GetAxis(xaxis,yaxis)
-      call GetOpt(selgen,noapply,nosrc,uvflags)
+      call keyr('flagpar',flagpar(1),7.0)
+      call keyr('flagpar',flagpar(2),1.0)
+      call keyr('flagpar',flagpar(3),1.0)
+      call keyr('flagpar',flagpar(4),3.0)
+      call keyr('flagpar',flagpar(5),5.0)
+      call keyr('flagpar',flagpar(6),3.0)
+      call keya('command',command,' ')
+      if (command.eq.' ') command=''
+      call GetOpt(selgen,noapply,nosrc,nodisp,uvflags)
       call uvDatInp('vis',uvflags)
       call keyfin
 c
 c  Set the default polarisation type if needed.
 c
       call uvDatGti('npol',npol)
-      if(npol.eq.0)call uvDatSet('stokes',0)
+      if(npol.eq.0)call uvDatSet('stokes',1)
 c
 c     Open the input data.
 c
@@ -386,42 +444,46 @@ c
 c
 c     Open the plot device(s).
 c
-      devicenum=pgopen(device)
-      if(devicenum.le.0)then
-         call pgldev
-         call bug('f','Unable to open PGPLOT device')
-      endif
-      device2num=0
-      if (device2.ne.' ') then
-         device2num=pgopen(device2)
-         if (device2num.le.0) then
-            call pgldev
-            call bug('f','Unable to open PGPLOT device')
-         endif
-      endif
-      call pgslct(devicenum)
-      call pgqinf('CURSOR',val,length)
-      if(val.eq.'NO')call bug('f','PGPLOT device is not interactive')
-      call pgask(.false.)
-      if (device2num.gt.0) then
-         call pgslct(device2num)
-         call pgask(.false.)
-         call pgslct(devicenum)
+      if (.not.nodisp) then
+        devicenum=pgopen(device)
+        if(devicenum.le.0)then
+           call pgldev
+           call bug('f','Unable to open PGPLOT device')
+        endif
+        device2num=0
+        if (device2.ne.' ') then
+           device2num=pgopen(device2)
+           if (device2num.le.0) then
+              call pgldev
+              call bug('f','Unable to open PGPLOT device')
+           endif
+        endif
+        call pgslct(devicenum)
+        call pgqinf('CURSOR',val,length)
+        if(val.eq.'NO')call bug('f','PGPLOT device is not interactive')
+        call pgask(.false.)
+        if (device2num.gt.0) then
+           call pgslct(device2num)
+           call pgask(.false.)
+           call pgslct(devicenum)
+        endif
       endif
 c
 c     Use a scratch file for the data.
 c
       call scropen(lScr)
       call CopyDat(tno,lScr,yaxis,nchan,t1,MAXTIME,ntime,day0,ttol,
-     *             blpres,MAXBASE,nvis,chanoff,chanw,nosrc)
+     *             blpres,MAXBASE,nvis,chanoff,chanw,nosrc,mbl,mant)
       call uvinfo(tno,'sfreq',cfreq)
 c
 c Determine the number of baselines.
 c
       nflags=0
       nbl=0
-      do i=1,MAXBASE
-         if (blpres(i)) nbl=nbl+1
+      do i=1,mbl
+         if (blpres(i)) then
+	   nbl=nbl+1
+	 endif
          firstread(i)=.true.
       enddo
 c
@@ -437,7 +499,7 @@ c
       curr_zooms(1,2)=nchan
       curr_zooms(2,2)=ntime
       call reset_points(points)
-      do i=1,MAXBASE
+      do i=1,mbl
          if (blpres(i)) then
             cbl=i
             goto 10
@@ -457,6 +519,7 @@ c
       going_backward=.false.
       subavgc=.false.
       subavgt=.false.
+      subbkgnd=.false.
       fiddle_active=.false.
       use_fiddle=.false.
       keep_looping=.true.
@@ -464,6 +527,12 @@ c
       scale_locked=.false.
       colour_from_region=.false.
       previous_pressed=' '
+      icmd=1
+      ncmd=len1(command)
+      if (ncmd.gt.0.and.command(ncmd:ncmd).ne.'n') then
+        ncmd=ncmd+1
+        command(ncmd:ncmd)='n'
+      endif
       do while (keep_looping)
          if (needread .eqv. .true.) then
             some_unflagged=.false.
@@ -471,13 +540,13 @@ c
                use_fiddle=.false.
             endif
             do while (some_unflagged.eqv..false.)
-               call Gridit(memI(iFlg),memR(iDat),nchan,ntime,cbl,day0,
-     *              lScr,nvis,t1,firstread(cbl),some_unflagged)
+               call Gridit(memI(iFlg),memR(iDat),nchan,ntime,cbl,
+     *              day0,lScr,nvis,t1,firstread(cbl),some_unflagged)
                call ApplyFlags(memI(iFlg),nchan,ntime,chans,times,
-     *              bases,flagval,MAXEDIT,nflags,cbl,some_unflagged)
+     *            bases,flagval,MAXEDIT,nflags,cbl,mant,some_unflagged)
                if (some_unflagged.eqv..false.) then
                   if (going_forward) then
-                     do i=cbl+1,MAXBASE
+                     do i=cbl+1,mbl
                         if (blpres(i)) then
                            newbl=i
                            goto 20
@@ -508,13 +577,14 @@ c
             firstread(cbl)=.false.
          endif
 c     Now plot the data.
-         if (needplot .eqv. .true.) then
-            call MakePlot(memI(iFlg),memR(iDat),nchan,ntime,cbl,
+         if (needplot.and..not.nodisp) then
+            call MakePlot(memI(iFlg),memR(iDat),t1,nchan,ntime,cbl,
      *           curr_zooms,meas_channel,meas_freq,meas_time,meas_amp,
      *           plot_top,plot_average,plot_main,points,plot_points,
-     *           yaxis,chanoff,chanw,subavgc,subavgt,datamin,datamax,
-     *           fiddle_min,fiddle_max,use_fiddle,colour_from_window,
-     *           colour_from_region,fiddle_active)
+     *           yaxis,chanoff,chanw,subavgc,subavgt,subbkgnd,datamin,
+     *           datamax,fiddle_min,fiddle_max,use_fiddle,
+     *           colour_from_window,colour_from_region,fiddle_active,
+     *           flagpar)
             needplot=.false.
             plot_top=.false.
             plot_average=.false.
@@ -528,7 +598,19 @@ c     Now plot the data.
             endif
          endif
          pressed=' '
-         call pgband(7,0,0.0,0.0,curs_x,curs_y,pressed)
+         if (ncmd.eq.0) then
+           call pgband(7,0,0.0,0.0,curs_x,curs_y,pressed)
+         else
+           if (previous_pressed.eq.'n'.and.previous_bl.eq.cbl) then
+             pressed='q'
+             keep_looping=.false.
+           else          
+             pressed=command(icmd:icmd)
+             icmd = icmd + 1
+             if (icmd.gt.ncmd) icmd=1
+           endif
+           previous_bl = cbl
+         endif
 c         write(status,'(A,I6,I6)') pressed(1:1),int(anint(curs_x)),
 c     *        int(anint(curs_y))
 c         call output(status)
@@ -540,7 +622,7 @@ c     next baseline requested
                going_forward=.true.
                going_backward=.false.
                newbl=cbl
-               do i=cbl+1,MAXBASE
+               do i=cbl+1,mbl
                   if (blpres(i)) then
                      newbl=i
                      goto 30
@@ -560,12 +642,13 @@ c     previous baseline requested
                newbl=cbl
                going_backward=.true.
                going_forward=.false.
-               do i=1,cbl-1
+               do i=cbl-1,1,-1
                   if (blpres(i)) then
                      newbl=i
+                     goto 35
                   endif
                enddo
-               if (newbl.ne.cbl) then
+ 35            if (newbl.ne.cbl) then
                   cbl=newbl
                   needread=.true.
                   needplot=.true.
@@ -783,8 +866,8 @@ c     flag the data in the selection box
             do_flag=.false.
             do_unflag=.false.
             do_undoflag=.false.
-            do i=1,MAXANT
-               do j=i,MAXANT
+            do i=1,mant
+               do j=i,mant
                   tbl=((j-1)*j)/2+i
                   if (cbl.eq.tbl) then
                      f_a1=i
@@ -831,7 +914,7 @@ c     flag the data in the selection box
      *        bases,flagval,MAXEDIT,nflags,day0,t1,ntime,chanoff,
      *        chanw)
             call ApplyFlags(memI(iFlg),nchan,ntime,chans,times,
-     *        bases,flagval,MAXEDIT,nflags,cbl,some_unflagged)
+     *        bases,flagval,MAXEDIT,nflags,cbl,mant,some_unflagged)
             needplot=.true.
             plot_top=.true.
             plot_average=.true.
@@ -862,37 +945,15 @@ c     flag out all regions brighter than the currently set maximum
 c     plot value, on this baseline, or on all baselines
             max_makeregion=.true.
             region_width=0
-c     we select only the regions that are brighter on this baseline
-            call LocateMax(memi(iFlg),nchan,ntime,memr(iDat),chanoff,
-     *           chanw,region_width,max_makeregion,points,day0,t1,
-     *           meas_maxval)
+            last_nflags=nflags
+	    call Thres(memR(iDat),memI(iFlg),nchan,ntime,chans,times,
+     *          bases,flagval,MAXEDIT,nflags,cbl,t1,datamax,1)
             do_flag=.true.
-            if (pressed(1:1).eq.'v') then
-               f_mode=1
-            else
-               f_mode=4
+            if (pressed(1:1).eq.'V') then
+              do i=last_nflags+1,nflags
+                bases(2,i)=4
+              enddo
             endif
-            do i=1,MAXANT
-               do j=i,MAXANT
-                  tbl=((j-1)*j)/2+i
-                  if (cbl.eq.tbl) then
-                     f_a1=i
-                     f_a2=j
-                     goto 60
-                  endif
-               enddo
-            enddo
- 60         do while (meas_maxval.gt.datamax)
-               call FlagData(points,f_a1,f_a2,f_mode,
-     *              do_flag,do_unflag,do_undoflag,chans,times,
-     *              bases,flagval,MAXEDIT,nflags,day0,t1,ntime,chanoff,
-     *              chanw)
-               call ApplyFlags(memI(iFlg),nchan,ntime,chans,times,
-     *              bases,flagval,MAXEDIT,nflags,cbl,some_unflagged)
-               call LocateMax(memi(iFlg),nchan,ntime,memr(iDat),chanoff,
-     *              chanw,region_width,max_makeregion,points,day0,t1,
-     *              meas_maxval)
-            enddo
             needplot=.true.
             plot_top=.true.
             plot_average=.true.
@@ -903,6 +964,7 @@ c     clear the selection
          elseif (pressed(1:1).eq.'x') then
             subavgc=.not.subavgc
             subavgt=.false.
+            subbkgnd=.false.
             needplot=.true.
             plot_main=.true.
             plot_points=.true.
@@ -911,6 +973,7 @@ c     clear the selection
          elseif (pressed(1:1).eq.'d') then
             subavgt=.not.subavgt
             subavgc=.false.
+            subbkgnd=.false.
             needplot=.true.
             plot_main=.true.
             plot_points=.true.
@@ -941,14 +1004,31 @@ c     fiddle the colour amplitude scale
             plot_average=.true.
             colour_from_window=.false.
             scale_locked=.false.
+         elseif (pressed(1:1).eq.'=') then
+            call output('Autoscaling colour amplitude.')
+            needplot=.true.
+            plot_main=.true.
+            plot_points=.true.
+            plot_top=.true.
+            plot_average=.true.
+            colour_from_window=.false.
+            call GetScale(memR(iDat),memI(iFlg),nchan,ntime,
+     *         fiddle_min,fiddle_max)
+            use_fiddle=.true.
+            scale_locked=.false.
+            datamin=fiddle_min
+            datamax=fiddle_max
          elseif (pressed(1:1).eq.'q') then
 c     quit, applying the flagging
-            yn=' '
-            write(*,*) ''
-            write(*,*) 'Really quit and apply flagging? y[n]'
-            read(*,*) yn
-            if (yn(1:1).eq.'y') then
-               keep_looping=.false.
+            if (keep_looping) then
+              yn=' '
+              write(*,*) ''
+              write(*,*) 'Really quit and apply flagging? y[n]'
+              read(*,*) yn
+              l = len1(yn)
+              if (yn(l:l).eq.'y') then
+                 keep_looping=.false.
+              endif
             endif
          elseif (pressed(1:1).eq.'a') then
 c     abort, discarding all flags
@@ -956,7 +1036,8 @@ c     abort, discarding all flags
             write(*,*) ''
             write(*,*) 'Really abort, discarding all flagging? y[n]'
             read(*,*) yn
-            if (yn(1:1).eq.'y') then
+            l = len1(yn)
+            if (yn(l:l).eq.'y') then
                keep_looping=.false.
             endif
          elseif (pressed(1:1).eq.'[') then
@@ -1004,10 +1085,12 @@ c     remove flags from this baseline
                aflags=nflags
             endif
             do i=1,aflags
-               bases(cbl,i)=.false.
+               if (bases(1,i).eq.cbl.and.bases(2,i).eq.1) then
+                  bases(2,i)=0
+               endif
             enddo
             call ApplyFlags(memI(iFlg),nchan,ntime,chans,times,
-     *           bases,flagval,MAXEDIT,nflags,cbl,some_unflagged)
+     *           bases,flagval,MAXEDIT,nflags,cbl,mant,some_unflagged)
             needplot=.true.
             plot_main=.true.
             plot_points=.true.
@@ -1022,12 +1105,10 @@ c     remove flags from all baselines
                aflags=nflags
             endif
             do i=1,aflags
-               do j=1,MAXBASE
-                  bases(j,i)=.false.
-               enddo
+               bases(2,i)=0
             enddo
             call ApplyFlags(memI(iFlg),nchan,ntime,chans,times,
-     *           bases,flagval,MAXEDIT,nflags,cbl,some_unflagged)
+     *           bases,flagval,MAXEDIT,nflags,cbl,mant,some_unflagged)
             needplot=.true.
             plot_main=.true.
             plot_points=.true.
@@ -1054,7 +1135,7 @@ c     print some info on the flagging done so far
             endif
             nthis=0
             do i=1,aflags
-               if (bases(cbl,i)) then
+               if (bases(1,i).eq.cbl.and.bases(2,j).eq.1) then
                   nthis=nthis+1
                endif
             enddo
@@ -1072,6 +1153,86 @@ c     available
                call PlotSpectrum(memI(iFlg),memR(iDat),nchan,ntime,
      *              points,day0,t1,chanoff,chanw,cfreq,meastype,yaxis)
                call pgslct(devicenum)
+            endif
+         elseif (pressed(1:1).eq.'*') then
+            subbkgnd = .not.subbkgnd
+            if (subbkgnd) call output('Subtract smooth background')
+            subavgt=.false.
+            subavgc=.false.
+            needplot=.true.
+            plot_main=.true.
+            plot_points=.true.
+            plot_average=.true.
+            plot_top=.true.
+         elseif (pressed(1:1).eq.'<') then
+            call output('Do SumThreshold operation')
+            needplot=.true.
+            plot_main=.true.
+            plot_points=.true.
+            plot_average=.true.
+            plot_top=.true.
+            nIter=nint(flagpar(4))
+            do i=1,nIter
+             level=flagpar(1)*2**(nIter-i)
+              call subConvl(memR(iDat),t1,nchan,ntime,memI(iFlg),
+     *          flagpar(2),flagpar(3))
+	      call Thres(memR(iDat),memI(iFlg),nchan,ntime,chans,times,
+     *          bases,flagval,MAXEDIT,nflags,cbl,t1,level,
+     *          nint(flagpar(5)))
+            enddo 
+         elseif (pressed(1:1).eq.'b') then
+            if (nodisp) call output('Blow away the dust...')
+            needplot=.true.
+            plot_main=.true.
+            plot_points=.true.
+            plot_average=.true.
+            plot_top=.true.
+            call dust(memI(iFlg),t1,nchan,ntime,
+     *                nint(flagpar(6)),chans,times,bases,flagval,
+     *                MAXEDIT,nflags,cbl)
+         elseif (pressed(1:1).eq.'T') then
+            call output('Change SumThreshold parameters')
+            write(promp,'(A,F4.1,A)') 
+     *        'Threshold             (',flagpar(1),'): '
+            call prompt(string,length,promp)
+            if (length.gt.0) then
+              call atorf(string,result,ok)
+              if (ok) flagpar(1)=max(1.,result)
+            endif 
+            write(promp,'(A,F4.1,A)') 
+     *        'Conv size - channels (',flagpar(2),') : '
+            call prompt(string,length,promp)
+            if (length.gt.0) then
+              call atorf(string,result,ok)
+              if (ok) flagpar(2)=max(0.,result) 
+            endif
+            write(promp,'(A,F4.1,A)') 
+     *        'Conv size - timeslots (',flagpar(3),'): '
+            call prompt(string,length,promp)
+            if (length.gt.0) then
+              call atorf(string,result,ok)
+              if (ok) flagpar(3)=max(0.,result)
+            endif 
+            write(promp,'(A,I2,A)') 
+     *        'Iterations      (',nint(flagpar(4)),'): '
+            call prompt(string,length,promp)
+            if (length.gt.0) then
+              call atoif(string,iresult,ok)
+              if (ok) flagpar(4)=max(1,iresult)
+            endif 
+            write(promp,'(A,I2,A)') 
+     *        'Max #points as 2^n    (n=',nint(flagpar(5)),'): '
+            call prompt(string,length,promp)
+            if (length.gt.0) then
+              call atoif(string,iresult,ok)
+              if (ok) flagpar(5)=max(1,iresult)
+            endif
+            write(promp,'(A,I2,A)') 
+     *        'Minumum # neighbours   (',nint(flagpar(6)),'): '
+            call prompt(string,length,promp)
+            if (length.gt.0) then
+              call atoif(string,iresult,ok)
+              if (ok) flagpar(6)=max(1,iresult)
             endif
          endif
          previous_pressed=pressed
@@ -1096,10 +1257,12 @@ c
 c
 c Close the PGPLOT device(s).
 c
-      call pgclos()
-      if (device2num.gt.0) then
-         call pgslct(device2num)
-         call pgclos()
+      if (.not.nodisp) then
+        call pgclos()
+        if (device2num.gt.0) then
+           call pgslct(device2num)
+           call pgclos()
+        endif
       endif
 c
 c     Close the file
@@ -1114,7 +1277,7 @@ c
       include 'maxdim.h'
       integer nflags,ntime,tno,chanoff,chanw
       integer chans(2,nflags),times(2,nflags)
-      logical bases(MAXBASE,nflags)
+      integer bases(2,nflags)
       logical flagval(nflags),selgen
       real t1(ntime)
       double precision day0
@@ -1122,7 +1285,7 @@ c
 c  Write out the user generated flags to the UV file.
 c
 c  Input:
-c    bases    the first and last baselines to flag
+c    bases    the baselines to flag
 c    chans    the first and last channels to flag
 c    times    the first and last times to flag
 c    flagval  whether to flag or unflag
@@ -1138,15 +1301,17 @@ c    selgen   switch to determine whether to output selgen files
 c  Output:
 c    none
 c-----------------------------------------------------------------------
+      integer MAXEDIT2
+      parameter (MAXEDIT2=1000000)
       integer isave(5),nchan,ant1,ant2,bl,i,j,lu,lf,iostat,l,k
       character flagstring*120,selectline*120
       double precision preamble(4)
       complex data(MAXCHAN)
-      logical flags(MAXCHAN),flagged,more
-      real t
+      logical flags(MAXCHAN),flagged,more,blselect
+      real t,tprev
       integer oldflags_bad,oldflags_good,newflags_bad,newflags_good
-      integer flags_goodtobad,flags_badtogood,nflagged,fbl
-      integer t_a1,t_a2,f_a1,time1,time2
+      integer flags_goodtobad,flags_badtogood
+      integer time1,time2,ipol,ntflag,tflag(MAXEDIT2)
       character outline*256
 c
 c     Externals
@@ -1185,68 +1350,27 @@ c     write out the history of the flagging
          endif
          do i=1,nflags
 c     determine what type of flagging
-            nflagged=0
-            do j=1,MAXBASE
-               if (bases(j,i).eqv..true.) then
-                  nflagged=nflagged+1
-                  fbl=j
-               endif
-            enddo
-            if (nflagged.eq.1) then
-               isave(1)=1
-               isave(2)=fbl
-            elseif (nflagged.eq.MAXBASE) then
-               isave(1)=4
-               isave(2)=fbl
-            else
-c     must be flagging based on one antenna; figure out which one
-               t_a1=-1
-               t_a2=-1
-               f_a1=-1
-               do l=1,MAXBASE
-                  if (bases(l,i).eqv..true.) then
-                     do j=1,MAXANT
-                        do k=j,MAXANT
-                           fbl=((k-1)*k)/2+j
-                           if (fbl.eq.l) then
-                              if (t_a1.eq.-1) then
-                                 t_a1=j
-                                 t_a2=k
-                              elseif (f_a1.eq.-1) then
-                                 if ((j.eq.t_a1).or.(j.eq.t_a2)) then
-                                    f_a1=j
-                                 elseif ((k.eq.t_a1).or.
-     *                                   (k.eq.t_a2)) then
-                                    f_a1=k
-                                 endif
-                              endif
-                           endif
-                        enddo
-                     enddo
-                  endif
-               enddo
-               isave(1)=2
-               isave(2)=f_a1
-            endif
+            isave(1)=bases(2,i)
+            isave(2)=bases(1,i)
             isave(3)=chans(1,i)
             isave(4)=chans(2,i)
-            if (flagval(i).eqv..true.) then
+            if (flagval(i)) then
                isave(5)=0
             else
                isave(5)=1
             endif
-            if (nflagged.gt.0) then
-               time1=times(1,i)
-               time2=times(2,i)
-               if (time1.gt.ntime) then
-                  time1=ntime
-               endif
-               if (time2.gt.ntime) then
-                  time2=ntime
-               endif
-               call FmtCmd(flagstring,isave,t1(time1),
+            if (bases(2,i).gt.0) then
+               time1=min(times(1,i),ntime)
+               time2=min(times(2,i),ntime)
+c
+c      Only log large flagged areas, not single points
+c               
+               if (bases(2,i).ne.1.or.(times(2,i)-times(1,i)).gt.10.or.
+     *           (chans(2,i)-chans(1,i)).gt.50) then
+                 call FmtCmd(flagstring,isave,t1(time1),
      *              t1(time2),chanoff,chanw,day0,selectline)
-               call hiswrite(tno,'PGFLAG: '//flagstring)
+                 call hiswrite(tno,'PGFLAG: '//flagstring)
+               endif  
                if (selgen) then
                   l=len1(selectline)
                   more=.false.
@@ -1278,6 +1402,7 @@ c     must be flagging based on one antenna; figure out which one
             endif
          enddo
 c     do the flagging
+         tprev=0
          call uvread(tno,preamble,data,flags,MAXCHAN,nchan)
          do while (nchan.gt.0)
             do i=1,nchan
@@ -1291,25 +1416,29 @@ c     do the flagging
             flagged=.false.
             call basant(preamble(4),ant1,ant2)
             bl=((ant2-1)*ant2)/2+ant1
-            do i=1,nflags
-               if (bases(bl,i).eqv..true.) then
-c                  write(status,'(A,F20.10)') 'preamble time',t
-c                  call output(status)
-                  time1=times(1,i)
-                  time2=times(2,i)
-                  if (time1.gt.ntime) then
-                     time1=ntime
-                  endif
-                  if (time2.gt.ntime) then
-                     time2=ntime
-                  endif
-c                  write(status,'(A,F20.10,F20.10)') 'ftimes',
-c     *                 t1(time1),t1(time2)
-c                  call output(status)
+c           call uvrdvri(tno,'pol',ipol,0)
+            if (t.ne.tprev) then
+               ntflag=0
+               do i=1,nflags
+                  time1=min(times(1,i),ntime)
+                  time2=min(times(2,i),ntime)
                   if ((t1(time1).le.t).and.
      *                (t1(time2).ge.t)) then
+                     ntflag=ntflag+1
+                     if (ntflag.gt.MAXEDIT2) 
+     *                 call bug('f','MAXEDIT2 exceeded')
+                     tflag(ntflag)=i
+                  endif
+               enddo
+            else
+               do k=1,ntflag
+                  i=tflag(k)
+                  blselect = bases(2,i).eq.4.or.
+     *             (bases(2,i).eq.1.and.bases(1,i).eq.bl).or.
+     *             (bases(2,i).eq.2.and.bases(1,i).eq.ant1).or.
+     *             (bases(2,i).eq.3.and.bases(1,i).eq.ant2)     
+                  if (blselect) then
                      flagged=.true.
-c                     call output('flagged')
                      do j=chans(1,i),chans(2,i)
                         flags(j)=.not.flagval(i)
                         if (flagval(i).eqv..false.) then
@@ -1319,8 +1448,8 @@ c                     call output('flagged')
                         endif
                      enddo
                   endif
-               endif
-            enddo
+               enddo
+            endif
             if (flagged) call uvflgwr(tno,flags)
             do i=1,nchan
                if (flags(i).eqv..true.) then
@@ -1330,6 +1459,7 @@ c                     call output('flagged')
                endif
             enddo
             call uvread(tno,preamble,data,flags,MAXCHAN,nchan)
+            tprev=t
          enddo
          call hisclose(tno)
          if (selgen) then
@@ -1429,13 +1559,13 @@ c
       end
 c***********************************************************************
       subroutine ApplyFlags(iflag,xdim,ydim,chans,times,bases,
-     *  flagval,MAXEDIT,nflags,bl,some_unflagged)
+     *  flagval,MAXEDIT,nflags,bl,mant,some_unflagged)
 c
       include 'maxdim.h'
-      integer MAXEDIT,xdim,ydim,nflags,bl
+      integer MAXEDIT,xdim,ydim,nflags,bl,mant
       integer iflag(xdim,ydim,2),chans(2,MAXEDIT)
       integer times(2,MAXEDIT)
-      logical bases(MAXBASE,MAXEDIT)
+      integer bases(2,MAXEDIT)
       logical flagval(MAXEDIT),some_unflagged
 c
 c  Apply the user generated flags to the currently displayed
@@ -1448,7 +1578,7 @@ c    xdim            The number of channels present in the data.
 c    ydim            The number of time samples present in the data.
 c    chans           The first and last channels to flag.
 c    times           The first and last times to flag.
-c    bases           The first and last baselines to flag.
+c    bases           The baselines to flag.
 c    flagval         Whether to flag or unflag.
 c    MAXEDIT         The maximum number of edits that can be held
 c                    in the chans, times, bases and flagval arrays.
@@ -1458,7 +1588,8 @@ c  Output:
 c    some_unflagged  Status switch indicating whether there are
 c                    unflagged visibilites on this baseline.
 c-----------------------------------------------------------------------
-      integer i,j,k,aflags
+      integer i,j,k,aflags,a(2,MAXBASE),bsln
+      logical blselect
 c
 c     Initialise the flags
 c
@@ -1466,6 +1597,15 @@ c
          do j=1,ydim
             iflag(i,j,2)=iflag(i,j,1)
          enddo
+      enddo
+      
+      bsln = 0
+      do j=1,mant
+        do i=1,j
+          bsln = bsln + 1
+          a(1,bsln)=i
+          a(2,bsln)=j
+        enddo
       enddo
 c
 c     Apply the flags we have now
@@ -1476,7 +1616,11 @@ c
          aflags=nflags
       endif
       do i=1,aflags
-         if (bases(bl,i).eqv..true.) then
+         blselect = (bases(2,i).eq.4).or.
+     *      (bases(2,i).eq.1.and.bases(1,i).eq.bl).or.
+     *      (bases(2,i).eq.2.and.bases(1,i).eq.a(1,bl)).or.
+     *      (bases(2,i).eq.3.and.bases(1,i).eq.a(2,bl))
+         if (blselect) then
             do j=chans(1,i),chans(2,i)
                do k=times(1,i),times(2,i)
                   if (flagval(i)) then
@@ -1500,7 +1644,7 @@ c
       integer points(2,2),a1,a2,mode,MAXEDIT,ntime
       integer chans(2,MAXEDIT),chanoff,chanw
       integer times(2,MAXEDIT),nflags
-      logical bases(MAXBASE,MAXEDIT)
+      integer bases(2,MAXEDIT)
       real t1(ntime)
       logical flag,unflag,undo,flagval(MAXEDIT)
       double precision day0
@@ -1521,7 +1665,7 @@ c    undo     A switch to specify that the last flagging action
 c             should be reversed.
 c    chans    The first and last channels to flag.
 c    times    The first and last channels to flag.
-c    bases    The first and last baselines to flag.
+c    bases    The baselines to flag.
 c    flagval  Whether to flag or unflag.
 c    MAXEDIT  The maximum number of edits that can be held in the
 c             chans, times, bases and flagval arrays.
@@ -1538,14 +1682,14 @@ c    chans    The first and last channels to flag, updated to contain
 c             the new flagging action.
 c    times    The first and last times to flag, updated to contain
 c             the new flagging action.
-c    bases    The first and last baselines to flag, updated to contain
+c    bases    The baselines to flag, updated to contain
 c             the new flagging action.
 c    flagval  Whether to flag or unflag, updated to contain the new
 c             flagging action.
 c    nflags   The number of flagging edits now held in the chans,
 c             times, bases and flagval arrays.
 c-----------------------------------------------------------------------
-      integer minx,maxx,miny,maxy,i,j,tbl
+      integer minx,maxx,miny,maxy
       integer isave(5),time1,time2
       character flagstring*120,selectline*120
 c
@@ -1574,41 +1718,10 @@ c     check that we have a full selection box
                maxy=maxy-1
             enddo
             times(2,nflags)=maxy
-            do i=1,MAXBASE
-               bases(i,nflags)=.false.
-               if (mode.eq.4) then
-                  bases(i,nflags)=.true.
-               endif
-            enddo
-            do i=1,MAXANT
-               do j=i,MAXANT
-                  tbl=((j-1)*j)/2+i
-                  if (mode.eq.1) then
-                     if (((i.eq.a1).and.(j.eq.a2)).or.
-     *                   ((i.eq.a2).and.(j.eq.a1))) then
-                        if (tbl.le.MAXBASE) then
-                           bases(tbl,nflags)=.true.
-                        endif
-                     endif
-                  elseif (mode.eq.2) then
-                     if ((i.eq.a1).or.(j.eq.a1)) then
-                        if (tbl.le.MAXBASE) then
-                           bases(tbl,nflags)=.true.
-                        endif
-                     endif
-                  elseif (mode.eq.3) then
-                     if ((i.eq.a2).or.(j.eq.a2)) then
-                        if (tbl.le.MAXBASE) then
-                           bases(tbl,nflags)=.true.
-                        endif
-                     endif
-                  elseif (mode.eq.4) then
-                     if (tbl.le.MAXBASE) then
-                        bases(tbl,nflags)=.true.
-                     endif
-                  endif
-               enddo
-            enddo
+            bases(2,nflags)=mode
+            if (mode.eq.1) bases(1,nflags)=(a2*(a2-1))/2+a1
+            if (mode.eq.2) bases(1,nflags)=a1
+            if (mode.eq.3) bases(1,nflags)=a2
             isave(1)=mode
             if (mode.eq.1) then
                isave(2)=((a2-1)*a2)/2+a1
@@ -1634,10 +1747,10 @@ c     check that we have a full selection box
             if (time2.gt.ntime) then
                time2=ntime
             endif
-            call FmtCmd(flagstring,isave,t1(time1),t1(time2),
-     *       chanoff,
-     *       chanw,day0,selectline)
-            call output(flagstring)
+c            call FmtCmd(flagstring,isave,t1(time1),t1(time2),
+c     *       chanoff,
+c     *       chanw,day0,selectline)
+c            call output(flagstring)
          elseif (undo) then
             if (nflags.gt.0) then
                nflags=-1*nflags
@@ -1645,6 +1758,168 @@ c     check that we have a full selection box
                nflags=-1*nflags
             endif
          endif
+      endif
+c
+      end
+c***********************************************************************
+      subroutine Thres(array,iflag,Nx,Ny,chans,times,bases,flagval,
+     *                 MAXEDIT,nflags,cbl,t1,cliplev,nThresholds)
+      include 'maxdim.h'
+c
+      integer Nx, Ny, cbl, nFlags, MAXEDIT
+      real array(Nx,Ny,2)
+      real t1(Ny),cliplev
+      integer iflag(Nx,Ny,2)
+      integer nThresholds
+      integer chans(2,MAXEDIT),times(2,MAXEDIT),bases(2,MAXEDIT)
+      logical flagval(MAXEDIT)
+c
+c  Apply a SumThreshold operation to the data.
+c  If cliplev<0, just do a clip operation.
+c
+c-----------------------------------------------------------------------
+      integer WIDTH, MAXX, MAXY
+      parameter(WIDTH=20, MAXX=8192, MAXY=8640)
+      real buf(MAXY*4),level,sum,mad
+      integer count,N,step,wid,tot
+c
+      integer i,j,k,l
+      character string*80
+c
+c compile stats
+      integer nclippix
+c
+c external
+c
+      integer prime
+
+      nclippix = 0
+c
+c  Calculate median absolute deviation from zero
+c
+      mad = 0
+      count = 0
+      N = min(MAXY*3,Nx*Ny)
+      step = (Nx*Ny)/N
+      if (step.gt.3) step = prime(step)
+      do k=0,Nx*Ny-1,step
+        i=mod(k,Nx)+1
+        j=k/Nx+1
+        if (t1(j).gt.-1.and.iflag(i,j,2).gt.0) then
+          count = count + 1
+          buf(count) = abs(array(i,j,2))
+        endif
+      enddo
+      if (count.gt.0) call median(buf,count,mad)
+c
+c  Apply the flagging operation to the iflag array, and recompute the
+c  wedge values.
+c  For normal distr.: mad*1.4826 = sigma
+c  First apply SumThreshold in X direction
+c
+      do k=0,nThresholds
+        wid = 2**k
+        if (cliplev.gt.0) then
+          level = cliplev*mad*1.4826/1.5**k
+        else
+          level=abs(cliplev)
+        endif
+        do j= 1, Ny
+          if(t1(j).gt.-1)then
+            do i=1, Nx-wid+1
+              sum = 0
+              count = 0
+              do l=0,wid-1
+                if(iflag(i+l,j,2).gt.0)then
+                  sum = sum + array(i+l,j,2)
+                  count = count + 1
+                endif
+              enddo
+              if (count.gt.0) then
+                if (sum/count.gt.level) then
+                  if (nflags.lt.MAXEDIT)then
+                    nclippix = nclippix + count
+                    nflags=nflags+1
+                    times(1,nflags)=j
+                    times(2,nflags)=j
+                    chans(1,nflags)=i
+                    chans(2,nflags)=i+wid-1
+                    bases(1,nflags)=cbl
+                    bases(2,nflags)=1
+                    flagval(nflags)=.true.
+                    do l=0,wid-1
+                      iflag(i+l,j,2) = 0
+                    enddo
+                  endif
+                endif
+              endif
+            enddo
+          endif
+        enddo
+      enddo
+c
+c Now do Y direction (skipping single point case)
+c
+      do k=1,nThresholds
+        wid = 2**k
+        level = cliplev*mad/1.5**k
+        do j= 1, Ny-wid+1
+          if(t1(j).gt.-1)then
+            do i=1, Nx
+              sum = 0
+              count = 0
+              do l=0,wid-1
+                if(t1(j+l).gt.-1.and.iflag(i,j+l,2).gt.0)then
+                  sum = sum + array(i,j+l,2)
+                  count = count + 1
+                endif
+              enddo
+              if (count.gt.0) then
+                if (sum/count.gt.level) then
+                  if (nflags.lt.MAXEDIT)then
+                    nclippix = nclippix + count
+                    nflags=nflags+1
+                    times(1,nflags)=j
+                    times(2,nflags)=j+wid-1
+                    chans(1,nflags)=i
+                    chans(2,nflags)=i
+                    bases(1,nflags)=cbl
+                    bases(2,nflags)=1
+                    flagval(nflags)=.true.
+                    do l=0,wid-1
+                      if (t1(j+l).gt.-1) then
+                        iflag(i,j+l,2) = 0
+                      endif
+                    enddo
+                  endif
+                endif
+              endif
+            enddo
+          endif
+        enddo
+      enddo
+
+
+c
+c  Show the flag statistics
+c
+      count = 0
+      tot =0
+      do j=1, Ny
+        if (t1(j).gt.-1) then
+          do i=1, Nx
+            if(iflag(i,j,2).eq.0) count = count + 1
+            tot = tot + 1
+          enddo
+        endif
+      enddo
+      if (tot.gt.0) then
+        write(string,'(F5.1,A)')  (100.0*count)/tot,
+     *         '% of the data on this baseline is now flagged'
+        call output(string)
+      endif
+      if (nflags.eq.MAXEDIT) then
+        call output('Threshold flagging exceeded max #flags')
       endif
 c
       end
@@ -1894,22 +2169,22 @@ c     check we have a valid time
 c
       end
 c***********************************************************************
-      subroutine MakePlot(iflag,array,nchan,ntime,bl,curr_zooms,
+      subroutine MakePlot(iflag,array,t1,nchan,ntime,bl,curr_zooms,
      *  meas_channel,meas_frequency,meas_time,meas_amplitude,plot_top,
      *  plot_averages,plot_main,points,plot_points,yaxis,chanoff,chanw,
-     *  subavgc,subavgt,minval,maxval,fiddle_min,fiddle_max,
-     *  use_fiddle,colour_window,colour_region,fiddle_active)
+     *  subavgc,subavgt,subbkgnd,minval,maxval,fiddle_min,fiddle_max,
+     *  use_fiddle,colour_window,colour_region,fiddle_active,flagpar)
 c
       integer nchan,ntime,bl,chanoff,chanw
       integer iflag(nchan,ntime,2)
-      real array(nchan,ntime,2)
+      real array(nchan,ntime,2),t1(ntime)
       integer curr_zooms(2,2),points(2,2)
       integer meas_channel
       real meas_frequency,meas_amplitude,minval,maxval
-      real fiddle_min,fiddle_max
+      real fiddle_min,fiddle_max,flagpar(5)
       character meas_time*(*),yaxis*(*)
       logical plot_top,plot_averages,plot_main,plot_points
-      logical subavgc,subavgt,use_fiddle,colour_window
+      logical subavgc,subavgt,subbkgnd,use_fiddle,colour_window
       logical colour_region,fiddle_active
 c
 c  Top-level routine for generating the PGFLAG window.
@@ -1951,6 +2226,8 @@ c    subavgc         Switch to indicate whether the average channel
 c                    level should be subtracted from the data.
 c    subavgt         Switch to indicate whether the average time
 c                    level should be subtracted from the data.
+c    subbkgnd        Switch to indicate whether the convolved
+c                    background should be subtracted from the data.
 c    fiddle_min      The user-specified minimum value for the colour
 c                    amplitude scale.
 c    fiddle_max      The user-specified maximum value for the colour
@@ -2154,21 +2431,22 @@ c
       tr(6)=1.0
       call paint_plot(xleft,xright,ybot,ytop,ybuffer,xbuffer,nchan,
      *  ntime,minval,maxval,arrowbox_frac_x,arrowbox_frac_y,colpos,
-     *  tr,titles,curr_zooms,array,n_columns,n_toplines,
+     *  tr,titles,curr_zooms,array,t1,n_columns,n_toplines,
      *  TOPBOX_WORLD_XRANGE,TOPBOX_WORLD_YRANGE,plot_top,plot_averages,
      *  plot_main,plot_points,points,iflag,chanoff,chanw,subavgc,
-     *  subavgt,fiddle_min,fiddle_max,use_fiddle,colour_window,
-     *  colour_region,xcolumnbuffer,ylinespacing,fiddle_active)
+     *  subavgt,subbkgnd,fiddle_min,fiddle_max,use_fiddle,colour_window,
+     *  colour_region,xcolumnbuffer,ylinespacing,fiddle_active,flagpar)
 c
       end
 c***********************************************************************
       subroutine paint_plot(xleft,xright,ybot,ytop,ybuffer,xbuffer,
      *  xdim,ydim,minval,maxval,arrowbox_frac_x,arrowbox_frac_y,
-     *  colpos,tr,titles,curr_zooms,valarray,n_columns,n_toplines,
+     *  colpos,tr,titles,curr_zooms,valarray,t1,n_columns,n_toplines,
      *  TOPBOX_WORLD_XRANGE,TOPBOX_WORLD_YRANGE,plot_top,plot_averages,
      *  plot_main,plot_points,points,iflag,chanoff,chanw,subavgc,
-     *  subavgt,fiddle_min,fiddle_max,use_fiddle,colour_window,
-     *  colour_region,xcolumnbuffer,ylinespacing,fiddle_active)
+     *  subavgt,subbkgnd,fiddle_min,fiddle_max,use_fiddle,colour_window,
+     *  colour_region,xcolumnbuffer,ylinespacing,fiddle_active,
+     *  flagpar)
 c
       real xleft,xright,ybot,ytop,ybuffer,xbuffer
       integer xdim,ydim,n_columns,n_toplines,chanoff,chanw
@@ -2178,10 +2456,10 @@ c
       character titles(n_columns,n_toplines)*256
       integer curr_zooms(2,2)
       real TOPBOX_WORLD_XRANGE,TOPBOX_WORLD_YRANGE
-      real valarray(xdim,ydim,2),fiddle_min,fiddle_max
-      real xcolumnbuffer,ylinespacing
+      real valarray(xdim,ydim,2),t1(ydim),fiddle_min,fiddle_max
+      real xcolumnbuffer,ylinespacing,flagpar(5)
       logical plot_top,plot_averages,plot_main,plot_points
-      logical subavgc,subavgt,use_fiddle,colour_window
+      logical subavgc,subavgt,subbkgnd,use_fiddle,colour_window
       logical colour_region,fiddle_active
       integer points(2,2)
 c
@@ -2253,6 +2531,8 @@ c    subavgc              Switch to indicate whether the average channel
 c                         level should be subtracted from the data.
 c    subavgt              Switch to indicate whether the average time
 c                         level should be subtracted from the data.
+c    subbkgnd             Switch to indicate whether the convolved
+c                         background should be subtracted from the data.
 c    fiddle_min      The user-specified minimum value for the colour
 c                    amplitude scale.
 c    fiddle_max      The user-specified maximum value for the colour
@@ -2351,10 +2631,10 @@ c     can we move right?
       endif
       call compute_average_spectrum(valarray,xdim,ydim,xaverage,
      *     yaverage,average_box_width,iflag,dxaverage,dyaverage)
-      call mask_and_range(iflag,valarray,xdim,ydim,subavgc,subavgt,
-     *     minval,maxval,fiddle_min,fiddle_max,use_fiddle,
+      call mask_and_range(iflag,valarray,t1,xdim,ydim,subavgc,subavgt,
+     *     subbkgnd,minval,maxval,fiddle_min,fiddle_max,use_fiddle,
      *     curr_zooms,colour_window,xaverage,yaverage,
-     *     average_box_width,points,colour_region)
+     *     average_box_width,points,colour_region,flagpar)
       call compute_average_spectrum(valarray,xdim,ydim,xaverage,
      *     yaverage,average_box_width,iflag,dxaverage,dyaverage)
       if (plot_averages) then
@@ -2372,7 +2652,7 @@ c
          if (subavgc) then
             call pgsci(1)
          endif
-         if ((subavgc).or.(subavgt)) then
+         if ((subavgc).or.(subavgt).or.subbkgnd) then
             call pggray(dxaverage,xdim,average_box_width,
      *             curr_zooms(1,1),curr_zooms(1,2),1,average_box_width,
      *             maxval,minval,tr)
@@ -2391,7 +2671,7 @@ c     and then on the right
          if (subavgt) then
             call pgsci(1)
          endif
-         if ((subavgc).or.(subavgt)) then
+         if ((subavgc).or.(subavgt).or.subbkgnd) then
             call pggray(dyaverage,average_box_width,ydim,1,
      *             average_box_width,curr_zooms(2,1),curr_zooms(2,2),
      *             maxval,minval,tr)
@@ -2490,16 +2770,17 @@ c      call output(status)
 c
       end
 c***********************************************************************
-      subroutine mask_and_range(iflag,valarray,xdim,ydim,subavgc,
-     *     subavgt,minval,maxval,fiddle_min,fiddle_max,use_fiddle,
-     *     curr_zooms,colour_window,xaverage,yaverage,abw,points,
-     *     colour_region)
+      subroutine mask_and_range(iflag,valarray,t1,xdim,ydim,subavgc,
+     *     subavgt,subbkgnd,minval,maxval,fiddle_min,fiddle_max,
+     *     use_fiddle,curr_zooms,colour_window,xaverage,yaverage,abw,
+     *     points,colour_region,flagpar)
 c
       integer xdim,ydim,curr_zooms(2,2),abw
-      real minval,maxval,fiddle_min,fiddle_max
-      logical subavgc,subavgt,use_fiddle,colour_window,colour_region
+      real t1(ydim),minval,maxval,fiddle_min,fiddle_max
+      logical subavgc,subavgt,subbkgnd
+      logical use_fiddle,colour_window,colour_region
       real valarray(xdim,ydim,2)
-      real xaverage(xdim,abw),yaverage(abw,ydim)
+      real xaverage(xdim,abw),yaverage(abw,ydim),flagpar(5)
       integer iflag(xdim,ydim,2),points(2,2)
 c
 c  Create the second set of the valarray, by masking values that are
@@ -2534,6 +2815,7 @@ c                   xaverage.
 c    points         The bounding points of the current selection region.
 c    colour_region  Switch to use only the currently selection region
 c                   when determining the colour amplitude scale.
+c    flagpar        The flag parameters
 c  Output:
 c    minval         The minimum unflagged value present in the
 c                   appropriate region of valarray.
@@ -2547,20 +2829,24 @@ c
       minval=0.0
       maxval=0.0
 c     first make a masked value array
-      do i=1,xdim
-         do j=1,ydim
-            if (iflag(i,j,2).ge.1) then
-               valarray(i,j,2)=valarray(i,j,1)
-               if (subavgc) then
-                  valarray(i,j,2)=valarray(i,j,2)-xaverage(i,1)
-               elseif (subavgt) then
-                  valarray(i,j,2)=valarray(i,j,2)-yaverage(1,j)
-               endif
-            else
-               valarray(i,j,2)=0.0
-            endif
-         enddo
-      enddo
+      if (subbkgnd) then
+        call subconvl(valarray,t1,xdim,ydim,iflag,flagpar(3),flagpar(4))
+      else
+        do i=1,xdim
+           do j=1,ydim
+              if (iflag(i,j,2).ge.1) then
+                 valarray(i,j,2)=valarray(i,j,1)
+                 if (subavgc) then
+                    valarray(i,j,2)=valarray(i,j,2)-xaverage(i,1)
+                 elseif (subavgt) then
+                    valarray(i,j,2)=valarray(i,j,2)-yaverage(1,j)
+                 endif
+              else
+                 valarray(i,j,2)=0.0
+              endif
+           enddo
+        enddo
+      endif
 c     now look for the appropriate min/max values
 c     check that if we are supposed to be using a region, that we
 c     have a properly specified region
@@ -2634,6 +2920,253 @@ c     check that our min/max values are reasonable
       endif
 c
       end
+c***********************************************************************
+      subroutine subconvl(valarray,t1,xdim,ydim,iflag,sigx,sigy)
+c
+      integer xdim,ydim,iflag(xdim,ydim,2)
+      real valarray(xdim,ydim,2),t1(ydim),sigx,sigy
+c
+c  Convolve array in channel and time directions and subtract
+c  convolved array from original array
+c
+c  Input:
+c    valarray	On input, it contains the original values.
+c    xdim	Number of channels.
+c    ydim	Number of time slots.
+c    iflag	Flags for the data.
+c    sigx,sigy  The width of the gaussian convolution in pixels 
+c               for channels and time slots respectively
+c  Output:
+c    valarray	The input minus the input convolved in time and 
+c		channel. Flagged data is skipped over and time gaps
+c               are not convolved across.
+c
+c-----------------------------------------------------------------------
+c 
+      include 'maxdim.h'
+      integer maxk
+      parameter (maxk=99)
+      real acc,wtsum, wt, c(MAXDIM),kernel(0:maxk),maxwt
+      integer cstart(MAXDIM),cend(MAXDIM)
+      integer i,j,i0,j0,jw,iw
+c
+      if(ydim.gt.MAXDIM)call bug('f','Too many times')
+c
+c  Determine the ranges to average over for each time slot.
+c
+      call AvRange(ydim,t1,cstart,cend)
+        
+c
+c  Generate the convolution over time
+c
+      if (sigy.gt.0) then
+        iw = nint(3*sigy)
+        if (iw.gt.maxk) call bug('f','Time conv. kernel too large')
+        maxwt=0
+        do i=0,iw
+          kernel(i)=exp((-0.5*i*i)/sigy/sigy)
+          maxwt=maxwt+kernel(i)
+        enddo
+        maxwt=maxwt*2-1
+	do j=1,xdim
+	  do i=1,ydim
+            acc = 0
+            wtsum = 0
+	    if(cstart(i).le.cend(i))then
+	      do i0=max(cstart(i),i-iw),min(cend(i),i+iw)
+		if(iflag(j,i0,2).gt.0)then
+                  wt = kernel(abs(i-i0))
+		  acc = acc + valarray(j,i0,1) * wt
+                  wtsum = wtsum + wt
+		endif
+	      enddo
+	    endif
+c
+c  Save the result. Note we require a reasonable weight for the
+c  convolved value (a few isolated points will be zeroed instead)
+c
+            if (wtsum.gt.maxwt/4) then
+              valarray(j,i,2) = acc/wtsum
+            else 
+              valarray(j,i,2) = 0
+            endif
+	  enddo
+	enddo
+      else
+        do j=1,xdim
+          do i=1,ydim
+            valarray(j,i,2) = valarray(j,i,1)
+          enddo
+        enddo
+      endif
+c
+c  Generate the convolution over channel
+c
+      if (sigx.gt.0) then
+        jw = nint(3*sigx)
+        if (jw.gt.maxk) call bug('f','Channel conv. kernel too large')
+        maxwt=0
+        do j=0,jw
+          kernel(j)=exp((-0.5*j*j)/sigx/sigx)
+          maxwt = maxwt + kernel(j)
+        enddo
+        maxwt = 2*maxwt-1
+	do i=1,ydim
+	  do j=1,xdim
+            acc = 0
+            wtsum = 0
+	    do j0=max(1,j-jw),min(xdim,j+jw)
+              if(iflag(j0,i,2).gt.0)then
+                wt = kernel(abs(j-j0))
+	        acc = acc + valarray(j0,i,2) * wt
+                wtsum = wtsum + wt
+              endif
+	    enddo
+            if (wtsum.gt.maxwt/4) then
+              c(j) = acc/wtsum
+            else 
+              c(j) = 0
+            endif
+	  enddo
+          do j=1,xdim
+            if (iflag(j,i,2).gt.0)valarray(j,i,2)=
+     *        valarray(j,i,1)-c(j)
+          enddo
+	enddo
+      else
+        do i=1,ydim
+          do j=1,xdim
+            valarray(j,i,2) = valarray(j,i,1) - valarray(j,i,2)
+          enddo
+        enddo
+      endif
+c
+            
+c      
+      end
+c***********************************************************************
+      subroutine dust(iflag,t1,xdim,ydim,minN,
+     *  chans,times,bases,flagval,MAXEDIT,nflags,cbl)
+c
+      integer xdim,ydim,iflag(xdim,ydim,2),minN
+      integer cbl, nFlags, MAXEDIT
+      real valarray(xdim,ydim,2),t1(ydim)
+      integer chans(2,MAXEDIT),times(2,MAXEDIT),bases(2,MAXEDIT)
+      logical flagval(MAXEDIT)
+c
+c  Dust the array - flag all pixels with less than minN neighbours 
+c
+c  Input:
+c    valarray	On input, it contains the original values.
+c    xdim	Number of channels.
+c    ydim	Number of time slots.
+c    iflag	Flags for the data.
+c    minN       Minimum number of unflagged neighbours
+c    chans,times,bases Channels, Times and Baselines to flag
+c    flagval    Flag value for each edit operation
+c    MAXEDIT,nflags Max and current number of flags
+c    cbl        Current baseline number
+c  Output:
+c    valarray	The input with 'dust' flagged out
+c
+c-----------------------------------------------------------------------
+c 
+      include 'maxdim.h'
+      integer cstart(MAXDIM),cend(MAXDIM)
+      integer i,j,i0,j0,n,lastnflags,niter
+c
+      if(ydim.gt.MAXDIM)call bug('f','Too many times')
+c
+c  Determine the valid ranges for each time slot.
+c
+      call AvRange(ydim,t1,cstart,cend)
+        
+c
+c  Blow away the dust
+c
+      lastnflags=-1
+      niter=0
+      do while (nflags.gt.lastnflags.and.niter.lt.5)
+        niter=niter+1
+        lastnflags=nflags
+        do j=1,xdim
+	  do i=1,ydim
+	    if(cstart(i).le.cend(i))then
+              if (iflag(j,i,2).gt.0) then
+                n = 9
+	        do j0=max(1,j-1),min(xdim,j+1)
+	          do i0=max(cstart(i),i-1),min(cend(i),i+1)
+		    if(iflag(j0,i0,2).le.0) n=n-1
+                  enddo
+                enddo
+                if (n.le.minN.and.nflags.lt.MAXEDIT) then
+                  iflag(j,i,2)=0
+                  nflags = nflags + 1
+                  times(1,nflags)=i
+                  times(2,nflags)=i
+                  chans(1,nflags)=j
+                  chans(2,nflags)=j
+                  bases(1,nflags)=cbl
+                  bases(2,nflags)=1
+                  flagval(nflags)=.true.
+                endif
+              endif
+            endif
+	  enddo
+        enddo
+      enddo
+      end
+c***********************************************************************
+	subroutine AvRange(Ny,t1,cstart,cend)
+c
+	integer Ny
+	real t1(Ny)
+	integer cstart(Ny),cend(Ny)
+c
+c  Determine the range of time slots for each source
+c
+c  Input:
+c    t1	Time of each time slot.
+c    Ny	Number of time slots.
+c  Output:
+c    cstart	First time slot to use
+c    cend	Last time slot to use
+c-----------------------------------------------------------------------
+	integer i
+	integer pstart,pend
+	logical more
+c
+c  Determine the channels to use in the running mean.
+c
+	pstart = 1
+	pend   = 0
+	do i=1,Ny
+c
+c  If this is a gap, reset the accumulators, and set the cstart and
+c  cend variables to minimise the work next time around.
+c
+	  if(t1(i).lt.-1)then
+	    pstart = i+1
+	    pend = i
+	  else
+c
+c  Determine the limits of this running mean. We average times
+c  "cstart" to "cend". "pstart" and "pend" are the limits of the
+c  running mean for the previous time slot.
+c
+	    pend = max(pstart,pend)
+	    more = .true.
+	    do while(more)
+	      more = pend+1.le.Ny
+	      if(more) more = t1(pend+1).gt.-1
+	      if(more) pend = pend + 1
+	    enddo
+	  endif
+	  cstart(i) = pstart
+	  cend(i) = pend
+	enddo
+c
+	end
 c***********************************************************************
       subroutine set_plot_main(xleft,xright,ybot,ytop,curr_zooms)
 c
@@ -2781,17 +3314,14 @@ c
 c      character status*80
 
       some_unflagged=.false.
-      if (firstread) then
-         do j=1,ntime
-c            write(status,'(A,I6,F20.10)') 't1',j,t1(j)
-c            call output(status)
-            do i=1,nchan
-               iflag(i,j,1)=0
-               array(i,j,1)=0
-               array(i,j,2)=0
-            enddo
+      do j=1,ntime
+         do i=1,nchan
+            iflag(i,j,1)=0
+            iflag(i,j,2)=0
+            array(i,j,1)=0
+            array(i,j,2)=0
          enddo
-      endif
+      enddo
 c
 c     Start reading the data.
 c
@@ -2803,14 +3333,8 @@ c
          bl=nint(buf(1))
          if (bl.eq.rqbl) then
             t=buf(2)+(dble(buf(3))-day0)
-c            write(status,'(A,I6,F20.10)') 'btimes',k,t
-c            call output(status)
             do pnt=1,ntime
                if (t1(pnt).gt.-1.0) then
-c                  write(status,'(A,I6,F20.10,F20.10,F20.10)') 'ttimes',
-c     *                 pnt,t1(pnt),t1(pnt+1),t1(pnt+2)
-c                  call output(status)
-c                  call output('time valid')
                   if (((t1(pnt).le.t).and.(t.lt.t1(pnt+1))).or.
      *               ((t1(pnt+1).eq.-2).and.(t.lt.t1(pnt+2))).or.
      *               ((t1(pnt).le.t).and.(pnt.eq.ntime)))goto 10
@@ -2857,193 +3381,31 @@ c      call keymatch('axis',NAX,axes,1,xaxis,n)
       if(n.eq.0)yaxis = axes(1)
       end
 c***********************************************************************
-      subroutine GetOpt(selgen,noapply,nosrc,uvflags)
+      subroutine GetOpt(selgen,noapply,nosrc,nodisp,uvflags)
 c
-      logical selgen,noapply,nosrc
+      logical selgen,noapply,nosrc,nodisp
       character uvflags*(*)
 c
 c  Get extra processing options.
 c-----------------------------------------------------------------------
       integer NOPTS
-      parameter(NOPTS=6)
+      parameter(NOPTS=7)
       logical present(NOPTS)
       character opts(NOPTS)*8
       data opts/'nocal   ','nopass  ','nopol   ',
-     *          'selgen  ','noapply ','nosrc   '/
+     *          'selgen  ','noapply ','nosrc   ',
+     *          'nodisp  '/
 c
       call options('options',opts,present,NOPTS)
 c
       selgen = present(4)
       noapply= present(5)
       nosrc  = present(6)
+      nodisp = present(7)
       uvflags = 'sdlwb'
       if(.not.present(1))uvflags(6:6) = 'c'
       if(.not.present(2))uvflags(7:7) = 'f'
       if(.not.present(3))uvflags(8:8) = 'e'
-      end
-c***********************************************************************
-      subroutine GetDat(tno,xaxis,yaxis,present,maxbase1,xdat,ydat,
-     *                  bldat,timedat,ndat,MAXDAT,ant1,ant2)
-c
-      integer tno,maxbase1,MAXDAT,ndat,ant1,ant2
-      integer bldat(MAXDAT)
-      logical present(maxbase1)
-      double precision timedat(MAXDAT)
-      real xdat(MAXDAT),ydat(MAXDAT)
-      character xaxis*(*),yaxis*(*)
-c
-      include 'maxdim.h'
-      double precision TTOL
-      parameter(TTOL=1d0/86400d0)
-c
-      logical flags(MAXCHAN),ok
-      complex data(MAXCHAN)
-      complex corr(MAXBASE)
-      double precision preamble(4),time,time0,tprev,lst,ra
-      real uvdist2(MAXBASE),var(MAXBASE),temp
-      integer i,n,bl,i1,i2,nants,npnt(MAXBASE),mbase,nchan
-c
-c     Miscellaneous initialisation.
-c
-      mbase = min(MAXBASE,maxbase1)
-      do i=1,MAXBASE
-         present(i) = .false.
-      enddo
-c
-      do i=1,mbase
-         npnt(i)    = 0
-         uvdist2(i) = 0
-         corr(i)    = 0
-         var(i) = 0
-      enddo
-      ndat = 0
-c
-c     Lets get going.
-c
-      call output('Reading the data ...')
-      call uvDatRd(preamble,data,flags,MAXCHAN,nchan)
-      if(nchan.eq.0)call bug('f','No visibility data found')
-      call flagchk(tno)
-      nants = 0
-      tprev = preamble(3)
-      time0 = int(tprev - 0.5d0) + 0.5d0
-      call uvrdvrd(tno,'lst',lst,0.d0)
-      call uvrdvrd(tno,'ra',ra,0.d0)
-      do while(nchan.gt.0)
-         call BasAnt(preamble(4),i1,i2)
-         bl = (i2*(i2-1))/2 + i1
-         if ((ant1.eq.i1).and.(ant2.eq.i2)) then
-            ok=.true.
-         else
-            ok=.false.
-         endif
-c     ok = bl.lt.mbase
-         if(ok)then
-            time = preamble(3)
-            if(abs(time-tprev).gt.TTOL)then
-c               call output(xaxis)
-c               call output(yaxis)
-               if(nants.gt.0) call IntFlush(nants,tprev,
-     *              uvdist2,var,corr,xaxis,yaxis,npnt,
-     *              time0,present,mbase,xdat,ydat,timedat,bldat,ndat,
-     *              MAXDAT)
-               nants = 0
-               tprev = time
-               call uvrdvrd(tno,'lst',lst,0.d0)
-               call uvrdvrd(tno,'ra',ra,0.d0)
-            endif
-            n = 0
-            do i=1,nchan
-               if(flags(i))then
-                  n = n + 1
-                  npnt(bl) = npnt(bl) + 1
-                  corr(bl) = corr(bl) + data(i)
-               endif
-            enddo
-            if(n.gt.0)then
-               call uvDatGtr('variance',temp)
-               var(bl) = var(bl) + n*temp
-               uvdist2(bl) = uvdist2(bl) +
-     *              n * (preamble(1)*preamble(1)+preamble(2)*
-     *              preamble(2))
-               nants = max(nants,i1,i2)
-            endif
-         endif
-         call uvDatRd(preamble,data,flags,MAXCHAN,nchan)
-      enddo
-c
-      if(nants.gt.0)
-     *     call IntFlush(nants,time,uvdist2,var,
-     *     corr,xaxis,yaxis,npnt,
-     *     time0,present,mbase,xdat,ydat,timedat,bldat,ndat,MAXDAT)
-c
-      end
-c***********************************************************************
-      subroutine IntFlush(nants,time,uvdist2,var, corr,xaxis,yaxis,npnt,
-     *    time0,present,MAXBASE,xdat,ydat,timedat,bldat,ndat,MAXDAT)
-c
-      integer MAXBASE,MAXDAT,nants,npnt(MAXBASE),bldat(MAXDAT),ndat
-      double precision time,time0,timedat(MAXDAT)
-      real uvdist2(MAXBASE),var(MAXBASE),xdat(MAXDAT),ydat(MAXDAT)
-      complex corr(MAXBASE)
-      logical present(MAXBASE)
-      character xaxis*(*),yaxis*(*)
-c
-c-----------------------------------------------------------------------
-      integer i,j,k
-c
-c  Externals.
-c
-      real GetVal
-c
-c        call output(xaxis)
-c        call output(yaxis)
-      k = 0
-      do j=1,nants
-        do i=1,j
-          k = k + 1
-          if(npnt(k).gt.0)then
-            ndat = ndat + 1
-            if(ndat.gt.MAXDAT)call bug('f','Too many points')
-c              call output(xaxis)
-            xdat(ndat) = GetVal(xaxis,corr(k), npnt(k),time,time0)
-c              call output(yaxis)
-            ydat(ndat) = GetVal(yaxis,corr(k), npnt(k),time,time0)
-            bldat(ndat) = k
-            timedat(ndat) = time
-            present(k) = .true.
-            npnt(k) = 0
-            uvdist2(k) = 0
-            var(k) = 0
-            corr(k) = 0
-          endif
-        enddo
-      enddo
-c
-      end
-c***********************************************************************
-      real function GetVal(axis,corr,npnt, time,time0)
-c
-      character axis*(*)
-      complex corr
-      double precision time,time0
-      integer npnt
-c-----------------------------------------------------------------------
-      include 'mirconst.h'
-      complex data
-c
-      data = corr/npnt
-c
-c      call output(axis)
-      if(axis.eq.'amplitude')then
-        GetVal = abs(data)
-      else if(axis.eq.'phase')then
-        GetVal = 180/pi * atan2(aimag(data),real(data))
-      else if(axis.eq.'time')then
-        GetVal = 86400*(time - time0)
-      else
-        call bug('f','I should never get here')
-      endif
       end
 c***********************************************************************
       subroutine flagchk(tno)
@@ -3067,9 +3429,10 @@ c
       end
 c***********************************************************************
       subroutine CopyDat(lIn,lScr,apri,nchan,time,MAXTIME,ntime,
-     *  day0,ttol,blpres,nbase,nvis,chanoff,chanw,nosrc)
+     *  day0,ttol,blpres,nbase,nvis,chanoff,chanw,nosrc,mbl,mant)
 c
       integer lIn,lScr,nchan,maxtime,ntime,nbase,nvis,chanoff,chanw
+      integer mbl,mant
       character apri*1
       real time(maxtime),ttol
       double precision day0
@@ -3095,6 +3458,8 @@ c    nchan      Number of channels.
 c    chanoff    Offset to add to channel numbers to get true channel
 c               numbers.
 c    chanw      Width of channel specified in linetype
+c    mbl        Max baseline number
+c    mant       Max antenna number
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       logical flags(MAXCHAN),newsrc
@@ -3102,7 +3467,7 @@ c-----------------------------------------------------------------------
       double precision preamble(4),line(6),day1
       real buf(2*MAXCHAN+3),t,tprev,maxgap
       logical torder
-      integer vsrc,nread,length,ant1,ant2,i,bl,i0
+      integer vsrc,nread,length,ant1,ant2,i,bl,i0,ipol
       ptrdiff offset
 c
 c  Externals.
@@ -3122,7 +3487,8 @@ c
       call uvVarini(lIn,vsrc)
       call uvVarSet(vsrc,'source')
 c
-      call uvread(lIn,preamble,data,flags,MAXCHAN,nchan)
+c      call uvread(lIn,preamble,data,flags,MAXCHAN,nchan)
+      call uvDatRd(preamble,data,flags,MAXCHAN,nchan)
       if (nchan .eq. 0) call bug('f', 'No valid data found.')
       call flagchk(lIn)
       call uvinfo(lIn,'line',line)
@@ -3137,10 +3503,15 @@ c
       ntime = 0
       nread = nchan
       torder = .true.
+      mant=0
+      mbl=0
       dowhile(nread.eq.nchan)
         call basant(preamble(4),ant1,ant2)
+        mant=max(max(mant,ant1),ant2)
         bl = ((ant2-1)*ant2)/2 + ant1
+        mbl=max(mbl,bl)
         t = preamble(3) - day0
+        call uvDatGti('pol',ipol)
         if(t.lt.0)then
           day1 = nint(preamble(3)-1) + 0.5d0
           do i=1,ntime
@@ -3192,7 +3563,8 @@ c
 c
           offset = offset + length
         endif
-        call uvread(lIn,preamble,data,flags,MAXCHAN,nread)
+c       call uvread(lIn,preamble,data,flags,MAXCHAN,nread)
+        call uvDatRd(preamble,data,flags,MAXCHAN,nread)
       enddo
 c
       if(.not.torder)
@@ -3413,3 +3785,61 @@ c
       endif
 c
       end
+c***********************************************************************
+	subroutine GetScale(array,iflag,Nx,Ny,bmin,bmax)
+c
+	integer Nx,Ny
+	integer iflag(Nx,Ny,2)
+	real array(Nx,Ny,2),bmin,bmax
+c
+c  Determine a useful display range for the good data.
+c
+c-----------------------------------------------------------------------
+	integer i,j,k,step,N,count
+	logical first
+        real mad,buf(15000)
+c
+        integer prime
+c
+	bmin = 0
+	bmax = 0
+c
+c
+c  Calculate median absolute deviation from zero
+c
+        mad = 0
+        count = 0
+        N = min(10000,Nx*Ny)
+        step = (Nx*Ny)/N
+        if (step.gt.3) step = prime(step)
+        do k=0,Nx*Ny-1,step
+          i=mod(k,Nx)+1
+          j=k/Nx+1
+          if (iflag(i,j,2).gt.0) then
+            count = count + 1
+            buf(count) = abs(array(i,j,2))
+          endif
+        enddo
+        if (count.gt.0) call median(buf,count,mad)
+
+	first = .true.
+	do j=1,Ny
+	  do i=1,Nx
+	    if(iflag(i,j,2).gt.0)then
+	      if(first)then
+		bmin = array(i,j,2)
+		bmax = bmin
+		first = .false.
+	      else
+		bmin = min(bmin,array(i,j,2))
+		bmax = max(bmax,array(i,j,2))
+	      endif
+	    endif
+	  enddo
+	enddo
+c
+        bmin = max(bmin,-10*mad)
+        bmax = min(bmax, 10*mad)
+c
+	end
+c***********************************************************************
