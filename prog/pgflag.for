@@ -247,8 +247,8 @@ c     6 : Dust the plot - flag points with less than flagpar(6)
 c         unflagged neighbours. Useful range 1-4, default 3.
 c@ command
 c     Specify a series of commands for non-interactive flagging.
-c     E.g., '<b' will apply SumThreshold flagging for each baseline,
-c      followed by blowing away the dust;
+c     E.g., '<b' will apply SumThreshold flagging followed
+c      by blowing away the dust, for each baseline;
 c     '=vvx=v' will autoscale the data, do two clip operations, then
 c      subtract the channel average, autoscale and clip again before
 c      moving on to the next baseline. Default is no command.
@@ -267,14 +267,14 @@ c       nosrc   Do not cause a break in the display when the source
 c               changes. Normally PGFLAG puts a gap in the display
 c               whenever the source changes.
 c       noapply Do not apply the flagging.
-c       nodisp  Do not use the display, just use the flagpar parameters
+c       nodisp  Do not use the display, just use the specified command 
 c               to flag all baselines in the dataset.
 c     The following options can be used to disable calibration.
 c       nocal   Do not apply antenna gain calibration.
 c       nopass  Do not apply bandpass correction.
 c       nopol   Do not apply polarisation leakage correction.
 c
-c$Id: pgflag.for,v 1.15 2012/04/13 04:10:19 wie017 Exp $
+c$Id: pgflag.for,v 1.16 2012/04/13 05:45:44 wie017 Exp $
 c--
 c
 c  History:
@@ -410,8 +410,8 @@ c
       logical uvDatOpn
 
       version = versan ('pgflag',
-     :                  '$Revision: 1.15 $',
-     :                  '$Date: 2012/04/13 04:10:19 $')
+     :                  '$Revision: 1.16 $',
+     :                  '$Date: 2012/04/13 05:45:44 $')
 
 c
 c Get user inputs
@@ -419,7 +419,6 @@ c
       call keyini
       call keya('device',device,' ')
       call keya('device2',device2,' ')
-      if (device.eq.' ') call bug('f','A PGPLOT device must be given')
       call GetAxis(xaxis,yaxis)
       call keyr('flagpar',flagpar(1),7.0)
       call keyr('flagpar',flagpar(2),1.0)
@@ -430,6 +429,9 @@ c
       call keya('command',command,' ')
       if (command.eq.' ') command=''
       call GetOpt(selgen,noapply,nosrc,nodisp,uvflags)
+      if (command.eq.''.and.nodisp) call bug('f','Nothing to do')
+      if (device.eq.' '.and..not.nodisp) 
+     *   call bug('f','A PGPLOT device must be given')
       call uvDatInp('vis',uvflags)
       call keyfin
 c
@@ -575,9 +577,19 @@ c
             enddo
             needread=.false.
             firstread(cbl)=.false.
+            do i=1,mant
+               do j=i,mant
+                  tbl=((j-1)*j)/2+i
+                  if (cbl.eq.tbl) then
+                     f_a1=i
+                     f_a2=j
+                     goto 25
+                  endif
+               enddo
+            enddo
          endif
 c     Now plot the data.
-         if (needplot.and..not.nodisp) then
+ 25      if (needplot.and..not.nodisp) then
             call MakePlot(memI(iFlg),memR(iDat),t1,nchan,ntime,cbl,
      *           curr_zooms,meas_channel,meas_freq,meas_time,meas_amp,
      *           plot_top,plot_average,plot_main,points,plot_points,
@@ -1165,7 +1177,9 @@ c     available
             plot_average=.true.
             plot_top=.true.
          elseif (pressed(1:1).eq.'<') then
-            call output('Do SumThreshold operation')
+            write(status,'(A,I3,1x,I3)') 
+     *        'Do SumThreshold operation on baseline ',f_a1,f_a2
+            call output(status)
             needplot=.true.
             plot_main=.true.
             plot_points=.true.
