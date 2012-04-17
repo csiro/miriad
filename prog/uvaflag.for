@@ -43,11 +43,17 @@ c                useful when applying flagging based on a `channel-0'
 c                dataset.
 c         nobin  The bin numbers of the correlations in the template are
 c                ignored. If any bin in the template is flagged, then
-c                all bins in the inputs are flagged. This can be useful
+c                all bins in the input are flagged. This can be useful
 c                when applying flagging based on a bin averaged dataset.
+c         freq   The first baseline of the template is read and the
+c                flags are applied to all times, baselines and bins
+c                in the input. This can be useful when applying spectral
+c                flags based on a small sample of data or time averaged
+c                data. Option freq implies nobin. It can be combined 
+c                with nopol, but not with nofreq.
 c         noapply Do not apply the flagging, just report the statistics
 c                about what would be flagged.
-c$Id: uvaflag.for,v 1.4 2012/02/09 03:02:52 wie017 Exp $
+c$Id: uvaflag.for,v 1.5 2012/04/17 02:08:46 wie017 Exp $
 c--
 c  History:
 c     nebk 25may89 Original program
@@ -60,14 +66,15 @@ c     rjs  22oct98 noapply option.
 c     rjs  27apr09 Fix spurious warning when using options=nofreq. Change
 c                  print output message format.
 c     mhw  03feb12 Add nobin option
+c     mhw  17apr12 Add freq option
 c------------------------------------------------------------------------
         implicit none
         include 'maxdim.h'
         include 'mem.h'
         integer MAXSELS,MAXFILES,MAXPOL
         character version*(*)
-        parameter(version='Uvaflag: $Revision: 1.4 $, '//
-     *             '$Date: 2012/02/09 03:02:52 $')
+        parameter(version='Uvaflag: $Revision: 1.5 $, '//
+     *             '$Date: 2012/04/17 02:08:46 $')
         parameter(MAXSELS=512,MAXFILES=64,MAXPOL=4)
 c
         complex data(maxchan)
@@ -77,7 +84,7 @@ c
         integer nfiles,k,ib,ip,nbl,npol1,off
         character in1(MAXFILES)*64,in2*64,line*64
         logical vflags(MAXCHAN)
-        logical nofreq,nopol,nobin,doapp,match,eof,skip
+        logical nofreq,nopol,nobin,freq,doapp,match,eof,skip
         ptrdiff pFlag
 c
 c  Externals.
@@ -96,9 +103,9 @@ c
           nfiles = 1
         endif
         call selInput('select',sels,MAXSELS)
-        call getopt(nofreq,nopol,nobin,doapp)
+        call getopt(nofreq,nopol,nobin,freq,doapp)
         if(nfiles.eq.1.and.in1(1).eq.in2.and.
-     *    .not.nofreq.and..not.nopol.and..not.nobin)
+     *    .not.nofreq.and..not.nopol.and..not.nobin.and..not.freq)
      *    call bug('f','Requested operation makes no sense')
         call keyfin
 c
@@ -128,10 +135,12 @@ c
             match = .false.
             if(.not.skip) call uvread(lVis,vtbp,data,vflags,MAXCHAN,nv)
             skip = .false.
-            if(nv.eq.0.and..not.eof)then
-              call bug('w','Unexpected end of visibility dataset')
-            else if(abs(vtbp(1)-ttbp(1,1,1)).lt.1./86400.0.and.
-     *              (nobin.or.nint(vtbp(4)-ttbp(4,1,1)).eq.0)) then
+            if(nv.eq.0) then
+              if (.not.eof.and..not.freq)then
+                 call bug('w','Unexpected end of visibility dataset')
+              endif
+            else if ((freq.or.abs(vtbp(1)-ttbp(1,1,1)).lt.1./86400.0)
+     *             .and.(nobin.or.nint(vtbp(4)-ttbp(4,1,1)).eq.0)) then
 c
 c matching time + bin found
 c
@@ -140,7 +149,7 @@ c
               off=0
               match=.false.
               do while (.not.match.and.ib.le.nbl)
-                if (nint(vtbp(2)-ttbp(2,ip,ib)).eq.0..and.
+                if ((freq.or.nint(vtbp(2)-ttbp(2,ip,ib)).eq.0.).and.
      *                (nopol.or.nint(vtbp(3)-ttbp(3,ip,ib)).eq.0)) then
 c                      
 c matching baseline + pol found
@@ -269,22 +278,27 @@ c
 c
         end
 c************************************************************************
-        subroutine GetOpt(nofreq,nopol,nobin,doapp)
+        subroutine GetOpt(nofreq,nopol,nobin,freq,doapp)
 c
         implicit none
-        logical nofreq,nopol,nobin,doapp
+        logical nofreq,nopol,nobin,doapp,freq
 c------------------------------------------------------------------------
         integer NOPTS
-        parameter(NOPTS=4)
+        parameter(NOPTS=5)
         character opts(NOPTS)*8
         logical present(NOPTS)
-        data opts/'nofreq  ','nopol   ','nobin   ','noapply '/
+        data opts/'nofreq  ','nopol   ','nobin   ','freq    ',
+     *            'noapply '/
 c
         call options('options',opts,present,NOPTS)
         nofreq =      present(1)
         nopol  =      present(2)
         nobin  =      present(3)
-        doapp  = .not.present(4)
+        freq   =      present(4)
+        doapp  = .not.present(5)
+        if (freq.and.nofreq) call bug('f',
+     *   'Options freq and nofreq cannot be combined')
+        if (freq) nobin = .true.
 c
         end
 c************************************************************************
