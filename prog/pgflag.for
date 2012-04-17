@@ -197,6 +197,20 @@ c       P                Display the current selection on the secondary
 c                        plot device as a spectrum. This command will
 c                        work only if device2 is specified.
 c
+c     Non interactive flagging:
+c     Using the command parameter and the flagpar parameters you can use
+c     pgflag in non-interactive mode. The recommended strategy is to run
+c     pgflag interactively, work out what flagpar parameters work best 
+c     using the * command to see the effect of background subtraction and
+c     the < command to see the effects of SumThreshold flagging. 
+c     If too much or too little was flagged, change the parameters with
+c     the 'T' command and undo the flagging with the 'rr' command and try
+c     again. Once the right parameters are found you can abort with 'a' and
+c     run pgflag with command set to "<" or "<b" to flag the entire dataset.
+c     You can use options=nodisp if you don't want to watch the flagging, 
+c     if you do want to see what is happening, you'll want to specify  
+c     command='=<' or the like to scale the data for the display.
+c
 c@ vis
 c     Input visibility dataset to be flagged. No default.
 c@ line
@@ -249,9 +263,11 @@ c@ command
 c     Specify a series of commands for non-interactive flagging.
 c     E.g., '<b' will apply SumThreshold flagging followed
 c      by blowing away the dust, for each baseline;
-c     '=vvx=v' will autoscale the data, do two clip operations, then
+c     '=vx=v' will autoscale the data, do a clip operation, then
 c      subtract the channel average, autoscale and clip again before
-c      moving on to the next baseline. Default is no command.
+c      moving on to the next baseline. There is no need to specify
+c      a 'q' in the command sequence, unless you want to quit before
+c      all baselines are processed. Default is no command.
 c@ options
 c     Task enrichment parameters. Several can be given, separated by
 c     commas. Minimum match is used. Possible values are:
@@ -274,7 +290,7 @@ c       nocal   Do not apply antenna gain calibration.
 c       nopass  Do not apply bandpass correction.
 c       nopol   Do not apply polarisation leakage correction.
 c
-c$Id: pgflag.for,v 1.16 2012/04/13 05:45:44 wie017 Exp $
+c$Id: pgflag.for,v 1.17 2012/04/17 04:55:56 wie017 Exp $
 c--
 c
 c  History:
@@ -410,8 +426,8 @@ c
       logical uvDatOpn
 
       version = versan ('pgflag',
-     :                  '$Revision: 1.16 $',
-     :                  '$Date: 2012/04/13 05:45:44 $')
+     :                  '$Revision: 1.17 $',
+     :                  '$Date: 2012/04/17 04:55:56 $')
 
 c
 c Get user inputs
@@ -1444,26 +1460,25 @@ c           call uvrdvri(tno,'pol',ipol,0)
                      tflag(ntflag)=i
                   endif
                enddo
-            else
-               do k=1,ntflag
-                  i=tflag(k)
-                  blselect = bases(2,i).eq.4.or.
-     *             (bases(2,i).eq.1.and.bases(1,i).eq.bl).or.
-     *             (bases(2,i).eq.2.and.bases(1,i).eq.ant1).or.
-     *             (bases(2,i).eq.3.and.bases(1,i).eq.ant2)     
-                  if (blselect) then
-                     flagged=.true.
-                     do j=chans(1,i),chans(2,i)
-                        flags(j)=.not.flagval(i)
-                        if (flagval(i).eqv..false.) then
-                           flags_badtogood=flags_badtogood+1
-                        else
-                           flags_goodtobad=flags_goodtobad+1
-                        endif
-                     enddo
-                  endif
-               enddo
             endif
+            do k=1,ntflag
+               i=tflag(k)
+               blselect = bases(2,i).eq.4.or.
+     *         (bases(2,i).eq.1.and.bases(1,i).eq.bl).or.
+     *         (bases(2,i).eq.2.and.bases(1,i).eq.ant1).or.
+     *         (bases(2,i).eq.3.and.bases(1,i).eq.ant2)     
+               if (blselect) then
+                  flagged=.true.
+                  do j=chans(1,i),chans(2,i)
+                     flags(j)=.not.flagval(i)
+                     if (flagval(i).eqv..false.) then
+                        flags_badtogood=flags_badtogood+1
+                     else
+                        flags_goodtobad=flags_goodtobad+1
+                     endif
+                  enddo
+               endif
+            enddo
             if (flagged) call uvflgwr(tno,flags)
             do i=1,nchan
                if (flags(i).eqv..true.) then
