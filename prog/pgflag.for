@@ -290,7 +290,7 @@ c       nocal   Do not apply antenna gain calibration.
 c       nopass  Do not apply bandpass correction.
 c       nopol   Do not apply polarisation leakage correction.
 c
-c$Id: pgflag.for,v 1.17 2012/04/17 04:55:56 wie017 Exp $
+c$Id: pgflag.for,v 1.18 2012/04/22 22:53:40 wie017 Exp $
 c--
 c
 c  History:
@@ -397,7 +397,6 @@ c
       integer newbl,tbl,mbl,mant
       real t1(MAXTIME),ttol,curs_x,curs_y
       logical blpres(MAXBASE),nosrc,nodisp,needplot,needread
-      logical firstread(MAXBASE)
       parameter(ttol=1.0/86400.0)
       integer iFlg,iDat,curr_zooms(2,2),points(2,2)
       integer min_x_zoom,max_x_zoom,min_y_zoom,max_y_zoom
@@ -426,8 +425,8 @@ c
       logical uvDatOpn
 
       version = versan ('pgflag',
-     :                  '$Revision: 1.17 $',
-     :                  '$Date: 2012/04/17 04:55:56 $')
+     :                  '$Revision: 1.18 $',
+     :                  '$Date: 2012/04/22 22:53:40 $')
 
 c
 c Get user inputs
@@ -502,7 +501,6 @@ c
          if (blpres(i)) then
 	   nbl=nbl+1
 	 endif
-         firstread(i)=.true.
       enddo
 c
 c Allocate memory.
@@ -559,7 +557,7 @@ c
             endif
             do while (some_unflagged.eqv..false.)
                call Gridit(memI(iFlg),memR(iDat),nchan,ntime,cbl,
-     *              day0,lScr,nvis,t1,firstread(cbl),some_unflagged)
+     *              day0,lScr,nvis,t1,some_unflagged)
                call ApplyFlags(memI(iFlg),nchan,ntime,chans,times,
      *            bases,flagval,MAXEDIT,nflags,cbl,mant,some_unflagged)
                if (some_unflagged.eqv..false.) then
@@ -592,7 +590,6 @@ c
                endif
             enddo
             needread=.false.
-            firstread(cbl)=.false.
             do i=1,mant
                do j=i,mant
                   tbl=((j-1)*j)/2+i
@@ -1341,7 +1338,7 @@ c-----------------------------------------------------------------------
       real t,tprev
       integer oldflags_bad,oldflags_good,newflags_bad,newflags_good
       integer flags_goodtobad,flags_badtogood
-      integer time1,time2,ipol,ntflag,tflag(MAXEDIT2)
+      integer time1,time2,ntflag,tflag(MAXEDIT2)
       character outline*256
 c
 c     Externals
@@ -1446,7 +1443,6 @@ c     do the flagging
             flagged=.false.
             call basant(preamble(4),ant1,ant2)
             bl=((ant2-1)*ant2)/2+ant1
-c           call uvrdvri(tno,'pol',ipol,0)
             if (t.ne.tprev) then
                ntflag=0
                do i=1,nflags
@@ -1776,10 +1772,10 @@ c     check that we have a full selection box
             if (time2.gt.ntime) then
                time2=ntime
             endif
-c            call FmtCmd(flagstring,isave,t1(time1),t1(time2),
-c     *       chanoff,
-c     *       chanw,day0,selectline)
-c            call output(flagstring)
+            call FmtCmd(flagstring,isave,t1(time1),t1(time2),
+     *       chanoff,
+     *       chanw,day0,selectline)
+            call output(flagstring)
          elseif (undo) then
             if (nflags.gt.0) then
                nflags=-1*nflags
@@ -2999,24 +2995,28 @@ c
         maxwt=maxwt*2-1
 	do j=1,xdim
 	  do i=1,ydim
-            acc = 0
-            wtsum = 0
-	    if(cstart(i).le.cend(i))then
-	      do i0=max(cstart(i),i-iw),min(cend(i),i+iw)
-		if(iflag(j,i0,2).gt.0)then
-                  wt = kernel(abs(i-i0))
-		  acc = acc + valarray(j,i0,1) * wt
-                  wtsum = wtsum + wt
-		endif
-	      enddo
-	    endif
+            if (iflag(j,i,2).gt.0) then
+              acc = 0
+              wtsum = 0
+	      if(cstart(i).le.cend(i))then
+	        do i0=max(cstart(i),i-iw),min(cend(i),i+iw)
+		  if(iflag(j,i0,2).gt.0)then
+                    wt = kernel(abs(i-i0))
+		    acc = acc + valarray(j,i0,1) * wt
+                    wtsum = wtsum + wt
+		  endif
+	        enddo
+	      endif
 c
 c  Save the result. Note we require a reasonable weight for the
 c  convolved value (a few isolated points will be zeroed instead)
 c
-            if (wtsum.gt.maxwt/4) then
-              valarray(j,i,2) = acc/wtsum
-            else 
+              if (wtsum.gt.maxwt/4) then
+                valarray(j,i,2) = acc/wtsum
+              else 
+                valarray(j,i,2) = 0
+              endif
+            else
               valarray(j,i,2) = 0
             endif
 	  enddo
@@ -3024,7 +3024,11 @@ c
       else
         do j=1,xdim
           do i=1,ydim
-            valarray(j,i,2) = valarray(j,i,1)
+            if (iflag(j,i,2).gt.0) then
+              valarray(j,i,2) = valarray(j,i,1)
+            else
+              valarray(j,i,2) = 0
+            endif
           enddo
         enddo
       endif
@@ -3042,30 +3046,39 @@ c
         maxwt = 2*maxwt-1
 	do i=1,ydim
 	  do j=1,xdim
-            acc = 0
-            wtsum = 0
-	    do j0=max(1,j-jw),min(xdim,j+jw)
-              if(iflag(j0,i,2).gt.0)then
-                wt = kernel(abs(j-j0))
-	        acc = acc + valarray(j0,i,2) * wt
-                wtsum = wtsum + wt
+            if (iflag(j,i,2).gt.0) then
+              acc = 0
+              wtsum = 0
+	      do j0=max(1,j-jw),min(xdim,j+jw)
+                if(iflag(j0,i,2).gt.0)then
+                  wt = kernel(abs(j-j0))
+	          acc = acc + valarray(j0,i,2) * wt
+                  wtsum = wtsum + wt
+                endif
+	      enddo
+              if (wtsum.gt.maxwt/4) then
+                c(j) = acc/wtsum
+              else 
+                c(j) = 0
               endif
-	    enddo
-            if (wtsum.gt.maxwt/4) then
-              c(j) = acc/wtsum
-            else 
-              c(j) = 0
             endif
 	  enddo
           do j=1,xdim
-            if (iflag(j,i,2).gt.0)valarray(j,i,2)=
-     *        valarray(j,i,1)-c(j)
+            if (iflag(j,i,2).gt.0) then
+              valarray(j,i,2)=valarray(j,i,1)-c(j)
+            else
+              valarray(j,i,2)=0
+            endif
           enddo
 	enddo
       else
         do i=1,ydim
           do j=1,xdim
-            valarray(j,i,2) = valarray(j,i,1) - valarray(j,i,2)
+            if (iflag(j,i,2).gt.0) then
+              valarray(j,i,2) = valarray(j,i,1) - valarray(j,i,2)
+            else
+              valarray(j,i,2) = 0
+            endif  
           enddo
         enddo
       endif
@@ -3079,7 +3092,7 @@ c***********************************************************************
 c
       integer xdim,ydim,iflag(xdim,ydim,2),minN
       integer cbl, nFlags, MAXEDIT
-      real valarray(xdim,ydim,2),t1(ydim)
+      real t1(ydim)
       integer chans(2,MAXEDIT),times(2,MAXEDIT),bases(2,MAXEDIT)
       logical flagval(MAXEDIT)
 c
@@ -3329,10 +3342,10 @@ c
       end
 c***********************************************************************
       subroutine Gridit(iflag,array,nchan,ntime,rqbl,day0,
-     *                  lScr,nvis,t1,firstread,some_unflagged)
+     *                  lScr,nvis,t1,some_unflagged)
 c
       integer nchan,ntime,lScr,nvis,rqbl
-      logical firstread,some_unflagged
+      logical some_unflagged
       integer iflag(nchan,ntime,2)
       real t1(ntime),array(nchan,ntime,2)
       double precision day0
@@ -3496,7 +3509,7 @@ c-----------------------------------------------------------------------
       double precision preamble(4),line(6),day1
       real buf(2*MAXCHAN+3),t,tprev,maxgap
       logical torder
-      integer vsrc,nread,length,ant1,ant2,i,bl,i0,ipol
+      integer vsrc,nread,length,ant1,ant2,i,bl,i0
       ptrdiff offset
 c
 c  Externals.
@@ -3540,7 +3553,6 @@ c      call uvread(lIn,preamble,data,flags,MAXCHAN,nchan)
         bl = ((ant2-1)*ant2)/2 + ant1
         mbl=max(mbl,bl)
         t = preamble(3) - day0
-        call uvDatGti('pol',ipol)
         if(t.lt.0)then
           day1 = nint(preamble(3)-1) + 0.5d0
           do i=1,ntime
