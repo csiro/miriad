@@ -51,10 +51,9 @@ c    * The xy phase is not applied to the polarisation solution.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
-	character version*(*)
-	integer MAXSELS,MAXFBIN
-	parameter(version='GpBoot: version 21-Jan-01')
-	parameter(MAXSELS=256,MAXFBIN=16)
+	character version*80
+	integer MAXSELS
+	parameter(MAXSELS=256)
 c
 	character cal*64,vis*64,line*72
 	real sels(MAXSELS)
@@ -65,9 +64,15 @@ c
 	integer temp,j,nfbin,nfbin1
         double precision freqc(MAXFBIN),freqv(MAXFBIN)
 c
+c  External
+c
+        character*80 versan
+c
 c  Get the input parameters.
 c
-	call output(version)
+	version = versan('gpboot',
+     *                   '$Revision: 1.0',
+     *                   '$Date: ')
 	call keyini
 	call keya('cal',cal,' ')
 	call keya('vis',vis,' ')
@@ -130,7 +135,7 @@ c
 c  Now apply the correction.
 c
 	call Correct(tVis,nants,nfeedv,ntau,factor,freqc,freqv,
-     *   nfbin,nfbin1,MAXFBIN)
+     *   nfbin,nfbin1)
 c
 c  Inform user, not appeasing Bob, who would rather the user
 c  be kept bare foot and ignorant.
@@ -404,10 +409,10 @@ c
 	end
 c************************************************************************
 	subroutine Correct(tVis,nants,nfeeds,ntau,Factor,freqc,freqv,
-     *      nfbinc,nfbinv,MAXFBIN)
+     *      nfbinc,nfbinv)
 c
 	implicit none
-	integer tVis,nants,nfeeds,ntau,nfbinc,nfbinv,MAXFBIN
+	integer tVis,nants,nfeeds,ntau,nfbinc,nfbinv
 	real Factor(0:nfbinv)
         double precision freqc(nfbinc),freqv(nfbinv)
 c

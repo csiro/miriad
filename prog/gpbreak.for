@@ -39,13 +39,12 @@ c  Bugs and Shortcomings:
 c------------------------------------------------------------------------
 	include 'maxdim.h'
         include 'mem.h'
-	integer MAXFEED,MAXTIME,MAXFBIN
-	character version*(*)
-	parameter(version='GpBreak: version 1.0 05-Mar-97')
-	parameter(MAXFEED=2,MAXTIME=64,MAXFBIN=16)
+	integer MAXFEED,MAXTIME
+	character version*80
+	parameter(MAXFEED=2,MAXTIME=64)
 c
 	character vis*64
-	integer iostat,tVis,itGain,nants,nfeeds,nsols,i,ngains
+	integer iostat,tVis,nants,nfeeds,nsols,i,ngains
 	integer numtime,numant,numfeed,ntau,maxgains,nfbin,maxsols
 	double precision btimes(MAXTIME)
 	integer ants(MAXANT),feeds(MAXFEED)
@@ -55,11 +54,13 @@ c
 c
 c  Externals.
 c
-	character itoaf*8
+	character itoaf*8,versan*80
 c
 c  Get the input parameters.
 c
-	call output(version)
+        version = versan('gpbreak',
+     *                   '$Revision: 1.0',
+     *                   '$Date: ')
 	call keyini
 	call keya('vis',vis,' ')
 	call mkeyt('break',btimes,MAXTIME,numtime,'time')
@@ -160,7 +161,7 @@ c
 	call wrhdi(tVis,'nsols',nsols)
 c	call GainWr(itGain,nsols,nants,nfeeds,times,Gains)
         call uvGnWrit(tVis,memc(pGains2),memd(pTimes),freq,ngains,
-     *                nsols,nfbin,maxgains,maxsols,maxfbin)
+     *                nsols,nfbin,maxgains,maxsols,maxfbin,.false.)
         call memFree(pTimes,maxsols,'d')
         call memFree(pGains,maxgains,'c')
         call memFree(pGains2,maxgains,'c')
@@ -174,7 +175,6 @@ c
 c
 c  Close up everything.
 c
-	call hdaccess(itGain,iostat)
 	call hclose(tVis)	
 	end
 c************************************************************************

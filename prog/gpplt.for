@@ -105,10 +105,9 @@ c    rjs  23jan07 Handle second leakage table.
 c    mhw  26aug09 Handle multiple bandpass solution intervals
 c  Bugs:
 c------------------------------------------------------------------------
-	integer MAXSELS,MAXFBIN,MAXSOLN
-	character version*(*)
-	parameter(MAXSELS=256,MAXFBIN=16,MAXSOLN=1024)
-	parameter(version='GpPlt: version 23-Jan-07')
+	integer MAXSELS,MAXSOLN
+	character version*80
+	parameter(MAXSELS=256,MAXSOLN=1024)
 	include 'gpplt.h'
 	integer iostat,tIn,nx,ny,nfeeds,nants,nsols,ierr,symbol,nchan
 	integer ntau,length,i,k,off,nbpsols,nfbin,ngains
@@ -127,12 +126,15 @@ c  Externals.
 c
 	logical hdprsnt
 	integer pgbeg,len1
+        character*80 versan
 c
 	data Feeds/'I','X','Y'/
 c
 c  Get the user parameters.
 c
-	call output(version)
+	version = versan('gpplt',
+     *                   '$Revision: 1.0',
+     *                   '$Date: ')
 	call keyini
 	call keya('vis',vis,' ')
 	if(vis.eq.' ')call bug('f','Input data-set must be given')
@@ -310,8 +312,7 @@ c  Do the polarization leakage term plots.
 c
 	if(dopol)then
 	  if(doLog)call LogWrite('# Polarization leakage table',more)
-	  call PLoad(tIn,G1,nfeeds,nants,nfbin,freq,MAXFBIN,
-     *               .false.)
+	  call PLoad(tIn,G1,nfeeds,nants,nfbin,freq,.false.)
 	  call PolPlt(G1,nfeeds,nants,nfbin,freq,range,Feeds(nfeeds),
      *          MAXANT,doamp,dophase,doreal,doimag,doplot,dolog,symbol)
 	endif
@@ -319,8 +320,7 @@ c
 	if(dopol2)then
 	  if(doLog)call LogWrite('# Second polarization leakage table',
      *								   more)
-	  call PLoad(tIn,G1,nfeeds,nants,nfbin,freq,MAXFBIN,
-     *               .true.)
+	  call PLoad(tIn,G1,nfeeds,nants,nfbin,freq,.true.)
 	  call PolPlt(G1,nfeeds,nants,0,freq,range,Feeds(nfeeds),
      *		MAXANT,doamp,dophase,doreal,doimag,doplot,dolog,symbol)
 	endif
@@ -583,11 +583,11 @@ c
 	end
 c************************************************************************
 	subroutine PLoad(tIn,Leaks,nfeeds,nants,nfbin,
-     *                   freq,MAXFBIN,do2)
+     *                   freq,do2)
 c
 	implicit none
         include 'gpplt.h'
-	integer tIn,nfeeds,nants,nfbin,MAXFBIN
+	integer tIn,nfeeds,nants,nfbin
 	complex Leaks(2,MAXANT,0:MAXFBIN)
         double precision freq(MAXFBIN)
 	logical do2,hdprsnt

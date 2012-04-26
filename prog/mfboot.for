@@ -81,7 +81,7 @@ c	  noapply Do not apply the scale factor - just evaluate it.
 c         nospec Do not try to determine and correct the spectral index across
 c                the band.
 c
-c$Id: mfboot.for,v 1.7 2011/09/08 05:15:04 wie017 Exp $
+c$Id: mfboot.for,v 1.8 2012/04/26 02:53:29 wie017 Exp $
 c--
 c  History:
 c    rjs     15jan06 Original version adapted from plboot.
@@ -601,8 +601,8 @@ c  Scale the gains table present in the data.
 c
 c------------------------------------------------------------------------
 	include 'maxdim.h'
-        integer maxgains,maxtimes,maxfbin
-        parameter (MAXTIMES=10000,MAXFBIN=16,MAXGAINS=3*MAXANT*MAXTIMES*
+        integer maxgains,maxtimes
+        parameter (MAXTIMES=10000,MAXGAINS=3*MAXANT*MAXTIMES*
      *     MAXFBIN)
 	complex G(MAXGAINS)
         double precision time(MAXTIMES),freq(0:MAXFBIN)
@@ -627,7 +627,7 @@ c
         enddo
             
         call uvGnWrit(lVis,G,time,freq,ngains,nsols,nfbin,maxgains,
-     *    maxtimes,maxfbin)
+     *    maxtimes,maxfbin,.false.)
 	end
 c************************************************************************
 	subroutine bpSca(lVis,f0,alpha)

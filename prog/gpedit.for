@@ -72,10 +72,9 @@ c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
         include 'mirconst.h'
-	integer MAXFEED,MAXSELS,MAXFBIN
-	character version*(*)
-	parameter(version='Gpedit: version 1.0 02-Jan-05')
-	parameter(MAXFEED=2,MAXSELS=300,MAXFBIN=16)
+	integer MAXFEED,MAXSELS
+	character version*80
+	parameter(MAXFEED=2,MAXSELS=300)
 c
 	character vis*64
 	logical domult,dorep,doflag,doamp,dophas,dorefl,dozm,doscal
@@ -92,11 +91,14 @@ c  Externals.
 c
 	integer hsize
 	logical hdprsnt
+        character versan*80
 	external MultOp,RepOp,FlagOp,AmpOp,PhasOp,ScalOp,InvOp
 c
 c  Get the input parameters.
 c
-	call output(version)
+        version = versan('gpedit',
+     *                   '$Revision: 1.0',
+     *                   '$Date: ')
 	call keyini
 	call keya('vis',vis,' ')
 	if(vis.eq.' ')call bug('f','No input vis data-set given')
@@ -207,7 +209,7 @@ c
 c  Write out the gains.
 c
           call uvGnWrit(tVis,memc(pGains),memd(pTimes),freq,ngains,
-     *      nsols,nfbin,maxgains,nsols,maxfbin)
+     *      nsols,nfbin,maxgains,nsols,maxfbin,.false.)
 c	  call GainWr(itGain,dup,nsols,nants,nfeeds,
 c     *				memd(pTimes),memc(pGains))
 	  call memFree(pTimes,nsols,'d')
