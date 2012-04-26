@@ -59,7 +59,7 @@ c         verbose    Give lots of messages during the iterations.  The
 c                    default is to give a one line message at each
 c                    iteration.
 c
-c$Id: mostess.for,v 1.6 2011/10/31 00:37:30 wie017 Exp $
+c$Id: mostess.for,v 1.7 2012/04/26 04:07:20 wie017 Exp $
 c--
 c  History:
 c    rjs   7aug95  Adapted from MOSMEM.
@@ -83,8 +83,9 @@ c-----------------------------------------------------------------------
      *          naxis, nBeam(2), nDef(3), niter, nMap(2), nMod(3),
      *          nOut(MAXNAX), npnt, nx, ny, offset(3), pbObj(MAXPNT),
      *          x0(MAXPNT), y0(MAXPNT)
-      ptrdiff   pDChi, pDef, pEst, pMap, pNewDChi, pNewEst, pNewRes,
-     *          pRes, pTmp, pWt, Cnvl(MAXPNT)
+      ptrdiff   pDChi, pDef, pEst, pMap, pNewDChi
+      ptrdiff   pNewEst, pNewRes, pRes
+      ptrdiff   pTmp, pWt, Cnvl(MAXPNT)
       real      Alpha, Beta, ClipLev, De, Df, Flux, Grad11, GradEE,
      *          GradEF, GradEH, GradEJ, GradFF, GradFH, GradFJ, GradHH,
      *          GradJJ, Immax, Immin, J0, J1, OStLen1, OStLen2, Q, Qest,
@@ -98,8 +99,8 @@ c-----------------------------------------------------------------------
       external  ismax, itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('mostess',
-     *                 '$Revision: 1.6 $',
-     *                 '$Date: 2011/10/31 00:37:30 $')
+     *                 '$Revision: 1.7 $',
+     *                 '$Date: 2012/04/26 04:07:20 $')
 c
 c  Get the input parameters.
 c
