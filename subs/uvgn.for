@@ -32,7 +32,7 @@ c    08aug07 rjs  Correct bug in averaging wide channels.
 c    27aug09 mhw  Handle multiple bandpass solution intervals
 c    24feb11 mhw  Handle freq bins in gains and leakage
 c
-c $Id: uvgn.for,v 1.15 2011/10/31 00:28:01 wie017 Exp $
+c $Id: uvgn.for,v 1.16 2012/04/26 02:51:27 wie017 Exp $
 c***********************************************************************
 
       subroutine uvGnIni(tno1,dogains1,dopass1)
@@ -177,6 +177,21 @@ c-----------------------------------------------------------------------
 c      Read a gain table into memory.
 c      Read both the standard gains and the gainsf table if present.
 c      Intended as a standalone routine to read gain tables.
+c   Input:
+c    tno      handle of visibility file
+c    maxgains maximum number of gains to be read
+c    maxtimes maximum number of solution intervals
+c    maxfbin  maximum number of freq bins
+c  Output:
+c    G        the gains, both continuum and freq binned gains 
+c             are returned
+c    time     the time for each solution
+c    freq     the frequency for each bin
+c    ngains   the number of gains per solution
+c    nfeeds   the number of feeds
+c    ntau     ntau=1 means we have delay solutions (nfbin should be 0)
+c    nsols    the number of solutions
+c    nfbin    the number of freq bins
 c-----------------------------------------------------------------------
       integer iostat
       integer i,j,k,off,item
@@ -198,7 +213,7 @@ c-----------------------------------------------------------------------
       call haccess(tno,item,'gains','read',iostat)
       if (iostat.ne.0) call UvGnBug(iostat,'accessing gains table')
 c
-c  Check that its the right size.
+c  Check that it's the right size.
 c
       if (hsize(item).ne.8+(ngains+1)*8*nsols)
      *        call bug('f','Gain table size is incorrect')
@@ -228,7 +243,7 @@ c
       if (iostat.ne.0) call UvGnBug(iostat,'reading gainsf header')
       if (nfbin.gt.maxfbin) call bug('f',
      *   'Too many freq bins for supplied buffer, in uvGnRead')
-      if (ngains*nsols*nfbin.gt.maxgains) call bug('f',
+      if (ngains*nsols*(nfbin+1).gt.maxgains) call bug('f',
      *   'Too many gains for supplied buffer, in uvGnRead.')
       off = 8
       do j=1,nfbin
@@ -249,20 +264,25 @@ c
 c***********************************************************************
 
       subroutine uvGnWrit(tno,G,time,freq,ngains,nsols,
-     *  nfbin,maxgains,maxtimes,maxfbin) 
+     *  nfbin,maxgains,maxtimes,maxfbin,replace) 
       integer tno,ngains,nsols,nfbin,maxgains,maxtimes
       integer maxfbin
       complex G(maxgains)
+      logical replace
       double precision time(maxtimes),freq(maxfbin)
 c-----------------------------------------------------------------------
 c      Read a gain table into memory.
 c      Read both the standard gains and the gainsf table if present.
 c      Intended as a standalone routine to read gain tables.
+c
 c-----------------------------------------------------------------------
       integer iostat
       integer i,j,k,off,item
+      character*6 mode
 c-----------------------------------------------------------------------
-      call haccess(tno,item,'gains','append',iostat)
+      mode='append'
+      if (replace) mode='write'
+      call haccess(tno,item,'gains',mode,iostat)
       if (iostat.ne.0) call UvGnBug(iostat,'accessing gains table')
 c
 c  Write the gain solutions
@@ -282,7 +302,7 @@ c
 c  Write the binned gain solutions
 c
       if (nfbin.gt.1) then
-        call haccess(tno,item,'gainsf','append',iostat)
+        call haccess(tno,item,'gainsf',mode,iostat)
         if (iostat.ne.0) call UvGnBug(iostat,'writing gainsf header')
         call hwritei(item,nfbin,4,4,iostat)
         if (iostat.ne.0) call UvGnBug(iostat,'writing gainsf header')
