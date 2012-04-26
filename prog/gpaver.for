@@ -27,22 +27,29 @@ c    rjs     10jan95 Fixed a serious bug I introduced on 6jan.
 c    rjs     28aug96 Minor change to get around gcc-related bug. Change
 c		     care Dave Rayner.
 c    pjt     20oct99 FIxed bug (at least on linux) of not initializing nnsols
+c    mhw     23apr12 Handle frequency bins (gainsf table)
 c
 c  Bugs and Shortcomings:
 c    ? Perfect ?
 c------------------------------------------------------------------------
 	include 'maxdim.h'
-	character version*(*)
-	parameter(version='GpAver: version 1.0 20-oct-99')
+	character version*80
 	logical dovec
 	double precision interval
 	character vis*64
-	integer ngains,nfeeds,ntau,nants,iostat
+	integer iostat
 	integer tVis
+c
+c  Externals
+c
+        character versan*80
+c------------------------------------------------------------------------
+        version = versan('gpaver',
+     *                   '$Revision: 1.2 $',
+     *                   '$Date: 2012/04/26 02:52:56 $')       
 c
 c  Get the input parameters.
 c
-	call output(version)
 	call keyini
 	call keya('vis',vis,' ')
 	call keyd('interval',interval,10.0d0)
@@ -59,19 +66,9 @@ c
 	call hopen(tVis,vis,'old',iostat)
 	if(iostat.ne.0)call AverBug(iostat,'Error opening '//vis)
 c
-c  Determine the number of feeds in the gain table.
-c
-	call rdhdi(tVis,'ngains',ngains,0)
-	call rdhdi(tVis,'nfeeds',nfeeds,1)
-	call rdhdi(tVis,'ntau',  ntau,  0)
-	if(nfeeds.le.0.or.nfeeds.gt.2.or.mod(ngains,nfeeds+ntau).ne.0
-     *	  .or.ntau.gt.1.or.ntau.lt.0)
-     *	  call bug('f','Bad number of gains or feeds in '//vis)
-	nants = ngains / (nfeeds + ntau)
-c
 c  Average the gains now.
 c
-	call AverGain(tVis,dovec,nfeeds,ntau,nants,interval)
+	call AverGain(tVis,dovec,interval)
 c
 c  Write out some history now.
 c
@@ -93,7 +90,7 @@ c
 c  Get "Task Enrichment Parameters".
 c
 c  Output:
-c    dovec	Do vecotr averaging.
+c    dovec	Do vector averaging.
 c------------------------------------------------------------------------
 	integer nopts
 	parameter(nopts=2)
@@ -120,57 +117,45 @@ c------------------------------------------------------------------------
 	call bugno('f',iostat)
 	end
 c************************************************************************
-	subroutine AverGain(tVis,dovec,nfeeds,ntau,nants,interval)
+	subroutine AverGain(tVis,dovec,interval)
 c
 	implicit none
 	logical dovec
-	integer nfeeds,ntau,nants,tVis
+	integer tVis
 	double precision interval
 c
 c  Read and write the gains, and call the averaging routine.
 c
 c------------------------------------------------------------------------
 	include 'maxdim.h'
-	integer MAXSOLS,MAXGAINS
-	parameter(MAXSOLS=10000,MAXGAINS=3*MAXSOLS*MAXANT)
-	complex Gains(MAXGAINS)
-	double precision time(MAXSOLS),int1,dtemp
-	integer nsols,offset,pnt,i,tGains,iostat,nnsols,ngains
-c
-c  Externals.
-c
-	integer hsize
+        include 'mem.h'
+	integer MAXSOLS,maxgains
+	parameter(MAXSOLS=10000)
+	integer pGains, pTimes, oGains, oTimes
+	double precision int1,dtemp, freq(MAXFBIN)
+	integer nsols,nnsols,ngains,nfbin
+        integer ntau,nfeeds,nants
 c
 c  Open the gains table and read them all in.
 c
-	call haccess(tVis,tGains,'gains','read',iostat)
-	if(iostat.ne.0)call AverBug(iostat,'Error opening the gains')
-	nsols = (hsize(tGains)-8)/(8*nants*(nfeeds+ntau)+8)
-	if(nsols.gt.MAXSOLS.or.nsols*nants*(nfeeds+ntau).gt.MAXGAINS)
-     *	  call bug('f','Gain table too big for me to handle')
-c
-	ngains = nants*(nfeeds+ntau)
-	offset = 8
-	pnt = 1
-	do i=1,nsols
-	  call hreadd(tGains,time(i),offset,8,iostat)
-	  offset = offset + 8
-	  if(iostat.eq.0)call hreadr(tGains,Gains(pnt),offset,8*ngains,
-     *								 iostat)
-	  pnt = pnt + ngains
-	  offset = offset + 8*ngains
-	  if(iostat.ne.0)call Averbug(iostat,'Error reading gain table')
-	enddo
-c
-c  Close up.
-c
-	call hdaccess(tGains,iostat)
-	if(iostat.ne.0)call AverBug(iostat,'Error closing gain table')
+        call rdhdi(tVis,'ngains',ngains,0)
+        call rdhdi(tVis,'nsols',nsols,0)
+	if(ngains.lt.1.or.nsols.lt.1)
+     *	  call bug('f','Bad number of gains or solutions')
+        maxgains = nsols * ngains * (MAXFBIN+1)
+        call memAlloc(pGains,maxgains,'c')
+        call memAlloc(pTimes,maxsols,'d')
+        call memAlloc(oGains,maxgains,'c')
+        call memAlloc(oTimes,maxsols,'d')
+        call uvGnRead(tVis,memc(pGains),memd(pTimes),freq,ngains,nfeeds,
+     *    ntau,nsols,nfbin,maxgains,maxsols,maxfbin)
+        if (nfeeds+ntau.le.0) call bug('f','Bad number of feeds')
+        nants = ngains/(nfeeds+ntau)
 c
 c  Do the averaging.
 c
-	call AverIt(time,Gains,nsols,nants,ntau,nfeeds,
-     *	  interval,dovec,nnsols)
+	call AverIt(memd(pTimes),memc(pGains),memd(oTimes),memc(oGains),
+     *    nsols,nants,ntau,nfeeds,nfbin,interval,dovec,nnsols)
 c
 c  Now write out the new gain solutions.
 c
@@ -178,44 +163,31 @@ c
 	call rdhdd(tVis,'interval',int1,0.d0)
 	dtemp = max(int1,interval)
 	call wrhdd(tVis,'interval',dtemp)
-	call haccess(tVis,tGains,'gains','write',iostat)
-	if(iostat.ne.0)call AverBug(iostat,'Error reopening gain table')
-c
-	call hwritei(tGains,0,0,4,iostat)
-	if(iostat.ne.0)
-     *	  call AverBug(iostat,'Error writing gain table preamble')
-c
-	offset = 8
-	pnt = 1
-	do i=1,nnsols
-	  call hwrited(tGains,time(i),offset,8,iostat)
-	  offset = offset + 8
-	  if(iostat.eq.0)call hwriter(tGains,Gains(pnt),offset,8*ngains,
-     *								 iostat)
-	  pnt = pnt + ngains
-	  offset = offset + 8*ngains
-	  if(iostat.ne.0)call Averbug(iostat,'Error writing gain table')
-	enddo
-c
-	call hdaccess(tGains,iostat)
-	if(iostat.ne.0)call AverBug(iostat,'Error reclosing gain table')
+        call uvGnWrit(tVis,memc(oGains),memd(oTimes),freq,ngains,
+     *                nnsols,nfbin,maxgains,maxsols,maxfbin,.true.)
+        call memFree(pTimes,maxsols,'d')
+        call memFree(pGains,maxgains,'c')
+        call memFree(oTimes,maxsols,'d')
+        call memFree(oGains,maxgains,'c')
 c
 	end
 c************************************************************************
-	subroutine AverIt(time,Gains,nsols,nants,ntau,nfeeds,
-     *	  interval,dovec,nnsols)
+	subroutine AverIt(time,Gains,oTimes,oGains,nsols,nants,ntau,
+     *    nfeeds,nfbin,interval,dovec,nnsols)
 c
 	implicit none
-	integer nsols,nants,ntau,nfeeds,nnsols
-	double precision time(nsols),interval
+	integer nsols,nants,ntau,nfeeds,nfbin,nnsols
+	double precision time(nsols),interval,oTimes(nsols)
 	logical dovec
-	complex Gains((nfeeds+ntau)*nants,nsols)
+	complex Gains((nfeeds+ntau)*nants,nsols,0:nfbin)
+	complex oGains((nfeeds+ntau)*nants*nsols*(nfbin+1))
 c
 c  Do the actual averaging.
 c
 c  Input:
 c    nsols	Number of input solutions.
 c    nants,ntau,nfeeds Number of antenna, delay/atten terms, feeds.
+c    nfbin      Number of freq bins
 c    interval	Averaging interval.
 c    dovec	Do vector averaging if true.
 c  Input/Output:
@@ -227,7 +199,7 @@ c------------------------------------------------------------------------
 	include 'maxdim.h'
 	complex AvGains(3*MAXANT),t
 	real AvAmps(3*MAXANT)
-	integer Count(3*MAXANT),CountT,totgood,ngains,i,j,n
+	integer Count(3*MAXANT),CountT,totgood,ngains,i,j,n,k,off
 	double precision Tend,AvT
 	logical tau
 c
@@ -238,70 +210,77 @@ c
      *	  call bug('f','Buffers too small, in AverIt')
 c
 c  Loop over all the gains, accumulating while we go.
+c  Loop backwards over the bins, updating the times using the 
+c  continuum solution
 c
-	totgood = 0
-	nnsols = 0
-	Tend = time(1) - 1
-	do j=1,nsols
+        off = 1
+        do k=0,nfbin
+	  totgood = 0
+	  nnsols = 0
+	  Tend = time(1) - 1
+	  do j=1,nsols
 c
 c  We have finished a solution interval. Update the gains.
 c
-	  if(time(j).gt.Tend)then
-	    if(totgood.gt.0)then
-	      nnsols = nnsols + 1
-	      time(nnsols) = AvT / CountT
-	      call NewG(nfeeds,ntau,nants,Gains(1,nnsols),
+	    if(time(j).gt.Tend)then
+	      if(totgood.gt.0)then
+	        nnsols = nnsols + 1
+	        if (k.eq.0) oTimes(nnsols) = AvT / CountT
+	        call NewG(nfeeds,ntau,nants,oGains(off),
      *			AvGains,AvAmps,Count,dovec)
-	    endif
+                off = off + (nfeeds+ntau)*nants
+	      endif
 c
 c  Initialise the accumulates with a new interval.
 c
-	    n = 0
-	    do i=1,ngains
-	      t = Gains(i,j)
-	      tau = ntau.eq.1.and.mod(j,nfeeds+ntau).eq.0
-	      if(tau)then
-		AvGains(i) = t
-		Count(i) = 1
-	      else if(abs(real(t))+abs(aimag(t)).gt.0)then
-		t = 1/t
-		AvGains(i) = t
-		AvAmps(i) = abs(t)
-		Count(i) = 1
-		n = n + 1
-	      else
-		AvGains(i) = 0
-		AvAmps(i) = 0
-		Count(i) = 0
-	      endif
-	    enddo
-	    AvT = time(j)
-	    CountT = 1
-	    totgood = n
-	    if(totgood.gt.0)Tend = AvT + interval
+	      n = 0
+	      do i=1,ngains
+	        t = Gains(i,j,k)
+	        tau = ntau.eq.1.and.mod(j,nfeeds+ntau).eq.0
+	        if(tau.and.k.eq.0)then
+		  AvGains(i) = t
+		  Count(i) = 1
+	        else if(abs(real(t))+abs(aimag(t)).gt.0)then
+		  t = 1/t
+		  AvGains(i) = t
+		  AvAmps(i) = abs(t)
+		  Count(i) = 1
+		  n = n + 1
+	        else
+		  AvGains(i) = 0
+		  AvAmps(i) = 0
+		  Count(i) = 0
+	        endif
+	      enddo
+	      AvT = time(j)
+	      CountT = 1
+	      totgood = n
+	      if(totgood.gt.0)Tend = AvT + interval
 c
 c  Otherwise keep on accumulating.
 c
-	  else
-	    call AccG(nfeeds,ntau,nants,Gains(1,j),
+	    else
+	      call AccG(nfeeds,ntau,nants,Gains(1,j,k),
      *				AvGains,AvAmps,Count,n)
-	    totgood = totgood + n
-	    if(n.gt.0)then
-	      AvT = AvT + time(j)
-	      CountT = CountT + 1
+	      totgood = totgood + n
+	      if(n.gt.0)then
+	        AvT = AvT + time(j)
+	        CountT = CountT + 1
+	      endif
 	    endif
-	  endif
 c
-	enddo
+	  enddo
 c
 c  Finish with the last solution interval.
 c
-	if(totgood.gt.0)then
-	  nnsols = nnsols + 1
-	  time(nnsols) = AvT / CountT
-	  call NewG(nfeeds,ntau,nants,Gains(1,nnsols),
+	  if(totgood.gt.0)then
+	    nnsols = nnsols + 1
+	    if (k.eq.0) oTimes(nnsols) = AvT / CountT
+	    call NewG(nfeeds,ntau,nants,oGains(off),
      *			AvGains,AvAmps,Count,dovec)
-	endif
+            off = off + (nfeeds+ntau)*nants
+	  endif
+        enddo
 c
 	end
 c************************************************************************
