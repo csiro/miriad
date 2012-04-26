@@ -94,8 +94,8 @@ c  Leaks    Polarisation leakage parameters.
 c  nLeaks   Number of polarisation leakage parameters.
 c
 	include 'maxdim.h'
-	integer MAXPOL,MAXPRE,MAXFBIN
-	parameter(MAXPOL=4,MAXPRE=8,MAXFBIN=16)
+	integer MAXPOL,MAXPRE
+	parameter(MAXPOL=4,MAXPRE=8)
 c
 	integer PolII,PolI,PolQ,PolU,PolV,PolRR,PolLL,PolRL,PolLR
 	integer PolXX,PolYY,PolXY,PolYX,PolQQ,PolUU,PolMin,PolMax

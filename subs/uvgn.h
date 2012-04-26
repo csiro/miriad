@@ -36,9 +36,9 @@ c  aver
 c  
 c
 	include 'maxdim.h'
-	integer MAXTAB,MAXFEEDS,MAXGAINS,MAXSPECT,MAXSOLN, MAXFBIN
+	integer MAXTAB,MAXFEEDS,MAXGAINS,MAXSPECT,MAXSOLN
 	parameter(MAXTAB=8096,MAXFEEDS=2,MAXSPECT=MAXWIN)
-	parameter(MAXGAINS=3*MAXANT, MAXSOLN=1024, MAXFBIN=16)
+	parameter(MAXGAINS=3*MAXANT, MAXSOLN=1024)
 	integer t1,t2,nsols,nants,nfeeds,ntau,ngains,gitem,solno(MAXTAB)
         integer nbpsols,bpsolno,nfbin
         integer b(2,MAXCHAN)
