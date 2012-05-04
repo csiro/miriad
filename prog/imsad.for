@@ -2009,7 +2009,7 @@ c
         dde = pf(3,i)
 
         write(line2,3000) pf(2,i)*DR2AS, pf(3,i)*DR2AS
- 3000   format('Fitted offsets', 2(1x,1pe10.3), ' arcsec')
+ 3000   format('Fitted offsets', 2(1x,1pe11.4), ' arcsec')
         call output(line2)
 
         ra = ra0 + dra
