@@ -58,7 +58,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: co.for,v 1.44 2012/04/10 03:23:53 cal103 Exp $
+c $Id: co.for,v 1.45 2012/05/07 23:51:15 wie017 Exp $
 c***********************************************************************
 
 c* coCtype -- Parse a world coordinate ctype.
@@ -801,7 +801,6 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
       icrd = coLoc(lu,.false.)
 
-      axtype = ' '
       wtype  = ' '
       units  = ' '
 
@@ -816,6 +815,7 @@ c       Don't alter axtype - it might be given as a character constant.
         call coCtype(ctype(iax,icrd), dummy, wtype, algo, units, scl)
 
       else
+        axtype = ' '
         call coCtype(ctype(iax,icrd), axtype, wtype, algo, units, scl)
       endif
 
