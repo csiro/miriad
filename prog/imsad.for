@@ -1272,6 +1272,7 @@ c
       if (naxis.eq.0) call bug('f','Zero dimensions in image')
       naxis = min(naxis,MAXNAX)
       if (nsize(1).gt.MAXDIM) call bug('f','Input file to big')
+      call output('Image: '//file)
 c
 c Setup the region of interest
 c
