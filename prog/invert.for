@@ -161,7 +161,12 @@ c                   only to create the normal beam.  If the spectral
 c                   dirty beam is created, this is saved as an extra
 c                   plane in the beam dataset.
 c         mosaic    Process multiple pointings, and generate a linear
-c                   mosaic of these pointings.
+c                   mosaic of these pointings. For single pointings
+c                   to be combined with linmos you can use this to 
+c                   specify a common reference position with the
+c                   offset parameter. Observations using OTF mosaicing
+c                   always need to specify this to ensure the moving
+c                   beam is handled properly.
 c         imaginary Make imaginary image for non-Hermitian data
 c                   (holography).
 c         amplitude Produce a image using the data amplitudes only.  The
@@ -215,7 +220,7 @@ c       replaced with 0, or to be estimated by linear interpolation of
 c       two adjacent good channels.  See the Users Guide for the merits
 c       and evils of the two approaches.  The default is 'zero'.
 c
-c$Id: invert.for,v 1.14 2012/03/21 00:33:14 wie017 Exp $
+c$Id: invert.for,v 1.15 2012/05/14 02:35:15 wie017 Exp $
 c--
 c  History
 c    rjs        89  Initial version
@@ -388,8 +393,8 @@ c
       data slops/'zero        ','interpolate '/
 c-----------------------------------------------------------------------
       version = versan ('invert',
-     :                  '$Revision: 1.14 $',
-     :                  '$Date: 2012/03/21 00:33:14 $')
+     :                  '$Revision: 1.15 $',
+     :                  '$Date: 2012/05/14 02:35:15 $')
 c
 c  Get the input parameters. Convert all angular things into
 c  radians as soon as possible!!
