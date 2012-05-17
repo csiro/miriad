@@ -33,13 +33,18 @@ c@ xaxis
 c       The x-axis can be plotted as 'channel', 'frequency' ('FREQ'),
 c       'radio' velocity ('VELO'), 'optical' velocity ('FELO'), or the
 c       units in the image.  The default is whatever units are in the
-c       header.
+c       header. A second value will overwrite the default label for this
+c       axis. You can use pgplot escape characters to change fonts
+c       and sub/superscript level, e.g., 
+c       'Optical Velocity, \ficz\fr km\u-1s\d' will write 'cz' in 
+c        italics and '-1' as a superscript.
 c@ yaxis
 c       If 'average' then the pixels enclosed in the x-y area specified
 c       are averaged.  If 'sum' they are summed and normalized if the
 c       units are known.  If 'point' they are optimally weighted
 c       according to the beam parameters, assuming that the source is
-c       unresolved.  Default is 'average'
+c       unresolved.  Default is 'average'. A second value will overwrite
+c       the default label for this axis.
 c@ xrange
 c       X-axis range for plot.  The default is to self-scale to the
 c       region requested.  The units are km/s for velocity and MHz for
@@ -144,7 +149,7 @@ c
 c Note that this program does not report its version number so that gif
 c and ps output can be piped.
 c
-c$Id: mbspect.for,v 1.17 2012/03/02 08:04:20 cal103 Exp $
+c$Id: mbspect.for,v 1.18 2012/05/17 05:37:44 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -173,7 +178,7 @@ c-----------------------------------------------------------------------
       character algo*3, comment*80, cpoly*64, dec1*13, dec2*13,
      *          device*64, in*132, logf*132, object*9, out*132, ra1*13,
      *          ra2*13, str*3, txt*72, unit0*16, version*80, xaxis*64,
-     *          xlabel*64, yaxis*64, ylabel*64
+     *          xlabel*64, yaxis*64, ylabel*64, xlab*64, ylab*64
 
       external  hangle, itoaf, keyprsnt, len1, pgbeg, rangle, versan
       logical   keyprsnt
@@ -182,8 +187,8 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 c     Don't report the ID so that gif and ps output can be piped.
       version = versan ('-mbspect',
-     *                  '$Revision: 1.17 $',
-     *                  '$Date: 2012/03/02 08:04:20 $')
+     *                  '$Revision: 1.18 $',
+     *                  '$Date: 2012/05/17 05:37:44 $')
 
 c     Get inputs.
       call keyini
@@ -196,7 +201,9 @@ c     Get inputs.
       if (mod(width(1),2).ne.1 .or. mod(width(2),2).ne.1)
      *  call bug('f', 'width must be an odd number')
       call keya('xaxis',xaxis,' ')
+      call keya('xaxis',xlab,' ')
       call keya('yaxis',yaxis,'average')
+      call keya('yaxis',ylab,' ')
       call keyr('xrange',xrange(1),0.0)
       call keyr('xrange',xrange(2),xrange(1))
       if (xrange(1).eq.xrange(2) .and. xrange(1).ne.0.0)
@@ -504,6 +511,8 @@ c     Optionally Hanning smooth spectrum..
 c     Get plot axes, convert units, and write labels.
       call axes(lIn,ispc,naxis,nchan,wpix,chan,xaxis,yaxis,
      *  xlabel,ylabel,value,spec,unit0)
+      if (xlab.ne.' ') xlabel=xlab
+      if (ylab.ne.' ') ylabel=ylab
 
 c     Optionally take derivatives.
       if (deriv1 .or. deriv2) call der(deriv1, nchan, spec, work)
