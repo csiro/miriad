@@ -139,6 +139,12 @@ c       (which is ~ 1/40 of the view surface height) for the plot axis
 c       labels and the title.
 c       Defaults try to choose something sensible.  Use 0.0 to default
 c       any particular value.
+c@ lines
+c       Up to 2 values. Line widths for the axes and the plot.
+c       Defaults to 1,1.
+c@ colors
+c       Up to 3 values. Colors for the main spectrum, the polynomial 
+c       fit and the 'measure' parameters. Defaults to 1,2,3
 c@ log
 c       Write spectrum to this ascii file. Spectral axis units are as
 c       specified by the xaxis keyword. Default is no output file.
@@ -149,7 +155,7 @@ c
 c Note that this program does not report its version number so that gif
 c and ps output can be piped.
 c
-c$Id: mbspect.for,v 1.18 2012/05/17 05:37:44 wie017 Exp $
+c$Id: mbspect.for,v 1.19 2012/05/18 02:24:33 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -165,7 +171,7 @@ c-----------------------------------------------------------------------
       integer   blc(MAXNAX), i, ierr, ilat, ilng, imax, iostat, ispc, j,
      *          jmax, k, lIn, lOut, naxis, nchan, nmask, nsize(MAXNAX),
      *          nsmth, pblc(MAXNAX), poly, ptrc(MAXNAX), trc(MAXNAX),
-     *          width(2)
+     *          width(2),linew(2),color(3)
       real      bmaj, bmin, bpa, cdelt1, cdelt2, cdelt3, cdeltd, cdeltr,
      *          chan(maxdim), clip(2), coeffs(MAXCO), csize(2), epoch,
      *          fac, fit(maxdim), hwork(MAXCO), lab1, lab2,
@@ -187,8 +193,8 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 c     Don't report the ID so that gif and ps output can be piped.
       version = versan ('-mbspect',
-     *                  '$Revision: 1.18 $',
-     *                  '$Date: 2012/05/17 05:37:44 $')
+     *                  '$Revision: 1.19 $',
+     *                  '$Date: 2012/05/18 02:24:33 $')
 
 c     Get inputs.
       call keyini
@@ -250,6 +256,12 @@ c     Get inputs.
       call keya('device',device,' ')
       call keyr('csize',csize(1),0.0)
       call keyr('csize',csize(2),csize(1))
+      call keyi('lines',linew(1),1)
+      call keyi('lines',linew(2),1)
+      call keyi('colors',color(1),1)
+      call keyi('colors',color(2),2)
+      call keyi('colors',color(3),3)
+      
       call keya('log',logf,' ')
       comment = ' '
       do while (keyprsnt('comment'))
@@ -586,14 +598,20 @@ c       Label sizes.
         endif
 
         call pgswin(xdmin, xdmax, ydmin, ydmax)
-        call pgbox('BCNTS1',0.0,0.0,'BCNTS',0.0,0.0)
+        call pgslw(linew(1))
+        call pgbox('BCTS',0.0,0.0,'BCTS',0.0,0.0)
+        call pgslw(1)
+        call pgbox('N1',0.0,0.0,'N',0.0,0.0)
 
+        call pgslw(linew(2))
+        call pgsci(color(1))
         if (histo) then
           call pgHline(nchan,value,spec,2.0)
         else
           call pgline(nchan,value,spec)
         endif
-
+        
+        call pgsci(color(2))
         if (poly.ge.0) then
           if (subpoly) then
             call pgmove(xdmin,0.0)
@@ -607,9 +625,7 @@ c       Label sizes.
               call pgsls(1)
             endif
           else
-            call pgsci(2+poly)
             call pgline(nchan,value,fit)
-            call pgsci(1)
             if (measure .and.
      *         (clip(1).ne.0.0 .or. clip(2).ne.0.0)) then
               call pgsls(2)
@@ -633,18 +649,17 @@ c       Label sizes.
 
         if (measure .and.
      *     (profile(1).ne.0.0 .or. profile(2).ne.0.0)) then
-          call pgsci(2)
           call pgsls(4)
           call pgmove(profile(1),ydmin)
           call pgdraw(profile(1),ydmax)
           call pgmove(profile(2),ydmin)
           call pgdraw(profile(2),ydmax)
           call pgsls(1)
-          call pgsci(1)
         endif
-
+        call pgslw(1)
+        call pgsci(1)
+        
 c       Axis labelling, except for options=pstyle2.
-
         if (.not.pstyle2) call pglab(xlabel,ylabel,' ')
 
 c       Title and extra information.
@@ -709,7 +724,7 @@ c     Measure spectral parameters.
       if (measure) then
         if (posfit) call output('#     ...updating position')
         call vmom(nchan,value,spec,fit,xaxis,unit0,clip,
-     *            profile,work,work1,poly,subpoly,device,serr)
+     *            profile,work,work1,poly,subpoly,device,serr,color(3))
       endif
 
 c     Close graphics.
@@ -1549,9 +1564,9 @@ c  Iteration count
 c***********************************************************************
 
       subroutine vmom (nchan,value,spec,fit,xaxis,unit0,clip,
-     *                 profile,work,work1,poly,subpoly,device,serr)
+     *                 profile,work,work1,poly,subpoly,device,serr,ci)
 
-      integer nchan,npts,poly
+      integer nchan,npts,poly,ci
       real profile(*),fit(*), serr
       real spec(nchan), value(nchan), clip(*), work(*), work1(*)
       character*(*) xaxis, unit0, device
@@ -1859,7 +1874,7 @@ c
            d(4)=fit(i20a(1)+jprof)
            d(5)=fit(i20b(1)+jprof)
          endif
-         call pgsci(2)
+         call pgsci(ci)
          call pgpt(1,work(fmax),sg*spmaxa+d(1),-10)
          if (.not.skip50) then
            call pgpt(1,v50a,sg*spmaxa/2.0+d(2),4)
@@ -1986,7 +2001,7 @@ c
            d(4)=fit(i20a(1)+jprof)
            d(5)=fit(i20b(1)+jprof)
          endif
-         call pgsci(2)
+         call pgsci(ci)
          if (.not.skip50) then
            call pgpt(1,v50a,sg*spmaxa/2.0+d(2),5)
            call pgpt(1,v50b,sg*spmaxb/2.0+d(3),5)
