@@ -118,7 +118,7 @@
 *      - also remember per keyword which program used it, such that they can
 *        be used next to each other
 *
-* $Id: miriad.c,v 1.6 2007/06/12 04:59:46 cal103 Exp $
+* $Id: miriad.c,v 1.7 2012/05/20 22:58:02 wie017 Exp $
 *****************************************************************************/
 
 #include <ctype.h>
@@ -1081,8 +1081,9 @@ char *name;
     while(*s && *s != ' ' && *s != '\t' && *s != '=')s++;
     while(*s && (*s == ' ' || *s == '\t' || *s == '='))*s++ = 0;
     argv[2] = s;
-    while(*s && *s != ' ' && *s != '\t' && *s != '\n')s++;
+    while(*s && *s != '\t' && *s != '\n')s++;
     *s = 0;
+    while (s-->argv[2] && *s ==' ') *s = 0; 
     if(*argv[2])doset(3,argv);
   }
   fclose(fd);
