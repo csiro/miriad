@@ -172,7 +172,7 @@ c       For concatenated spectra the width of a single zoom is used.
 c       Note that noise and artefacts go up quickly towards the band 
 c       edge so making this much smaller will not gain you much.
 c
-c$Id: atlod.for,v 1.37 2011/12/12 02:32:58 wie017 Exp $
+c$Id: atlod.for,v 1.38 2012/05/29 03:30:56 wie017 Exp $
 c--
 c
 c  Program Structure:
@@ -330,8 +330,9 @@ c    mhw  26oct10 Fix birdie flagging in 20/13 cm band
 c    mhw  11nov10 Record scan direction for otfmos scans
 c    mhw  23nov10 Fix for CABB 33 channel (64MHz) mode
 c    mhw  07feb11 Add edge keyword to control birdie/edge flagging
+c    mhw  29may12 Make opcor more accurate for wide bands
 c
-c $Id: atlod.for,v 1.37 2011/12/12 02:32:58 wie017 Exp $
+c $Id: atlod.for,v 1.38 2012/05/29 03:30:56 wie017 Exp $
 c-----------------------------------------------------------------------
 
         integer MAXFILES,MAXTIMES,MAXSIM
@@ -352,8 +353,8 @@ c
         character itoaf*8, rperr*32, versan*80
 c-----------------------------------------------------------------------
       version = versan ('atlod',
-     :                  '$Revision: 1.37 $',
-     :                  '$Date: 2011/12/12 02:32:58 $')
+     :                  '$Revision: 1.38 $',
+     :                  '$Date: 2012/05/29 03:30:56 $')
 c
 c  Get the input parameters.
 c
@@ -636,7 +637,7 @@ c
 c  Initialise the Poke routines.
 c-----------------------------------------------------------------------
         include 'atlod.h'
-        integer bl,p,if,bin
+        integer bl,p,iif,bin
         logical ok
 c
         sname  = ' '
@@ -662,22 +663,22 @@ c
         nants = 0
         nifs = 0
         nused = 0
-        do if=1,ATIF
-          nstoke(if) = 0
-          nfreq(if) = 0
+        do iif=1,ATIF
+          nstoke(iif) = 0
+          nfreq(iif) = 0
         enddo
 c
 c  Reset the counters, etc.
 c
-        do if=1,ATIF
-          nbin(if) = 0
+        do iif=1,ATIF
+          nbin(iif) = 0
         enddo
         inttim = 0
         do bin=1,ATBIN
           do bl=1,ATBASE
             do p=1,ATPOL
-              do if=1,ATIF
-                pnt(if,p,bl,bin) = 0
+              do iif=1,ATIF
+                pnt(iif,p,bl,bin) = 0
               enddo
             enddo
           enddo
@@ -933,9 +934,9 @@ c-----------------------------------------------------------------------
 c
         end
 c***********************************************************************
-        subroutine PokeIF(if,nfreq1,bw,freq,ref,rfreq,nstok,cstok,ifc)
+        subroutine PokeIF(iif,nfreq1,bw,freq,ref,rfreq,nstok,cstok,ifc)
 c
-        integer if,nfreq1,nstok,ifc
+        integer iif,nfreq1,nstok,ifc
         character cstok(nstok)*(*)
         double precision freq,bw,ref,rfreq
 c
@@ -949,55 +950,55 @@ c  Externals.
 c
         integer PolsP2C
 c
-        if(if.gt.nifs)call bug('f','Invalid IF in PokeIF')
+        if(iif.gt.nifs)call bug('f','Invalid IF in PokeIF')
         if(nstok.gt.ATPOL)call bug('f',
      *          'Invalid number of polarisation parameters in PokeIF')
 c
-        nfreq(if) = nfreq1
-        if(nfreq(if).gt.1)then
-          sdf(if) = 1e-9*bw / (nfreq(if) - 1)
+        nfreq(iif) = nfreq1
+        if(nfreq(iif).gt.1)then
+          sdf(iif) = 1e-9*bw / (nfreq(iif) - 1)
         else
-          sdf(if) = 1e-9*abs(bw)
+          sdf(iif) = 1e-9*abs(bw)
         endif
-        if(abs(sdf(if)).eq.0)
+        if(abs(sdf(iif)).eq.0)
      *    call bug('w','Channel width in RPFITS file is 0')
-        sfreq(if) = 1e-9*freq - (ref-1)*sdf(if)
-        edge(if) = 0
-        bchan(if) = 0
+        sfreq(iif) = 1e-9*freq - (ref-1)*sdf(iif)
+        edge(iif) = 0
+        bchan(iif) = 0
 c
 c  If we are working in "birdie" mode, compute the channel with the
 c  128MHz LO signal in it for pre-CABB data
 c
-        if(.not.cabb.and.birdie.and.nfreq(if).eq.33)then
-          call birdchan(sfreq(if),sdf(if),nfreq(if),t)
+        if(.not.cabb.and.birdie.and.nfreq(iif).eq.33)then
+          call birdchan(sfreq(iif),sdf(iif),nfreq(iif),t)
 c
-          edge(if) = 3 + mod(t,2)
-          sfreq(if) = sfreq(if) + edge(if)*sdf(if)
-          sdf(if) = 2*sdf(if)
-          nfreq(if) = (nfreq(if)-2*edge(if)+1)/2
+          edge(iif) = 3 + mod(t,2)
+          sfreq(iif) = sfreq(iif) + edge(iif)*sdf(iif)
+          sdf(iif) = 2*sdf(iif)
+          nfreq(iif) = (nfreq(iif)-2*edge(iif)+1)/2
         endif
 c
-        if(dohann.and.nfreq(if).gt.33)then
-          edge(if) = 1
-          sfreq(if) = sfreq(if) + sdf(if)
-          sdf(if) = 2*sdf(if)
-          nfreq(if) = (nfreq(if)-1)/2
+        if(dohann.and.nfreq(iif).gt.33)then
+          edge(iif) = 1
+          sfreq(iif) = sfreq(iif) + sdf(iif)
+          sdf(iif) = 2*sdf(iif)
+          nfreq(iif) = (nfreq(iif)-1)/2
         endif
 c
 c  If birdie mode, flag out the birdie channel.
 c
         if(.not.cabb.and.birdie)then
-          call birdchan(sfreq(if),sdf(if),nfreq(if),bchan(if))
+          call birdchan(sfreq(iif),sdf(iif),nfreq(iif),bchan(iif))
         else
-          bchan(if) = 0
+          bchan(iif) = 0
         endif
 c
-        nstoke(if) = nstok
-        restfreq(if) = 1e-9 * rfreq
-        ifchain(if) = ifc
+        nstoke(iif) = nstok
+        restfreq(iif) = 1e-9 * rfreq
+        ifchain(iif) = ifc
 c
-        do p=1,nstoke(if)
-          polcode(if,p) = PolsP2C(cstok(p))
+        do p=1,nstoke(iif)
+          polcode(iif,p) = PolsP2C(cstok(p))
         enddo
 c
         newfreq = .true.
@@ -1050,12 +1051,12 @@ c
         refnant = nant1
         end
 c***********************************************************************
-        subroutine PokeSC(ant,if,chi1,tcorr1,
+        subroutine PokeSC(ant,iif,chi1,tcorr1,
      *          xtsys1,ytsys1,xyphase1,xyamp1,xsamp,ysamp,
      *          xgtp1,ygtp1,xsdo1,ysdo1,xcaljy1,ycaljy1,
      *          pntrms,pntmax)
 c
-        integer ant,if,tcorr1
+        integer ant,iif,tcorr1
         real chi1,xtsys1,ytsys1,xyphase1,xyamp1
         real xgtp1,ygtp1,xsdo1,ysdo1,xcaljy1,ycaljy1
         real xsamp(3),ysamp(3),pntrms,pntmax
@@ -1063,35 +1064,35 @@ c
 c  Save the SYSCAL group info.
 c-----------------------------------------------------------------------
         include 'atlod.h'
-        if(ant.gt.nants.or.if.gt.nifs)call bug('f',
+        if(ant.gt.nants.or.iif.gt.nifs)call bug('f',
      *                          'Invalid Ant or IF in PokeSC')
 c
         tcorr = tcorr1
         chi = chi1
         axisrms(ant)=pntrms
         axismax(ant)=pntmax
-        xtsys(if,ant) = xtsys1
-        ytsys(if,ant) = ytsys1
-        xyphase(if,ant) = xyphase1
-        xyamp(if,ant) = xyamp1
+        xtsys(iif,ant) = xtsys1
+        ytsys(iif,ant) = ytsys1
+        xyphase(iif,ant) = xyphase1
+        xyamp(iif,ant) = xyamp1
 c
 c CABB
 c
         if (cabb) then
-          xgtp(if,ant) = xgtp1
-          ygtp(if,ant) = ygtp1
-          xsdo(if,ant) = xsdo1
-          ysdo(if,ant) = ysdo1
-          xcaljy(if,ant) = xcaljy1
-          ycaljy(if,ant) = ycaljy1
+          xgtp(iif,ant) = xgtp1
+          ygtp(iif,ant) = ygtp1
+          xsdo(iif,ant) = xsdo1
+          ysdo(iif,ant) = ysdo1
+          xcaljy(iif,ant) = xcaljy1
+          ycaljy(iif,ant) = ycaljy1
         else
-          xsampler(1,if,ant) = xsamp(1)
-          xsampler(2,if,ant) = xsamp(2)
-          xsampler(3,if,ant) = xsamp(3)
+          xsampler(1,iif,ant) = xsamp(1)
+          xsampler(2,iif,ant) = xsamp(2)
+          xsampler(3,iif,ant) = xsamp(3)
 c
-          ysampler(1,if,ant) = ysamp(1)
-          ysampler(2,if,ant) = ysamp(2)
-          ysampler(3,if,ant) = ysamp(3)
+          ysampler(1,iif,ant) = ysamp(1)
+          ysampler(2,iif,ant) = ysamp(2)
+          ysampler(3,iif,ant) = ysamp(3)
         endif
 c
         newsc = .true.
@@ -1235,10 +1236,10 @@ c
 c
         end
 c***********************************************************************
-        subroutine PokeData(u1,v1,w1,baseln,if,bin,vis,nfreq1,nstoke1,
+        subroutine PokeData(u1,v1,w1,baseln,iif,bin,vis,nfreq1,nstoke1,
      *          flag1,inttime1,docon,doxyflip,xymode)
 c
-        integer nfreq1,nstoke1,if,baseln,bin,xymode
+        integer nfreq1,nstoke1,iif,baseln,bin,xymode
         real u1,v1,w1,inttime1
         logical flag1(nstoke1),docon,doxyflip
         complex vis(nfreq1*nstoke1)
@@ -1262,9 +1263,9 @@ c
         real rscr(2*ATCONT-2),gtp,sdo
         complex cscr(ATCONT)
 c
-        if(if.gt.nifs)call bug('f',
+        if(iif.gt.nifs)call bug('f',
      *          'Incorrect IF number')
-        if(nstoke1.ne.nstoke(if))call bug('f',
+        if(nstoke1.ne.nstoke(iif))call bug('f',
      *          'Inconsistent number of polarisations')
         i2 = baseln / 256
         i1 = mod(baseln,256)
@@ -1296,83 +1297,83 @@ c
 c  Remove the phase switching.
 c
         if(dopmps)
-     *    call deswitch(vis,nstoke(if),nfreq1,time,inttime(bl),i1,i2)
+     *    call deswitch(vis,nstoke(iif),nfreq1,time,inttime(bl),i1,i2)
 c
 c  Reweight the data, if needed.
 c
         if(dowt.and.nfreq1.eq.ATCONT)
-     *    call Reweight(vis,cscr,rscr,nstoke(if),nfreq1,wts)
+     *    call Reweight(vis,cscr,rscr,nstoke(iif),nfreq1,wts)
 c
 c  Do the 8 MHz de-birdie'ing operation.
 c
         if(birdie.and.
-     *     abs(abs(nfreq(if)*sdf(if))-0.008).lt.0.0001)then
-          call do8(vis,nstoke(if),nfreq(if),sfreq(if),sdf(if))
+     *     abs(abs(nfreq(iif)*sdf(iif))-0.008).lt.0.0001)then
+          call do8(vis,nstoke(iif),nfreq(iif),sfreq(iif),sdf(iif))
         endif
 c
 c  Allocate buffer slots for each polarisation. Save the flags, Copy the
 c  data to the output. Do sampler corrections.
 c
         if(bin.gt.ATBIN)call bug('f','Invalid pulsar bin number')
-        do p=1,nstoke(if)
+        do p=1,nstoke(iif)
           ipnt = nused + 1
-          pnt(if,p,bl,bin) = ipnt
-          flag(if,p,bl,bin) = flag1(p)
-          nbin(if) = max(nbin(if),bin)
-          nused = nused + nfreq(if)
+          pnt(iif,p,bl,bin) = ipnt
+          flag(iif,p,bl,bin) = flag1(p)
+          nbin(iif) = max(nbin(iif),bin)
+          nused = nused + nfreq(iif)
           if(nused.gt.ATDATA)call bug('f','Buffer overflow in PokeData')
-          doneg = (polcode(if,p).eq.PolXY.or.
-     *             polcode(if,p).eq.PolYX).and.doxyflip
-          call DatCpy(nstoke(if),nfreq(if),nfreq1,
+          doneg = (polcode(iif,p).eq.PolXY.or.
+     *             polcode(iif,p).eq.PolYX).and.doxyflip
+          call DatCpy(nstoke(iif),nfreq(iif),nfreq1,
      *          dohann.and.nfreq1.gt.33,
      *          birdie.and.nfreq1.eq.33.and..not.cabb,
-     *          edge(if),doconj,doneg,vis(p),data(ipnt))
-          if(dosam)call SamCorr(nfreq(if),data(ipnt),polcode(if,p),
-     *          i2,i1,if,time,xsampler,ysampler,ATIF,ATANT)
+     *          edge(iif),doconj,doneg,vis(p),data(ipnt))
+          if(dosam)call SamCorr(nfreq(iif),data(ipnt),polcode(iif,p),
+     *          i2,i1,iif,time,xsampler,ysampler,ATIF,ATANT)
 c
 c  Do XY phase correction if needed.
 c
           if(doxyp.and.xymode.ne.0)then
             if(dosw(bl))then
-              pol = polcode(if,p)
+              pol = polcode(iif,p)
               if(pol.eq.PolXY)then
                 pol = PolYX
               else if(pol.eq.PolYX)then
                 pol = PolXY
               endif
-              call XypCorr(nfreq(if),data(ipnt),pol,
-     *          i1,i2,if,xyphase,ATIF,ATANT,xymode)
+              call XypCorr(nfreq(iif),data(ipnt),pol,
+     *          i1,i2,iif,xyphase,ATIF,ATANT,xymode)
             else
-              call XYpCorr(nfreq(if),data(ipnt),polcode(if,p),
-     *          i2,i1,if,xyphase,ATIF,ATANT,xymode)
+              call XYpCorr(nfreq(iif),data(ipnt),polcode(iif,p),
+     *          i2,i1,iif,xyphase,ATIF,ATANT,xymode)
             endif
           endif
-          if (polcode(if,p).eq.polXX) iXX=p
-          if (polcode(if,p).eq.polXY) iXY=p
-          if (polcode(if,p).eq.polYX) iYX=p
-          if (polcode(if,p).eq.polYY) iYY=p
+          if (polcode(iif,p).eq.polXX) iXX=p
+          if (polcode(iif,p).eq.polXY) iXY=p
+          if (polcode(iif,p).eq.polYX) iYX=p
+          if (polcode(iif,p).eq.polYY) iYY=p
         enddo
         
 c
 c  Undo online Tsys correction/calibration if needed
 c        
-        if (.not.dotsys.and.xsdo(if,i1).gt.0.and.xsdo(if,i2).gt.0.and.
-     *       ysdo(if,i1).gt.0.and.ysdo(if,i2).gt.0.and.
-     *       xcaljy(if,i1).gt.0.and.xcaljy(if,i2).gt.0.and.
-     *       ycaljy(if,i1).gt.0.and.ycaljy(if,i2).gt.0) then
-          do i=1,nfreq(if)
-            data(pnt(if,iXX,bl,bin)+i-1)=data(pnt(if,iXX,bl,bin)+i-1)*
-     *         sqrt(xsdo(if,i1)*xsdo(if,i2)/
-     *              xcaljy(if,i1)/xcaljy(if,i2))/1.e6
-            data(pnt(if,iXY,bl,bin)+i-1)=data(pnt(if,iXY,bl,bin)+i-1)*
-     *         sqrt(xsdo(if,i1)*ysdo(if,i2)/
-     *              xcaljy(if,i1)/ycaljy(if,i2))/1.e6
-            data(pnt(if,iYX,bl,bin)+i-1)=data(pnt(if,iYX,bl,bin)+i-1)*
-     *         sqrt(ysdo(if,i1)*xsdo(if,i2)/
-     *              ycaljy(if,i1)/xcaljy(if,i2))/1.e6
-            data(pnt(if,iYY,bl,bin)+i-1)=data(pnt(if,iYY,bl,bin)+i-1)*
-     *         sqrt(ysdo(if,i1)*ysdo(if,i2)/
-     *              ycaljy(if,i1)/ycaljy(if,i2))/1.e6
+        if (.not.dotsys.and.xsdo(iif,i1).gt.0.and.xsdo(iif,i2).gt.0.and.
+     *       ysdo(iif,i1).gt.0.and.ysdo(iif,i2).gt.0.and.
+     *       xcaljy(iif,i1).gt.0.and.xcaljy(iif,i2).gt.0.and.
+     *       ycaljy(iif,i1).gt.0.and.ycaljy(iif,i2).gt.0) then
+          do i=1,nfreq(iif)
+            data(pnt(iif,iXX,bl,bin)+i-1)=data(pnt(iif,iXX,bl,bin)+i-1)*
+     *         sqrt(xsdo(iif,i1)*xsdo(iif,i2)/
+     *              xcaljy(iif,i1)/xcaljy(iif,i2))/1.e6
+            data(pnt(iif,iXY,bl,bin)+i-1)=data(pnt(iif,iXY,bl,bin)+i-1)*
+     *         sqrt(xsdo(iif,i1)*ysdo(iif,i2)/
+     *              xcaljy(iif,i1)/ycaljy(iif,i2))/1.e6
+            data(pnt(iif,iYX,bl,bin)+i-1)=data(pnt(iif,iYX,bl,bin)+i-1)*
+     *         sqrt(ysdo(iif,i1)*xsdo(iif,i2)/
+     *              ycaljy(iif,i1)/xcaljy(iif,i2))/1.e6
+            data(pnt(iif,iYY,bl,bin)+i-1)=data(pnt(iif,iYY,bl,bin)+i-1)*
+     *         sqrt(ysdo(iif,i1)*ysdo(iif,i2)/
+     *              ycaljy(iif,i1)/ycaljy(iif,i2))/1.e6
           enddo
         endif
 c
@@ -1382,19 +1383,19 @@ c       the first cont. band, the 2nd cont band comes after the zooms
 c       for band 1.
 c        
         if(dopack.and.bin.eq.2.and.i1.eq.i2) then
-          do i=1,nfreq(if)
-            sdo=real(data(pnt(if,iXX,bl,2)+i-1) -
-     *               data(pnt(if,iXX,bl,1)+i-1))
-            gtp=real(data(pnt(if,iXX,bl,2)+i-1) +
-     *               data(pnt(if,iXX,bl,1)+i-1))/2
-            data(pnt(if,iXX,bl,1)+i-1)=cmplx(gtp,sdo)
-            sdo=real(data(pnt(if,iYY,bl,2)+i-1) -
-     *               data(pnt(if,iYY,bl,1)+i-1))
-            gtp=real(data(pnt(if,iYY,bl,2)+i-1) +
-     *               data(pnt(if,iYY,bl,1)+i-1))/2
-            data(pnt(if,iYY,bl,1)+i-1)=cmplx(gtp,sdo)
-            data(pnt(if,iYX,bl,1)+i-1)=data(pnt(if,iXY,bl,2)+i-1)-
-     *       data(pnt(if,iXY,bl,1)+i-1)
+          do i=1,nfreq(iif)
+            sdo=real(data(pnt(iif,iXX,bl,2)+i-1) -
+     *               data(pnt(iif,iXX,bl,1)+i-1))
+            gtp=real(data(pnt(iif,iXX,bl,2)+i-1) +
+     *               data(pnt(iif,iXX,bl,1)+i-1))/2
+            data(pnt(iif,iXX,bl,1)+i-1)=cmplx(gtp,sdo)
+            sdo=real(data(pnt(iif,iYY,bl,2)+i-1) -
+     *               data(pnt(iif,iYY,bl,1)+i-1))
+            gtp=real(data(pnt(iif,iYY,bl,2)+i-1) +
+     *               data(pnt(iif,iYY,bl,1)+i-1))/2
+            data(pnt(iif,iYY,bl,1)+i-1)=cmplx(gtp,sdo)
+            data(pnt(iif,iYX,bl,1)+i-1)=data(pnt(iif,iXY,bl,2)+i-1)-
+     *       data(pnt(iif,iXY,bl,1)+i-1)
           enddo
         endif
 c
@@ -1480,10 +1481,10 @@ c
 c
         end
 c***********************************************************************
-        subroutine XypCorr(nfreq,vis,pol,i1,i2,if,xyphase,ATIF,ATANT,
+        subroutine XypCorr(nfreq,vis,pol,i1,i2,iif,xyphase,ATIF,ATANT,
      *                     xymode)
 c
-        integer nfreq,pol,i1,i2,if,ATIF,ATANT,xymode
+        integer nfreq,pol,i1,i2,iif,ATIF,ATANT,xymode
         complex vis(nfreq)
         real xyphase(ATIF,ATANT)
 c
@@ -1497,9 +1498,9 @@ c-----------------------------------------------------------------------
         real theta,theta1,theta2
 c
         theta1 = 0
-        if(xymode.eq.i1.or.xymode.lt.0)theta1 = xyphase(if,i1)
+        if(xymode.eq.i1.or.xymode.lt.0)theta1 = xyphase(iif,i1)
         theta2 = 0
-        if(xymode.eq.i2.or.xymode.lt.0)theta2 = xyphase(if,i2)
+        if(xymode.eq.i2.or.xymode.lt.0)theta2 = xyphase(iif,i2)
 c
         theta = 0
         if(pol.eq.PolYY)then
@@ -1584,15 +1585,15 @@ c  Flush out a saved integration.
 c-----------------------------------------------------------------------
         include 'atlod.h'
         include 'mirconst.h'
-        integer NDATA
-        parameter(NDATA=MAXCHAN*MAXWIN)
-        integer i1,i2,if,p,bl,nchan,npol,ipnt,ischan(ATIF)
+        integer NDATA, NDIV
+        parameter(NDATA=MAXCHAN*MAXWIN, NDIV=32)
+        integer i,i1,i2,iif,p,bl,nchan,npol,ipnt,ischan(ATIF)
         integer tbinhi,tbin,binhi,binlo,bin
         complex vis(NDATA)
         logical flags(NDATA),doopcorr,wband
         double precision preamble(5),vel,lst,tdash,az,el
-        real buf(3*ATANT*ATIF),fac(ATIF,2),freq0(ATIF,2),Tb(ATIF,2)
-        real jyperk,tfac
+        real buf(3*ATANT*ATIF),fac(NDIV,ATIF),freq0(NDIV,ATIF)
+        real jyperk,tfac,Tb(NDIV,ATIF)
 c
 c  Externals.
 c
@@ -1608,28 +1609,28 @@ c
 c  In the case where we've packed bin 2 into bin 1 (for tsys and xyphase
 c  calculations later) we discard bin 2 here.
 c
-        do if=1,nifs
-          if (nbin(if).eq.2.and.dopack) nbin(if)=1
+        do iif=1,nifs
+          if (nbin(iif).eq.2.and.dopack) nbin(iif)=1
         enddo 
 
         if(newfreq)then
           if(doif)then
-            do if=2,nifs
-              if(nbin(if).ne.nbin(1))    call bug('f',
+            do iif=2,nifs
+              if(nbin(iif).ne.nbin(1))    call bug('f',
      *          'Number of bins differ between IFs. '//
      *          'Use options=noif.')
-              if(nstoke(if).ne.nstoke(1))call bug('f',
+              if(nstoke(iif).ne.nstoke(1))call bug('f',
      *          'Number of polarisations differ between IFs. '//
      *          'Use options=noif.')
-              do p=1,nstoke(if)
-                if(polcode(if,p).ne.polcode(1,p))call bug('f',
+              do p=1,nstoke(iif)
+                if(polcode(iif,p).ne.polcode(1,p))call bug('f',
      *          'Polarisation types differ between IFs. '//
      *          'Use options=noif.')
               enddo
             enddo
           else if(hires)then
-            do if=2,nifs
-              if(nbin(if).ne.nbin(1))    call bug('f',
+            do iif=2,nifs
+              if(nbin(iif).ne.nbin(1))    call bug('f',
      *          'Number of bins in different IFs must '//
      *                             'agree for options=hires')
             enddo
@@ -1685,9 +1686,11 @@ c  Get ready to apply opacity correction.
 c
           jyperk = getjpk(real(sfreq(1)))
 
-          do if=1,nifs
-            freq0(if,1) = sfreq(if)*1e9
-            freq0(if,2) = (sfreq(if) + (nfreq(if)-1)*sdf(if))*1e9
+          do iif=1,nifs
+            do i=1,NDIV
+              freq0(i,iif) = sfreq(iif)*1e9 + 
+     *         (nfreq(iif)-1)/(NDIV-1.0)*(i-1)*sdf(iif)*1e9
+            enddo
           enddo
           wband = freq0(1,1).gt.75e9
           doopcorr = .false.
@@ -1705,22 +1708,22 @@ c
               spress = 97.5*mdata(2)
               shumid = 0.01*mdata(3)
             endif
-            call opacGet(nifs,freq0(1,1),real(el),stemp,spress,shumid,
-     *                                               fac(1,1),Tb(1,1))
-            call opacGet(nifs,freq0(1,2),real(el),stemp,spress,shumid,
-     *                                               fac(1,2),Tb(1,2))
+            call opacGet(NDIV*nifs,freq0,real(el),stemp,spress,shumid,
+     *                   fac,Tb)
             doopcorr = .true.
             tfac = 1
-            do if=1,nifs
-              fac(if,1) = 1/fac(if,1)
-              fac(if,2) = 1/fac(if,2)
-              tfac = tfac * fac(if,1)* fac(if,2)
+            do iif=1,nifs
+              do i=1,NDIV
+                fac(i,iif) = 1/fac(i,iif)
+                tfac = tfac * fac(i,iif)
+              enddo
             enddo
-            jyperk = jyperk * tfac**(1.0/real(2*nifs))
+            jyperk = jyperk * tfac**(1.0/real(NDIV*nifs))
           else
-            do if=1,nifs
-              fac(if,1) = 1
-              fac(if,2) = 1
+            do iif=1,nifs
+              do i=1,NDIV
+                fac(i,iif) = 1
+              enddo
             enddo
           endif
 c
@@ -1738,30 +1741,30 @@ c  Handle the case that we are writing the multiple IFs out as multiple
 c  records.
 c
           if(.not.doif.and.nifs.gt.1)then
-            do if=1,nifs
+            do iif=1,nifs
               call uvputvri(tno,'nspect',1,1)
-              call uvputvri(tno,'npol',  nstoke(if),1)
-              call uvputvri(tno,'nschan',nfreq(if),1)
+              call uvputvri(tno,'npol',  nstoke(iif),1)
+              call uvputvri(tno,'nschan',nfreq(iif),1)
               call uvputvri(tno,'ischan',1,1)
-              call uvputvrd(tno,'sfreq', sfreq(if),1)
-              call uvputvrd(tno,'sdf',   sdf(if),  1)
-              call uvputvrd(tno,'restfreq',restfreq(if),1)
-              call uvputvri(tno,'ifchain',ifchain(if),1)
+              call uvputvrd(tno,'sfreq', sfreq(iif),1)
+              call uvputvrd(tno,'sdf',   sdf(iif),  1)
+              call uvputvrd(tno,'restfreq',restfreq(iif),1)
+              call uvputvri(tno,'ifchain',ifchain(iif),1)
               
               if(newsc)call ScOut(tno,chi,tcorr,
      *            xtsys,ytsys,xyphase,xyamp,
      *            xsampler,ysampler,xgtp,ygtp,xsdo,ysdo,xcaljy,ycaljy,
      *            axisrms,axismax,cabb,
-     *            ATIF,ATANT,nants,if,if,buf)
+     *            ATIF,ATANT,nants,iif,iif,buf)
               if(hires)then
                 binlo = tbin
                 binhi = tbin
               else
                 binlo = 1
-                binhi = nbin(if)
+                binhi = nbin(iif)
               endif
               do bin=binlo,binhi
-                if(.not.hires)call uvputvri(tno,'nbin',nbin(if),1)
+                if(.not.hires)call uvputvri(tno,'nbin',nbin(iif),1)
                 bl = 0
                 do i2=1,nants
                   do i1=1,i2
@@ -1771,22 +1774,22 @@ c
                     preamble(3) = w(bl)
                     preamble(4) = tdash
                     preamble(5) = 256*i1 + i2
-                    do p=1,nstoke(if)
-                      ipnt = pnt(if,p,bl,bin)
+                    do p=1,nstoke(iif)
+                      ipnt = pnt(iif,p,bl,bin)
                       if(ipnt.gt.0)then
-                        call PolPut(tno,polcode(if,p),dosw(bl))
-                        call GetFlag(flag(if,p,bl,bin),nfreq(if),
-     *                                            bchan(if),flags)
-                        call FlagNaN(data(ipnt),flags,nfreq(if))
-                        call rfiFlag(flags,NDATA,1,nfreq(if),
-     *                            sfreq(if),sdf(if),birdie,edgepc,tdash)
+                        call PolPut(tno,polcode(iif,p),dosw(bl))
+                        call GetFlag(flag(iif,p,bl,bin),nfreq(iif),
+     *                                            bchan(iif),flags)
+                        call FlagNaN(data(ipnt),flags,nfreq(iif))
+                        call rfiFlag(flags,NDATA,1,nfreq(iif),
+     *                         sfreq(iif),sdf(iif),birdie,edgepc,tdash)
                         if(.not.hires)call uvputvri(tno,'bin',bin,1)
                         call uvputvrr(tno,'inttime',inttime(bl),1)
                         if(doopcorr)
-     *                    call opapply(data(ipnt),nfreq(if),fac(if,1),
-     *                               fac(if,2))
+     *                    call opapply(data(ipnt),nfreq(iif),sfreq(iif),
+     *                       sdf(iif),fac(1,iif),freq0(1,iif),ATIF,NDIV)
                         call uvwrite(tno,preamble,data(ipnt),flags,
-     *                                                  nfreq(if))
+     *                                                  nfreq(iif))
 
                       endif
                     enddo
@@ -1801,8 +1804,8 @@ c
           else
             if(newfreq.and.tbin.eq.1)then
               ischan(1) = 1
-              do if=2,nifs
-                ischan(if) = ischan(if-1) + nfreq(if-1)
+              do iif=2,nifs
+                ischan(iif) = ischan(iif-1) + nfreq(iif-1)
               enddo
               call uvputvri(tno,'nspect',nifs,1)
               call uvputvri(tno,'ischan',ischan,nifs)
@@ -1839,8 +1842,8 @@ c
                     call uvputvri(tno,'npol',npol,1)
                     do p=1,nstoke(1)
                       call GetDat(data,nused,pnt(1,p,bl,bin),
-     *                  flag(1,p,bl,bin),nfreq,ATIF,fac,bchan,nifs,
-     *                  vis,flags,NDATA,nchan)
+     *                  flag(1,p,bl,bin),nfreq,sfreq,sdf,ATIF,NDIV,
+     *                  fac,freq0,bchan,nifs,vis,flags,NDATA,nchan)
                       if(nchan.gt.0)then
                         call rfiFlag(flags,NDATA,nifs,nfreq,sfreq,
      *                             sdf,birdie,edgepc,tdash)
@@ -1864,16 +1867,16 @@ c
         inttim = 0
         do bl=1,ATBASE
           do p=1,ATPOL
-            do if=1,nifs
-              do bin=1,nbin(if)
-                pnt(if,p,bl,bin) = 0
+            do iif=1,nifs
+              do bin=1,nbin(iif)
+                pnt(iif,p,bl,bin) = 0
               enddo
             enddo
           enddo
         enddo
 c
-        do if=1,nifs
-          nbin(if) = 0
+        do iif=1,nifs
+          nbin(iif) = 0
         enddo
 c
         mcount = 0
@@ -1920,23 +1923,30 @@ c
 c
         end
 c***********************************************************************
-        subroutine opapply(data,nchan,fac1,fac2)
+        subroutine opapply(data,nchan,sfreq,sdf,fac,freq,NDIV)
 c
-        integer nchan
-        real fac1,fac2
+        integer nchan,NDIV
+        double precision sfreq,sdf
+        real fac(NDIV),freq(NDIV)
         complex data(nchan)
 c-----------------------------------------------------------------------
-        integer i
+        integer i,i1,i2
+        real f,df
 c
-c       do linear interpolation across spectrum
+c       do piecewise linear interpolation across spectrum
 c
         if (nchan.gt.1) then
           do i=1,nchan
-            data(i) = (fac1*(nchan-i)/real(nchan-1)+
-     *                 fac2*i/real(nchan-1))*data(i)
+            i1 = 1+(i-1)/(nchan/(NDIV-1.0))
+            i2 = i1+1
+            f = sfreq + (i-1)*sdf
+            df = freq(i2)-freq(i1)
+            data(i) = (fac(i1)*(freq(i2)-f)/df+
+     *                 fac(i2)*(f-freq(i1))/df)
+     *                 * data(i)
           enddo
         else
-          data(1)=data(1)*fac1
+          data(1)=data(1)*fac(1)
         endif
 c
         end
@@ -2166,13 +2176,13 @@ c
 c  Write out the SYSTEMP variable, which we fudge to be the geometric
 c  mean of the xtsys and ytsys variables.
 c-----------------------------------------------------------------------
-        integer ant,if,cnt
+        integer ant,iif,cnt
 c
         cnt = 0
-        do if=if1,if2
+        do iif=if1,if2
           do ant=1,nants
             cnt = cnt + 1
-            buf(cnt) = sqrt(xtsys(if,ant)*ytsys(if,ant))
+            buf(cnt) = sqrt(xtsys(iif,ant)*ytsys(iif,ant))
           enddo
         enddo
 c
@@ -2188,14 +2198,14 @@ c
 c
 c  Write out a syscal variable.
 c-----------------------------------------------------------------------
-        integer ant,if,cnt,n
+        integer ant,iif,cnt,n
 c
         cnt = 0
-        do if=if1,if2
+        do iif=if1,if2
           do ant=1,nants
             do n=1,ndim
               cnt = cnt + 1
-              buf(cnt) = dat(n,if,ant)
+              buf(cnt) = dat(n,iif,ant)
             enddo
           enddo
         enddo
@@ -2211,27 +2221,28 @@ c
 c  Determine the number of valid Stokes records in this record.
 c-----------------------------------------------------------------------
         logical valid
-        integer p,if
+        integer p,iif
 c
         npol = 0
         do p=1,nstoke
           valid = .false.
-          do if=1,nifs
-            valid = valid.or.pnt(if,p).gt.0
+          do iif=1,nifs
+            valid = valid.or.pnt(iif,p).gt.0
           enddo
           if(valid)npol = npol + 1
         enddo
 c
         end
 c***********************************************************************
-        subroutine GetDat(data,nvis,pnt,flag,nfreq,ATIF,fac,bchan,nifs,
-     *                                  vis,flags,ndata,nchan)
+        subroutine GetDat(data,nvis,pnt,flag,nfreq,sfreq,sdf,ATIF,NDIV,
+     *                    fac,freq0,bchan,nifs,vis,flags,ndata,nchan)
 c
         integer nvis,nifs,pnt(nifs),nfreq(nifs),bchan(nifs),nchan
-        integer ndata,ATIF
+        integer ndata,ATIF,NDIV
         logical flag(nifs),flags(ndata)
+        double precision sfreq(ATIF),sdf(ATIF)
         complex vis(ndata),data(nvis)
-        real fac(ATIF,2)
+        real fac(NDIV,ATIF),freq0(NDIV,ATIF)
 c
 c  Construct a visibility record constructed from multiple IFs.
 c-----------------------------------------------------------------------
@@ -2254,16 +2265,19 @@ c
 c
             if (nfreq(n).gt.1) then
               do i=nchan+1,nchan+nfreq(n)
+                vis(i) = data(ipnt)
 
-                vis(i) = (real(nchan+nfreq(n)-i)/real(nfreq(n)-1)
-     *                    *fac(n,1)+
-     *                    real(i-nchan-1)/real(nfreq(n)-1)
-     *                    *fac(n,2))*data(ipnt)
+c                vis(i) = (real(nchan+nfreq(n)-i)/real(nfreq(n)-1)
+c     *                    *fac(n,1)+
+c     *                    real(i-nchan-1)/real(nfreq(n)-1)
+c     *                    *fac(n,2))*data(ipnt)
                 flags(i) = flag(n)
                 ipnt = ipnt + 1
               enddo
+              call opapply(vis(nchan+1),nfreq(n),sfreq(n),sdf(n),
+     *            fac(1,n),freq0(1,n),NDIV)         
             else
-              vis(nchan+1)=fac(n,1)*data(ipnt)
+              vis(nchan+1)=fac(1,n)*data(ipnt)
               flags(nchan+1)=flag(n)
               ipnt=ipnt+1
             endif
@@ -2311,10 +2325,10 @@ c
 c
         end
 c***********************************************************************
-        subroutine SamCorr(nfreq,vis,pol,i1,i2,if,time,
+        subroutine SamCorr(nfreq,vis,pol,i1,i2,iif,time,
      *          xsampler,ysampler,ATIF,ATANT)
 c
-        integer i1,i2,if,nfreq,pol,ATIF,ATANT
+        integer i1,i2,iif,nfreq,pol,ATIF,ATANT
         real xsampler(3,ATIF,ATANT),ysampler(3,ATIF,ATANT)
         double precision time
         complex vis(nfreq)
@@ -2339,33 +2353,33 @@ c
         if(time.gt.J20Jun91.and.time.le.J21Aug93)ssexp=17.1
 c
         if(pol.eq.PolXX)then
-          fac = twobit_gain_adjust(ssexp,xsampler(1,if,i1),
-     *                                   xsampler(2,if,i1),
-     *                                   xsampler(3,if,i1),
-     *                                   xsampler(1,if,i2),
-     *                                   xsampler(2,if,i2),
-     *                                   xsampler(3,if,i2))
+          fac = twobit_gain_adjust(ssexp,xsampler(1,iif,i1),
+     *                                   xsampler(2,iif,i1),
+     *                                   xsampler(3,iif,i1),
+     *                                   xsampler(1,iif,i2),
+     *                                   xsampler(2,iif,i2),
+     *                                   xsampler(3,iif,i2))
         else if(pol.eq.PolYY)then
-          fac = twobit_gain_adjust(ssexp,ysampler(1,if,i1),
-     *                                   ysampler(2,if,i1),
-     *                                   ysampler(3,if,i1),
-     *                                   ysampler(1,if,i2),
-     *                                   ysampler(2,if,i2),
-     *                                   ysampler(3,if,i2))
+          fac = twobit_gain_adjust(ssexp,ysampler(1,iif,i1),
+     *                                   ysampler(2,iif,i1),
+     *                                   ysampler(3,iif,i1),
+     *                                   ysampler(1,iif,i2),
+     *                                   ysampler(2,iif,i2),
+     *                                   ysampler(3,iif,i2))
         else if(pol.eq.PolXY)then
-          fac = twobit_gain_adjust(ssexp,xsampler(1,if,i1),
-     *                                   xsampler(2,if,i1),
-     *                                   xsampler(3,if,i1),
-     *                                   ysampler(1,if,i2),
-     *                                   ysampler(2,if,i2),
-     *                                   ysampler(3,if,i2))
+          fac = twobit_gain_adjust(ssexp,xsampler(1,iif,i1),
+     *                                   xsampler(2,iif,i1),
+     *                                   xsampler(3,iif,i1),
+     *                                   ysampler(1,iif,i2),
+     *                                   ysampler(2,iif,i2),
+     *                                   ysampler(3,iif,i2))
         else if(pol.eq.PolYX)then
-          fac = twobit_gain_adjust(ssexp,ysampler(1,if,i1),
-     *                                   ysampler(2,if,i1),
-     *                                   ysampler(3,if,i1),
-     *                                   xsampler(1,if,i2),
-     *                                   xsampler(2,if,i2),
-     *                                   xsampler(3,if,i2))
+          fac = twobit_gain_adjust(ssexp,ysampler(1,iif,i1),
+     *                                   ysampler(2,iif,i1),
+     *                                   ysampler(3,iif,i1),
+     *                                   xsampler(1,iif,i2),
+     *                                   xsampler(2,iif,i2),
+     *                                   xsampler(3,iif,i2))
         else
           fac = 1
         endif
