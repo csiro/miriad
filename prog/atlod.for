@@ -163,6 +163,10 @@ c       This gives one or two numbers, being the number of scans to
 c       skip, followed by the number of scans to process.  NOTE: This
 c       applies to all files read.  The default is to skip none and
 c       process all scans.
+c@ nopcorr
+c       This gives the number of frequencies to use for opacity
+c       correction. The default is to use linear interpolation across
+c       the spectrum. Maximum value is 32.
 c@ edge
 c       Specify the percentage of edge channels the birdie option will
 c       flag out. The default is 9.8 which will flag about 100 channels 
@@ -172,7 +176,7 @@ c       For concatenated spectra the width of a single zoom is used.
 c       Note that noise and artefacts go up quickly towards the band 
 c       edge so making this much smaller will not gain you much.
 c
-c$Id: atlod.for,v 1.38 2012/05/29 03:30:56 wie017 Exp $
+c$Id: atlod.for,v 1.39 2012/05/30 02:12:54 wie017 Exp $
 c--
 c
 c  Program Structure:
@@ -330,9 +334,9 @@ c    mhw  26oct10 Fix birdie flagging in 20/13 cm band
 c    mhw  11nov10 Record scan direction for otfmos scans
 c    mhw  23nov10 Fix for CABB 33 channel (64MHz) mode
 c    mhw  07feb11 Add edge keyword to control birdie/edge flagging
-c    mhw  29may12 Make opcor more accurate for wide bands
+c    mhw  29may12 Try to make opcorr more accurate for wide bands
 c
-c $Id: atlod.for,v 1.38 2012/05/29 03:30:56 wie017 Exp $
+c $Id: atlod.for,v 1.39 2012/05/30 02:12:54 wie017 Exp $
 c-----------------------------------------------------------------------
 
         integer MAXFILES,MAXTIMES,MAXSIM
@@ -340,7 +344,7 @@ c-----------------------------------------------------------------------
 c
         character in(MAXFILES)*128,line*64,out*64,t1*18,t2*18,version*80
         integer tno,ntimes
-        integer ifile,ifsel(MAXSIM),nsel,nfreq,iostat,nfiles,i
+        integer ifile,ifsel(MAXSIM),nsel,nfreq,iostat,nfiles,nopcorr,i
         double precision rfreq(2),times(2,MAXTIMES)
         logical doauto,docross,docomp,dosam,relax,unflag,dohann
         logical dobary,doif,birdie,dowt,dopmps,doxyp,doop,dopack,dotsys
@@ -353,8 +357,8 @@ c
         character itoaf*8, rperr*32, versan*80
 c-----------------------------------------------------------------------
       version = versan ('atlod',
-     :                  '$Revision: 1.38 $',
-     :                  '$Date: 2012/05/29 03:30:56 $')
+     :                  '$Revision: 1.39 $',
+     :                  '$Date: 2012/05/30 02:12:54 $')
 c
 c  Get the input parameters.
 c
@@ -384,6 +388,8 @@ c
         call keyi('nscans',scanproc,0)
         if(scanskip.lt.0.or.scanproc.lt.0)
      *    call bug('f','Invalid NSCANS parameter')
+        call keyi('nopcorr',nopcorr,2)
+        nopcorr=min(32,max(2,nopcorr))
         call keyr('edge',edge,9.8)
         call keyfin
 c
@@ -420,7 +426,7 @@ c
             if(iostat.ne.0)call bug('f','Error skipping RPFITS file')
           else
             call PokeIni(tno,dosam,doxyp,doop,dohann,birdie,edge,
-     *          dowt,dopmps,dobary,doif,hires,dopack,dotsys)
+     *          dowt,dopmps,dobary,doif,hires,dopack,dotsys,nopcorr)
             if(nfiles.eq.1)then
               i = 1
             else
@@ -627,9 +633,9 @@ c***********************************************************************
 c***********************************************************************
         subroutine PokeIni(tno1,dosam1,doxyp1,doop1,
      *          dohann1,birdie1,edge1,dowt1,dopmps1,dobary1,doif1,
-     *          hires1,dopack1,dotsys1)
+     *          hires1,dopack1,dotsys1,nopcorr1)
 c
-        integer tno1
+        integer tno1,nopcorr1
         logical dosam1,doxyp1,dohann1,doif1,dobary1,birdie1,dowt1
         logical dopmps1,hires1,doop1,dopack1,dotsys1
         real    edge1
@@ -654,6 +660,7 @@ c
         hires  = hires1
         dopack = dopack1
         dotsys = dotsys1
+        nopcorr= nopcorr1
         edgepc = edge1
 c
         if(dowt)call LagWt(wts,2*ATCONT-2,0.04)
@@ -1687,9 +1694,9 @@ c
           jyperk = getjpk(real(sfreq(1)))
 
           do iif=1,nifs
-            do i=1,NDIV
+            do i=1,nopcorr
               freq0(i,iif) = sfreq(iif)*1e9 + 
-     *         (nfreq(iif)-1)/(NDIV-1.0)*(i-1)*sdf(iif)*1e9
+     *         (nfreq(iif)-1)/(nopcorr-1.0)*(i-1)*sdf(iif)*1e9
             enddo
           enddo
           wband = freq0(1,1).gt.75e9
@@ -1708,20 +1715,20 @@ c
               spress = 97.5*mdata(2)
               shumid = 0.01*mdata(3)
             endif
-            call opacGet(NDIV*nifs,freq0,real(el),stemp,spress,shumid,
-     *                   fac,Tb)
+            call opacGet(nopcorr*nifs,freq0,real(el),stemp,spress,
+     *                   shumid,fac,Tb)
             doopcorr = .true.
             tfac = 1
             do iif=1,nifs
-              do i=1,NDIV
+              do i=1,nopcorr
                 fac(i,iif) = 1/fac(i,iif)
                 tfac = tfac * fac(i,iif)
               enddo
             enddo
-            jyperk = jyperk * tfac**(1.0/real(NDIV*nifs))
+            jyperk = jyperk * tfac**(1.0/real(nopcorr*nifs))
           else
             do iif=1,nifs
-              do i=1,NDIV
+              do i=1,nopcorr
                 fac(i,iif) = 1
               enddo
             enddo
@@ -1787,7 +1794,7 @@ c
                         call uvputvrr(tno,'inttime',inttime(bl),1)
                         if(doopcorr)
      *                    call opapply(data(ipnt),nfreq(iif),sfreq(iif),
-     *                       sdf(iif),fac(1,iif),freq0(1,iif),ATIF,NDIV)
+     *                       sdf(iif),fac(1,iif),freq0(1,iif),nopcorr)
                         call uvwrite(tno,preamble,data(ipnt),flags,
      *                                                  nfreq(iif))
 
@@ -1843,7 +1850,8 @@ c
                     do p=1,nstoke(1)
                       call GetDat(data,nused,pnt(1,p,bl,bin),
      *                  flag(1,p,bl,bin),nfreq,sfreq,sdf,ATIF,NDIV,
-     *                  fac,freq0,bchan,nifs,vis,flags,NDATA,nchan)
+     *                  fac,freq0,bchan,nifs,vis,flags,NDATA,nchan,
+     *                  nopcorr)
                       if(nchan.gt.0)then
                         call rfiFlag(flags,NDATA,nifs,nfreq,sfreq,
      *                             sdf,birdie,edgepc,tdash)
@@ -1923,11 +1931,11 @@ c
 c
         end
 c***********************************************************************
-        subroutine opapply(data,nchan,sfreq,sdf,fac,freq,NDIV)
+        subroutine opapply(data,nchan,sfreq,sdf,fac,freq,nop)
 c
-        integer nchan,NDIV
+        integer nchan,nop
         double precision sfreq,sdf
-        real fac(NDIV),freq(NDIV)
+        real fac(nop),freq(nop)
         complex data(nchan)
 c-----------------------------------------------------------------------
         integer i,i1,i2
@@ -1937,7 +1945,7 @@ c       do piecewise linear interpolation across spectrum
 c
         if (nchan.gt.1) then
           do i=1,nchan
-            i1 = 1+(i-1)/(nchan/(NDIV-1.0))
+            i1 = 1+(i-1)/(nchan/(nop-1.0))
             i2 = i1+1
             f = sfreq + (i-1)*sdf
             df = freq(i2)-freq(i1)
@@ -2235,10 +2243,11 @@ c
         end
 c***********************************************************************
         subroutine GetDat(data,nvis,pnt,flag,nfreq,sfreq,sdf,ATIF,NDIV,
-     *                    fac,freq0,bchan,nifs,vis,flags,ndata,nchan)
+     *                    fac,freq0,bchan,nifs,vis,flags,ndata,nchan,
+     *                    nopcorr)
 c
         integer nvis,nifs,pnt(nifs),nfreq(nifs),bchan(nifs),nchan
-        integer ndata,ATIF,NDIV
+        integer ndata,ATIF,NDIV,nopcorr
         logical flag(nifs),flags(ndata)
         double precision sfreq(ATIF),sdf(ATIF)
         complex vis(ndata),data(nvis)
@@ -2275,7 +2284,7 @@ c     *                    *fac(n,2))*data(ipnt)
                 ipnt = ipnt + 1
               enddo
               call opapply(vis(nchan+1),nfreq(n),sfreq(n),sdf(n),
-     *            fac(1,n),freq0(1,n),NDIV)         
+     *            fac(1,n),freq0(1,n),nopcorr)         
             else
               vis(nchan+1)=fac(1,n)*data(ipnt)
               flags(nchan+1)=flag(n)

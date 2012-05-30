@@ -30,7 +30,7 @@ c
 	real axisrms(ATANT),axismax(ATANT),mdata(9)
 	double precision obsra,obsdec,lat,long,ra,dec
 	character sname*64
-	integer refnant
+	integer refnant,nopcorr
 	real refpnt(2,ATANT)
 	real stemp,spress,shumid
 c
@@ -42,7 +42,7 @@ c
      *    xyphase,xyamp,xsampler,ysampler,u,v,w,inttime,
      *	    inttim,wts,mdata,axisrms,axismax,refpnt,stemp,spress,shumid,
      *	  pnt,nbin,nused,tno,nants,nifs,nfreq,nstoke,polcode,ifchain,
-     *	    edge,bchan,tcorr,mcount,refnant,
+     *	    edge,bchan,tcorr,mcount,refnant,nopcorr,
      *	  flag,dosw,dosam,dohann,birdie,dowt,dopmps,doxyp,opcorr,
      *	    doif,dobary,newfreq,hires,cabb,dopack,dotsys,
      *	  newsc,newpnt,edgepc
