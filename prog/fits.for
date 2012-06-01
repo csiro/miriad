@@ -130,7 +130,7 @@ c         velocity=lsr
 c       indicates that fits is to determine the observatory velocity
 c       wrt the LSR frame using an appropriate model.
 c
-c$Id: fits.for,v 1.24 2012/03/02 00:56:37 cal103 Exp $
+c$Id: fits.for,v 1.25 2012/06/01 01:56:22 wie017 Exp $
 c--
 c
 c  Bugs:
@@ -164,8 +164,8 @@ c-----------------------------------------------------------------------
       character versan*72
 c-----------------------------------------------------------------------
       version = versan('fits',
-     *                 '$Revision: 1.24 $',
-     *                 '$Date: 2012/03/02 00:56:37 $')
+     *                 '$Revision: 1.25 $',
+     *                 '$Date: 2012/06/01 01:56:22 $')
 c
 c  Get the input parameters.
 c
@@ -3988,10 +3988,7 @@ c           Assumed to be radio velocity wrt LSRK in km/s.
           endif
         endif
 
-c       Convert to Miriad units (ignoring CUNITi).
         call coCtype(ctype(iax), axtype, wtype, algo, units, scl)
-        cdelt(iax) = cdelt(iax) / scl
-        crval(iax) = crval(iax) / scl
 
 c       Locate the celestial axes.
         if (axtype.eq.'longitude') then
@@ -4041,7 +4038,14 @@ c     Determine the increment and rotation for celestial axes.
       if (ilat.ne.0 .and. ilng.ne.0) then
         call cdget(lIn,ilng,ilat,cdelt(ilng),cdelt(ilat),llrot)
       endif
-
+      
+c     Convert to Miriad units (ignoring CUNITi).
+      do iax = 1, naxis
+        call coCtype(ctype(iax), axtype, wtype, algo, units, scl)
+        cdelt(iax) = cdelt(iax) / scl
+        crval(iax) = crval(iax) / scl
+      enddo
+      
       end
 
 c***********************************************************************
