@@ -48,6 +48,7 @@ c		    polarisations.
 c    rjs  12oct95   Copy xyphase variable.
 c    rjs  13jun96   Fix window selection.
 c    rjs  23sep99   Fix window selection again!!
+c    mhw  05jun12   Handle ifchain correctly when selecting windows
 c  Bugs:
 c
 c= uvcat - Catenate and copy uv datasets; Apply gains file, Select windows.
@@ -360,9 +361,10 @@ c------------------------------------------------------------------------
 	integer length,nspect,offset,nout,i,j,nsystemp,nxyph
 	double precision sdf(MAXWIN),sfreq(MAXWIN),restfreq(MAXWIN)
 	real systemp(MAXANT*MAXWIN),xyphase(MAXANT*MAXWIN)
+        integer ifchain(MAXWIN)
 	character type*1
 	logical unspect,unschan,uischan,usdf,usfreq,urest,usyst
-	logical uxyph
+	logical uxyph,uifch
 c
 c  Get the dimensioning info.
 c
@@ -386,6 +388,9 @@ c
 	call uvgetvrd(lIn,'sfreq',sfreq,nspect)
 	call uvprobvr(lIn,'restfreq',type,length,urest)
 	call uvgetvrd(lIn,'restfreq',restfreq,nspect)
+        call uvprobvr(lIn,'ifchain',type,length,uifch)
+        uifch = type.eq.'i'.and.length.eq.nspect
+        if (uifch) call uvgetvri(lIn,'ifchain',ifchain,nspect)
 	call uvprobvr(lIn,'systemp',type,nsystemp,usyst)
 	usyst = type.eq.'r'.and.nsystemp.le.MAXANT*MAXWIN.and.
      *				nsystemp.gt.0
@@ -410,6 +415,7 @@ c
 	    sdf(nout) = sdf(i)
 	    sfreq(nout) = sfreq(i)
 	    restfreq(nout) = restfreq(i)
+            ifchain(nout) = ifchain(i)
 c
 	    if(usyst.and.nsystemp.ge.nspect*nants)then
 	      do j=1,nants
@@ -434,6 +440,7 @@ c
 	call uvputvrd(lOut,'sdf',sdf,nout)
 	call uvputvrd(lOut,'sfreq',sfreq,nout)
 	call uvputvrd(lOut,'restfreq',restfreq,nout)
+        call uvputvri(lOut,'ifchain',ifchain,nout)
 	if(nsystemp.ge.nspect*nants)nsystemp = nout*nants
 	if(usyst)call uvputvrr(lOut,'systemp',systemp,nsystemp)
 	if(uxyph)call uvputvrr(lOut,'xyphase',xyphase,nxyph)
