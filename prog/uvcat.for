@@ -341,6 +341,7 @@ c    sdf
 c    sfreq
 c    restfreq
 c    systemp
+c    (ifchain)
 c
 c  It also returns a description used by a later routine to extract the
 c  useful channels.
@@ -415,7 +416,7 @@ c
 	    sdf(nout) = sdf(i)
 	    sfreq(nout) = sfreq(i)
 	    restfreq(nout) = restfreq(i)
-            ifchain(nout) = ifchain(i)
+            if (uifch) ifchain(nout) = ifchain(i)
 c
 	    if(usyst.and.nsystemp.ge.nspect*nants)then
 	      do j=1,nants
@@ -440,7 +441,7 @@ c
 	call uvputvrd(lOut,'sdf',sdf,nout)
 	call uvputvrd(lOut,'sfreq',sfreq,nout)
 	call uvputvrd(lOut,'restfreq',restfreq,nout)
-        call uvputvri(lOut,'ifchain',ifchain,nout)
+        if (uifch) call uvputvri(lOut,'ifchain',ifchain,nout)
 	if(nsystemp.ge.nspect*nants)nsystemp = nout*nants
 	if(usyst)call uvputvrr(lOut,'systemp',systemp,nsystemp)
 	if(uxyph)call uvputvrr(lOut,'xyphase',xyphase,nxyph)
