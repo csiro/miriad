@@ -22,7 +22,7 @@ c                 for a start.
 c    rjs  31oct94 Added CnvlExt, plus some comments.
 c    mhw  27oct11  Use ptrdiff type for memory allocations
 c
-c $Id: cnvl.for,v 1.4 2011/10/31 00:28:01 wie017 Exp $
+c $Id: cnvl.for,v 1.5 2012/06/13 00:44:40 wie017 Exp $
 
 c***********************************************************************
 c* CnvlIniF -- Ready a beam, from a file, for a convolution operation.
@@ -81,7 +81,7 @@ c
 c
 c  All said and done. Release allocated memory, and return.
 c
-      call MemFree(Trans,space,'r')
+      call MemFrep(Trans,space,'r')
       end
 
 c***********************************************************************
