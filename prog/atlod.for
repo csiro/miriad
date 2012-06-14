@@ -164,9 +164,9 @@ c       skip, followed by the number of scans to process.  NOTE: This
 c       applies to all files read.  The default is to skip none and
 c       process all scans.
 c@ nopcorr
-c       This gives the number of frequencies to use for opacity
-c       correction. The default is to use linear interpolation across
-c       the spectrum. Maximum value is 32.
+c       This gives the number of frequencies to use per IF for opacity
+c       correction. The default (2) is to use linear interpolation 
+c       across the spectrum. Maximum value is 32.
 c@ edge
 c       Specify the percentage of edge channels the birdie option will
 c       flag out. The default is 9.8 which will flag about 100 channels 
@@ -176,7 +176,7 @@ c       For concatenated spectra the width of a single zoom is used.
 c       Note that noise and artefacts go up quickly towards the band 
 c       edge so making this much smaller will not gain you much.
 c
-c$Id: atlod.for,v 1.39 2012/05/30 02:12:54 wie017 Exp $
+c$Id: atlod.for,v 1.40 2012/06/14 23:34:22 wie017 Exp $
 c--
 c
 c  Program Structure:
@@ -335,8 +335,9 @@ c    mhw  11nov10 Record scan direction for otfmos scans
 c    mhw  23nov10 Fix for CABB 33 channel (64MHz) mode
 c    mhw  07feb11 Add edge keyword to control birdie/edge flagging
 c    mhw  29may12 Try to make opcorr more accurate for wide bands
+c    mhw  15jun12 Fix index errors in opcor change
 c
-c $Id: atlod.for,v 1.39 2012/05/30 02:12:54 wie017 Exp $
+c $Id: atlod.for,v 1.40 2012/06/14 23:34:22 wie017 Exp $
 c-----------------------------------------------------------------------
 
         integer MAXFILES,MAXTIMES,MAXSIM
@@ -357,8 +358,8 @@ c
         character itoaf*8, rperr*32, versan*80
 c-----------------------------------------------------------------------
       version = versan ('atlod',
-     :                  '$Revision: 1.39 $',
-     :                  '$Date: 2012/05/30 02:12:54 $')
+     :                  '$Revision: 1.40 $',
+     :                  '$Date: 2012/06/14 23:34:22 $')
 c
 c  Get the input parameters.
 c
@@ -1595,12 +1596,12 @@ c-----------------------------------------------------------------------
         integer NDATA, NDIV
         parameter(NDATA=MAXCHAN*MAXWIN, NDIV=32)
         integer i,i1,i2,iif,p,bl,nchan,npol,ipnt,ischan(ATIF)
-        integer tbinhi,tbin,binhi,binlo,bin
+        integer tbinhi,tbin,binhi,binlo,bin,k
         complex vis(NDATA)
         logical flags(NDATA),doopcorr,wband
         double precision preamble(5),vel,lst,tdash,az,el
-        real buf(3*ATANT*ATIF),fac(NDIV,ATIF),freq0(NDIV,ATIF)
-        real jyperk,tfac,Tb(NDIV,ATIF)
+        real buf(3*ATANT*ATIF),fac(NDIV*ATIF),freq0(NDIV*ATIF)
+        real jyperk,tfac,Tb(NDIV*ATIF)
 c
 c  Externals.
 c
@@ -1693,13 +1694,15 @@ c  Get ready to apply opacity correction.
 c
           jyperk = getjpk(real(sfreq(1)))
 
+          k=0
           do iif=1,nifs
             do i=1,nopcorr
-              freq0(i,iif) = sfreq(iif)*1e9 + 
+              k=k+1
+              freq0(k) = sfreq(iif)*1e9 + 
      *         (nfreq(iif)-1)/(nopcorr-1.0)*(i-1)*sdf(iif)*1e9
             enddo
           enddo
-          wband = freq0(1,1).gt.75e9
+          wband = freq0(1).gt.75e9
           doopcorr = .false.
           if(opcorr.and..not.wband)then
             if(mcount.lt.3)then
@@ -1719,17 +1722,21 @@ c
      *                   shumid,fac,Tb)
             doopcorr = .true.
             tfac = 1
+            k=0
             do iif=1,nifs
               do i=1,nopcorr
-                fac(i,iif) = 1/fac(i,iif)
-                tfac = tfac * fac(i,iif)
+                k=k+1
+                fac(k) = 1/fac(k)
+                tfac = tfac * fac(k)
               enddo
             enddo
             jyperk = jyperk * tfac**(1.0/real(nopcorr*nifs))
           else
+            k=0
             do iif=1,nifs
               do i=1,nopcorr
-                fac(i,iif) = 1
+                k=k+1
+                fac(k) = 1
               enddo
             enddo
           endif
@@ -1748,6 +1755,7 @@ c  Handle the case that we are writing the multiple IFs out as multiple
 c  records.
 c
           if(.not.doif.and.nifs.gt.1)then
+            k=1
             do iif=1,nifs
               call uvputvri(tno,'nspect',1,1)
               call uvputvri(tno,'npol',  nstoke(iif),1)
@@ -1794,7 +1802,8 @@ c
                         call uvputvrr(tno,'inttime',inttime(bl),1)
                         if(doopcorr)
      *                    call opapply(data(ipnt),nfreq(iif),sfreq(iif),
-     *                       sdf(iif),fac(1,iif),freq0(1,iif),nopcorr)
+     *                       sdf(iif),fac(k),
+     *                       freq0(k),nopcorr)
                         call uvwrite(tno,preamble,data(ipnt),flags,
      *                                                  nfreq(iif))
 
@@ -1803,6 +1812,7 @@ c
                   enddo
                 enddo
               enddo
+              k=k+nopcorr
             enddo
 c
 c  Handle the case were we are writing the multiple IFs out as a single
@@ -1849,7 +1859,7 @@ c
                     call uvputvri(tno,'npol',npol,1)
                     do p=1,nstoke(1)
                       call GetDat(data,nused,pnt(1,p,bl,bin),
-     *                  flag(1,p,bl,bin),nfreq,sfreq,sdf,ATIF,NDIV,
+     *                  flag(1,p,bl,bin),nfreq,sfreq,sdf,ATIF,
      *                  fac,freq0,bchan,nifs,vis,flags,NDATA,nchan,
      *                  nopcorr)
                       if(nchan.gt.0)then
@@ -2242,16 +2252,16 @@ c
 c
         end
 c***********************************************************************
-        subroutine GetDat(data,nvis,pnt,flag,nfreq,sfreq,sdf,ATIF,NDIV,
+        subroutine GetDat(data,nvis,pnt,flag,nfreq,sfreq,sdf,ATIF,
      *                    fac,freq0,bchan,nifs,vis,flags,ndata,nchan,
      *                    nopcorr)
 c
         integer nvis,nifs,pnt(nifs),nfreq(nifs),bchan(nifs),nchan
-        integer ndata,ATIF,NDIV,nopcorr
+        integer ndata,ATIF,nopcorr
         logical flag(nifs),flags(ndata)
         double precision sfreq(ATIF),sdf(ATIF)
         complex vis(ndata),data(nvis)
-        real fac(NDIV,ATIF),freq0(NDIV,ATIF)
+        real fac(nopcorr,nifs),freq0(nopcorr,nifs)
 c
 c  Construct a visibility record constructed from multiple IFs.
 c-----------------------------------------------------------------------
@@ -2275,11 +2285,6 @@ c
             if (nfreq(n).gt.1) then
               do i=nchan+1,nchan+nfreq(n)
                 vis(i) = data(ipnt)
-
-c                vis(i) = (real(nchan+nfreq(n)-i)/real(nfreq(n)-1)
-c     *                    *fac(n,1)+
-c     *                    real(i-nchan-1)/real(nfreq(n)-1)
-c     *                    *fac(n,2))*data(ipnt)
                 flags(i) = flag(n)
                 ipnt = ipnt + 1
               enddo
