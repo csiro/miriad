@@ -10,6 +10,7 @@ c    jm    13sep91    Increased size of character strings to allow for
 c                     very long keyword inputs (eg. select=...).
 c    jm    08oct91    Added date of program execution to output.
 c    rjs   18aug93    More tolerant of funny input.
+c    mhw   15jun12    Adopt T format time (from pjt)
 c***********************************************************************
 c* HisInput -- Copy task input parameters to a history file.
 c& jm
@@ -50,7 +51,7 @@ c
 	enddo
 	if(l1.le.0) call bug('f','HisInput: Bad program name.')
 	call TodayJul(julian)
-	call JulDay(julian, 'H', file)
+	call JulDay(julian, 'T', file)
 	line = name(1:l1)//': Executed on: '//file(1:len1(file))
 	call ucase(line(1:l1))
 	call hiswrite(tno,line)
