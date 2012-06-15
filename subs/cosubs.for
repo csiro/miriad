@@ -27,7 +27,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: cosubs.for,v 1.16 2012/03/05 01:25:28 cal103 Exp $
+c $Id: cosubs.for,v 1.17 2012/06/15 01:30:17 wie017 Exp $
 c***********************************************************************
 
 c* chkaxCO -- Check axis type and coordinate type for compatibility
@@ -599,7 +599,7 @@ c     Fish out axis.
 
 c***********************************************************************
 
-c* w2wfsCO -- Convert a coordinate for a single axis and format
+c* w2wsfCO -- Convert a coordinate for a single axis and format
 c& nebk
 c: coordinates
 c+
