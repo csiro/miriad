@@ -130,7 +130,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: fitsio.for,v 1.8 2010/11/22 04:06:07 cal103 Exp $
+c $Id: fitsio.for,v 1.9 2012/06/19 05:15:35 wie017 Exp $
 c***********************************************************************
 
 c* FxyOpen -- Open a FITS image file.
@@ -181,7 +181,7 @@ c
         call fitrdhdi(lu,'BITPIX', bitpix,0)
         if (bitpix.ne.16 .and. abs(bitpix).ne.32) then
            if (bitpix.eq.-64) then
-              call bug('w','Loosing precision for BITPIX=-64')
+              call bug('w','Losing precision for BITPIX=-64')
            else
               call bug('f','Unsupported value for BITPIX')
            endif
@@ -2406,14 +2406,24 @@ c-----------------------------------------------------------------------
       if (found) then
         call fitcdio(lu,card)
         i = index(card,'=') + 1
-        do while (card(i:i).ne.'''')
+        do while (card(i:i).ne.'''' .and. i.lt.80)
           i = i + 1
         enddo
         i = i + 1
+        if (i.ge.80) then
+           call bug('w','keyword w/o quotes')
+           out = default
+           return
+        endif
         j = i
-        do while (card(j:j).ne.'''')
+        do while (card(j:j).ne.'''' .and. j.lt.80)
           j = j + 1
         enddo
+        if (j.ge.80) then
+           call bug('w','keyword w/o end quote')
+           out = default
+           return
+        endif
         out = card(i:j-1)
       else
         out = default
