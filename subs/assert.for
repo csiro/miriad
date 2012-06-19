@@ -11,6 +11,7 @@ c			pollution of needed C libraries
 c    rjs  13-jul-00	Replace "inquire" with "hexists" routine, to
 c			avoid a bug on some Digital UNIX systems.
 c    pjt  13-jul-00     Fixed a documentation bug
+c    pjt  14-apr-06     Added assertigti and assertigei (asserti2 will disappear)
 c
 c************************************************************************
 c	SUBROUTINE assert(cond,mesg)
@@ -19,7 +20,7 @@ c	LOGICAL   cond
 c	CALL bug('w','Old style routine ASSERT called - use ASSERTL')
 c	CALL assertl(cond,mesg)
 c	END	
-c* assertl -- Assert a condition
+c* assertl -- Assert a boolean condition
 c& pjt
 c: error-handling
 c+
@@ -86,11 +87,77 @@ c
 
       END
 c************************************************************************
-c* asserti2 -- Assert a condition, otherwise bug out
+c* asserti2 -- Assert a condition (to be deprecated)
 c& pjt 
 c: error-handling
 c+
       SUBROUTINE asserti2 (i1,i2,mesg)
+c
+      INTEGER   i1, i2
+      CHARACTER mesg*(*)
+c
+c  This routine is deprecated, please use assertigt2 or assertigei
+c  asserti2 is the same as assertigei
+c
+c   Input:
+c       i1      -- first integer, often an available size (of an array)
+c       i2      -- second integer, often size needed (for the array)
+c       mesg    -- message passed to bug
+c----------------------------------------------------------------------|
+
+      CHARACTER   line*80
+
+      IF (i1.GE.i2) RETURN
+
+      WRITE(line,'(''### '',I7,'' is less than '',I7)') i1, i2
+      CALL output(line)
+      CALL bug('f',mesg)
+
+      RETURN
+      END
+
+
+c************************************************************************
+c* assertigti -- Assert a condition integer1 greater than integer2
+c& pjt 
+c: error-handling
+c+
+      SUBROUTINE assertigti (i1,i2,mesg)
+c
+      INTEGER   i1, i2
+      CHARACTER mesg*(*)
+c
+c   Assert that I1 > I2, otherwise bail out by calling
+c   'bug' with the type 'f' and mesg as provided in the arguments.
+c   Is often used to check if enough memory in arrays for operations
+c   Example:
+c       CALL asserti2(MAXBUF,naxis1*naxis2,'MAXBUF vs. naxis1*naxis2')
+c   Note that
+c       CALL assert(MAXBUF.GT.naxis1*naxis2,'MAXBUF vs. naxis1*naxis2')
+c   would also do the trick, except it will not print out values.
+c
+c   Input:
+c       i1      -- first integer, often an available size (of an array)
+c       i2      -- second integer, often size needed (for the array)
+c       mesg    -- message passed to bug
+c----------------------------------------------------------------------|
+
+      CHARACTER   line*80
+
+      IF (i1.GT.i2) RETURN
+
+      WRITE(line,'(''### '',I7,'' is less or equal than '',I7)') i1, i2
+      CALL output(line)
+      CALL bug('f',mesg)
+
+      RETURN
+      END
+c************************************************************************
+c* assertigei -- Assert a condition integer1 greater or equal than integer2
+c& pjt 
+c: error-handling
+c+
+      SUBROUTINE assertigei (i1,i2,mesg)
 c
       INTEGER   i1, i2
       CHARACTER mesg*(*)
@@ -120,5 +187,7 @@ c----------------------------------------------------------------------|
 
       RETURN
       END
+
+
 
 
