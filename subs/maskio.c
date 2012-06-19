@@ -16,6 +16,8 @@
 /*    rjs   6nov94   Change item handle to an integer.			*/
 /*    rjs  19apr97   Handle FORTRAN LOGICALs better. Some tidying.      */
 /*    rjs  03jan05   Tidying.						*/
+/*    pjt   7jan10   yes, and fixed 64bit offsets (not lengths!!!)      */
+/*    pjt    feb12   added masking support, getmaski,setmaski           */
 /************************************************************************/
 
 #include <stdio.h>
@@ -380,6 +382,43 @@ void mkflush_c(char *handle)
 		mask->offset/BITS_PER_INT*H_INT_SIZE,
 		mask->length/BITS_PER_INT*H_INT_SIZE,&iostat);	CHECK(iostat);
   mask->modified = FALSE;
+}
+/************************************************************************/
+void getmaski_c(Const int mask, int *masks)
+/*
+  Decode an integer into an array of integers representing each bit.
+  Due to lack of support for masking operations in Fortran-77.
+  User is responsible for properly allocating enough space in masks[]
+  The sign bit is not used.
+
+------------------------------------------------------------------------*/
+{
+  int i,n, m;
+  int t,*buf,iostat;
+
+  n = 8*sizeof(int) - 1;    /* skip the sign bit */
+  for (i=0, m=1; i<n; i++, m=m<<1){
+    // printf("i=%d m=0x%x n=%d\n",i,m,n);
+    masks[i] = mask & m;
+  }
+}
+/************************************************************************/
+void setmaski_c(int *mask, Const int *masks)
+/*
+  Decode an integer into an array of integers representing each bit.
+  Due to lack of support for masking operations in Fortran-77.
+  User is responsible for properly allocating enough space in masks[]
+  The sign bit is not used.
+
+------------------------------------------------------------------------*/
+{
+  int i, n, m, mm;
+
+  n = 8*sizeof(int) - 1;    /* skip the sign bit */
+  for (i=0, mm=0, m=1; i<n; i++, m=m<<1){
+    if (masks[i]) mm |= m;
+  }
+  *mask = mm;
 }
 /************************************************************************/
 private void mkfill(MASK_INFO *mask, off_t offset)
