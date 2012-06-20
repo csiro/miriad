@@ -64,7 +64,11 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: boxes.for,v 1.7 2012/03/02 00:46:56 cal103 Exp $
+c  CARMA Customizations:
+c
+c  2011-Jul-13  pkgw  Add box(m) shorthand for box(-m,-m,m,m)
+c
+c $Id: boxes.for,v 1.8 2012/06/20 23:20:18 wie017 Exp $
 c--
 c***********************************************************************
 
@@ -339,7 +343,7 @@ c
 c-----------------------------------------------------------------------
       include 'mirconst.h'
       integer k0,i
-      logical more,ok
+      logical more,ok,shhand
       double precision temp,temp2,x1(2),x2(2)
 c-----------------------------------------------------------------------
       if (spec(k1:k1).ne.'(')
@@ -353,6 +357,8 @@ c-----------------------------------------------------------------------
           more = spec(k1:k1).eq.','
           if (k1.le.k0) call BoxBug(spec,'Bad region subcommand')
           n = n + 1
+          shhand = (.not.more).and.(n.eq.1).and.
+     *         (modulo.eq.4).and.(nmax.eq.4)
           if (n.gt.nmax)
      *    call BoxBug(spec,'Subregion too complex -- buffer overflow')
           call atodf(spec(k0:k1-1),temp,ok)
@@ -360,19 +366,56 @@ c-----------------------------------------------------------------------
           if (type.eq.'abspix') then
             boxes(n) = nint(temp)
           else if (type.eq.'relpix') then
-            i = mod(n-1,2) + 1
-            call coCvt1(lu,i,'op',temp,'ap',temp2)
-            boxes(n) = nint(temp2)
+            if (shhand) then
+c            Implicit (-x, -x, +x, +x) box
+               call coCvt1(lu,1,'op',-temp,'ap',temp2)
+               boxes(1) = nint(temp2)
+               call coCvt1(lu,2,'op',-temp,'ap',temp2)
+               boxes(2) = nint(temp2)
+               call coCvt1(lu,1,'op',temp,'ap',temp2)
+               boxes(3) = nint(temp2)
+               call coCvt1(lu,2,'op',temp,'ap',temp2)
+               boxes(4) = nint(temp2)
+               n = 4
+            else
+               i = mod(n-1,2) + 1
+               call coCvt1(lu,i,'op',temp,'ap',temp2)
+               boxes(n) = nint(temp2)
+            endif
           else if (type.eq.'relcen') then
-            i = mod(n-1,2) + 1
-            boxes(n) = nint(temp) + lu(i+1)/2 + 1
+            if (shhand) then
+c            Implicit (-x, -x, +x, +x) box
+               boxes(1) = nint(-temp) + lu(2)/2 + 1
+               boxes(2) = nint(-temp) + lu(3)/2 + 1
+               boxes(3) = nint(temp) + lu(2)/2 + 1
+               boxes(4) = nint(temp) + lu(3)/2 + 1
+               n = 4
+            else
+               i = mod(n-1,2) + 1
+               boxes(n) = nint(temp) + lu(i+1)/2 + 1
+            endif
           else if (type.eq.'arcsec') then
-            i = mod(n-1,2) + 1
-            x1(i) = dpi/180/3600 * temp
-            if (i.eq.2) then
-              call coCvt(lu,'ow/ow',x1,'ap/ap',x2)
-              boxes(n-1) = nint(x2(1))
-              boxes(n)   = nint(x2(2))
+            if (shhand) then
+c            Implicit (-x, -x, +x, +x) box
+               x1(1) = dpi/180/3600 * (-temp)
+               x1(2) = x1(1)
+               call coCvt(lu,'ow/ow',x1,'ap/ap',x2)
+               boxes(1) = nint(x2(1))
+               boxes(2) = nint(x2(2))
+               x1(1) = dpi/180/3600 * temp
+               x1(2) = x1(1)
+               call coCvt(lu,'ow/ow',x1,'ap/ap',x2)
+               boxes(3) = nint(x2(1))
+               boxes(4) = nint(x2(2))
+               n = 4
+            else
+               i = mod(n-1,2) + 1
+               x1(i) = dpi/180/3600 * temp
+               if (i.eq.2) then
+                  call coCvt(lu,'ow/ow',x1,'ap/ap',x2)
+                  boxes(n-1) = nint(x2(1))
+                  boxes(n)   = nint(x2(2))
+               endif
             endif
           else if (type.eq.'kms') then
             call coCvt1(lu,3,'aw',temp,'ap',temp2)
