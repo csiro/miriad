@@ -56,7 +56,7 @@ c    dofbcal                    Frequency binned cal file is present
 c    dofbleak                   Frequency binned leakage file is present
 c
 	integer maxsels,maxNam,maxIn
-	parameter(maxsels=512,maxNam=20000,maxIn=400)
+	parameter(maxsels=2048,maxNam=20000,maxIn=400)
 	real sels(maxsels),lstart,lwidth,lstep,lflag,rstart,rwidth,rstep
 	real plmaj,plmin,plangle
 	logical doplanet,dowave,doref,dodata,docal,dosels,doleak,dopass
