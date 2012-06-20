@@ -150,12 +150,13 @@ c       Write spectrum to this ascii file. Spectral axis units are as
 c       specified by the xaxis keyword. Default is no output file.
 c@ comment
 c       A one-line comment which is written into the logfile and any
-c       plot.
+c       plot. If the comment contains spaces you need to enclose it
+c       in single quotes.
 c
 c Note that this program does not report its version number so that gif
 c and ps output can be piped.
 c
-c$Id: mbspect.for,v 1.19 2012/05/18 02:24:33 wie017 Exp $
+c$Id: mbspect.for,v 1.20 2012/06/20 04:58:04 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -193,8 +194,8 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 c     Don't report the ID so that gif and ps output can be piped.
       version = versan ('-mbspect',
-     *                  '$Revision: 1.19 $',
-     *                  '$Date: 2012/05/18 02:24:33 $')
+     *                  '$Revision: 1.20 $',
+     *                  '$Date: 2012/06/20 04:58:04 $')
 
 c     Get inputs.
       call keyini
