@@ -58,7 +58,10 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: co.for,v 1.45 2012/05/07 23:51:15 wie017 Exp $
+c  CARMA customizations:
+c    pkgw  2012may25  Extract some error messages from wcslib
+c
+c $Id: co.for,v 1.46 2012/06/20 23:39:23 wie017 Exp $
 c***********************************************************************
 
 c* coCtype -- Parse a world coordinate ctype.
@@ -223,7 +226,7 @@ c       Unrecognized projection code, revert to linear.
       else if (axtype.eq.'spectral') then
         if (ctypei.eq.'FREQUENCY') then
           wtype = 'FREQ'
-        else if (ctypei.eq.'FELOCITY') then
+        else if (ctypei.eq.'FELOCITY'.or.ctypei.eq.'FELO') then
           wtype = 'VOPT'
           algo  = 'F2W'
         else if (ctypei.eq.'VELOCITY') then
@@ -2615,16 +2618,19 @@ c-----------------------------------------------------------------------
       include 'co.h'
       include 'mirconst.h'
       include 'wcslib/prj.inc'
+      include 'wcslib/wcserr.inc'
 
       logical   ok
       integer   iax, icrd, ilat, ilng, ispc, prj(PRJLEN), status
       double precision lat0, lng0
       character aipsfr*8, algo*8, axtype*16, lng*8, lat*8, pcode1*3,
      *          pcode2*3, stype*8, units*8, wtype*16
-
+      integer   theerr(ERRLEN)
+      character themsg*(WCSERR_MSG_LENGTH)
       external  coLoc, len1
       integer   coLoc, len1
 c-----------------------------------------------------------------------
+      status = wcserr_enable(1)
       icrd = coLoc(lu,.false.)
 
 c     Convert to enumerated coordinate types.
@@ -2728,8 +2734,13 @@ c             Convert GLS to SFL for WCSLIB.
 
             status = celpti(cel(1,icrd), CEL_PRJ, prj, 0)
             status = celset(cel(1,icrd))
-            if (status.ne.0) call bug('f',
-     *        'Error initializing celestial coordinates in coReinit')
+            if (status.ne.0) then
+              status = celgti(cel(1,icrd), CEL_ERR, theerr)
+              status = wcserr_gtc(theerr, WCSERR_MSG, themsg)
+              call bug('f',
+     *         'Error initializing celestial coordinates in coReinit: '
+     *         //themsg)
+            endif
           endif
 
         else if (ilng.ne.0 .or. ilat.ne.0) then
@@ -2773,9 +2784,13 @@ c         Crack ctype.
 
 c         coInitXY should have stored the rest frequency in spcprm.
           status = spcset(spc(1,icrd))
-          if (status.ne.0) call bug('f',
-     *      'Error initializing spectral coordinates in coReinit')
-
+          if (status.ne.0) then
+           status = spcgti(spc(1,icrd), SPC_ERR, theerr)
+           status = wcserr_gtc(theerr, WCSERR_MSG, themsg)
+           call bug('f',
+     *      'Error initializing spectral coordinates in coReinit: '
+     *      //themsg)
+          endif
         endif
       endif
 
