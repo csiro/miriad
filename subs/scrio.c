@@ -13,7 +13,7 @@
 /*   pjt  11dec07  More helpful message when scratch files fail         */
 /*   rjs  01apr09  Add scrRecSz routine and associated work.		*/
 /*   rjs  13may09  Make returned handle always positive (some tasks have*/
-/*		   relied on this).					*/
+/*		   relied on this).                                     */
 /************************************************************************/
 
 #include <stdio.h>
@@ -97,7 +97,7 @@ void scrclose_c(int handle)
   items[handle] = first;
   first = handle;
   if(iostat){
-    bug_c(  'w',"Error closing scratch file");
+    bug_c(  'w',"Error closing scratch file; check your $TMPDIR");
     bugno_c('f',iostat);
   }
 }
@@ -113,7 +113,7 @@ void scrrecsz_c(int handle,size_t recsize)
   This sets the record size to be used in future access operations.
   Input:
     tno		The handle of the scratch file.
-    recsize	The record size.					*/
+    recsize	The record size (measured in reals).			*/
 /*--									*/
 /*----------------------------------------------------------------------*/
 {
@@ -154,7 +154,7 @@ void scrread_c(int handle,float *buffer,off_t offset,size_t length)
 
   hreadb_c(myhandle,(char *)buffer,myoff,mylen,&iostat);
   if(iostat){
-    bug_c(  'w',"Error reading from scratch file");
+    bug_c(  'w',"Error reading from scratch file; check your $TMPDIR");
     bugno_c('f',iostat);
   }
 }
