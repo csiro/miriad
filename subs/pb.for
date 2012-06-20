@@ -76,8 +76,9 @@ c   21jul09   rjs    Merge in mchw changes. Extend VLA/EVLA frequency
 c                    ranges. Add an entry for the ATCA at 7mm.
 c   25nov10   mhw    Add support for OTF mosaicing
 c   12may11   mhw    Add bandwidth
+c   18apr12   mchw   Add GBT
 c
-c $Id: pb.for,v 1.9 2011/10/21 06:00:29 cal103 Exp $
+c $Id: pb.for,v 1.10 2012/06/20 01:36:04 wie017 Exp $
 c***********************************************************************
 c* pbList -- List known primary beam types.
 c& rjs
@@ -951,6 +952,8 @@ c   ATA  FWHM = 3.70 degrees  = 222 arcmin at 1 GHz.
 c   ATA antenna pattern measurements (Gerry Harp 30 Jan 2009)
 c
       call pbAdd('ATA',0.5,12.0,   222.0, 0.05, GAUS,0,0.0,
+     *                           'Truncated Gaussian')
+      call pbAdd('GBT',0.1,115.0,   12.6, 0.05, GAUS,0,0.0,
      *                           'Truncated Gaussian')
 c
 c  The following values for the WSRT are derived from the NEWSTAR

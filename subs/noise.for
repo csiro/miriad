@@ -16,8 +16,10 @@ c    rjs  24oct99  Added "save" statement in "ran" function.
 c    rjs  04jul00  Use double precision arithmetic in "ran" to avoid some
 c		   machine rounding biases.
 c    rjs  18oct00  Setting the seedon "vms-style" machines was not working.
+c    mc   12mar07  external for ran fixes gfortran problem
+c    pjt  20mar07  merged previous MIR4 fortran standards
 c
-c $Id: noise.for,v 1.2 2007/03/12 06:01:58 cal103 Exp $
+c $Id: noise.for,v 1.3 2012/06/20 01:32:50 wie017 Exp $
 c************************************************************************
 c
 c  Choose which random number style we are to use. We have three choices:
@@ -56,6 +58,7 @@ c:random-variables,noise
 c+
 	subroutine RandSet(seed)
 c
+	implicit none
 	integer seed
 c
 c  This sets the seed of the random number generator. Future sequences
@@ -88,6 +91,7 @@ c:random-variables,noise
 c+
 	subroutine uniform(data,n)
 c
+	implicit none
 	integer n
 	real data(n)
 c
@@ -149,6 +153,7 @@ c------------------------------------------------------------------------
 c************************************************************************
 	subroutine setseed(seed)
 c
+	implicit none
 	integer seed
 c
 c  Set the seed for the VMS-style random number generator.
@@ -176,6 +181,7 @@ c:random-variables,noise
 c+
 	subroutine gaus(data,n)
 c
+	implicit none
 	integer n
 	real data(n)
 c
@@ -193,6 +199,8 @@ c
 c  Output:
 c    data	An array of gaussian noise.
 c--
+c  TODO:  what about the Box-Mueller (polar) method 
+c         see Knuth, vol. 2, p. 104.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer i,j,l,ltot
@@ -227,6 +235,7 @@ c************************************************************************
 #ifdef inc_ran
       real function ran(iseed)
 c
+      implicit none
       integer iseed
 
 c  Generate a random number in the range 0 to 1.
