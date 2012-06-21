@@ -22,8 +22,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "io.h"
 #include "miriad.h"
+#include "io.h"
 #include "maxdimc.h"
 
 #define OLD 1
