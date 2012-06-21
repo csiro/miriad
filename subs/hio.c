@@ -46,8 +46,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "hio.h"
 #include "miriad.h"
+#include "hio.h"
 
 #define private static
 #if !defined(NULL)
