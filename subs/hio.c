@@ -37,17 +37,22 @@
        23-feb-03  pjt   merged MIR4
        22-jul-04  jwr	changed type of "size" in hexists_c() from int to size_t
        05-nov-04  jwr	changed file sizes from size_t to off_t
-       02-jan-05  rjs   Correct type of hreada/hwritea "length" parameter. Tidy.
-
- $Id: hio.c,v 1.4 2011/07/04 08:22:09 cal103 Exp $
+       01-jan-05  pjt   a few bug_c() -> bugv_c()
+       03-jan-05  pjt/rjs   hreada/hwritea off_t -> size_t for length 
+       04-jul-11  mrc   fix of some static function use off_t/size_t
+       19-jun-12  pjt   fixed hashing bug colliding with handle=0
 */
-
 
 #include <stdlib.h>
 #include <string.h>
 
-#include "miriad.h"
 #include "hio.h"
+#include "miriad.h"
+
+#define private static
+#if !defined(NULL)
+#  define NULL 0
+#endif
 
 #define MAXNAME 9
 #define CACHESIZE 64			/* Max size of items to cache. */
@@ -74,7 +79,7 @@
 typedef struct {          /* buffer for I/O operations */
   off_t  offset;
   size_t length;
-  int    state;
+  int    state; 
   char   *buf;
 } IOB;
 
@@ -89,10 +94,10 @@ typedef struct item {
   struct item *fwd;
 } ITEM;
 
-typedef struct tree {
+typedef struct tree { 
   char *name;
   int handle,flags,rdwr,wriostat;
-  ITEM *itemlist;
+  ITEM *itemlist; 
 } TREE;
 
 static TREE foreign = {"",0,0,0,0,NULL};
@@ -368,7 +373,7 @@ void habort_c()
         if(*name)hdelete_c(t->handle,name,&iostat);
         it = itfwd;
       }
-
+    
 /* Pretend the cache has not changed and finish up. Completely delete
    trees that were opened as NEW. Otherwise finish up. */
 
@@ -444,16 +449,13 @@ void hclose_c(int tno)
   TREE *t;
   ITEM *item,*it1,*it2;
   int iostat;
-  char message[40];
 
 /* Close any open items. */
 
   t = hget_tree(tno);
   for(item=t->itemlist; item != NULL; item = item->fwd){
     if(item->flags & ACCESS_MODE){
-      Strcpy(message,"Closing item -- ");
-      Strcat(message,item->name);
-      bug_c('w',message);
+      bugv_c('w',"Closing item -- %s",item->name);
       hdaccess_c(item->handle,&iostat);			check(iostat);
     }
   }
@@ -522,7 +524,7 @@ void hdelete_c(int tno,Const char *keyword,int *iostat)
 
   if(item != NULL){
     if(item->flags & ACCESS_MODE)
-      bug_c('f',"hdelete: Attempt to delete an accessed item");
+      bugv_c('f',"hdelete: Attempt to delete accessed item: %s",keyword);
     if(item->flags & ITEM_CACHE) t->flags |= TREE_CACHEMOD;
     hrelease_item_c(item);
     ent_del = TRUE;
@@ -558,6 +560,7 @@ void haccess_c(int tno,int *ihandle,Const char *keyword,Const char *status,int *
     tno		The handle of the data set.
     keyword	The name of the item.
     status	This can be 'read', 'write', 'append' or 'scratch'.
+                'scratch' files are using $TMPDIR, if present, else current.
   Output:
     itno	The handle of the opened item. Note that item handles are
 		quite distinct from data-set handles.
@@ -578,7 +581,7 @@ void haccess_c(int tno,int *ihandle,Const char *keyword,Const char *status,int *
   else if(!strcmp("write",status))  mode = ITEM_WRITE;
   else if(!strcmp("scratch",status))mode = ITEM_SCRATCH;
   else if(!strcmp("append",status)) mode = ITEM_APPEND;
-  else bug_c('f',"haccess_c: Unrecognised STATUS");
+  else bugv_c('f',"haccess_c: unrecognised STATUS=%s",status);
 
   if(!strcmp("header",keyword) || !strcmp(".",keyword) ||
      !strcmp("history",keyword)|| tno == 0 	       ||
@@ -595,7 +598,7 @@ void haccess_c(int tno,int *ihandle,Const char *keyword,Const char *status,int *
     if(*iostat) return;
   }
 
-/* Check if the item is aleady here abouts. */
+/* Check if the item is already here abouts. */
 
   item = NULL;
   if(tno != 0)
@@ -614,7 +617,8 @@ void haccess_c(int tno,int *ihandle,Const char *keyword,Const char *status,int *
 
 /* Check and set the read/write flags. */
 
-  if(item->flags & ACCESS_MODE) bug_c('f',"haccess_c: Multiple access to item");
+  if(item->flags & ACCESS_MODE) 
+    bugv_c('f',"haccess_c: Multiple access to item %s",keyword);  
   item->flags |= mode;
 
 /* Open the file if necessary. */
@@ -693,7 +697,7 @@ void hmode_c(int tno,char *mode)
 
   if(t->rdwr == RDWR_RDONLY)    Strcpy(mode,"r");
   else if(t->rdwr == RDWR_RDWR) Strcpy(mode,"rw");
-  else bug_c('f',"Algorithmic failure, in HMODE");
+  else bugv_c('f',"hmode_c: Algorithmic failure rdwr=%d",t->rdwr);
 
 }
 /************************************************************************/
@@ -747,10 +751,10 @@ int hexists_c(int tno,Const char *keyword)
 
 
   dopen_c(&fd,path,"read",&size,&iostat);
-  if(iostat)return(FALSE);
+  if(iostat)return FALSE;
   dclose_c(fd,&iostat);
-  if(iostat != 0)bug_c('f',"hexists_c: Error closing item");
-  return(TRUE);
+  if(iostat != 0)bugv_c('f',"hexists_c: Error closing item %s",keyword);
+  return TRUE;
 }
 /************************************************************************/
 void hdaccess_c(int ihandle,int *iostat)
@@ -835,7 +839,7 @@ off_t hsize_c(int ihandle)
 {
   ITEM *item;
   item = hget_item(ihandle);
-  return(item->size);
+  return item->size;
 }
 /************************************************************************/
 void hio_c(int ihandle,int dowrite,int type,char *buf,
@@ -1069,7 +1073,7 @@ void hio_c(int ihandle,int dowrite,int type,char *buf,
         case H_TXT:	Memcpy(s,buf,len);
 			if(*(buf+len-1) == 0)*(iob1->buf+off+len-1) = '\n';
 			break;
-        default:	bug_c('f',"hio_c: Unrecognised type");
+        default:	bugv_c('f',"hio_c: Unrecognised write type %d",type);
       }
       if(off % size) Memcpy(iob1->buf+off,align_buf,len);
     } else {
@@ -1102,7 +1106,7 @@ void hio_c(int ihandle,int dowrite,int type,char *buf,
 			  *(buf+len-1) = 0;
 			}
 			break;
-        default:	bug_c('f',"hio_c: Unrecognised type");
+        default:	bugv_c('f',"hio_c: Unrecognised read type %d",type);
       }
     }
     buf += expansion[type] * len;
@@ -1168,7 +1172,7 @@ private void hcheckbuf_c(ITEM *item,off_t next,int *iostat)
   }
 }
 /************************************************************************/
-private void hwrite_fill_c(ITEM *item, IOB *iob, off_t next,int *iostat)
+private void hwrite_fill_c(ITEM *item, IOB *iob, off_t next, int *iostat)
 /*
   A nonaligned nonsequential write operation has been requested. Read in the
   portion that we are missing. We need to fill the i/o buffer up to at
@@ -1331,7 +1335,7 @@ private int hname_check(char *name)
     if((c < 'a' || c > 'z') && (c < '0' || c > '9') && (c != '-') && (c != '_'))
       return(-1);
   }
-  return(0);
+  return 0 ;
 }
 /************************************************************************/
 private void hdir_c(ITEM *item)
@@ -1446,13 +1450,17 @@ private ITEM *hcreate_item_c(TREE *tree,char *name)
 
   s = name;
   hash = nitem++;
-  if(nitem > MAXITEM)bug_c('f',"Item address table overflow, in hio");
+  if(nitem > MAXITEM)
+    bugv_c('f',"Item address table overflow, in hio; nitem=%d MAXITEM=%d",nitem,MAXITEM);
   while(*s) hash += *s++;
   hash %= MAXITEM;
 
 /* Find a slot in the list of addresses, and allocate it. */
+/* avoid hash=0 since the hash is returned as a handle and it will */
+/* collide with the special stdout value that MIRIAD often uses */
+/* could also return hash+1 ?  but what if this > MAXOPEN */
 
-  while(hget_item(hash) != NULL) hash = (hash+1) % MAXITEM;
+  while(hget_item(hash) != NULL || hash==0) hash = (hash+1) % MAXITEM;
   item_addr[hash] = (ITEM *)Malloc(sizeof(ITEM));
 
 /* Initialise it now. */
@@ -1492,13 +1500,14 @@ private TREE *hcreate_tree_c(char *name)
 
   s = name;
   hash = ntree++;
-  if(ntree > MAXOPEN)bug_c('f',"Tree address table overflow, in hio");
+  if(ntree > MAXOPEN)
+    bugv_c('f',"Tree address table overflow, in hio, ntree=%d MAXOPEN=%d",ntree,MAXOPEN);
   while(*s) hash += *s++;
   hash %= MAXOPEN;
 
 /* Find a slot in the list of addresses, and allocate it. */
 
-  while(hget_tree(hash) != NULL) hash = (hash+1) % MAXOPEN;
+  while(hget_tree(hash) != NULL || hash==0) hash = (hash+1) % MAXOPEN;
   tree_addr[hash] = (TREE *)Malloc(sizeof(TREE));
 
 /* Initialise it. */
