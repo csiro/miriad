@@ -176,6 +176,9 @@ c  After this sequence, 1000 integers are available from iData(ipnt),
 c			1000 reals    are available from rData(rpnt), and
 c			1000 doubles  are available from dData(dpnt).
 c
+c  Warning:   memalloc is deprecated, memallop() and memfrep() 
+c             should be used
+c
 c  Input:
 c    type	The data type. Possible values are:
 c		  'i'	Integer.
@@ -262,7 +265,9 @@ c
 	character type*1
 c
 c  This frees up a portion of blank common, previously allocated by
-c  MemAlloc.
+c  MemAlloc. Note these routines are deprecated.
+c
+c  Warning: memfree() is deprecated, memfrep() should be used.
 c
 c  Inputs:
 c    pnt	Pointer to the memory in blank common.
@@ -302,7 +307,7 @@ c
 	if(qd.le.0.or.qd.gt.MAXBUF)then
 	  call mmfree(Data(qd))
 c
-c  Frr memory which was obtained from the common block.
+c  Free memory which was obtained from the common block.
 c  Search the free list for the place to add this bit.
 c
 	else
@@ -359,18 +364,18 @@ c
 	integer size
 	character type*1
 c
-c  The MemAlloc routine reserves a portion of blank common for its
+c  The MemAllop routine reserves a portion of blank common for its
 c  caller. It returns a pointer to the index in blank common of the
 c  reserved portion. The caller should declare an array in blank common
 c  of size MAXBUF integer elements.
 c
-c  NOTE: If memalloc is used by any routine, then ALL routines that
-c  use blank common MUST go through memalloc/memfree. Otherwise
+c  NOTE: If memallop is used by any routine, then ALL routines that
+c  use blank common MUST go through memallop/memfrep. Otherwise
 c  multiple routines may overwrite blank common.
 c
 c  Typical usage would be something like:
 c
-c	integer ipnt,rpnt,dpnt
+c	ptrdiff ipnt,rpnt,dpnt
 c	include 'maxdim.h'
 c	integer iData(MAXBUF)
 c	real rData(MAXBUF)
@@ -378,9 +383,9 @@ c	double precision dData(MAXBUF/2)
 c	common iData
 c	equivalence(iData,rData,dData)
 c
-c	call MemAlloc(ipnt,1000,'i')
-c	call MemAlloc(rpnt,1000,'r')
-c	call MemAlloc(dpnt,1000,'d')
+c	call MemAllop(ipnt,1000,'i')
+c	call MemAllop(rpnt,1000,'r')
+c	call MemAllop(dpnt,1000,'d')
 c
 c  After this sequence, 1000 integers are available from iData(ipnt),
 c			1000 reals    are available from rData(rpnt), and
@@ -421,7 +426,7 @@ c
 c  Find a block of memory that is big enough.
 c
 	if(size.le.0)
-     *	  call bug('f','Bad value for size, in MemAlloc')
+     *	  call bug('f','Bad value for size, in MemAllop')
 	q = 1
 	p = 0
 	nc = align
@@ -452,7 +457,7 @@ c
 	endif
 c
  	if(mod(pntd-1,elsize).ne.0)
-     *	  call bug('f','Alignment error in memAlloc')
+     *	  call bug('f','Alignment error in memAllop')
 c
 	pnt = (pntd-1) / elsize + 1
 c
@@ -470,7 +475,7 @@ c
 	character type*1
 c
 c  This frees up a portion of blank common, previously allocated by
-c  MemAlloc.
+c  MemAllop.
 c
 c  Inputs:
 c    pnt	Pointer to the memory in blank common.
@@ -499,7 +504,7 @@ c
 c  Check.
 c
 	if(size.le.0)
-     *	  call bug('f','Bad value for size, in MemFree')
+     *	  call bug('f','Bad value for size, in MemFrep')
 	elsize = mmSize(ichar(type))
 	pntd = (pnt-1)*elsize
 	qd = pntd/intsize + 1
@@ -515,7 +520,7 @@ c  Search the free list for the place to add this bit.
 c
 	else
 	  if((qd-1)*intsize+sized-1.gt.intsize*MAXBUF)
-     *	    call bug('f','Bad value for pnt or size, in MemFree')
+     *	    call bug('f','Bad value for pnt or size, in MemFrep')
 	  q = 1
 	  p = 0
 	  dowhile(q.lt.qd.and.q.gt.0)
@@ -525,12 +530,12 @@ c
 c
 c  Various checks.
 c
-	  if(p.eq.0)call bug('f','Internal bug in MemFree')
+	  if(p.eq.0)call bug('f','Internal bug in MemFrep')
 	  if(q.gt.0.and.(qd-1)*intsize+sized.gt.(q-1)*intsize) 
      *	    call bug('f',
-     *	    'Deallocating a deallocated part of memory, in MemFree')
+     *	    'Deallocating a deallocated part of memory, in MemFrep')
 	  if((p-1)*intsize+Data(p+1).gt.(qd-1)*intsize+1) call bug('f',
-     *	    'Deallocating a deallocated part of memory, in MemFree')
+     *	    'Deallocating a deallocated part of memory, in MemFrep')
 c
 c  Insert this bit into the free list.
 c
