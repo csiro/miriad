@@ -24,7 +24,9 @@
 // 23-jun-02 pjt define MIR4 here if you want to enable the LSF and MIR4
 // 30-aug-04 pjt removed deprecated ARGS() macro
 // 01-jan-04 rjs Eliminate MIR3/MIR4 stuff. Tidy up.
+//  1-dec-05 pjt added bugv_c
 // 01-apr-09 rjs Add additional interface to scrRecSz
+// 14-dec-11 pkgw Declare errmsg_c()
 */
 
 
@@ -259,6 +261,8 @@ void mkclose_c (char *handle);
 int  mkread_c  (char *handle, int mode, int *flags, off_t offset, int n, int nsize);
 void mkwrite_c (char *handle, int mode, Const int *flags, off_t offset, int n, int nsize);
 void mkflush_c (char *handle);
+void setmaski_c(int *mask, Const int *masks);
+void getmaski_c(Const int mask, int *masks);
 
 
 /* xyzio.c */
@@ -285,7 +289,9 @@ int xyzpix_c    (int tno, int dims);
 
 void buglabel_c  (Const char *name);
 void bugno_c     (char s, int n);
+char *errmsg_c   (int n);
 void bug_c       (char s, Const char *m);
+void bugv_c      (char s, Const char *m, ...);
 
 /* scrio.c */
 
