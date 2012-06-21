@@ -28,11 +28,12 @@ c    10dec97 rjs  Check gain table size is correct.
 c    24feb97 rjs  Make "bandpass calibration" work for wide-only files.
 c    01jan05 rjs  Double precision baselines and use basant.
 c    08jan07 rjs  Use MAXWIN more rigorously.
+c    13feb07 pjt  Fix sign of swidth for LSB wide bands
 c    08aug07 rjs  Correct bug in averaging wide channels.
 c    27aug09 mhw  Handle multiple bandpass solution intervals
 c    24feb11 mhw  Handle freq bins in gains and leakage
 c
-c $Id: uvgn.for,v 1.16 2012/04/26 02:51:27 wie017 Exp $
+c $Id: uvgn.for,v 1.17 2012/06/21 01:45:36 wie017 Exp $
 c***********************************************************************
 
       subroutine uvGnIni(tno1,dogains1,dopass1)
@@ -1370,12 +1371,13 @@ c
           swidth(j) = 0
           do i = 1, lwidth
             sfreq(j) = sfreq(j) + wfreq(i0)*abs(wwidth(i0))
-            swidth(j) = swidth(j) + abs(wwidth(i0))
+            swidth(j) = swidth(j) + wwidth(i0)
             i0 = i0 + 1
           enddo
           sfreq(j) = sfreq(j) / swidth(j)
           sdf(j) = swidth(j)
           nschan(j) = 1
+          swidth(j) = abs(swidth(j))
         enddo
 c
 c  Something else, which I cannot handle.
