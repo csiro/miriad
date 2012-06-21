@@ -13,7 +13,7 @@
 *                    though cannot be exported to Fortran              
 *    pkgw    14dec11 Make errmsg_c public for use in uvio.c            
 *
-*  $Id: bug.c,v 1.5 2012/06/21 00:45:18 wie017 Exp $
+*  $Id: bug.c,v 1.6 2012/06/21 23:00:19 wie017 Exp $
 *===========================================================================*/
 
 #include <stdio.h>
@@ -21,7 +21,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include "miriad.h"
-/*#include "sysdep.h"*/
+#include "sysdep.h"
 
 char *errmsg_c();
 
