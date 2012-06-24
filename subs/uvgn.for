@@ -31,9 +31,11 @@ c    08jan07 rjs  Use MAXWIN more rigorously.
 c    13feb07 pjt  Fix sign of swidth for LSB wide bands
 c    08aug07 rjs  Correct bug in averaging wide channels.
 c    27aug09 mhw  Handle multiple bandpass solution intervals
+c    31oct11 mhw  Use ptrdiff for memory allocation
 c    24feb11 mhw  Handle freq bins in gains and leakage
+c    22jun12 pjt  Fixed some ptrdiff
 c
-c $Id: uvgn.for,v 1.17 2012/06/21 01:45:36 wie017 Exp $
+c $Id: uvgn.for,v 1.18 2012/06/24 23:18:11 wie017 Exp $
 c***********************************************************************
 
       subroutine uvGnIni(tno1,dogains1,dopass1)
@@ -730,7 +732,8 @@ c-----------------------------------------------------------------------
       parameter (LINE=1,WIDE=2,VELO=3)
       integer TYPE,COUNT,START,WIDTH,STEP
       parameter (TYPE=1,COUNT=2,START=3,WIDTH=4,STEP=5)
-      integer linetype,i,j,bl,i0
+      integer linetype,i,bl,i0
+      ptrdiff j
       logical willcg,ok
       double precision dat(6)
 c-----------------------------------------------------------------------
@@ -1160,7 +1163,8 @@ c***********************************************************************
       double precision sfreq(nspect),sdf(nspect)
       real factor
       logical dowide,dotau,dopass,aver
-      integer pTab,pFlags,pDat,nDat,pFreq,nFreq,bpsolno
+      ptrdiff pTab,pFlags,pDat,pFreq
+      integer nDat,nFreq,bpsolno
 c-----------------------------------------------------------------------
 c  Match and compute the passband gains.
 c
