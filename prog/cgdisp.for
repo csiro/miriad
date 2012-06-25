@@ -589,7 +589,7 @@ c       The OFFSET directive is not applied to ANY position fields in
 c       succeeding directives that have %OTYPEs that are "hms" or "dms".
 c       I am too lazy to code it.
 c
-c$Id: cgdisp.for,v 1.20 2012/03/02 00:55:01 cal103 Exp $
+c$Id: cgdisp.for,v 1.21 2012/06/25 04:11:16 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -660,8 +660,8 @@ c     Plotting parameters.
       data getvsc /.true./
 c-----------------------------------------------------------------------
       version = versan ('cgdisp',
-     *                  '$Revision: 1.20 $',
-     *                  '$Date: 2012/03/02 00:55:01 $')
+     *                  '$Revision: 1.21 $',
+     *                  '$Date: 2012/06/25 04:11:16 $')
 
 c     Get user inputs.
       call inputs(maxchan, MAXLEV, MAXCON, MAXTYP, ltypes, ncon, cin,
@@ -3274,8 +3274,8 @@ c       angular units.
         pType(2) = pType(1)
       endif
 
-      call chkaxco(lun, pType(1), 1, ' ')
-      call chkaxco(lun, pType(2), 2, ' ')
+      call chkaxco(lun, pType(1), 1)
+      call chkaxco(lun, pType(2), 2)
 
 
 c     Get overlay position in pixel coordinates.
