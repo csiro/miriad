@@ -450,7 +450,7 @@ void rdhdl_c(int thandle,Const char *keyword,int8 *value,int8 defval)
         *value = ltemp;
       }
     } else {
-      bug_c('f',"Unrecognised type in rdhdl");
+      bugv_c('f',"rdhdl_c: item %s not an int8 or small enough int4",keyword);
     }
     check(iostat);
   }
@@ -843,7 +843,8 @@ void hdprobe_c(int tno,Const char *keyword,char *descr,size_t length,char *type,
     Strcpy(type,"unknown");
     *n = asize;
   } else if(bufit){
-    if(strlen(buf) > length - 1)bug_c('f',"Descr buffer overflow in hdprobe");
+    if(strlen(buf) > length - 1)
+      bugv_c('f',"Descr buffer overflow in hdprobe for %s",keyword);
     strcpy(descr,buf);
   }
 }
