@@ -129,8 +129,9 @@ c    * IF frequency axis is not handled on output of uv data.
 c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
+c    mhw  02jul12  Read/write of images with dimensions up to MAXDIM
 c
-c $Id: fitsio.for,v 1.9 2012/06/19 05:15:35 wie017 Exp $
+c $Id: fitsio.for,v 1.10 2012/07/02 03:59:09 wie017 Exp $
 c***********************************************************************
 
 c* FxyOpen -- Open a FITS image file.
@@ -354,7 +355,7 @@ c  Output:
 c    data       Array containing the pixel info.
 c-----------------------------------------------------------------------
       integer i,length,iostat,blank
-      integer offset3(3)
+      integer offset3(3),off3(3)
       real bs,bz
       include 'fitsio.h'
 c-----------------------------------------------------------------------
@@ -369,7 +370,10 @@ c  case where BZERO is 0.
 c
       length = axes(1,lu)
       call mpSet(offset3,PixBase3(1,lu))
-      call mpAddmi(offset3,BypPix(lu)*(indx-1)*length)
+c      call mpAddmi(offset3,BypPix(lu)*(indx-1)*length)
+      call mpCvtim(off3,length)
+      call mpMulmi(off3,BypPix(lu)*(indx-1))
+      call mpAddmm(offset3,off3)
       bs = bscale(lu)
       bz = bzero(lu)
       blank = BlankVal(lu)
@@ -452,7 +456,7 @@ c  Output:
 c    flags      Output pixel flags.
 c-----------------------------------------------------------------------
       integer i,length,iostat,blank
-      integer offset3(3)
+      integer offset3(3),off3(3)
       include 'fitsio.h'
 c-----------------------------------------------------------------------
 c
@@ -466,7 +470,10 @@ c  Initialise.
 c
       length = axes(1,lu)
       call mpSet(offset3,PixBase3(1,lu))
-      call mpAddmi(offset3,BypPix(lu)*(indx-1)*length)
+c      call mpAddmi(offset3,BypPix(lu)*(indx-1)*length)
+      call mpCvtim(off3,length)
+      call mpMulmi(off3,BypPix(lu)*(indx-1))
+      call mpAddmm(offset3,off3)
       blank = BlankVal(lu)
 c
 c  If there was no BLANK keyword, assume all the data are good.
@@ -526,7 +533,7 @@ c        .true., 1.0 and 0.0 respectively!  THIS ASSUMPTION depends on
 c        the code in fxyopen!
 c-----------------------------------------------------------------------
       integer iostat
-      integer offset3(3)
+      integer offset3(3),off3(3)
       include 'fitsio.h'
 
       external mpSign
@@ -547,7 +554,10 @@ c
 c  This assumes that we have floating point pixels.
 c
       call mpSet(offset3,PixBase3(1,lu))
-      call mpAddmi(offset3,BypPix(lu)*(indx-1)*axes(1,lu))
+c      call mpAddmi(offset3,BypPix(lu)*(indx-1)*axes(1,lu))
+      call mpCvtim(off3,axes(1,lu))
+      call mpMulmi(off3,BypPix(lu)*(indx-1))
+      call mpAddmm(offset3,off3)
       call hwrite3r(item(lu),data,offset3,BypPix(lu)*axes(1,lu),
      *                                                        iostat)
       if (iostat.ne.0) call bugno('f',iostat)
@@ -601,7 +611,10 @@ c  This assumes that we have floating point pixels.
 c
       Blank = BlankVal(lu)
       call mpSet(offset3,PixBase3(1,lu))
-      call mpAddmi(offset3,BypPix(lu)*(indx-1)*axes(1,lu))
+c      call mpAddmi(offset3,BypPix(lu)*(indx-1)*axes(1,lu))
+      call mpCvtim(off3,axes(1,lu))
+      call mpMulmi(off3,BypPix(lu)*(indx-1))
+      call mpAddmm(offset3,off3)
 c
 c  Convert the flags into a run-length encoding, and then write out
 c  the magic value blanked version.
