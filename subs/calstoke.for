@@ -20,6 +20,7 @@ c    mhw  17aug09 Updated fit to 1934-638 above 10 GHz to include 30-50GHz data.
 c                 New parabolic fit joins smoothly to low freq fit at 10.7 GHz.
 c    rjs  17may10 EVLA is using different names for calibrators than it used
 c		  to. Change to accommodate this/
+c    mhw  17jul12 Add new JVLA fits
 c************************************************************************
 c* CalStoke -- Flux characteristics of selected calibrators.
 c& nebk, rjs
@@ -52,7 +53,7 @@ c--
 c-----------------------------------------------------------------------
       integer nsrc, nnames
       integer loglog,loglin,linlin,linlog
-      parameter (nsrc = 11, nnames = 25)
+      parameter (nsrc = 15, nnames = 35)
       parameter (loglog=1,loglin=2,linlin=3,linlog=4)
 c
       character name*32
@@ -60,12 +61,12 @@ c
       real coeffs(5,nsrc,4), stmp, frange(2,nsrc)
       character names(nnames)*10
       integer srcnum(nnames), isrc, isrcd, ipol, i, j
-      integer coeftype(nsrc,4)
+      integer coeftype(nsrc,4),coeftype2(nsrc)
 c
       save coeffs, names, srcnum, coeftype
 c
 c  All lists are in the order:
-c	3C286,	  Ott et al, 1995 (total intensity)
+c	OLD3C286,	  Ott et al, 1995 (total intensity)
 c		  Perley/Killeen, 1991 (unpublished -- polarised component)
 c	3C48,	  VLA database
 c	3C147,	  VLA database
@@ -73,8 +74,14 @@ c	3C138,	  Perley/Killeen, 1991 (unpublished)
 c	1934-638, Reynolds, 1994, ATNF Technical Memo 39.3040
 c	0823-500  John Reynolds (unpublished)
 c	0407-658  (unknown origin -- unreliable)
+c       OLD1934,  pre 1994 model
 c	3c161	  Ott et al, 1995
 c	3c218	  Ott et al, 1995
+c       1934-638, high freq model, Stevens, 2009 (unpublished)
+c       3c123     Perley et al 2012
+c       3c196     Perley et al 2012
+c       3c295     Perley et al 2012
+c       3c286     Perley et al 2012, polarised fit copied from old model
 c
 c     +     1.099506E2,  -44.80922,   4.618715,    0.0,       0.0,
       data ((coeffs(i,j,1),i=1,5),j=1,nsrc) /
@@ -88,7 +95,11 @@ c     +     1.099506E2,  -44.80922,   4.618715,    0.0,       0.0,
      +	  -23.839,	  19.569,    -4.8168,	   0.35836,   0.0,
      +	    1.250,	   0.726,    -0.2286,	   0.0,       0.0,
      +	    4.729,	  -1.025,     0.0130,	   0.0,       0.0,
-     +  -1.237160,     2.005317,   -0.400622,      0.0,       0.0/
+     +  -1.237160,     2.005317,   -0.400622,      0.0,       0.0,
+     +     1.8036,       -0.7742,    -0.1508,      0.0142,    0.0,
+     +     1.2984,       -0.8785,    -0.1632,      0.0248,    0.0,
+     +     1.4680,       -0.7429,    -0.3701,      0.0792,    0.0,
+     +     1.2382,       -0.4188,    -0.2076,      0.0444,    0.0/
 c
 c  Q coefficients.
 c
@@ -103,7 +114,11 @@ c
      +		     0.0,	 0.0,	      0.0,	   0.0,0.0,
      +		     0.0,	 0.0,	      0.0,	   0.0,0.0,
      +		     0.0,	 0.0,	      0.0,	   0.0,0.0,
-     +		     0.0,	 0.0,	      0.0,	   0.0,0.0/
+     +		     0.0,	 0.0,	      0.0,	   0.0,0.0,
+     +		     0.0,	 0.0,	      0.0,	   0.0,0.0,
+     +		     0.0,	 0.0,	      0.0,	   0.0,0.0,
+     +		     0.0,	 0.0,	      0.0,	   0.0,0.0,
+     +		     2.735732,	-0.923091,    0.073638,    0.0,0.0/
 c
 c  U coefficients.
 c
@@ -118,7 +133,11 @@ c
      +		     0.0,	 0.0,	      0.0,	   0.0,0.0,
      +		     0.0,	 0.0,	      0.0,	   0.0,0.0,
      +		     0.0,	 0.0,	      0.0,	   0.0,0.0,
-     +		     0.0,	 0.0,	      0.0,	   0.0,0.0/
+     +		     0.0,	 0.0,	      0.0,	   0.0,0.0,
+     +		     0.0,	 0.0,	      0.0,	   0.0,0.0,
+     +		     0.0,	 0.0,	      0.0,	   0.0,0.0,
+     +		     0.0,	 0.0,	      0.0,	   0.0,0.0,
+     +		     6.118902,	-2.05799,     0.163173,    0.0,0.0/
 c
 c  V coefficients.
 c
@@ -133,11 +152,15 @@ c
      +		    0.0, 0.0, 0.0, 0.0,0.0,
      +		    0.0, 0.0, 0.0, 0.0,0.0,
      +		    0.0, 0.0, 0.0, 0.0,0.0,
+     +		    0.0, 0.0, 0.0, 0.0,0.0,
+     +		    0.0, 0.0, 0.0, 0.0,0.0,
+     +		    0.0, 0.0, 0.0, 0.0,0.0,
+     +		    0.0, 0.0, 0.0, 0.0,0.0,
      +		    0.0, 0.0, 0.0, 0.0,0.0/
 c
 c Recognized names
 c
-      data names /'3C286     ','1328+307  ','1331+305  ',
+      data names /'OLD3C286  ',
      +		  '3C48      ','0134+329  ','0137+331  ','J0137+3309',
      +		  '3C147     ','0538+498  ','0542+498  ',
      +		  '3C138     ','0518+165  ','0521+166  ',
@@ -146,24 +169,33 @@ c
      +		  '0407      ','0407-658  ',
      +		  'OLD1934   ',
      +		  '3C161     ','0624-058  ',
-     +		  '3C218     ','0915-119  '/
+     +		  '3C218     ','0915-119  ',
+     +            '3C123     ','0433+295  ','0437+296  ',
+     +            '3C196     ','0809+483  ','0813+482  ',
+     +            '3C295     ','1409+524  ','1411+522  ',
+     +            '3C286     ','1328+307  ','1331+305  '/
 c
 c Source number in coef table
 c
-      data srcnum /1,1,1, 2,2,2,2, 3,3,3, 4,4,4, 5,5,5, 6,6, 7,7, 8,
-     +		   9,9, 10,10/
+      data srcnum /1, 2,2,2,2, 3,3,3, 4,4,4, 5,5,5, 6,6, 7,7, 8,
+     +		   9,9, 10,10, 12,12,12, 13,13,13, 14,14,14, 15,15,15/
 c
 c  What sort of fit is the polynomial (logarithmic? linear?).
 c
       data coeftype /
      +	loglog,loglog,loglog,loglin,loglog,loglog,loglog,loglog,
-     +		loglog,loglog,loglog,
+     +	loglog,loglog,loglog,loglog,loglog,loglog,loglog,
      +	loglin,linlin,linlin,loglin,linlin,linlin,linlin,linlin,
-     +		linlin,linlin,linlin,
+     +	linlin,linlin,linlin,linlin,linlin,linlin,linlin,
      +	loglin,linlin,linlin,loglin,linlin,linlin,linlin,linlin,
-     +		linlin,linlin,linlin,
+     +	linlin,linlin,linlin,linlin,linlin,linlin,linlin,
      +	linlin,linlin,linlin,linlin,linlin,linlin,linlin,linlin,
-     +		linlin,linlin,linlin/
+     +	linlin,linlin,linlin,linlin,linlin,linlin,linlin/
+c
+c  What is the freq unit of the fit (MHz=0,GHz=1).
+c
+      data coeftype2 /
+     +	0,0,0,0,0,0,0,0,0,0,0,1,1,1,1/
 c
 c Frequency range polynomial fits done over (0.0 means don't know)
 c
@@ -177,7 +209,11 @@ c
      +		   0.4080,   8.400,
      +		   1.408,   10.550,
      +		   1.408,   10.550,
-     +		  10.700,   50.000/
+     +		  10.700,   50.000,
+     +             1.000,   50.000,
+     +             1.000,   50.000,
+     +             1.000,   50.000,
+     +             1.000,   50.000/
 c-----------------------------------------------------------------------
       ierr = 2
       name = source
@@ -208,8 +244,9 @@ c
 	  if (frange(1,isrcd).ne.0.0 .and. frange(2,isrcd).ne.0.0 .and.
      +	    (x.lt.frange(1,isrcd) .or. x.gt.frange(2,isrcd)))
      +	    ierr=1
+          if (coeftype2(isrcd).eq.0) x = 1000.*x
 	  if(coeftype(isrcd,ipol).eq.loglog.or.
-     +	     coeftype(isrcd,ipol).eq.loglin) x = log10(1000.*x)
+     +	     coeftype(isrcd,ipol).eq.loglin) x = log10(x)
 c
 	  stmp = coeffs(1,isrcd,ipol)  + x*(coeffs(2,isrcd,ipol) +
      +	       x*(coeffs(3,isrcd,ipol) + x*(coeffs(4,isrcd,ipol) +
