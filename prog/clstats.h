@@ -2,8 +2,9 @@ c-------------------------------------------------------------
 c  old name: clstats.h
 c  common stat variables
 c-------------------------------------------------------------
-      integer maxbuf,maxdim,ncl
-      parameter(maxbuf=4194304,maxdim=400,ncl=300)
+      include 'maxdim.h'
+      integer ncl
+      parameter(ncl=1000)
 
 
       integer nmin

@@ -82,25 +82,25 @@ c  25aug98  pjt  change keywords in doc section to lower case
 c                and removed that awkward case checking code
 c  14mar00  ks/pjt format and output changes
 c  20nov01  pjt  minor output format change
+c  05jul12  mhw  use memallop/memfrep, remove size limits
 c-------------------------------------------------------------------------
-      character version*(*)
-      parameter(version='version 1.5 20-nov-01' )
       include 'clstats.h'
+      include 'mem.h'
 
       integer lenline,imax,ncmax
       logical pos
       character line*80,positns*3
-      character*80 head1,head2
+      character*80 head1,head2,version
+      character versan*80
+      external  versan
 
-c.....dynamic memory setup
-      integer It,Ic,Im
-      integer iData(maxbuf)
-      real rData(maxbuf)
-      logical lData(maxbuf)
-      common iData
-      equivalence(iData,rData,lData)
+c.....dynamic memory pointers
+      ptrdiff It,Ic,Im
+c-----------------------------------------------------------------------
 
-      call output('CLSTATS '//version)
+      version = versan('clstats',
+     *                 '$Revision: 1.3 $',
+     *                 '$Date: 2012/07/19 02:38:31 $')
 
 c.....Get the parameters from the user.
       call keyini
@@ -135,32 +135,33 @@ c.....Open data cube
       if(ny.gt.maxdim)call bug('f','Image is too big in axis 2')
       nv = nsize(3)
       if(nv.gt.maxdim)call bug('f','Image is too big in axis 3')
-      if(nx*ny*nv.gt.maxbuf) call bug('f','Image too big')
+      if ((log(nx*1.)+log(ny*1.)+log(nv*1.))/log(2.).gt.31) 
+     *  call bug('f','Image too big')
       call rdhd(lin1)
 
-      call memalloc(It,nx*ny*nv,'r')
-      call memalloc(Ic,nx*ny*nv,'i')
-      call memalloc(Im,nx*ny*nv,'l')
+      call memallop(It,nx*ny*nv,'r')
+      call memallop(Ic,nx*ny*nv,'i')
+      call memallop(Im,nx*ny*nv,'l')
 
       call prthead(pos)
 
       line='--------------------------------------------------------'
       call output(line(1:lenline(line))//line(1:lenline(line)))
 
-      call readata(idata(Ic),rdata(It),ldata(Im),imax,ncmax)
+      call readata(memI(Ic),memR(It),memL(Im),imax,ncmax)
 
       head1='Cl#  Xpeak   Ypeak   Vpeak    <t>     t0   FWHMx'
       head2='  FWHMy   R(pc)  FWHMv   Mlte        Err    Mgrav      N '
       call output(head1(1:lenline(head1))//head2(1:lenline(head2)))
       call output(line(1:lenline(line))//line(1:lenline(line)))
 
-      call dostats(pos,idata(Ic),rdata(It),ldata(Im),imax,ncmax)
+      call dostats(pos,memI(Ic),memR(It),memL(Im),imax,ncmax)
 
       call output(line(1:lenline(line))//line(1:lenline(line)))
 
-      call memfree(It,nx*ny*nv,'r')
-      call memfree(Ic,nx*ny*nv,'i')
-      call memfree(Im,nx*ny*nv,'l')
+      call memfrep(It,nx*ny*nv,'r')
+      call memfrep(Ic,nx*ny*nv,'i')
+      call memfrep(Im,nx*ny*nv,'l')
 
       end
 c------------------------------------------------------------------

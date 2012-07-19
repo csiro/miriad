@@ -29,7 +29,7 @@ c@ nmin
 c     Minimum number of pixels in each clump.
 c     Any clumps with fewer pixels are rejected (default=4).
 c
-c$Id: clfind.for,v 1.8 2010/11/22 07:05:42 cal103 Exp $
+c$Id: clfind.for,v 1.9 2012/07/19 02:38:31 wie017 Exp $
 c--
 c       this used to be a parameter, but - as discussed in the paper -
 c       we don't want users to mess with this. (:-)
@@ -52,6 +52,7 @@ c   09/20/96 jpw/pjt   Formal miriad version (finally)
 c   18-may-98 rjs/pjt  Moved over to a single-source file
 c   13-jul-98 pjt linux/g77 cleanup, and fixed CntLevs counting bug
 c   09-nov-05 rjs Update link in documentation.
+c   05-jul-12 mhw Use memallop/memfrep, remove limits on size of cube
 c
 c  Note:
 c   This program comes with a testsuite dataset, which you should run
@@ -67,6 +68,7 @@ c         code won't pass FLINT.
 c
 c-----------------------------------------------------------------------
       include 'clfind.h'
+      include 'mem.h'
 
       integer   ncl, nclump, ngy, nlevs, nmin, npx1, npx2, nsize(3),
      *          nstop
@@ -79,17 +81,11 @@ c-----------------------------------------------------------------------
       character versan*80
       external  len1, versan
 
-c     Dynamic memory allocations.
-      integer heap(maxbuf), Ia, Ipos, Ipos1, Ireg, It, pos(maxbuf),
-     *        pos1(maxbuf/10), reg(maxbuf)
-      real    data(maxbuf)
-      common heap
-
-      equivalence(heap,pos1,pos,reg,data)
+      ptrdiff   Ia, Ipos, Ipos1, Ireg, It
 c-----------------------------------------------------------------------
       version = versan('clfind',
-     *                 '$Revision: 1.8 $',
-     *                 '$Date: 2010/11/22 07:05:42 $')
+     *                 '$Revision: 1.9 $',
+     *                 '$Date: 2012/07/19 02:38:31 $')
 
 c     Get the parameters from the user.
       call keyini
@@ -115,7 +111,6 @@ c      call keyi('naxis',p3,3)
       if (nx.gt.maxdim) call bug('f','Image too big in x')
       if (ny.gt.maxdim) call bug('f','Image too big in y')
       if (nz.gt.maxdim) call bug('f','Image too big in v')
-      if (nx*ny*nz.gt.maxbuf) call bug('f','Image too big')
 
 c     Read required header keywords.
       call rdhdd(lin, 'cdelt1', cdelt1, 1d0)
@@ -169,11 +164,11 @@ c     Open the output, and add a header to it.
       call wrhd(lin, lout, version)
 
 c     space allocation for data and assign arrays
-      call memalloc(Ia,nx*ny*nz,'i')
-      call memalloc(It,nx*ny*nz,'r')
+      call memallop(Ia,nx*ny*nz,'i')
+      call memallop(It,nx*ny*nz,'r')
 
 c     Start reading the input file
-      call rdgrdclf(data(It),heap(Ia))
+      call rdgrdclf(memR(It),memI(Ia))
       call xyclose(lin)
 
       line1='------------------------------------------'
@@ -189,20 +184,20 @@ c     Start reading the input file
 
 c      print 1013, data(1)
 c 1013 format(' t(1) = ',f)
-      call CntLevs(data(It),nlevs,npx1,npx2)
+      call CntLevs(memR(It),nlevs,npx1,npx2)
       nlevels=nlevs
 
 c     space allocation for coded position arrays
-      call memalloc(Ipos1,npx1,'i')
-      call memalloc(Ipos,nlevs*npx2,'i')
-      call memalloc(Ireg,nlevs*npx2,'i')
+      call memallop(Ipos1,npx1,'i')
+      call memallop(Ipos,nlevs*npx2,'i')
+      call memallop(Ireg,nlevs*npx2,'i')
 
-      call FillLevs(data(It),nlevs,npx1,npx2,
-     *              pos1(Ipos1),pos(Ipos),reg(Ireg))
+      call FillLevs(memR(It),nlevs,npx1,npx2,
+     *              memI(Ipos1),memI(Ipos),memI(Ireg))
 
 c     Connect to find connected regions at each gray level
       call output(' ')
-      call findreg(nlevs,npx2,pos(Ipos),reg(Ireg))
+      call findreg(nlevs,npx2,memI(Ipos),memI(Ireg))
 
 c     Work thru data cube, from highest level to lowest
 c     connecting regions across levels
@@ -215,23 +210,23 @@ c     Total number of clumps
       do ngy = nlevels,2,-1
 c       Number of clumps at level ngy
         ncl=0
-        call findclp(ngy,ncl,nclump,data(It),heap(Ia),
-     *               nlevs,npx2,pos(Ipos),reg(Ireg))
+        call findclp(ngy,ncl,nclump,memR(It),memI(Ia),
+     *               nlevs,npx2,memI(Ipos),memI(Ireg))
         print 1040, ngy+p1-1,ncl
         if (ngy.gt.2)
-     *  call xtendclp(ngy,nclump,data(It),heap(Ia),
-     *                nlevs,npx2,pos(Ipos),reg(Ireg))
+     *  call xtendclp(ngy,nclump,memR(It),memI(Ia),
+     *                nlevs,npx2,memI(Ipos),memI(Ireg))
       enddo
  1040 format(' Level ',i2,':',i5,' new clumps')
 
       call output(' ')
       call output('Extending to level 1')
-      call xtendlow(nclump,heap(Ia),npx1,pos1(Ipos1))
+      call xtendlow(nclump,memI(Ia),npx1,memI(Ipos1))
 
       call output('Testing clumps for badness')
       nstop=0
 c     clumps must have greater than nmin pixels
-      call testbad(nmin,nstop,nclump,heap(Ia))
+      call testbad(nmin,nstop,nclump,memI(Ia))
 
       line2='=========================================='
       call output(line2)
@@ -240,19 +235,19 @@ c     clumps must have greater than nmin pixels
       call output(line2)
  1080 format(i5,' clumps found (',i5,' clumps stopped)')
 
-      call printree(nclump,nlevs,data(It))
+      call printree(nclump,nlevs,memR(It))
 
       call output(line2)
 
       call output('Writing assignment file')
-      call wrgrdclf(heap(Ia))
+      call wrgrdclf(memI(Ia))
       call xyclose(lout)
 
-      call memfree(Ia,nx*ny*nz,'i')
-      call memfree(It,nx*ny*nz,'r')
-      call memfree(Ipos1,npx1,'i')
-      call memfree(Ipos,nlevs*npx2,'i')
-      call memfree(Ireg,nlevs*npx2,'i')
+      call memfrep(Ia,nx*ny*nz,'i')
+      call memfrep(It,nx*ny*nz,'r')
+      call memfrep(Ipos1,npx1,'i')
+      call memfrep(Ipos,nlevs*npx2,'i')
+      call memfrep(Ireg,nlevs*npx2,'i')
 
       end
 
@@ -910,7 +905,7 @@ c-----------------------------------------------------------------------
          enddo
 
          do n2 = 1, nregions(ngy)
-            do nmerge = 1, maxmge
+            do nmerge = 1, 5*maxmge
                list(nmerge)=0
             enddo
             nmerge=0

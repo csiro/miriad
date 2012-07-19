@@ -2,10 +2,7 @@ c-----------------------------------------------------------------------
 c     clfind.h
 c     include file for the clump finding program
 c-----------------------------------------------------------------------
-c Allow for a 128x128x128 cube
-      integer maxbuf,maxdim
-      parameter (maxbuf = 128*128*128, maxdim = 400)
-
+      include 'maxdim.h'
 c maxlvl = number of contour levels
 c maxreg = number of regions/level
 c maxpix = number of pixels/level (level>2)
