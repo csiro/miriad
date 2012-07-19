@@ -127,6 +127,9 @@ c                   job.
 c    nebk 19sep94   Fix typo in options=expand in subroutien getopt
 c    rjs  07dec99   Fix writing of history for "adjust" image.
 c    rjs  18sep05   Fix type of boxes argument.
+c    mchw 09feb09   Format change for ATA.
+c    mrc  12nov10   headcopy -> headcp
+c    mhw  17jan12   Use ptrdiff for scr routines
 c
 c  Bugs and Shortcomings:
 c   * This should really be part of "shifty".
@@ -135,7 +138,7 @@ c     removed.  This is hangover from Werong days.
 c
 c-----------------------------------------------------------------------
       character version*(*)
-      parameter (version='version 7-Dec-99')
+      parameter (version='version 20-jul-12')
       include 'maxdim.h'
       include 'maxnax.h'
       include 'imdiff.h'
@@ -329,7 +332,7 @@ c
 100     format(a,1pe13.6)
         call output(aline)
         write(aline,200)   'Minimum located at X-Shift:     ',xshift
-200     format(a,f6.3)
+200     format(a,f12.3)
         call output(aline)
         write(aline,200)   '                   Y-Shift:     ',yshift
         call output(aline)
