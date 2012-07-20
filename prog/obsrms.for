@@ -53,6 +53,7 @@ c  mchw 11jun96  Echo inputs to user.
 c  mchw 15aug96  Format change for smaller inttime.
 c  mchw 25sep96  Calculate deltav from bw if input; format 0.1" theta 
 c  mchw 25mar97  Change format and units for consistency and for VLBI.
+c  mchw 28sep07  Change format to handle low freq.
 c
 c Possible development:
 c
@@ -60,9 +61,9 @@ c@ telescop
 c	Name of the telescope. This provides default values for tsys and Jy/K.
 c----------------------------------------------------------------------c
 	character version*(*)
-	parameter(version='version 25-MAR-97')
+	parameter(version='version 28-SEP-2007')
         include 'mirconst.h'
-	character telescop*20,line*80
+	character telescop*20,line*100
 	real tsys,jyperk,lambda,theta(2),nants,deltav,inttime
 	real rms_Jy,rms_Tb,bw,omega,freq,antdiam,anteta,coreta,rmsphase
 c
@@ -109,14 +110,15 @@ c
 c
 c Echo inputs to user.
 c
-	call bug('i','inttime is now in minutes')
+	call bug('i','inttime in minutes')
 c********1*********2*********3*********4*********5*********6*********7*c
-        write(line,'(a,a)') ' tsys  jyperk  freq  ',
-     *    'lambda  deltav   bw  inttime  nants  theta  coreta rmsphase'
+        write(line,'(a,a,a,a,a)') ' tsys  jyperk  freq  ',' lambda',
+     *   '    deltav     bw  inttime   nants    theta',
+     *   '    coreta   rmsphase'
         call output(line)
-        write(line,'(f6.0,f6.1,f7.1,2f8.2,2f7.2,f7.0,2f5.1,f6.2,f6.0)') 
-     *	    tsys, jyperk, freq,
-     *      lambda, deltav, bw, inttime, nants, theta, coreta, rmsphase
+        write(line,'(f6.0,f6.1,f8.2,2f9.2,2f8.2,f7.0,2f7.1,f6.2,f6.0)') 
+     *	    tsys, jyperk, freq, lambda,
+     *      deltav, bw, inttime, nants, theta, coreta, rmsphase
         call output(line)
 c
 c Convert to MKS units.
