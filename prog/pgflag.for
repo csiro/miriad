@@ -292,7 +292,7 @@ c       nocal   Do not apply antenna gain calibration.
 c       nopass  Do not apply bandpass correction.
 c       nopol   Do not apply polarisation leakage correction.
 c
-c$Id: pgflag.for,v 1.19 2012/07/05 02:15:58 wie017 Exp $
+c$Id: pgflag.for,v 1.20 2012/07/26 01:56:00 wie017 Exp $
 c--
 c
 c  History:
@@ -427,8 +427,8 @@ c
       logical uvDatOpn
 
       version = versan ('pgflag',
-     :                  '$Revision: 1.19 $',
-     :                  '$Date: 2012/07/05 02:15:58 $')
+     :                  '$Revision: 1.20 $',
+     :                  '$Date: 2012/07/26 01:56:00 $')
 
 c
 c Get user inputs
@@ -974,7 +974,7 @@ c     plot value, on this baseline, or on all baselines
             region_width=0
             last_nflags=nflags
 	    call Thres(memR(iDat),memI(iFlg),nchan,ntime,chans,times,
-     *          bases,flagval,MAXEDIT,nflags,cbl,t1,datamax,1)
+     *          bases,flagval,MAXEDIT,nflags,cbl,t1,-datamax,0)
             do_flag=.true.
             if (pressed(1:1).eq.'V') then
               do i=last_nflags+1,nflags
