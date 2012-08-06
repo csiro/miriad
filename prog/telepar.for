@@ -12,7 +12,7 @@ c@ telescop
 c       Name of the observatory.  Several can be given.  If none are
 c       given, TELEPAR simply lists the known observatories.
 c
-c$Id: telepar.for,v 1.6 2010/05/11 00:32:24 cal103 Exp $
+c$Id: telepar.for,v 1.7 2012/08/06 23:55:09 wie017 Exp $
 c--
 c  History:
 c    rjs  20jun91 Original version.
@@ -25,7 +25,8 @@ c    mchw 26aug03 Add Nasmyth
 c    sdw  8jul06  Doesnt print all characteristics !
 c                 added subdiam,ew,nants,ellimt
 c                 also tried to improve formatting.
-c    rjs 23apr10  Reworked formatting was failing on some machines.
+c    pjt   1aug08 keyword reminder
+c    rjs  23apr10 Reworked formatting was failing on some machines.
 c                 Rework the formatting again.
 c-----------------------------------------------------------------------
       include 'mirconst.h'
@@ -42,8 +43,8 @@ c     Externals.
       character rangle*20, versan*80
 c-----------------------------------------------------------------------
       version = versan ('telepar',
-     :                  '$Revision: 1.6 $',
-     :                  '$Date: 2010/05/11 00:32:24 $')
+     :                  '$Revision: 1.7 $',
+     :                  '$Date: 2012/08/06 23:55:09 $')
 
       call keyini
       call mkeya('telescop',observs,MAXOBS,nobs)
@@ -51,6 +52,7 @@ c-----------------------------------------------------------------------
 
       if(nobs.eq.0)then
         call obsPrint
+        call output('Use telescop= to select observatories')
       endif
 
       do i=1,nobs
