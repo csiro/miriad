@@ -77,8 +77,9 @@ c                    ranges. Add an entry for the ATCA at 7mm.
 c   25nov10   mhw    Add support for OTF mosaicing
 c   12may11   mhw    Add bandwidth
 c   18apr12   mchw   Add GBT
+c   29June12  mchw   use FWHM values measured in CARMA memo 52
 c
-c $Id: pb.for,v 1.10 2012/06/20 01:36:04 wie017 Exp $
+c $Id: pb.for,v 1.11 2012/08/06 02:01:50 wie017 Exp $
 c***********************************************************************
 c* pbList -- List known primary beam types.
 c& rjs
@@ -932,20 +933,28 @@ c
 c
 c  The OVRO primary beam is a gaussian of size is 128.4 arcmin.GHz
 c  according to numbers from Shardha Jogee.
+c  29June2012 mchw use FWHM values measured in CARMA memo 52
+c  At 100 GHz the data are consistent with a common FWHM
+c  for azimuth and elevation axes.
+c  The average FWHM for 10m antennas is 1.20 +/- 0.02 arcmin.
+c  The average for 6m antennas is 1.98 +/- 0.03 arcmin.
+c  At 230 GHz, the 10m FWHM ~ 0.53', the 6m FWHM ~ 0.86'
 c
-      call pbAdd('OVRO',24.0,350.0,   107.3, 0.05, GAUS,0,0.0,
+c      call pbAdd('OVRO',24.0,350.0,   107.3, 0.05, GAUS,0,0.0,
+c     *                           'Truncated Gaussian')
+      call pbAdd('OVRO',24.0,350.0,   121.0, 0.05, GAUS,0,0.0,
      *                           'Truncated Gaussian')
 c
 c  The Hat Ck primary beam is a gaussian of size is 191.67 arcmin.GHz
 c  according to "John L"
 c
-      call pbAdd('HATCREEK',24.0,270.0,   191.67, 0.05, GAUS,0,0.0,
+      call pbAdd('HATCREEK',24.0,270.0,   194.5, 0.05, GAUS,0,0.0,
      *                           'Truncated Gaussian')
 c
 c  Add BIMA and ATA.  The old HATCREEK antennas are now the BIMA
 c  antennas at CARMA.
 c
-      call pbAdd('BIMA',24.0,270.0,   191.67, 0.05, GAUS,0,0.0,
+      call pbAdd('BIMA',24.0,270.0,   194.5, 0.05, GAUS,0,0.0,
      *                           'Truncated Gaussian')
 c
 c   ATA  FWHM = 3.70 degrees  = 222 arcmin at 1 GHz.
