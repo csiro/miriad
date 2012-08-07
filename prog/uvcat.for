@@ -48,7 +48,19 @@ c		    polarisations.
 c    rjs  12oct95   Copy xyphase variable.
 c    rjs  13jun96   Fix window selection.
 c    rjs  23sep99   Fix window selection again!!
-c    mhw  05jun12   Handle ifchain correctly when selecting windows
+c    gmx  08apr04   Added xtsys and ytsys to the variables to be handled
+c                   when removing channels.
+c    jwr  16jun04   Fixed bug in calling uvVarUpd that relied on McCarthy
+c                   evaluation of logical expressions (ifort does not!)
+c    dnf  30jun06   increased size of output file name to 256 characters
+c    mhw  02nov11   add l to uvflags to make sure line params get initialized
+c    pjt  11may12   deal with bfmask(nspect) and bfmask(1)
+c    pjt   6jun12   more checks when to write out in windupd(), although this
+c                   takes care of bugzilla 1049, the root cause is still a
+c                   mystery
+c    mhw  07jun12   Handle ifchain correctly when selecting windows
+c    mhw  07aug12   Merge atca and carma version (ifchain and bfmask)
+c
 c  Bugs:
 c
 c= uvcat - Catenate and copy uv datasets; Apply gains file, Select windows.
@@ -90,7 +102,7 @@ c--
 c------------------------------------------------------------------------
         include 'maxdim.h'
 	character version*(*)
-	parameter(version='UvCat: version 1.0 23-Sep-99')
+	parameter(version='UvCat: version 6-jun-2012')
 c
 	integer nchan,vhand,lIn,lOut,i,j,nspect,nPol,Pol,SnPol,SPol
 	integer nschan(MAXWIN),ischan(MAXWIN),ioff,nwdata,length
@@ -102,7 +114,7 @@ c
 	logical first,init,new,more,dopol,PolVary,donenpol
 	logical nowide,nochan,dochan,dowide,docopy,doall,updated
 	logical nopass
-	character out*64,type*1,uvflags*8
+	character out*256,type*1,uvflags*8
 c
 c  Externals.
 c
@@ -203,8 +215,10 @@ c
 c
 c  Update the window parameters if needed.
 c
-	    if(dochan.and.uvVarUpd(vhand)) call WindUpd(lIn,lOut,
+	    if(dochan) then
+	      if (uvVarUpd(vhand)) call WindUpd(lIn,lOut,
      *			  MAXWIN,wins,nspect,nschan,ischan,window)
+	    endif
 c
 c  Move the data around, if we are eliminating spectra.
 c
@@ -282,11 +296,12 @@ c------------------------------------------------------------------------
 	logical updated
 c
 	integer nwin
-	parameter(nwin=7)
+	parameter(nwin=11)
 	character windpar(nwin)*8
 c
 	data windpar/ 'ischan  ','nschan  ','nspect  ','restfreq',
-     *	   'sdf     ','sfreq   ','systemp '/
+     *	   'sdf     ','sfreq   ','systemp ','xtsys   ','ytsys   ',
+     *     'bfmask  ','ifchain '/
 c
 c  Check if "wcorr" and "corr" are present, and determine which ones we
 c  want to write out.
@@ -319,7 +334,7 @@ c
 	call uvprobvr(lIn,'npol',type,length,updated)
 	dopol = type.eq.'i'
 c
-c  Disable window-based selection, as thta is done manually.
+c  Disable window-based selection, as that is done manually.
 c
 	call uvset(lIn,'selection','window',0,0.,0.,0.)
 c
@@ -342,6 +357,9 @@ c    sfreq
 c    restfreq
 c    systemp
 c    (ifchain)
+c    xtsys
+c    ytsys
+c    bfmask
 c
 c  It also returns a description used by a later routine to extract the
 c  useful channels.
@@ -358,14 +376,21 @@ c    ischand	The offset of the first channel in each window.
 c    window	This is false if all windows are selected.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
-	integer nschan(MAXWIN),ischan(MAXWIN),nants
+	integer nschan(MAXWIN),ischan(MAXWIN),bfmask(MAXWIN),nants
 	integer length,nspect,offset,nout,i,j,nsystemp,nxyph
+	integer nxtsys,nytsys
 	double precision sdf(MAXWIN),sfreq(MAXWIN),restfreq(MAXWIN)
 	real systemp(MAXANT*MAXWIN),xyphase(MAXANT*MAXWIN)
         integer ifchain(MAXWIN)
+	real xtsys(MAXANT*MAXWIN),ytsys(MAXANT*MAXWIN)
 	character type*1
 	logical unspect,unschan,uischan,usdf,usfreq,urest,usyst
+	logical uxtsys,uytsys,ubfmask
 	logical uxyph,uifch
+	logical bfirst
+c
+	save bfirst
+	data bfirst/.TRUE./
 c
 c  Get the dimensioning info.
 c
@@ -392,12 +417,54 @@ c
         call uvprobvr(lIn,'ifchain',type,length,uifch)
         uifch = type.eq.'i'.and.length.eq.nspect
         if (uifch) call uvgetvri(lIn,'ifchain',ifchain,nspect)
+	call uvprobvr(lIn,'bfmask',type,length,ubfmask)
+c
+c  bfmask if a new CARMA variable (for general use). But
+c  it is allowed to contain 1 element, but is forced to
+c  be nspect, as is required by most downstream software
+c  This construction here will fix that issue.
+c
+	if (ubfmask) then
+	   if (length.eq.nspect) then
+	      call uvgetvri(lIn,'bfmask',bfmask,nspect)
+	   else if (length.eq.1) then
+	      if (bfirst) then
+		 call bug('i','Fixing up bfmask(nspect)')
+		 bfirst = .FALSE.
+	      endif
+	      call uvgetvri(lIn,'bfmask',bfmask,1)
+	      do i=2,nspect
+		 bfmask(i) = bfmask(1)
+	      enddo
+	   else
+	      call bug('f','bfmask is not nspect or 1 in size')
+	   endif
+	endif
+c
+c       System Temperature
+c
 	call uvprobvr(lIn,'systemp',type,nsystemp,usyst)
-	usyst = type.eq.'r'.and.nsystemp.le.MAXANT*MAXWIN.and.
+	usyst = usyst.and.type.eq.'r'.and.nsystemp.le.MAXANT*MAXWIN.and.
      *				nsystemp.gt.0
 	if(usyst)call uvgetvrr(lIn,'systemp',systemp,nsystemp)
+c
+c       x-feed system temperature
+c
+	call uvprobvr(lIn,'xtsys',type,nxtsys,uxtsys)
+	uxtsys = uxtsys.and.type.eq.'r'.and.nxtsys.le.MAXANT*MAXWIN.and.
+     *				nxtsys.gt.0
+	if(uxtsys)call uvgetvrr(lIn,'xtsys',xtsys,nxtsys)
+
+c
+c       y-feed system temperature
+c
+	call uvprobvr(lIn,'ytsys',type,nytsys,uytsys)
+	uytsys = uytsys.and.type.eq.'r'.and.nytsys.le.MAXANT*MAXWIN.and.
+     *				nytsys.gt.0
+	if(uytsys)call uvgetvrr(lIn,'ytsys',ytsys,nytsys)
+
 	call uvprobvr(lIn,'xyphase',type,nxyph,uxyph)
-	uxyph = type.eq.'r'.and.nxyph.le.MAXANT*MAXWIN.and.
+	uxyph = uxyph.and.type.eq.'r'.and.nxyph.le.MAXANT*MAXWIN.and.
      *				nxyph.gt.0
 	if(uxyph)call uvgetvrr(lIn,'xyphase',xyphase,nxyph)
 c
@@ -417,10 +484,23 @@ c
 	    sfreq(nout) = sfreq(i)
 	    restfreq(nout) = restfreq(i)
             if (uifch) ifchain(nout) = ifchain(i)
+	    bfmask(nout) = bfmask(i)
 c
 	    if(usyst.and.nsystemp.ge.nspect*nants)then
 	      do j=1,nants
 	        systemp((nout-1)*nants+j) = systemp((i-1)*nants+j)
+	      enddo
+	    endif
+
+	    if(uxtsys.and.nxtsys.ge.nspect*nants)then
+	      do j=1,nants
+	        xtsys((nout-1)*nants+j) = xtsys((i-1)*nants+j)
+	      enddo
+	    endif
+
+	    if(uytsys.and.nytsys.ge.nspect*nants)then
+	      do j=1,nants
+	        ytsys((nout-1)*nants+j) = ytsys((i-1)*nants+j)
 	      enddo
 	    endif
 c
@@ -438,12 +518,18 @@ c
 	call uvputvri(lOut,'nspect',nout,1)
 	call uvputvri(lOut,'nschan',nschan,nout)
 	call uvputvri(lOut,'ischan',ischan,nout)
-	call uvputvrd(lOut,'sdf',sdf,nout)
-	call uvputvrd(lOut,'sfreq',sfreq,nout)
-	call uvputvrd(lOut,'restfreq',restfreq,nout)
-        if (uifch) call uvputvri(lOut,'ifchain',ifchain,nout)
+	if(usdf) call uvputvrd(lOut,'sdf',sdf,nout)
+	if(usfreq) call uvputvrd(lOut,'sfreq',sfreq,nout)
+	if(urest) call uvputvrd(lOut,'restfreq',restfreq,nout)
+        if(uifch) call uvputvri(lOut,'ifchain',ifchain,nout)
+	if(ubfmask) call uvputvri(lOut,'bfmask',bfmask,nout)
 	if(nsystemp.ge.nspect*nants)nsystemp = nout*nants
 	if(usyst)call uvputvrr(lOut,'systemp',systemp,nsystemp)
+	if(nxtsys.ge.nspect*nants) nxtsys = nout*nants
+	if(uxtsys) call uvputvrr(lOut,'xtsys',xtsys,nxtsys)
+	if(nytsys.ge.nspect*nants) nytsys = nout*nants
+	if(uytsys) call uvputvrr(lOut,'ytsys',ytsys,nytsys)
+c-check?
 	if(uxyph)call uvputvrr(lOut,'xyphase',xyphase,nxyph)
 c
 c  Determine the output parameters.
