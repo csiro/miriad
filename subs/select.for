@@ -26,7 +26,7 @@ c    mjs  04aug91 Replaced hardcoded MAXANT(S) by including maxdim.h
 c    rjs  05sep91 DAYTIME values can cross day boundaries.
 c    rjs  22nov91 Added select=auto.
 c    rjs  25mar92 Added frequency selection.
-c    rjs  ??????? Source selection.
+c    rjs  ??????? Source selection,
 c    rjs   2nov92 Documentation changes only.
 c    rjs  23sep93 improve misleading error messages.
 c    rjs  22jul94 Added ra and dec selection.
@@ -37,7 +37,8 @@ c    rjs  16jun00 Check for bad antenna numbers.
 c    rjs  28jul00 Correct bug introduced in the above.
 c    rjs  27oct00 Handle change in baseline numbering convention.
 c    rjs  16aug04 Handle elevation and HA selection.
-c    mhw  08oct07 Handle seeing selection
+c    pjt  17may07 Handle purpose selection
+c    mhw  08oct08 Handle ATCA's seeing selection 
 c
 c  Routines are:
 c    subroutine SelInput(key,sels,maxsels)
@@ -70,6 +71,10 @@ c    dra(p1,p2)		Data with "dra" parameter (in arcsec) between two
 c			limits. Both limits must be given.
 c    ddec(p1,p2)	Data with "ddec" parameter (in arcsec) between two
 c			limits. Both limits must be given.
+c    dazim(p1,p2)	Data with "dazim" parameter (in arcsec) between two
+c			limits. Both limits must be given. [CARMA]
+c    delev(p1,p2)	Data with "delev" parameter (in arcsec) between two
+c			limits. Both limits must be given. [CARMA]
 c    increment(n)	Every nth visibility is selected.
 c    on(n)		Those records when the appropriate value of "on"
 c    polarization(x)	Select records of a particular polarisation,
@@ -80,14 +85,15 @@ c			"x" meters.
 c    auto		Select autocorrelation data.
 c    freq(lo,hi)	Frequency selection, based on sky frequency of the
 c			first channel.
-c    source(src1,src2...) Select by source.
+c    source(src1,src2...) Select by source, ignoring case.
 c    ra(hh:mm:ss,hh:mm:ss) Select by RA.
 c    dec(dd:mm:ss,dd:mm:ss) Select by DEC.
 c    bin(lo,hi)		Select pulsar bin
 c    ha(hstart,hend)    Select on hour angle (values in decimal hours or hh:mm:ss)
 c    lst(lst1,lst2)     Select on LST (value as above).
 c    elevation(el1,el2) Select on elevation (angles in degrees).
-c    seeing(r1,r2)      Select on seeing monitor rms path lenght (in microns)
+c    purpose(type(s))   Select on purpose uv variable string BFGPSO [CARMA]
+c    seeing(r1,r2)      Select on seeing monitor rms path lenght (in microns) [ATCA/CARMA]
 c
 c  The input command would look something like:
 c    select=time(t1,t2),uv(uv1,uv2),...
@@ -132,6 +138,8 @@ c		  'uvnrange'		Nanoseconds.
 c		  'visibility'		Visibility number (1 relative).
 c		  'dra'			Radians.
 c		  'ddec'		Radians.
+c		  'dazim'		Radians. [CARMA]
+c		  'delev'		Radians. [CARMA]
 c		  'pointing'		Arcseconds.
 c		  'amplitude'		Same as correlation data.
 c		  'window'		Window Number.
@@ -146,7 +154,8 @@ c		  'bin'			Select on bin number.
 c		  'ha'			Select on hour angle.
 c		  'lst'			Select on LST.
 c		  'elevation'		Select on elevation.
-c                 'seeing'              Select on seeing (micrometers)
+c                 'purpose'             Select on purpose [CARMA]
+c                 'seeing'              Select on seeing (micrometers) [ATCA/CARMA]
 c		Note that this does not support all objects to uvselect.
 c		The object name may have a suffix of '?' (e.g. 'window?')
 c		in which case the "value" argument is ignored, and SelProbe
@@ -325,12 +334,12 @@ c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
 	integer MAXVALS
-	parameter(MAXVALS=32)
+	parameter(MAXVALS=64)
 	integer offset,sgn,k1,k2,n,n1,n2,i,j,i1,i2,seltype,length,nsels
 	double precision ant1(MAXANT),ant2(MAXANT)
 	double precision vals(MAXVALS)
 	real time0
-	character spec*80,type*12
+	character spec*256,type*12
 	logical more
 c
 c  Externals.
@@ -378,6 +387,7 @@ c
      *		seltype.eq.UV.or.seltype.eq.POINT.or.
      *		seltype.eq.AMP.or.seltype.eq.UVN.or.
      *		seltype.eq.DRA.or.seltype.eq.DDEC.or.
+     *		seltype.eq.DAZIM.or.seltype.eq.DELEV.or.
      *		seltype.eq.SHADOW.or.seltype.eq.FREQ.or.
      *		seltype.eq.ELEV.or.seltype.eq.HA.or.
      *          seltype.eq.SEEING)then
@@ -387,7 +397,8 @@ c  Expand to two parameters, using some default mechanism.
 c
 	    if(n.eq.1)then
 	      vals(2) = vals(1)
-	      if(seltype.eq.DRA.or.seltype.eq.DDEC)then
+	      if(seltype.eq.DRA.or.seltype.eq.DDEC.or.
+     *           seltype.eq.DAZIM.or.seltype.eq.DELEV)then
 		vals(2) = vals(2) + 1
 		vals(1) = vals(1) - 1
 	      else if(seltype.eq.FREQ)then
@@ -404,7 +415,8 @@ c
 c
 c  Perform unit conversion.
 c
-	    if(seltype.eq.DRA.or.seltype.eq.DDEC)then
+	    if(seltype.eq.DRA.or.seltype.eq.DDEC.or.
+     *         seltype.eq.DAZIM.or.seltype.eq.DELEV)then
 	      vals(1) = vals(1) * pi/180/3600
 	      vals(2) = vals(2) * pi/180/3600
 	    else if(seltype.eq.HA)then
@@ -418,7 +430,7 @@ c
 c  Store away the bacon.
 c
 	    if(offset+4.gt.MAXSELS)
-     *		call Selbug(spec,'Selection too complex')
+     *		call Selbug(spec,'Selection too complex-1')
 	    sels(offset+LOVAL) = vals(1)
 	    sels(offset+HIVAL) = vals(2)
 	    sels(offset+ITYPE) = sgn*seltype
@@ -431,7 +443,7 @@ c
 	  else if(seltype.eq.LST)then
 	    call SelDcde(spec,k1,k2,vals,n,2,'ra') 
 	    if(offset+4.gt.MAXSELS)
-     *		call Selbug(spec,'Selection too complex')
+     *		call Selbug(spec,'Selection too complex-2')
 	    sels(offset+LOVAL) = vals(1)
 	    sels(offset+HIVAL) = vals(2)
 	    sels(offset+ITYPE) = sgn*seltype
@@ -451,11 +463,37 @@ c
 	    call SelFudge(sels(offset+LOVAL),vals(1)-sels(offset+MDVAL))
 	    call SelFudge(sels(offset+HIVAL),vals(2)-sels(offset+MDVAL))
 	    if(offset+5.gt.MAXSELS)
-     *		call Selbug(spec,'Selection too complex')
+     *		call Selbug(spec,'Selection too complex-3')
 	    sels(offset+ITYPE) = sgn*seltype
 	    sels(offset+NSIZE) = 5
 	    offset = offset + 5
 	    nsels = nsels + 1
+
+c
+c  Handle  "PURPOSE" selection.
+c
+          else if(seltype.eq.PURPOSE)then
+	    if(k1+2.gt.k2)
+     *		call SelBug(spec,'Bad purpose list')
+	    if(spec(k1:k1).ne.'('.or.spec(k2:k2).ne.')')
+     *		call SelBug(spec,'Bad purpose list')
+	    length = 0
+	    do j=k1+1,k2
+	      if(spec(j:j).eq.','.or.j.eq.k2)then
+		if(length.eq.0)
+     *		  call SelBug(spec,'Zero length purpose list')
+		sels(offset+ITYPE) = sgn*seltype
+		sels(offset+NSIZE) = length + 2
+		offset = offset + length + 2
+		nsels = nsels + 1
+		length = 0
+	      else
+		length = length + 1
+		if(offset+length+1.gt.maxsels)
+     *		  call SelBug(spec,'Selection expression too complex')
+		sels(offset+length+1) = ichar(spec(j:j))
+	      endif
+	    enddo
 c
 c  Handle  "SOURCE" selection.
 c
@@ -525,7 +563,7 @@ c
 		offset = offset + 4
 		nsels = nsels + 1
 		if(offset+3.gt.maxsels)
-     *			call SelBug(Spec,'Buffer overflow')
+     *			call SelBug(Spec,'Buffer overflow-1')
 		sels(offset+ITYPE) = sgn*DAYTIME
 		sels(offset+LOVAL) = 0
 	      endif
@@ -556,8 +594,8 @@ c
 c
 	    do i1=1,n1
 	      do i2=1,n2
-		if(offset+3.gt.maxsels)
-     *		    call SelBug(spec,'Buffer overflow')
+		if(offset+3.gt.maxsels) 
+     * 		    call SelBug(spec,'Buffer overflow-2')
 		sels(offset+ITYPE) = sgn*seltype
 		sels(offset+LOVAL) = nint(ant1(i1))
 		sels(offset+HIVAL) = nint(ant2(i2))
@@ -576,7 +614,7 @@ c
 	    if(seltype.eq.POL)
      *		call SelDcde(spec,k1,k2,vals,n,MAXVALS,'pol')
 	    if(offset+n+1.gt.maxsels)
-     *		call SelBug(spec,'Buffer overflow')
+     *		call SelBug(spec,'Buffer overflow-3')
 	    sels(offset+ITYPE) = sgn*seltype
 	    sels(offset+NSIZE) = n + 2
 	    do i=1,n
@@ -781,9 +819,9 @@ c
      *		0.0d0,flag)
 	    enddo
 c
-c  Source names.
+c  Source or purpose names.
 c
-	  else if(type.eq.SOURCE)then
+	  else if(type.eq.SOURCE .or. type.eq.PURPOSE)then
 	    if(n.gt.len(string))
      *		call bug('f','String buffer overflow, in SelApply')
 	    do j=1,n
