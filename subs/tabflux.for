@@ -46,10 +46,13 @@ c    jm    04oct95    Fixed long standing date>0 problem in tabflux.
 c    jm    21dec95    Fixed calget because fix above broke it.
 c    jm    25aug97    Changed call from mgetenv() to fullname() for 
 c                     the environment variable $MIRFLUXTAB in tabflux.
+c   pjt    17apr07    Also allow to parse CARMA style tables (# instead of !
+c                     and ccyy-mmm-dd.d instead of yymmmdd.d format)
+c   pjt    17apr08    Changed default name to FluxSource.cat
 c
 c***********************************************************************
 c* calget -- Routine to retrieve an interpolated calibrator flux.
-c& jm
+c& pjt
 c: calibration, flux
 c+
       subroutine calget(filename, source, freq, delfreq, day, deldate,
@@ -65,8 +68,9 @@ c Input:
 c   filename The name of the flux calibrator file.  If this is a
 c            blank string, then it defaults first to the file
 c            pointed to by the environment variable $MIRFLUXTAB;
-c            second to the file ./cals.fluxes; and, finally, to
-c            $MIRCAT/cals.fluxes.
+c            second to the file ./FluxSource.cat; and, finally, to
+c            $MIRCAT/FluxSource.cat.   The old style cals.fluxes
+c            is still recognized, but deprecated since Miriad 4.1.0
 c   source   The name of the calibrator source to match.  No default.
 c   freq     The observation frequency (GHz) (default of 0.0 means
 c            that a match occurs at any frequency).
@@ -242,8 +246,11 @@ c
         ratio = (date - dates(1)) / (dates(2) - dates(1))
         outflux = fluxes(1) + ((fluxes(2) - fluxes(1)) * ratio)
 c       freq = freqlast(1) + ((freqlast(2) - freqlast(1)) * ratio)
-        freq = 0.0
-        if (freqlast(1) .eq. freqlast(2)) freq = freqlast(1)
+        if (freqlast(1) .eq. freqlast(2)) then
+           freq = freqlast(1)
+        else
+           freq = 0.0
+        endif
       endif
 c
       oldfreq = freq
@@ -259,7 +266,7 @@ c
 c
 c***********************************************************************
 c* tabflux -- Return the flux of a calibrator source at an input freq.
-c& jm
+c& pjt
 c: calibration, flux, frequency
 c+
       subroutine tabflux(filename, source, freq, delfreq, day, delday,
@@ -275,8 +282,10 @@ c Input:
 c   filename The name of the flux calibrator file.  If this is a
 c            blank string, then it defaults first to the file
 c            pointed to by the environment variable $MIRFLUXTAB;
-c            second to the file ./cals.fluxes; and, finally, to
-c            $MIRCAT/cals.fluxes.
+c            second to the file ./FluxSource.cat; and, finally, to
+c            $MIRCAT/FluxSource.cat.
+c            The old style cals.fluxes format is still recognized,
+c            but deprecated as of Miriad 4.1.0
 c   delfreq  The frequency width (real: GHz) around the parameter
 c            ``freq'' in which to include a frequency match.
 c   delday   The date width (real: Julian days) around the parameter
@@ -315,7 +324,7 @@ c-----------------------------------------------------------------------
 c  Internal variables.
 c
       character DEFFILE*(*)
-      parameter (DEFFILE='MIRCAT:cals.fluxes')
+      parameter (DEFFILE='MIRCAT:FluxSource.cat')
 c
       character oldname*132, tmpname*132, newname*132
       character oldsrc*80
@@ -356,9 +365,12 @@ c
         if (Len1(filename) .gt. 0) then
           newname = fullname(filename)
         else
-          newname = fullname('$MIRFLUXTAB')
-          if ((Len1(newname) .lt. 1) .or.
+          call mgetenv(newname,'MIRFLUXTAB')
+          if ((Len1(newname) .gt. 0) .and.
      *        (.not. hexists(0, newname))) then
+             call bug('f',
+     *            'TABFLUX: did not find MIRFLUXTAB='//newname)
+          else if (Len1(newname) .lt. 1) then
             tmpname = DEFFILE
             icolon = index(tmpname, ':') + 1
             newname = tmpname(icolon:)
@@ -366,7 +378,7 @@ c
               newname = fullname(DEFFILE)
               if (.not. hexists(0, newname)) then
                 call bug('f',
-     *            'TABFLUX: Error finding calibrator flux table file.')
+     *            'TABFLUX: Error finding flux table: '//newname)
               endif
             endif
           endif
@@ -422,9 +434,14 @@ c  This routine reads a calibration file loading sources, observation
 c  dates, frequencies, fluxes, and rms values into the table arrays.
 c  THIS ROUTINE IS VERY FORMAT SPECIFIC IN THAT THE FIRST CHARACTER MUST
 c  BE THE CHARACTER "!" IF THE LINE IS TO BE IGNORED.  ALL other lines
-c  MUST have the following form:
+c  MUST have the following form (BIMA style)
 c     'Source'  DATE.UT  FREQ(GHz)  FLUX(Jy)  rms(Jy)
+c  or if the comment character is '#' it must be (CARMA style)
+c      Source   yyyy-mmm-dd.ut     FREQ(GHz)  FLUX(Jy)  rms(Jy)
 c  with each field separated by at least one space or TAB character.
+c  E.g.
+c 'W3OH'          06DEC17.0         93.3            3.36           0.50   CARMA14
+c  W3OH         2006-DEC-17.0       93.3            3.36           0.50   CARMA14
 c
 c Input:
 c   name     The name of the flux calibrator file.
@@ -436,8 +453,9 @@ c
 c-----------------------------------------------------------------------
 c  Internal variables.
 c
-      integer lu, length, nentry
+      integer lu, length, nentry, n1
       character*132 string
+      character com1*1, com2*2
 c
       integer Len1
 c
@@ -460,16 +478,37 @@ c  spaces and the first name is used as the anchor.  Otherwise, the
 c  string is parsed as a source entry and the entry counter is
 c  incremented.
 c
+c  in order to differentiate between bima (!) and carma (#) style,
+c  the first character on the first line MUST contain that comment character
+c
       nentry = 0
+      n1 = 0
       call addalias('resetall', ' ')
 c
       call TxtRead(lu, string, length, iostat)
       do while (iostat .eq. 0)
+        if (n1.eq.0) then
+           n1 = 1
+           if (string(1:1).eq.'!') then
+              call bug('i','Reading BIMA style flux table')
+              com1 = '!'
+              com2 = '!!'
+           else if (string(1:1).eq.'#') then
+              call bug('i','Reading CARMA style flux table')
+              com1 = '#'
+              com2 = '##'
+           else
+              call bug('f','tabload: cannot handle first line')
+           endif
+        endif
         length = Len1(string)
         if (length .gt. 0) then
-          if (string(1:1) .ne. '!') then
+          if (string(1:1) .ne. com1) then
+            if (com1.eq.'#') then
+               call car2bim(string)
+            endif
             call TabParse(string, length, source, nentry)
-          else if (string(1:2) .eq. '!!') then
+          else if (string(1:2) .eq. com2) then
             call NamParse(string(3:), length-2)
           endif
         endif
@@ -490,6 +529,51 @@ c
         iostat = -3
       endif
       return
+      end
+c***********************************************************************
+      subroutine car2bim(string)
+      implicit none
+      character string*(*)
+c
+c
+c   1) add quotes around the source name    **actually not needed**
+c   2) change 2006-DEC-17.0 to 
+c                 06DEC17.0
+c
+c   Once dayjul can be made to understand the "ccyy-mmm-dd.d" format
+c   this routine can be removed. For now, we are patching it for the
+c   CARMA format with a few extra precautions.
+c
+      integer ipos1
+c
+      if (string(1:1).eq.'''') call bug('f','No CARMA fluxtab format?')
+      ipos1 = 1
+      do while (string(ipos1:ipos1).ne.' ')
+         ipos1 = ipos1 + 1
+      enddo
+      do while (string(ipos1:ipos1).eq.' ')
+         ipos1 = ipos1 + 1
+      enddo
+      if (string(ipos1:ipos1).ne.'1' .and. 
+     *    string(ipos1:ipos1).ne.'2') 
+     *    call bug('f','Unexpected year in CARMA fluxtab format?')
+      if (string(ipos1+4:ipos1+4).ne.'-') 
+     *    call bug('f','Unexpected year format in CARMA fluxtab')
+      if (string(ipos1+8:ipos1+8).ne.'-') 
+     *    call bug('f','Unexpected year format in CARMA fluxtab')
+
+c
+c     shift over the month and last two year digits over to right
+c     replace first part with spaces, e.g.
+c           2006-DEC-17.0  ->   06DEC17.0
+c
+
+      string(ipos1+8:ipos1+8) = string(ipos1+7:ipos1+7) 
+      string(ipos1+7:ipos1+7) = string(ipos1+6:ipos1+6) 
+      string(ipos1+6:ipos1+6) = string(ipos1+5:ipos1+5) 
+      string(ipos1+5:ipos1+5) = string(ipos1+3:ipos1+3) 
+      string(ipos1+4:ipos1+4) = string(ipos1+2:ipos1+2) 
+      string(ipos1+0:ipos1+3) = '    '
       end
 c***********************************************************************
       subroutine tabfind(source, freq, deltnu, day, deltime, flux,
