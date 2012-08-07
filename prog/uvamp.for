@@ -73,6 +73,10 @@ c	rjs 26aug94 Better coordinate handling. Fix a few problems.
 c       lgm 03mar97 Corrected standard deviation calculation
 c       pjt  3may99 proper logopen/close interface; better line= stmts
 c	mchw 16may02 format change on output listing.
+c       jhz 12aug05 implemented input of multiple uv data sets
+c                   and processing annular averaging of the visibility
+c                   from a bundle of uv files.
+c       mhw 07aug12 Merge carma mods and clean up a bit
 c  Bugs:
 c------------------------------------------------------------------------
 	include 'maxdim.h'
@@ -84,7 +88,7 @@ c
 	parameter (maxbins = 200)
 c
 	character version*(*)
-	parameter(version='UvAmp: version 2.0 16-may-02')
+	parameter(version='UvAmp: version 2.1 12-Aug-05')
 	character uvflags*8,line*80,pldev*60,logfile*60
 	character bunit*10,type*5
 	integer tIn,i,nread,numdat(maxbins),numbins,ibin
@@ -99,9 +103,13 @@ c
 	complex data(maxchan),sumdat(maxbins)
 	logical flags(maxchan)
 c
+        character  vis*80
+        integer ifile,nfiles,len1
+c
 c  Externals.
 c
 	logical uvDatOpn,more
+        character itoaf*3
 c
 	more   = .true.
 c
@@ -130,10 +138,14 @@ c
 	call keya('log',logfile,' ')
 	call keyfin
 c
+c       check a number of input files
+c
+         call uvdatgti ('nfiles', nfiles)
+c
 c   Check input parameters
 c
 	if(numbins .lt. 0. .or. binsiz .le. 0.) 
-     1		call bug('f','Bins improperly specified')
+     *		call bug('f','Bins improperly specified')
 	if(numbins .gt. maxbins) then
 	   write(line,'('' Maximum allow bins = '',i5)') maxbins
 	   call bug('f',line)
@@ -157,40 +169,55 @@ c
 c
 c  Open the input uv file and output logfile.
 c
-	if(.not.uvDatOpn(tIn))call bug('f','Error opening input')
-	call LogOpen(logfile,' ')
+          call LogOpen(logfile,' ')
+
+        do ifile=1,nfiles
+	   if(.not.uvDatOpn(tIn))call bug('f','Error opening input')
+           call   uvdatgta ('name', vis)
+           if(vis.eq.' ') call bug('f',
+     *       'Input visibility file is missing')
+           call output('Processing input '//itoaf(ifile)//': '//
+     *       vis(1:len1(vis)))
+ 
 c
 c  Convert dra,ddec from true to grid offsets.
 c
-	call OffCvt(tIn,dra,ddec)
+           call OffCvt(tIn,dra,ddec)
 c
 c   Loop over data accumulating points in bins and squared quantities for
 c   calculations of formal error in result. The phaz rotates the phase 
 c   center of the data to the desired position.
 c
-	call uvDatRd(preamble,data,flags,maxchan,nread)
-	dowhile(nread.gt.0)
-	   call uvinfo(tIn,'sfreq',chfreq)
-	   uvd  = (preamble(1)*preamble(1) + preamble(2)*
-     1				preamble(2))**0.5
-           ibin = uvd/binsiz + 1
- 	   do i=1,nread
-	      freq = chfreq(i)
-	      if(klam) ibin = (freq*uvd/1000.0)/binsiz + 1
-	      if(flags(i).and.ibin.le.numbins) then
-		 phaz = -((preamble(1) * dra) + (preamble(2) * ddec)) *
-     1			2.0*pi*freq
-		 data(i) = data(i) * cmplx(cos(phaz),sin(phaz))
-	         sumdat(ibin) = sumdat(ibin) + data(i)
-	         numdat(ibin) = numdat(ibin) + 1
-	         sdatr2(ibin) = sdatr2(ibin) + 
-     1				real(data(i))*real(data(i))
-	         sdati2(ibin) = sdati2(ibin) + 
-     1				aimag(data(i))*aimag(data(i))
-	      endif
+           call uvDatRd(preamble,data,flags,maxchan,nread)
+	   dowhile(nread.gt.0)
+	      call uvinfo(tIn,'sfreq',chfreq)
+	      uvd  = (preamble(1)*preamble(1) + preamble(2)*
+     *	              preamble(2))**0.5
+              ibin = uvd/binsiz + 1
+ 	      do i=1,nread
+	         freq = chfreq(i)
+	         if(klam) ibin = (freq*uvd/1000.0)/binsiz + 1
+	         if(flags(i).and.ibin.le.numbins) then
+		    phaz = -((preamble(1) * dra) + 
+     *			     (preamble(2) * ddec)) * 2.0*pi*freq
+		    data(i) = data(i) * cmplx(cos(phaz),sin(phaz))
+	            sumdat(ibin) = sumdat(ibin) + data(i)
+	            numdat(ibin) = numdat(ibin) + 1
+	            sdatr2(ibin) = sdatr2(ibin) + 
+     *                             real(data(i))*real(data(i))
+	            sdati2(ibin) = sdati2(ibin) + 
+     *                             aimag(data(i))*aimag(data(i))
+	         endif
+	      enddo
+	      call uvDatRd(preamble,data,flags,maxchan,nread)
 	   enddo
-	   call uvDatRd(preamble,data,flags,maxchan,nread)
-	enddo
+c
+c  Close up the vis file.
+c
+           call uvdatcls
+        end do
+
+
 c
 c  Write out header stuff for log file
 c
@@ -220,7 +247,7 @@ c
               else
 	        uuvamp(i) = (rdat*rdat + idat*idat)**0.5
                 sigtot = (rdat*rdat/(uuvamp(i)*uuvamp(i)))*sigr2 +
-     1                   (idat*idat/(uuvamp(i)*uuvamp(i)))*sigi2
+     *                   (idat*idat/(uuvamp(i)*uuvamp(i)))*sigi2
               endif
 	      sigmean(i) = (sigtot/(numdat(i)-2))**0.5
 	      if(sigmean(i).gt.0)then
@@ -236,9 +263,9 @@ c
 	      expect(i)  = 0.0
 	   endif
 	   write(line,
-     0     '(f9.2,1x,f9.2,2x,1pe9.2,1x,e9.2,2x,0pf6.1,2x,1pe9.2,2x,i8)') 
-     1          binsiz*(i-1),binsiz*i,uuvamp(i),
-     2		sigmean(i),ratio(i),expect(i),numdat(i)
+     *     '(f9.2,1x,f9.2,2x,1pe9.2,1x,e9.2,2x,0pf6.1,2x,1pe9.2,2x,i8)') 
+     *          binsiz*(i-1),binsiz*i,uuvamp(i),
+     *		sigmean(i),ratio(i),expect(i),numdat(i)
 	   call LogWrite(line,more)
 	enddo
 c
@@ -288,7 +315,6 @@ c
 	   call pgend
 	endif
 	call LogClose
-	call uvDatCls
 c
 	end
 c************************************************************************
