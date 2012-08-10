@@ -77,6 +77,11 @@
 	can be given. An asterisk in the source name is treated as a
 	wildcard.
 
+	  purpose(p1,p2,...)
+	Select correlations with the particular purpose (CARMA) or 
+        calcode (ATCA). 
+        Several values can be given.
+
 	  frequency(f1,f2)
 	Select correlations, where the sky frequency of the first correlation
 	is in the range f1 to f2 (in GHz). If only a single frequency is
