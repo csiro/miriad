@@ -176,7 +176,7 @@ c       For concatenated spectra the width of a single zoom is used.
 c       Note that noise and artefacts go up quickly towards the band 
 c       edge so making this much smaller will not gain you much.
 c
-c$Id: atlod.for,v 1.40 2012/06/14 23:34:22 wie017 Exp $
+c$Id: atlod.for,v 1.41 2012/08/10 05:21:02 wie017 Exp $
 c--
 c
 c  Program Structure:
@@ -337,7 +337,7 @@ c    mhw  07feb11 Add edge keyword to control birdie/edge flagging
 c    mhw  29may12 Try to make opcorr more accurate for wide bands
 c    mhw  15jun12 Fix index errors in opcor change
 c
-c $Id: atlod.for,v 1.40 2012/06/14 23:34:22 wie017 Exp $
+c $Id: atlod.for,v 1.41 2012/08/10 05:21:02 wie017 Exp $
 c-----------------------------------------------------------------------
 
         integer MAXFILES,MAXTIMES,MAXSIM
@@ -358,8 +358,8 @@ c
         character itoaf*8, rperr*32, versan*80
 c-----------------------------------------------------------------------
       version = versan ('atlod',
-     :                  '$Revision: 1.40 $',
-     :                  '$Date: 2012/06/14 23:34:22 $')
+     :                  '$Revision: 1.41 $',
+     :                  '$Date: 2012/08/10 05:21:02 $')
 c
 c  Get the input parameters.
 c
@@ -3706,15 +3706,20 @@ c-----------------------------------------------------------------------
         real edge
 c
         double precision c1,c2,tmp,cfreq,J17AUG10
-        integer MAXRFI, NBIRDIE1, nrfi,ch1,ch2,i,j,k,offset
-        parameter(MAXRFI=99,NBIRDIE1=11,J17AUG10=2455425.5)
+        integer MAXRFI, NBIRDIE1, NBIRDIE2, nrfi,ch1,ch2,i,j,k,offset
+        parameter(MAXRFI=99,NBIRDIE1=11,NBIRDIE2=3,J17AUG10=2455425.5)
         double precision rfifreq(2,MAXRFI)
         common/rficom/rfifreq,nrfi
 c
-c  CABB continuum mode birdies (2049*1 MHz)
+c  CABB 1MHz continuum mode birdies (2049*1 MHz)
 c        
         integer b1(NBIRDIE1)
         data b1/640,256,768,1408,1280,1920,1792,1176,156,128,1152/
+c
+c  CABB 64 MHz continuum mode birdies (33*64 MHz)
+c        
+        integer b2(NBIRDIE2)
+        data b2/8,16,24/
 c        
         if (nrfi.gt.0) then
           offset=1
@@ -3784,6 +3789,17 @@ c
               do j=ch2,nfreq(i)-1
                   flags(offset+j)=.false.
               enddo
+            else if (nfreq(i).eq.33.and.
+     *          abs(abs(sdf(i))-0.064).lt.1.e-4) then
+c          
+c             CABB Mode 32*64MHz
+c
+              do j=1,NBIRDIE2
+                flags(offset+b2(j))=.false.
+              enddo
+              ch1=33*edge/200
+              ch2=33*(1.0-edge/200)
+     
             else if (nfreq(i).ge.2049.and.
      *          abs(sdf(i)).lt.4.e-5) then
 c
