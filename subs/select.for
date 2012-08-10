@@ -126,7 +126,7 @@ c  This routine checks whether particular uv data have been selected by
 c  the user. It returns .true. if so, or .false. otherwise.
 c
 c  Inputs:
-c    sels	The intermidate form of the uv selection, passed back
+c    sels	The intermediate form of the uv selection, passed back
 c		by SelInput.
 c    object	The type of value to check. Possible values are:
 c		  Object:		Units of Value:
