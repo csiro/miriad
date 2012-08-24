@@ -98,7 +98,7 @@ c       x and y pixel coordinate (in the output model; this goes from 1
 c       to N), the "I" component and the "I*alpha" component.  The
 c       default is to not create a log file.
 c
-c$Id: mfclean.for,v 1.6 2012/08/24 04:59:28 wie017 Exp $
+c$Id: mfclean.for,v 1.7 2012/08/24 05:41:56 wie017 Exp $
 c--
 c  History:
 c    rjs   Nov89 - Original version.
@@ -144,6 +144,7 @@ c   rjs  02jul97 - Added cellscal.
 c   rjs  23jul97 - Added pbtype.
 c   rjs  14aug00 - Added log file output.
 c   mhw  27oct11 - Use ptrdiff type for memory allocations
+c   mhw  24aug12 - Increase max patch and image size hogbom can deal with
 c
 c  Bugs and Shortcomings:
 c     * The way it does convolutions is rather inefficent, partially
@@ -186,7 +187,7 @@ c-----------------------------------------------------------------------
       integer naxis,n1,n2,n1d,n2d,ic,jc,nx,ny,ntmp
       integer xmin,xmax,ymin,ymax,xoff,yoff,zoff
       character MapNam*64,BeamNam*64,ModelNam*64,OutNam*64,line*72
-      character logf*64, version*72
+      character logf*64, version*80
       integer lMap,lBeam,lModel,lOut
       integer nMap(3),nBeam(3),nModel(3),nOut(4)
       real EstASum
@@ -199,8 +200,8 @@ c-----------------------------------------------------------------------
       external  itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('mfclean',
-     *                 '$Revision: 1.6 $',
-     *                 '$Date: 2012/08/24 04:59:28 $')
+     *                 '$Revision: 1.7 $',
+     *                 '$Date: 2012/08/24 05:41:56 $')
 c
 c  Get the input parameters.
 c
@@ -259,9 +260,7 @@ c
 c
 c  Determine the CLEAN algorithm that is to be used.
 c
-      print *,'nPoint=',nPoint,', maxCmp1=',maxCmp1
-      print *,'nx,ny=',nx,ny,', maxPatch=',maxPatch
-      if ((mode.eq.'any' .or. mode.eq.'hogbom') .and.
+      if (mode.eq.'hogbom' .and.
      *    nPoint.le.maxCmp1 .and.
      *    (2*nx-1).le.maxPatch .and. (2*ny-1).le.maxPatch) then
         mode = 'hogbom'
