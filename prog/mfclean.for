@@ -98,7 +98,7 @@ c       x and y pixel coordinate (in the output model; this goes from 1
 c       to N), the "I" component and the "I*alpha" component.  The
 c       default is to not create a log file.
 c
-c$Id: mfclean.for,v 1.5 2011/10/31 00:37:30 wie017 Exp $
+c$Id: mfclean.for,v 1.6 2012/08/24 04:59:28 wie017 Exp $
 c--
 c  History:
 c    rjs   Nov89 - Original version.
@@ -167,7 +167,7 @@ c-----------------------------------------------------------------------
       include 'maxdim.h'
 
       integer maxBeam,maxCmp1,maxCmp2,maxBox,maxRun,maxP
-      parameter (maxCmp1=66000,maxCmp2=32000,maxP=257)
+      parameter (maxCmp1=10000000,maxCmp2=320000,maxP=8193)
       parameter (maxBeam=maxP*maxP,maxBox=3*MAXDIM,maxRun=3*maxDim)
 
       integer Boxes(maxBox),Run(3,maxRun),nPoint,nRun
@@ -199,8 +199,8 @@ c-----------------------------------------------------------------------
       external  itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('mfclean',
-     *                 '$Revision: 1.5 $',
-     *                 '$Date: 2011/10/31 00:37:30 $')
+     *                 '$Revision: 1.6 $',
+     *                 '$Date: 2012/08/24 04:59:28 $')
 c
 c  Get the input parameters.
 c
@@ -259,6 +259,8 @@ c
 c
 c  Determine the CLEAN algorithm that is to be used.
 c
+      print *,'nPoint=',nPoint,', maxCmp1=',maxCmp1
+      print *,'nx,ny=',nx,ny,', maxPatch=',maxPatch
       if ((mode.eq.'any' .or. mode.eq.'hogbom') .and.
      *    nPoint.le.maxCmp1 .and.
      *    (2*nx-1).le.maxPatch .and. (2*ny-1).le.maxPatch) then
