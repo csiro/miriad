@@ -67,7 +67,10 @@ c       The maximum number of minor iterations.  MFCLEAN finishes when
 c       abs(NITERS) minor iterations have been performed.  Clean may
 c       finish before this point, however, if NITERS is negative and the
 c       absolute maximum residual becomes negative valued, or if the
-c       cutoff level (as described above) is reached.
+c       cutoff level (as described above) is reached. Optional second value
+c       will force MFCLEAN to report on the level reached and 
+c       (for mode=clark) start a new major iteration at least every 
+c       niters(2) iterations. This can be useful to avoid overcleaning.
 c@ region
 c       This specifies the region to be Cleaned.  See the User's Manual
 c       for instructions on how to specify this.  The default is
@@ -75,7 +78,7 @@ c       generally inadequate, and a smaller region should be explicitly
 c       specified.
 c@ minpatch
 c       The minimum patch size when performing minor iterations.
-c       Default is 51, but make it larger if you are having problems
+c       Default is 511, but make it larger if you are having problems
 c       with corrugations.  You can make it smaller when cleaning
 c       images that consist of a pretty good dirty beam.
 c@ speed
@@ -98,7 +101,7 @@ c       x and y pixel coordinate (in the output model; this goes from 1
 c       to N), the "I" component and the "I*alpha" component.  The
 c       default is to not create a log file.
 c
-c$Id: mfclean.for,v 1.7 2012/08/24 05:41:56 wie017 Exp $
+c$Id: mfclean.for,v 1.8 2012/08/27 04:41:59 wie017 Exp $
 c--
 c  History:
 c    rjs   Nov89 - Original version.
@@ -145,6 +148,7 @@ c   rjs  23jul97 - Added pbtype.
 c   rjs  14aug00 - Added log file output.
 c   mhw  27oct11 - Use ptrdiff type for memory allocations
 c   mhw  24aug12 - Increase max patch and image size hogbom can deal with
+c   mhw  28aug12 - Change default minpatch and add control with niters(2)
 c
 c  Bugs and Shortcomings:
 c     * The way it does convolutions is rather inefficent, partially
@@ -183,7 +187,7 @@ c-----------------------------------------------------------------------
       character Mode*8,Text*7
       real Cutoff,Gain0,Gain1,Speed,Limit,Scale
       logical NegStop,NegFound,More,dolog
-      integer maxNiter,Niter,totNiter,minPatch,maxPatch
+      integer maxNiter(2),Niter,totNiter,minPatch,maxPatch,curMaxNiter
       integer naxis,n1,n2,n1d,n2d,ic,jc,nx,ny,ntmp
       integer xmin,xmax,ymin,ymax,xoff,yoff,zoff
       character MapNam*64,BeamNam*64,ModelNam*64,OutNam*64,line*72
@@ -200,8 +204,8 @@ c-----------------------------------------------------------------------
       external  itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('mfclean',
-     *                 '$Revision: 1.7 $',
-     *                 '$Date: 2012/08/24 05:41:56 $')
+     *                 '$Revision: 1.8 $',
+     *                 '$Date: 2012/08/27 04:41:59 $')
 c
 c  Get the input parameters.
 c
@@ -406,16 +410,17 @@ c
       More = nPoint.gt.0
       Limit = 0
       do while (More)
+        curMaxNiter = min(Niter+MaxNiter(2), MaxNiter(1))
         if (mode.eq.'hogbom') then
           call Hogbom(maxPatch,Patch00,Patch11,Patch01,Patch10,nx,ny,
      *      dat(Res0),dat(Res1),dat(Est0),dat(Est1),Icmp,Jcmp,
      *      dat(Tmp),nPoint,Run,nRun,EstASum,Cutoff,Gain0,Gain1,
-     *      negStop,negFound,maxNiter,Niter,dolog)
+     *      negStop,negFound,curMaxNiter,Niter,dolog)
             text = ' Hogbom'
         else
           call Clark(nx,ny,dat(Res0),dat(Res1),dat(Est0),dat(Est1),
      *      nPoint,Run,nRun,Histo,Patch00,Patch11,Patch01,Patch10,
-     *      minPatch,maxPatch,Cutoff,negStop,maxNiter,Gain0,Gain1,
+     *      minPatch,maxPatch,Cutoff,negStop,curMaxNiter,Gain0,Gain1,
      *      Speed,ResAMax,EstASum,Niter,dolog,Limit,negFound,
      *      Rcmp0,Rcmp1,Ccmp0,Ccmp1,Icmp,Jcmp,dat(Tmp),maxCmp2)
           call Diff(dat(Est0),dat(Est1),dat(Map0),dat(Map1),
@@ -435,15 +440,14 @@ c
 c  Check for convergence.
 c
         more = .not.((negFound .and. negStop)
-     *                .or. ResAMax.le.Cutoff .or. Niter.ge.MaxNiter)
-
+     *                .or. ResAMax.le.Cutoff .or. Niter.ge.MaxNiter(1))
       enddo
 c
 c  Give a message about what terminated the iterations.
 c
       if (ResAMax.le.Cutoff) then
         call output(' Stopping -- Clean cutoff limit reached')
-      else if (Niter.ge.maxNiter) then
+      else if (Niter.ge.maxNiter(1)) then
         call output(' Stopping -- Maximum iterations performed')
       else if (NegStop .and. NegFound) then
         call output(' Stopping -- Negative components encountered')
@@ -737,7 +741,7 @@ c***********************************************************************
       subroutine inputs(map,beam,estimate,out,Niter,negStop,
      *  cutoff,box,maxbox,minpatch,gain0,gain1,speed,mode,logf)
 
-      integer Niter, minpatch, maxbox
+      integer Niter(2), minpatch, maxbox
       integer box(maxbox)
       real cutoff,gain0,gain1,speed
       logical negStop
@@ -778,15 +782,17 @@ c-----------------------------------------------------------------------
       call keya('out', out, ' ')
       if (map.eq.' ' .or. beam.eq.' ' .or. out.eq.' ')
      *  call bug('f', 'A file name was missing from the parameters')
-      call keyi('niters', Niter, 250)
-      negStop = Niter.lt.0
-      Niter = abs(Niter)
-      if (Niter.eq.0) call bug('f', 'NITERS must be nonzero')
+      call keyi('niters', Niter(1), 250)
+      call keyi('niters', Niter(2), 1000)
+      negStop = Niter(1).lt.0
+      Niter(1) = abs(Niter(1))
+      Niter(2) = max(1,abs(Niter(2)))
+      if (Niter(1).eq.0) call bug('f', 'NITERS must be nonzero')
       call keyr('cutoff', cutoff,0.0)
 
       call BoxInput('region',map,box,maxbox)
 
-      call keyi('minpatch', minpatch, 51)
+      call keyi('minpatch', minpatch, 511)
       call keyr('gain', gain0, 0.1)
       if (gain0.le.0 .or. gain0.gt.1)
      *  call bug('f','Bad gain value, it must be in the range (0,1]')
