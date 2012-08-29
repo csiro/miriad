@@ -61,7 +61,7 @@ c
 c  CARMA customizations:
 c    pkgw  2012may25  Extract some error messages from wcslib
 c
-c $Id: co.for,v 1.46 2012/06/20 23:39:23 wie017 Exp $
+c $Id: co.for,v 1.47 2012/08/29 03:03:25 cal103 Exp $
 c***********************************************************************
 
 c* coCtype -- Parse a world coordinate ctype.
@@ -1304,10 +1304,10 @@ c     Parse parameterized keywords.
 
       else if (obj.eq.'lonpole') then
         status = celptd(cel(1,icrd), CEL_REF, value, 3)
-        defs(1,icrd) = .true.
+        defs(1,icrd) = (value.ne.999d0)
       else if (obj.eq.'latpole') then
         status = celptd(cel(1,icrd), CEL_REF, value, 4)
-        defs(2,icrd) = .true.
+        defs(2,icrd) = (value.ne.999d0)
       else if (obj.eq.'phi0') then
         status = celptd(cel(1,icrd), CEL_PHI0, value, 0)
         defs(3,icrd) = .true.
@@ -2727,6 +2727,13 @@ c             Convert GLS to SFL for WCSLIB.
               status = celptd(cel(1,icrd), CEL_PHI0,   0d0,  0)
               status = celptd(cel(1,icrd), CEL_THETA0, lat0, 0)
               status = prjptc(prj, PRJ_CODE, 'SFL', 0)
+
+            else if (pcode1.eq.' ') then
+c             Convert simple linear coordinates to CAR for WCSLIB.
+              status = celpti(cel(1,icrd), CEL_OFFSET, 1, 0)
+              status = celptd(cel(1,icrd), CEL_PHI0,   0d0, 0)
+              status = celptd(cel(1,icrd), CEL_THETA0, lat0, 0)
+              status = prjptc(prj, PRJ_CODE, 'CAR', 0)
 
             else
               status = prjptc(prj, PRJ_CODE, pcode1, 0)
