@@ -38,8 +38,12 @@ c                      output is normalised to account for overlap
 c                      regions.
 c         relax        Do not check that the coordinate systems are
 c                      consistent.
+c         fqaver       If 3rd axis (assumed to be frequency) is a
+c                      single plane, average the input images in
+c                      frequency, instead of producing a cube
+c                      containing all planes.
 c
-c$Id: imcomb.for,v 1.7 2010/11/22 06:07:03 cal103 Exp $
+c$Id: imcomb.for,v 1.8 2012/08/30 05:48:30 wie017 Exp $
 c--
 c  History:
 c    rjs  29nov94 Original version.
@@ -56,6 +60,7 @@ c    rjs  28jun02 Added options=relax, better error message.
 c    rjs  17may06 Changes to make it more robust with images that span
 c                 360 degrees.
 c    rjs  31may06 Changes to use new calling sequence of pcvt.
+c    mhw  29aug12 Add fqaver option
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -64,7 +69,7 @@ c-----------------------------------------------------------------------
       integer MAXIN, MAXOPEN
       parameter (MAXIN=1024, MAXOPEN=6)
 
-      logical equal, interp, mosaic, nonorm, relax
+      logical equal, interp, mosaic, nonorm, relax, fqaver
       integer i, k, maxpix, minpix, nOpen, nOut(MAXNAX), naxis, nin,
      *        nrms, nsize(3,MAXIN), off(3), pData, pFlags, pWts, tOut,
      *        tno(MAXIN)
@@ -75,8 +80,8 @@ c-----------------------------------------------------------------------
       external  stcat, versan
 c-----------------------------------------------------------------------
       version = versan ('imcomb',
-     *                  '$Revision: 1.7 $',
-     *                  '$Date: 2010/11/22 06:07:03 $')
+     *                  '$Revision: 1.8 $',
+     *                  '$Date: 2012/08/30 05:48:30 $')
 c
 c  Get the inputs.
 c
@@ -85,7 +90,7 @@ c
       call keya('tin',tin,' ')
       call keya('out',out,' ')
       call mkeyr('rms',rms,MAXIN,nrms)
-      call GetOpt(mosaic,nonorm,relax)
+      call GetOpt(mosaic,nonorm,relax,fqaver)
       call keyfin
 c
 c  Check the inputs.
@@ -114,7 +119,7 @@ c
           call rdhdi(tno(i),'naxis',naxis,3)
           naxis = min(naxis,MAXNAX)
         else
-          call ThingChk(tno(1),tno(i),nsize(1,i),relax,
+          call ThingChk(tno(1),tno(i),nsize(1,i),relax,fqaver,
      *      interp,blctrc(1,i))
           if (interp) then
             line = stcat('Geometry of '//in(1),
@@ -167,11 +172,12 @@ c
       do k = 4, naxis
         nout(k) = 1
       enddo
+        
 c
 c  Create the output.
 c
       call xyopen(tOut,out,'new',naxis,nOut)
-      call hdout(tno(1),tOut,off,version)
+      call hdout(tno,rms,nIn,tOut,off,fqaver.and.nOut(3).eq.1,version)
 c
 c  Allocate arrays.
 c
@@ -207,9 +213,9 @@ c
       call xyclose(tOut)
       end
 c***********************************************************************
-      subroutine GetOpt(mosaic,nonorm,relax)
+      subroutine GetOpt(mosaic,nonorm,relax,fqaver)
 
-      logical mosaic,nonorm,relax
+      logical mosaic,nonorm,relax,fqaver
 c
 c  Determine processing options.
 c
@@ -219,32 +225,39 @@ c    nonorm
 c    relax
 c-----------------------------------------------------------------------
       integer NOPTS
-      parameter (NOPTS=3)
+      parameter (NOPTS=4)
       logical present(NOPTS)
       character opts(NOPTS)*12
-      data opts/'mosaic      ','nonormalise ','relax       '/
+      data opts/'mosaic      ','nonormalise ','relax       ',
+     *          'fqaver      '/
 c-----------------------------------------------------------------------
       call options('options',opts,present,NOPTS)
 
       mosaic = present(1)
       nonorm = present(2)
       relax  = present(3)
+      fqaver = present(4)
 
       end
 c***********************************************************************
-      subroutine hdout(tin,tout,off,version)
+      subroutine hdout(tin,rms,nIn,tout,off,fqaver,version)
 
-      integer tin,tout
+      integer nIn,tin(nIn),tout
+      real rms(nIn)
       integer off(3)
+      logical fqaver
       character version*(*)
 
 c  Make up the header of the output file.
 c
 c  Input:
-c    tin        The handle of the input file, which is to be used as a
+c    tin        The handles of the input files, first is to be used as a
 c               template.
-c    tout       The handle of the output file.
-c    off
+c    rms        The image rms to use (from header or user)
+c    nIn        The number of input files
+c    tout       The handle of the output file
+c    off        The ref pixel offset
+c    fqaver     Flag to indicate we're averaging 2D images in frequency
 c    version
 c-----------------------------------------------------------------------
       integer   i
@@ -254,16 +267,32 @@ c-----------------------------------------------------------------------
       character itoaf*2
       external  itoaf
 c-----------------------------------------------------------------------
+      double precision f,fout
+      real wt
+      
 c     Start with a verbatim copy of the header.
       call headcp(tIn, tOut, 0, 0, 0, 0)
 
 c     Update changed header items.
       do i = 1, 3
         num = itoaf(i)
-        call rdhdd(tIn, 'crpix'//num, crpix, 0d0)
+        call rdhdd(tIn(1), 'crpix'//num, crpix, 0d0)
         crpix = crpix + off(i)
         call wrhdd(tOut, 'crpix'//num, crpix)
       enddo
+
+c  Fill in average value of 3rd axis for 2d images
+      if (fqaver) then
+        fout=0
+        wt=0
+        do i=1, nIn
+          call rdhdd(tIn(i), 'crval3', f, 0d0)
+          fout = fout + f/rms(i)**2
+          wt = wt + 1/rms(i)**2
+        enddo
+        fout = fout / wt
+        call wrhdd(tOut,'crval3',fout)
+      endif
 
 c     Create history.
       call hisopen(tout,'append')
@@ -288,10 +317,10 @@ c-----------------------------------------------------------------------
 
       end
 c***********************************************************************
-      subroutine ThingChk(tIn,tOut,nsize,relax,interp,blctrc)
+      subroutine ThingChk(tIn,tOut,nsize,relax,fqaver,interp,blctrc)
 
       integer tIn, tOut, nsize(3)
-      logical relax, interp
+      logical relax, fqaver, interp
       real    blctrc(6)
 c-----------------------------------------------------------------------
       logical   valid
@@ -339,6 +368,10 @@ c-----------------------------------------------------------------------
       endif
 
       interp = .false.
+      if (fqaver.and.nsize(3).eq.1) then
+        blctrc(3)=1d0
+        blctrc(6)=1d0
+      endif
       do i = 1, 3
         interp = interp .or.
      *     nint(blctrc(i+3))-nint(blctrc(i))+1.ne.nsize(i) .or.
