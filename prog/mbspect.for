@@ -156,7 +156,7 @@ c
 c Note that this program does not report its version number so that gif
 c and ps output can be piped.
 c
-c$Id: mbspect.for,v 1.20 2012/06/20 04:58:04 wie017 Exp $
+c$Id: mbspect.for,v 1.21 2012/09/03 05:28:06 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -194,8 +194,8 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 c     Don't report the ID so that gif and ps output can be piped.
       version = versan ('-mbspect',
-     *                  '$Revision: 1.20 $',
-     *                  '$Date: 2012/06/20 04:58:04 $')
+     *                  '$Revision: 1.21 $',
+     *                  '$Date: 2012/09/03 05:28:06 $')
 
 c     Get inputs.
       call keyini
@@ -1241,6 +1241,7 @@ c-----------------------------------------------------------------------
       real      bmaj, bmin,cbof, omega
       double precision dVal
       character algo*8, axtype*16, bunit*16, cname*32, units*8, wtype*16
+      character bunitup*16
 
       external  itoaf, len1
       integer   len1
@@ -1297,6 +1298,8 @@ c         Convert frequency to MHz.
 
 c     Get units and beam oversampling factor from image header.
       call GetBeam(lIn,naxis,bunit,bmaj,bmin,omega,cbof)
+      bunitup = bunit
+      call ucase(bunitup)
 
 c     Normalize the spectra and get the yaxis.
       if (yaxis.eq.'average' .or. yaxis.eq.'point') then
@@ -1307,7 +1310,7 @@ c     Normalize the spectra and get the yaxis.
              call bug('f', 'Some channels have zero weight')
           endif
         enddo
-        if (bunit(1:7).eq.'JY/BEAM') then
+        if (bunitup(1:7).eq.'JY/BEAM') then
            if (yaxis.eq.'point') then
              unit0 = 'Jy'
              ylabel = 'Flux Density (Jy)'
@@ -1320,11 +1323,12 @@ c     Normalize the spectra and get the yaxis.
            ylabel = 'Average Intensity ('//unit0(1:len1(unit0))//')'
         endif
 
-      else if (bunit.eq.'JY/PIXEL') then
+      else if (bunitup.eq.'JY/PIXEL') then
         unit0='Jy'
         ylabel = 'Total Intensity (Jy)'
 
-      else if (bunit(1:7).eq.'JY/BEAM' .and. bmaj*bmin*omega.ne.0) then
+      else if (bunitup(1:7).eq.'JY/BEAM' 
+     *         .and. bmaj*bmin*omega.ne.0) then
         do i = 1, NCHAN
           spec(i) = spec(i)/cbof
         enddo
