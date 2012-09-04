@@ -1,5 +1,5 @@
 	integer maxlines
 	parameter(maxlines=23)
-	integer nlines,lu,nopen
-	logical query,domore,printer
-	common/logcomm/nlines,lu,nopen,query,domore,printer
+	integer nlines,lu
+	logical query,domore,printer,dostdout
+	common/logcomm/nlines,lu,query,domore,printer,dostdout
