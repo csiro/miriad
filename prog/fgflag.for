@@ -39,25 +39,27 @@ c  History:
 c    27jul93 rjs   Original version.
 c    25nov93 rjs   Increase number of rows.
 c    23apr09 rjs   Increase buffer size to allow it to work on bigger problems.
+c    08jun11 rjs   Make "interval" 0.5 sec.
+c    01sep12 rjs   Rewrite and fix some flawed code (get rid of interval).
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='FgFlag: version 1.0 23-Apr-09')
-	integer MAXROWS,MAXRCPNT,MAXSELS
-	parameter(MAXROWS=300000,MAXRCPNT=50000,MAXSELS=256)
-	integer nrange,nrcpnt,fgtable
-	integer indx(2*MAXROWS),pnt(2,MAXROWS+1),RcPnt(MAXRCPNT)
+	parameter(version='FgFlag: version 1.0 01-Sep-12')
+	integer MAXROWS,MAXSELS
+	parameter(MAXROWS=300000,MAXSELS=256)
+	integer fgtable
+	integer list(MAXROWS)
 	double precision time(2,MAXROWS)
-	double precision timrange(MAXROWS+1)
 	integer subarray(MAXROWS),srcid(MAXROWS),freqid(MAXROWS)
 	integer chans(2,MAXROWS),ants(2,MAXROWS),ifs(2,MAXROWS)
+c	
 	real sels(MAXSELS)
-	character vis*64
-	integer iostat,lIn,lTab,nrows,nUni
+	character vis*64,line*64
+	integer iostat,lIn,lTab,nrows,nflag
 c
 c  Externals.
 c
 	logical hdprsnt,SelProbe
-	character itoaf*3
+	character itoaf*10
 c
 c  Get the input parameters, and check them.
 c
@@ -96,25 +98,31 @@ c
 	call haccess(lIn,lTab,'aipsfg'//itoaf(fgtable),'read',iostat)
 	if(iostat.ne.0)call bugno('f',iostat)
 	call FgRead(lTab,MAXROWS,nrows,
-     *	  SrcId,SubArray,FreqId,Ants,Time,Ifs,Chans)
+     *	  Time,SrcId,FreqId,SubArray,Ants,Chans,Ifs)
 	call hdaccess(lTab,iostat)
+	call output('Number of flagging commands: '//itoaf(nrows))
+	if(nrows.eq.0)
+     *	  call bug('f','No flagging commands found in the aipsfg table')
 	if(iostat.ne.0)call bugno('f',iostat)
-c
-c  Determine the appropriate index tables for the data.
-c
-	call FgIndx(time,nrows,timrange,pnt,indx,nrange,nUni,
-     *	  RcPnt,MAXRCPNT,nrcpnt)
 c
 c  Apply the flagging information.
 c
-	call FgApply(lIn,TimRange,Pnt,nRange,nUni,RcPnt,nRcPnt,
-     *	  nrows,Time,SrcId,FreqId,SubArray,Ants,Chans,Ifs)
+	call FgApply(lIn,nrows,list,Time,SrcId,FreqId,SubArray,
+     *					  Ants,Chans,Ifs,nflag)
+c
+	if(nflag.gt.0)then
+	  call output('Number of correlations flagged: '//itoaf(nflag))
+	else
+	  call bug('w','No correlations were flagged')
+	endif
 c
 c  Write some history.
 c
 	call hisopen(lIn,'append')
 	call hiswrite(lIn,'FGFLAG: Miriad '//version)
 	call hisinput(lIn,'FGFLAG')
+	line = 'FGFLAG: Number of correlations flagged: '//itoaf(nflag)
+	call hiswrite(lIn,line)
 	call hisclose(lIn)
 c
 c  All said and done.
@@ -123,7 +131,7 @@ c
 	end
 c************************************************************************
 	subroutine FgRead(lTab,MAXROWS,nrows,
-     *	  SrcId,SubArray,FreqId,Ants,Time,Ifs,Chans)
+     *	  Time,SrcId,FreqId,SubArray,Ants,Chans,Ifs)
 c
 	implicit none
 	integer MAXROWS,nrows,lTab
@@ -175,6 +183,9 @@ c
 c
 c  Decode a line from an "aipsfg" table.
 c------------------------------------------------------------------------
+	double precision Tminf,Tpinf
+	parameter(Tminf=0.d0,Tpinf=7000000.d0)
+c
 	integer k1,k2,k1d,k2d,length,nvals,temp
 	character type*16,field*64
 	double precision vals(2)
@@ -183,8 +194,8 @@ c  Externals.
 c
 	integer len1
 c
-	Time(1) = 0
-	Time(2) = 0
+	Time(1) = Tminf
+	Time(2) = Tpinf
 	SrcId = 0
 	FreqId = 0
 	SubArray = 0
@@ -220,8 +231,20 @@ c
 	  else if(type.eq.'time')then
 	    if(nvals.ne.2)
      *		call bug('f','Bad time entry in aipsfg table')
-	    time(1) = vals(1)
-	    time(2) = vals(2)
+	    if(vals(1).eq.0)then
+	      time(1) = Tminf
+	    else
+	      time(1) = vals(1)
+	      if(vals(1).lt.Tminf)
+     *		call bug('f','Time before Big Bang')
+	    endif
+	    if(vals(2).eq.0)then
+	      time(2) = Tpinf
+	    else
+	      time(2) = vals(2)
+	      if(vals(2).gt.Tpinf)
+     *		call bug('f','Time is after end of Universe')
+	    endif
 c
 	  else if(type.eq.'array')then
 	    subarray = nint(vals(1))
@@ -319,175 +342,15 @@ c
 c
 	end
 c************************************************************************
-	subroutine FgIndx(time,nrows,timrange,pnt,indx,nrange,nUni,
-     *	  RcPnt,MAXRCPNT,nrcpnt)
+	subroutine FgApply(lIn,nrows,list,Time,SrcId,FreqId,SubArray,
+     *						Ants,Chans,Ifs,nflag)
 c
 	implicit none
-	integer nrows,nrange,nrcpnt,MAXRCPNT,nUni
-	integer pnt(2,nrows),indx(2*nrows),RcPnt(MAXRCPNT)
-	double precision time(2*nrows),TimRange(nrows+1)
-c
-c  Work out various structures that we need to perform the on-the-fly
-c  flagging.
-c
-c  Input:
-c    time
-c    nrows
-c    MAXRCPNT
-c  Output:
-c    timrange
-c    pnt
-c    nrange
-c    RcPnt
-c    nrcpnt
-c    nUni
-c  Scratch:
-c    indx
-c------------------------------------------------------------------------
-	integer MAXREC
-	double precision DT,INTERVAL
-	parameter(DT=5.d0/3600.d0/24.d0,INTERVAL=5.d0/60.d0/24.d0)
-	parameter(MAXREC=128)
-	integer k,kd,current(MAXREC),expired(MAXREC),ncur,nexp
-	double precision t0,tprev
-c
-c  Sort the times.
-c
-	call hsortd(2*nrows,time,indx)
-c
-c  Do through the records, determining which ones are active at a particular
-c  time.
-c
-	t0 = 0
-	ncur = 0
-	nexp = 0
-	nrange = 0
-	nrcpnt = 0
-	do k=1,2*nrows
-	  kd = indx(k)
-c
-c  Handle the case of a zero time.
-c
-	  if(time(kd).eq.0)then
-	    if(2*(kd/2).ne.kd)then
-	      nrcpnt = nrcpnt + 1
-	      if(nrcpnt.gt.MAXRCPNT)
-     *	        call bug('f','Buffer overflow, in FgIndx')
-	      rcpnt(nrcpnt) = kd/2 + 1
-	      nUni = nrcpnt
-	    endif
-c
-c  Handle the case of a start time.
-c
-	  else if(2*(kd/2).ne.kd)then
-	    if(t0.eq.0)t0 = time(kd) - DT
-	    if(ncur.eq.MAXREC.or.time(kd).gt.t0+INTERVAL.or.
-     *	      (time(kd).gt.tprev.and.2*nexp.gt.ncur))then
-	      nrange = nrange + 1
-	      timrange(nrange) = t0
-	      pnt(1,nrange) = nrcpnt + 1
-	      pnt(2,nrange) = nrcpnt + ncur
-	      call FgOrg(ncur,current,nexp,expired,
-     *				rcpnt,nrcpnt,MAXRCPNT)
-	      ncur = ncur - nexp
-	      nexp = 0
-	      t0 = max(0.5*(time(kd)+tprev),time(kd)-DT)
-	    endif
-	    ncur = ncur + 1
-	    current(ncur) = kd/2 + 1
-c
-c  Handle the case of an end time.
-c
-	  else
-	    nexp = nexp + 1
-	    expired(nexp) = kd/2
-	  endif
-	  tprev = time(kd)
-	enddo
-c
-c  If there are some current records, flush them out.
-c
-	if(ncur.gt.0)then
-	  nrange = nrange + 1
-	  timrange(nrange) = t0
-	  pnt(1,nrange) = nrcpnt + 1
-	  pnt(2,nrange) = nrcpnt + ncur
-	  call FgOrg(ncur,current,nexp,expired,rcpnt,nrcpnt,MAXRCPNT)
-	  ncur = ncur - nexp
-	endif
-	if(ncur.gt.0)call bug('f','Assertion failure, in FgIndx')
-c
-c  Add the final thing to the end.
-c
-	TimRange(nRange+1) = tprev + DT
-c
-	end
-c************************************************************************
-	subroutine FgOrg(ncur,current,nexp,expired,
-     *					rcpnt,nrcpnt,MAXRCPNT)
-c
-	implicit none
-	integer ncur,nexp,nrcpnt,MAXRCPNT
-	integer current(ncur),expired(nexp),rcpnt(MAXRCPNT)
-c
-c  Copy the list of current records, and then delete the ones that have
-c  expired from the list.
-c
-c  Input:
-c    ncur
-c    nexp
-c    MAXRCPNT
-c  Input/Output:
-c    current	Those records whose times are current. On output, it
-c		contains those remaining after deleting the expired ones.
-c    expired	Those records whose times have expired. Destroyed on exit.
-c    rcpnt
-c    nrcpnt
-c------------------------------------------------------------------------
-	integer i,j,k
-	logical delete
-c
-c  Sort both the current and expired lists.
-c
-	if(ncur.gt.0)call sorti(current,ncur)
-	if(nexp.gt.0)call sorti(expired,nexp)
-c
-c  Copy the current ones to the output.
-c
-	if(ncur+nrcpnt.gt.MAXRCPNT)
-     *	  call bug('f','Buffer overflow, in Organ')
-	do i=1,ncur
-	  nrcpnt = nrcpnt + 1
-	  rcpnt(nrcpnt) = current(i)
-	enddo
-c
-c  Update the current list.
-c
-	j = 0
-	k = 1
-	do i=1,ncur
-	  delete = k.le.nexp
-	  if(delete) delete = current(i).eq.expired(k)
-	  if(delete)then
-	    k = k + 1
-	  else
-	    j = j + 1
-	    current(j) = current(i)
-	  endif
-	enddo
-	if(j.ne.ncur-nexp)call bug('f','Assertion failure, in Organ')
-c
-	end
-c************************************************************************
-	subroutine FgApply(lIn,TimRange,Pnt,nRange,nUni,RcPnt,nRcPnt,
-     *	  nrows,Time,SrcId,FreqId,SubArray,Ants,Chans,Ifs)
-c
-	implicit none
-	integer lIn,nRange,nUni,nRcPnt,nrows
-	integer Pnt(2,nRange),RcPnt(nRcPnt)
+	integer lIn,nrows,list(nrows)
 	integer SrcId(nrows),Freqid(nrows),SubArray(nrows)
 	integer Ants(2,nrows),Chans(2,nrows),Ifs(2,nrows)
-	double precision Time(2,nrows),TimRange(nRange+1)
+	integer nflag
+	double precision Time(2,nrows)
 c
 c  Apply the flagging table to all the data.
 c
@@ -497,13 +360,14 @@ c  Output:
 c    None!
 c------------------------------------------------------------------------
 	include 'maxdim.h'
-	integer MAXSPECT
-	parameter(MAXSPECT=16)
+	double precision Tminf,Tpinf
+	parameter(Tminf=0.d0,Tpinf=7000000.d0)
+c
 	complex data(MAXCHAN)
 	logical flags(MAXCHAN),flagged
-	integer nchan,nspect,ipt,vupd,nschan(MAXSPECT)
-	integer fgsrcid,fgfreqid,fgarray,i,id,ant1,ant2
-	double precision t,preamble(4)
+	integer nchan,nspect,vupd,nschan(MAXWIN)
+	integer fgsrcid,fgfreqid,fgarray,i,id,ant1,ant2,nlist
+	double precision t,preamble(4),tmin,tmax
 c
 c  Externals.
 c
@@ -521,8 +385,10 @@ c
 	fgfreqid = 1
 	fgarray  = 1
 c
-	ipt = 1
-	call uvread(lIn,preamble,data,flags,MAXCHAN,nchan)	
+	call uvread(lIn,preamble,data,flags,MAXCHAN,nchan)
+	tmin = preamble(3) + 1
+	tmax = preamble(3) + 2
+	nflag = 0
 	dowhile(nchan.gt.0)
 c
 c  If things have been updated, load the new values.
@@ -532,7 +398,7 @@ c
 	    call uvrdvri(lIn,'fgfreqid',fgfreqid,1)
 	    call uvrdvri(lIn,'fgarray', fgarray,1)
 	    call uvrdvri(lIn,'nspect',nspect,1)
-	    if(nspect.gt.MAXSPECT)
+	    if(nspect.gt.MAXWIN)
      *	      call bug('f','Nspect too big, in FgApply')
 	    call uvgetvri(lIn,'nschan',nschan,nspect)
 	    do i=2,nspect
@@ -546,37 +412,31 @@ c
 c  Determine time and baseline number.
 c
 	  t = preamble(3)
+	  if(t.lt.Tminf.or.t.gt.Tpinf)
+     *	    call bug('f','Invalid assumption about time range')
 	  call Basant(preamble(4),ant1,ant2)
 c
-c  Find the appropriate time record.
+c  Determine flagging commands that might apply to these data.
 c
-	  call FgLoc(t,TimRange,nrange,ipt)
+	  if(t.lt.tmin.or.t.gt.tmax)then
+	    call fglist(nrows,time,t,list,nlist,tmin,tmax)
+#ifdef TEST
+	    call writeout(nlist,t,tmin,tmax)
+#endif
+	  endif
+
 c
 c  Apply the universally applicable time flagging.
 c
 	  flagged = .false.
-	  do i=1,nUni
-	    id = RcPnt(i)
+	  do i=1,nlist
+	    id = list(i)
 	    call FgFlg(flags,nspect,nschan,
      *		fgsrcid,fgfreqid,fgarray,ant1,ant2,
      *		Srcid(id),Freqid(id),SubArray(id),
-     *		Ants(1,id),Chans(1,id),Ifs(1,id),flagged)
+     *		Ants(1,id),Chans(1,id),Ifs(1,id),flagged,nflag)
 	  enddo
-
 c
-c  Apply the flagging corresponding to this interval.
-c
-	  if(t.gt.timrange(ipt).and.t.lt.timrange(ipt+1))then
-	    do i=pnt(1,ipt),pnt(2,ipt)
-	      id = RcPnt(i)
-	      if(t.gt.Time(1,id).and.t.lt.Time(2,id))then
-	        call FgFlg(flags,nspect,nschan,
-     *		  fgsrcid,fgfreqid,fgarray,ant1,ant2,
-     *		  Srcid(id),Freqid(id),SubArray(id),
-     *		  Ants(1,id),Chans(1,id),Ifs(1,id),flagged)
-	      endif
-	    enddo
-	  endif
 	  if(flagged)call uvflgwr(lIn,flags)
 	  call uvread(lIn,preamble,data,flags,MAXCHAN,nchan)	
 	enddo
@@ -585,10 +445,10 @@ c
 c************************************************************************
 	subroutine FgFlg(flags,nspect,nschan,
      *	  fgsrcid,fgfreqid,fgarray,ant1,ant2,
-     *	  Srcid,Freqid,SubArray,Ants,Chans,Ifs,flagged)
+     *	  Srcid,Freqid,SubArray,Ants,Chans,Ifs,flagged,nflag)
 c
 	implicit none
-	integer nspect,nschan
+	integer nspect,nschan,nflag
 	logical flags(nschan,nspect),flagged
 	integer fgsrcid,fgfreqid,fgarray,ant1,ant2
 	integer Srcid,Freqid,SubArray,Ants(2),Chans(2),Ifs(2)
@@ -613,10 +473,13 @@ c
 	  if2 = ifs(2)
 	  if(if2.le.0.or.if2.gt.nspect) if2 = nspect
 	  if(if1.le.if2.and.chan1.le.chan2)then
-	    flagged = .true.
 	    do j=if1,if2
 	      do i=chan1,chan2
-		flags(i,j) = .false.
+		if(flags(i,j))then
+		  flags(i,j) = .false.
+	          flagged = .true.
+		  nflag = nflag + 1
+		endif
 	      enddo
 	    enddo
 	  endif
@@ -624,54 +487,68 @@ c
 c
 	end
 c************************************************************************
-	subroutine FgLoc(t,TimRange,nrange,ipt)
+	subroutine fglist(nrows,time,t0,list,nlist,tmin,tmax)
 c
 	implicit none
-	integer nrange,ipt
-	double precision t,Timrange(nrange+1)
+	integer nlist,nrows,list(nrows)
+	double precision time(2,nrows),t0,tmin,tmax
 c
-c  Input:
-c    t
-c    Timrange
-c    nrange
-c  Input/Output:
-c    ipt
+c  Determine the time flagging commands that are active for this
+c  particular time, and determine the time range over which this list
+c  will remain valid.
 c------------------------------------------------------------------------
-	integer step,jpt,k
+	double precision Tminf,Tpinf
+	parameter(Tminf=0.d0,Tpinf=7000000.d0)
 c
-	step = 1
-	jpt = ipt
+	integer i
 c
-c  DO a binary expansion, to boudn teh valid time range.
+	tmin = Tminf
+	tmax = Tpinf
+	nlist = 0
 c
-	dowhile(t.lt.Timrange(ipt).and.ipt.gt.1)
-	  jpt = max(ipt-1,1)
-	  ipt = max(ipt-step,1)
-	  step = step + step
+	do i=1,nrows
+	  if(time(1,i).le.t0.and.t0.le.time(2,i))then
+	    nlist = nlist + 1
+	    list(nlist) = i
+	    tmin = max(tmin,time(1,i))
+	    tmax = min(tmax,time(2,i))
+	  else if(t0.lt.time(1,i))then
+	    tmax = min(tmax,time(1,i))
+	  else if(t0.gt.time(2,i))then
+	    tmin = max(tmin,time(2,i))
+	  endif
 	enddo
-c
-	dowhile(t.gt.Timrange(jpt+1).and.jpt.lt.nrange)
-	  ipt = min(jpt+1,nrange)
-	  jpt = min(jpt+step,nrange)
-	  step = step + step
-	enddo
-	if(t.lt.Timrange(ipt))then
-	  continue
-	else if(t.gt.Timrange(jpt+1))then
-	  ipt = jpt
-	else
-c
-c  We have bounded the time interval. It lies between ipt and jpt. Home
-c  in on it now.
-c
-	  dowhile(ipt.ne.jpt)
-	    k = (ipt+jpt)/2
-	    if(t.gt.timrange(k+1))then
-	      ipt = k+1
-	    else
-	      jpt = k
-	    endif
-	  enddo
-	endif
 c
 	end
+#ifdef TEST
+c************************************************************************
+	subroutine writeout(n,t,tmin,tmax)
+c
+	implicit none
+	integer n
+	double precision t,tmin,tmax
+c
+c------------------------------------------------------------------------
+	character line*128,ts*32,tmins*32,tmaxs*32
+c
+c  Externals.
+c
+	character stcat*128,itoaf*8
+c
+	call julday(t,'H',ts)
+	if(tmin.le.0.d0)then
+	  tmins = '-inf'
+	else
+	  call julday(tmin,'H',tmins)
+	endif
+	if(tmax.gt.5000000.d0)then
+	  tmaxs = '+inf'
+	else
+	  call julday(tmax,'H',tmaxs)
+	endif
+c
+	line = stcat(stcat(stcat(stcat('For time',' '//ts),
+     *	  ' n='//itoaf(n)),' trange='//tmins),','//tmaxs)
+	call output(line)
+	end
+#endif
