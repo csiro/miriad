@@ -47,7 +47,7 @@ c
       character version*(*)
       parameter (version='UvGlue: Version 10-Mar-97')
       integer len1
-      character itoaf*3
+      character itoaf*5
       data first /.true./
 c-----------------------------------------------------------------------
       call output(version)
