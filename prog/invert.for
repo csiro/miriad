@@ -220,7 +220,7 @@ c       replaced with 0, or to be estimated by linear interpolation of
 c       two adjacent good channels.  See the Users Guide for the merits
 c       and evils of the two approaches.  The default is 'zero'.
 c
-c$Id: invert.for,v 1.15 2012/05/14 02:35:15 wie017 Exp $
+c$Id: invert.for,v 1.16 2012/09/18 01:52:21 wie017 Exp $
 c--
 c  History
 c    rjs        89  Initial version
@@ -393,8 +393,8 @@ c
       data slops/'zero        ','interpolate '/
 c-----------------------------------------------------------------------
       version = versan ('invert',
-     :                  '$Revision: 1.15 $',
-     :                  '$Date: 2012/05/14 02:35:15 $')
+     :                  '$Revision: 1.16 $',
+     :                  '$Date: 2012/09/18 01:52:21 $')
 c
 c  Get the input parameters. Convert all angular things into
 c  radians as soon as possible!!
@@ -1138,11 +1138,12 @@ c  Output:
 c    Rms2       An estimate of the rms noise in the output map.
 c    umax,vmax  Maximum u and v values.
 c-----------------------------------------------------------------------
+      include 'maxdim.h'
       integer InU,InV,InW,InPnt,InRms,InFreq,InWt,InData
       parameter(InU=0,InV=1,InW=2,InPnt=3,InRms=4,InFreq=5,InWt=6,
      *          InData=8)
       integer maxrun
-      parameter(maxrun=8192)
+      parameter(maxrun=8*MAXCHAN+8)
 c
       real Wts(maxrun/(InData+2)),Vis(maxrun),logFreq0,Wt,SumWt,t
       integer i,j,k,l,size,step,n,u,v,offcorr,nbeam,ncorr,ipnt
