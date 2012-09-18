@@ -9,8 +9,8 @@ c  subroutine pbWrite(tno,pbtype)
 c
 c  subroutine pbInit(pbObj,pbtype,coObj)
 c  subroutine pbInitb(pbObj,pbtype,coObj,bw)
-c  subroutine pbInitc(pbObj,pbtype,coObj,in,x1,bw)
-c  subroutine pbInitcc(pbObj,pbtype,coObj,in,x1,x2,bw)
+c  subroutine pbInitc(pbObj,pbtype,coObj,in,x1,f,bw)
+c  subroutine pbInitcc(pbObj,pbtype,coObj,in,x1,x2,f,bw)
 c  subroutine pbInfo(pbObj,pbfwhm,cutoff,maxrad)
 c  subroutine pbExtent(pbObj,x0,y0,xrad,yrad)
 c  subroutine pbList
@@ -78,8 +78,9 @@ c   25nov10   mhw    Add support for OTF mosaicing
 c   12may11   mhw    Add bandwidth
 c   18apr12   mchw   Add GBT
 c   29June12  mchw   use FWHM values measured in CARMA memo 52
+c   18sep12   mhw    Use input frequencies for pb model
 c
-c $Id: pb.for,v 1.11 2012/08/06 02:01:50 wie017 Exp $
+c $Id: pb.for,v 1.12 2012/09/18 03:50:17 wie017 Exp $
 c***********************************************************************
 c* pbList -- List known primary beam types.
 c& rjs
@@ -254,7 +255,7 @@ c               object.
 c  Output:
 c    pbObj      The primary beam object.
 c-----------------------------------------------------------------------
-      call pbInitc(pbObj,pbtype,coObj,'op',0d0,0.0)
+      call pbInitc(pbObj,pbtype,coObj,'op',0d0,0d0,0.0)
 
       end
 
@@ -281,7 +282,7 @@ c    bw         Bandwidth
 c  Output:
 c    pbObj      The primary beam object.
 c-----------------------------------------------------------------------
-      call pbInitc(pbObj,pbtype,coObj,'op',0d0,bw)
+      call pbInitc(pbObj,pbtype,coObj,'op',0d0,0d0,bw)
 
       end
 
@@ -291,11 +292,11 @@ c* pbInitcc -- Initialise a primary beam object.
 c& rjs
 c: image-data
 c+
-      subroutine pbInitcc(pbObj,type,coObj,in,x1,x2,bw)
+      subroutine pbInitcc(pbObj,type,coObj,in,x1,x2,f,bw)
 
       integer pbObj,coObj
       character type*(*),in*(*)
-      double precision x1(*),x2(*)
+      double precision x1(*),x2(*),f
       real bw
 c  ---------------------------------------------------------------------
 c  Initialise a primary beam object. The primary beam is assumed to
@@ -313,6 +314,7 @@ c    in         Form of the input coordinate defining the reference
 c               location (passed to the co routines).
 c    x1         The reference location.
 c    x2         The location specifying the convolution direction
+c    f          The frequency
 c    bw         The bandwidth
 c  Output:
 c    pbObj      The primary beam object.
@@ -322,7 +324,7 @@ c-----------------------------------------------------------------------
 
       double precision x2c(2)
 c-----------------------------------------------------------------------
-      call pbInitc(pbObj,type,coObj,in,x1,bw)
+      call pbInitc(pbObj,type,coObj,in,x1,f,bw)
       call coCvt(coObj,in,x2,'ap/ap',x2c)
       xn(pbObj)=x2c(1)
       yn(pbObj)=x2c(2)
@@ -336,11 +338,11 @@ c* pbInitc -- Initialise a primary beam object.
 c& rjs
 c+ image-data
 c+
-      subroutine pbInitc(pbObj,type,coObj,in,x1,bw)
+      subroutine pbInitc(pbObj,type,coObj,in,x1,f,bw)
 
       character type*(*),in*(*)
       integer pbObj,coObj
-      double precision x1(*)
+      double precision x1(*),f
       real bw
 c  ---------------------------------------------------------------------
 c  Initialise a primary beam object. The primary beam is assumed to
@@ -353,6 +355,7 @@ c    coObj      The coordinate system.
 c    in         Form of the input coordinate defining the reference
 c               location (passed to the co routines).
 c    x1         The reference location.
+c    f          The frequency
 c    bw         The bandwidth
 c  Output:
 c    pbObj      The primary beam object.
@@ -362,7 +365,7 @@ c-----------------------------------------------------------------------
 
       logical more,ok
       integer l1,l2,iax,k,kd
-      double precision f,dtemp,x2(2),antdiam
+      double precision dtemp,x2(2),antdiam
       double precision crpix,crval,cdelt1,cdelt2
       real error,t,alpha
       character ctype*16,line*64
@@ -389,11 +392,13 @@ c
 c
 c  Get information about this coordinate system.
 c
-      call coFindAx(coObj,'frequency',iax)
-      if (iax.ne.0) then
-        call coFreq(coObj,'op',0d0,f)
-      else
-        f = 0
+      if (f.eq.0d0) then
+        call coFindAx(coObj,'frequency',iax)
+        if (iax.ne.0) then
+          call coFreq(coObj,'op',0d0,f)
+        else
+          f = 0
+        endif
       endif
       call coCvt(coObj,in,x1,'ap/ap',x2)
       call coAxGet(coObj,1,ctype,crpix,crval,cdelt1)

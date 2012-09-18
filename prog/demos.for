@@ -48,7 +48,7 @@ c         detaper    This indicates that the input image is not fully
 c                    primary beam corrected. Such images are formed by
 c                    LINMOS with options=taper or by MOSMEM.
 c
-c$Id: demos.for,v 1.5 2011/06/02 05:15:10 wie017 Exp $
+c$Id: demos.for,v 1.6 2012/09/18 03:51:35 wie017 Exp $
 c--
 c  History:
 c    rjs  25apr90 Original version.
@@ -75,6 +75,7 @@ c    rjs  02jul97 cellscal change.
 c    rjs  07jul97 Change coaxdesc to coaxget.
 c    rjs  17sep97 Doc change only.
 c    rjs  25sep98 Less fussy about freq axis for 1-plane files.
+c    mhw  18sep12 Change to pbinitc argument list
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mirconst.h'
@@ -94,8 +95,8 @@ c-----------------------------------------------------------------------
       external  itoaf, len1, versan
 c-----------------------------------------------------------------------
       version = versan('demos',
-     *                 '$Revision: 1.5 $',
-     *                 '$Date: 2011/06/02 05:15:10 $')
+     *                 '$Revision: 1.6 $',
+     *                 '$Date: 2012/09/18 03:51:35 $')
 c
 c  Get the input parameters.
 c
@@ -353,7 +354,7 @@ c       Initialise the primary beam object.
         xin(1) = ra
         xin(2) = dec
         xin(3) = k
-        call pbInitc(pbObj,pbtype,tmap,'aw/aw/ap',xin,0.0)
+        call pbInitc(pbObj,pbtype,tmap,'aw/aw/ap',xin,0d0,0.0)
 
         if (detaper) then
           call mosMIni(tmap,real(k))
