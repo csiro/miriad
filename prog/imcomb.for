@@ -43,7 +43,7 @@ c                      single plane, average the input images in
 c                      frequency, instead of producing a cube
 c                      containing all planes.
 c
-c$Id: imcomb.for,v 1.8 2012/08/30 05:48:30 wie017 Exp $
+c$Id: imcomb.for,v 1.9 2012/09/18 04:32:13 wie017 Exp $
 c--
 c  History:
 c    rjs  29nov94 Original version.
@@ -80,8 +80,8 @@ c-----------------------------------------------------------------------
       external  stcat, versan
 c-----------------------------------------------------------------------
       version = versan ('imcomb',
-     *                  '$Revision: 1.8 $',
-     *                  '$Date: 2012/08/30 05:48:30 $')
+     *                  '$Revision: 1.9 $',
+     *                  '$Date: 2012/09/18 04:32:13 $')
 c
 c  Get the inputs.
 c
@@ -287,10 +287,10 @@ c  Fill in average value of 3rd axis for 2d images
         wt=0
         do i=1, nIn
           call rdhdd(tIn(i), 'crval3', f, 0d0)
-          fout = fout + f/rms(i)**2
+          fout = fout + log(f)/rms(i)**2
           wt = wt + 1/rms(i)**2
         enddo
-        fout = fout / wt
+        fout = exp(fout/wt)
         call wrhdd(tOut,'crval3',fout)
       endif
 
