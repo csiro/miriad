@@ -65,7 +65,7 @@ c         gain         Rather than a mosaiced image, produce an image
 c                      giving the effective gain across the field.  If
 c                      options=taper is used, this will be a smooth
 c                      function.  Otherwise it will be 1 or 0 (blanked).
-c$Id: linmos.for,v 1.18 2012/01/17 03:47:09 wie017 Exp $
+c$Id: linmos.for,v 1.19 2012/09/18 03:51:35 wie017 Exp $
 c--
 c
 c  History:
@@ -113,6 +113,7 @@ c    rjs  25aug97 Doc change and an extra error message.
 c    mhw  25nov10 Cope with OTF mosaics using extra parameters in
 c                 mosaic table
 c    mhw  03mar11 Add bandwidth
+c    mhw  18sep12 Use correct frequencies when not all the same
 c
 c  Bugs:
 c    * Blanked images are not handled when interpolation is necessary.
@@ -140,7 +141,8 @@ c-----------------------------------------------------------------------
      *          naxis, offset
       ptrdiff   pOut, pWts
       real      blctrc(4,MAXIN), extent(4), rms(MAXIN), sigt, xoff,
-     *          yoff, bw
+     *          yoff, bw, wt
+      double precision f, fout
       character inName*64, inbuf*(MAXLEN), outNam*64, version*80
 
       integer   len1
@@ -148,8 +150,8 @@ c-----------------------------------------------------------------------
       external  len1, versan
 c-----------------------------------------------------------------------
       version = versan ('linmos',
-     *                  '$Revision: 1.18 $',
-     *                  '$Date: 2012/01/17 03:47:09 $')
+     *                  '$Revision: 1.19 $',
+     *                  '$Date: 2012/09/18 03:51:35 $')
 
 c     Get and check inputs.
       call keyini
@@ -196,12 +198,14 @@ c     grid system from the first map.
 
       docar  = .false.
       defrms = .false.
+      fout = 0.d0
+      wt = 0
       do i = 1, nIn
         call xyopen(lIn(i),InBuf(k1(i):k2(i)),'old',3,axLen(1,i))
         if (max(axLen(1,i),axLen(2,i)).gt.MAXDIM)
      *    call bug('f','Input map is too big')
 
-        call chkHdr(lIn(i), axLen(1,i), exact, blctrc(1,i), extent)
+        call chkHdr(lIn(i), axLen(1,i), exact, blctrc(1,i), extent, f)
 
         if (i.eq.1) then
           call rdhdi(lIn(1),'naxis',naxis,3)
@@ -226,9 +230,11 @@ c     grid system from the first map.
             if (rms(i).le.0) rms(i) = rms(i-1)
           endif
         endif
-
+        wt = wt + 1.0/rms(i)**2
+        fout = fout + log(f)/rms(i)**2
         if (i.gt.nOpen) call xyclose(lIn(i))
       enddo
+      fout = exp(fout/wt)
 
 c     Create the output image and make a header for it.
       do i = 1, 4
@@ -261,7 +267,7 @@ c     Create the output image and make a header for it.
 
       call xyopen(lOut,outNam,'new',naxis,nout)
       call mkHead(lIn(1),lOut,axLen(1,1),extent,version,docar,dosen,
-     *            dogain)
+     *            dogain,fout)
       call coInit(lOut)
 
 c     Correct blctrc for the extent of the image.
@@ -388,9 +394,9 @@ c-----------------------------------------------------------------------
       parameter (TOL=0.01)
 
       logical interp, mask, dootf
-      integer i, j, k, pbObj, xhi, xlo, xoff, yhi, ylo, yoff
+      integer i, j, k, pbObj, xhi, xlo, xoff, yhi, ylo, yoff, iax
       real    In(MAXDIM), pBeam(MAXDIM), Sect(4), sigma, xinc, yinc, wgt
-      double precision x(3),xn(2),pra(2),pdec(2)
+      double precision x(3),xn(2),pra(2),pdec(2),f
       character pbtype*16
 
       logical  hdprsnt
@@ -449,14 +455,22 @@ c     Ready to construct the primary beam object.
       else
         dootf=.false.
       endif
+      call coInit(lIn)
+      call coFindAx(lIn,'frequency',iax)
+      if (iax.ne.0) then
+        call coFreq(lIn,'op',0d0,f)
+      else
+        f = 0
+      endif
+      call coFin(lIn)
 
 c     Loop over all planes.
       do k = 1, n3
         x(3) = k
         if (dootf) then
-          call pbInitcc(pbObj,pbtype,lOut,'aw/aw/ap',x,xn,bw)
+          call pbInitcc(pbObj,pbtype,lOut,'aw/aw/ap',x,xn,f,bw)
         else
-          call pbInitc(pbObj,pbtype,lOut,'aw/aw/ap',x,bw)
+          call pbInitc(pbObj,pbtype,lOut,'aw/aw/ap',x,f,bw)
         endif
         call xysetpl(lIn,1,k)
         if (interp) call IntpRIni
@@ -785,12 +799,13 @@ c     Flag as good all rows before the first bad row.
 ***************************************************************** mkHead
 
       subroutine mkHead(lIn, lOut, axLen, extent, version, docar, dosen,
-     *  dogain)
+     *  dogain, f)
 
       integer   lIn, lOut, axLen(3)
       real      extent(4)
       character version*72
       logical   dosen, dogain, docar
+      double precision f
 c-----------------------------------------------------------------------
 c  Make up the header of the output file.
 c
@@ -803,6 +818,7 @@ c    extent     Expanded extent of the output.
 c    docar      True if we are to label with RA---CAR, DEC--CAR
 c    dosen      True if the sensitivity function is being evaluated.
 c    dogain     True if the gain function is being evaluated.
+c    f          Frequency for output header
 c-----------------------------------------------------------------------
       double precision crpix
       character ctype*16
@@ -818,6 +834,9 @@ c     Apply sub-imaging.
       call rdhdd(lIn,  'crpix2', crpix, dble(axLen(2)/2+1))
       crpix = crpix - dble(extent(2)-1.0)
       call wrhdd(lOut, 'crpix2', crpix)
+      
+c     Set the frequency (average of all the inputs)      
+      call wrhdd(lOut, 'crval3', f)
 
 c     Write the output projection as plate carrée?
       if (docar) then
@@ -850,13 +869,14 @@ c     Update history.
 
 ***************************************************************** chkHdr
 
-      subroutine chkHdr(lIn, axLen, exact, blctrc, extent)
+      subroutine chkHdr(lIn, axLen, exact, blctrc, extent, f)
 
       integer   lIn, axLen(3)
       logical   exact
       real      blctrc(4), extent(4)
+      double precision f
 c-----------------------------------------------------------------------
-      logical   doInit
+      logical   doInit, doWarn
       integer   iax, k
       double precision cdelt(3,2), cdelt1(2), crpix(3,2), crval(3,2),
      *          discr, frq(2), lat(2), lng(2), x, y, z
@@ -867,7 +887,7 @@ c-----------------------------------------------------------------------
       character itoaf*1
       external  itoaf
 
-      data doInit /.true./
+      data doInit /.true./, doWarn/.true./
 c-----------------------------------------------------------------------
       if (doInit) then
         k = 1
@@ -940,7 +960,10 @@ c         system of the first image.
 c       Check third axis alignment.
         discr = 0.5d0*abs(cdelt(3,1))
         if (max(abs(frq(2)-frq(1)),abs(cdelt(3,2)-cdelt(3,1))).gt.discr)
-     *    call bug('w', 'Third axis of inputs do not align')
+     *    then
+          call bug('w', 'Third axis of inputs do not align')
+          doWarn=.false.
+        endif
 
 c       Update the extent.
         extent(1) = min(blctrc(1), extent(1))
@@ -948,6 +971,7 @@ c       Update the extent.
         extent(3) = max(blctrc(3), extent(3))
         extent(4) = max(blctrc(4), extent(4))
       endif
+      f = frq(k)
 
       end
 
