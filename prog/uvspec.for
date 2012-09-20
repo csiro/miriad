@@ -56,6 +56,8 @@ c	   'dots'        Plot phases with dots instead of filled circles.
 c	   'flagged'     Plot flagged data instead of unflagged data. The
 c	                 default is to plot only unflagged data.
 c	   'all'         Plot both flagged and unflagged data.
+c          'hdr'         Use high dynamic range scaling for amplitude plots:
+c                        log(1+amp). This works well for RFI affected data. 
 c@ axis
 c	This gives two strings, which determine the X and Y axes of each plot.
 c	The values can be abbreviated to uniqueness.
@@ -84,7 +86,7 @@ c@ log
 c	Log file into which the spectra are dumped in the order in which
 c	they are plotted.  Really only useful if your plot is quite simple.
 c
-c$Id: uvspec.for,v 1.8 2010/04/30 08:23:28 cal103 Exp $
+c$Id: uvspec.for,v 1.9 2012/09/20 05:30:41 wie017 Exp $
 c--
 c  History:
 c    rjs  18sep92 Derived from uvaver.
@@ -118,6 +120,7 @@ c    rjs  26jan07 Adjust size of title to prevent overflow on multipanel
 c	          plot.
 c    mhw  02feb10 Add sdo option to look at CABB autocorrelation data bins
 c    mhw  21apr10 Fix axis label and plot accuracy issues for high res data
+c    mhw  07sep12 Add hdr option, useful for plotting rfi
 c  Bugs:
 c------------------------------------------------------------------------
 	include 'mirconst.h'
@@ -130,7 +133,7 @@ c
 	character uvflags*8,device*64,xaxis*12,yaxis*12,logf*64
 	character xtitle*64,ytitle*64
 	logical ampsc,rms,nobase,avall,first,buffered,doflush,dodots
-	logical doshift,doflag,doall,dolag,dosdo
+	logical doshift,doflag,doall,dolag,dosdo,dohdr
 	double precision interval,T0,T1,preamble(5),shift(2),lmn(3)
 	integer tIn,vupd
 	integer nxy(2),nchan,nread,nplot
@@ -151,7 +154,7 @@ c
 	call output(version)
 	call keyini
 	call GetOpt(uvflags,ampsc,rms,nobase,avall,dodots,
-     *    doflag,doall,dosdo)
+     *    doflag,doall,dosdo,dohdr)
 	call GetAxis(xaxis,yaxis)
 	dolag = xaxis.eq.'lag'
 	call uvDatInp('vis',uvflags)
@@ -242,8 +245,8 @@ c  Pull the chain and flush out and plot the accumulated data
 c  in the case of time averaging.
 c
 	    if(doflush)then
-	      call BufFlush(ampsc,rms,nobase,dodots,hann,hc,hw,first,
-     *	        device,x,nplot,xtitle,ytitle,nxy,yrange,logf)
+	      call BufFlush(ampsc,rms,nobase,dodots,dohdr,hann,hc,hw,
+     *	        first,device,x,nplot,xtitle,ytitle,nxy,yrange,logf)
 	      T0 = preamble(4)
 	      T1 = T0
 	      buffered = .false.
@@ -267,8 +270,8 @@ c
 c  Flush out and plot anything remaining.
 c
 	  if(buffered)then
-	    call BufFlush(ampsc,rms,nobase,dodots,hann,hc,hw,first,
-     *	      device,x,nplot,xtitle,ytitle,nxy,yrange,logf)
+	    call BufFlush(ampsc,rms,nobase,dodots,dohdr,hann,hc,hw,
+     *	      first,device,x,nplot,xtitle,ytitle,nxy,yrange,logf)
 	    buffered = .false.
 	  endif
 	  call uvDatCls
@@ -428,10 +431,10 @@ c
 	end
 c************************************************************************
 	subroutine GetOpt(uvflags,ampsc,rms,nobase,avall,dodots,
-     *		doflag,doall,dosdo)
+     *		doflag,doall,dosdo,dohdr)
 c
 	implicit none
-        logical ampsc,rms,nobase,avall,dodots,doflag,doall,dosdo
+        logical ampsc,rms,nobase,avall,dodots,doflag,doall,dosdo,dohdr
 	character uvflags*(*)
 c
 c  Determine the flags to pass to the uvdat routines.
@@ -447,12 +450,12 @@ c    doflag
 c    doall
 c------------------------------------------------------------------------
 	integer nopts
-	parameter(nopts=11)
+	parameter(nopts=12)
 	character opts(nopts)*9
 	logical present(nopts),docal,dopol,dopass
 	data opts/'nocal    ','nopol    ','ampscalar','nopass   ',
      *		  'nobase   ','avall    ','dots     ','rms      ',
-     *            'flagged  ','all      ','sdo      '/
+     *            'flagged  ','all      ','sdo      ','hdr      '/
 c
 	call options('options',opts,present,nopts)
 	docal = .not.present(1)
@@ -468,6 +471,7 @@ c
         doflag =   present(9)
 	doall  =   present(10)
         dosdo  =   present(11)
+        dohdr  =   present(12)
 	if(doflag.and.doall)call bug('f',
      *	  'The "flagged" and "all" options are mutually exclusive')
 c
@@ -491,11 +495,11 @@ c------------------------------------------------------------------------
 	mbase = 0
 	end
 c************************************************************************
-	subroutine BufFlush(ampsc,rms,nobase,dodots,hann,hc,hw,
+	subroutine BufFlush(ampsc,rms,nobase,dodots,dohdr,hann,hc,hw,
      *	        first,device,x,n,xtitle,ytitle,nxy,yrange,logf)
 c
 	implicit none
-	logical ampsc,rms,nobase,first,dodots
+	logical ampsc,rms,nobase,first,dodots,dohdr
 	character device*(*),xtitle*(*),ytitle*(*),logf*(*)
 	integer n,nxy(2),hann
 	real yrange(2),hc(*),hw(*)
@@ -518,10 +522,13 @@ c------------------------------------------------------------------------
 	logical doamp,doampsc,dorms,dophase,doreal,doimag,dopoint,dolag
 	logical dosdo,Hit(PolMin:PolMax)
 	integer npol,pol(MAXPOL)
+        
 c
 c  Determine the conversion of the data.
 c
-	doamp = ytitle(1:9).eq.'Amplitude'
+	doamp = index(ytitle,'Amp').gt.0
+        dohdr = dohdr.and.doamp
+        if (dohdr) ytitle = 'Amplitude+1'
 	dolag = xtitle.eq.'Lag Number'
 	doampsc = doamp.and.ampsc
 	dorms   = doamp.and.rms
@@ -589,7 +596,7 @@ c
 		else
 		  call VisExt(x,buf(p),buf2(p),bufr(p),count(p),
      *		    nchan(i,j),
-     *		    doamp,doampsc,dorms,dophase,doreal,doimag,
+     *		    doamp,doampsc,dorms,dophase,doreal,doimag,dohdr,
      *		    xp,yp,MAXPNT,npnts)
 		endif
 	      endif
@@ -607,7 +614,7 @@ c
 	    if(.not.nobase.and.npnts.gt.0)then
 	      call Plotit(npnts,xp,yp,xrange,yrange,dodots,plot,nplts,
      *		xtitle,ytitle,j,time/ntime,inttime/nplts,pol,npol,
-     *		dopoint,hann,hc,hw,logf,MAXPNT)
+     *		dopoint,hann,hc,hw,logf,MAXPNT,dohdr)
 c
 	      npol = 0
 	      do i=PolMin,PolMax
@@ -626,7 +633,7 @@ c  Do the final plot.
 c
 	if(npnts.gt.0)call Plotit(npnts,xp,yp,xrange,yrange,dodots,
      *	  plot,nplts,xtitle,ytitle,0,time/ntime,inttime/nplts,
-     *	  pol,npol,dopoint,hann,hc,hw,logf,MAXPNT)
+     *	  pol,npol,dopoint,hann,hc,hw,logf,MAXPNT,dohdr)
 c
 c  Reset the counters.
 c
@@ -637,11 +644,11 @@ c
 c************************************************************************
 	subroutine VisExt(x,buf,buf2,bufr,count,nchan,
      *		    doamp,doampsc,dorms,dophase,doreal,doimag,
-     *		    xp,yp,MAXPNT,npnts)
+     *		    dohdr,xp,yp,MAXPNT,npnts)
 c
 	implicit none
 	integer nchan,npnts,MAXPNT,count(nchan)
-	logical doamp,doampsc,dorms,dophase,doreal,doimag
+	logical doamp,doampsc,dorms,dophase,doreal,doimag,dohdr
 	real buf2(nchan),bufr(nchan),yp(MAXPNT)
 	double precision x(nchan),xp(MAXPNT)
 	complex buf(nchan)
@@ -659,10 +666,13 @@ c
 	  if(count(k).gt.0)then
 	    if(doamp)then
 	      temp = abs(buf(k)) / count(k)
+              if (dohdr) temp = log10(1+temp)
 	    else if(doampsc)then
 	      temp = bufr(k) / count(k)
+              if (dohdr) temp = log10(1+temp)
 	    else if(dorms)then
 	      temp = sqrt(buf2(k) / count(k))
+              if (dohdr) temp = log10(1+temp)
 	    else if(dophase)then
 	      ctemp = buf(k)
 	      if(abs(real(ctemp))+abs(aimag(ctemp)).eq.0)then
@@ -961,14 +971,14 @@ c
 c************************************************************************
 	subroutine Plotit(npnts,xp,yp,xrange,yrange,dodots,
      *		  plot,nplts,xtitle,ytitle,bl,time,inttime,
-     *		  pol,npol,dopoint,hann,hc,hw,logf,MAXPNT)
+     *		  pol,npol,dopoint,hann,hc,hw,logf,MAXPNT,dohdr)
 c
 	implicit none
 	integer npnts,bl,nplts,plot(nplts+1),npol,pol(npol),hann,MAXPNT
 	double precision time,xp(npnts)
         real x(MAXPNT)
 	real inttime,hc(*),hw(*),xrange(2),yrange(2),yp(npnts)
-	logical dopoint,dodots
+	logical dopoint,dodots,dohdr
 	character xtitle*(*),ytitle*(*),logf*(*)
 c
 c  Draw a plot
@@ -1022,7 +1032,11 @@ c
 	else
 	  call pgswin(xranged(1),xranged(2),yrange(1),yrange(2))
 	endif
-	call pgbox('BCNST',0.,0.,'BCNST',0.,0.)
+	if (dohdr) then
+          call pgbox('BCNST',0.,0.,'BCNSTL',0.,0.)
+        else
+          call pgbox('BCNST',0.,0.,'BCNST',0.,0.)
+        endif
 	do i=1,nplts
 	  call pgsci(mod(i-1,NCOL)+1)
 	  if(dopoint)then
