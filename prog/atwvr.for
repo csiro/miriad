@@ -17,6 +17,9 @@ c       Format : time (yymmmdd:hh:mm:ss), phase (6x).
 c	Prepending a '-' to the file name will negate the phases.
 c@ offset
 c	Offset, in seconds, between the recorded values and the data
+c@ log
+c       Name of log file. If specified it will list the phases
+c       applied to each baseline
 c--
 c  History:
 c    03jul04 rjs  Original version.
@@ -24,19 +27,20 @@ c    25jul04 rjs  Adjust tolerance to determine glitches.
 c    09sep08 mhw  Modify atrtfix to become atscfix
 c    23mar11 mhw  Modify atscfix to become atwvr
 c    22jun11 mhw  Add pol code back in
+c    21sep12 mhw  Add log file
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='AtWVR: version 1.0 23-Mar-11')
+	parameter(version='AtWVR: version 1.0 21-Sep-2012')
 	include 'maxdim.h'
 	include 'mirconst.h'
 c
-	character vis*64,out*64,wvrphase*64
+	character vis*128,out*64,wvrphase*128,log*128,line*80
 	real phase,theta
 	complex w
-	integer lVis,lOut,nchan,i,pol,npol,sign
+	integer lVis,lOut,nchan,i,pol,pol0,npol,sign,i1,i2
 	double precision preamble(5)
 	complex data(MAXCHAN)
-	logical flags(MAXCHAN)
+	logical flags(MAXCHAN),dolog
 	real offset
 c
 c  Externals.
@@ -54,6 +58,8 @@ c
           wvrphase = wvrphase(2:)
         endif
 	call keyr('offset',offset,0.0)
+        call keya('log',log,' ')
+        dolog = log.ne.' '
 	call keyfin
 c
 c  Open the input and output, and do various housekeeping.
@@ -71,6 +77,8 @@ c
         call hiswrite(lOut,'ATWVR: Miriad '//version)
         call hisinput(lOut,'ATWVR')   
         call hisclose(lOut)
+c        
+        if (dolog) call LogOpen(log,' ')       
 c
 c  Get first record
 c
@@ -83,17 +91,24 @@ c
 c
 c  Loop through the data
 c               
+        call uvrdvri(lVis,'pol',pol0,0)
 	dowhile(nchan.gt.0)
           call uvrdvri(lVis,'pol',pol,0)
           call uvrdvri(lVis,'npol',npol,0)
 
 	  phase = Phget(preamble(4)-offset/86400.d0,preamble(5))
 c
+	  theta = sign*PI/180*phase
+	  w = cmplx(cos(theta),sin(theta))
 	  do i=1,nchan
-	    theta = sign*PI/180*phase
-	    w = cmplx(cos(theta),sin(theta))
 	    data(i) = w*data(i)
 	  enddo
+          if (dolog.and.pol.eq.pol0) then
+            call julday(preamble(4),'H',line)
+            call basant(preamble(5),i1,i2)
+            write(line(20:),'(I3,''-'',I3,1x,F6.1)') i1,i2,sign*phase
+            call logwrit(line)
+          endif
 c
 c  Copy to the output.
 c
@@ -111,6 +126,7 @@ c
 	call uvclose(lOut)
 	call uvclose(lVis)
 	call Phclose()
+        if (dolog) call LogClose
 c
 	end
 c************************************************************************
