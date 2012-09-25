@@ -81,7 +81,7 @@ c	  noapply Do not apply the scale factor - just evaluate it.
 c         nospec Do not try to determine and correct the spectral index across
 c                the band.
 c
-c$Id: mfboot.for,v 1.8 2012/04/26 02:53:29 wie017 Exp $
+c$Id: mfboot.for,v 1.9 2012/09/25 05:57:48 wie017 Exp $
 c--
 c  History:
 c    rjs     15jan06 Original version adapted from plboot.
@@ -329,6 +329,7 @@ c------------------------------------------------------------------------
 	logical more,ok
 	real tm,sigma2
 	complex td
+        ptrdiff denom
 c
 	i3 = 3
 	more = .true.
@@ -344,10 +345,11 @@ c
   	        if(more)ok = nb(j,b12).gt.0.and.nb(j,b13).gt.0.and.
      *		  	     nb(j,b23).gt.0
 	        if(ok)then
-		  td =  db(j,b12)*db(j,b23)*conjg(db(j,b13))/
-     *		       (nb(j,b12)*nb(j,b23)*      nb(j,b13))
-		  tm =  mb(j,b12)*mb(j,b23)*      mb(j,b13) /
-     *		       (nb(j,b12)*nb(j,b23)*      nb(j,b13))
+                  denom = nb(j,b12)
+                  denom = denom*nb(j,b23)*nb(j,b13)
+                  
+		  td =  db(j,b12)*db(j,b23)*conjg(db(j,b13))/denom
+		  tm =  mb(j,b12)*mb(j,b23)*      mb(j,b13) /denom
 		  sigma2 = 1
 	          SumXX(j) = SumXX(j) +     (tm*tm/sigma2)
 	          SumXY(j) = SumXY(j) + real(tm*td/sigma2)
