@@ -80,7 +80,7 @@ c   18apr12   mchw   Add GBT
 c   29June12  mchw   use FWHM values measured in CARMA memo 52
 c   18sep12   mhw    Use input frequencies for pb model
 c
-c $Id: pb.for,v 1.12 2012/09/18 03:50:17 wie017 Exp $
+c $Id: pb.for,v 1.13 2012/09/25 03:30:53 wie017 Exp $
 c***********************************************************************
 c* pbList -- List known primary beam types.
 c& rjs
@@ -338,11 +338,11 @@ c* pbInitc -- Initialise a primary beam object.
 c& rjs
 c+ image-data
 c+
-      subroutine pbInitc(pbObj,type,coObj,in,x1,f,bw)
+      subroutine pbInitc(pbObj,type,coObj,in,x1,frq,bw)
 
       character type*(*),in*(*)
       integer pbObj,coObj
-      double precision x1(*),f
+      double precision x1(*),frq
       real bw
 c  ---------------------------------------------------------------------
 c  Initialise a primary beam object. The primary beam is assumed to
@@ -355,7 +355,7 @@ c    coObj      The coordinate system.
 c    in         Form of the input coordinate defining the reference
 c               location (passed to the co routines).
 c    x1         The reference location.
-c    f          The frequency
+c    frq        The frequency
 c    bw         The bandwidth
 c  Output:
 c    pbObj      The primary beam object.
@@ -365,7 +365,7 @@ c-----------------------------------------------------------------------
 
       logical more,ok
       integer l1,l2,iax,k,kd
-      double precision dtemp,x2(2),antdiam
+      double precision dtemp,x2(2),antdiam,f
       double precision crpix,crval,cdelt1,cdelt2
       real error,t,alpha
       character ctype*16,line*64
@@ -392,6 +392,7 @@ c
 c
 c  Get information about this coordinate system.
 c
+      f=frq
       if (f.eq.0d0) then
         call coFindAx(coObj,'frequency',iax)
         if (iax.ne.0) then
