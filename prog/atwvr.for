@@ -16,7 +16,7 @@ c	A text file containing the phase corrections.
 c       Format : time (yymmmdd:hh:mm:ss), phase (6x).
 c	Prepending a '-' to the file name will negate the phases.
 c@ offset
-c	Offset, in seconds, between the recorded values and the data
+c	Offset of phase correction time stamps vs data time stamps.
 c@ log
 c       Name of log file. If specified it will list the phases
 c       applied to each baseline
@@ -28,6 +28,7 @@ c    09sep08 mhw  Modify atrtfix to become atscfix
 c    23mar11 mhw  Modify atscfix to become atwvr
 c    22jun11 mhw  Add pol code back in
 c    21sep12 mhw  Add log file
+c    09oct12 mhw  Use closest correction slot instead of preceeding slot
 c------------------------------------------------------------------------
 	character version*(*)
 	parameter(version='AtWVR: version 1.0 21-Sep-2012')
@@ -35,8 +36,8 @@ c------------------------------------------------------------------------
 	include 'mirconst.h'
 c
 	character vis*128,out*64,wvrphase*128,log*128,line*80
-	real phase,theta
-	complex w
+	real phase,theta, visph
+	complex w,v
 	integer lVis,lOut,nchan,i,pol,pol0,npol,sign,i1,i2
 	double precision preamble(5)
 	complex data(MAXCHAN)
@@ -58,6 +59,7 @@ c
           wvrphase = wvrphase(2:)
         endif
 	call keyr('offset',offset,0.0)
+        offset = offset/86400.d0
         call keya('log',log,' ')
         dolog = log.ne.' '
 	call keyfin
@@ -87,7 +89,7 @@ c
 c
 c  Open the phase file and skip to start of data
 c
-	call Phopen(wvrphase,preamble(4)-offset/86400.d0)
+	call Phopen(wvrphase,preamble(4)+offset)
 c
 c  Loop through the data
 c               
@@ -96,17 +98,21 @@ c
           call uvrdvri(lVis,'pol',pol,0)
           call uvrdvri(lVis,'npol',npol,0)
 
-	  phase = Phget(preamble(4)-offset/86400.d0,preamble(5))
+	  phase = Phget(preamble(4)+offset,preamble(5))
 c
 	  theta = sign*PI/180*phase
 	  w = cmplx(cos(theta),sin(theta))
+          v = 0
 	  do i=1,nchan
+             if (flags(i)) v = v + data(i)
 	    data(i) = w*data(i)
 	  enddo
+          if (abs(v).gt.0) visph =atan2(imag(v),real(v))*180/PI
           if (dolog.and.pol.eq.pol0) then
             call julday(preamble(4),'H',line)
             call basant(preamble(5),i1,i2)
-            write(line(20:),'(I3,''-'',I3,1x,F6.1)') i1,i2,sign*phase
+            write(line(20:),'(I3,''-'',I3,1x,3F8.1)') 
+     *       i1,i2,sign*phase,visph,visph+sign*phase
             call logwrit(line)
           endif
 c
@@ -138,21 +144,30 @@ c
 c------------------------------------------------------------------------
 	integer i
 c
-	double precision time
+	double precision time, ctime
 	real phases(6),cphases(6)
-	common/phcomm/time,phases,cphases
+	common/phcomm/time,ctime,phases,cphases
 c
 	call tinOpen(file,'n')
         do i=1,6
           cphases(i)=0
         enddo
 	call phrec(time,phases(1))
+        ctime=time-10./86400
 	dowhile(t.gt.time)
           do i=1,6
             cphases(i)=phases(i)
           enddo
+          ctime = time
 	  call phrec(time,phases(1))
 	enddo
+        if (abs(t-time).lt.abs(t-ctime)) then
+          ctime=time
+          do i=1,6
+            cphases(i)=phases(i)
+          enddo
+        endif
+        
 c
 	end
 c***********************************************************************
@@ -163,21 +178,34 @@ c
 c------------------------------------------------------------------------
 	integer i1,i2,i
 c
-	double precision time
+	double precision time, ctime
 	real phases(6),cphases(6)
-	common/phcomm/time,phases,cphases
+c        character*80 line
+	common/phcomm/time,ctime,phases,cphases
 c
 
 	dowhile(t.gt.time)
           do i=1,6
             cphases(i)=phases(i)
           enddo
+          ctime = time
 	  call phrec(time,phases(1))
 	enddo
+        if (abs(t-time).lt.abs(t-ctime)) then
+          ctime=time
+          do i=1,6
+            cphases(i)=phases(i)
+          enddo
+        endif
 c
 	phget=0
         call basant(bl,i1,i2)
+c        call julday(ctime,'H',line)
+c        call julday(t,'H',line(20:))
+c        write(line(40:),'(2I4,1x,2F8.1)') i1,i2,cphases(i1),cphases(i2)
+c        call logwrit('DEBUG '//line)
 	phget = cphases(i1) - cphases(i2)
+        
 	end
 c************************************************************************
 	subroutine PhRec(time,phases)
