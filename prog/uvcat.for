@@ -60,6 +60,8 @@ c                   takes care of bugzilla 1049, the root cause is still a
 c                   mystery
 c    mhw  07jun12   Handle ifchain correctly when selecting windows
 c    mhw  07aug12   Merge atca and carma version (ifchain and bfmask)
+c    mhw  15oct12   Make sure sfreq appears in output, even if uvprobvr
+c                   claims it never updates
 c
 c  Bugs:
 c
@@ -102,7 +104,7 @@ c--
 c------------------------------------------------------------------------
         include 'maxdim.h'
 	character version*(*)
-	parameter(version='UvCat: version 6-jun-2012')
+	parameter(version='UvCat: version 15-oct-2012')
 c
 	integer nchan,vhand,lIn,lOut,i,j,nspect,nPol,Pol,SnPol,SPol
 	integer nschan(MAXWIN),ischan(MAXWIN),ioff,nwdata,length
@@ -387,10 +389,10 @@ c------------------------------------------------------------------------
 	logical unspect,unschan,uischan,usdf,usfreq,urest,usyst
 	logical uxtsys,uytsys,ubfmask
 	logical uxyph,uifch
-	logical bfirst
+	logical first,bfirst
 c
-	save bfirst
-	data bfirst/.TRUE./
+	save first,bfirst
+	data first/.TRUE./,bfirst/.TRUE./
 c
 c  Get the dimensioning info.
 c
@@ -415,7 +417,7 @@ c
 	call uvprobvr(lIn,'restfreq',type,length,urest)
 	call uvgetvrd(lIn,'restfreq',restfreq,nspect)
         call uvprobvr(lIn,'ifchain',type,length,uifch)
-        uifch = type.eq.'i'.and.length.eq.nspect
+        uifch = (uifch.or.first).and.type.eq.'i'.and.length.eq.nspect
         if (uifch) call uvgetvri(lIn,'ifchain',ifchain,nspect)
 	call uvprobvr(lIn,'bfmask',type,length,ubfmask)
 c
@@ -518,9 +520,9 @@ c
 	call uvputvri(lOut,'nspect',nout,1)
 	call uvputvri(lOut,'nschan',nschan,nout)
 	call uvputvri(lOut,'ischan',ischan,nout)
-	if(usdf) call uvputvrd(lOut,'sdf',sdf,nout)
-	if(usfreq) call uvputvrd(lOut,'sfreq',sfreq,nout)
-	if(urest) call uvputvrd(lOut,'restfreq',restfreq,nout)
+	if(usdf.or.first) call uvputvrd(lOut,'sdf',sdf,nout)
+	if(usfreq.or.first) call uvputvrd(lOut,'sfreq',sfreq,nout)
+	if(urest.or.first) call uvputvrd(lOut,'restfreq',restfreq,nout)
         if(uifch) call uvputvri(lOut,'ifchain',ifchain,nout)
 	if(ubfmask) call uvputvri(lOut,'bfmask',bfmask,nout)
 	if(nsystemp.ge.nspect*nants)nsystemp = nout*nants
@@ -547,6 +549,7 @@ c
 	    endif
 	  enddo
 	endif
+        first = .false.
 c
 	end
 c************************************************************************
