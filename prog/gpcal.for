@@ -151,7 +151,7 @@ c                    solution for the observation already exists.  This
 c                    preliminary solution must be formed from a
 c                    calibrator with known Stokes-V.
 c
-c$Id: gpcal.for,v 1.13 2012/02/20 04:05:37 wie017 Exp $
+c$Id: gpcal.for,v 1.14 2012/10/15 01:32:52 wie017 Exp $
 c--
 c  History:
 c    rjs,nebk 1may91 Original version.
@@ -241,6 +241,7 @@ c                    iteration process.  Add (and correct!) misc
 c                    comments to the code.
 c    mhw     03sep10 Use mean freq of all data used for flux cal
 c    mhw     15feb11 Solve for leakage in frequency bins
+c    mhw     15oct12 Remove freq dep gains and leakages if nfbin=1
 c
 c  Miscellaneous notes:
 c ---------------------
@@ -297,8 +298,8 @@ c-----------------------------------------------------------------------
       external  itoaf, keyprsnt, uvDatOpn
 c-----------------------------------------------------------------------
       version = versan('gpcal',
-     *                 '$Revision: 1.13 $',
-     *                 '$Date: 2012/02/20 04:05:37 $')
+     *                 '$Revision: 1.14 $',
+     *                 '$Date: 2012/10/15 01:32:52 $')
 c
 c  Get inputs.
 c
@@ -2865,7 +2866,12 @@ c
       call wrhdi(tIn,'nsols',nsoln)
       call wrhdd(tIn,'interval',0.5d0)
       
-      if (nfbin.le.1) return
+      if (nfbin.le.1) then
+        call hdelete(tIn,'gainsf',iostat)
+        call hdelete(tIn,'leakagef',iostat)
+        call hdelete(tIn,'nfbin',iostat)
+        return
+      endif
 c
 c  Now write the gains for the frequency binned solutions
 c
@@ -3009,7 +3015,12 @@ c
       endif
       call hdaccess(item,iostat)
       if (iostat.ne.0) call bugno('f',iostat)
-      if (nfbin.le.1) return
+      if (nfbin.le.1) then
+        call hdelete(tIn,'gainsf',iostat)
+        call hdelete(tIn,'leakagef',iostat)
+        call hdelete(tIn,'nfbin',iostat)
+        return
+      endif
 c
 c  Now write the frequency binned leakages
 c
