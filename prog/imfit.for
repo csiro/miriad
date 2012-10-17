@@ -101,7 +101,7 @@ c         residual The output data-set is the residual image.
 c                  If an output is being created, the default is to make
 c                  this the fitted model.
 c
-c$Id: imfit.for,v 1.8 2010/11/22 05:54:01 cal103 Exp $
+c$Id: imfit.for,v 1.9 2012/10/17 03:32:40 wie017 Exp $
 c--
 c  History:
 c    mchw 22apr94 new task.
@@ -125,6 +125,8 @@ c    rjs  27apr98 Merge above two sets of changes.
 c    rjs  27oct98 Improved format statements.
 c    rjs  30jun99 Ditto.
 c    paj  28Mar03 Fix bug in uncertainty estimates
+c    mhw  16oct12 Add error estimate for integrated flux
+c                 and give position error ellipse
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -148,8 +150,8 @@ c     Externals.
       external FUNCTION
 c-----------------------------------------------------------------------
       version = versan ('imfit',
-     *                '$Revision: 1.8 $',
-     *                '$Date: 2010/11/22 05:54:01 $')
+     *                '$Revision: 1.9 $',
+     *                '$Date: 2012/10/17 03:32:40 $')
 
 c     Get the input parameters.
       call keyini
@@ -328,7 +330,7 @@ c-----------------------------------------------------------------------
       double precision in(3),out(3)
       double precision crpix(2),crval(2),cdelt(2)
       character ctype(2)*16
-      real bmaj,bmin,bpa,dx,dy
+      real bmaj,bmin,bpa,dx,dy,ma,mi,p
       integer i
 c-----------------------------------------------------------------------
       do i = 1, nsrc
@@ -356,6 +358,8 @@ c
           else
             call coGauCvt(lIn,'ap/ap/ap',in,
      *          'p',fwhm1(i),fwhm2(i),pa(i),'w',bmaj,bmin,bpa)
+            call coGauCvt(lIn,'ap/ap/ap',in,
+     *          'p',spema(i),spemi(i),pepa(i),'w',ma,mi,p)
           endif
 c
 c  Convert the uncertainties.
@@ -381,6 +385,9 @@ c
           fwhm1(i) = bmaj
           fwhm2(i) = bmin
           pa(i)    = bpa
+          spema(i) = ma
+          spemi(i) = mi
+          pepa(i)  = p
         endif
       enddo
 
@@ -658,9 +665,13 @@ c***********************************************************************
 c  Unpack the covariance matrix.
 c-----------------------------------------------------------------------
       include 'imfit.h'
-      integer i,n
+      include 'mirconst.h'
+      integer i,n, isl, ism
+      real d,t,l1,l2,p
 c-----------------------------------------------------------------------
       n = 0
+      isl = 0
+      ism = 0
 
       do i = 1, nsrc
         if (vflux(i)) then
@@ -670,10 +681,12 @@ c-----------------------------------------------------------------------
         if (vl0(i)) then
           n = n + 1
           sl0(i) = sqrt(covar(n,n))
+          isl = n
         endif
         if (vm0(i)) then
           n = n + 1
           sm0(i) = sqrt(covar(n,n))
+          ism = n
         endif
         if (vfwhm1(i)) then
           n = n + 1
@@ -687,6 +700,27 @@ c-----------------------------------------------------------------------
         if (vpa(i)) then
           n = n + 1
           spa(i) = sqrt(covar(n,n))
+        endif
+c
+c  Work out the error ellipse if possible
+c  Somewhat empirical correction for position angle applied to cope
+c  with inverted ra axis and pa measured from North
+c
+        if (isl.gt.0.and.ism.gt.0) then
+          p=0
+          if (covar(isl,isl).ne.covar(ism,ism)) then
+            p=0.5*atan2(2*covar(isl,ism),
+     *       (covar(isl,isl)-covar(ism,ism)))
+            p=-(p-PI_2)
+          endif
+          d = covar(isl,isl)*covar(ism,ism)-
+     *     covar(isl,ism)*covar(ism,isl)
+          t = covar(isl,isl) + covar(ism,ism)
+          l1 = t/2 + sqrt(t*t/4-d)
+          l2 = t/2 - sqrt(t*t/4-d)
+          spema(i)=sqrt(l1)
+          spemi(i)=sqrt(l2)
+          pepa(i)=p
         endif
       enddo
 
@@ -882,7 +916,7 @@ c-----------------------------------------------------------------------
       include 'imfit.h'
 
       integer i,ifail
-      real f1,f2,p,sf1,sf2,sp,tflux,sfac,fac
+      real f1,f2,p,sf1,sf2,sp,tflux,stflux,sfac,fac
       character line*80
 
       integer NOBJS
@@ -976,8 +1010,21 @@ c
               tflux = flux(i) * pi/4.0 * fwhm1(i) * fwhm2(i)
               if (srctype(i).eq.GAUSSIAN) tflux = tflux / log(2.0)
               tflux = tflux / bvol
-              write(line,35) tflux
-  35          format('  Total integrated flux:',1pg16.4)
+              if (srctype(i).ne.POINT) then
+                call GauFid(fwhm1(i),fwhm2(i),sfac*sfwhm1(i),
+     *            sfac*sfwhm2(i),pa(i),sfac*spa(i),f1,f2,sf1,sf2,p,sp)
+                stflux=0
+                if (flux(i).gt.0) stflux=stflux+(sflux(i)/flux(i))**2
+                if (f1.gt.0) stflux=stflux+(sf1/f1)**2
+                if (f2.gt.0) stflux=stflux+(sf2/f2)**2
+                stflux = tflux*sqrt(stflux)
+                write(line,35) tflux, stflux
+  35            format('  Total integrated flux:',1pg16.4,:,' +/-',
+     *                 1pg12.4)
+              else
+                write(line,37) tflux
+  37            format('  Total integrated flux:',1pg16.4)
+              endif
               call output(line)
             endif
             if (max(abs(l0(i)),abs(m0(i)))*R2AS.gt.9999.5) then
@@ -993,6 +1040,13 @@ c
   45          format('  Positional errors (arcsec):',2f10.3)
               call output(line)
             endif
+            if (spema(i)+spemi(i).gt.0) then
+              write(line,46) sfac*spema(i)*R2AS,sfac*spemi(i)*R2AS,
+     *          sfac*pepa(i)*R2D
+  46          format('  Pos error ellipse (arcsec):',
+     *               2f10.3,1x,f8.2)
+              call output(line)
+            endif              
             line = '  Right Ascension:                '//
      *                hangleh(radec(1,i))
             call output(line)
@@ -1003,25 +1057,25 @@ c
           if (srctype(i).ne.POINT) then
             call GauFid(fwhm1(i),fwhm2(i),sfac*sfwhm1(i),
      *        sfac*sfwhm2(i),pa(i),sfac*spa(i),f1,f2,sf1,sf2,p,sp)
-            if (sf1.gt.0) then
-              write(line,50)'Major',f1,sf1
+            if (abs(sf1).gt.0) then
+              write(line,50)'Major',f1,abs(sf1)
             else
               write(line,50)'Major',f1
             endif
             call output(line)
-            if (sf1.gt.0) then
-              write(line,50)'Minor',f2,sf2
+            if (abs(sf2).gt.0) then
+              write(line,50)'Minor',f2,abs(sf2)
             else
               write(line,50)'Minor',f2
             endif
             call output(line)
   50        format('  ',a,' axis (arcsec):',f16.3,:,' +/-',f7.3)
-            if (sp.gt.0) then
-              write(line,60) p,sp
+            if (abs(sp).gt.0) then
+              write(line,60) p,abs(sp)
             else
             write(line,60) p
             endif
-  60        format('  Position angle (degrees):',f11.2,:,' +/-',f11.2)
+  60        format('  Position angle (degrees):',f11.2,:,' +/-',f7.2)
             call output(line)
 c
 c  Deconvolve the beam, if possible.
