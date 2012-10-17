@@ -12,10 +12,12 @@
 	logical vflux(MAXSRC),vl0(MAXSRC),vm0(MAXSRC)
 	logical vfwhm1(MAXSRC),vfwhm2(MAXSRC),vpa(MAXSRC),circ(MAXSRC)
 	real    sflux(MAXSRC),sl0(MAXSRC),sm0(MAXSRC)
+        real    spema(MAXSRC),spemi(MAXSRC),pepa(MAXSRC)
 	real    sfwhm1(MAXSRC),sfwhm2(MAXSRC),spa(MAXSRC)
 	real xoff,yoff
 c
 	common/JmFit/radec,l0,m0,fwhm1,fwhm2,pa,flux,Data,
      *		     sflux,sl0,sm0,sfwhm1,sfwhm2,spa,
      *		     xoff,yoff,nsrc,srctype,ndata,x,y,
-     *		     vflux,vl0,vm0,vfwhm1,vfwhm2,vpa,circ
+     *		     vflux,vl0,vm0,vfwhm1,vfwhm2,vpa,circ,
+     *               spema,spemi,pepa
