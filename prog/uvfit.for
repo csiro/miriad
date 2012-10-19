@@ -94,9 +94,11 @@ c       Use this with the bin parameter to fix e.g., position while
 c       fitting for flux variation with time or frequency.
 c       Defaults to the value of fix.
 c@ out
-c	The optional output data-set. The default is not to create an
-c	output data-set. If an output dataset name is given, then
-c	either the model or residual visibilities can be saved.
+c       Optionally, you can specify one or more output files for model
+c       or residual visibilities. If you specify one output file, all data
+c       will be written to that file. If you specify more than one output
+c       file, the number of output files should equal the number of input 
+c	visibility files.
 c@ options
 c	Extra processing options. Several can be given, separated by commas.
 c	Minimum match is used. Possible values are:
@@ -105,7 +107,7 @@ c	           If an output is being created, the default is to make
 c	           this the fitted model.
 c         
 c
-c$Id: uvfit.for,v 1.8 2011/12/09 00:43:18 wie017 Exp $
+c$Id: uvfit.for,v 1.9 2012/10/19 03:17:45 wie017 Exp $
 c--
 c  History:
 c    rjs  13dec90  Original version.
@@ -127,21 +129,25 @@ c                  spheres and thick shells, but they don't work yet!
 c    rjs  18mar97  Handle multiple files, autocorr data, better message.
 c    bmg  14jan05  Added 2 more significant figures to offset position
 c    mhw  07nov11  Add frequency and time binning
+c    mhw  19oct12  Write multiple output files (copied from uvsfit)
 c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'uvfit.h'
+        integer maxOut
+        parameter (maxOut=10)
 c
-	character out*64, ltype*16, version*80, calday1*20, calday2*20
+	character out(maxOut)*64, ltype*16, version*80
+        character calday1*20, calday2*20
         character*16 fix2(MAXSRC)
-	integer lIn,lOut
-	integer nread,ifail1,ifail2,i,j,k,nvar,npol,pol
+	integer lIn,lOut,nout
+	integer nread,ifail1,ifail2,i,j,k,nvar,npol,pol,iOut
 	real x(MAXVAR),x1(MAXVAR),rms,covar(MAXVAR*MAXVAR)
         real cflux(MAXSRC),csflux(MAXSRC),cl(MAXSRC),csl(MAXSRC)
         real cm(MAXSRC),csm(MAXSRC),cw1(MAXSRC),csw1(MAXSRC)
         real cw2(MAXSRC),csw2(MAXSRC),cpa(MAXSRC),cspa(MAXSRC)
 	double precision preamble(4),sfreq(MAXCHAN)
 	complex data(MAXCHAN),Model(MAXCHAN)
-	logical flags(MAXCHAN),dores,more
+	logical flags(MAXCHAN),dores
 c
 c  Externals.
 c
@@ -150,8 +156,8 @@ c
         external FUNCTION,FUNCTION1
 c-----------------------------------------------------------------------
       version = versan ('uvfit',
-     :                  '$Revision: 1.8 $',
-     :                  '$Date: 2011/12/09 00:43:18 $')
+     :                  '$Revision: 1.9 $',
+     :                  '$Date: 2012/10/19 03:17:45 $')
 c
 c  Get the inputs.
 c
@@ -161,7 +167,7 @@ c
         call keyd('bin',df,0.d0)
         call keyd('bin',dt,0.d0)
         dt = dt / 24.d0
-	call keya('out',out,' ')
+	call mkeya('out',out,maxOut,nout)
 	call GetOpt(dores)
         call keyfin
 c
@@ -201,7 +207,7 @@ c
 c  Pack the things that we are going to solve for.
 c
 	call PackPar(x,nvar,MAXVAR)
-	if(out.eq.' '.and.nvar.eq.0)
+	if(nOut.eq.0.and.nvar.eq.0)
      *	  call bug('f','Nothing to be done -- check inputs!')
 	if(nvar.ge.2*nvis)call bug('f','Too few correlations to fit')
 c
@@ -344,27 +350,29 @@ c
 c
 c  Write out the results.
 c
-	if(out.ne.' ')then
-	  call output('Generating output file ...')
+        iOut = 0
+	if(nOut.gt.0)then
+	  call output('Generating output file(s) ...')
 	  call uvDatRew()
 	  call uvDatGta('ltype',ltype)
-          more = uvDatOpn(lIn)
-	  if(.not.more) call bug('f','Error opening input file')
-c
-	  call uvopen(lOut,out,'new')
-	  call hdcopy(lIn,lOut,'history')
-	  call hisopen(lOut,'append')
-	  call hiswrite(lOut,'UVFIT: Miriad '//version)
-	  call hisinput(lOut,'UVFIT')
-	  call hisclose(lOut)
-c
-          if (ntime.gt.1.or.nfreq.gt.1) call int2dIni(nvar)
-c
-c  Process all the records.
-c
-          dowhile(more)
+          dowhile(uvDatOpn(lIn))
+            iOut = iOut+1
+            if (nOut.gt.1.and.iOut.gt.nOut) then
+              call bug('f','Too few output files given')
+            endif
 	    call VarInit(lIn,ltype)
+c
+            if (iOut.le.nOut) then
+	      call uvopen(lOut,out(iOut),'new')
+	      call hdcopy(lIn,lOut,'history')
+	      call hisopen(lOut,'append')
+	      call hiswrite(lOut,'UVFIT: Miriad '//version)
+	      call hisinput(lOut,'UVFIT')
+	      call hisclose(lOut)
+            endif
 	    call VarOnit(lIn,lOut,ltype)
+c
+            if (ntime.gt.1.or.nfreq.gt.1) call int2dIni(nvar)
 c
 c  Get the first record, and write the polarisation type.
 c
@@ -372,6 +380,8 @@ c
 	    call uvputvri(lOut,'npol',1,1)
 	    call uvDatGti('pol',pol)
 	    call uvputvri(lOut,'pol',pol,1)
+c
+c  Process all the records.
 c
 	    dowhile(nread.ge.1)
 	      call uvinfo(lIn,'sfreq',sfreq)
@@ -399,10 +409,10 @@ c
 	      call uvwrite(lOut,preamble,data,flags,nread)
 	      call uvDatRd(preamble,data,flags,MAXCHAN,nread)
 	    enddo
+            if (nOut.gt.1) call uvclose(lOut)
 	    call uvDatCls
-            more = uvDatOpn(lIn)
           enddo
-	  call uvclose(lOut)
+          if (nOut.eq.1) call uvclose(lOut)
 	endif
 c
         end
@@ -698,7 +708,7 @@ c
 c  Check and unpack the things that we are solving for.
 c
 	if(m.ne.2*nvis1)call bug('f','Inconsistency in FUNCTION')
-	call Upackpar(x,nvar,0,2)
+	call Upackpar(x,nvar)
 c
 c  Evaluate the model.
 c
