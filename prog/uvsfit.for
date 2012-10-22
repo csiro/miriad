@@ -139,11 +139,12 @@ c	formal errors in each (0.0 if not a free parameter); line 3 has
 c	the values of all three spectral terms; line 4 has the formal
 c	errors in those terms (again 0.0 if not included in the fit).
 c
-c$Id: uvsfit.for,v 1.2 2012/10/20 10:28:58 wie017 Exp $
+c$Id: uvsfit.for,v 1.3 2012/10/22 04:09:58 wie017 Exp $
 c--
 c  History:
 c    dmcc 12jan12  Original version, adapted from uvfit version 14jan05.
 c    dmcc 10oct12  Adapted for spectral curvature and for general use.
+c    dmcc 22oct12  Include ref freq in output log; fix errors in logging.
 c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'uvsfit.h'
@@ -166,8 +167,8 @@ c
         external FUNCTION
 c-----------------------------------------------------------------------
       version = versan ('uvsfit',
-     :                  '$Revision: 1.2 $',
-     :                  '$Date: 2012/10/20 10:28:58 $')
+     :                  '$Revision: 1.3 $',
+     :                  '$Date: 2012/10/22 04:09:58 $')
 c
 c  Get the inputs.
 c  Relative to original uvfit, insist on cross-corrlelations with flag 'x'.
@@ -224,9 +225,6 @@ c
 	if (freqref .eq. 0.0) then
 	   freqref = freq(1)
 	endif
-	write(line,23) freqref,freq(1),nvis
- 23	format('freqref : ',2f12.6,i12)
-c	call output(line)
 c
 c  Pack the things that we are going to solve for.
 c
@@ -723,14 +721,17 @@ c
 	call output('------------------------------------------------')
 	if (dolog) call loginput('uvsfit')
 c
-
+	write(line,3)freqref
+    3	format('Reference frequency (GHz): ',f7.3)
+	call output(line)
 	write(line,5)rms
     5	format('RMS residual is',1pe10.3)
 	call output(line)
 	call output(' ')
 	if (dolog) then
-	   write(line,6) rms
- 6	   format('RMSresidual ',1pe10.3)
+	   write(line,3)freqref
+	   call logwrite(line,more)
+	   write(line,5) rms
 	   call logwrite(line, more)
 	endif
 c
