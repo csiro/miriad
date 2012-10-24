@@ -46,17 +46,19 @@ c@ minants
 c	The minimum number of antennae that must be present before a
 c	solution is attempted. Default is 2.
 c@ interval
-c	This gives one, two or three numbers, all given in minutes, being
-c	used to determine the extents of the antenna gain and passband 
-c       calibration solution interval.
-c	The first gives the maximum length of a solution interval. The
-c	second gives the maximum gap size in a solution interval. A new solution
-c	interval is started when either the max length is exceeded, or a
-c	gap larger than the max gap size is encountered. The default max length is
-c	5 minutes, and the default max gap size is the same as the max length.
-c       The third number specifies the passband solution interval. The default is
-c       to use a single passband solution for the entire observation. Each passband
-c       solution interval will consist of one or more full gain solution intervals.
+c	This gives one, two or three numbers, all in units of minutes, being
+c	used to determine the lengths of the antenna gain and passband 
+c	calibration solution interval.
+c	The first gives the maximum length of a gain solution interval.
+c	The default is 5 minutes.
+c	The second gives the maximum gap size in a gain solution interval.
+c	A new solution interval is started when either the max length is
+c	exceeded, or a gap larger than the max gap size is encountered.
+c	The default default max gap size is the same as the max length.
+c	The third number specifies the passband solution interval.
+c	The default is a single passband solution for the entire observation.
+c	Each passband solution interval will consist of one or more
+c	full gain solution intervals.
 c@ options
 c	Extra processing options. Several values can be given, separated by
 c	commas. Minimum match is used. Possible values are:
@@ -79,7 +81,7 @@ c	            density scale. See the help on "oldflux" for more
 c	            information.
 c@ tol
 c	Solution convergence tolerance. Default is 0.001.
-c$Id: mfcal.for,v 1.12 2011/05/29 23:43:24 wie017 Exp $
+c$Id: mfcal.for,v 1.13 2012/10/24 01:12:12 mci156 Exp $
 c--
 c  History:
 c    rjs   8jul92 Original version.
@@ -126,6 +128,7 @@ c    rjs  17dec09 There was a bug in packit/unpackit where handling a dataset
 c		  with many windows or Doppler tracking.
 c    mhw  14apr11 Fix hash function overflow by moving to double for VisId
 c                 Also use mem.h for dynamic memory
+c    vjm  24oct12 Tidy up text explaining the interval options.
 c
 c  Problems:
 c    * Should do simple spectral index fit.
@@ -139,8 +142,8 @@ c------------------------------------------------------------------------
 	parameter(MAXSOLN=1024,MAXPOL=2)
 c
 	character version*(*)
-	parameter(version='MfCal: $Revision: 1.12 $, '//
-     *             '$Date: 2011/05/29 23:43:24 $')
+	parameter(version='MfCal: $Revision: 1.13 $, '//
+     *             '$Date: 2012/10/24 01:12:12 $')
 c
 	integer tno
 	integer pWGains,pFreq,pSource,pPass,pGains,pTau
