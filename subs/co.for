@@ -57,11 +57,12 @@ c      coFin(lu)
 c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
+c    mhw 26oct12  Initialize coordinate scale to 1
 c
 c  CARMA customizations:
 c    pkgw  2012may25  Extract some error messages from wcslib
 c
-c $Id: co.for,v 1.47 2012/08/29 03:03:25 cal103 Exp $
+c $Id: co.for,v 1.48 2012/10/26 03:57:58 wie017 Exp $
 c***********************************************************************
 
 c* coCtype -- Parse a world coordinate ctype.
@@ -165,6 +166,7 @@ c     Assume linear unless recognized as otherwise.
       wtype  = ' '
       algo   = ' '
       units  = ' '
+      scl    = 1d0
 
       if (ctypei.eq.' ') return
 
