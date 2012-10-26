@@ -130,7 +130,7 @@ c         velocity=lsr
 c       indicates that fits is to determine the observatory velocity
 c       wrt the LSR frame using an appropriate model.
 c
-c$Id: fits.for,v 1.25 2012/06/01 01:56:22 wie017 Exp $
+c$Id: fits.for,v 1.26 2012/10/26 03:55:31 wie017 Exp $
 c--
 c
 c  Bugs:
@@ -150,6 +150,8 @@ c      is needed. Probably need the user to give an auxillary text file.
 c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
+c    mhw 26oct12  Initialize map rotation to zero
+c
 c-----------------------------------------------------------------------
       integer   MAXBOXES
       parameter (MAXBOXES=2048)
@@ -164,8 +166,8 @@ c-----------------------------------------------------------------------
       character versan*72
 c-----------------------------------------------------------------------
       version = versan('fits',
-     *                 '$Revision: 1.25 $',
-     *                 '$Date: 2012/06/01 01:56:22 $')
+     *                 '$Revision: 1.26 $',
+     *                 '$Date: 2012/10/26 03:55:31 $')
 c
 c  Get the input parameters.
 c
@@ -3935,6 +3937,7 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
       ilng = 0
       ilat = 0
+      llrot = 0d0
 
       do iax = 1, naxis
         cax = itoaf(iax)
@@ -4106,6 +4109,7 @@ c     Convert matrix elements to cdelt1, cdelt2, and llrot.
         call bug('w','Using some mean rotation')
       endif
       llrot  = (crota1 + crota2)/2d0
+      if (abs(llrot).lt.1d-300) llrot=0d0
       cdelt1 = cd11/cos(llrot)
       cdelt2 = cd22/cos(llrot)
 
