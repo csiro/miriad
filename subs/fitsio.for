@@ -131,7 +131,7 @@ c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c    mhw  02jul12  Read/write of images with dimensions up to MAXDIM
 c
-c $Id: fitsio.for,v 1.10 2012/07/02 03:59:09 wie017 Exp $
+c $Id: fitsio.for,v 1.11 2012/10/26 01:37:14 wie017 Exp $
 c***********************************************************************
 
 c* FxyOpen -- Open a FITS image file.
@@ -489,17 +489,24 @@ c
         if (BypPix(lu).eq.2) then
           call hread3j(item(lu),array,offset3,BypPix(lu)*length,
      *                                                        iostat)
-        else
+        else if (BypPix(lu).eq.4) then
           call hread3i(item(lu),array,offset3,BypPix(lu)*length,
+     *                                                        iostat)
+        else if (BypPix(lu).eq.8) then
+          call hread3d(item(lu),darray,offset3,BypPix(lu)*length,
      *                                                        iostat)
         endif
         if (iostat.ne.0) call bugno('f',iostat)
-        if (float(lu)) then
+        if (float(lu).and.BypPix(lu).eq.4) then
           do i = 1, length
             flags(i) = (2139095040.gt.array(i) .or.
      *                  array(i).gt.2147483647) .and.
      *                 (-8388608.gt.array(i) .or.
      *                  array(i).gt.-1)
+          enddo
+        else if (BypPix(lu).eq.8) then
+          do i = 1, length
+            flags(i) = darray(i).ne.blank
           enddo
         else
           do i = 1, length
