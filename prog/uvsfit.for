@@ -139,7 +139,7 @@ c	formal errors in each (0.0 if not a free parameter); line 3 has
 c	the values of all three spectral terms; line 4 has the formal
 c	errors in those terms (again 0.0 if not included in the fit).
 c
-c$Id: uvsfit.for,v 1.3 2012/10/22 04:09:58 wie017 Exp $
+c$Id: uvsfit.for,v 1.4 2012/11/01 00:44:52 wie017 Exp $
 c--
 c  History:
 c    dmcc 12jan12  Original version, adapted from uvfit version 14jan05.
@@ -167,8 +167,8 @@ c
         external FUNCTION
 c-----------------------------------------------------------------------
       version = versan ('uvsfit',
-     :                  '$Revision: 1.3 $',
-     :                  '$Date: 2012/10/22 04:09:58 $')
+     :                  '$Revision: 1.4 $',
+     :                  '$Date: 2012/11/01 00:44:52 $')
 c
 c  Get the inputs.
 c  Relative to original uvfit, insist on cross-corrlelations with flag 'x'.
@@ -746,27 +746,6 @@ c
 	  endif
    20	  format('  Flux: ',1pg34.4,:,' +/- ',1pe8.2)
 	  call output(line)
-          if(salph0(i).gt.0)then
-             write(line,21)alph0(i),salph0(i)
-          else
-             write(line,21)alph0(i)
-          endif
-   21	  format(' Alpha0: ',1pg34.4,:,' +/- ',1pe8.2)
-          call output(line)
-          if(salph1(i).gt.0)then
-             write(line,23)alph1(i),salph1(i)
-          else
-             write(line,23)alph1(i)
-          endif
-   23	  format(' Alpha1: ',1pg34.4,:,' +/- ',1pe8.2)
-          call output(line)
-          if(salph2(i).gt.0)then
-             write(line,24)alph2(i),salph2(i)
-          else
-             write(line,24)alph2(i)
-          endif
- 24	  format(' Alpha2: ',1pg34.4,:,' +/- ',1pe8.2)
-          call output(line)
 	  l0a = 3600*180/pi*l0(i)
 	  m0a = 3600*180/pi*m0(i)
 	  sl0a = 3600*180/pi*sl0(i)
@@ -823,30 +802,55 @@ c
 	    endif
 	  endif
 c
+c       write spectral parameters
+c
+          if(salph0(i).gt.0)then
+             write(line,51)alph0(i),salph0(i)
+          else
+             write(line,51)alph0(i)
+          endif
+   51	  format('  Alpha0:',1pg34.4,:,' +/- ',1pe8.2)
+          call output(line)
+          if(salph1(i).gt.0)then
+             write(line,53)alph1(i),salph1(i)
+          else
+             write(line,53)alph1(i)
+          endif
+   53	  format('  Alpha1:',1pg34.4,:,' +/- ',1pe8.2)
+          call output(line)
+          if(salph2(i).gt.0)then
+             write(line,54)alph2(i),salph2(i)
+          else
+             write(line,54)alph2(i)
+          endif
+   54	  format('  Alpha2:',1pg34.4,:,' +/- ',1pe8.2)
+          call output(line)
+
+c
 c       Write log records
 c
 	  if (dolog) then
 	     if(srctype(i).eq.DISK.or.srctype(i).eq.GAUSSIAN.or.
      *          srctype(i).eq.SHELL.or.srctype(i).eq.RING)then
-	        write(line,42) i,objects(srctype(i)),flux(i),l0a,m0a,
+	        write(line,62) i,objects(srctype(i)),flux(i),l0a,m0a,
      *                         f1,f2,p
- 42		format(i3,1x,a,1p,g14.4,0p,f10.3,f10.3,2f10.4,f9.1)
+ 62		format(i3,1x,a,1p,g14.3,0p,f10.3,f10.3,2f10.4,f9.1)
 		call logwrite(line,more)
-		write(line,43) sflux(i),sl0a,sm0a,sf1,sf2,sp
- 43		format(12x,1p,e14.2,0p,2f10.3,2f10.4,f9.1)
+		write(line,63) sflux(i),sl0a,sm0a,sf1,sf2,sp
+ 63		format(12x,1p,e14.3,0p,2f10.3,2f10.4,f9.1)
 	     else
-	        write(line,45) i,objects(srctype(i)),flux(i),l0a,m0a
- 45		format(i3,1x,a,1p,g14.4,0p,f10.3,f10.3)
+	        write(line,65) i,objects(srctype(i)),flux(i),l0a,m0a
+ 65		format(i3,1x,a,1p,g14.3,0p,f10.3,f10.3)
 		call logwrite(line,more)
-		write(line,46) sflux(i),sl0a,sm0a
- 46		format(12x,1p,e14.2,0p,2f10.3)
+		write(line,66) sflux(i),sl0a,sm0a
+ 66		format(12x,1p,e14.3,0p,2f10.3)
 	     endif
 	     call logwrite(line,more)
-	     write(line,48) alph0(i),alph1(i),alph2(i)
- 48	     format(12x,1p,3g14.4)
+	     write(line,68) alph0(i),alph1(i),alph2(i)
+ 68	     format(12x,1p,3g14.4)
 	     call logwrite(line,more)
-	     write(line,50) salph0(i),salph1(i),salph2(i)
- 50	     format(12x,1p,3g14.4)
+	     write(line,70) salph0(i),salph1(i),salph2(i)
+ 70	     format(12x,1p,3g14.4)
 	     call logwrite(line,more)
 	  endif
 	enddo
