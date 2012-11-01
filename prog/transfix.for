@@ -27,10 +27,15 @@ c	The default is all channels. Note that if there are multiple
 c	spectral windows, the fitting process is performed on each window
 c	separately.
 c@ pparams
-c	Pointing parameter table. These tables are stored on LEON at
-c	Narrabri in the file at$log:pparams.log. It is usually entered as an
-c	indirect parameter file. The table consists of 6 lines (one per
-c	antenna), each consisting of 12 numbers (the first number being the
+c	Pointing parameter table. These tables are stored on the observing
+c       machine at Narrabri in the file pparams.log.
+c       The actively used version is:
+c       /atomsexport/caobsonline/caobs_pparms/pparams.dat
+c       Previous versions of the file are archived here:
+c       /archive/backup/caobsonline/caobs_pparams/pparams.dat.yyyymmdd-hhmm
+c	It is usually entered as an indirect parameter file.
+c	The table consists of 6 lines (one per antenna),
+c	each consisting of 12 numbers (the first number being the
 c	antenna number).
 c@ options
 c	Task enrichment options. Possible values are
@@ -48,6 +53,7 @@ c--
 c  History:
 c    27jun97 rjs  Adapted from uvredo
 c    23jul97 rjs  Improved equations, care mjk.
+c    01nov12 mhw  Update docs for file locations
 c
 c  Bugs:
 c------------------------------------------------------------------------
