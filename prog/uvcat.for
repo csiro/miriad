@@ -62,6 +62,7 @@ c    mhw  07jun12   Handle ifchain correctly when selecting windows
 c    mhw  07aug12   Merge atca and carma version (ifchain and bfmask)
 c    mhw  15oct12   Make sure sfreq appears in output, even if uvprobvr
 c                   claims it never updates
+c    mhw  05nov12   Revert some of the 07aug changes - missing systemps
 c
 c  Bugs:
 c
@@ -391,8 +392,8 @@ c------------------------------------------------------------------------
 	logical uxyph,uifch
 	logical first,bfirst
 c
-	save first,bfirst
-	data first/.TRUE./,bfirst/.TRUE./
+	save bfirst
+	data bfirst/.TRUE./
 c
 c  Get the dimensioning info.
 c
@@ -417,7 +418,7 @@ c
 	call uvprobvr(lIn,'restfreq',type,length,urest)
 	call uvgetvrd(lIn,'restfreq',restfreq,nspect)
         call uvprobvr(lIn,'ifchain',type,length,uifch)
-        uifch = (uifch.or.first).and.type.eq.'i'.and.length.eq.nspect
+        uifch = type.eq.'i'.and.length.eq.nspect
         if (uifch) call uvgetvri(lIn,'ifchain',ifchain,nspect)
 	call uvprobvr(lIn,'bfmask',type,length,ubfmask)
 c
@@ -446,14 +447,14 @@ c
 c       System Temperature
 c
 	call uvprobvr(lIn,'systemp',type,nsystemp,usyst)
-	usyst = usyst.and.type.eq.'r'.and.nsystemp.le.MAXANT*MAXWIN.and.
+	usyst = type.eq.'r'.and.nsystemp.le.MAXANT*MAXWIN.and.
      *				nsystemp.gt.0
 	if(usyst)call uvgetvrr(lIn,'systemp',systemp,nsystemp)
 c
 c       x-feed system temperature
 c
 	call uvprobvr(lIn,'xtsys',type,nxtsys,uxtsys)
-	uxtsys = uxtsys.and.type.eq.'r'.and.nxtsys.le.MAXANT*MAXWIN.and.
+	uxtsys = type.eq.'r'.and.nxtsys.le.MAXANT*MAXWIN.and.
      *				nxtsys.gt.0
 	if(uxtsys)call uvgetvrr(lIn,'xtsys',xtsys,nxtsys)
 
@@ -461,12 +462,12 @@ c
 c       y-feed system temperature
 c
 	call uvprobvr(lIn,'ytsys',type,nytsys,uytsys)
-	uytsys = uytsys.and.type.eq.'r'.and.nytsys.le.MAXANT*MAXWIN.and.
+	uytsys = type.eq.'r'.and.nytsys.le.MAXANT*MAXWIN.and.
      *				nytsys.gt.0
 	if(uytsys)call uvgetvrr(lIn,'ytsys',ytsys,nytsys)
 
 	call uvprobvr(lIn,'xyphase',type,nxyph,uxyph)
-	uxyph = uxyph.and.type.eq.'r'.and.nxyph.le.MAXANT*MAXWIN.and.
+	uxyph = type.eq.'r'.and.nxyph.le.MAXANT*MAXWIN.and.
      *				nxyph.gt.0
 	if(uxyph)call uvgetvrr(lIn,'xyphase',xyphase,nxyph)
 c
@@ -520,9 +521,9 @@ c
 	call uvputvri(lOut,'nspect',nout,1)
 	call uvputvri(lOut,'nschan',nschan,nout)
 	call uvputvri(lOut,'ischan',ischan,nout)
-	if(usdf.or.first) call uvputvrd(lOut,'sdf',sdf,nout)
-	if(usfreq.or.first) call uvputvrd(lOut,'sfreq',sfreq,nout)
-	if(urest.or.first) call uvputvrd(lOut,'restfreq',restfreq,nout)
+	call uvputvrd(lOut,'sdf',sdf,nout)
+	call uvputvrd(lOut,'sfreq',sfreq,nout)
+	call uvputvrd(lOut,'restfreq',restfreq,nout)
         if(uifch) call uvputvri(lOut,'ifchain',ifchain,nout)
 	if(ubfmask) call uvputvri(lOut,'bfmask',bfmask,nout)
 	if(nsystemp.ge.nspect*nants)nsystemp = nout*nants
@@ -531,7 +532,7 @@ c
 	if(uxtsys) call uvputvrr(lOut,'xtsys',xtsys,nxtsys)
 	if(nytsys.ge.nspect*nants) nytsys = nout*nants
 	if(uytsys) call uvputvrr(lOut,'ytsys',ytsys,nytsys)
-c-check?
+	if(nxyph.ge.nspect*nants)nxyph = nout*nants
 	if(uxyph)call uvputvrr(lOut,'xyphase',xyphase,nxyph)
 c
 c  Determine the output parameters.
