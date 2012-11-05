@@ -24,20 +24,19 @@ c     At the top of the plot is a box with information about the
 c     baseline that is being viewed, the last taken measurement,
 c     and a guide to the commonly required action keys.
 c
+c     Selecting data:
 c     The user may edit the data by selecting a range of channels
-c     and times with the mouse, and then flagging or unflagging
-c     them. Selecting a range of channels and times is done by
-c     selecting two points - one with the left mouse button and
-c     one with the right mouse button - that bound the desired
-c     range. When a selection is made with either the left mouse
-c     button or the right mouse button, a green point will be
-c     placed on the screen at the selected location. If both a
-c     left mouse selection and a right mouse selection have been
-c     made, a green box will be displayed that will have the two
-c     selected points as opposite corners. Selecting another point
-c     with either the left mouse button or the right mouse button
-c     will move the appropriate corner of the box to form a new
-c     selection.
+c     and times with the mouse, and then flagging or unflagging them.
+c     This is done by selecting two points - one with the left mouse button
+c     and one with the right mouse button - that bound the desired range.
+c     When a selection is made with either the left mouse button or
+c     the right mouse button, a green point will be placed on the screen
+c     at the selected location. If both a left mouse selection and
+c     a right mouse selection have been made, a green box will be displayed
+c     that will have the two selected points as opposite corners.
+c     Selecting another point with either the left mouse button or
+c     the right mouse button will move the appropriate corner of the box
+c     to form a new selection.
 c
 c     To act upon this selection, or the plot itself, the user
 c     should press one of the following keys while the cursor is
@@ -273,8 +272,8 @@ c     Task enrichment parameters. Several can be given, separated by
 c     commas. Minimum match is used. Possible values are:
 c       selgen  Generate a file appropriate for selecting the bad data
 c               (via a 'select' keyword). The output is two text files
-c               called 'blflag_flag.select' (for flagging operations),
-c               and 'blflag_unflag.select' (for unflagging operations).
+c               called 'pgflag_flag.select' (for flagging operations),
+c               and 'pgflag_unflag.select' (for unflagging operations).
 c               Unfortunately, since 'select' does not support the use
 c               of a 'channel' selection, this option is of limited use,
 c               but is supplied in case time-based selection is all that
@@ -292,7 +291,7 @@ c       nocal   Do not apply antenna gain calibration.
 c       nopass  Do not apply bandpass correction.
 c       nopol   Do not apply polarisation leakage correction.
 c
-c$Id: pgflag.for,v 1.21 2012/09/14 05:35:43 wie017 Exp $
+c$Id: pgflag.for,v 1.22 2012/11/05 23:45:00 mci156 Exp $
 c--
 c
 c  History:
@@ -427,8 +426,8 @@ c
       logical uvDatOpn
 
       version = versan ('pgflag',
-     :                  '$Revision: 1.21 $',
-     :                  '$Date: 2012/09/14 05:35:43 $')
+     :                  '$Revision: 1.22 $',
+     :                  '$Date: 2012/11/05 23:45:00 $')
 
 c
 c Get user inputs
@@ -1342,10 +1341,16 @@ c-----------------------------------------------------------------------
       integer flags_goodtobad,flags_badtogood
       integer time1,time2,ntflag,tflag(MAXEDIT2)
       character outline*256
+      character flagfile*32
+      character unflagfile*32
 c
 c     Externals
 c
       integer len1
+c
+c     Files to create in local directory, if selgen is true
+      flagfile='pgflag_flag.select'
+      unflagfile='pgflag_unflag.select'
 c
       oldflags_bad=0
       oldflags_good=0
@@ -1364,19 +1369,22 @@ c
          call uvrewind(tno)
 c     write out the history of the flagging
          if (selgen) then
-            call txtopen(lf,'pgflag_flag.select','new',iostat)
+            call txtopen(lf,flagfile,'new',iostat)
             if (iostat.ne.0) then
                call bug('w',
-     *           'Error opening output text file pgflag_flag.select')
+     *           'Error opening output text file '//flagfile)
                call bugno('w',iostat)
             endif
-            call txtopen(lu,'pgflag_unflag.select','new',iostat)
+            call txtopen(lu,unflagfile,'new',iostat)
             if (iostat.ne.0) then
                call bug('w',
-     *           'Error opening output text file pgflag_unflag.select')
+     *           'Error opening output text file '//unflagfile)
                call bugno('w',iostat)
             endif
          endif
+c        we have nflags new flags to apply
+c        to apply a flag value we need these coordinates:
+c          a baseline, a set of channels and a time range
          do i=1,nflags
 c     determine what type of flagging
             isave(1)=bases(2,i)
@@ -1393,7 +1401,7 @@ c     determine what type of flagging
                time2=min(times(2,i),ntime)
 c
 c      Only log large flagged areas, not single points
-c               
+c
                if ((bases(2,i).ne.1.or.(times(2,i)-times(1,i)).gt.10.or.
      *           (chans(2,i)-chans(1,i)).gt.50).and..not.logstats) then
                  call FmtCmd(flagstring,isave,t1(time1),
@@ -1416,14 +1424,14 @@ c
                      call txtwrite(lf,selectline,l,iostat)
                      if (iostat.ne.0) then
                         call bug('w',
-     *                       'Error writing to file blflag_flag.select')
+     *                       'Error writing to file '//flagfile)
                         call bugno('w',iostat)
                      endif
                   else
                      call txtwrite(lu,selectline,l,iostat)
                      if (iostat.ne.0) then
                         call bug('w',
-     *               'Error writing to file blflag_unflag.select')
+     *               'Error writing to file '//unflagfile)
                         call bugno('w',iostat)
                      endif
                   endif
