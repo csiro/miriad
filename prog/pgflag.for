@@ -41,7 +41,7 @@ c
 c     To act upon this selection, or the plot itself, the user
 c     should press one of the following keys while the cursor is
 c     inside the main plot area:
-c     abcCdfFgGhHjJkKlLmMnpPqrsStTRuvVxzZ ,<.?;[]12=!@*
+c     aAbcCdfFgGhHjJkKlLmMnpPqrRsStTuvVwWxXzZ ,<.?;[]12=!@*
 c
 c     Exiting PGFLAG:
 c       a                Abort the editing procedure and quit
@@ -51,8 +51,12 @@ c       q                Apply any flagging that was requested
 c                        and then exit PGFLAG.
 c
 c     Editing data:
+c       w                Apply the flagging specified by the patch
+c                        file.
+c       W                Apply the flagging specified by the patch
+c                        file, in reverse (ie. good <-> bad)
 c       b                Blow away the dust: flag all visibilities
-c                        with less than 3 good neighbours
+c                        with less than 3 good neighbours.
 c       f                Flag the selected range of data on the
 c                        currently displayed baseline only.
 c       F                Flag the selected range of data on all
@@ -258,6 +262,13 @@ c     5 : Power of two of the maximum number of points used in the
 c         SumThreshold operation (e.g., 5 -> 32 points). Default 5.
 c     6 : Dust the plot - flag points with less than flagpar(6) 
 c         unflagged neighbours. Useful range 1-4, default 3.
+c@ patch
+c     The name of the flagging patch file, either to write (if the
+c     'patch' option is specified), or to use for the 'w' or 'W'
+c     commands.
+c@ log
+c     The name of a log file to which will be output the entire set
+c     of flagging actions, in text format.
 c@ command
 c     Specify a series of commands for non-interactive flagging.
 c     E.g., '<b' will apply SumThreshold flagging followed
@@ -270,6 +281,9 @@ c      all baselines are processed. Default is no command.
 c@ options
 c     Task enrichment parameters. Several can be given, separated by
 c     commas. Minimum match is used. Possible values are:
+c       patch   Generate a flagging patch file that contains all the
+c               flagging operations that are done by this run of
+c               pgflag.
 c       selgen  Generate a file appropriate for selecting the bad data
 c               (via a 'select' keyword). The output is two text files
 c               called 'pgflag_flag.select' (for flagging operations),
@@ -284,14 +298,12 @@ c               whenever the source changes.
 c       noapply Do not apply the flagging.
 c       nodisp  Do not use the display, just use the specified command 
 c               to flag all baselines in the dataset.
-c       logstats Log flagging stats, not individual flags, this is the
-c               default for non interactive flagging
 c     The following options can be used to disable calibration.
 c       nocal   Do not apply antenna gain calibration.
 c       nopass  Do not apply bandpass correction.
 c       nopol   Do not apply polarisation leakage correction.
 c
-c$Id: pgflag.for,v 1.22 2012/11/05 23:45:00 mci156 Exp $
+c$Id: pgflag.for,v 1.23 2012/11/27 03:40:21 ste616 Exp $
 c--
 c
 c  History:
@@ -375,6 +387,12 @@ c                 Now possible to plot an average spectrum of the
 c                 selected region on another specified PGPLOT device.
 c    mhw 30Mar12  Add selected features from the AOFlagger and
 c                 non interactive mode.
+c    jbs 27Nov12  Remove all the crap from the history,
+c                 and make a flagging 'patch' that
+c                 contains all the flagging that we have done, and that
+c                 can be used later to repeat the exact procedure.
+c                 The same stuff can be made into a human-readable
+c                 text log file.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mirconst.h'
@@ -395,23 +413,27 @@ c Data storage.
 c
       double precision day0,cfreq(MAXCHAN)
       integer lScr,nchan,ntime,nvis,chanoff,chanw,nbl,cbl
-      integer newbl,tbl,mbl,mant
+      integer newbl,tbl,mbl,mant,k1,k2,toklen,bindex
+      integer pant1,pant2,pchan1,pchan2,pflag
       real t1(MAXTIME),ttol,curs_x,curs_y
       logical blpres(MAXBASE),nosrc,nodisp,logstats,needplot,needread
+      logical genpatch,keepreading,pantok,genlog,autopatch
       parameter(ttol=1.0/86400.0)
       integer iFlg,iDat,curr_zooms(2,2),points(2,2)
-      integer min_x_zoom,max_x_zoom,min_y_zoom,max_y_zoom
-      character pressed*2,previous_pressed*2
+      integer min_x_zoom,max_x_zoom,min_y_zoom,max_y_zoom,patchlen
+      character pressed*2,previous_pressed*2,patchline*80
       integer meas_channel,shift_x,shift_y,f_a1,f_a2,f_mode
       real meas_freq,meas_amp,meas_maxval
+      double precision patcht1,patcht2,ptdiff
       character meas_time*20,yn*20,status*60,promp*30,string*20
-      character*80 command
+      character patchfile*80,patchtok*80,logfile*80
+      character*80 command,prefts,patchts
       integer icmd,ncmd,previous_bl
-      logical plot_top,plot_average,plot_main,plot_points
+      logical plot_top,plot_average,plot_main,plot_points,tmfnd
       logical do_flag,do_unflag,do_undoflag,subavgc,subavgt,subbkgnd
       integer times(2,MAXEDIT)
       integer chans(2,MAXEDIT),nflags,aflags,nthis,last_nflags
-      integer region_width,meastype,nIter,l,iresult
+      integer region_width,meastype,nIter,l,iresult,lfp,iostat
       integer bases(2,MAXEDIT)
       logical flagval(MAXEDIT),some_unflagged,scale_locked
       logical going_forward,going_backward,fiddle_active
@@ -426,8 +448,8 @@ c
       logical uvDatOpn
 
       version = versan ('pgflag',
-     :                  '$Revision: 1.22 $',
-     :                  '$Date: 2012/11/05 23:45:00 $')
+     :                  '$Revision: 1.23 $',
+     :                  '$Date: 2012/11/27 03:40:21 $')
 
 c
 c Get user inputs
@@ -443,8 +465,17 @@ c
       call keyr('flagpar',flagpar(5),5.0)
       call keyr('flagpar',flagpar(6),3.0)
       call keya('command',command,' ')
+      call keya('patch',patchfile,' ')
+      call keya('log',logfile,' ')
       if (command.eq.' ') command=''
-      call GetOpt(selgen,noapply,nosrc,nodisp,logstats,uvflags)
+      if (patchfile.eq.' ') patchfile=''
+      genlog=.true.
+      if (logfile.eq.' ') then
+         genlog=.false.
+         logfile=''
+      endif
+      logstats=.true.
+      call GetOpt(selgen,noapply,nosrc,nodisp,genpatch,uvflags)
       if (command.eq.''.and.nodisp) call bug('f','Nothing to do')
       if (device.eq.' '.and..not.nodisp) 
      *   call bug('f','A PGPLOT device must be given')
@@ -524,6 +555,7 @@ c
       enddo
  10   needread=.true.
       needplot=.true.
+      autopatch=.false.
       meas_channel=9999
       meas_freq=999999.9999
       meas_time='99DEC9999-99:99:99.9'
@@ -630,9 +662,16 @@ c     Now plot the data.
            if (previous_pressed.eq.'n'.and.previous_bl.eq.cbl) then
              pressed='q'
              keep_looping=.false.
-           else          
-             pressed=command(icmd:icmd)
-             icmd = icmd + 1
+           else
+              pressed=''
+              if ((command(icmd:icmd).eq.'w'.or.
+     *             command(icmd:icmd).eq.'W').and.
+     *             autopatch.eqv..true.) then
+                 icmd = icmd + 1
+              else
+                 pressed=command(icmd:icmd)
+                 icmd = icmd + 1
+              endif
              if (icmd.gt.ncmd) icmd=1
            endif
            previous_bl = cbl
@@ -938,7 +977,7 @@ c     flag the data in the selection box
             call FlagData(points,f_a1,f_a2,f_mode,
      *        do_flag,do_unflag,do_undoflag,chans,times,
      *        bases,flagval,MAXEDIT,nflags,day0,t1,ntime,chanoff,
-     *        chanw)
+     *        chanw,.true.)
             call ApplyFlags(memI(iFlg),nchan,ntime,chans,times,
      *        bases,flagval,MAXEDIT,nflags,cbl,mant,some_unflagged)
             needplot=.true.
@@ -1262,6 +1301,186 @@ c     available
               call atoif(string,iresult,ok)
               if (ok) flagpar(6)=max(1,iresult)
             endif
+         elseif ((pressed(1:1).eq.'w').or.(pressed(1:1).eq.'W')) then
+c     Take the specified patch file and do the flagging.
+c     Open the patch file.
+            call txtopen(lfp,patchfile,'old',iostat)
+            if (iostat.ne.0) then
+               call bug('w','Error opening patch file '//patchfile)
+               call bugno('w',iostat)
+            else
+               autopatch=.true.
+c     Read in each flag and add it to the list.
+               keepreading=.true.
+               if (pressed(1:1).eq.'w') then
+                  call output('Flagging using patch file.')
+               else
+                  call output('Reversing patch file flagging.')
+               endif
+               do while (keepreading)
+                  call txtread(lfp,patchline,patchlen,iostat)
+                  if (iostat.eq.-1) then
+c     This is the end of the file.
+                     keepreading=.false.
+                  elseif (iostat.eq.0) then
+c     Interpret the line.
+                     k1=1
+                     k2=patchlen
+                     f_mode=-1
+c     The first element is the first antenna in the baseline.
+                     call gettok(patchline,k1,k2,patchtok,toklen)
+c     Turn it into an integer.
+                     call atoif(patchtok,pant1,pantok)
+                     if (.not.pantok) then
+                        call bug('w','Bad read of patch ant1')
+                        keepreading=.false.
+                     else
+                        f_a1=pant1
+                     endif
+c     The second element is the second antenna in the baseline.
+                     call gettok(patchline,k1,k2,patchtok,toklen)
+c     Turn it into an integer.
+                     call atoif(patchtok,pant2,pantok)
+                     if (.not.pantok) then
+                        call bug('w','Bad read of patch ant2')
+                        keepreading=.false.
+                     else
+                        f_a2=pant2
+                     endif
+c     Check the baseline.
+                     if (f_a1.eq.0) then
+                        f_mode=4
+                     elseif (f_a2.eq.0) then
+c     This is all baselines with f_a1.
+                        f_mode=2
+                     else
+c     This is a single baseline.
+                        f_mode=1
+                     endif
+c     The next element is the first time.
+                     if (keepreading) then
+                        call gettok(patchline,k1,k2,patchtok,toklen)
+c     Find this time in terms of the samples.
+                        call atodf(patchtok,patcht1,pantok)
+                        if (.not.pantok) then
+                           call bug('w','Bad read of patch t1')
+                           keepreading=.false.
+                        else
+                           patcht1=patcht1-day0
+                           write(patchts,'(F18.5)') patcht1
+                           tmfnd=.false.
+                           do i=1,ntime
+                              write(prefts,'(F18.5)') t1(i)
+                              ptdiff=t1(i)-patcht1
+                              if (prefts.eq.patchts) then
+                                 points(1,2)=i
+                                 tmfnd=.true.
+                              endif
+                           enddo
+                           if (.not.tmfnd) then
+c     We couldn't find this time.
+                              call bug('w','Patch file not applicable')
+                              keepreading=.false.
+                           endif
+                        endif
+                     endif
+c     The next element is the first time.
+                     if (keepreading) then
+                        call gettok(patchline,k1,k2,patchtok,toklen)
+c     Find this time in terms of the samples.
+                        call atodf(patchtok,patcht2,pantok)
+                        if (.not.pantok) then
+                           call bug('w','Bad read of patch t2')
+                           keepreading=.false.
+                        else
+                           patcht2=patcht2-day0
+                           write(patchts,'(F18.5)') patcht2
+                           tmfnd=.false.
+                           do i=1,ntime
+                              write(prefts,'(F18.5)') t1(i)
+                              if (prefts.eq.patchts) then
+                                 points(2,2)=i
+                                 tmfnd=.true.
+                              endif
+                           enddo
+                           if (.not.tmfnd) then
+c     We couldn't find this time.
+                              call bug('w','Patch file not applicable')
+                              keepreading=.false.
+                           endif
+                        endif
+                     endif
+c     The next element is the first channel.
+                     if (keepreading) then
+                        call gettok(patchline,k1,k2,patchtok,toklen)
+                        call atoif(patchtok,pchan1,pantok)
+                        if (.not.pantok) then
+                           call bug('w','Bad read of patch chan1')
+                           keepreading=.false.
+                        else
+                           points(1,1)=(pchan1-chanoff)/chanw
+                        endif
+                     endif
+c     The next element is the second channel.
+                     if (keepreading) then
+                        call gettok(patchline,k1,k2,patchtok,toklen)
+                        call atoif(patchtok,pchan2,pantok)
+                        if (.not.pantok) then
+                           call bug('w','Bad read of patch chan2')
+                           keepreading=.false.
+                        else
+                           points(2,1)=(pchan2-chanoff)/chanw
+                        endif
+                     endif
+c     The next element is the flag action.
+                     if (keepreading) then
+                        call gettok(patchline,k1,k2,patchtok,toklen)
+                        call atoif(patchtok,pflag,pantok)
+                        if (.not.pantok) then
+                           call bug('w','Bad read of patch flag')
+                           keepreading=.false.
+                        else
+                           do_undoflag=.false.
+                           if (pflag.eq.0) then
+                              do_flag=.true.
+                              do_unflag=.false.
+                           else
+                              do_flag=.false.
+                              do_unflag=.true.
+                           endif
+                        endif
+                     endif
+c     Now do the flagging.
+                     if (keepreading) then
+                        if (pressed(1:1).eq.'W') then
+c     Reverse the flagging action.
+                           do_flag=.not.do_flag
+                           do_unflag=.not.do_unflag
+                        endif
+                        call FlagData(points,f_a1,f_a2,f_mode,
+     *                       do_flag,do_unflag,do_undoflag,chans,times,
+     *                       bases,flagval,MAXEDIT,nflags,day0,t1,ntime,
+     *                       chanoff,chanw,.false.)
+                     endif
+                  else
+c     This is an error.
+                     call output('Error reading patch file.')
+                     call bugno('w',iostat)
+                     keepreading=.false.
+                  endif
+               enddo
+c     Close the patch file.
+               call txtclose(lfp)
+c     Apply the flags to the screen.
+               call ApplyFlags(memI(iFlg),nchan,ntime,chans,times,
+     *              bases,flagval,MAXEDIT,nflags,cbl,mant,
+     *              some_unflagged)
+               needplot=.true.
+               plot_top=.true.
+               plot_average=.true.
+               plot_main=.true.
+               plot_points=.true.
+            endif
          endif
          previous_pressed=pressed
       enddo
@@ -1271,7 +1490,8 @@ c
       if (pressed(1:1).eq.'q') then
          if (.not.noapply) then
             call WriteFlags(bases,chans,times,flagval,nflags,tno,t1,
-     *        day0,ntime,chanoff,chanw,selgen,logstats)
+     *        day0,ntime,chanoff,chanw,selgen,logstats,genpatch,
+     *        patchfile,genlog,logfile)
          endif
       else
          call output('PGFLAG aborted at user request.')
@@ -1300,15 +1520,17 @@ c
       end
 c***********************************************************************
       subroutine WriteFlags(bases,chans,times,flagval,nflags,tno,t1,
-     *  day0,ntime,chanoff,chanw,selgen,logstats)
+     *  day0,ntime,chanoff,chanw,selgen,logstats,genpatch,patchfile,
+     *  genlog,logfile)
 c
       include 'maxdim.h'
       integer nflags,ntime,tno,chanoff,chanw
       integer chans(2,nflags),times(2,nflags)
       integer bases(2,nflags)
-      logical flagval(nflags),selgen,logstats
+      logical flagval(nflags),selgen,logstats,genpatch,genlog
       real t1(ntime)
       double precision day0
+      character patchfile*80,logfile*80
 c
 c  Write out the user generated flags to the UV file.
 c
@@ -1326,12 +1548,16 @@ c    ntime    the number of time samples in t1
 c    chanoff  the channel offset as specified by the line parameter
 c    chanw    the channel width as specified by the line parameter
 c    selgen   switch to determine whether to output selgen files
+c    logstats whether to log only the flagging statistics to the
+c             history instead of the hideous detail
+c    genpatch whether to make a flagging patch file
+c    patchfile the name of the flagging patch file to make
 c  Output:
 c    none
 c-----------------------------------------------------------------------
       integer MAXEDIT2
       parameter (MAXEDIT2=1000000)
-      integer isave(5),nchan,ant1,ant2,bl,i,j,lu,lf,iostat,l,k
+      integer isave(5),nchan,ant1,ant2,bl,i,j,lu,lf,iostat,l,k,lfp,lfl
       character flagstring*120,selectline*120
       double precision preamble(4)
       complex data(MAXCHAN)
@@ -1382,6 +1608,24 @@ c     write out the history of the flagging
                call bugno('w',iostat)
             endif
          endif
+c     write out a flagging patch file
+         if (genpatch) then
+            call txtopen(lfp,patchfile,'new',iostat)
+            if (iostat.ne.0) then
+               call bug('w',
+     *           'Error opening patch file '//patchfile)
+               call bugno('w',iostat)
+            endif
+         endif
+c     write out a flagging log file
+         if (genlog) then
+            call txtopen(lfl,logfile,'new',iostat)
+            if (iostat.ne.0) then
+               call bug('w',
+     *           'Error opening patch file '//logfile)
+               call bugno('w',iostat)
+            endif
+         endif
 c        we have nflags new flags to apply
 c        to apply a flag value we need these coordinates:
 c          a baseline, a set of channels and a time range
@@ -1406,8 +1650,31 @@ c
      *           (chans(2,i)-chans(1,i)).gt.50).and..not.logstats) then
                  call FmtCmd(flagstring,isave,t1(time1),
      *              t1(time2),chanoff,chanw,day0,selectline)
-                 call hiswrite(tno,'PGFLAG: '//flagstring)
-               endif  
+                 if (.not.logstats) call hiswrite(tno,
+     *                'PGFLAG: '//flagstring)
+               endif
+               if (genpatch) then
+                  call FmtPatch(flagstring,isave,t1(time1),
+     *               t1(time2),chanoff,chanw,day0,.false.)
+                  l=len1(flagstring)
+                  call txtwrite(lfp,flagstring,l,iostat)
+                  if (iostat.ne.0) then
+                     call bug('w',
+     *                    'Error writing to file '//patchfile)
+                     call bugno('w',iostat)
+                  endif
+               endif
+               if (genlog) then
+                  call FmtPatch(flagstring,isave,t1(time1),
+     *               t1(time2),chanoff,chanw,day0,.true.)
+                  l=len1(flagstring)
+                  call txtwrite(lfl,flagstring,l,iostat)
+                  if (iostat.ne.0) then
+                     call bug('w',
+     *                    'Error writing to file '//logfile)
+                     call bugno('w',iostat)
+                  endif
+               endif
                if (selgen) then
                   l=len1(selectline)
                   more=.false.
@@ -1501,6 +1768,12 @@ c     do the flagging
          if (selgen) then
             call txtclose(lf)
             call txtclose(lu)
+         endif
+         if (genpatch) then
+            call txtclose(lfp)
+         endif
+         if (genlog) then
+            call txtclose(lfl)
          endif
 c     summary of flagging
         outline='Counts of correlations within selected channels:'
@@ -1664,8 +1937,10 @@ c
       do i=1,aflags
          blselect = (bases(2,i).eq.4).or.
      *      (bases(2,i).eq.1.and.bases(1,i).eq.bl).or.
-     *      (bases(2,i).eq.2.and.bases(1,i).eq.a(1,bl)).or.
-     *      (bases(2,i).eq.3.and.bases(1,i).eq.a(2,bl))
+     *      (bases(2,i).eq.2.and.((bases(1,i).eq.a(1,bl)).or.
+     *        (bases(1,i).eq.a(2,bl)))).or.
+     *      (bases(2,i).eq.3.and.((bases(1,i).eq.a(2,bl)).or.
+     *        (bases(1,i).eq.a(1,bl))))
          if (blselect) then
             do j=chans(1,i),chans(2,i)
                do k=times(1,i),times(2,i)
@@ -1684,7 +1959,7 @@ c
 c***********************************************************************
       subroutine FlagData(points,a1,a2,mode,flag,
      *  unflag,undo,chans,times,bases,flagval,MAXEDIT,
-     *  nflags,day0,t1,ntime,chanoff,chanw)
+     *  nflags,day0,t1,ntime,chanoff,chanw,dprint)
 c
       include 'maxdim.h'
       integer points(2,2),a1,a2,mode,MAXEDIT,ntime
@@ -1692,7 +1967,7 @@ c
       integer times(2,MAXEDIT),nflags
       integer bases(2,MAXEDIT)
       real t1(ntime)
-      logical flag,unflag,undo,flagval(MAXEDIT)
+      logical flag,unflag,undo,flagval(MAXEDIT),dprint
       double precision day0
 c
 c  Flag the data in the user-selected region.
@@ -1723,6 +1998,7 @@ c    t1       Array of times.
 c    ntime    The number of samples in t1.
 c    chanoff  The channel offset as specified by the line parameter.
 c    chanw    The channel width as specified by the line parameter.
+c    dprint   If true, print out the flagging action to the terminal.
 c  Output:
 c    chans    The first and last channels to flag, updated to contain
 c             the new flagging action.
@@ -1793,10 +2069,12 @@ c     check that we have a full selection box
             if (time2.gt.ntime) then
                time2=ntime
             endif
-            call FmtCmd(flagstring,isave,t1(time1),t1(time2),
-     *       chanoff,
-     *       chanw,day0,selectline)
-            call output(flagstring)
+            if (dprint) then
+               call FmtCmd(flagstring,isave,t1(time1),t1(time2),
+     *              chanoff,
+     *              chanw,day0,selectline)
+               call output(flagstring)
+            endif
          elseif (undo) then
             if (nflags.gt.0) then
                nflags=-1*nflags
@@ -3444,9 +3722,9 @@ c      call keymatch('axis',NAX,axes,1,xaxis,n)
       if(n.eq.0)yaxis = axes(1)
       end
 c***********************************************************************
-      subroutine GetOpt(selgen,noapply,nosrc,nodisp,logstats,uvflags)
+      subroutine GetOpt(selgen,noapply,nosrc,nodisp,genpatch,uvflags)
 c
-      logical selgen,noapply,nosrc,nodisp,logstats
+      logical selgen,noapply,nosrc,nodisp,genpatch
       character uvflags*(*)
 c
 c  Get extra processing options.
@@ -3457,7 +3735,7 @@ c-----------------------------------------------------------------------
       character opts(NOPTS)*8
       data opts/'nocal   ','nopass  ','nopol   ',
      *          'selgen  ','noapply ','nosrc   ',
-     *          'nodisp  ','logstats'/
+     *          'nodisp  ','patch   '/
 c
       call options('options',opts,present,NOPTS)
 c
@@ -3465,7 +3743,8 @@ c
       noapply= present(5)
       nosrc  = present(6)
       nodisp = present(7)
-      logstats = present(8).or.nodisp
+      genpatch = present(8)
+c      logstats = present(8).or.nodisp
       uvflags = 'sdlwb'
       if(.not.present(1))uvflags(6:6) = 'c'
       if(.not.present(2))uvflags(7:7) = 'f'
@@ -3814,6 +4093,108 @@ c
       l=len1(string)
       string(l+1:)=' to '//flagval
 c
+      end
+c***********************************************************************
+      subroutine FmtPatch(string,isave,t1,t2,chanoff,chanw,day0,logform)
+c
+      character string*(*)
+      integer isave(5),chanoff,chanw
+      real t1,t2
+      double precision day0
+      logical logform
+c
+c  Format an editting instruction as a line in a patch file.
+c
+c  A patch file line will look like:
+c  bsln time1 time2 chan1 chan2 flag
+c
+c  Here, bsln is the baseline selection specifier:
+c   1-5 would be baseline formed by antenna 1 and 5
+c   1*  would be all baselines formed with antenna 1 as the
+c       first antenna
+c   *   would be all baselines present
+c  time1 is the first time to flag, time2 is the last
+c  chan1 is the first channel to flag, chan2 is the last
+c  flag is the way to flag, BAD or GOOD
+c
+c  Input:
+c     isave(5)  The details of the flag
+c               1: the mode of baseline flagging
+c               2: the indicator of baseline flagging
+c               3: the first channel to be flagged
+c               4: the last channel to be flagged
+c               5: the value of the flag (0=flag,1=unflag)
+c     t1        the first time to be flagged
+c     t2        the last time to be flagged
+c     chanoff   the channel offset from the line command
+c     chanw     the channel width from the line command
+c     day0      the start of the day
+c     logform   format for text log output
+c  Output:
+c    string     The formatted command.
+c-----------------------------------------------------------------------
+      include 'mirconst.h'
+      include 'maxdim.h'
+      integer chan1,chan2,l,i,j,tbl,ls,base1,base2
+      character time1*18,time2*18
+c      double precision time1,time2
+      character flagval*4,baseflag*7,selectant*13
+      double precision dt1,dt2
+c
+c  Externals.
+c
+      character itoaf*8
+      integer len1
+c
+      if (isave(1).eq.1) then
+         do i=1,MAXANT
+            do j=i,MAXANT
+               tbl=((j-1)*j)/2+i
+               if (tbl.eq.isave(2)) then
+                  write(baseflag,'(I3,A,I3)') i,'-',j
+                  base1=i
+                  base2=j
+                  goto 10
+               endif
+            enddo
+         enddo
+      elseif ((isave(1).eq.2).or.(isave(1).eq.3)) then
+         write(baseflag,'(I3,A)') isave(2),'*'
+         base1=isave(2)
+         base2=0
+      elseif (isave(1).eq.4) then
+         baseflag='*'
+         base1=0
+         base2=0
+      endif
+ 10   if (isave(5).eq.1) then
+         flagval='GOOD'
+      else
+         flagval='BAD'
+      endif
+      if (logform) then
+         call TimeToString(day0,t1,0,time1)
+         call TimeToString(day0,t2,0,time2)
+c      write(time1,'(F18.5)') real(day0+dbl(t1))
+c      write(time2,'(F18.5)') real(day0+dbl(t2))
+         chan1=chanoff+isave(3)*chanw
+         chan2=chanoff+isave(4)*chanw
+         string=''//baseflag//' '//time1//' '//time2//
+     *        ' '//itoaf(chan1)
+         l=len1(string)
+         string(l+1:)=' '//itoaf(chan2)
+         l=len1(string)
+         string(l+1:)=' '//flagval
+      else
+         chan1=chanoff+isave(3)*chanw
+         chan2=chanoff+isave(4)*chanw
+         dt1=day0+t1
+         dt2=day0+t2
+         write(string,'(I4,I4,F18.5,F18.5,I7,I7,I2)') base1,base2,
+     *        dt1,dt2,
+     *        chan1,chan2,isave(5)
+      endif
+c     
       end
 c***********************************************************************
       subroutine monthstring(month,string)
