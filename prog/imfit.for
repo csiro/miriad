@@ -101,7 +101,7 @@ c         residual The output data-set is the residual image.
 c                  If an output is being created, the default is to make
 c                  this the fitted model.
 c
-c$Id: imfit.for,v 1.9 2012/10/17 03:32:40 wie017 Exp $
+c$Id: imfit.for,v 1.10 2012/12/06 01:01:24 wie017 Exp $
 c--
 c  History:
 c    mchw 22apr94 new task.
@@ -127,6 +127,7 @@ c    rjs  30jun99 Ditto.
 c    paj  28Mar03 Fix bug in uncertainty estimates
 c    mhw  16oct12 Add error estimate for integrated flux
 c                 and give position error ellipse
+c    mhw  06dec12 Fix reported position angle of error ellipse
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -150,8 +151,8 @@ c     Externals.
       external FUNCTION
 c-----------------------------------------------------------------------
       version = versan ('imfit',
-     *                '$Revision: 1.9 $',
-     *                '$Date: 2012/10/17 03:32:40 $')
+     *                '$Revision: 1.10 $',
+     *                '$Date: 2012/12/06 01:01:24 $')
 
 c     Get the input parameters.
       call keyini
@@ -1042,7 +1043,7 @@ c
             endif
             if (spema(i)+spemi(i).gt.0) then
               write(line,46) sfac*spema(i)*R2AS,sfac*spemi(i)*R2AS,
-     *          sfac*pepa(i)*R2D
+     *          pepa(i)*R2D
   46          format('  Pos error ellipse (arcsec):',
      *               2f10.3,1x,f8.2)
               call output(line)
