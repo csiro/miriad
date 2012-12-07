@@ -176,7 +176,7 @@ c       For concatenated spectra the width of a single zoom is used.
 c       Note that noise and artefacts go up quickly towards the band 
 c       edge so making this much smaller will not gain you much.
 c
-c$Id: atlod.for,v 1.42 2012/09/14 04:10:09 wie017 Exp $
+c$Id: atlod.for,v 1.43 2012/12/07 00:55:43 wie017 Exp $
 c--
 c
 c  Program Structure:
@@ -337,8 +337,9 @@ c    mhw  07feb11 Add edge keyword to control birdie/edge flagging
 c    mhw  29may12 Try to make opcorr more accurate for wide bands
 c    mhw  15jun12 Fix index errors in opcor change
 c    mhw  12sep12 Drop edge channels for 16cm data with birdie option
+c    mhw  07dec12 Fix 29may12 opcor code again - how did it ever work?
 c
-c $Id: atlod.for,v 1.42 2012/09/14 04:10:09 wie017 Exp $
+c $Id: atlod.for,v 1.43 2012/12/07 00:55:43 wie017 Exp $
 c-----------------------------------------------------------------------
 
         integer MAXFILES,MAXTIMES,MAXSIM
@@ -359,8 +360,8 @@ c
         character itoaf*8, rperr*32, versan*80
 c-----------------------------------------------------------------------
       version = versan ('atlod',
-     :                  '$Revision: 1.42 $',
-     :                  '$Date: 2012/09/14 04:10:09 $')
+     :                  '$Revision: 1.43 $',
+     :                  '$Date: 2012/12/07 00:55:43 $')
 c
 c  Get the input parameters.
 c
@@ -1958,7 +1959,7 @@ c
           do i=1,nchan
             i1 = 1+(i-1)/(nchan/(nop-1.0))
             i2 = i1+1
-            f = sfreq + (i-1)*sdf
+            f = (sfreq + (i-1)*sdf)*1d9
             df = freq(i2)-freq(i1)
             data(i) = (fac(i1)*(freq(i2)-f)/df+
      *                 fac(i2)*(f-freq(i1))/df)
