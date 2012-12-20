@@ -17,6 +17,10 @@ c       Format : time (yymmmdd:hh:mm:ss), phase (6x).
 c	Prepending a '-' to the file name will negate the phases.
 c@ offset
 c	Offset of phase correction time stamps vs data time stamps.
+c@ uvrange
+c       Range of uv distance to apply the corrections over in meters(!).
+c       Defaults to all data. First value defaults to zero,
+c       second value defaults to infinity.
 c@ log
 c       Name of log file. If specified it will list the phases
 c       applied to each baseline
@@ -29,6 +33,7 @@ c    23mar11 mhw  Modify atscfix to become atwvr
 c    22jun11 mhw  Add pol code back in
 c    21sep12 mhw  Add log file
 c    09oct12 mhw  Use closest correction slot instead of preceeding slot
+c    20dec12 mhw  Add uvrange parameter
 c------------------------------------------------------------------------
 	character version*(*)
 	parameter(version='AtWVR: version 1.0 21-Sep-2012')
@@ -36,12 +41,12 @@ c------------------------------------------------------------------------
 	include 'mirconst.h'
 c
 	character vis*128,out*64,wvrphase*128,log*128,line*80
-	real phase,theta, visph
+	real phase,theta, visph, uvrange(2), uvdist
 	complex w,v
 	integer lVis,lOut,nchan,i,pol,pol0,npol,sign,i1,i2
 	double precision preamble(5)
 	complex data(MAXCHAN)
-	logical flags(MAXCHAN),dolog
+	logical flags(MAXCHAN),dolog, apply
 	real offset
 c
 c  Externals.
@@ -60,6 +65,8 @@ c
         endif
 	call keyr('offset',offset,0.0)
         offset = offset/86400.d0
+        call keyr('uvrange',uvrange(1),0.0)
+        call keyr('uvrange',uvrange(2),1e20)
         call keya('log',log,' ')
         dolog = log.ne.' '
 	call keyfin
@@ -97,6 +104,9 @@ c
 	dowhile(nchan.gt.0)
           call uvrdvri(lVis,'pol',pol,0)
           call uvrdvri(lVis,'npol',npol,0)
+          
+          uvdist = sqrt(preamble(1)**2+preamble(2)**2)*0.3
+          apply = uvdist.gt.uvrange(1).and.uvdist.lt.uvrange(2)
 
 	  phase = Phget(preamble(4)+offset,preamble(5))
 c
@@ -105,16 +115,17 @@ c
           v = 0
 	  do i=1,nchan
              if (flags(i)) v = v + data(i)
-	    data(i) = w*data(i)
+	     if (apply) data(i) = w*data(i)
 	  enddo
           if (abs(v).gt.0) visph =atan2(imag(v),real(v))*180/PI
+          call basant(preamble(5),i1,i2)
           if (dolog.and.pol.eq.pol0) then
             call julday(preamble(4),'H',line)
-            call basant(preamble(5),i1,i2)
             write(line(20:),'(I3,''-'',I3,1x,3F8.1)') 
      *       i1,i2,sign*phase,visph,visph+sign*phase
             call logwrit(line)
           endif
+          print *,uvdist,i1,i2,apply
 c
 c  Copy to the output.
 c
