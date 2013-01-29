@@ -151,7 +151,7 @@ c                    solution for the observation already exists.  This
 c                    preliminary solution must be formed from a
 c                    calibrator with known Stokes-V.
 c
-c$Id: gpcal.for,v 1.14 2012/10/15 01:32:52 wie017 Exp $
+c$Id: gpcal.for,v 1.15 2013/01/29 00:55:15 wie017 Exp $
 c--
 c  History:
 c    rjs,nebk 1may91 Original version.
@@ -242,6 +242,7 @@ c                    comments to the code.
 c    mhw     03sep10 Use mean freq of all data used for flux cal
 c    mhw     15feb11 Solve for leakage in frequency bins
 c    mhw     15oct12 Remove freq dep gains and leakages if nfbin=1
+c    mhw     24jan13 Avoid producing NaNs in the gains or leakages
 c
 c  Miscellaneous notes:
 c ---------------------
@@ -298,8 +299,8 @@ c-----------------------------------------------------------------------
       external  itoaf, keyprsnt, uvDatOpn
 c-----------------------------------------------------------------------
       version = versan('gpcal',
-     *                 '$Revision: 1.14 $',
-     *                 '$Date: 2012/10/15 01:32:52 $')
+     *                 '$Revision: 1.15 $',
+     *                 '$Date: 2013/01/29 00:55:15 $')
 c
 c  Get inputs.
 c
@@ -478,7 +479,7 @@ c
 c
 c  Solve for the antenna gains.
 c
-          xypref = xyp(refant+fbin*(n+1))
+          xypref = xyp(refant+fbin*nants)
           if (amphsol) then
             if (niter.eq.1 .and. xysol .and. .not.xyvary) then
               call output('Estimating the XY phases ...')
@@ -502,7 +503,7 @@ c
 c  If the XY phase for the reference antenna has changed, then adjust
 c  the leakages accordingly.
 c
-            xypcorr = xyp(refant+fbin*(n+1))*conjg(xypref)
+            xypcorr = xyp(refant+fbin*nants)*conjg(xypref)
             if ((polref .or. polsol .or. xyref) .and.
      *          abs(real(xypcorr)-1)+abs(aimag(xypcorr)).gt.ttol)
      *             call rotleaks(D(1,1+nants*fbin),nants,xypcorr)
@@ -523,7 +524,11 @@ c
             write(line,'(a,i2,a,f7.3)')'Iter=',niter,
      *          ', Polarisation Solution Error: ',epsi1
             call output(line)
-            epsi = max(epsi,epsi1)
+            if (epsi1.gt.0) then
+              epsi = max(epsi,epsi1)
+            else
+              epsi = -1
+            endif
           else if (useref) then
             call RefSolve(maxsoln,nsoln,nants,nbl,n,fbin,flux,xyref,
      *        polref,D,Gains,xyp,epsi1,Vis,VisCos,VisSin,
@@ -531,10 +536,14 @@ c
             write(line,'(a,i2,a,f7.3)')'Iter=',niter,
      *          ', Reference Solution Error:    ',epsi1
             call output(line)
-            epsi = max(epsi,epsi1)
+            if (epsi1.gt.0) then
+              epsi = max(epsi,epsi1)
+            else
+              epsi = -1
+            endif
           endif
 
-          if ((usepol .or. useref) .and. amphsol) then
+          if ((usepol .or. useref) .and. amphsol .and.epsi.gt.0) then
             call CompareG(nants,nsoln,n,fbin,D,Gains,Flux,
      *          OldD,OldGains,OldFlux,epsi)
             write(line,'(a,i2,a,f7.3)')'Iter=',niter,
@@ -788,10 +797,11 @@ c-----------------------------------------------------------------------
       enddo
 
       t = Flux(1,fbin)*Flux(1,fbin)
-      do i = 1, 4
-        epsi = max(epsi,(Flux(i,fbin)-OldFlux(i,fbin))**2/t)
-      enddo
-
+      if (t.gt.0) then
+        do i = 1, 4
+          epsi = max(epsi,(Flux(i,fbin)-OldFlux(i,fbin))**2/t)
+        enddo
+      endif
       epsi = sqrt(epsi)
       end
 
@@ -1099,8 +1109,8 @@ c
       do l = 1, nsoln
         do k = 1, 4*nbl
           if (Count((k+3)/4,l).gt.0) then
-            if (abs(gains(b1(k),l)).gt.0.and.
-     *          abs(gains(b2(k),l)).gt.0) then 
+            if (abs(Gains(b1(k),l)).gt.0.and.
+     *          abs(Gains(b2(k),l)).gt.0) then 
               g = 1/(Gains(b1(k),l)*conjg(Gains(b2(k),l)))
               V(k)  = V(k)  + g*Vis(k,l)
               VS(k) = VS(k) + g*VisSin(k,l)
@@ -1150,7 +1160,7 @@ c  Output:
 c    epsi       The relative change in the gains, etc.
 c-----------------------------------------------------------------------
       include 'gpcal.h'
-      real b(3),A(9),t1,t2,rcond,z(3)
+      real b(3),A(9),t1,t2,rcond,z(3),temp
       integer pivot(3),var(3),nvar
       integer i,j,idxD,idxXYP
       complex Gain,leakoff
@@ -1190,6 +1200,15 @@ c
       if (rcond.lt.1e-4) call bug('w',
      *  'Solution for requested parameters is unstable')
       call sgesl(A,nvar,nvar,pivot,b,1)
+      temp=0
+      do i=1,nvar
+        temp=max(temp,abs(b(i)))
+      enddo
+      if (temp.gt.1) then
+        call bug('e','Ref Polarisation solution failed')
+        epsi=-1
+        return
+      endif
 c
 c  Save the results, and compute epsi.
 c
@@ -1601,6 +1620,7 @@ c-----------------------------------------------------------------------
       real b(6*MAXANT+1),A((6*MAXANT+1)*(6*MAXANT+1)),z(6*MAXANT+1)
       real temp,dv,rcond
       logical polref1,xyref1
+      character itoaf*4
 c-----------------------------------------------------------------------
 c
 c  Determine if we are really going to do polref.
@@ -1640,15 +1660,26 @@ c
       if (rcond.le.1e-6) then
         if (nfbin.eq.0) then
           call bug('f',
-     *      'Solution for requested parameters is degenerate')
+     *      'Pol solution for requested parameters is degenerate')
         else
           epsi=0
+          call bug('w',
+     *      'Pol solution for bin '//itoaf(fbin)//' is degenerate')
           return
         endif
       endif
       if (rcond.lt.1e-4) call bug('w',
      *  'Solution for requested parameters is unstable')
       call sgesl(A,nvar,nvar,pivot,b,1)
+      temp=0
+      do i=1,nvar
+        temp=max(temp,abs(b(i)))
+      enddo
+      if (temp.gt.1) then
+        call bug('e','Polarisation solution failed')
+        epsi=-1
+        return
+      endif
 c
 c  Save the results, and compute epsi.
 c
@@ -1704,14 +1735,15 @@ c
 c  Combine the leakages with the leakage increments, adding in the
 c  appropriate adjustments.
 c
-      Sum1 = Sum1/ngood
+      if (ngood.gt.0) Sum1 = Sum1/ngood
       dDx = Sum1
       if (polref1 .and. .not.qusolve) dDx = cmplx(0.0,aimag(dDx))
-      if (polref1)                 dDx = cmplx(real(dDx),0.0)
+      if (polref1)                    dDx = cmplx(real(dDx),0.0)
       dDy = -conjg(dDx)
 
       if (vsolve) then
-        dv = -2.0*aimag(Sum2)/ngood
+        dv = -2.0*aimag(Sum2)
+        if (ngood.gt.0) dv=dv/ngood
         flux(4,fbin) = flux(4,fbin) + dv*flux(1,fbin)
         dDx = dDx - cmplx(0.0,0.5*dv)
         dDy = dDy + cmplx(0.0,0.5*dv)
@@ -1722,6 +1754,13 @@ c
         if (present(i)) then
           D(X,i,fbin) = D(X,i,fbin) + dD(X,i) - dDx
           D(Y,i,fbin) = D(Y,i,fbin) + dD(Y,i) - dDy
+          temp = max(abs(D(X,i,fbin)),abs(D(Y,i,fbin)))
+          if (temp.gt.0.5) then
+              call bug('w','Leakage term >0.5 for antenna '//
+     *         itoaf(i)//': solution invalid')
+              D(X,i,fbin) = 0
+              D(Y,i,fbin) = 0
+          endif
         endif
       enddo
 c
@@ -3281,12 +3320,14 @@ c
         Change = 0
 
         do i = 1, nants
-          Temp = (Sum(i)/abs(Sum(i)))
-          Temp = G(i) + Factor * (Temp - G(i))
-          Temp = Temp/abs(Temp)
-          Change = Change + real(G(i)-Temp)**2
+          if (abs(Sum(i)).gt.0) then
+            Temp = (Sum(i)/abs(Sum(i)))
+            Temp = G(i) + Factor * (Temp - G(i))
+            Temp = Temp/abs(Temp)
+            Change = Change + real(G(i)-Temp)**2
      *                    + aimag(G(i)-Temp)**2
-          G(i) = Temp
+            G(i) = Temp
+          endif
           Sum(i) = (0.0,0.0)
         enddo
         epsi = max(epsi,Change/nants)
@@ -3464,15 +3505,19 @@ c
 c
 c  Evaluate X and Y gains.
 c
-          Temp = Sum(X,i) / Sum2(X,i) - Gx(i)
-          Gx(i) = Gx(i) + Factor * Temp
-          ChangeX = ChangeX + real(Temp)**2 + aimag(Temp)**2
-          SumWtX = SumWtX + real(Gx(i))**2  + aimag(Gx(i))**2
+          if (Sum2(X,i).gt.0) then
+            Temp = Sum(X,i) / Sum2(X,i) - Gx(i)
+            Gx(i) = Gx(i) + Factor * Temp
+            ChangeX = ChangeX + real(Temp)**2 + aimag(Temp)**2
+            SumWtX = SumWtX + real(Gx(i))**2  + aimag(Gx(i))**2
+          endif
 
-          Temp = Sum(Y,i) / Sum2(Y,i) - Gy(i)
-          Gy(i) = Gy(i) + Factor * Temp
-          ChangeY = ChangeY + real(Temp)**2 + aimag(Temp)**2
-          SumWtY = SumWtY + real(Gy(i))**2  + aimag(Gy(i))**2
+          if (Sum2(Y,i).gt.0) then
+            Temp = Sum(Y,i) / Sum2(Y,i) - Gy(i)
+            Gy(i) = Gy(i) + Factor * Temp
+            ChangeY = ChangeY + real(Temp)**2 + aimag(Temp)**2
+            SumWtY = SumWtY + real(Gy(i))**2  + aimag(Gy(i))**2
+          endif
 c
 c  Zero the accumulators.
 c
@@ -3481,7 +3526,9 @@ c
           Sum2(X,i) = 0
           Sum2(Y,i) = 0
         enddo
-        t = max(ChangeX/SumWtX,ChangeY/SumWtY)
+        t=0
+        if (SumWtX.gt.0) t = ChangeX/SumWtX
+        if (SumWtY.gt.0) t = max(t,ChangeY/SumWtY)
         epsi = max(epsi,t)
         convrg = t.lt.tol
       enddo
@@ -3591,20 +3638,24 @@ c
 c  Evaluate X gain
 c
           if (Sum2(X,i).gt.0.and.Sum2(Y,i).gt.0) then
-            t = 1.0/(Sum2(X,i) + Axy(i)*Axy(i)*Sum2(Y,i))
-            Temp = t * (Sum(X,i) + Axy(i)*Sum(Y,i)) - G(i)
-            G(i) = G(i) + Factor * Temp
-            ChangeX = ChangeX + real(Temp)**2 + aimag(Temp)**2
-            SumWtX = SumWtX + real(G(i))**2  + aimag(G(i))**2
+            t =(Sum2(X,i) + Axy(i)*Axy(i)*Sum2(Y,i))
+            if (t.gt.0) then
+              Temp = 1/t * (Sum(X,i) + Axy(i)*Sum(Y,i)) - G(i)
+              G(i) = G(i) + Factor * Temp
+              ChangeX = ChangeX + real(Temp)**2 + aimag(Temp)**2
+              SumWtX = SumWtX + real(G(i))**2  + aimag(G(i))**2
+            endif
 c
 c  Evaluate Y amplitude.
 c
-            t = real(conjg(G(i))*Sum(Y,i)) /
-     *        ((real(G(i))**2+aimag(G(i))**2) * Sum2(Y,i)) - Axy(i)
-            t = max(t,-0.5*Axy(i))
-            Axy(i) = Axy(i) + Factor * t
-            ChangeY = ChangeY + t*t
-            SumWtY = SumWtY + Axy(i)*Axy(i)
+            if (abs(real(G(i)))+abs(real(G(i))).gt.0) then
+              t = real(conjg(G(i))*Sum(Y,i)) /
+     *          ((real(G(i))**2+aimag(G(i))**2) * Sum2(Y,i)) - Axy(i)
+              t = max(t,-0.5*Axy(i))
+              Axy(i) = Axy(i) + Factor * t
+              ChangeY = ChangeY + t*t
+              SumWtY = SumWtY + Axy(i)*Axy(i)
+            endif
           endif
 c
 c  Zero the accumulators.
