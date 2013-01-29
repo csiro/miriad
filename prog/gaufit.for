@@ -229,7 +229,7 @@ c@ log
 c       If the name of a file is given, the results of the fitting are
 c       written to this file instead of to the terminal
 c
-c$Id: gaufit.for,v 1.12 2012/03/13 02:21:33 wie017 Exp $
+c$Id: gaufit.for,v 1.13 2013/01/29 03:09:28 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -292,8 +292,8 @@ c-----------------------------------------------------------------------
       character versan*72
 c-----------------------------------------------------------------------
       version = versan ('gaufit',
-     *                  '$Revision: 1.12 $',
-     *                  '$Date: 2012/03/13 02:21:33 $')
+     *                  '$Revision: 1.13 $',
+     *                  '$Date: 2013/01/29 03:09:28 $')
 
       call inputs(units,prfinfo,runs,ngauss,limlist,cmpsort,prnm)
       call work(units,prfinfo,runs,ngauss,limlist,cmpsort,prnm)
@@ -498,7 +498,7 @@ c-----------------------------------------------------------------------
       external  len1
       integer   len1
 
-      data axC /'XYZABCD '/
+      data axC /'xyzabcd '/
 c-----------------------------------------------------------------------
 c     Open and get dimensions of input dataset: naxis.
       if (status.eq.'old') then
@@ -514,11 +514,11 @@ c     Open and get dimensions of input dataset: naxis.
 c     Determine the axis to fit.
       if (status.eq.'old' .and. fitAxI.eq.0) then
         call keya('fitaxis', fitAxis, 'SPECTRAL')
-        call ucase(fitAxis)
 
         if (len1(fitAxis).eq.1) then
           fitAxI = index(axC, fitAxis)
         else
+          call ucase(fitAxis)
           if (fitAxis.eq.'LON') then
             fitAxis = 'LONGITUDE'
           else if (fitAxis.eq.'LAT') then
