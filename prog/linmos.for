@@ -1,5 +1,4 @@
       program linmos
-
 c
 c= linmos - Linear mosaicing of datacubes
 c& rjs
@@ -41,7 +40,9 @@ c@ bw
 c       Bandwidth of the image in GHz. If specified the beam response
 c       will be averaged across the frequency band before
 c       being applied to the image. Use for wide band images to
-c       improve the accuracy of the correction.
+c       improve the accuracy of the correction. If the input images
+c       contain a spectral plane (by using the mfs option of restor), this
+c       will be used to improve the correction.
 c
 c@ options
 c       Extra processing options.  Several can be given, separated by
@@ -65,7 +66,7 @@ c         gain         Rather than a mosaiced image, produce an image
 c                      giving the effective gain across the field.  If
 c                      options=taper is used, this will be a smooth
 c                      function.  Otherwise it will be 1 or 0 (blanked).
-c$Id: linmos.for,v 1.19 2012/09/18 03:51:35 wie017 Exp $
+c$Id: linmos.for,v 1.20 2013/02/12 04:25:26 wie017 Exp $
 c--
 c
 c  History:
@@ -114,6 +115,7 @@ c    mhw  25nov10 Cope with OTF mosaics using extra parameters in
 c                 mosaic table
 c    mhw  03mar11 Add bandwidth
 c    mhw  18sep12 Use correct frequencies when not all the same
+c    mhw  23jan13 Handle 2nd plane (mfs I*alpha) in input
 c
 c  Bugs:
 c    * Blanked images are not handled when interpolation is necessary.
@@ -135,7 +137,7 @@ c-----------------------------------------------------------------------
       integer   MAXIN, MAXLEN, MAXOPN
       parameter (MAXIN=8192, MAXLEN=MAXIN*64, MAXOPN=6, TOL=0.01)
 
-      logical   defrms, dosen, dogain, docar, exact, taper
+      logical   defrms, dosen, dogain, docar, exact, taper, mfs
       integer   axLen(3,MAXIN), i, itemp, k1(MAXIN), k2(MAXIN), length,
      *          lIn(MAXIN), lOut, lScr, lWts, nIn, nOpen, nOut(4),
      *          naxis, offset
@@ -150,8 +152,8 @@ c-----------------------------------------------------------------------
       external  len1, versan
 c-----------------------------------------------------------------------
       version = versan ('linmos',
-     *                  '$Revision: 1.19 $',
-     *                  '$Date: 2012/09/18 03:51:35 $')
+     *                  '$Revision: 1.20 $',
+     *                  '$Date: 2013/02/12 04:25:26 $')
 
 c     Get and check inputs.
       call keyini
@@ -263,6 +265,11 @@ c     Create the output image and make a header for it.
       endif
       nOut(3) = axLen(3,1)
       if (dosen .or. dogain) nOut(3) = 1
+      if (nOut(3).eq.2.and.bw.gt.0) then
+         mfs = .true.
+         call output('Doing mfs type pb correction')
+         nOut(3)=1
+      endif
       nOut(4) = 1
 
       call xyopen(lOut,outNam,'new',naxis,nout)
@@ -293,7 +300,7 @@ c     Process each of the files.
      *                             'old',3,axLen(1,i))
         call process(i,lScr,lWts,lIn(i),lOut,memR(pOut),memR(pWts),
      *    axLen(1,i),axLen(2,i),nOut(1),nOut(2),nOut(3),dogain,
-     *    blctrc(1,i),rms(i),bw)
+     *    blctrc(1,i),rms(i),bw,mfs)
         call xyclose(lIn(i))
       enddo
 
@@ -357,13 +364,13 @@ c-----------------------------------------------------------------------
 **************************************************************** process
 
       subroutine process(fileno,lScr,lWts,lIn,lOut,Out,Wts,
-     *  nx,ny,n1,n2,n3,dogain,blctrc,rms,bw)
+     *  nx,ny,n1,n2,n3,dogain,blctrc,rms,bw,mfs)
 
       integer fileno,lScr,lWts,lIn,lOut
       integer nx,ny,n1,n2,n3
       real Out(n1,n2),Wts(n1,n2)
       real blctrc(4),rms,bw
-      logical dogain
+      logical dogain,mfs
 c-----------------------------------------------------------------------
 c  First determine the initial weight to apply to each pixel and
 c  accumulate info so that we can determine the normalisation factor
@@ -383,6 +390,7 @@ c    rms        Rms noise parameter.
 c    dogain     True if we are to compute the gain function rather than
 c               the normal mosaic or sensitivity function.
 c    bw         Bandwidth, to average the response in frequency
+c    mfs        Use mfs I*alpha plane to do wideband pb correction
 c  Scratch:
 c    In         Used for the interpolated version of the input.
 c    Out        Used for the output.
@@ -395,8 +403,10 @@ c-----------------------------------------------------------------------
 
       logical interp, mask, dootf
       integer i, j, k, pbObj, xhi, xlo, xoff, yhi, ylo, yoff, iax
+      integer nf, jf
       real    In(MAXDIM), pBeam(MAXDIM), Sect(4), sigma, xinc, yinc, wgt
-      double precision x(3),xn(2),pra(2),pdec(2),f
+      real    b,fac
+      double precision x(3),xn(2),pra(2),pdec(2),f,fj,t
       character pbtype*16
 
       logical  hdprsnt
@@ -467,13 +477,18 @@ c     Ready to construct the primary beam object.
 c     Loop over all planes.
       do k = 1, n3
         x(3) = k
-        if (dootf) then
-          call pbInitcc(pbObj,pbtype,lOut,'aw/aw/ap',x,xn,f,bw)
-        else
-          call pbInitc(pbObj,pbtype,lOut,'aw/aw/ap',x,f,bw)
-        endif
         call xysetpl(lIn,1,k)
         if (interp) call IntpRIni
+
+c     Handle mfs I*alpha plane
+c      do pb calculations for nf freqs across band 
+        nf = 1
+        b = bw
+        fac = 1
+        if (mfs) then
+          nf = 10
+          b = 0
+        endif
 
 c       Get a plane from the scratch array.
         if (fileno.eq.1) then
@@ -488,46 +503,55 @@ c       Get a plane from the scratch array.
           call getSec(lWts,Wts,k,n1,n2,xlo,xhi,ylo,yhi)
         endif
 
-c       Determine the offsets to start reading.
-        if (interp) then
-          xoff = xlo
-          yoff = 1
-        else
-          xoff = nint(blctrc(1))
-          yoff = ylo - nint(blctrc(2)) + 1
-        endif
+        do jf = 1, nf
+          t = (jf-0.5d0)/nf-0.5d0
+          fj = f + t*bw
+          if (f.gt.0) fac = log(fj/f)
+          if (dootf) then
+            call pbInitcc(pbObj,pbtype,lOut,'aw/aw/ap',x,xn,fj,b)
+          else
+            call pbInitc(pbObj,pbtype,lOut,'aw/aw/ap',x,fj,b)
+          endif
+c         Determine the offsets to start reading.
+          if (interp) then
+            xoff = xlo
+            yoff = 1
+          else
+            xoff = nint(blctrc(1))
+            yoff = ylo - nint(blctrc(2)) + 1
+          endif
 
-c       Process this plane.
-        do j = ylo, yhi
-          call getDat(lIn,nx,xoff,yoff,xlo,xhi,j,pbObj,
-     *                In,pBeam,n1,interp,mask)
-          yoff = yoff + 1
+c         Process this plane.
+          do j = ylo, yhi
+            call getDat(lIn,nx,xoff,yoff,xlo,xhi,j,pbObj,
+     *                  In,pBeam,n1,interp,mask,mfs,fac)
+            yoff = yoff + 1
 
-          do i = xlo, xhi
-            if (pBeam(i).eq.0.0) then
-c             The weight is zero.
-              go to 10
-            endif
+            do i = xlo, xhi
+              if (pBeam(i).eq.0.0) then
+c               The weight is zero.
+                go to 10
+              endif
 
-            if (dogain) then
-c             Gain function.
-              In(i) = pBeam(i)
-            endif
+              if (dogain) then
+c               Gain function.
+                In(i) = pBeam(i)
+              endif
 
-c           Apply primary beam normalization.
-            In(i) = In(i) / pBeam(i)
-            sigma =  rms  / pBeam(i)
+c             Apply primary beam normalization.
+              In(i) = In(i) / pBeam(i)
+              sigma =  rms  / pBeam(i)
 
-c           Weight by inverse variance.
-            wgt = 1.0 / (sigma*sigma)
+c             Weight by inverse variance.
+              wgt = 1.0 / (sigma*sigma) / nf
 
-c           Accumulate data.
-            Out(i,j) = Out(i,j) + wgt*In(i)
-            Wts(i,j) = Wts(i,j) + wgt
- 10         continue
+c             Accumulate data.
+              Out(i,j) = Out(i,j) + wgt*In(i)
+              Wts(i,j) = Wts(i,j) + wgt
+ 10           continue
+            enddo
           enddo
         enddo
-
 c       Save the output.
         if (fileno.eq.1) then
           call putSec(lScr,Out,k,n1,n2,1,n1,1,n2)
@@ -546,11 +570,11 @@ c       Release the primary beam object.
 ***************************************************************** getDat
 
       subroutine getDat(lIn,nx,xoff,yoff,xlo,xhi,j,pbObj,
-     *                  In,Pb,n1,interp,mask)
+     *                  In,Pb,n1,interp,mask,mfs,fac)
 
       integer lIn,xoff,yoff,xlo,xhi,n1,j,pbObj,nx
-      logical interp,mask
-      real In(n1),Pb(n1)
+      logical interp,mask,mfs
+      real In(n1),Pb(n1),fac
 c-----------------------------------------------------------------------
 c  Get a row of data (either from xyread or the interpolation routines).
 c
@@ -587,6 +611,24 @@ c     Get the data.
         enddo
       else
         call xyread(lIn,yoff,In(xoff))
+      endif
+      if (mfs) then
+        call xysetpl(lIn,1,2)
+        if (interp) then
+          call IntpRd(lIn,yoff,Dat,xyread)
+        else 
+          call xyread(lIn,yoff,Dat)
+        endif
+        if (.not.interp.and.(xoff.lt.1 .or. xoff+nx-1.gt.n1)) then
+          do i = xlo, xhi
+             In(i) = In(i)+Dat(i-xoff+1)*fac
+          enddo
+        else
+          do i = xoff, xoff+nx-1
+             In(i) = In(i) + Dat(i-xoff+1)*fac
+          enddo
+        endif
+        call xysetpl(lIn,1,1)
       endif
 
 c     Determine the primary beam.

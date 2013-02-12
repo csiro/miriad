@@ -58,10 +58,19 @@ c@ pa
 c       The position angle, in degrees, of the Gaussian restoring beam,
 c       measured east from north.  Ignored if no value is given for
 c       FWHM.  The default is determined from the dirty beam fit.
+c@ options
+c       There is only a single option at present:
+c         "mfs"  If the input model was produced by mfclean and contains 
+c                a 2nd plane with alpha*I components, using "mfs" will  
+c                cause restor to write a second plane in the output image 
+c                containing the alpha*I model convolved with the 
+c                Gaussian beam. Linmos will use this plane to do
+c                wideband primary beam correction if the bw parameter
+c                is used.
 c@ out
 c       The output restored image.  No default.
 c
-c$Id: restor.for,v 1.7 2011/10/31 00:37:30 wie017 Exp $
+c$Id: restor.for,v 1.8 2013/02/12 04:25:26 wie017 Exp $
 c--
 c
 c  History:
@@ -96,12 +105,13 @@ c                  when convolving.
 c    rjs  28jun01  Doc change only.
 c    mchw 07feb02  Change beamwidth format to handle ATA and ALMA.
 c    mhw  27oct11  Use ptrdiff type for memory allocations
+c    mhw  17jan13  Add mfs option
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mem.h'
       include 'mirconst.h'
 
-      logical   doBeam, doFit, doGaus, doMap
+      logical   doBeam, doFit, doGaus, doMap, doMap1, mfs
       integer   bmLen(3), cnvLen(2), i, lBeam, lMap, lModel, lOut,
      *          mapLen(4), modLen(3), naxis, offset(3), x0, y0
       ptrdiff   pOut
@@ -113,8 +123,8 @@ c-----------------------------------------------------------------------
       external  itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('restor',
-     *                 '$Revision: 1.7 $',
-     *                 '$Date: 2011/10/31 00:37:30 $')
+     *                 '$Revision: 1.8 $',
+     *                 '$Date: 2013/02/12 04:25:26 $')
 
 c     Get the input parameters.
       call keyini
@@ -126,6 +136,7 @@ c     Get the input parameters.
       call keyr('fwhm',fwhm(2),fwhm(1))
       call keyr('pa',pa,0.0)
       call getMode(mode)
+      call getOpt(mfs)
       call keyfin
 
 c     Check the inputs.
@@ -204,6 +215,11 @@ c     offset from map pixel coordinates to get model pixel coordinates.
         offset(2) = bmLen(2)/2
         offset(3) = 0
       endif
+      if (mfs.and.modLen(3).eq.2) then
+        mapLen(3)=2
+      else
+        mfs=.false.
+      endif
 
       if (mapLen(1).le.bmLen(1)) then
         cnvLen(1) = bmLen(1)
@@ -235,20 +251,23 @@ c     Open the output, and create its header.
       call xyopen(lOut, outNam, 'new', naxis, mapLen)
 
       call mkHead(lModel, modLen, lOut, version, doGaus, fwhm, pa, rms,
-     *  offset)
+     *  offset, mfs)
       if (doMap) call hdcopy(lMap,lOut,'mostable')
 
 c     Loop over the third dimension of the map.
       call memAllop(pOut,cnvLen(1)*cnvLen(2),'r')
       do i = 1, mapLen(3)
+        doMap1 = doMap.and..not.(mfs.and.i.gt.1)
         if (mod(i,10).eq.0 .or. (i.eq.1 .and. mapLen(3).ge.10))
      *    call output('Beginning plane '//itoaf(i))
         call xysetpl(lOut,1,i)
-        if (doMap) call xysetpl(lMap,1,i)
+        if (doMap1) call xysetpl(lMap,1,i)
         if (i-offset(3).ge.1 .and. i-offset(3).le.modLen(3)) then
           call Restore(lModel,i-offset(3),memr(pOut))
-          if (doMap) then
+          if (doMap1) then
             call subModel(lMap,mapLen,memr(pOut),cnvLen,lOut,x0,y0)
+          else if (mfs.and.i.gt.1) then
+            call copyModel(mapLen,memr(pOut),cnvLen,lOut,x0,y0)
           else
             if (mapLen(1).ne.cnvLen(1) .or. mapLen(2).ne.cnvLen(2))
      *        call bug('f','Algorithmic failure')
@@ -289,6 +308,28 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
       call keymatch('mode',NOPT,opts,1,mode,nout)
       if (nout.eq.0) mode = 'clean'
+
+      end
+***************************************************************** getOpt
+
+      subroutine getOpt(mfs)
+
+      logical mfs
+c-----------------------------------------------------------------------
+c  Get processing options.
+c
+c  Output:
+c    mfs        True if we are to produce I*alpha plane in the output
+c-----------------------------------------------------------------------
+      integer NOPTS
+      parameter (NOPTS=1)
+      logical present(NOPTS)
+      character opts(NOPTS)*8
+      data opts/'mfs     '/
+c-----------------------------------------------------------------------
+      call options('options',opts,present,NOPTS)
+
+      mfs  = present(1)
 
       end
 
@@ -362,7 +403,7 @@ c***********************************************************************
       subroutine mkHead(lModel, modLen, lOut, version, doGaus, fwhm,
      *  pa, rms, offset)
 
-      integer   lModel, modLen(2), lOut
+      integer   lModel, modLen(2), lOut, naxis3
       character version*72
       logical   doGaus
       real      fwhm(2), pa, rms
@@ -393,6 +434,9 @@ c     Update keywords that may have changed.
 
       call rdhdd(lModel, 'crpix3', crpix, 1d0)
       call wrhdd(lOut,   'crpix3', crpix+offset(3))
+      call rdhdi(lModel,'naxis3',naxis3,1)
+      call rdhdi(lOut,'naxis3',naxis3,1)
+
 
       call rdhda(lModel, 'bunit', text, ' ')
       i = index(text,'/PIXEL')
@@ -508,6 +552,48 @@ c     Read the map row-by-row, subtract the model, and write it out.
         if (j.ge.jlo .and. j.le.jhi) then
           do i = ilo, ihi
             map(i) = map(i) - Model(i-xoff,j-yoff)
+          enddo
+        endif
+
+        call xywrite(lOut, j, map)
+      enddo
+
+      end
+
+c***********************************************************************
+
+      subroutine copyModel(mapLen,Model,modLen,lOut,xoff,yoff)
+
+      integer   mapLen(2), modLen(2), lOut, xoff, yoff
+      real      Model(modLen(1),modLen(2))
+c-----------------------------------------------------------------------
+c  Write the convolved model out as the result.
+c
+c  Input:
+c    mapLen     Map size.
+c    modLen     Model size.
+c    Model      Model pixel values.
+c    xoff,yoff  Offsets to subtract from a map pixel coordinate to get
+c               the corresponding model pixel coordinate.
+c-----------------------------------------------------------------------
+      include 'maxdim.h'
+
+      integer   i,j,ilo,ihi,jlo,jhi
+      real      map(MAXDIM)
+c-----------------------------------------------------------------------
+c     Range of pixel coordinates in the map for the area that overlaps
+c     with the model.
+      ilo = max(1, 1+xoff)
+      ihi = min(modLen(1)+xoff, mapLen(1))
+      jlo = max(1, 1+yoff)
+      jhi = min(modLen(2)+yoff, mapLen(2))
+
+c     Read the map row-by-row, subtract the model, and write it out.
+      do j = 1, mapLen(2)
+c        call xyread(lMap, j, map)
+        if (j.ge.jlo .and. j.le.jhi) then
+          do i = ilo, ihi
+            map(i) = Model(i-xoff,j-yoff)
           enddo
         endif
 
