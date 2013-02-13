@@ -146,7 +146,7 @@ c
      *	    call bug('f','Too many antennae for me to cope with')
 	  if(nsols.le.0)
      *	    call bug('f','Bad number of solutions')
-          maxgains = nsols*nants*2*maxfbin
+          maxgains = nsols*nants*2*(maxfbin+1)
 	  call memAlloc(pGains,maxgains,'c')
 	  call memAlloc(pTimes,nsols,'d')
 c
