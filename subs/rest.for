@@ -28,6 +28,7 @@ c
 	double precision crpix1,crpix2
 	real bmaj,bmin,bpa
 c
+        cnvl3 = 0
 	nx = nx1
 	ny = ny1
 c
@@ -82,6 +83,9 @@ c
 	  if(mosaic)then
 	    call mcInitFG(lBeam,bmaj,bmin,bpa)
 	  else
+            if (mfs)then
+	       call CnvlIniA(cnvl3,memR(pGaus),nx,ny,x0,y0,0.,'s')
+            endif
 	    call RestDiff(lBeam,memr(pGaus),naxis1,naxis2,nx,ny,ic,jc)
 	    call CnvlIniA(cnvl1,memr(pGaus),nx,ny,x0,y0,0.,'s')
 	  endif
@@ -275,10 +279,14 @@ c
 	  call mcCnvl(memr(pDat),naxis1,naxis2,Out,nx,ny)
 	  call memFrep(pDat,naxis1*naxis2,'r')
 	else
-	  call CnvlF(cnvl1,lModel,naxis1,naxis2,Out,' ')
+	  if (i.eq.2.and.mfs)then
+            call CnvlF(cnvl3,lModel,naxis1,naxis2,Out,' ')
+          else
+            call CnvlF(cnvl1,lModel,naxis1,naxis2,Out,' ')
+          endif
 	endif
 c
-	if(mfs.and.naxis3.eq.2)then
+	if(mfs.and.naxis3.eq.2.and.i.eq.1)then
 	  call memAllop(pDat,nx*ny,'r')
 	  call xysetpl(lModel,1,2)
 	  call CnvlF(cnvl2,lModel,naxis1,naxis2,memr(pDat),' ')
@@ -317,6 +325,7 @@ c
 	else
 	  call CnvlFin(cnvl1)
 	  if(mfs)call CnvlFin(cnvl2)
+          if (cnvl3.ne.0) call CnvlFin(cnvl3)
 	endif
 c
 	end
