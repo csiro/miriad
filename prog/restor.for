@@ -70,7 +70,7 @@ c                is used.
 c@ out
 c       The output restored image.  No default.
 c
-c$Id: restor.for,v 1.8 2013/02/12 04:25:26 wie017 Exp $
+c$Id: restor.for,v 1.9 2013/02/15 00:20:59 wie017 Exp $
 c--
 c
 c  History:
@@ -123,8 +123,8 @@ c-----------------------------------------------------------------------
       external  itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('restor',
-     *                 '$Revision: 1.8 $',
-     *                 '$Date: 2013/02/12 04:25:26 $')
+     *                 '$Revision: 1.9 $',
+     *                 '$Date: 2013/02/15 00:20:59 $')
 
 c     Get the input parameters.
       call keyini
@@ -251,7 +251,7 @@ c     Open the output, and create its header.
       call xyopen(lOut, outNam, 'new', naxis, mapLen)
 
       call mkHead(lModel, modLen, lOut, version, doGaus, fwhm, pa, rms,
-     *  offset, mfs)
+     *  offset)
       if (doMap) call hdcopy(lMap,lOut,'mostable')
 
 c     Loop over the third dimension of the map.
@@ -403,7 +403,7 @@ c***********************************************************************
       subroutine mkHead(lModel, modLen, lOut, version, doGaus, fwhm,
      *  pa, rms, offset)
 
-      integer   lModel, modLen(2), lOut, naxis3
+      integer   lModel, modLen(2), lOut
       character version*72
       logical   doGaus
       real      fwhm(2), pa, rms
@@ -434,9 +434,6 @@ c     Update keywords that may have changed.
 
       call rdhdd(lModel, 'crpix3', crpix, 1d0)
       call wrhdd(lOut,   'crpix3', crpix+offset(3))
-      call rdhdi(lModel,'naxis3',naxis3,1)
-      call rdhdi(lOut,'naxis3',naxis3,1)
-
 
       call rdhda(lModel, 'bunit', text, ' ')
       i = index(text,'/PIXEL')
