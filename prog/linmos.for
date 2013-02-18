@@ -66,7 +66,7 @@ c         gain         Rather than a mosaiced image, produce an image
 c                      giving the effective gain across the field.  If
 c                      options=taper is used, this will be a smooth
 c                      function.  Otherwise it will be 1 or 0 (blanked).
-c$Id: linmos.for,v 1.20 2013/02/12 04:25:26 wie017 Exp $
+c$Id: linmos.for,v 1.21 2013/02/18 01:20:27 wie017 Exp $
 c--
 c
 c  History:
@@ -152,13 +152,14 @@ c-----------------------------------------------------------------------
       external  len1, versan
 c-----------------------------------------------------------------------
       version = versan ('linmos',
-     *                  '$Revision: 1.20 $',
-     *                  '$Date: 2013/02/12 04:25:26 $')
+     *                  '$Revision: 1.21 $',
+     *                  '$Date: 2013/02/18 01:20:27 $')
 
 c     Get and check inputs.
       call keyini
       nIn = 0
       offset = 0
+      mfs = .false.
       call keyf('in',inName,' ')
       do while (inName.ne.' ')
         nIn = nIn + 1
