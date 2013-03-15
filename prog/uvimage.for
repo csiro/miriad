@@ -50,6 +50,10 @@ c       This controls in what order the cube is written
 c       1: CHANNEL-BASELINE-TIME (default)
 c       2: TIME-CHANNEL-BASELINE
 c       3: TIME-BASELINE-CHANNEL
+c@ options
+c       time : make time axis linear, leaving gaps where there is no 
+c         data, the default is to leave no gaps.
+c       freq : make frequency axis instead of channel axis
 c
 c@ ignore
 c       Should flags be ignored?  If true, the underlying data values
@@ -62,15 +66,13 @@ c     pjt  21sep06  Added mode keyword, more efficient memory usage
 c     pjt  22dec06  Less terse, add ignore=
 c     pjt   8dec08  Allow scanning mode if out= absent
 c     pjt  30jun09  fixed labeling bug in output cube
-c     mhw  12mar13  Adapt for atnf
+c     mhw  12mar13  Adapt for atnf, increase cube size to 0.5 GB max
+c     mhw  15mar13  Add options time,freq and improve axis labelling
 c
 c  TODO
 c     - write plane by plane, but this will limit it to mode=1
 c       but handle much larger cubes
-c     - instead of array(MAXSIZE) should really use the perhaps not so
-c       portable dynamic memory allocation trick in miriad
 c     - consider copying the flags from the vis brick to the image brick
-c     - MAXSIZE is 127MB right now.
 c     - if no out= present, scan it, and report irregular behavior
 c     - nasty things can happen if nspect changes in the file
 c----------------------------------------------------------------------c
@@ -80,7 +82,7 @@ c
        include 'mirconst.h'
        include 'mem.h'
        character*(*) version
-       parameter(version='UVIMAGE: version 12-jun-2012')
+       parameter(version='UVIMAGE: version 15-mar-2013')
        integer MAXSELS
        parameter(MAXSELS=512)
        integer MAXSIZE
@@ -90,8 +92,9 @@ c
 
        real sels(MAXSELS)
        complex data(MAXCHAN)
-       logical flags(MAXCHAN),qmnmx,ignore,cube
-       double precision preamble(4),oldtime
+       logical flags(MAXCHAN),qmnmx,ignore,cube,dotime,dofreq
+       double precision preamble(4),oldtime,inttime,first,last
+       double precision sfreq(MAXCHAN),df
        integer lIn,nchan,nread,nvis,nchannel,vmode,nbl,omode
        integer nspect
        real start,width,step
@@ -102,7 +105,7 @@ c
        integer lout,nsize(3),i,j,k,l
        real v
        real datamin,datamax
-       character*1 type
+       character*1 type,c
        integer length
        logical updated
 c
@@ -118,6 +121,7 @@ c
        call keya ('view',view,'amp')
        call keyi ('mode',omode,1)
        call keyl ('ignore',ignore,.FALSE.)
+       call getopt(dotime,dofreq)
        call keyfin
 c
 c  Check that all the inputs are reasonable.
@@ -169,10 +173,17 @@ c
        else
           call bug('f','Visibilities with unknown datatype')
        endif
+       call uvinfo(lIn,'sfreq',sfreq)
+       df=1
+       if (nchannel.gt.1) df=sfreq(2)-sfreq(1)
        do i=1,MAXANT
           antsel(i) = 0
        enddo
        ntime = 1
+       inttime = 1000
+       first = preamble(3)
+       last = 0
+       
 
 c
 c  Continue to read through the uvdata a first time to gather
@@ -184,40 +195,51 @@ c
           call basant(preamble(4),ant1,ant2)
           antsel(ant1) = 1
           antsel(ant2) = 1
+          last = preamble(3)
           if (preamble(3) .ne. oldtime) then
              ntime = ntime + 1
+             inttime=min(inttime,preamble(3)-oldtime)
              oldtime = preamble(3)
           endif
           call uvread(lIn, preamble, data, flags, maxchan, nread)
           nvis = nvis + 1
           call uvgetvri(lIn,'nspect',nspect,1)
        enddo
+       inttime = nint(86400*1000*inttime)/86400000.d0
+       write(*,*) 'Est. Integration time = ',inttime*86400,'s'
+       
        nant=0
        do i=1,MAXANT
           if (antsel(i).gt.0) nant=nant+1
        enddo
        nbl = nvis/ntime
 
+       if (dotime.and.inttime.gt.0) then
+         ntime=max(ntime,nint((last-first)/inttime)+1)
+       endif
+
        write (*,*) 'Nvis=',nvis,' Nant=',nant
        write (*,*) 'Nchan=',nchannel,' Nbl=',nbl,' Ntime=',ntime,
      *    ' Space used: ',nchannel*nbl*ntime,' / ',MAXSIZE,
      *    ' = ',REAL(nchannel*nbl*ntime)/REAL(MAXSIZE)*100,'%'
-       if (MOD(nvis,ntime).NE.0) then
+       if (MOD(nvis,ntime).NE.0.and..not.dotime) then
           call bug('w','No regular baseline set, losing ants perhaps?')
        endif
+       c='C'
+       if (dofreq) c='F'
 
        if (omode.EQ.1) then
-          write(*,*) 'C-B-T cube' 
+          write(*,*) c//'-B-T cube' 
           nsize(1) = nchannel
           nsize(2) = nbl
           nsize(3) = ntime
        else if (omode.EQ.2) then
-          write(*,*) 'T-C-B cube' 
+          write(*,*) 'T-'//c//'-B cube' 
           nsize(1) = ntime
           nsize(2) = nchannel
           nsize(3) = nbl
        else if (omode.EQ.3) then
-          write(*,*) 'T-B-C bcube' 
+          write(*,*) 'T-B-'//c//' cube' 
           nsize(1) = ntime
           nsize(2) = nbl
           nsize(3) = nchannel
@@ -229,10 +251,9 @@ c
        if (cube) then
           if (nsize(1)*nsize(2)*nsize(3) .GT. MAXSIZE) call bug('f',
      *       'Too many data, use  uvaver, or select= to cut down')
-
-
           call xyopen(lOut,Out,'new',3,nsize)
-          call maphead(lIn,lOut,nsize,omode)
+          call maphead(lIn,lOut,nsize,omode,first,inttime,sfreq(1),df,
+     *      dotime,dofreq)
           call memalloc(apnt,nsize(1)*nsize(2)*nsize(3),'r')
           call azero(memr(apnt),nsize(1),nsize(2),nsize(3))
        endif
@@ -251,6 +272,7 @@ c
              oldtime = preamble(3)
              j=1
              k=k+1
+             if (dotime) k=nint((preamble(3)-first)/inttime)+1
           endif
           do i=1,nread
              if (flags(i) .or. ignore) then
@@ -317,6 +339,31 @@ c
       endif
 c
       end
+***************************************************************** getOpt
+
+      subroutine getOpt(dotime,dofreq)
+
+      logical dotime,dofreq
+c-----------------------------------------------------------------------
+c  Get processing options.
+c
+c  Output:
+c    dotime     True for a true time axis
+c    dofreq     True for a frequency axis instead of channel axis
+c-----------------------------------------------------------------------
+      integer NOPTS
+      parameter (NOPTS=2)
+      logical present(NOPTS)
+      character opts(NOPTS)*10
+      data opts/'time      ','frequency'/
+c-----------------------------------------------------------------------
+      call options('options',opts,present,NOPTS)
+
+      dotime  = present(1)
+      dofreq  = present(2)
+
+      end
+
 c********1*********2*********3*********4*********5*********6*********7**
       subroutine azero(a,nx,ny,nz)
       implicit none
@@ -342,13 +389,22 @@ c
       end
 
 c********1*********2*********3*********4*********5*********6*********7**
-      subroutine maphead(lIn,lOut,nsize,omode)
+      subroutine maphead(lIn,lOut,nsize,omode, t0, dt, f0, df, dotime,
+     *  dofreq)
       implicit none
       integer	lin,lout,nsize(3),omode
+      double precision t0,dt,f0,df
+      logical dotime,dofreq
+      character*1 t,b,c
 c  Inputs:
 c    lIn	The handle of the autocorrelation data.
 c    lOut	The handle of the output image.
 c    nsize	The output image size.
+c    omode      The order of the axes
+c    t0,dt      Reference time and increment
+c    f0,df      Reference frequency and increment'
+c    dotime     Label output in time
+c    dofreq     Label output in frequency
 c-------------------------------------------------------------------------
       include 'maxdim.h'
       character source*16,telescop*16
@@ -366,29 +422,46 @@ c
       call wrhdi(lOut,'naxis1',nsize(1))
       call wrhdi(lOut,'naxis2',nsize(2))
       call wrhdi(lOut,'naxis3',nsize(3))
-      call wrhdd(lOut,'crpix1',1.0d0)
-      call wrhdd(lOut,'crpix2',1.0d0)
-      call wrhdd(lOut,'crpix3',1.0d0)
-      call wrhdd(lOut,'cdelt1',1.0d0)
-      call wrhdd(lOut,'cdelt2',1.0d0)
-      call wrhdd(lOut,'cdelt3',1.0d0)
-      call wrhdd(lOut,'crval1',0.0d0)
-      call wrhdd(lOut,'crval2',0.0d0)
-      call wrhdd(lOut,'crval3',0.0d0)
+      
+      
       if (omode.eq.1) then
-         call wrhda(lOut,'ctype1','CHANNEL')
-         call wrhda(lOut,'ctype2','BASELINE')
-         call wrhda(lOut,'ctype3','TIME')
+         c='1'
+         b='2'
+         t='3'
       else if (omode.eq.2) then
-         call wrhda(lOut,'ctype1','TIME')
-         call wrhda(lOut,'ctype2','CHANNEL')
-         call wrhda(lOut,'ctype3','BASELINE')
+         t='1'
+         c='2'
+         b='3'
       else if (omode.eq.3) then
-         call wrhda(lOut,'ctype1','TIME')
-         call wrhda(lOut,'ctype2','BASELINE')
-         call wrhda(lOut,'ctype3','CHANNEL')
+         t='1'
+         b='2'
+         c='3'
       else
          call bug('w','Illegal output mode - bad axis labels')
+      endif
+      if (dofreq) then
+         call wrhda(lOut,'ctype'//c,'FREQ-LSR')
+         call wrhdd(lOut,'crpix'//c,1.d0)
+         call wrhdd(lOut,'cdelt'//c,df)
+         call wrhdd(lOut,'crval'//c,f0)
+      else  
+         call wrhda(lOut,'ctype'//c,'CHANNEL')
+         call wrhdd(lOut,'crpix'//c,1.0d0)
+         call wrhdd(lOut,'cdelt'//c,1.0d0)
+         call wrhdd(lOut,'crval'//c,1.0d0)
+      endif
+      call wrhda(lOut,'ctype'//b,'BASELINE')
+      call wrhdd(lOut,'crpix'//b,1.0d0)
+      call wrhdd(lOut,'crval'//b,0.0d0)
+      call wrhdd(lOut,'crval'//b,0.0d0)
+      call wrhda(lOut,'ctype'//t,'TIME')
+      call wrhdd(lOut,'crpix'//t,1.0d0)
+      if (dotime) then
+         call wrhdd(lOut,'cdelt'//t,dt*86400)
+         call wrhdd(lOut,'crval'//t,(t0-2400000.5)*86400)
+      else
+         call wrhdd(lOut,'cdelt'//t,1.0d0)
+         call wrhdd(lOut,'crval'//t,0.0d0)
       endif
       call wrhdr(lOut,'epoch',epoch)
       call wrhda(lOut,'object',source)
