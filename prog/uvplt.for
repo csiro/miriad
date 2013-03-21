@@ -239,7 +239,7 @@ c       The output logfile name. The default is the terminal.
 c@ comment
 c       A one line comment which is written into the logfile.
 c
-c$Id: uvplt.for,v 1.13 2011/06/14 04:40:21 cal103 Exp $
+c$Id: uvplt.for,v 1.14 2013/03/21 14:54:40 sau078 Exp $
 c--
 c
 c  History:
@@ -371,8 +371,8 @@ c
       data polmsk /13*0/
 c-----------------------------------------------------------------------
       version = versan ('uvplt',
-     *                  '$Revision: 1.13 $',
-     *                  '$Date: 2011/06/14 04:40:21 $')
+     *                  '$Revision: 1.14 $',
+     *                  '$Date: 2013/03/21 14:54:40 $')
 c
 c  Get the parameters given by the user and check them for blunders
 c
@@ -508,7 +508,7 @@ c
 c Get info from preamble and frequency
 c
           if (dowave) then
-            call getwvl(donano, preamble, u, v, uvdist, uvpa)
+            call getwvl(preamble, u, v, uvdist, uvpa)
             call uvinfo(lin, 'sfreq', freq)
           else if (xaxis.eq.'freq' .or. yaxis.eq.'freq') then
             call uvinfo(lin, 'sfreq', freq)
@@ -584,10 +584,12 @@ c
 c
 c Set x and y values
 c
-              call setval(xaxis, ha, u, v, uvdist, uvpa, fday, fyear,
+              call setval(xaxis, ha, u, v, uvdist, uvpa, donano,
+     *			   fday, fyear,
      *                     paran, lst, az, el, jyperk, rms,
      *                     data(j), j, freq, xvalr, xgood)
-              call setval(yaxis, ha, u, v, uvdist, uvpa, fday, fyear,
+              call setval(yaxis, ha, u, v, uvdist, uvpa, donano,
+     *			   fday, fyear,
      *                     paran, lst, az, el, jyperk, rms,
      *                     data(j), j, freq, yvalr, ygood)
               if (xgood .and. ygood) then
@@ -2286,17 +2288,15 @@ c-----------------------------------------------------------------------
       end
 
 ************************************************************************
-      subroutine getwvl (donano, preamble, u, v, uvdist, uvpa)
+      subroutine getwvl (preamble, u, v, uvdist, uvpa)
 
       double precision preamble(2)
       real u, v, uvdist, uvpa
-      logical donano
 c-----------------------------------------------------------------------
 c     Get some things from the preamble
 c
 c  Input:
 c    lin          Handle of vis file
-c    donano       True for wavelengths in nanoseconds, else kilo-lambda
 c    preamble     u and v in raw form (nsec or lambda)
 c  Output:
 c    u,v          u and v in form selected by user (nsec or klambda)
@@ -2307,11 +2307,6 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
       u = preamble(1)
       v = preamble(2)
-
-      if (.not.donano) then
-        u = preamble(1) / 1000.0
-        v = preamble(2) / 1000.0
-      endif
 
       uvdist = sqrt(u*u + v*v)
 
@@ -3466,17 +3461,17 @@ c
       end
 
 ************************************************************************
-
-      subroutine setval (axis, ha, u, v, uvdist, uvpa, fday, fyear,
+      subroutine setval (axis, ha, u, v, uvdist, uvpa, donano,
+     *			 fday, fyear,
      *                   parang, lst, az, el, jyperk, rms,
      *                   data, ichan, freq, val, ok)
-
+c
       complex data
       double precision fday, fyear, freq(*), ha, lst, az, el
       real val, u, v, uvdist, uvpa, parang, jyperk, rms
       character axis*(*)
       integer ichan
-      logical ok
+      logical ok,donano
 c-----------------------------------------------------------------------
 c     Set the value of the desired quantity
 c
@@ -3498,21 +3493,25 @@ c    rms      Theoretical visibility noise variance, in flux units.
 c    data     Complex visibility
 c    ichan    CHannel number
 c    freq     Array of frequencies for each channel
+c    donano   True if the uv coordinates are to be in light nanosec.
 c  Output:
 c    val      Value
 c    ok       True if value is a valid number to plot
 c-----------------------------------------------------------------------
       include 'mirconst.h'
-c-----------------------------------------------------------------------
+c
       ok = .true.
       if (axis.eq.'uvdistance') then
-        val = uvdist * freq(ichan) / freq(1)
+        val = uvdist
+	if(.not.donano)val = val * freq(ichan) / freq(1) / 1000.0
       else if (axis.eq.'uu' .or. axis.eq.'uc') then
-        val = u * freq(ichan) / freq(1)
+        val = u
+	if(.not.donano)val = val * freq(ichan) / freq(1) / 1000.0
       else if (axis.eq.'freq') then
         val = freq(ichan)
       else if (axis.eq.'vv' .or. axis.eq.'vc') then
-        val = v * freq(ichan) / freq(1)
+        val = v
+	if(.not.donano)val = val * freq(ichan) / freq(1) / 1000.0
       else if (axis.eq.'uvangle') then
         val = uvpa
         if (uvpa.eq.999.0) ok = .false.
