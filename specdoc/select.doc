@@ -11,7 +11,7 @@
 	or
 	  yymmmdd:hh:mm:ss.s
 	Various abbreviations are possible. If no date part is given, then
-	the time matchs all data (regardless of its date) for the given
+	the time matches all data (regardless of its date) for the given
 	time of day. The year is given by just two digits. The year is
 	assumed to be in the century 1940 to 2040.      
 
