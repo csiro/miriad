@@ -108,7 +108,7 @@ c   flux     The flux of the matched observation.
 c   iostat   An error integer.  Iostat = 0 means no error;
 c            -1 if there are no data found in the file FileName;
 c            -2 if an EOF is reached before a match; -3 if no source
-c            name matchs; -4 if no match at desired characteristics;
+c            name matches; -4 if no match at desired characteristics;
 c            and -5 if the date of the latest flux measurement is
 c            offset by more than 4 years.
 c
