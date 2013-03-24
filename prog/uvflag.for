@@ -140,6 +140,7 @@ c	    rjs     30aug99 Increase outline to 256 chars.
 c	    tw	    26aug04 allow fractional edge flagging using edge<0
 c           rjs     26nov05 Change to avoid compiler bug.
 c           mhw     13mar13 Cope with 128 antennas (MWA)
+c           vjm     26mar13 Convert version numbering to versan().
 c************************************************************************
 c uvflag works as follows:
 c It reads the name of the first visibility file.
@@ -150,8 +151,8 @@ c the flagging is done.
 c Then it asks for the next visibility file and does the whole process
 c again until the list is exhausted.
 
-      character*(*) version
-      parameter ( version = 'uvflag: version 2.6 26-aug-04')
+      character*80 versan
+      character*80 version
 
       character*64     vis
 
@@ -171,6 +172,10 @@ c again until the list is exhausted.
       character*1      tformat
 
       data	       usech / MAXCHAN * .true. /
+
+      version = versan('uvflag',
+     *                 '$Revision: 1.3 $',
+     *                 '$Date: 2013/03/24 23:49:21 $')
 
       call output( version )
       call keyini
