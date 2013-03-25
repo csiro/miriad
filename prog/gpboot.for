@@ -47,6 +47,7 @@ c    rjs      6feb98 Doc change oonly.
 c    rjs     12oct99 Get rid of options=noxy.
 c    rjs     21jan01 Change print format.
 c    vjm     26Mar13 Complain if adjacent frequency bins differ markedly
+c                    Complain about large scaling factors
 c  Bugs and Shortcomings:
 c    * The xy phase is not applied to the polarisation solution.
 c------------------------------------------------------------------------
@@ -59,7 +60,7 @@ c
 	character cal*64,vis*64,line*72
 	real sels(MAXSELS)
 	real VAmp(2,MAXANT,0:MAXFBIN),CAmp(2,MAXANT,0:MAXFBIN)
-        real factor(0:MAXFBIN),fr,fl
+        real factor(0:MAXFBIN),fr,fl,afl
 	integer VCNT(2,MAXANT,0:MAXFBIN),CCnt(2,MAXANT,0:MAXFBIN)
 	integer iostat,tVis,tCal,ngains,nants,nfeedc,nfeedv,ntau
 	integer temp,j,nfbin,nfbin1
@@ -72,11 +73,13 @@ c
 c  Get the input parameters.
 c
 	version = versan('gpboot',
-     *                   '$Revision: 1.6 $',
-     *                   '$Date: 2013/03/25 00:20:49 $')
+     *                   '$Revision: 1.7 $',
+     *                   '$Date: 2013/03/25 01:19:23 $')
 
 c       limit on ratio of scalings for adjacent frequency bins
         fl = 0.1
+c       absolute limit on scalings (afl to 1/afl)
+        afl = 0.2
 
 	call keyini
 	call keya('cal',cal,' ')
@@ -164,11 +167,17 @@ c           Adjacent gains should be similar in value
             if (j.gt.1) fr = factor(j-1)/factor(j)
           endif
           call output(line)
+
           if ( fr.lt.(1.0-fl) .or. fr.gt.(1.0+fl)) then
             write(line,'(a,f6.1,a)') 
      *        'Scaling of adjacent bins differs by > ',fl*100.0,'%'
             call bug('w', line)
+          else if ( factor(j).lt.afl .or. factor(j).gt.(1.0/afl)) then
+            write(line,'(a,f6.1,a,f6.1,a)') 
+     *        'Scaling outside expected range ', afl, ' to ', 1.0/afl
+            call bug('w', line)
           endif
+
           call hiswrite(tVis,'GPBOOT: '//line)
         enddo
 	call hisclose(tVis)
