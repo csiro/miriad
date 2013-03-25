@@ -46,6 +46,7 @@ c		     Get the wraps right.
 c    rjs      6feb98 Doc change oonly.
 c    rjs     12oct99 Get rid of options=noxy.
 c    rjs     21jan01 Change print format.
+c    vjm     26Mar13 Complain if adjacent frequency bins differ markedly
 c  Bugs and Shortcomings:
 c    * The xy phase is not applied to the polarisation solution.
 c------------------------------------------------------------------------
@@ -58,7 +59,7 @@ c
 	character cal*64,vis*64,line*72
 	real sels(MAXSELS)
 	real VAmp(2,MAXANT,0:MAXFBIN),CAmp(2,MAXANT,0:MAXFBIN)
-        real factor(0:MAXFBIN)
+        real factor(0:MAXFBIN),fr,fl
 	integer VCNT(2,MAXANT,0:MAXFBIN),CCnt(2,MAXANT,0:MAXFBIN)
 	integer iostat,tVis,tCal,ngains,nants,nfeedc,nfeedv,ntau
 	integer temp,j,nfbin,nfbin1
@@ -71,8 +72,12 @@ c
 c  Get the input parameters.
 c
 	version = versan('gpboot',
-     *                   '$Revision: 1.5 $',
-     *                   '$Date: 2012/12/16 21:41:49 $')
+     *                   '$Revision: 1.6 $',
+     *                   '$Date: 2013/03/25 00:20:49 $')
+
+c       limit on ratio of scalings for adjacent frequency bins
+        fl = 0.1
+
 	call keyini
 	call keya('cal',cal,' ')
 	call keya('vis',vis,' ')
@@ -148,14 +153,22 @@ c
 	call hiswrite(tVis,'GPBOOT: Miriad '//version)
 	call hisinput(tVis,'GPBOOT')
         do j=0,nfbin
+          fr = 1.0
           if (j.eq.0) then
             write(line,'(a,f8.3)') 'Secondary flux density scaled by:',
      *                         factor(j)**2
           else
             write(line,'(a,i2,a,f8.3)') 'Frequency bin ',j,
      *                        ' scaled by      :', factor(j)**2
+c           Adjacent gains should be similar in value
+            if (j.gt.1) fr = factor(j-1)/factor(j)
           endif
           call output(line)
+          if ( fr.lt.(1.0-fl) .or. fr.gt.(1.0+fl)) then
+            write(line,'(a,f6.1,a)') 
+     *        'Scaling of adjacent bins differs by > ',fl*100.0,'%'
+            call bug('w', line)
+          endif
           call hiswrite(tVis,'GPBOOT: '//line)
         enddo
 	call hisclose(tVis)
