@@ -117,10 +117,10 @@ c   22may01 dpr  - XY-EW support
 c   01jan07 rjs  - Handle more than 100 antennas in a simple way.
 c   18jun09 rjs  - Number antennas in "array" printout.
 c   23apr10 rjs  - Recognised blanked antenna numbers in "array" printout.
+c   27mar13 mhw  - Print > 10000 channels correctly
 c------------------------------------------------------------------------
 	include 'maxdim.h'
-	character version*(*)
-	parameter(version='Uvlist: version 1.0 23-Apr-10')
+	character*80 version,versan
 c
 	character out*50,last*1,date*18,uvflags*8
 	complex data(MAXCHAN)
@@ -135,6 +135,12 @@ c
 c  Externals.
 c
 	logical uvVarUpd,uvDatOpn
+c
+      version = versan('uvlist',
+     *                 '$Revision: 1.5 $',
+     *                 '$Date: 2013/03/26 22:41:01 $')
+
+      call output( version )
 c
 c  Read the inputs.
 c
@@ -475,7 +481,7 @@ c
 	    endif
 	    call amphase(data(i+j-1),amp(j),phas(j))
 	  enddo
-	  write(line,'(5(i4,f7.2,i4,a))') 
+	  write(line,'(5(i5,f7.2,i4,a))') 
      *		      (i+j-1,amp(j),nint(phas(j)),cflag(j),j=1,nchand)
 	  call LogWrite(line,more)
 	enddo
@@ -589,8 +595,8 @@ c
 c
 	if(dodata)then
 	  length = len1(linetype)
-	  write(line,'(a,i4,a,a)')
-     *	  'No. channels:',nchan,', Linetype: ',linetype(1:length)
+	  write(line,'(a,i5,a,a)')
+     *	  'No. channels: ',nchan,', Linetype: ',linetype(1:length)
 	  call LogWrite(line,more)
 	  write(line,'(a,f9.3,a,f9.3,a,f9.3)')
      *	  'Line Start:',start,', Width:',width,', Step:',step
