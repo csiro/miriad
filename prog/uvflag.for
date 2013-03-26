@@ -141,6 +141,7 @@ c	    tw	    26aug04 allow fractional edge flagging using edge<0
 c           rjs     26nov05 Change to avoid compiler bug.
 c           mhw     13mar13 Cope with 128 antennas (MWA)
 c           vjm     26mar13 Convert version numbering to versan().
+c           mhw     27mar13 Cope with larger number of visibilities
 c************************************************************************
 c uvflag works as follows:
 c It reads the name of the first visibility file.
@@ -174,8 +175,8 @@ c again until the list is exhausted.
       data	       usech / MAXCHAN * .true. /
 
       version = versan('uvflag',
-     *                 '$Revision: 1.3 $',
-     *                 '$Date: 2013/03/24 23:49:21 $')
+     *                 '$Revision: 1.4 $',
+     *                 '$Date: 2013/03/26 22:40:24 $')
 
       call output( version )
       call keyini
@@ -686,7 +687,8 @@ c counts(6,j) = number of flags changed from bad to good
 c j=1 for channel linetype, j=2 for wide linetype
 
       integer function counting( type, oldflags, newflags, nchan )
-      integer tcount, totcount, inittot
+      integer tcount,inittot
+      double precision totcount
 
       character*(*)    type
       logical	       oldflags(*), newflags(*)
@@ -695,9 +697,10 @@ c j=1 for channel linetype, j=2 for wide linetype
 
       integer	       i, j, NCOUNTS
       parameter        ( NCOUNTS = 6 )
-      integer	       counts(NCOUNTS,2), totcnts(NCOUNTS,2)
+      integer	       counts(NCOUNTS,2)
+      double precision totcnts(NCOUNTS,2)
       save	       counts, totcnts
-      data	       totcnts / NCOUNTS*0, NCOUNTS*0 /
+      data	       totcnts / NCOUNTS*0, NCOUNTS*0.d0 /
 
       if( type.eq.'channel' ) j = 1
       if( type.eq.'wide'    ) j = 2
@@ -1045,7 +1048,8 @@ c Type an overview and update history to finish off
       character     ltype*16
       integer	    lt, lt1, lt2
       integer	    reccount, treccnt
-      integer	    totcount, totcnt(6), i, l
+      double precision totcount, totcnt(6)
+      integer       i, l
       character     outline*256
 c
 c  Externals.
@@ -1094,48 +1098,25 @@ c
 
 	 if( lt.eq.1 ) ltype = 'channel'
 	 if( lt.eq.2 ) ltype = 'wide'
-	 write( outline, '( a8,''  Originally  Currently'')') ltype
+	 write( outline, '( a8,''  Originally    Currently'')') ltype
 	 call lhwr( outline, unit, apply )
 
 	 do i = 1, 6
 	    totcnt(i) = totcount(i,lt)
 	 enddo
-	 write( outline, '( ''Good:  '', 3x, i10, 1x, i10 )' )
+	 write( outline, '( ''Good:  '', 3x, f12.0, 1x, f12.0 )' )
      *	       totcnt(1), totcnt(3)
 	 if( .not.flagval ) write( outline( len1(outline)+1 : ), '('//
      *	       '4x, ''Changed to bad: '', i10 )' ) totcnt(5)
 	 call lhwr( outline, unit, apply )
 
-	 write( outline, '( ''Bad:   '', 3x, i10, 1x, i10 )' )
+	 write( outline, '( ''Bad:   '', 3x, f12.0, 1x, f12.0 )' )
      *		totcnt(2), totcnt(4)
 	 if(	  flagval ) write( outline( len1(outline)+1 : ), '('//
-     *		'4x, ''Changed to good: '',i10 )' ) totcnt(6)
+     *		'4x, ''Changed to good: '',f12.0 )' ) totcnt(6)
 	 call lhwr( outline, unit, apply )
 
        enddo
-c	  write( outline, '(
-c     *        ''Number of good channels originally: '',i17 )' )
-c     * 	 totcnt(1)
-c	  call lhwr( outline, unit, apply )
-c	  write( outline, '(
-c     *        ''Number of good channels currently:  '',i17 )' )
-c     * 	 totcnt(3)
-c	  call lhwr( outline, unit, apply )
-c	  write( outline, '(
-c     *        ''Number of bad	channels originally: '',i17 )' )
-c     * 	 totcnt(2)
-c	  call lhwr( outline, unit, apply )
-c	  write( outline, '(
-c     *        ''Number of bad	channels currently:  '',i17 )' )
-c     * 	 totcnt(4)
-c	  call lhwr( outline, unit, apply )
-c	  if( .not.flagval ) write( outline, '(
-c     *        ''Number of channels changed from good to bad: '',i8 )' )
-c     * 	 totcnt(5)
-c	  if(	   flagval ) write( outline, '(
-c     *        ''Number of channels changed from bad to good: '',i8 )' )
-c     * 	 totcnt(6)
-c	  call lhwr( outline, unit, apply )
       call lhwr( 'close', unit, apply )
 
       return
