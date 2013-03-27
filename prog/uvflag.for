@@ -175,8 +175,8 @@ c again until the list is exhausted.
       data	       usech / MAXCHAN * .true. /
 
       version = versan('uvflag',
-     *                 '$Revision: 1.5 $',
-     *                 '$Date: 2013/03/27 00:19:44 $')
+     *                 '$Revision: 1.6 $',
+     *                 '$Date: 2013/03/27 03:01:18 $')
 
       call keyini
       call keyf( 'vis', vis, ' ' )
@@ -1106,7 +1106,7 @@ c
 	 write( outline, '( ''Good:  '', 3x, f12.0, 1x, f12.0 )' )
      *	       totcnt(1), totcnt(3)
 	 if( .not.flagval ) write( outline( len1(outline)+1 : ), '('//
-     *	       '4x, ''Changed to bad: '', i10 )' ) totcnt(5)
+     *	       '4x, ''Changed to bad: '', f12.0 )' ) totcnt(5)
 	 call lhwr( outline, unit, apply )
 
 	 write( outline, '( ''Bad:   '', 3x, f12.0, 1x, f12.0 )' )
