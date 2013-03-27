@@ -137,14 +137,12 @@ c
 	logical uvVarUpd,uvDatOpn
 c
       version = versan('uvlist',
-     *                 '$Revision: 1.5 $',
-     *                 '$Date: 2013/03/26 22:41:01 $')
+     *                 '$Revision: 1.6 $',
+     *                 '$Date: 2013/03/27 00:19:44 $')
 
-      call output( version )
 c
 c  Read the inputs.
 c
-	call output(version)
  	call keyini
 	call GetOpt(dovar,dodata,dospect,dosigma,doarray,dosrc,
      *			dobrief,docal,dopol,dopass)
