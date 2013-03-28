@@ -239,7 +239,7 @@ c       The output logfile name. The default is the terminal.
 c@ comment
 c       A one line comment which is written into the logfile.
 c
-c$Id: uvplt.for,v 1.14 2013/03/21 14:54:40 sau078 Exp $
+c$Id: uvplt.for,v 1.15 2013/03/28 03:54:04 wie017 Exp $
 c--
 c
 c  History:
@@ -371,8 +371,8 @@ c
       data polmsk /13*0/
 c-----------------------------------------------------------------------
       version = versan ('uvplt',
-     *                  '$Revision: 1.14 $',
-     *                  '$Date: 2013/03/21 14:54:40 $')
+     *                  '$Revision: 1.15 $',
+     *                  '$Date: 2013/03/28 03:54:04 $')
 c
 c  Get the parameters given by the user and check them for blunders
 c
@@ -2877,14 +2877,14 @@ cc
      *  nb, np, ipt, il, ilen, icol
       character xlabel*100, ylabel*100, ans*1, devdef*80,
      *  str*80, units*10
-      character*2 fmt(2), polstr(12)*2, hard*3
+      character*2 fmt(3), polstr(12)*2, hard*3
       logical new, more, redef, none, doauto
 
       integer pgbeg, len1
       character polsc2p*2
 
       save cols
-      data fmt /'i1', 'i2'/
+      data fmt /'i1', 'i2', 'i3'/
       data cols1 /1, 7, 2, 5, 3, 4, 6, 8, 9,  10, 11, 12/
       data cols2 /1, 2, 5, 3, 4, 6, 8, 9, 10, 11, 12, 13/
 c-----------------------------------------------------------------------
@@ -3335,7 +3335,7 @@ c-----------------------------------------------------------------------
 cc
       character str1*2,aline*80
       integer i, j
-      character itoaf*2,stcat*80
+      character itoaf*3,stcat*80
 c-----------------------------------------------------------------------
 c
 c Loop over size of BUFFER polarization dimension
