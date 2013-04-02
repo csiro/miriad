@@ -81,7 +81,7 @@ c	            density scale. See the help on "oldflux" for more
 c	            information.
 c@ tol
 c	Solution convergence tolerance. Default is 0.001.
-c$Id: mfcal.for,v 1.13 2012/10/24 01:12:12 mci156 Exp $
+c$Id: mfcal.for,v 1.14 2013/04/02 03:14:11 wie017 Exp $
 c--
 c  History:
 c    rjs   8jul92 Original version.
@@ -129,6 +129,7 @@ c		  with many windows or Doppler tracking.
 c    mhw  14apr11 Fix hash function overflow by moving to double for VisId
 c                 Also use mem.h for dynamic memory
 c    vjm  24oct12 Tidy up text explaining the interval options.
+c    mhw  02apr13 Avoid producing NaNs when there are zeroes in the data
 c
 c  Problems:
 c    * Should do simple spectral index fit.
@@ -142,8 +143,8 @@ c------------------------------------------------------------------------
 	parameter(MAXSOLN=1024,MAXPOL=2)
 c
 	character version*(*)
-	parameter(version='MfCal: $Revision: 1.13 $, '//
-     *             '$Date: 2012/10/24 01:12:12 $')
+	parameter(version='MfCal: $Revision: 1.14 $, '//
+     *             '$Date: 2013/04/02 03:14:11 $')
 c
 	integer tno
 	integer pWGains,pFreq,pSource,pPass,pGains,pTau
@@ -1007,6 +1008,7 @@ c------------------------------------------------------------------------
 	integer i,j,p,k
 	real Change,Sum2,rtemp
 	complex temp
+
 c
 	epsi = 0
         do k=1,npsoln
@@ -2816,15 +2818,18 @@ c  Evaluate gain, and zero counters.
 c
 c#maxloop 32
 	  do i=1,nants
-	    t = 1./Sum2(i)
-	    Temp = t * Sum(i) - G(i)
-	    G(i) = G(i) + Factor * Temp
-	    Change = Change + real(Temp)**2 + aimag(Temp)**2
-	    SumWt = SumWt + real(G(i))**2  + aimag(G(i))**2
-	    Sum(i) = 0
-	    Sum2(i) = 0
+	    if (real(Sum(i))**2+imag(Sum(i))**2.gt.0) then
+              t = 1./Sum2(i)
+	      Temp = t * Sum(i) - G(i)
+	      G(i) = G(i) + Factor * Temp
+	      Change = Change + real(Temp)**2 + aimag(Temp)**2
+	      SumWt = SumWt + real(G(i))**2  + aimag(G(i))**2
+	      Sum(i) = 0
+	      Sum2(i) = 0
+            endif
 	  enddo
-	  t = Change/SumWt
+          t = 0
+	  if (SumWt.gt.0) t = Change/SumWt
 	  epsi = max(epsi,t)
 	  convrg = t.lt.tol
 	enddo
