@@ -137,8 +137,8 @@ c
 	logical uvVarUpd,uvDatOpn
 c
       version = versan('uvlist',
-     *                 '$Revision: 1.6 $',
-     *                 '$Date: 2013/03/27 00:19:44 $')
+     *                 '$Revision: 1.7 $',
+     *                 '$Date: 2013/04/04 21:24:43 $')
 
 c
 c  Read the inputs.
@@ -479,8 +479,13 @@ c
 	    endif
 	    call amphase(data(i+j-1),amp(j),phas(j))
 	  enddo
-	  write(line,'(5(i5,f7.2,i4,a))') 
+          if (i+j-1.lt.10000) then
+            write(line,'(5(i4,f7.2,i4,a1))') 
      *		      (i+j-1,amp(j),nint(phas(j)),cflag(j),j=1,nchand)
+          else
+            write(line,'(5(i5,f6.1,i4,a1))') 
+     *		      (i+j-1,amp(j),nint(phas(j)),cflag(j),j=1,nchand)
+          endif
 	  call LogWrite(line,more)
 	enddo
 c
