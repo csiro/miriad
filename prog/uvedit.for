@@ -54,6 +54,7 @@ c    rjs   05sep00    Use double precision to avoid rounding of coords.
 c    rjs   19sep04    Copy across sensitivity model, if appropriate.
 c    rjs   18sep05    Correct incorrect type of keyd call.
 c    rjs   14dec11    Copy across nbpsols item.
+c    mrc   09apr13    Fix handling of negative dec between 0 and -1
 c***********************************************************************
 c= Uvedit - Editing of the baseline of a UV data set.
 c& jm
@@ -374,7 +375,7 @@ c Dec.
         if (KeyPrsnt('dec')) then
           call Keyd('dec', val1, -1.0d0)
           call Keyd('dec', val2, -1.0d0)
-          if ((val1 .lt. 0) .or. (val2 .lt. 0)) then
+          if (decoff.gt.0.and.((val1 .lt. 0) .or. (val2 .lt. 0))) then
             errmsg = PROG // 'Incorrect DEC entered.'
             call Bug('f', errmsg)
           endif
