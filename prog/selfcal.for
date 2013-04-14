@@ -43,6 +43,11 @@ c@ interval
 c       The length of time, in minutes, of a gain solution.  Default is
 c       5, but use a larger value in cases of poor signal-to-noise, or
 c       if the atmosphere and instrument is fairly stable.
+c@ nfbin
+c       The number of frequency bins. The default is 1. Use nfbin>1 to
+c       solve for variation across the band in the gains.
+c       Works best for uv files with a single spectral window, i.e., 
+c       after uvsplit. 
 c@ options
 c       This gives several processing options. Possible values are:
 c         amplitude  Perform amplitude and phase self-cal.
@@ -90,7 +95,7 @@ c       the linetype parameters used to construct the map.  If you wish
 c       to override this, or if the info is not in the header, or if you
 c       are using a point source model, this parameter can be useful.
 c
-c$Id: selfcal.for,v 1.9 2012/01/17 03:47:09 wie017 Exp $
+c$Id: selfcal.for,v 1.10 2013/04/14 23:38:34 wie017 Exp $
 c--
 c
 c  History:
@@ -148,6 +153,7 @@ c    rjs  30aug99 Increase maxmod to 64
 c    rjs  14dec99 Ability to use model visibility datasets.
 c    dpr  17apr01 Increase MaxMod to 128
 c    mhw  16jan12 Use ptrdiff for scr routines to handle larger files
+c    mhw  10apr13 Add nfbin parameter
 c
 c  Bugs/Shortcomings:
 c   * Selfcal should check that the user is not mixing different
@@ -155,16 +161,18 @@ c     polarisations and pointings.
 c   * It would be desirable to apply bandpasses, and merge gain tables,
 c     apply polarisation calibration, etc.
 c-----------------------------------------------------------------------
+      include 'maxdim.h'
       integer   MAXMOD, MAXSELS, NHEAD
       parameter (MAXMOD=1024, MAXSELS=1024, NHEAD=3)
 
       logical   amp, doim, doline, mfs, noscale, phase, relax, selradec
       integer   i, minants, nModel, nchan, nvis, refant, tmod, tscr,
-     *          tvis
+     *          tvis, nfbin
       real      clip, flux(2), interval, lstart, lstep, lwidth,
      *          offset(2), sels(MAXSELS)
       character flag1*8, flag2*8, ltype*32, Models(MAXMOD)*64,
-     *          obstype*32, version*72, vis*64
+     *          obstype*32, version*80, vis*64
+      double precision sfreq(MAXCHAN)
 
 c     Externals.
       logical   hdprsnt
@@ -172,8 +180,8 @@ c     Externals.
       external  hdprsnt, header, versan
 c-----------------------------------------------------------------------
       version = versan('selfcal',
-     *                 '$Revision: 1.9 $',
-     *                 '$Date: 2012/01/17 03:47:09 $')
+     *                 '$Revision: 1.10 $',
+     *                 '$Date: 2013/04/14 23:38:34 $')
 c
 c  Get the input parameters.
 c
@@ -183,6 +191,9 @@ c
       call mkeyf('model',Models,MAXMOD,nModel)
       call keyr('clip',clip,0.0)
       call keyr('interval',interval,5.0)
+      call keyi('nfbin',nfbin,0)
+      nfbin=min(MAXFBIN,max(0,nfbin))
+      if (nfbin.eq.1) nfbin=0
       call keyi('minants',minants,0)
       call keyi('refant',refant,0)
       call keyr('flux',flux(1),1.0)
@@ -265,9 +276,10 @@ c
         call SelApply(tvis,sels,.true.)
         call Model(flag2,tvis,0,offset,flux,tscr,
      *                        NHEAD,header,nchan,nvis)
-        call SelfIni
+        call getFreq(tvis,sfreq)
+        call SelfIni(nfbin,nchan)
         call output('Accumulating statistics ...')
-        call SelfAcc(tscr,nchan,nvis,interval)
+        call SelfAcc(tscr,nchan,nvis,interval,sfreq)
         call scrclose(tscr)
       else
         do i = 1, nModel
@@ -290,8 +302,11 @@ c
             call uvclose(tmod)
           endif
           call output('Accumulating statistics ...')
-          if (i.eq.1) call SelfIni
-          call SelfAcc(tscr,nchan,nvis,interval)
+          if (i.eq.1) then
+            call getFreq(tvis,sfreq)
+            call SelfIni(nfbin,nchan)
+          endif
+          call SelfAcc(tscr,nchan,nvis,interval,sfreq)
           call scrclose(tscr)
         enddo
       endif
@@ -498,17 +513,25 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine SelfIni
+      subroutine SelfIni(nfbin1,nchan1)
+      
+      integer nfbin1,nchan1
 c-----------------------------------------------------------------------
 c  Initialise variables and allocate memory.
+c  Input:
+c     nfbin1    number of frequency bins
+c     nchan1     nuber of channels
 c-----------------------------------------------------------------------
       include 'selfcal.h'
 
-      integer i, SolSize
+      integer i, SolSize, n1
 
       integer  MemBuf, prime
       external MemBuf, prime
 c-----------------------------------------------------------------------
+      nfbin = nfbin1
+      nchan0 = nchan1
+      n1 = nfbin+1
       nHash = prime(maxHash-1)
       do i = 1, nHash+1
         Hash(i) = 0
@@ -522,20 +545,20 @@ c-----------------------------------------------------------------------
 
 c     Allocate memory.  The indices are offsets into a single scratch
 c     buffer used as follows:
-c       integer count(maxSol)
-c       real    stpTime(maxSol), strTime(maxSol), sumMM(maxSol),
-c               sumVV(nBl,maxSol), weight(nBl,maxSol)
+c       integer count(maxSol,n1)
+c       real    stpTime(maxSol), strTime(maxSol), sumMM(maxSol,n1),
+c               sumVV(nBl,maxSol,n1), weight(nBl,maxSol,n1)
 c       double precision rTime(maxSol)
-c       complex gains(nants,maxSol), sumVM(nBl,maxSol)
+c       complex gains(nants,maxSol,n1), sumVM(nBl,maxSol,n1)
       call MemAlloc(pStptim,maxSol, 'r')
       call MemAlloc(pStrtim,maxSol, 'r')
-      call MemAlloc(pCount, maxSol, 'i')
+      call MemAlloc(pCount, maxSol*n1, 'i')
       call MemAlloc(prTime, maxSol, 'd')
-      call MemAlloc(pSumMM, maxSol, 'r')
-      call MemAlloc(pSumVV, maxSol*nBl, 'r')
-      call MemAlloc(pSumVM, maxSol*nBl, 'c')
-      call MemAlloc(pWeight,maxSol*nBl, 'r')
-      call MemAlloc(pGains, maxSol*nants, 'c')
+      call MemAlloc(pSumMM, maxSol*n1, 'r')
+      call MemAlloc(pSumVV, maxSol*nBl*n1, 'r')
+      call MemAlloc(pSumVM, maxSol*nBl*n1, 'c')
+      call MemAlloc(pWeight,maxSol*nBl*n1, 'r')
+      call MemAlloc(pGains, maxSol*nants*n1, 'c')
 
       end
 
@@ -546,25 +569,51 @@ c-----------------------------------------------------------------------
 c  Release allocated memory.
 c-----------------------------------------------------------------------
       include 'selfcal.h'
+      integer n1
 c-----------------------------------------------------------------------
+      n1 = nfbin+1
       call MemFree(pStpTim,maxSol, 'r')
       call MemFree(pStrTim,maxSol, 'r')
-      call MemFree(pCount, maxSol, 'i')
+      call MemFree(pCount, maxSol*n1, 'i')
       call MemFree(prTime, maxSol, 'd')
-      call MemFree(pSumMM, maxSol, 'r')
-      call MemFree(pSumVV, maxSol*nBl, 'r')
-      call MemFree(pSumVM, maxSol*nBl, 'c')
-      call MemFree(pWeight,maxSol*nBl, 'r')
-      call MemFree(pGains, maxSol*nants, 'c')
+      call MemFree(pSumMM, maxSol*n1, 'r')
+      call MemFree(pSumVV, maxSol*nBl*n1, 'r')
+      call MemFree(pSumVM, maxSol*nBl*n1, 'c')
+      call MemFree(pWeight,maxSol*nBl*n1, 'r')
+      call MemFree(pGains, maxSol*nants*n1, 'c')
 
+      end
+
+***********************************************************************
+
+      subroutine getFreq(tvis,sfreq)
+      include 'selfcal.h'
+      integer tvis
+      double precision sfreq(MAXCHAN)
+c-----------------------------------------------------------------------
+c  Get frequency details at start of file and rewind file.
+c  Input:
+c     tvis - handle to uv file
+c  Output:
+c     sfreq - channel frequencies
+c-----------------------------------------------------------------------
+      double precision preamble(6)
+      logical flags(MAXCHAN)
+      complex vis(MAXCHAN)
+      integer nchan
+c-----------------------------------------------------------------------
+      call uvread(tvis,preamble,vis,flags,MAXCHAN,nchan)
+      call uvinfo(tVis,'sfreq',sfreq)
+      call uvrewind(tvis)
       end
 
 c***********************************************************************
 
-      subroutine SelfAcc(tscr,nchan,nvis,interval)
+      subroutine SelfAcc(tscr,nchan,nvis,interval,sfreq)
 
       integer tscr,nchan,nvis
       real interval
+      double precision sfreq(nchan)
 c-----------------------------------------------------------------------
 c  Call the routine that does the real work in accumulating the
 c  statistics about a model.
@@ -575,31 +624,35 @@ c               visibility and model information.
 c    nchan      The number of channels in the scratch file.
 c    nvis       The number of visbilities in the scratch file.
 c    Interval   The self-cal gain interval.
+c    sfreq      The channel frequencies
 c-----------------------------------------------------------------------
       include 'selfcal.h'
 c-----------------------------------------------------------------------
       TotVis = TotVis + nVis
-      call SelfAcc1(tscr,nchan,nvis,nBl,maxSol,nSols,
+      if (nchan.ne.nchan0.and.nfbin.gt.1) call bug('f',
+     *  'nfbin>1 only supported if the number of channels is constant') 
+      call SelfAcc1(tscr,nchan,nvis,nBl,maxSol,nSols,nfbin,
      *  nhash,Hash,Indx,interval,
      *  Memc(pSumVM),Memr(pSumVV),Memr(pSumMM),
      *  Memr(pWeight),Memi(pCount),Memd(prTime),Memr(pstpTim),
-     *  Memr(pstrTim))
+     *  Memr(pstrTim),sfreq,freq)
 
       end
 
 c***********************************************************************
 
-      subroutine SelfAcc1(tscr,nchan,nvis,nBl,maxSol,nSols,
+      subroutine SelfAcc1(tscr,nchan,nvis,nBl,maxSol,nSols,nfbin,
      *  nHash,Hash,Indx,interval,
-     *  SumVM,SumVV,SumMM,Weight,Count,rTime,StpTime,StrTime)
+     *  SumVM,SumVV,SumMM,Weight,Count,rTime,StpTime,StrTime,sfreq,freq)
 
-      integer tscr,nchan,nvis,nBl,maxSol,nSols
+      integer tscr,nchan,nvis,nBl,maxSol,nSols,nfbin
       integer nHash,Hash(nHash+1),Indx(nHash)
       real    interval
-      complex SumVM(nBl,maxSol)
-      real    SumVV(nBl,maxSol),SumMM(maxSol),Weight(nBl,maxSol)
-      integer count(maxSol)
-      double precision rTime(maxSol)
+      complex SumVM(nBl,maxSol,0:nfbin)
+      real    SumVV(nBl,maxSol,0:nfbin),SumMM(maxSol,0:nfbin)
+      real    Weight(nBl,maxSol,0:nfbin)
+      integer count(maxSol,0:nfbin)
+      double precision rTime(maxSol),freq(0:nfbin),sfreq(nchan)
       real    StpTime(maxSol), StrTime(maxSol)
 c-----------------------------------------------------------------------
 c  This reads through the scratch file which contains the visibility
@@ -654,10 +707,13 @@ c-----------------------------------------------------------------------
       integer   NHEAD, MAXLEN
       parameter (NHEAD = 3, MAXLEN = NHEAD + 5*MAXCHAN)
 
-      integer   i, i1, i2, iBl, ihash, itime, j, k, length, sCount
+      integer   i, i1, i2, iBl, ihash, itime, j, k, length, chn, fbin
+      integer   sCount(0:MAXFBIN)
       ptrdiff   off
-      real      mm, out(MAXLEN), sMM, sTime, sVV, vv, wgt
-      complex   sVM, vm
+      real      mm, out(MAXLEN), sMM(0:MAXFBIN), sTime
+      real      sVV(0:MAXFBIN), vv, wgt
+      complex   sVM(0:MAXFBIN), vm
+      double precision wfreq(MAXFBIN),sF(MAXFBIN)
 c-----------------------------------------------------------------------
       if (nchan.gt.MAXCHAN) call bug('f','Too many channels')
       length = NHEAD + 5*nchan
@@ -692,14 +748,15 @@ c       Not in the hash table, add a new entry.
 
           StpTime(nSols) = Out(2)
           StrTime(nSols) = Out(2)
-
-          count(nSols) = 0
           rTime(nSols) = 0d0
-          sumMM(nSols) = 0.0
-          do iBl = 1, nBl
-             sumVV(iBl,nSols) = 0.0
-             sumVM(iBl,nSols) = (0.0,0.0)
-            weight(iBl,nSols) = 0.0
+          do fbin=0,nfbin
+            count(nSols,fbin) = 0
+            sumMM(nSols,fbin) = 0.0
+            do iBl = 1, nBl
+              sumVV(iBl,nSols,fbin) = 0.0
+              sumVM(iBl,nSols,fbin) = (0.0,0.0)
+              weight(iBl,nSols,fbin) = 0.0
+            enddo
           enddo
         endif
 
@@ -714,35 +771,62 @@ c       Accumulate info about this visibility record.
 c       N.B. using temporaries to accumulate statistics separately for
 c       each spectrum helps to maintain precision when there are a very
 c       large number of correlations in the solution interval.
-        sCount = 0
-        sTime  = 0.0
-        sMM    = 0.0
-        sVV    = 0.0
-        sVM    = (0.0,0.0)
 
+        sTime  = 0.0
+        do fbin = 0, nfbin
+          sCount(fbin) = 0
+          sMM(fbin)    = 0.0
+          sVV(fbin)    = 0.0
+          sVM(fbin)    = (0.0,0.0)
+          freq(fbin)   = 0.d0
+          if (fbin.gt.0) then
+            sF(fbin)     = 0.d0
+            wfreq(fbin)  = 0.d0
+          endif
+        enddo
+        chn=0
         do k = NHEAD+1, NHEAD+5*nchan, 5
+          chn = chn + 1
           if (out(k+4).gt.0.0) then
-            sCount = sCount + 1
+            sCount(0) = sCount(0) + 1
             sTime  = sTime  + Out(2)
 
             mm = Out(k)**2   + Out(k+1)**2
             vv = Out(k+2)**2 + Out(k+3)**2
             vm = cmplx(Out(k),Out(k+1)) * cmplx(Out(k+2),-Out(k+3))
 
-            sMM = sMM + mm
-            sVV = sVV + vv
-            sVM = sVM + vm
+            sMM(0) = sMM(0) + mm
+            sVV(0) = sVV(0) + vv
+            sVM(0) = sVM(0) + vm
+            if (nfbin.gt.1) then
+              fbin = min(nfbin,(chn-1)/(nchan/nfbin)+1)
+              sCount(fbin) = sCount(fbin) + 1
+              sMM(fbin) = sMM(fbin) + mm
+              sVV(fbin) = sVV(fbin) + vv
+              sVM(fbin) = sVM(fbin) + vm
+              sF(fbin) = sF(fbin) + log(sfreq(chn))
+            endif
           endif
         enddo
 
 c       Accumulate statistics for this spectrum.
         wgt = 0.5d0 / Out(3)
-         count(i)     =  count(i)     + sCount
-         rTime(i)     =  rTime(i)     + sTime
-         sumMM(i)     =  sumMM(i)     + wgt*sMM
-         sumVV(iBl,i) =  sumVV(iBl,i) + wgt*sVV
-         sumVM(iBl,i) =  sumVM(iBl,i) + wgt*sVM
-        weight(iBl,i) = weight(iBl,i) + wgt*sCount
+        rTime(i)     =  rTime(i)     + sTime
+        do fbin=0,nfbin
+          count(i,fbin)     =  count(i,fbin)     + sCount(fbin)
+          sumMM(i,fbin)     =  sumMM(i,fbin)     + wgt*sMM(fbin)
+          sumVV(iBl,i,fbin) =  sumVV(iBl,i,fbin) + wgt*sVV(fbin)
+          sumVM(iBl,i,fbin) =  sumVM(iBl,i,fbin) + wgt*sVM(fbin)
+          weight(iBl,i,fbin) = weight(iBl,i,fbin) + wgt*sCount(fbin)
+          if (fbin.gt.0) then
+            freq(fbin) = freq(fbin) + wgt*sF(fbin)
+            wfreq(fbin) = wfreq(fbin) + wgt*sCount(fbin)
+          endif
+        enddo
+      enddo
+      
+      do fbin=1,nfbin
+        if (wfreq(fbin).gt.0) freq(fbin)=exp(freq(fbin)/wfreq(fbin))
       enddo
 
       end
@@ -781,31 +865,32 @@ c-----------------------------------------------------------------------
       call output(line)
 
 c     Determine all the gain solutions.
-      call Solve1(tgains,nSols,nBl,nants,phase,relax,noscale,
-     *  minants,refant,Time0,interval,Indx,
+      call Solve1(tgains,nSols,maxsol,nBl,nants,nfbin,phase,relax,
+     *  noscale,minants,refant,Time0,interval,Indx,
      *  Memc(pSumVM),Memr(pSumVV),Memr(pSumMM),Memc(pGains),
      *  Memr(pWeight),Memi(pCount),memD(prTime),
-     *  Memr(pStpTim),Memr(pStrTim))
+     *  Memr(pStpTim),Memr(pStrTim),freq)
 
       end
 
 c***********************************************************************
 
-      subroutine Solve1(tgains,nSols,nBl,nants,phase,relax,
-     *  noscale,minants,refant,Time0,interval,TIndx,
+      subroutine Solve1(tgains,nSols,maxsol,nBl,nants,nfbin,phase,
+     *  relax,noscale,minants,refant,Time0,interval,TIndx,
      *  SumVM,SumVV,SumMM,Gains,Weight,Count,rTime,
-     *  StpTime,StrTime)
+     *  StpTime,StrTime,freq)
 
-      integer tgains, nSols, nBl, nants
+      integer tgains, nSols, maxsol, nBl, nants, nfbin
       logical phase,relax,noscale
       integer minants, refant
       double precision Time0
       real   interval
       integer TIndx(nSols)
-      complex SumVM(nBl,nSols), Gains(nants,nSols)
-      real    SumVV(nBl,nSols), SumMM(nSols), Weight(nBl,nSols)
-      integer Count(nSols)
-      double precision rTime(nSols)
+      complex SumVM(nBl,maxsol,0:nfbin), Gains(nants,maxsol,0:nfbin)
+      real    SumVV(nBl,maxsol,0:nfbin), SumMM(maxsol,0:nfbin)
+      real    Weight(nBl,maxsol,0:nfbin)
+      integer Count(maxsol,0:nfbin)
+      double precision rTime(nSols),freq(0:nfbin)
       real    StpTime(nSols),StrTime(nSols)
 c-----------------------------------------------------------------------
 c  Run through all the accumulated data and calculate the selfcal
@@ -832,8 +917,10 @@ c    Gains
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       logical Convrg
-      integer i,k,k0,nbad,iostat,item,offset,header(2),nmerge
+      integer i,k,k0,nbad,iostat,item,offset,header(2),nmerge,fbin
       double precision dtime,dtemp
+      character line*80
+      complex G(MAXANT)
 
 c     Externals.
       character itoaf*8
@@ -842,40 +929,51 @@ c     Sort the self-cal solutions into order of increasing time.
       call sortidxr(nSols,StpTime,TIndx)
 
 c     Merge together short, adjacent, solution intervals.
-      call Merger(nSols,nBl,TIndx,interval,StpTime,StrTime,
+      call Merger(nSols,nBl,nfbin,TIndx,interval,StpTime,StrTime,
      *  SumVM,SumVV,SumMM,Weight,Count,rTime,nmerge)
       if (nmerge.gt.0) call output(
      *  'Solution intervals merged together: '//itoaf(nmerge))
 
 c     Now calculate the solutions.
-      nbad = 0
-      do k = 1, nSols
-        if (Count(k).gt.0) then
-          call Solve2(nbl,nants,SumVM(1,k),SumVV(1,k),Weight(1,k),
-     *      phase,relax,minants,refant,Gains(1,k),Convrg)
-          if (.not.Convrg) then
-            nbad = nbad + 1
-            Count(k) = 0
+      do fbin=0,nfbin
+        if (fbin.gt.0) then
+          write(line,'(a,i2)') 'Solution for freq. bin ',fbin
+          call output(line)
+          call HisWrite(tgains,'SELFCAL: '//line)
+        endif
+        nbad = 0
+        do k = 1, nSols
+          if (Count(k,fbin).gt.0) then
+            call Solve2(nbl,nants,SumVM(1,k,fbin),SumVV(1,k,fbin),
+     *        Weight(1,k,fbin),phase,relax,minants,refant,
+     *        Gains(1,k,fbin),Convrg)
+            if (.not.Convrg) then
+              nbad = nbad + 1
+              Count(k,fbin) = 0
+            endif
           endif
-        endif
-        if (Count(k).eq.0) then
-          do i = 1, nants
-            Gains(i,k) = 0
-          enddo
-        endif
+          if (Count(k,fbin).eq.0) then
+            do i = 1, nants
+              Gains(i,k,fbin) = 0
+            enddo
+          endif
+        enddo
+
+c       Write out some info to wake the user up from his/her slumber.
+        if (nbad.ne.0) call bug('w','Intervals with no solution: '//
+     *                                                itoaf(nbad))
+        if (nbad+nmerge.eq.nsols) 
+     *    call bug('f','No solutions were found')
+      
+c       Scale the gains if needed.
+        if (.not.(noscale .or. phase)) call GainScal(Gains(1,1,fbin),
+     *    nants,nSols)
+c       Calculate statistics.
+        call CalcStat(tgains,nsols,nbl,nants,SumVM(1,1,fbin),
+     *    SumMM(1,fbin),SumVV(1,1,fbin),
+     *    Weight(1,1,fbin),Count(1,fbin),Gains(1,1,fbin))
       enddo
 
-c     Write out some info to wake the user up from his/her slumber.
-      if (nbad.ne.0) call bug('w','Intervals with no solution: '//
-     *                                                itoaf(nbad))
-      if (nbad+nmerge.eq.nsols) call bug('f','No solutions were found')
-
-c     Scale the gains if needed.
-      if (.not.(noscale .or. phase)) call GainScal(Gains,nants,nSols)
-
-c     Calculate statistics.
-      call CalcStat(tgains,nsols,nbl,nants,SumVM,SumMM,SumVV,
-     *  Weight,Count,Gains)
 
 c     Write the gains out to a gains table.
       call haccess(tgains,item,'gains','write',iostat)
@@ -894,13 +992,13 @@ c     Write the gains out to a gains table.
       offset = 8
       do k = 1, nSols
         k0 = TIndx(k)
-        if (Count(k0).gt.0) then
-          dtime = rTime(k0) / Count(k0) + time0
+        if (Count(k0,0).gt.0) then
+          dtime = rTime(k0) / Count(k0,0) + time0
           call hwrited(item,dtime,offset,8,iostat)
           offset = offset + 8
-          call GFudge(gains(1,k0),nants)
-          if (iostat.eq.0) call hwriter(item,gains(1,k0),offset,8*nants,
-     *                                                        iostat)
+          call GFudge(gains(1,k0,0),nants)
+          if (iostat.eq.0) call hwriter(item,gains(1,k0,0),offset,
+     *      8*nants,iostat)
           offset = offset + 8*nants
           if (iostat.ne.0) then
             call bug('w','I/O error while writing to gains item')
@@ -921,20 +1019,83 @@ c     Write some extra information for the gains table.
       call wrhdi(tgains,'nsols',nsols-nbad-nmerge)
       call wrhdi(tgains,'nfeeds',1)
       call wrhdi(tgains,'ntau',0)
+      
+      if (nfbin.le.1) then
+        call hdelete(tgains,'gainsf',iostat)
+        call hdelete(tgains,'leakagef',iostat)
+        call hdelete(tgains,'nfbin',iostat)
+        return
+      endif
+c
+c  Now write the gains for the frequency binned solutions
+c
+      call haccess(tgains,item,'gainsf','write',iostat)
+      if (iostat.ne.0) then
+        call bug('w','Error opening output gainsf table.')
+        call bugno('f',iostat)
+      endif
+      call hwritei(item,0,0,4,iostat)
+      call hwritei(item,nfbin,4,4,iostat)
+      if (iostat.ne.0) then
+        call bug('w','Error writing header of gainsf table')
+        call bugno('f',iostat)
+      endif
+c
+c  Write out all the gains.
+c
+      offset = 8
+      do fbin = 1, nfbin
+        do k = 1, nSols
+          k0 = TIndx(k)
+          if (Count(k0,0).gt.0) then
+            dtime = rTime(k0) / Count(k0,0) + time0
+            call hwrited(item,dtime,offset,8,iostat)
+            offset = offset + 8
+            if (iostat.ne.0) then
+              call bug('w','Error writing time to gainsf table')
+              call bugno('f',iostat)
+            endif
+            do i = 1, nants
+              if (abs(real(Gains(i,k0,fbin)))+
+     *            abs(aimag(Gains(i,k0,fbin))).ne.0) then
+                G(i) = 1/Gains(i,k0,fbin)
+              else
+                G(i) = (0.0,0.0)
+              endif
+            enddo
+            call hwriter(item,G,offset,8*nants,iostat)
+            offset = offset + 8*nants
+            if (iostat.ne.0) then
+              call bug('w','Error writing gains to gainsf table')
+              call bugno('f',iostat)
+            endif
+          endif
+        enddo
+        call hwrited(item,freq(fbin),offset,8,iostat)
+        offset = offset + 8
+      enddo
+c
+c  Finished writing the gain table.
+c
+      call hdaccess(item,iostat)
+      if (iostat.ne.0) call bugno('f',iostat)
+      call wrhdi(tgains,'nfbin',nfbin)
+      
 
       end
 
 c***********************************************************************
 
-      subroutine Merger(nSols,nBl,TIndx,interval,StpTime,StrTime,
+      subroutine Merger(nSols,nBl,nfbin,TIndx,interval,StpTime,StrTime,
      *  SumVM,SumVV,SumMM,Weight,Count,rTime,nmerge)
 
-      integer nSols, nBl, tIndx(nSols)
+      integer nSols, nBl, nfbin, tIndx(nSols)
       real    interval
       real    StpTime(nSols), StrTime(nSols)
-      complex SumVM(nBl,nSols)
-      real    SumVV(nBl,nSols),SumMM(nSols),Weight(nBl,nSols)
-      integer Count(nSols)
+      complex SumVM(nBl,nSols,0:nfbin)
+      real    SumVV(nBl,nSols,0:nfbin),SumMM(nSols,0:nfbin)
+      real    Weight(nBl,nSols,0:nfbin)
+      integer Count(nSols,0:nfbin)
       double precision rTime(nSols)
       integer nmerge
 c-----------------------------------------------------------------------
@@ -959,7 +1120,7 @@ c  Output:
 c    nmerge     The number of mergers.
 c-----------------------------------------------------------------------
       logical more
-      integer iBl, iSol, jSol, jdx, idx
+      integer iBl, iSol, jSol, jdx, idx, fbin
 c-----------------------------------------------------------------------
       nmerge = 0
 
@@ -969,7 +1130,7 @@ c     Find the first solution slot with some valid data.
       do while (iSol.lt.nSols .and. more)
         iSol = iSol + 1
         idx = TIndx(iSol)
-        if (count(idx).le.0) then
+        if (count(idx,0).le.0) then
           nmerge = nmerge + 1
         else
           more = .false.
@@ -979,19 +1140,24 @@ c     Find the first solution slot with some valid data.
 
       do jSol = iSol+1, nSols
         jdx = TIndx(jSol)
-        if (count(jdx).le.0) then
+        if (count(jdx,0).le.0) then
           nmerge = nmerge + 1
         else if (StrTime(jdx)-StpTime(idx).le.interval) then
           nmerge = nmerge + 1
           StrTime(idx) = StrTime(jdx)
-          count(idx) = count(idx) + count(jdx)
-          count(jdx) = 0
-          sumMM(idx) = sumMM(idx) + sumMM(jdx)
           rTime(idx) = rTime(idx) + rTime(jdx)
-          do iBl = 1, nBl
-             sumVM(iBl,idx) =  sumVM(iBl,idx) +  sumVM(iBl,jdx)
-             sumVV(iBl,idx) =  sumVV(iBl,idx) +  sumVV(iBl,jdx)
-            weight(iBl,idx) = weight(iBl,idx) + weight(iBl,jdx)
+          do fbin=0,nfbin
+            count(idx,fbin) = count(idx,fbin) + count(jdx,fbin)
+            count(jdx,fbin) = 0
+            sumMM(idx,fbin) = sumMM(idx,fbin) + sumMM(jdx,fbin)
+            do iBl = 1, nBl
+               sumVM(iBl,idx,fbin) =  sumVM(iBl,idx,fbin) + 
+     *           sumVM(iBl,jdx,fbin)
+               sumVV(iBl,idx,fbin) =  sumVV(iBl,idx,fbin) + 
+     *           sumVV(iBl,jdx,fbin)
+              weight(iBl,idx,fbin) = weight(iBl,idx,fbin) +
+     *          weight(iBl,jdx,fbin)
+            enddo
           enddo
         else
           idx = jdx
