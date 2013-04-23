@@ -62,7 +62,7 @@ c
 c  CARMA customizations:
 c    pkgw  2012may25  Extract some error messages from wcslib
 c
-c $Id: co.for,v 1.48 2012/10/26 03:57:58 wie017 Exp $
+c $Id: co.for,v 1.49 2013/04/23 03:53:30 ste616 Exp $
 c***********************************************************************
 
 c* coCtype -- Parse a world coordinate ctype.
@@ -107,7 +107,7 @@ c-----------------------------------------------------------------------
       include 'wcslib/spc.inc'
 
       integer    NWTYPE, NPCODE, NSCODE
-      parameter (NWTYPE = 29, NPCODE = 29, NSCODE = 14)
+      parameter (NWTYPE = 30, NPCODE = 29, NSCODE = 14)
 
       integer   i, k, status
       character aipsfr*8, axtypes(NWTYPE)*9, cunits(NWTYPE)*6,
@@ -119,6 +119,7 @@ c-----------------------------------------------------------------------
 
 c     Recognised wtypes; this list must be in alphabetical order.
       data (wtypes(i),axtypes(i),cunits(i),i=1,NWTYPE)/
+     *  'ABSNAT   ', 'linear   ', 'rad   ',
      *  'ANGLE    ', 'linear   ', 'rad   ',
      *  'AWAV     ', 'spectral ', 'm     ',
      *  'BETA     ', 'spectral ', '      ',
