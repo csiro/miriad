@@ -233,7 +233,7 @@ c       Interpolation tolerance.  Tolerate an error of the specified
 c       amount in converting pixel locations in the input to the output.
 c       Must be less that 0.5.  The default is 0.05.
 c
-c$Id: regrid.for,v 1.14 2012/08/29 03:26:50 cal103 Exp $
+c$Id: regrid.for,v 1.15 2013/05/08 03:43:50 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -275,8 +275,8 @@ c     Projection codes.
      *  'pco', 'tsc', 'csc', 'qsc', 'hpx'/
 c-----------------------------------------------------------------------
       version = versan ('regrid',
-     *                  '$Revision: 1.14 $',
-     *                  '$Date: 2012/08/29 03:26:50 $')
+     *                  '$Revision: 1.15 $',
+     *                  '$Date: 2013/05/08 03:43:50 $')
 
 c     Get the input parameters.
       call keyini
@@ -564,7 +564,7 @@ c       Allocate space used for the coordinate translation grid.
 
 c       Calculate the coordinates translation grid, and work out some
 c       statistics about it.
-        call GridGen(nAxOut(1),nAxOut(2),k,
+        call GridGen(nAxOut(1),nAxOut(2),naxes,k,
      *        memr(xv),memr(yv),memr(zv),meml(Valid),gnx,gny)
         call GridStat(doNear,memr(xv),memr(yv),memr(zv),meml(valid),
      *        gnx,gny,nAxIn(1),nAxIn(2),nAxIn(3),tol,minv,maxv,order)
@@ -1126,9 +1126,9 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine GridGen(nx,ny,plane,xv,yv,zv,valid,gnx,gny)
+      subroutine GridGen(nx,ny,naxes,plane,xv,yv,zv,valid,gnx,gny)
 
-      integer nx,ny,plane,gnx,gny
+      integer nx,ny,naxes,plane,gnx,gny
       real xv(gnx,gny),yv(gnx,gny),zv(gnx,gny)
       logical valid(gnx,gny)
 c-----------------------------------------------------------------------
@@ -1136,7 +1136,7 @@ c  Determine the translation between the output and input pixel
 c  coordinates on a grid.
 c
 c  Input:
-c    nx,ny
+c    nx,ny,naxes
 c    plane
 c    gnx,gny
 c  Output:
@@ -1157,7 +1157,11 @@ c-----------------------------------------------------------------------
           if (valid(i,j)) then
             xv(i,j) = out(1)
             yv(i,j) = out(2)
-            zv(i,j) = out(3)
+            if (naxes.gt.2) then
+              zv(i,j) = out(3)
+            else
+              zv(i,j) = in(3)
+            endif            
           endif
         enddo
       enddo
