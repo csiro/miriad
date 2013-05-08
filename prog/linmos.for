@@ -37,12 +37,18 @@ c       image is used.  If no value could be determined for the first
 c       image, a warning is issued and ALL images are given equal weight
 c       by assigning an RMS of 1.0.
 c@ bw
-c       Bandwidth of the image in GHz. If specified the beam response
-c       will be averaged across the frequency band before
-c       being applied to the image. Use for wide band images to
-c       improve the accuracy of the correction. If the input images
-c       contain a spectral plane (by using the mfs option of restor), this
-c       will be used to improve the correction.
+c       Bandwidth of the image in GHz, default 0. If specified the beam 
+c       response will either be averaged across the frequency band before
+c       being applied to the image or, if the input images contain a 
+c       spectral index plane (created with the mfs option of restor)  
+c       the images will be evaluated and corrected across the band.
+c       Use this for wide band images to improve the accuracy of the 
+c       correction.
+c       Note that doing wide band primary beam correction at low
+c       frequency will make the effective observing frequency vary
+c       significantly across the field. 
+c       An optional second parameter can be given to set the number
+c       of frequencies to divide the bandwidth into, it defaults to 10.
 c
 c@ options
 c       Extra processing options.  Several can be given, separated by
@@ -66,7 +72,10 @@ c         gain         Rather than a mosaiced image, produce an image
 c                      giving the effective gain across the field.  If
 c                      options=taper is used, this will be a smooth
 c                      function.  Otherwise it will be 1 or 0 (blanked).
-c$Id: linmos.for,v 1.21 2013/02/18 01:20:27 wie017 Exp $
+c         frequency    Rather than a mosaiced image, produce an image 
+c                      giving the effective frequency across the field.
+c
+c$Id: linmos.for,v 1.22 2013/05/08 02:19:11 wie017 Exp $
 c--
 c
 c  History:
@@ -116,6 +125,7 @@ c                 mosaic table
 c    mhw  03mar11 Add bandwidth
 c    mhw  18sep12 Use correct frequencies when not all the same
 c    mhw  23jan13 Handle 2nd plane (mfs I*alpha) in input
+c    mhw  03may13 Extension to previous and add options=frequency
 c
 c  Bugs:
 c    * Blanked images are not handled when interpolation is necessary.
@@ -137,10 +147,11 @@ c-----------------------------------------------------------------------
       integer   MAXIN, MAXLEN, MAXOPN
       parameter (MAXIN=8192, MAXLEN=MAXIN*64, MAXOPN=6, TOL=0.01)
 
-      logical   defrms, dosen, dogain, docar, exact, taper, mfs
+      logical   defrms, dosen, dogain, dofreq, docar, exact, taper, mfs
+      logical   cube
       integer   axLen(3,MAXIN), i, itemp, k1(MAXIN), k2(MAXIN), length,
      *          lIn(MAXIN), lOut, lScr, lWts, nIn, nOpen, nOut(4),
-     *          naxis, offset
+     *          naxis, offset, nbw
       ptrdiff   pOut, pWts
       real      blctrc(4,MAXIN), extent(4), rms(MAXIN), sigt, xoff,
      *          yoff, bw, wt
@@ -152,14 +163,15 @@ c-----------------------------------------------------------------------
       external  len1, versan
 c-----------------------------------------------------------------------
       version = versan ('linmos',
-     *                  '$Revision: 1.21 $',
-     *                  '$Date: 2013/02/18 01:20:27 $')
+     *                  '$Revision: 1.22 $',
+     *                  '$Date: 2013/05/08 02:19:11 $')
 
 c     Get and check inputs.
       call keyini
       nIn = 0
       offset = 0
       mfs = .false.
+      cube = .false.
       call keyf('in',inName,' ')
       do while (inName.ne.' ')
         nIn = nIn + 1
@@ -183,13 +195,19 @@ c     Get and check inputs.
      *      call bug('f','Non-positive rms noise parameter.')
       enddo
       call keyr('bw',bw,0.0)
+      call keyi('bw',nbw,10)
+      nbw = max(1,nbw)
+      if (bw.le.0.0) nbw=1
+      if (nbw.eq.1) bw=0.0
 
 c     Get processing options.
-      call getOpt(dosen,dogain,taper)
+      call getOpt(dosen,dogain,dofreq,taper)
       call keyfin
 
       if (nIn.eq.1 .and. taper) call bug('f',
      *  'options=taper reduces to no correction for single pointings')
+      if (nIn.eq.1 .and. dofreq .and. bw.eq.0.) 
+     * call bug('f','options=frequency needs bw>0 for single pointings')
 
 c     Open the files, determine the size of the output.  Determine the
 c     grid system from the first map.
@@ -208,7 +226,8 @@ c     grid system from the first map.
         if (max(axLen(1,i),axLen(2,i)).gt.MAXDIM)
      *    call bug('f','Input map is too big')
 
-        call chkHdr(lIn(i), axLen(1,i), exact, blctrc(1,i), extent, f)
+        call chkHdr(lIn(i), axLen(1,i), exact, blctrc(1,i), extent, f,
+     *     cube)
 
         if (i.eq.1) then
           call rdhdi(lIn(1),'naxis',naxis,3)
@@ -234,10 +253,10 @@ c     grid system from the first map.
           endif
         endif
         wt = wt + 1.0/rms(i)**2
-        fout = fout + log(f)/rms(i)**2
+        if (.not.cube) fout = fout + log(f)/rms(i)**2
         if (i.gt.nOpen) call xyclose(lIn(i))
       enddo
-      fout = exp(fout/wt)
+      if (.not.cube) fout = exp(fout/wt)
 
 c     Create the output image and make a header for it.
       do i = 1, 4
@@ -265,17 +284,19 @@ c     Create the output image and make a header for it.
         endif
       endif
       nOut(3) = axLen(3,1)
-      if (dosen .or. dogain) nOut(3) = 1
       if (nOut(3).eq.2.and.bw.gt.0) then
          mfs = .true.
          call output('Doing mfs type pb correction')
          nOut(3)=1
+      else if (nOut(3).gt.2) then
+         cube = .true.        
       endif
+      if (dosen .or. dogain . or. dofreq) nOut(3) = 1
       nOut(4) = 1
 
       call xyopen(lOut,outNam,'new',naxis,nout)
       call mkHead(lIn(1),lOut,axLen(1,1),extent,version,docar,dosen,
-     *            dogain,fout)
+     *            dogain,dofreq,fout,cube)
       call coInit(lOut)
 
 c     Correct blctrc for the extent of the image.
@@ -301,7 +322,7 @@ c     Process each of the files.
      *                             'old',3,axLen(1,i))
         call process(i,lScr,lWts,lIn(i),lOut,memR(pOut),memR(pWts),
      *    axLen(1,i),axLen(2,i),nOut(1),nOut(2),nOut(3),dogain,
-     *    blctrc(1,i),rms(i),bw,mfs)
+     *    dofreq,blctrc(1,i),rms(i),bw,mfs,nbw)
         call xyclose(lIn(i))
       enddo
 
@@ -333,9 +354,9 @@ c     Close down.
 
 ***************************************************************** getOpt
 
-      subroutine getOpt(dosen,dogain,taper)
+      subroutine getOpt(dosen,dogain,dofreq,taper)
 
-      logical dosen,dogain,taper
+      logical dosen,dogain,dofreq,taper
 c-----------------------------------------------------------------------
 c  Get processing options.
 c
@@ -343,35 +364,39 @@ c  Output:
 c    dosen      True if we are to produce a sensitivity image.
 c    dogain     True if we are to produce an image of the effective
 c               gain.
+c    dofreq     True if we are to produce an image of the effective
+c               frequency.
 c    taper      True if the output is to be tapered to achieve quasi-
 c               uniform noise across the image.
 c-----------------------------------------------------------------------
       integer NOPTS
-      parameter (NOPTS=3)
+      parameter (NOPTS=4)
       logical present(NOPTS)
       character opts(NOPTS)*11
-      data opts/'sensitivity','gain       ','taper      '/
+      data opts/'sensitivity','gain       ','taper      ','frequency  '/
 c-----------------------------------------------------------------------
       call options('options',opts,present,NOPTS)
 
       dosen  = present(1)
       dogain = present(2)
       taper  = present(3)
+      dofreq = present(4)
 
-      if (dosen .and. dogain) call bug('f',
-     *  'Cannot do options=sensitivity,gains simultaneously')
+      if (dosen .and. dogain .or. dosen .and. dofreq .or. 
+     *    dogain .and. dofreq) call bug('f',
+     *  'Cannot do options=sensitivity,gains or freq simultaneously')
       end
 
 **************************************************************** process
 
       subroutine process(fileno,lScr,lWts,lIn,lOut,Out,Wts,
-     *  nx,ny,n1,n2,n3,dogain,blctrc,rms,bw,mfs)
+     *  nx,ny,n1,n2,n3,dogain,dofreq,blctrc,rms,bw,mfs,nbw)
 
       integer fileno,lScr,lWts,lIn,lOut
-      integer nx,ny,n1,n2,n3
+      integer nx,ny,n1,n2,n3,nbw
       real Out(n1,n2),Wts(n1,n2)
       real blctrc(4),rms,bw
-      logical dogain,mfs
+      logical dogain,dofreq,mfs
 c-----------------------------------------------------------------------
 c  First determine the initial weight to apply to each pixel and
 c  accumulate info so that we can determine the normalisation factor
@@ -390,8 +415,10 @@ c    blctrc     Grid corrdinates, in the output, that the input maps to.
 c    rms        Rms noise parameter.
 c    dogain     True if we are to compute the gain function rather than
 c               the normal mosaic or sensitivity function.
+c    dofreq     True if we are to compute the effective frequency
 c    bw         Bandwidth, to average the response in frequency
 c    mfs        Use mfs I*alpha plane to do wideband pb correction
+c    nbw        Number of bandwidth bins to use
 c  Scratch:
 c    In         Used for the interpolated version of the input.
 c    Out        Used for the output.
@@ -473,7 +500,6 @@ c     Ready to construct the primary beam object.
       else
         f = 0
       endif
-      call coFin(lIn)
 
 c     Loop over all planes.
       do k = 1, n3
@@ -486,8 +512,8 @@ c      do pb calculations for nf freqs across band
         nf = 1
         b = bw
         fac = 1
-        if (mfs) then
-          nf = 10
+        if (mfs.or.(dofreq.and.bw.gt.0)) then
+          nf = nbw
           b = 0
         endif
 
@@ -507,6 +533,8 @@ c       Get a plane from the scratch array.
         do jf = 1, nf
           t = (jf-0.5d0)/nf-0.5d0
           fj = f + t*bw
+c
+c          print *,'Using pb cor freq = ',fj
           if (f.gt.0) fac = log(fj/f)
           if (dootf) then
             call pbInitcc(pbObj,pbtype,lOut,'aw/aw/ap',x,xn,fj,b)
@@ -537,6 +565,8 @@ c               The weight is zero.
               if (dogain) then
 c               Gain function.
                 In(i) = pBeam(i)
+              else if (dofreq) then
+                In(i) = fj * pBeam(i)
               endif
 
 c             Apply primary beam normalization.
@@ -565,6 +595,7 @@ c       Save the output.
 c       Release the primary beam object.
         call pbFin(pbObj)
       enddo
+      call coFin(lIn)
 
       end
 
@@ -777,7 +808,7 @@ c               Apply taper to suppress noise near the edges.
 c               Sensitivity function.
                 Out(i,j) = scale / sqrt(Wts(i,j))
               else
-c               Mosaic or gain function.
+c               Mosaic, gain or freq function.
                 Out(i,j) = scale * Out(i,j) / Wts(i,j)
               endif
             endif
@@ -842,12 +873,12 @@ c     Flag as good all rows before the first bad row.
 ***************************************************************** mkHead
 
       subroutine mkHead(lIn, lOut, axLen, extent, version, docar, dosen,
-     *  dogain, f)
+     *  dogain, dofreq, f, cube)
 
       integer   lIn, lOut, axLen(3)
       real      extent(4)
       character version*72
-      logical   dosen, dogain, docar
+      logical   dosen, dogain, dofreq, docar, cube
       double precision f
 c-----------------------------------------------------------------------
 c  Make up the header of the output file.
@@ -861,6 +892,7 @@ c    extent     Expanded extent of the output.
 c    docar      True if we are to label with RA---CAR, DEC--CAR
 c    dosen      True if the sensitivity function is being evaluated.
 c    dogain     True if the gain function is being evaluated.
+c    dofreq     True if the effective frequency is being evaluated 
 c    f          Frequency for output header
 c-----------------------------------------------------------------------
       double precision crpix
@@ -878,8 +910,8 @@ c     Apply sub-imaging.
       crpix = crpix - dble(extent(2)-1.0)
       call wrhdd(lOut, 'crpix2', crpix)
       
-c     Set the frequency (average of all the inputs)      
-      call wrhdd(lOut, 'crval3', f)
+c     Set the frequency (average of all the inputs) for mfs image     
+      if (.not.cube) call wrhdd(lOut, 'crval3', f)
 
 c     Write the output projection as plate carrée?
       if (docar) then
@@ -905,6 +937,9 @@ c     Update history.
       else if (dogain) then
         call hiswrite(lOut,
      *    'LINMOS: The image is the gain function.')
+      else if (dofreq) then
+        call hiswrite(lOut,
+     *    'LINMOS: The image is the effective frequency function')
       endif
       call hisclose(lOut)
 
@@ -912,10 +947,10 @@ c     Update history.
 
 ***************************************************************** chkHdr
 
-      subroutine chkHdr(lIn, axLen, exact, blctrc, extent, f)
+      subroutine chkHdr(lIn, axLen, exact, blctrc, extent, f, cube)
 
       integer   lIn, axLen(3)
-      logical   exact
+      logical   exact, cube
       real      blctrc(4), extent(4)
       double precision f
 c-----------------------------------------------------------------------
@@ -923,7 +958,7 @@ c-----------------------------------------------------------------------
       integer   iax, k
       double precision cdelt(3,2), cdelt1(2), crpix(3,2), crval(3,2),
      *          discr, frq(2), lat(2), lng(2), x, y, z
-      character cax*1, ctype(3,2)*16
+      character cax*1, ctype(3,2)*16, cunit*16
 
       save cdelt, cdelt1, crpix, crval, ctype, doInit, frq, lat, lng
 
@@ -934,6 +969,8 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
       if (doInit) then
         k = 1
+        call rdhda(lIn, 'cunit3',cunit,' ')
+        cube = cube.or.cunit.ne.'GHz'
       else
         k = 2
       endif
@@ -946,6 +983,7 @@ c     Read the axis descriptors.
         call rdhdd(lIn, 'crval'//cax, crval(iax,k), 1d0)
         call rdhda(lIn, 'ctype'//cax, ctype(iax,k), ' ')
       enddo
+      
 
 c     Projection-plane coordinates of pixel (1,1,1).
       cdelt1(k) = cdelt(1,k) / cos(crval(2,k))
@@ -1004,7 +1042,7 @@ c       Check third axis alignment.
         discr = 0.5d0*abs(cdelt(3,1))
         if (max(abs(frq(2)-frq(1)),abs(cdelt(3,2)-cdelt(3,1))).gt.discr)
      *    then
-          call bug('w', 'Third axis of inputs do not align')
+          if (doWarn) call bug('w', 'Third axis of inputs do not align')
           doWarn=.false.
         endif
 
