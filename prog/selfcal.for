@@ -56,6 +56,10 @@ c         mfs        This is used if there is a single plane in the
 c                    input model, which is assumed to represent the
 c                    image at all frequencies.  This should also be
 c                    used if the model has been derived from MFCLEAN.
+c         mmfs       Same as mfs, but with multiple input models,
+c                    each applying to a subset of the bandwidth. 
+c                    For use with nfbin>1: models will be allocated to
+c                    bins based on their centre frequency.
 c         relax      Relax the convergence criteria. This is useful when
 c                    selfcal'ing with a very poor model.
 c         noscale    Do not scale the gains.  By default the gains are
@@ -95,7 +99,7 @@ c       the linetype parameters used to construct the map.  If you wish
 c       to override this, or if the info is not in the header, or if you
 c       are using a point source model, this parameter can be useful.
 c
-c$Id: selfcal.for,v 1.10 2013/04/14 23:38:34 wie017 Exp $
+c$Id: selfcal.for,v 1.11 2013/05/10 04:05:27 wie017 Exp $
 c--
 c
 c  History:
@@ -154,6 +158,7 @@ c    rjs  14dec99 Ability to use model visibility datasets.
 c    dpr  17apr01 Increase MaxMod to 128
 c    mhw  16jan12 Use ptrdiff for scr routines to handle larger files
 c    mhw  10apr13 Add nfbin parameter
+c    mhw  09may13 Add mmfs option
 c
 c  Bugs/Shortcomings:
 c   * Selfcal should check that the user is not mixing different
@@ -166,8 +171,9 @@ c-----------------------------------------------------------------------
       parameter (MAXMOD=1024, MAXSELS=1024, NHEAD=3)
 
       logical   amp, doim, doline, mfs, noscale, phase, relax, selradec
+      logical   mmfs
       integer   i, minants, nModel, nchan, nvis, refant, tmod, tscr,
-     *          tvis, nfbin
+     *          tvis, nfbin, numchan, start
       real      clip, flux(2), interval, lstart, lstep, lwidth,
      *          offset(2), sels(MAXSELS)
       character flag1*8, flag2*8, ltype*32, Models(MAXMOD)*64,
@@ -180,8 +186,8 @@ c     Externals.
       external  hdprsnt, header, versan
 c-----------------------------------------------------------------------
       version = versan('selfcal',
-     *                 '$Revision: 1.10 $',
-     *                 '$Date: 2013/04/14 23:38:34 $')
+     *                 '$Revision: 1.11 $',
+     *                 '$Date: 2013/05/10 04:05:27 $')
 c
 c  Get the input parameters.
 c
@@ -202,7 +208,8 @@ c
       call keyr('offset',offset(2),0.0)
       call keyline(ltype,nchan,lstart,lwidth,lstep)
       doline = ltype.ne.' '
-      call GetOpt(phase,amp,noscale,relax,mfs,selradec)
+      call GetOpt(phase,amp,noscale,relax,mfs,mmfs,selradec)
+      mfs = mfs .or. mmfs
       call keyfin
 c
 c  Check that the inputs make sense.
@@ -276,18 +283,24 @@ c
         call SelApply(tvis,sels,.true.)
         call Model(flag2,tvis,0,offset,flux,tscr,
      *                        NHEAD,header,nchan,nvis)
-        call getFreq(tvis,sfreq)
-        call SelfIni(nfbin,nchan)
+        call getFreq(tvis,sfreq,numchan)
+        call SelfIni(nfbin)
         call output('Accumulating statistics ...')
-        call SelfAcc(tscr,nchan,nvis,interval,sfreq)
+        call SelfAcc(tscr,numchan,numchan,1,nvis,interval,sfreq)
         call scrclose(tscr)
       else
         do i = 1, nModel
+          start = 1
+          if (i.eq.1) then
+            call getFreq(tvis,sfreq,numchan)
+          endif
           call output('Calculating the model for '//Models(i))
           call SelfSet(i.eq.1,MinAnts)
           call getopen(tmod,Models(i),doim)
           if (doim) then
-            call ModelIni(tmod,tvis,sels,flag1)
+            if (mmfs.and.nfbin.gt.0) 
+     *        call SelBin(tvis,tmod,nfbin,numchan,sfreq,start)
+           call ModelIni(tmod,tvis,sels,flag1)
           else
             call uvrewind(tvis)
             call uvselect(tvis,'clear',0d0,0d0,.true.)
@@ -303,10 +316,9 @@ c
           endif
           call output('Accumulating statistics ...')
           if (i.eq.1) then
-            call getFreq(tvis,sfreq)
-            call SelfIni(nfbin,nchan)
+            call SelfIni(nfbin)
           endif
-          call SelfAcc(tscr,nchan,nvis,interval,sfreq)
+          call SelfAcc(tscr,numchan,nchan,start,nvis,interval,sfreq)
           call scrclose(tscr)
         enddo
       endif
@@ -321,7 +333,7 @@ c  Calculate the self-cal gains.
 c
       call output('Finding the selfcal solutions ...')
       call Solve(tvis,phase,relax,noscale,
-     *     refant,interval,nchan)
+     *     refant,interval,numchan)
 c
 c  Close up.
 c
@@ -382,9 +394,9 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine GetOpt(phase,amp,noscale,relax,mfs,selradec)
+      subroutine GetOpt(phase,amp,noscale,relax,mfs,mmfs,selradec)
 
-      logical phase,amp,noscale,relax,mfs,selradec
+      logical phase,amp,noscale,relax,mfs,mmfs,selradec
 c-----------------------------------------------------------------------
 c  Determine extra processing options.
 c
@@ -395,15 +407,17 @@ c    noscale    Do not scale the model to conserve flux.
 c    relax      Relax convergence criteria.
 c    mfs        Model is frequency independent, or has been derived
 c               from MFCLEAN.
+c    mmfs       Multiple mfs models each covering part of the band 
+c               are present.
 c    selradec   Input uv file contains multiple pointings or multiple
 c               sources.
 c-----------------------------------------------------------------------
       integer nopt
-      parameter (nopt=6)
+      parameter (nopt=7)
       character opts(nopt)*9
       logical present(nopt)
       data opts/'amplitude','phase    ','noscale  ','relax    ',
-     *          'mfs      ','mosaic   '/
+     *          'mfs      ','mmfs     ','mosaic   '/
 c-----------------------------------------------------------------------
       call options('options',opts,present,nopt)
       amp = present(1)
@@ -411,7 +425,8 @@ c-----------------------------------------------------------------------
       noscale = present(3)
       relax = present(4)
       mfs = present(5)
-      selradec = present(6)
+      mmfs = present(6)
+      selradec = present(7)
       if (amp .and. phase)
      *  call bug('f','Cannot do both amp and phase self-cal')
       if (.not.(amp .or. phase)) phase = .true.
@@ -513,14 +528,13 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine SelfIni(nfbin1,nchan1)
+      subroutine SelfIni(nfbin1)
       
-      integer nfbin1,nchan1
+      integer nfbin1
 c-----------------------------------------------------------------------
 c  Initialise variables and allocate memory.
 c  Input:
 c     nfbin1    number of frequency bins
-c     nchan1     nuber of channels
 c-----------------------------------------------------------------------
       include 'selfcal.h'
 
@@ -530,7 +544,6 @@ c-----------------------------------------------------------------------
       external MemBuf, prime
 c-----------------------------------------------------------------------
       nfbin = nfbin1
-      nchan0 = nchan1
       n1 = nfbin+1
       nHash = prime(maxHash-1)
       do i = 1, nHash+1
@@ -586,9 +599,9 @@ c-----------------------------------------------------------------------
 
 ***********************************************************************
 
-      subroutine getFreq(tvis,sfreq)
+      subroutine getFreq(tvis,sfreq,nchan)
       include 'selfcal.h'
-      integer tvis
+      integer tvis,nchan
       double precision sfreq(MAXCHAN)
 c-----------------------------------------------------------------------
 c  Get frequency details at start of file and rewind file.
@@ -600,18 +613,51 @@ c-----------------------------------------------------------------------
       double precision preamble(6)
       logical flags(MAXCHAN)
       complex vis(MAXCHAN)
-      integer nchan
 c-----------------------------------------------------------------------
       call uvread(tvis,preamble,vis,flags,MAXCHAN,nchan)
       call uvinfo(tVis,'sfreq',sfreq)
       call uvrewind(tvis)
       end
+***********************************************************************
+
+      subroutine SelBin(tvis,tmod,nfbin,nchan,sfreq,start)
+c      include 'selfcal.h'
+      integer tvis,tmod,nfbin,nchan,start
+      double precision sfreq(nchan),cfreq
+c-----------------------------------------------------------------------
+c  Select the correct bin for this model, based on ref frequency
+c  Input:
+c     tvis - handle to uv file
+c     tmod - handle to image model
+c     nfbin - number of bins
+c     nchan - number of channels in full spectrum
+c     sfreq - channel frequencies
+c-----------------------------------------------------------------------
+      integer nchan1, chn, i, fbin
+      double precision dmin, d
+c-----------------------------------------------------------------------
+      call rdhdd(tmod,'crval3',cfreq,0.d0)
+      nchan1 = nchan/nfbin
+      dmin=1d10
+      do i=1,nchan
+        d = abs(sfreq(i)-cfreq)
+        if (d.lt.dmin) then
+          chn = i
+          dmin = d
+        endif
+      enddo
+      fbin = min(nfbin,(chn-1)/(nchan/nfbin)+1)
+      start = (fbin-1)*(nchan/nfbin)+1
+      nchan1 = nchan/nfbin
+      if (fbin.eq.nfbin) nchan1=nchan-start+1 
+      call uvset(tvis,'data','channel',nchan1,start*1.0,1.0,1.0)
+      end
 
 c***********************************************************************
 
-      subroutine SelfAcc(tscr,nchan,nvis,interval,sfreq)
+      subroutine SelfAcc(tscr,nchan0,nchan,start,nvis,interval,sfreq)
 
-      integer tscr,nchan,nvis
+      integer tscr,nchan0,nchan,start,nvis
       real interval
       double precision sfreq(nchan)
 c-----------------------------------------------------------------------
@@ -621,7 +667,9 @@ c
 c  Input:
 c    tscr       The handle of the scratch file, which contains the
 c               visibility and model information.
+c    nchan0     Number of channels in original spectrum (mmfs)
 c    nchan      The number of channels in the scratch file.
+c    start      THe start channel number, 1 unless using options=mmfs
 c    nvis       The number of visbilities in the scratch file.
 c    Interval   The self-cal gain interval.
 c    sfreq      The channel frequencies
@@ -629,10 +677,8 @@ c-----------------------------------------------------------------------
       include 'selfcal.h'
 c-----------------------------------------------------------------------
       TotVis = TotVis + nVis
-      if (nchan.ne.nchan0.and.nfbin.gt.1) call bug('f',
-     *  'nfbin>1 only supported if the number of channels is constant') 
-      call SelfAcc1(tscr,nchan,nvis,nBl,maxSol,nSols,nfbin,
-     *  nhash,Hash,Indx,interval,
+      call SelfAcc1(tscr,nchan0,nchan,start,nvis,nBl,maxSol,nSols,
+     *  nfbin,nhash,Hash,Indx,interval,
      *  Memc(pSumVM),Memr(pSumVV),Memr(pSumMM),
      *  Memr(pWeight),Memi(pCount),Memd(prTime),Memr(pstpTim),
      *  Memr(pstrTim),sfreq,freq)
@@ -641,11 +687,11 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine SelfAcc1(tscr,nchan,nvis,nBl,maxSol,nSols,nfbin,
-     *  nHash,Hash,Indx,interval,
+      subroutine SelfAcc1(tscr,nchan0,nchan,start,nvis,nBl,maxSol,
+     *  nSols,nfbin,nHash,Hash,Indx,interval,
      *  SumVM,SumVV,SumMM,Weight,Count,rTime,StpTime,StrTime,sfreq,freq)
 
-      integer tscr,nchan,nvis,nBl,maxSol,nSols,nfbin
+      integer tscr,nchan0,nchan,start,nvis,nBl,maxSol,nSols,nfbin
       integer nHash,Hash(nHash+1),Indx(nHash)
       real    interval
       complex SumVM(nBl,maxSol,0:nfbin)
@@ -663,7 +709,9 @@ c  statistics are eventually used to determine the self-cal solutions.
 c
 c  Input:
 c    tscr       Handle of the scratch file.
+c    nchan0     Number of channels in original spectrum (mmfs)
 c    nchan      Number of channels.
+c    start      THe start channel number, 1 unless using options=mmfs
 c    nvis       Number of visibilities.
 c    nants      Number of antennae.
 c    nBl        Number of baselines = nants*(nants-1)/2.
@@ -784,7 +832,7 @@ c       large number of correlations in the solution interval.
             wfreq(fbin)  = 0.d0
           endif
         enddo
-        chn=0
+        chn=start-1
         do k = NHEAD+1, NHEAD+5*nchan, 5
           chn = chn + 1
           if (out(k+4).gt.0.0) then
@@ -799,7 +847,7 @@ c       large number of correlations in the solution interval.
             sVV(0) = sVV(0) + vv
             sVM(0) = sVM(0) + vm
             if (nfbin.gt.1) then
-              fbin = min(nfbin,(chn-1)/(nchan/nfbin)+1)
+              fbin = min(nfbin,(chn-1)/(nchan0/nfbin)+1)
               sCount(fbin) = sCount(fbin) + 1
               sMM(fbin) = sMM(fbin) + mm
               sVV(fbin) = sVV(fbin) + vv
@@ -824,10 +872,6 @@ c       Accumulate statistics for this spectrum.
           endif
         enddo
       enddo
-      
-      do fbin=1,nfbin
-        if (wfreq(fbin).gt.0) freq(fbin)=exp(freq(fbin)/wfreq(fbin))
-      enddo
 
       end
 
@@ -846,6 +890,7 @@ c  determine the self-cal solutions.
 c-----------------------------------------------------------------------
       include 'selfcal.h'
       character line*64
+      integer fbin
 
 c     Externals.
       character itoaf*8
@@ -863,6 +908,12 @@ c-----------------------------------------------------------------------
       line = 'Total number of solution intervals: '//itoaf(nSols)
       call HisWrite(tgains,'SELFCAL: '//line)
       call output(line)
+
+c     Calculate geometric mean frequency for each bin 
+      do fbin=1,nfbin
+        freq(fbin)=0.d0
+        if (wfreq(fbin).gt.0) freq(fbin)=exp(freq(fbin)/wfreq(fbin))
+      enddo
 
 c     Determine all the gain solutions.
       call Solve1(tgains,nSols,maxsol,nBl,nants,nfbin,phase,relax,
@@ -1409,9 +1460,18 @@ c
         endif
       enddo
 
-      Phi = sqrt(abs(SumPhi/(2*SumWts)))
-      Amp = sqrt(abs(SumAmp/(2*SumWts)))
-      Sigma = sqrt(abs(SumChi2/SumExp))
+      if (SumWts.gt.0) then
+        Phi = sqrt(abs(SumPhi/(2*SumWts)))
+        Amp = sqrt(abs(SumAmp/(2*SumWts)))
+      else
+        Phi = 0
+        Amp = 0
+      endif
+      if (SumExp.gt.0) then
+        Sigma = sqrt(abs(SumChi2/SumExp))
+      else
+        Sigma = 0
+      endif
       write(line,'(a,f6.1)')'Rms of the gain phases (degrees):',phi
       call output(line)
       call HisWrite(tgains,'SELFCAL: '//line)
