@@ -71,6 +71,7 @@ c	            incorrect when using options=avall.
 c	  notriple  Plot data from all quantities on a single plot.
 c	  rms       Plot theoretical error bars on the points. The error
 c	            bars are +/- sigma.
+c         log       Make a log file closure_log.txt.
 c	The following give control over calibration to be applied to the
 c	visibility data before the triple correlations are formed. Note
 c	that applying phase calibrations does not affect the closure
@@ -79,7 +80,7 @@ c	  nocal     Do not perform gain calibration.
 c	  nopol     Do not perform polarisation calibration on the data.
 c	  nopass    Do not perform bandpass calibration on the data.
 c
-c$Id: closure.for,v 1.6 2010/04/30 08:23:28 cal103 Exp $
+c$Id: closure.for,v 1.7 2013/05/10 04:42:03 ste616 Exp $
 c--
 c  History:
 c    rjs   7sep94 Original version.
@@ -106,7 +107,7 @@ c-----------------------------------------------------------------------
 	parameter(MAXTRIP=(MAXANT*(MAXANT-1)*(MAXANT-2))/6)
 	parameter(PolMin=-8,PolMax=4,MAXPOL=2)
 c
-	logical avall,notrip,doamp,doerr,quad
+	logical avall,notrip,doamp,doerr,quad,dolog
 	character uvflags*16,device*64,version*80
 	real interval,yrange(2)
 	integer nx,ny,nread,i,j,mpnts,mplots,tno,pnt1,pnt2
@@ -143,13 +144,13 @@ c
 	character versan*80
 c-----------------------------------------------------------------------
       version = versan ('closure',
-     :                  '$Revision: 1.6 $',
-     :                  '$Date: 2010/04/30 08:23:28 $')
+     :                  '$Revision: 1.7 $',
+     :                  '$Date: 2013/05/10 04:42:03 $')
 c
 c Lets go! Get user inputs.
 c
 	call keyini
-	call GetOpt(avall,notrip,doamp,doerr,quad,uvflags)
+	call GetOpt(avall,notrip,doamp,doerr,quad,dolog,uvflags)
 	notrip = notrip.or.avall
 c
 	call uvDatInp('vis',uvflags)
@@ -306,7 +307,7 @@ c
      *	   '    when using options=avall')
 	endif
 	call Plotit(doamp,doerr,device,nx,ny,yrange,
-     *			x,y,yerr,npnts,nplots,title,mpnts)
+     *			x,y,yerr,npnts,nplots,title,mpnts,dolog)
 c
 	end
 c************************************************************************
@@ -582,24 +583,26 @@ c
 	enddo
 	end
 c************************************************************************
-	subroutine GetOpt(avall,notrip,doamp,doerr,quad,uvflags)
+	subroutine GetOpt(avall,notrip,doamp,doerr,quad,dolog,uvflags)
 c
-	logical avall,notrip,doamp,doerr,quad
+	logical avall,notrip,doamp,doerr,quad,dolog
 	character uvflags*(*)
 c------------------------------------------------------------------------
 	integer NOPTS
-	parameter(NOPTS=8)
+	parameter(NOPTS=9)
 	character opts(NOPTS)*9
 	logical present(NOPTS)
 	data opts/'avall    ','notriple ','amplitude','rms      ',
-     *		  'nocal    ','nopol    ','nopass   ','quad     '/
+     *		  'nocal    ','nopol    ','nopass   ','quad     ',
+     *            'log      '/
 c
 	call options('options',opts,present,NOPTS)
-	avall = present(1)
+	avall  = present(1)
 	notrip = present(2)
 	doamp  = present(3)
 	doerr  = present(4)
 	quad   = present(8)
+	dolog  = present(9)
 c
 c c -- docal
 c f -- dopass
@@ -637,9 +640,9 @@ c
 	end
 c************************************************************************
 	subroutine Plotit(doamp,doerr,device,nx,ny,yrange,
-     *			x,y,yerr,npnts,nplots,title,maxpnts)
+     *			x,y,yerr,npnts,nplots,title,maxpnts,dolog)
 c
-	logical doamp,doerr
+	logical doamp,doerr,dolog
 	character device*(*)
 	real yrange(2)
 	integer nplots,maxpnts,nx,ny
@@ -651,8 +654,9 @@ c  Make the closure phase or triple amplitude plots.
 c------------------------------------------------------------------------
 	real xmin,xmax,ymin,ymax,t
 	double precision yrms,yerrav,yav
-	integer i,j,jd,n,nxd,nyd,symbol
+	integer i,j,k,jd,n,nxd,nyd,symbol
 	character line*80
+	logical domore
 c
 c  Externals.
 c
@@ -668,6 +672,7 @@ c
 	yrms = 0
 	yav = 0
 	yerrav = 0
+	domore = .true.
 c
 	n = 0
 	do j=1,nplots
@@ -742,6 +747,9 @@ c
 	if(n.lt.80*nplots)symbol = 17
 c
 	jd = 0
+	if(dolog) then
+	   call LogOpen('closure_log.txt',' ')
+	endif
 	do j=1,nplots
 	  call sorter(jd,title,nplots)
 	  call pgpage
@@ -752,8 +760,21 @@ c
 	  else
 	    call pglab('Time','Closure Phase (degrees)',title(jd))
 	  endif
-	  if(.not.doerr.or.symbol.ne.1)
-     *		call pgpt(npnts(jd),x(1,jd),y(1,jd),symbol)
+	  if(dolog) then
+	     call LogWrite(title(jd),domore)
+	     do k=1,npnts(jd)
+		if(doerr) then
+		   write(line,'(f16.8,f16.8,f16.8)')
+     *                 x(k,jd),y(k,jd),yerr(k,jd)
+		else
+		   write(line,'(f16.8,f16.8)') x(k,jd),y(k,jd)
+		endif
+		call LogWrite(line,domore)
+	     enddo
+	  endif
+	  if(.not.doerr.or.symbol.ne.1) then
+	     call pgpt(npnts(jd),x(1,jd),y(1,jd),symbol)
+	  endif
 	  if(doerr)then
 	    do i=1,npnts(jd)
 	      t = y(i,jd)
@@ -763,6 +784,9 @@ c
 	    call pgerry(npnts(jd),x(1,jd),y(1,jd),yerr(1,jd),1.)
 	  endif
 	enddo
+	if(dolog) then
+	   call LogClose
+	endif
 	call pgend
 c
 	end
