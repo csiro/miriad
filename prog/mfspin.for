@@ -62,11 +62,12 @@ c       the linearly polarized intensity spectral index image, and the
 c       second will receive an estimate of the rotation measure (units
 c       of rad/m**2).
 c
-c$Id: mfspin.for,v 1.8 2011/12/06 06:52:47 cal103 Exp $
+c$Id: mfspin.for,v 1.9 2013/05/13 02:15:03 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c    mhw  27oct11  Use ptrdiff type for memory allocations
+c    mhw  13may13  Read mosaic table for pointing centre if present
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mirconst.h'
@@ -95,8 +96,8 @@ c-----------------------------------------------------------------------
       common dat
 c-----------------------------------------------------------------------
       version = versan('mfspin',
-     *                 '$Revision: 1.8 $',
-     *                 '$Date: 2011/12/06 06:52:47 $')
+     *                 '$Revision: 1.9 $',
+     *                 '$Date: 2013/05/13 02:15:03 $')
 c
 c  Get the input parameters.
 c
@@ -474,7 +475,7 @@ c    Data       The spectral index, before and after correction.
 c-----------------------------------------------------------------------
       integer i,j,k,pbObj,pix
       real pbfac,pbdif
-      double precision freq
+      double precision freq,pra(2),pdec(2),x(3)
 
 c     Externals.
       real pbget,pbder
@@ -484,8 +485,13 @@ c Find frequency of model image and set primary beam
 c
       call coInit(tin)
       call coFreq(tin,'op',0d0,freq)
-      call pbRead(tin,type)
-      call pbInit(pbObj,type,tin)
+      call pntCent(tin,type,pra,pdec)
+      x(1)=pra(1)
+      x(2)=pdec(1)
+      if (abs(pra(2)).gt.0.or.abs(pdec(2)).gt.0)
+     *  call bug('f','mfspin does not handle OTF mosaics yet') 
+      x(3)=1
+      call pbInitc(pbObj,type,tin,'aw/aw/ap',x,freq,0.d0)
 
       pix = 0
       do k = 1, nRuns
@@ -1080,4 +1086,78 @@ c-----------------------------------------------------------------------
         endif
       enddo
 
+      end
+**************************************************************** pntCent
+
+      subroutine pntCent(lIn,pbtype,pra,pdec)
+
+      integer lIn
+      double precision pra(2),pdec(2)
+      character pbtype*(*)
+c-----------------------------------------------------------------------
+c  Determine the pointing centre and the primary beam type.
+c
+c  Inputs:
+c    lIn        Handle of the input image dataset
+c  Output:
+c    pra,pdec   1:Pointing centre RA and DEC, in radians.
+c               2:Pointing centre for next or prev otf mosaic position
+c    pbtype     Primary beam type. This will normally just be the
+c               name of a telescope (e.g. 'HATCREEK' or 'ATCA'), but it
+c               can also be 'GAUS(xxx)', where xxx is a Gaussian primary
+c               beam size, with its FWHM given in arcseconds.  For
+c               example 'GAUS(120)' is a Gaussian primary beam with
+c               FWHM 120 arcsec.
+c-----------------------------------------------------------------------
+      integer mit,size,iostat,ival(2)
+      character string*16
+
+      logical  hdprsnt,otf
+      integer  hsize
+      external hdprsnt, hsize
+c-----------------------------------------------------------------------
+c     Zero the otf parameters
+      pra(2)=0
+      pdec(2)=0
+c     Is the mosaic table present?
+      if (hdprsnt(lIn, 'mostable')) then
+c       Yes, read it.
+        call haccess(lIn, mit, 'mostable', 'read', iostat)
+        if (iostat.ne.0) call bugno('f',iostat)
+
+c       Check its size.
+        size = hsize(mit)
+
+c       Check version
+        call hreadi(mit,ival,0,8,iostat)
+        otf = ival(2).eq.2
+        
+        if ((size.ne.56.and..not.otf).or.(size.ne.72.and.otf))
+     *    call bug('f','Bad size for mosaic table')
+
+c       Read (RA,Dec).
+        call hreadd(mit,pra(1),16,8,iostat)
+        if (iostat.eq.0) call hreadd(mit,pdec(1),24,8,iostat)
+
+c       Read the primary beam type.
+        if (iostat.eq.0) call hreadb(mit,string,32,16,iostat)
+        pbtype = string
+        
+c       Read the otf parameters
+        if (otf) then
+          if (iostat.eq.0) call hreadd(mit,pra(2),56,8,iostat)
+          if (iostat.eq.0) call hreadd(mit,pdec(2),64,8,iostat)        
+        endif
+        
+        call hdaccess(mit,iostat)
+        if (iostat.ne.0) call bugno('f',iostat)
+
+      else
+c       No, treat a regular synthesis image.
+        call rdhdd(lIn,'crval1',pra(1), 0.d0)
+        call rdhdd(lIn,'crval2',pdec(1),0.d0)
+        call pbRead(lIn, pbtype)
+      endif
+
+c
       end
