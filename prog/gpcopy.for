@@ -68,11 +68,11 @@ c    rjs  19sep04 Copy across sensitivity model.
 c    rjs  23jan07 Correct some logical errors and also copy "leakage2" table.
 c    mhw  02sep09 Handle multiple bandpass solution intervals
 c    mhw  11aug11 Copy gainsf and leakagef tables
+c    mhw  13may13 Handle gainsf in 'merge' and 'apply' mode
 c  Bugs:
 c    None?
 c------------------------------------------------------------------------
-	character version*(*)
-	parameter(version='GpCopy: version 23-Jan-07')
+	character version*80
 	logical dopol,docal,dopass,docopy
 	integer iostat,tIn,tOut
 	character vis*64,out*64,mode*8,line*64
@@ -81,8 +81,11 @@ c
 c  Externals.
 c
 	logical hdprsnt
+        character*80 versan
 c
-	call output(version)
+	version = versan('gpcopy',
+     *                   '$Revision: 1.6 $',
+     *                   '$Date: 2013/05/20 00:01:28 $')
 	call keyini
 	call keya('vis',vis,' ')
 	if(vis.eq.' ')call bug('f','Input data-set must be given')
@@ -153,6 +156,7 @@ c
 	    call hdcopy(tIn,tOut,'ntau')
 	    call hdcopy(tIn,tOut,'gains')
 	    call hdcopy(tIn,tOut,'gainsf')
+            call hdcopy(tIn,tOut,'nfbin')
 	    call hdcopy(tIn,tOut,'freq0')
 	    call hdcopy(tIn,tOut,'senmodel')
 	  endif
@@ -400,38 +404,51 @@ c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
 c
-	integer ngains,nfeeds,ntau,nsols1,nsols2
-	double precision int1,int2
-	integer pGain1,pGain2,pTim1,pTim2
+	integer ngains,nfeeds,ntau,nsols1,nsols2,nfbin,maxtimes,maxgains
+	double precision int1,int2,freq(maxfbin)
+	integer pGain1,pGain2,pGainO,pTim1,pTim2,pTimO
 c
 c  Get info about the two gain tables.
 c
 	call GnCheck(tIn,tOut,nsols1,nsols2,ngains,nfeeds,ntau,
-     *	  int1,int2)
+     *	  int1,int2,nfbin)
 c
 c  Allocate memory.
 c
-	call memAlloc(pGain1,nsols1*ngains,'c')
-	call memAlloc(pTim1,nsols1,'d')
-	call memAlloc(pGain2,nsols2*ngains,'c')
-	call memAlloc(pTim2,nsols2,'d')
+        maxtimes = nsols1+nsols2
+        maxgains = maxtimes*ngains*(nfbin+1)
+	call memAlloc(pGain1,maxgains,'c')
+	call memAlloc(pTim1,maxtimes,'d')
+	call memAlloc(pGain2,maxgains,'c')
+	call memAlloc(pTim2,maxtimes,'d')
+	call memAlloc(pGainO,maxgains,'c')
+	call memAlloc(pTimO,maxtimes,'d')
 c
 c  Load the two tables.
 c
-	call GnLoad(tIn,nsols1,ngains,memc(pGain1),memd(pTim1))
-	call GnLoad(tOut,nsols2,ngains,memc(pGain2),memd(pTim2))
+        call uvGnRead(tIn,memc(pGain1),memd(pTim1),freq,ngains,nfeeds,
+     *    ntau,nsols1,nfbin,maxgains,maxtimes,maxfbin)    
+        call uvGnRead(tOut,memc(pGain2),memd(pTim2),freq,ngains,nfeeds,
+     *    ntau,nsols2,nfbin,maxgains,maxtimes,maxfbin)    
 c
 c  Now merge them.
 c
-	call GnMerge1(tOut,ngains,memc(pGain1),memd(pTim1),nsols1,
-     *			          memc(pGain2),memd(pTim2),nsols2)
+	call GnMerge1(ngains,nfbin,
+     *    memc(pGain1),memd(pTim1),nsols1,
+     *	  memc(pGain2),memd(pTim2),nsols2, 
+     *    memc(pGainO),memd(pTimO),maxtimes)
+c
+        call uvGnWrit(tOut,memc(pGainO),memd(pTimO),freq,ngains,
+     *    maxtimes,nfbin,maxgains,maxtimes,maxfbin,.true.)
 c
 c  Release allocated memory.
 c
-	call memFree(pGain1,nsols1*ngains,'c')
-	call memFree(pTim1,nsols1,'d')
-	call memFree(pGain2,nsols2*ngains,'c')
-	call memFree(pTim2,nsols2,'d')
+	call memFree(pGain1,maxgains,'c')
+	call memFree(pTim1,maxtimes,'d')
+	call memFree(pGain2,maxgains,'c')
+	call memFree(pTim2,maxtimes,'d')
+	call memFree(pGainO,maxgains,'c')
+	call memFree(pTimO,maxtimes,'d')
 c
 c  Make the interval the larger of the individual intervals.
 c
@@ -458,64 +475,77 @@ c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
 c
-	integer ngains,nfeeds,ntau,nsols1,nsols2,nsols
-	double precision int1,int2
-	integer pGain1,pGain2,pTim1,pTim2
+	integer ngains,nfeeds,ntau,nsols1,nsols2,nsols,nfbin,maxtimes
+        integer maxgains
+	double precision int1,int2,freq(maxfbin)
+	integer pGain1,pGain2,pGainO,pTim1,pTim2,pTimO
 c
 c  Get info about the two gain tables.
 c
 	call GnCheck(tIn,tOut,nsols1,nsols2,ngains,nfeeds,ntau,
-     *	  int1,int2)
+     *	  int1,int2,nfbin)
 c
 c  Allocate memory.
 c
-	call memAlloc(pGain1,nsols1*ngains,'c')
-	call memAlloc(pTim1,nsols1,'d')
-	call memAlloc(pGain2,nsols2*ngains,'c')
-	call memAlloc(pTim2,nsols2,'d')
+        maxtimes = nsols1+nsols2
+        maxgains = maxtimes*ngains*(nfbin+1)
+	call memAlloc(pGain1,maxgains,'c')
+	call memAlloc(pTim1,maxtimes,'d')
+	call memAlloc(pGain2,maxgains,'c')
+	call memAlloc(pTim2,maxtimes,'d')
+	call memAlloc(pGainO,maxgains,'c')
+	call memAlloc(pTimO,maxtimes,'d')
 c
 c  Load the two tables.
 c
-	call GnLoad(tIn,nsols1,ngains,memc(pGain1),memd(pTim1))
-	call GnLoad(tOut,nsols2,ngains,memc(pGain2),memd(pTim2))
+        call uvGnRead(tIn,memc(pGain1),memd(pTim1),freq,ngains,nfeeds,
+     *    ntau,nsols1,nfbin,maxgains,maxtimes,maxfbin)    
+        call uvGnRead(tOut,memc(pGain2),memd(pTim2),freq,ngains,nfeeds,
+     *    ntau,nsols2,nfbin,maxgains,maxtimes,maxfbin)    
 c
 c  Now apply them.
 c
-	call GnApply1(tOut,ngains,nfeeds,ntau,nsols,
+	call GnApply1(ngains,nfeeds,ntau,nfbin,maxtimes,maxgains,
      *	    memc(pGain1),memd(pTim1),nsols1,int1,
-     *	    memc(pGain2),memd(pTim2),nsols2,int2)
+     *	    memc(pGain2),memd(pTim2),nsols2,int2,
+     *	    memc(pGainO),memd(pTimO),nsols)
 c
-c  Release allocated memory.
-c
-	call memFree(pGain1,nsols1*ngains,'c')
-	call memFree(pTim1,nsols1,'d')
-	call memFree(pGain2,nsols2*ngains,'c')
-	call memFree(pTim2,nsols2,'d')
+        if (nsols.gt.0) then
+          call uvGnWrit(tOut,memc(pGainO),memd(pTimO),freq,ngains,
+     *    nsols,nfbin,maxgains,maxtimes,maxfbin,.true.)
 c
 c  Make the interval the larger of the individual intervals.
 c
-	if(int1.lt.int2)call wrhdd(tOut,'interval',int1)
-c
-c  Assume that freq0 (if present) is the same for both,
-c
-	continue
+	  if(int1.lt.int2)call wrhdd(tOut,'interval',int1)
 c
 c  Set the new number of solution intervals.
 c
-	call wrhdi(tOut,'nsols',nsols)
+	  call wrhdi(tOut,'nsols',nsols)
+        else
+          call bug('w','Unable to apply gain table')
+        endif
+c  
+c  Release allocated memory.
+c
+	call memFree(pGain1,maxgains,'c')
+	call memFree(pTim1,maxtimes,'d')
+	call memFree(pGain2,maxgains,'c')
+	call memFree(pTim2,maxtimes,'d')
+	call memFree(pGainO,maxgains,'c')
+	call memFree(pTimO,maxtimes,'d')
 c
 	end
 c************************************************************************
 	subroutine GnCheck(tIn,tOut,nsols1,nsols2,ngains,nfeeds,ntau,
-     *	  int1,int2)
+     *	  int1,int2, nfbin)
 c
 	implicit none
-	integer tIn,tOut,nsols1,nsols2,ngains,nfeeds,ntau
+	integer tIn,tOut,nsols1,nsols2,ngains,nfeeds,ntau,nfbin
 	double precision int1,int2
 c
 c  Get the description of the gain table.
 c------------------------------------------------------------------------
-	integer nants1,nants2,ntau2,nfeeds2,ngains2
+	integer nants1,nants2,ntau2,nfeeds2,ngains2,nfbin1
 c
 c  Determine the number of solution intervals.
 c
@@ -546,81 +576,31 @@ c
 c
 	call rdhdd(tIn, 'interval',int1,0.d0)
 	call rdhdd(tOut,'interval',int2,0.d0)
+c        
+        call rdhdi(tIn,'nfbin',nfbin,0)
+        call rdhdi(tOut,'nfbin',nfbin1,0)
+        if (nfbin.ne.nfbin1) call bug('f',
+     *   'The number of frequency bins in the two gain tables differs')
 c
 	end
 c************************************************************************
-	subroutine GnLoad(tno,nsols,ngains,Gains,Times)
+	subroutine GnMerge1(ngains,nfbin,Gains1,Times1,nsols1,
+     *	                    Gains2,Times2,nsols2,GainsO,TimesO,nsols)
 c
 	implicit none
-	integer tno,nsols,ngains
-	complex Gains(ngains,nsols)
-	double precision Times(nsols)
-c
-c  Load a gain table into memory.
-c------------------------------------------------------------------------
-	integer offset,iostat,i,git
-c
-c  Externals.
-c
-	integer hsize
-c
-	call haccess(tno,git,'gains','read',iostat)
-	if(iostat.ne.0)then
-	  call bug('w','Error opening gains table')
-	  call bugno('f',iostat)
-	endif
-c
-c  Check that its the right size.
-c
-	if(hsize(git).ne.8+8*(ngains+1)*nsols)call bug('f',
-     *	  'Gain table looks to be the wrong size.')
-c
-	offset = 8
-c
-	do i=1,nsols
-	  call hreadd(git,Times(i),offset,8,iostat)
-	  offset = offset + 8
-	  if(iostat.eq.0)
-     *	    call hreadr(git,Gains(1,i),offset,8*ngains,iostat)
-	  offset = offset + 8*ngains
-	  if(iostat.ne.0)then
-	    call bug('w','Error reading gain table')
-	    call bugno('f',iostat)
-	  endif
-	enddo
-c
-	call hdaccess(git,iostat)
-	if(iostat.ne.0)then
-	  call bug('w','Error closing gains table')
-	  call bugno('f',iostat)
-	endif
-c
-	end
-c************************************************************************
-	subroutine GnMerge1(tOut,ngains,Gains1,Times1,nsols1,
-     *				       Gains2,Times2,nsols2)
-c
-	implicit none
-	integer tOut,ngains,nsols1,nsols2
-	double precision Times1(nsols1),Times2(nsols2)
-	complex Gains1(ngains,nsols1),Gains2(ngains,nsols2)
+	integer ngains,nfbin,nsols1,nsols2,nsols
+	double precision Times1(nsols1),Times2(nsols2),TimesO(nsols)
+	complex Gains1(ngains,nsols1,0:nfbin)
+        complex Gains2(ngains,nsols2,0:nfbin)
+        complex GainsO(ngains,nsols, 0:nfbin)
 c
 c  Merge and write two gain tables.
 c------------------------------------------------------------------------
-	integer gout,offset,iostat,i1,i2
+	integer i1,i2,i,j,k
 	logical do1,do2
-c
-c  Open the output gains table.
-c
-	call haccess(tOut,gout,'gains','append',iostat)
-	if(iostat.ne.0)then
-	  call bug('w','Error opening gains table to write')
-	  call bugno('f',iostat)
-	endif
-c
-	offset = 8
 	i1 = 0
 	i2 = 0
+        i = 0
 	dowhile(i1.lt.nsols1.or.i2.lt.nsols2)
 c
 c  Determine whether we want to write from table 1 or 2.
@@ -632,33 +612,46 @@ c
 	    do2 = .not.do1
 	  endif
 c
-c  Write the appropriate record.
+c  Copy the appropriate gains.
 c
 	  if(do1)then
 	    i1 = i1 + 1
-	    call GnWrite(gout,offset,Times1(i1),Gains1(1,i1),ngains)
+            i = i + 1
+	    TimesO(i) = Times1(i1)
+            do k=0,nfbin
+              do j=1,ngains
+                GainsO(j,i,k) = Gains1(j,i1,k)
+              enddo
+            enddo
 	  endif
 	  if(do2)then
 	    i2 = i2 + 1
-	    call GnWrite(gout,offset,Times2(i2),Gains2(1,i2),ngains)
+            i = i + 1
+            TimesO(i) = Times2(i2)
+            do k=0,nfbin
+              do j=1,ngains
+                GainsO(j,i,k) = Gains2(j,i2,k)
+              enddo
+            enddo
 	  endif
 	enddo
-c
-	call hdaccess(gout,iostat)
-	if(iostat.ne.0)then
-	  call bug('w','Error closing gains table after write')
-	  call bugno('f',iostat)
-	endif
+        if (i.ne.nsols) call bug('f','Inconsistent number of solutions')
 c
 	end
 c************************************************************************
-	subroutine GnApply1(tOut,ngains,nfeeds,ntau,nsols,
-     *	  Gains1,Times1,nsols1,int1,Gains2,Times2,nsols2,int2)
+	subroutine GnApply1(ngains,nfeeds,ntau,nfbin,maxsols,maxgains,
+     *	  Gains1,Times1,nsols1,int1,
+     *    Gains2,Times2,nsols2,int2,
+     *    GainsO,TimesO,nsols)
 c
 	implicit none
-	integer tOut,ngains,nsols1,nsols2,nfeeds,ntau,nsols
-	double precision Times1(nsols1),Times2(nsols2),int1,int2
-	complex Gains1(ngains,nsols1),Gains2(ngains,nsols2)
+	integer ngains,nfeeds,ntau,nfbin,maxsols,maxgains,nsols1,nsols2
+        integer nsols
+	double precision Times1(nsols1),Times2(nsols2),TimesO(maxsols)
+        double precision int1,int2
+	complex Gains1(ngains,nsols1,0:nfbin)
+        complex Gains2(ngains,nsols2,0:nfbin)
+        complex GainsO(maxgains)
 c
 c  Merge and write two gain tables.
 c  Input:
@@ -671,7 +664,7 @@ c------------------------------------------------------------------------
 	double precision tol
 	parameter(NMAX=3*MAXANT)
 	parameter(tol=0.5d0/(24.d0*3600.d0))
-	integer gout,offset,iostat,i,i1,i2,j1,j2,indx1,indx2
+	integer slot,offset,i,i1,i2,j1,j2,indx1,indx2,n,k
 	double precision t,ta,tb,ti1,ti2,tj1,tj2,tend
 	complex Null(NMAX)
 	logical pre,post
@@ -686,75 +679,84 @@ c
 	  Null(i) = 0
 	enddo
 c
-c  Open the output gains table.
+	offset = 0
+        n=nfbin
+        if (n.le.1) n=0
+        do k=0,n
+          slot = 0
 c
-	call haccess(tOut,gout,'gains','append',iostat)
-	if(iostat.ne.0)then
-	  call bug('w','Error opening gains table to write')
-	  call bugno('f',iostat)
-	endif
+	  indx1 = 1
+	  indx2 = 1
+	  t = max(times1(1)-int1,times2(1)-int2) - tol
+	  tend = min(times1(nsols1)+int1,times2(nsols2)+int2)
 c
-	offset = 8
-c
-	indx1 = 1
-	indx2 = 1
-	t = max(times1(1)-int1,times2(1)-int2) - tol
-	tend = min(times1(nsols1)+int1,times2(nsols2)+int2)
-c
-	dowhile(t.le.tend)
-	  call GnGet(t,nsols1,times1,int1,indx1,i1,j1,ti1,tj1)
-	  call GnGet(t,nsols2,times2,int2,indx2,i2,j2,ti2,tj2)
-	  ta = max(ti1,ti2)
-	  tb = min(tj1,tj2)
+	  dowhile(t.le.tend)
+	    call GnGet(t,nsols1,times1,int1,indx1,i1,j1,ti1,tj1)
+	    call GnGet(t,nsols2,times2,int2,indx2,i2,j2,ti2,tj2)
+	    ta = max(ti1,ti2)
+	    tb = min(tj1,tj2)
 c
 c  Do we have a good gain somewhere?
 c
-	  if((i1.ne.0.or.j1.ne.0).and.(i2.ne.0.or.j2.ne.0))then
+	    if((i1.ne.0.or.j1.ne.0).and.(i2.ne.0.or.j2.ne.0))then
 c
 c  Determine if we need to write blanked records before and
 c  after.
 c
-	    if(i1.eq.0.and.ti1.lt.ti2)i1 = j1
-	    if(j1.eq.0.and.tj1.gt.tj2)j1 = i1
-	    if(i2.eq.0.and.ti2.lt.ti1)i2 = j2
-	    if(j2.eq.0.and.tj2.gt.tj1)j2 = i2
+	      if(i1.eq.0.and.ti1.lt.ti2)i1 = j1
+	      if(j1.eq.0.and.tj1.gt.tj2)j1 = i1
+	      if(i2.eq.0.and.ti2.lt.ti1)i2 = j2
+	      if(j2.eq.0.and.tj2.gt.tj1)j2 = i2
 c
-	    pre  = i1.eq.0.or.i2.eq.0
-	    post = j1.eq.0.or.j2.eq.0
+	      pre  = i1.eq.0.or.i2.eq.0
+	      post = j1.eq.0.or.j2.eq.0
 c
-	    if(i1.eq.0) i1 = j1
-	    if(j1.eq.0) j1 = i1
-	    if(i2.eq.0) i2 = j2
-	    if(j2.eq.0) j2 = i2
+	      if(i1.eq.0) i1 = j1
+	      if(j1.eq.0) j1 = i1
+	      if(i2.eq.0) i2 = j2
+	      if(j2.eq.0) j2 = i2
 c
-	    if(pre)call GnWrite(gout,offset,ta-tol,Null,ngains)
+	      if(pre) then
+                slot=slot+1
+	        TimesO(slot)=T
+                do i=1,ngains
+                  GainsO(offset+i)=0
+                enddo
+                offset=offset+ngains
+              endif
 c
 c  Interpolate the gain at the start of the interval.
 c
-	    call GnInterp(gout,offset,ta,ngains,nfeeds,ntau,
-     *				ti1,Gains1(1,i1),tj1,Gains1(1,j1),
-     *				ti2,Gains2(1,i2),tj2,Gains2(1,j2))
+              slot = slot + 1
+              TimesO(slot) = ta
+	      call GnInterp(GainsO(offset+1),ta,ngains,nfeeds,ntau,
+     *                      ti1,Gains1(1,i1,k),tj1,Gains1(1,j1,k),
+     *                      ti2,Gains2(1,i2,k),tj2,Gains2(1,j2,k))
+              offset = offset + ngains
 c
 c  Interpolate a gain at the end of the interval, if needed.
 c
-	    if(post)then
-	      call GnInterp(gout,offset,tb,ngains,nfeeds,ntau,
-     *				ti1,Gains1(1,i1),tj1,Gains1(1,j1),
-     *				ti2,Gains2(1,i2),tj2,Gains2(1,j2))
-	      call GnWrite(gout,offset,tb+tol,Null,ngains)
+	      if(post)then
+                slot = slot + 1
+                TimesO(slot) = tb
+	        call GnInterp(GainsO(offset+1),tb,ngains,nfeeds,ntau,
+     *                        ti1,Gains1(1,i1,k),tj1,Gains1(1,j1,k),
+     *                        ti2,Gains2(1,i2,k),tj2,Gains2(1,j2,k))
+                offset = offset + ngains
+
+                slot=slot+1
+	        TimesO(slot)=tb+tol
+                do i=1,ngains
+                  GainsO(offset+i)=0
+                enddo
+                offset=offset+ngains
+              endif
 	    endif
-	  endif
-	  t = tb
-	enddo
+	    t = tb
+	  enddo
+        enddo
 c
-c
-	call hdaccess(gout,iostat)
-	if(iostat.ne.0)then
-	  call bug('w','Error closing gains table after write')
-	  call bugno('f',iostat)
-	endif
-c
-	nsols = (offset-8)/(8*(ngains+1))
+	nsols = slot
 c
 	end
 c************************************************************************
@@ -820,22 +822,19 @@ c
 c
 	end
 c************************************************************************
-	subroutine GnInterp(gout,offset,T,ngains,nfeeds,ntau,
+	subroutine GnInterp(GainsO,T,ngains,nfeeds,ntau,
      *	  ti1,Gains1i,tj1,Gains1j,ti2,Gains2i,tj2,Gains2j)
 c
 	implicit none
-	integer gout,offset,ngains,nfeeds,ntau
+	integer ngains,nfeeds,ntau
 	double precision T,ti1,tj1,ti2,tj2
 	complex Gains1i(ngains),Gains1j(ngains)
-	complex Gains2i(ngains),Gains2j(ngains)
+	complex Gains2i(ngains),Gains2j(ngains),GainsO(ngains)
 c
 c  Interpolate between two gain solutions.
 c------------------------------------------------------------------------
-	include 'maxdim.h'
-	integer NMAX
-	parameter(NMAX=3*MAXANT)
 	integer i
-	complex gains(NMAX),g1,g2
+	complex g1,g2
 	real epsi1,epsi2,mag
 	logical dotau,bad1i,bad1j,bad2i,bad2j
 c
@@ -845,7 +844,7 @@ c
 	do i=1,ngains
 	  dotau = ntau.gt.0.and.mod(i-nfeeds,nfeeds+ntau).eq.1
 	  if(dotau)then
-	    gains(i) = Gains1j(i) - epsi1*(Gains1j(i) - Gains1i(i)) +
+	    GainsO(i) = Gains1j(i) - epsi1*(Gains1j(i) - Gains1i(i)) +
      *		       Gains2j(i) - epsi2*(Gains2j(i) - Gains2i(i))
 	  else
 	    bad1j = abs(real(Gains1j(i)))+abs(aimag(Gains1j(i))).eq.0
@@ -853,7 +852,7 @@ c
 	    bad2j = abs(real(Gains2j(i)))+abs(aimag(Gains2j(i))).eq.0
 	    bad2i = abs(real(Gains2i(i)))+abs(aimag(Gains2i(i))).eq.0
 	    if((bad1j.and.bad1i).or.(bad2j.and.bad2i))then
-	      gains(i) = 0
+	      GainsO(i) = 0
 	    else
 	      if(bad1j)then
 		g1 = Gains1i(i)
@@ -873,28 +872,10 @@ c
 		mag = abs(g2)
 		g2 = Gains2j(i) * (1 + (mag-1)*epsi2) * (g2/mag)**epsi2
 	      endif
-	      gains(i) = g1*g2
+	      GainsO(i) = g1*g2
 	    endif
 	  endif
 	enddo
 c
-	call GnWrite(gout,offset,T,gains,ngains)
-c
 	end
 c************************************************************************
-	subroutine GnWrite(gout,offset,T,gains,ngains)
-c
-	implicit none
-	integer gout,ngains,offset
-	double precision T
-	complex gains(ngains)
-c------------------------------------------------------------------------
-	integer iostat
-	call hwrited(gout,T,offset,8,iostat)
-	if(iostat.ne.0)call bugno('f',iostat)
-	offset = offset + 8
-	call hwriter(gout,gains,offset,8*ngains,iostat)
-	if(iostat.ne.0)call bugno('f',iostat)
-	offset = offset + 8*ngains
-c
-	end
