@@ -12,14 +12,14 @@
 <a href="http://en.wikipedia.org/wiki/Unix">unix</a>-based
 <a href="http://en.wikipedia.org/wiki/Platform_%28computing%29">platforms</a>.
 At the ATNF it runs under
-<a href="http://en.wikipedia.org/wiki/Linux">Linux</a> (32- and 64-bit);
+<a href="http://en.wikipedia.org/wiki/Linux">Linux</a> (64-bit);
 <a href="http://en.wikipedia.org/wiki/SunOS">SunOS</a> 5.9 (aka
 <a href="http://en.wikipedia.org/wiki/Solaris_Operating_System">Solaris</a>
 2.9) and later; and
 <a href="http://en.wikipedia.org/wiki/Intel">Intel</a>
 <a href="http://en.wikipedia.org/wiki/Macintosh">Macs</a> running
 <a href="http://en.wikipedia.org/wiki/Mac_OS_X">MacOSX</a> 10.6.2 ("Snow
-Leopard") which is based on
+Leopard") or later which is based on
 <a href="http://en.wikipedia.org/wiki/Darwin_%28operating_system%29">
 Darwin</a> 10.2.0.  Binary distribution kits are provided for these
 platforms.
@@ -27,6 +27,7 @@ platforms.
 
 <p>
 In the past (and present) <em>Miriad</em> has also run on
+32-bit Linux, 
 <a href="http://en.wikipedia.org/wiki/Powerpc">PowerPC</a> Macs, in the
 <a href="http://en.wikipedia.org/wiki/Microsoft_Windows">Windows</a>
 <a href="http://en.wikipedia.org/wiki/Cygwin">Cygwin</a> environment, on
@@ -70,7 +71,7 @@ system is available for them and other unix-based platforms.
       <li><a href="#GCC">GNU Fortran and C compilers</a></li>
       <li><a href="#linker">Linker reports unresolved symbols</a></li>
       <li><a href="#LFS">Large File Support (LFS)</a></li>
-      <li><a href="#Linux">Linux (32- and 64-bit)</a></li>
+      <li><a href="#Linux">Linux (64-bit)</a></li>
       <li><a href="#SunOS">SunOS 5.x (Solaris 2.x)</a></li>
       <li><a href="#Darwin">Darwin / MacOSX</a></li>
       <li><a href="#Cygwin">Cywin/Windows</a></li>
@@ -150,8 +151,8 @@ libraries</a>:
 
 <li>
   <p>
-  The <a href="http://www.atnf.csiro.au/computing/software/rpfits"><code>
-  RPFITS</code> library</a> (currently version 2.21) is used by
+  The <a href="http://www.atnf.csiro.au/computing/software/rpfits.html"><code>
+  RPFITS</code> library</a> (currently version 2.23) is used by
   <a href="http://www.atnf.csiro.au/computing/software/miriad/doc/atlod.html">
   <code>atlod</code></a> and a number of other specialized tasks to read the
   ATNF data format.  It is provided in binary installations.
@@ -334,14 +335,12 @@ Note that if you don't have an account at the ATNF that would allow you to run
   <code>miriad-common.tar.bz2</code></a> (which includes catalogues, auxiliary
   data files and also the compiled documentation) and the binaries, which will
   be in a <code>bzip2</code>'d <code>tar</code> file with a name like
-  <a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad-linux.tar.bz2">
-  <code>miriad-linux.tar.bz2</code></a> (others currently are
   <a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad-linux64.tar.bz2">
-  <code>linux64</code></a>,
-  <a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad-sun4sol.tar.bz2">
-  <code>sun4sol</code></a>, and
+  <code>miriad-linux64.tar.bz2</code></a> (others currently are
   <a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad-darwin_x86_64.tar.bz2">
-  <code>darwin_x86_64</code></a>).
+  <code>darwin_x86_64</code></a>),
+  <a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad-sun4sol.tar.bz2">
+  <code>sun4sol</code></a>.
   </p>
 
   <p>
@@ -360,7 +359,7 @@ Note that if you don't have an account at the ATNF that would allow you to run
 <pre>
     % cd /usr/local
     % bzcat miriad-common.tar.bz2 | tar xvf -
-    % bzcat miriad-linux.tar.bz2  | tar xvf -
+    % bzcat miriad-linux64.tar.bz2  | tar xvf -
 </pre>
   </p>
 
@@ -890,9 +889,8 @@ A few more steps are required to finalize the installation:
   The
   <a href="http://en.wikipedia.org/wiki/GNU_Compiler_Collection">GNU Fortran
   95 and C compilers</a>, <code>gfortran</code> and <code>gcc</code>, are
-  effectively now the standard for compiling <em>Miriad</em> source code
-  (the 32-bit <code>linux</code> system still uses <code>g77</code> but that
-  is set to change soon).  <code>configure</code> will usually find
+  effectively now the standard for compiling <em>Miriad</em> source code.
+  <code>configure</code> will usually find
   <code>gfortran</code> and <code>gcc</code> before any others.  Linux and
   other systems such as Darwin where the GNU compilers are the standard
   usually have the aliases <code>f77</code> and <code>cc</code> set up to
@@ -1069,7 +1067,7 @@ A few more steps are required to finalize the installation:
 </li>
 
 <li>
-  <a name="Linux"><h4>Linux (32- and 64-bit)</h4>
+  <a name="Linux"><h4>Linux (64-bit)</h4>
   <p>
   See comments above on GNU compilers.
   </p>
@@ -1545,5 +1543,5 @@ private version:
 <hr>
 
 <p>
-<small>$Id: INSTALL.html,v 1.23 2012/03/05 07:21:13 cal103 Exp $</small>
+<small>$Id: INSTALL.html,v 1.24 2013/05/21 01:15:46 mirmgr Exp $</small>
 </p>
