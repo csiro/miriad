@@ -132,7 +132,7 @@ c         nocal   Do not apply antenna gain calibration.
 c         nopass  Do not apply bandpass correction.
 c         nopol   Do not apply polarisation leakage correction.
 c
-c$Id: blflag.for,v 1.19 2011/04/12 06:43:30 cal103 Exp $
+c$Id: blflag.for,v 1.20 2013/05/23 03:43:33 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -148,16 +148,16 @@ c     fail with truncated relocations.
       logical   finish, havebl(MAXBASE), noapply, nobase, nofqaver, rms,
      *          scalar, selgen
       integer   ant1, ant2, bl, blIdxp, i, j, length, lIn, nBl, nBlIdx,
-     *          nDat, nEdit, nPol, pCorr, pCorr1, pCorr2, pFlags, pNpnt,
-     *          pVis
+     *          nDat, nEdit, nPol
+      ptrdiff   pCorr, pCorr1, pCorr2, pFlags, pNpnt, pVis
       real      xmax, xmin, ymax, ymin
       double precision time0
       character device*64, title*32, uvflags*12, val*16, version*72,
      *          xaxis*12, yaxis*12
 
 c     Data store (48*MAXBUF bytes).
-      integer   blDat(MAXDAT), blIdx(MAXDAT), chDat(MAXDAT)
-      real      tDat(MAXDAT), xDat(MAXDAT), yDat(MAXDAT)
+      integer   blIdx(MAXDAT)
+      ptrdiff   pblDat, pchDat, ptDat, pxDat, pyDat
 
       external  itoaf, len1, pgbeg, uvDatOpn, versan
       logical   uvDatOpn
@@ -165,8 +165,8 @@ c     Data store (48*MAXBUF bytes).
       character itoaf*10, versan*72
 c-----------------------------------------------------------------------
       version = versan('blflag',
-     *                 '$Revision: 1.19 $',
-     *                 '$Date: 2011/04/12 06:43:30 $')
+     *                 '$Revision: 1.20 $',
+     *                 '$Date: 2013/05/23 03:43:33 $')
 
 c     Get the input parameters.
       call keyini
@@ -200,29 +200,37 @@ c     Open the plot device.
       call pgask(.false.)
 
 c     Allocate memory for getDat.
-      call memAlloc(pFlags, MAXCHAN, 'l')
-      call memAlloc(pNpnt,  MAXCHAN, 'i')
-      call memAlloc(pCorr,  MAXCHAN, 'c')
-      call memAlloc(pCorr1, MAXCHAN, 'c')
-      call memAlloc(pCorr2, MAXCHAN, 'c')
-      call memAlloc(pVis,   MAXCHAN, 'c')
+      call memAllop(pblDat, MAXDAT, 'i')
+      call memAllop(pchDat, MAXDAT, 'i')
+      call memAllop(ptDat,  MAXDAT, 'r')
+      call memAllop(pxDat,  MAXDAT, 'r')
+      call memAllop(pyDat,  MAXDAT, 'r')
+      
+      call memAllop(pFlags, MAXCHAN, 'l')
+      call memAllop(pNpnt,  MAXCHAN, 'i')
+      call memAllop(pCorr,  MAXCHAN, 'c')
+      call memAllop(pCorr1, MAXCHAN, 'c')
+      call memAllop(pCorr2, MAXCHAN, 'c')
+      call memAllop(pVis,   MAXCHAN, 'c')
+      
 
 c     Get the data.
       call getDat(lIn,rms,scalar,nofqaver,xaxis,yaxis,xmin,xmax,
      *  ymin,ymax,MAXCHAN,memL(pFlags),memI(pNpnt),memC(pCorr),
      *  memC(pCorr1),memC(pCorr2),memC(pVis),MAXBASE,havebl,MAXDAT,nDat,
-     *  blDat,chDat,time0,tDat,xDat,yDat)
+     *  memI(pblDat),memI(pchDat),time0,memR(ptDat),memR(pxDat),
+     *  memR(pyDat))
       call uvDatCls
       call output('Number of points to edit: '//itoaf(nDat))
       if (nDat.eq.0) call bug('f','No points to flag')
 
 c     Free memory (in reverse order).
-      call memFree(pVis,   MAXCHAN, 'c')
-      call memFree(pCorr2, MAXCHAN, 'c')
-      call memFree(pCorr1, MAXCHAN, 'c')
-      call memFree(pCorr,  MAXCHAN, 'c')
-      call memFree(pNpnt,  MAXCHAN, 'i')
-      call memFree(pFlags, MAXCHAN, 'l')
+      call memFrep(pVis,   MAXCHAN, 'c')
+      call memFrep(pCorr2, MAXCHAN, 'c')
+      call memFrep(pCorr1, MAXCHAN, 'c')
+      call memFrep(pCorr,  MAXCHAN, 'c')
+      call memFrep(pNpnt,  MAXCHAN, 'i')
+      call memFrep(pFlags, MAXCHAN, 'l')
 
 c     Loop over the baselines.
       call output('Entering interactive mode...')
@@ -233,7 +241,8 @@ c     Loop over the baselines.
           blIdx(i) = i
         enddo
 
-        call edit(xaxis,yaxis,'All baselines',nDat,xDat,yDat,nDat,blIdx,
+        call edit(xaxis,yaxis,'All baselines',nDat,memR(pxDat),
+     *    memR(pyDat),nDat,blIdx,
      *    nEdit,finish)
         nBlIdx = nDat
 
@@ -247,10 +256,10 @@ c     Loop over the baselines.
               length = len1(title)
               title(length+1:) = '-' // itoaf(ant2)
 
-              call getIdx(bl,nDat,blDat,nBl,blIdx(blIdxp))
+              call getIdx(bl,nDat,memI(pblDat),nBl,blIdx(blIdxp))
               if (nBl.gt.0) then
-                call edit(xaxis,yaxis,title,nDat,xDat,yDat,nBl,
-     *            blIdx(blIdxp),nEdit,finish)
+                call edit(xaxis,yaxis,title,nDat,memR(pxDat),
+     *           memR(pyDat),nBl,blIdx(blIdxp),nEdit,finish)
                 blIdxp = blIdxp + nBl
                 if (finish) goto 10
               endif
@@ -280,7 +289,8 @@ c     Generate the "blflag.select" file, if needed.
         if (nEdit.eq.0) then
           call bug('w','No edit commands to write out!')
         else
-          call doSelGen(nDat,blDat,chDat,time0,tDat,nBlIdx,blIdx)
+          call doSelGen(nDat,memI(pblDat),memI(pchDat),time0,
+     *      memR(ptDat),nBlIdx,blIdx)
         endif
       endif
 
@@ -290,10 +300,18 @@ c     Apply the changes.
         call uvDatRew
         call uvDatSet('disable',0)
         if (.not.uvDatOpn(lIn)) call bug('f','Error reopening input')
-        call flagApp(lIn,nDat,blDat,chDat,time0,tDat,nBlIdx,blIdx,
-     *    version)
+        call flagApp(lIn,nDat,memI(pblDat),memI(pchDat),time0,
+     *    memR(ptDat),nBlIdx,blIdx,version)
         call uvDatCls
       endif
+
+c     Free more memory      
+      call memFrep(pblDat, MAXDAT, 'i')
+      call memFrep(pchDat, MAXDAT, 'i')
+      call memFrep(ptDat,  MAXDAT, 'r')
+      call memFrep(pxDat,  MAXDAT, 'r')
+      call memFrep(pyDat,  MAXDAT, 'r')
+      
 
       end
 
