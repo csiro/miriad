@@ -8,8 +8,8 @@ c+
 c       RMCLEAN reads in dirty Q and U cubes, generates rmtf based on
 c       the frequencies given in an ascii file, and cleans the rm
 c       spectra following the algorithm given by Brentjens (2007).
-c       The output cubes contain the clean model components and the
-c       CLEANed rm spectra.
+c       The output cubes contain the clean model components, the
+c       CLEANed rm spectra and the residuals.
 c       The input cubes must be reordered with mode=312, and the
 c       output cubes will have the same ordering and thus must be
 c       reordered after being written to disk. A script (runrmclean.py)
@@ -21,6 +21,11 @@ c       Cube containing dirty U spectra. No default.
 c@ freq
 c       Ascii file containing the observed frequencies. No default.
 c       The file should contain one frequency per line, in Hertz.
+c       Comment lines aren't allowed.
+c@ weight
+c       Ascii file containing the weights. Default is equal weights.
+c       The file should contain one weight per line, in the same
+c       order as is given in the frequency file, and the same length.
 c       Comment lines aren't allowed.
 c@ nmax
 c       Maximum number of iterations per pixel. Default 1000.
@@ -53,11 +58,15 @@ c@ resu
 c       Residual U cube. Default 'Uresid'.
 c@ ni
 c       Number of CLEAN iterations per pixel. Default 'niters'.
+c@ derot
+c       Derotate the spectrum? 0=no, 1=yes. Default 1.
 c@ debug
 c       Debug mode? 0=no, 1=yes. Default 0.
 c
-c $Id: rmclean.for,v 1.2 2012/03/25 23:54:20 wie017 Exp $
+c $Id: rmclean.for,v 1.3 2013/05/30 23:07:02 wie017 Exp $
 c--
+c  RMCLEAN is a task to deconvolve output of RM Synthesis.
+c  It was written by George Heald <heald@astron.nl>
 c  History:
 c    ghh   28nov07  Initial version [1.0]. Based on matlab version.
 c    ghh   04dec07  Version 1.1: added cross-correlation method of
@@ -75,25 +84,32 @@ c                                To do: repeat this for MAXPHI
 c    ghh   19apr11  Version 1.7: increased allowed size of phi axis
 c                                added constant MAXPHI
 c                                created rmclean.h
+c    mhw   25mar12               Cope with blanked pixels 
+c    ghh   29mar13  Version 1.8: add ability to not derotate
+c                                fixed findmax problem (with zeros)
+c                                add weight file
+c    mhw   31may13               merge 1.8 into miriad version, 
+c                                update docs
 c-----------------------------------------------------------------------
       implicit none
       include 'mirconst.h'
       include 'maxdim.h'
       include 'rmclean.h'
       character version*(*)
-      parameter(version='RMCLEAN: version 1.7 19-Apr-11')
-      character*64 inq*64,inu*64,freq*64
+      parameter(version='RMCLEAN: version 1.8 29-Mar-13')
+      character*64 inq*64,inu*64,freq*64,wtfile*64
       character*64 outq*64,outu*64,modq*64,modu*64,ni*64
       character*64 resq*64,resu*64
       character*80 line*80
       character*5 method*5
       character*8 axrm*8
-      integer nmax,nsize(3),axnum(2),x,y,i,debug
+      integer nmax,nsize(3),axnum(2),x,y,i,debug,derot,wtunity
       integer loutqc,loutuc,loutqm,loutum,loutni,linq,linu
       integer loutqr,loutur
-      integer ffile,iostat,llen,nf,whl,mi
+      integer ffile,wfile,iostat,llen,nf,nw,whl,mi
       integer nphi,pphi,naxis,xpix,ypix,nval,blc(3)
       real gain,cutoff,fwhm,fvals(MAXFRQ),phi(MAXPHI),lphi(MAXLPHI)
+      real wtvals(MAXFRQ),wtsum
       real dqs(MAXPHI),dus(MAXPHI),cqs(MAXPHI),cus(MAXPHI)
       real mqs(MAXPHI),mus(MAXPHI),lam02
       real rqs(MAXPHI),rus(MAXPHI)
@@ -109,8 +125,10 @@ c
       call keya('inq',inq,' ')
       call keya('inu',inu,' ')
       call keya('freq',freq,' ')
+      call keya('weight',wtfile,' ')
       call keyi('nmax',nmax,1000)
       call keyi('debug',debug,0)
+      call keyi('derot',derot,1)
       call keyr('gain',gain,0.1)
       call keyr('cutoff',cutoff,0.0)
       call keyr('fwhm',fwhm,0.0)
@@ -129,6 +147,13 @@ c
       if(inq.eq.' ') call bug('f','Input Q cube must be given')
       if(inu.eq.' ') call bug('f','Input U cube must be given')
       if(freq.eq.' ') call bug('f','Input frequencies must be given')
+      if(wtfile.eq.' ') then
+        wtunity = 1
+        call bug('w','Using equal weights for all frequencies')
+      else
+        wtunity = 0
+        call output('Using weights from file')
+      endif
       if(nmax.le.0) call bug('f','nmax unreasonable')
       if(gain.le.0.0.or.gain.gt.1.0) call bug('f','gain unreasonable')
       if(cutoff.lt.0.0) call bug('f','cutoff unreasonable')
@@ -141,6 +166,7 @@ c
         call bug('f','Unknown value given for option METHOD')
       endif
       if (debug.ne.0.and.debug.ne.1) call bug('f','Invalid debug mode')
+      if (derot.ne.0.and.derot.ne.1) call bug('f','Invalid derot mode')
       if(fwhm.eq.0.0) call bug('w','I will determine FWHM for you')
 c
 c  Report back the important inputs.
@@ -159,6 +185,11 @@ c
         call output('Using cross-correlation clean component method')
       else
         call output('Using peak of P spectrum clean component method')
+      endif
+      if(derot.eq.1) then
+        call output('Doing in-line derotation may cause fast ripples!')
+      else
+        call output('NOT doing in-line derotation, note lambda_0^2 !')
       endif
 c
 c  Open the input cubes.
@@ -214,16 +245,44 @@ c
       if(iostat.eq.0) call bug('f','Too many frequencies in file!')
       call txtclose(ffile)
       if (debug.eq.1) call output('Frequency file successfully read')
+      if (wtunity.eq.0) then
+        if (debug.eq.1) call output('Opening weights file')
+        call txtopen(wfile,wtfile,'old',iostat)
+        if(iostat.ne.0) call bug('f','Could not read weights file')
+        nw = 0
+        wtsum = 0.0
+        do i = 1, MAXFRQ
+          call txtread(wfile,line,llen,iostat)
+          if(iostat.eq.0) then
+            read(line,'(BN,F20.0)') wtvals(i)
+            nw = nw + 1
+            wtsum = wtsum + wtvals(i)
+          endif
+        enddo
+        if(iostat.eq.0) call bug('f','Too many weights in file!')
+        call txtclose(wfile)
+        if (debug.eq.1) call output('Weights file successfully read')
+      else
+        wtsum = 0.0
+        do i = 1, nf
+          wtvals(i) = 1.0
+          wtsum = wtsum + wtvals(i)
+        enddo
+        nw = nf
+      endif
+      if (nf.ne.nw) then
+        call bug('f','Unequal number of weights and frequencies')
+      endif
       if(fwhm.eq.0.0) then
         if (debug.eq.1) call output('Making RMSF, auto fwhm method')
-        call mkRMTF(nphi,lphi,nf,fvals,rmtf,fwhm,lam02)
+        call mkRMTF(nphi,lphi,nf,fvals,wtvals,wtsum,rmtf,fwhm,lam02)
         if (debug.eq.1) call output('Made RMSF')
         write (line,'(SP,F9.2)') fwhm
         call output('Using FWHM = '//line)
         whl = 1
       else
         if (debug.eq.1) call output('Making RMSF, known fwhm method')
-        call mkRMTF(nphi,lphi,nf,fvals,rmtf,junk,lam02)
+        call mkRMTF(nphi,lphi,nf,fvals,wtvals,wtsum,rmtf,junk,lam02)
         if (debug.eq.1) call output('Made RMSF')
         whl = 0
       endif
@@ -265,48 +324,68 @@ c
         write(line,'(SP,F9.2)') fwhm
         call hiswrite(loutqc,'RMCLEAN: Autocalculated FWHM: '//line)
       endif
+      write(line,'(SP,F12.9)') lam02
+      call hiswrite(loutqc,'RMCLEAN: lambda_0^2: '//line)
       call hisclose(loutqc)
       call hisopen(loutuc,'append')
       call hiswrite(loutuc,'RMCLEAN: Miriad '//version)
       call hisinput(loutuc,'RMCLEAN')
       if(whl.eq.1) then
+        write(line,'(SP,F9.2)') fwhm
         call hiswrite(loutuc,'RMCLEAN: Autocalculated FWHM: '//line)
       endif
+      write(line,'(SP,F12.9)') lam02
+      call hiswrite(loutuc,'RMCLEAN: lambda_0^2: '//line)
       call hisclose(loutuc)
       call hisopen(loutqm,'append')
       call hiswrite(loutqm,'RMCLEAN: Miriad '//version)
       call hisinput(loutqm,'RMCLEAN')
       if(whl.eq.1) then
+        write(line,'(SP,F9.2)') fwhm
         call hiswrite(loutqm,'RMCLEAN: Autocalculated FWHM: '//line)
       endif
+      write(line,'(SP,F12.9)') lam02
+      call hiswrite(loutqm,'RMCLEAN: lambda_0^2: '//line)
       call hisclose(loutqm)
       call hisopen(loutum,'append')
       call hiswrite(loutum,'RMCLEAN: Miriad '//version)
       call hisinput(loutum,'RMCLEAN')
       if(whl.eq.1) then
+        write(line,'(SP,F9.2)') fwhm
         call hiswrite(loutum,'RMCLEAN: Autocalculated FWHM: '//line)
       endif
+      write(line,'(SP,F12.9)') lam02
+      call hiswrite(loutum,'RMCLEAN: lambda_0^2: '//line)
       call hisclose(loutum)
       call hisopen(loutqr,'append')
       call hiswrite(loutqr,'RMCLEAN: Miriad '//version)
       call hisinput(loutqr,'RMCLEAN')
       if(whl.eq.1) then
+        write(line,'(SP,F9.2)') fwhm
         call hiswrite(loutqr,'RMCLEAN: Autocalculated FWHM: '//line)
       endif
+      write(line,'(SP,F12.9)') lam02
+      call hiswrite(loutqr,'RMCLEAN: lambda_0^2: '//line)
       call hisclose(loutqr)
       call hisopen(loutur,'append')
       call hiswrite(loutur,'RMCLEAN: Miriad '//version)
       call hisinput(loutur,'RMCLEAN')
       if(whl.eq.1) then
+        write(line,'(SP,F9.2)') fwhm
         call hiswrite(loutur,'RMCLEAN: Autocalculated FWHM: '//line)
       endif
+      write(line,'(SP,F12.9)') lam02
+      call hiswrite(loutur,'RMCLEAN: lambda_0^2: '//line)
       call hisclose(loutur)
       call hisopen(loutni,'append')
       call hiswrite(loutni,'RMCLEAN: Miriad '//version)
       call hisinput(loutni,'RMCLEAN')
       if(whl.eq.1) then
+        write(line,'(SP,F9.2)') fwhm
         call hiswrite(loutni,'RMCLEAN: Autocalculated FWHM: '//line)
       endif
+      write(line,'(SP,F12.9)') lam02
+      call hiswrite(loutni,'RMCLEAN: lambda_0^2: '//line)
       call hisclose(loutni)
 c
 c  Do the rmclean operation for each spectrum individually
@@ -329,7 +408,7 @@ c         For each x (ra), pull out a spectrum and clean it
           call xyread(linq,x,dqs)
           call xyread(linu,x,dus)
           call doRMCLEAN(nphi,phi,rmtf,nmax,gain,cutoff,fwhm,mi,lam02,
-     +                   dqs,dus,cqs,cus,mqs,mus,rqs,rus,nval)
+     +                   dqs,dus,cqs,cus,mqs,mus,rqs,rus,nval,derot)
 c         Collect the niters for this row
           nrow(x) = nval
 c         Write the cleaned and model spectra to their output files
@@ -364,13 +443,14 @@ c
 c
       end
 c***********************************************************************
-      subroutine mkRMTF(numphi,phiv,numf,fv,R,width,lam02)
+      subroutine mkRMTF(numphi,phiv,numf,fv,wv,ws,R,width,lam02)
 c
       implicit none
       include 'mirconst.h'
       include 'rmclean.h'
-      complex R(MAXLPHI),compI
+      complex R(MAXLPHI),compI,wvtmp
       real lam2(MAXFRQ),lam02,width,minl2,maxl2,phiv(MAXLPHI),fv(MAXFRQ)
+      real wv(MAXFRQ),ws
       integer numphi,numf,i,j
 c
       lam02 = 0.0
@@ -380,18 +460,19 @@ c
 c     Produce the minimum, maximum, and weighted mean lambda^2
       do i = 1, numf
         lam2(i) = (CMKS/fv(i))**2
-        lam02 = lam02 + lam2(i)
+        lam02 = lam02 + wv(i)*lam2(i)
         if(lam2(i).lt.minl2) minl2 = lam2(i)
         if(lam2(i).gt.maxl2) maxl2 = lam2(i)
       enddo
-      lam02 = lam02/numf
+      lam02 = lam02/ws
 c     Now make the rmtf
       do i = 1, numphi*2+1
         R(i) = cmplx(0.0,0.0)
         do j = 1, numf
-          R(i) = R(i)+exp(-2.0*compI*phiv(i)*(lam2(j)-lam02))
+          wvtmp = cmplx(real(wv(i)),0.0)
+          R(i) = R(i)+wvtmp*exp(-2.0*compI*phiv(i)*(lam2(j)-lam02))
         enddo
-        R(i) = R(i)/real(numf)
+        R(i) = R(i)/real(ws)
       enddo
 c     Calculate the theoretical resolution (fwhm) of range(lambda^2)
       width = (2.0*sqrt(3.0))/(maxl2-minl2)
@@ -399,7 +480,7 @@ c
       end
 c***********************************************************************
       subroutine doRMCLEAN(numphi,phiv,R,nm,g,cut,width,mi,lam02,
-     +                     dq,du,cq,cu,mq,mu,rq,ru,n)
+     +                     dq,du,cq,cu,mq,mu,rq,ru,n,dodr)
 c
       implicit none
       include 'mirconst.h'
@@ -410,7 +491,7 @@ c
       real dq(MAXPHI),du(MAXPHI),cq(MAXPHI),cu(MAXPHI),mq(MAXPHI)
       real mu(MAXPHI),lam02
       real rq(MAXPHI),ru(MAXPHI)
-      integer numphi,nm,n,i,j,maxabspi,mi
+      integer numphi,nm,n,i,j,maxabspi,mi,dodr
 c
       n = 0
       compI = (0.0,1.0)
@@ -438,19 +519,23 @@ c         We are looking at the P spectrum itself (standard method)
         endif
         if(maxabspi.eq.0) goto 10
 c       If it's below the cutoff, exit the loop
-        if(maxabsp.lt.cut) goto 10
+        if(maxabsp.le.cut) goto 10
         n = n+1
 c       The clean component is gain*peak(P)
         modcomp = g*dp(maxabspi)
 c       The derotated clean component is modcomp*exp(-2i(phi)(lam02))
-        mcdr = modcomp*exp(-2.0*compI*phiv(maxabspi)*lam02)
+        if(dodr.eq.1) then
+          mcdr = modcomp*exp(-2.0*compI*phiv(maxabspi)*lam02)
+        else
+          mcdr = modcomp
+        endif
 c       Shift the rmtf to the location of the clean component
         call circshift(numphi,R,sR,maxabspi)
         do i = 1, numphi
 c         Subtract out the clean component * shifted rmtf
           dp(i) = dp(i)-modcomp*sR((numphi/2)+i)
           absp(i) = abs(dp(i))
-c         Add a piece (pre-derotated) to the cleaned spectrum
+c         Add a piece (maybe pre-derotated) to the cleaned spectrum
           cq(i) = cq(i)+(real(mcdr)
      +      *exp(-(phiv(i)-phiv(maxabspi))**2/(2.0*((width/2.355)**2))))
           cu(i) = cu(i)+(aimag(mcdr)
@@ -462,11 +547,13 @@ c           Store the clean components for later reference
           endif
         enddo
       enddo
-c     Finally, add the (derotated) residuals into the clean spectrum
+c     Finally, add (maybe derotated) residuals to the clean spectrum
 10    do i = 1, numphi
         rq(i) = real(dp(i))
         ru(i) = aimag(dp(i))
-        dp(i) = dp(i)*exp(-2.0*compI*phiv(i)*lam02)
+        if(dodr.eq.1) then
+          dp(i) = dp(i)*exp(-2.0*compI*phiv(i)*lam02)
+        endif
         cq(i) = cq(i) + real(dp(i))
         cu(i) = cu(i) + aimag(dp(i))
       enddo
@@ -480,7 +567,7 @@ c
       integer n,i,j
       real s(1024),m
 c
-      m = 0.0
+      m = -1.0
       i = 0
       do j = 1, n
         if(s(j).gt.m) then
