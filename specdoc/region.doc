@@ -11,6 +11,12 @@
 	If both z1 and z2 are missing, then all planes are selected. If
 	only z2 is omitted, z2 defaults	to z1.
 
+          percentage(px,py)(z1,z2)
+        Select the inner px and py percent of the image x and y axis 
+        for planes z1 to z2 inclusive. If py is missing, it defaults to px.
+        If both z1 and z2 are missing, then all planes are selected. If
+        only z2 is omitted, z2 defaults to z1.
+
 	  boxes(xmin,ymin,xmax,ymax)(z1,z2)
 	Select the pixels within a box with corners xmin,ymin,xmax,ymax.
 	z1 and z2 are the same as in the "image" subcommand. If z1 and z2

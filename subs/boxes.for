@@ -31,7 +31,7 @@ c               interest selected for a particular plane.
 c
 c  The BOX routines work by reading the region specified on the command
 c  line and breaking it into an intermediate form, stored in the "boxes"
-c  array.  This intermeidate form consists of a number of subregion
+c  array.  This intermediate form consists of a number of subregion
 c  specifications which are ANDed and ORed together to produce the
 c  output region.  The subregions can consist of IMAGE (a rectangular
 c  subregion of a range of planes), BOX (a number of rectangular
@@ -53,6 +53,8 @@ c          segments are discarded).  For a poly made of N (non-
 c          horizontal) line segments, SIZE=4*N.  The line segments are
 c          sorted in increasing order of min(x1,x2).
 c    MASK Additional info is the handle of the mask file.
+c    PERC This requires the percentage of the x and y axis to select,
+c         SIZE=2.        
 c
 c  The routine BoxRuns returns the region of a particular plane that was
 c  selected. This is returned in "runs", which is a table of entries of
@@ -68,7 +70,7 @@ c  CARMA Customizations:
 c
 c  2011-Jul-13  pkgw  Add box(m) shorthand for box(-m,-m,m,m)
 c
-c $Id: boxes.for,v 1.8 2012/06/20 23:20:18 wie017 Exp $
+c $Id: boxes.for,v 1.9 2013/06/04 05:52:12 wie017 Exp $
 c--
 c***********************************************************************
 
@@ -107,28 +109,29 @@ c-----------------------------------------------------------------------
       include 'maxnax.h'
 
       integer    NTYPES
-      parameter (NTYPES=10)
+      parameter (NTYPES=11)
 
       logical   coordini, more, dounit
       integer   boxtype, i, ilat, ilng, ispc, k2, length,k1, lu(3), n,
      *          nshape, nsize(MAXNAX), offset, spare, tmp(4)
-      character algo*8, spec*4096, type*9, types(NTYPES)*9, units*8,
+      character algo*8, spec*4096, type*9, types(NTYPES)*10, units*8,
      *          wtype*16, xytype*6, ztype*6
 
       external  keyprsnt, len1
       logical   keyprsnt
       integer   len1
 
-      data types(BOX  )/'boxes    '/
-      data types(MASK )/'mask     '/
-      data types(POLY )/'polygon  '/
-      data types(IMAGE)/'images   '/
-      data types(ARCSEC)/'arcsec   '/
-      data types(KMS  )/'kms      '/
-      data types(RELPIX)/'relpixel '/
-      data types(ABSPIX)/'abspixel '/
-      data types(RELCEN)/'relcenter'/
-      data types(QUART) /'quarter  '/
+      data types(BOX  ) /'boxes     '/
+      data types(MASK ) /'mask      '/
+      data types(POLY ) /'polygon   '/
+      data types(IMAGE) /'images    '/
+      data types(ARCSEC)/'arcsec    '/
+      data types(KMS  ) /'kms       '/
+      data types(RELPIX)/'relpixel  '/
+      data types(ABSPIX)/'abspixel  '/
+      data types(RELCEN)/'relcenter '/
+      data types(QUART) /'quarter   '/
+      data types(PERC)  /'percentage'/
 c-----------------------------------------------------------------------
       coordini = .false.
       xytype = 'abspix'
@@ -183,6 +186,16 @@ c         Process region specification subcommands.
           boxes(offset+YMAX) = 0
           boxes(offset+SIZE) = 0
           call BoxZRnge(spec,k1,k2,boxes(offset+ZMIN),ztype,lu)
+        else if (boxtype.eq.PERC) then
+          boxes(offset+XMIN) = 0
+          boxes(offset+XMAX) = 0
+          boxes(offset+YMIN) = 0
+          boxes(offset+YMAX) = 0
+          boxes(offset+SIZE) = 2
+          call BoxInt(spec,k1,k2,boxes(offset+DATA),n,1,2,'abspix',lu)
+          if (n.eq.0) boxes(offset+DATA) = 100
+          if (n.eq.1) boxes(offset+DATA+1) = boxes(offset+DATA)
+          call BoxZRnge(spec,k1,k2,boxes(offset+ZMIN),ztype,lu)       
         else if (boxtype.eq.BOX) then
           boxtype = IMAGE
           call BoxInt(spec,k1,k2,tmp,n,4,4,xytype,lu)
@@ -843,6 +856,7 @@ c-----------------------------------------------------------------------
       include 'boxes.h'
       integer blc(3),trc(3)
       integer i,offset
+      real fx,fy
 c-----------------------------------------------------------------------
       if (naxis.lt.1) call bug('f','Bad dimension')
       boxes(NX) = nsize(1)
@@ -885,6 +899,15 @@ c
             boxes(offset+XMAX) = max(1,boxes(NX)/4 + boxes(NX)/2)
             boxes(offset+YMIN) = boxes(NY)/4 + 1
             boxes(offset+YMAX) = max(1,boxes(NY)/4 + boxes(NY)/2)
+          endif
+          if (boxes(offset+ITYPE).eq.PERC) then
+            fx = boxes(offset+DATA)/100.0
+            fy = boxes(offset+DATA+1)/100.0
+            boxes(offset+ITYPE) = IMAGE
+            boxes(offset+XMIN) = boxes(NX)*(1-fx)/2 + 1
+            boxes(offset+XMAX) = max(1.,boxes(NX)*(1+fx)/2)
+            boxes(offset+YMIN) = boxes(NY)*(1-fy)/2 + 1
+            boxes(offset+YMAX) = max(1.,boxes(NY)*(1+fy)/2)
           endif
 
           if (boxes(offset+XMIN).eq.0) boxes(offset+XMIN) = 1
