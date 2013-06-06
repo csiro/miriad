@@ -12,7 +12,7 @@ c    09may00 rjs  Do not allow default image size if pbtype=SINGLE.
 c    28jun05 rjs  Check the u,v coordinates to see if NCP projection is
 c                 best.
 c
-c $Id: hdtab.for,v 1.6 2011/10/21 01:44:46 cal103 Exp $
+c $Id: hdtab.for,v 1.7 2013/06/06 02:02:41 wie017 Exp $
 c***********************************************************************
 
       subroutine HdInit(mfs1,mosaic1)
@@ -343,9 +343,13 @@ c     Determine the FWHM of the telescope.
         call coFin(coObj)
       endif
 
-      nx = max(nint(abs(fwhm/cdelt1)),1)
-      ny = max(nint(abs(fwhm/cdelt2)),1)
-
+      if (nx.gt.0.and.ny.gt.0) then
+        nx = max(nint(abs(nx*fwhm/cdelt1)),1)
+        ny = max(nint(abs(ny*fwhm/cdelt2)),1)
+      else
+        nx = max(nint(abs(fwhm/cdelt1)),1)
+        ny = max(nint(abs(fwhm/cdelt2)),1)
+      endif
       end
 
 c***********************************************************************
