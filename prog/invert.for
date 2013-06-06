@@ -25,14 +25,18 @@ c       Output beam (point-spread function) file name.  The default is
 c       not to make a beam.
 c@ imsize
 c       The size of the output dataset.  The default is to image out to
-c       primary beam half power points.  For options=mosaic, an image of
-c       this size is made for each pointing before a linear mosaic
-c       operation is performed.
+c       primary beam half power points. Add 'beam' as the third value
+c       to specify the image size in primary beam FWHMs (e.g., 
+c       imsize=2,2,beam).
+c     . For options=mosaic, an image of this size is made for each 
+c       pointing before a linear mosaic operation is performed.
 c@ cell
 c       Image cell size, in arcsec.  If two values are given, they give
 c       the RA and DEC cell sizes.  If only one value is given, the
-c       cells are made square.  The default is about one third of the
-c       resolution of the resultant images.
+c       cells are made square.  The default is about one third of the 
+c       resolution of the resultant images. Add 'res' as the third value,
+c       to specify the the cellsize in terms of the number of pixels per 
+c       resolution element (e.g., cell=5,5,res)
 c@ offset
 c       When not mosaicing, this gives the sky position to shift to the
 c       center of the output images.  The position is specified as an
@@ -220,7 +224,7 @@ c       replaced with 0, or to be estimated by linear interpolation of
 c       two adjacent good channels.  See the Users Guide for the merits
 c       and evils of the two approaches.  The default is 'zero'.
 c
-c$Id: invert.for,v 1.16 2012/09/18 01:52:21 wie017 Exp $
+c$Id: invert.for,v 1.17 2013/06/06 02:10:13 wie017 Exp $
 c--
 c  History
 c    rjs        89  Initial version
@@ -353,6 +357,7 @@ c                   files.
 c    mhw   07nov11  Add warning for uniform weighting and mfs
 c    mhw   17jan12  Handle larger files by using ptrdiff type more
 c    mhw   06mar12  Add fsystemp option
+c    mhw   03jun13  Add beam and res options to imsize and cellsize
 c  Bugs:
 c-----------------------------------------------------------------------
       include 'mirconst.h'
@@ -362,7 +367,7 @@ c
       integer MAXPOL,MAXRUNS
       parameter(MAXPOL=4,MAXRUNS=4*MAXDIM)
 c
-      real cellx,celly,fwhmx,fwhmy,freq0,slop,supx,supy
+      real cellx,celly,fwhmx,fwhmy,freq0,slop,supx,supy,ppbx,ppby
       real umax,vmax,wdu,wdv,tu,tv,rms,robust
       real ChanWt(MAXPOL*MAXCHAN)
       character maps(MAXPOL)*64,beam*64,uvflags*16,mode*16,vis*64
@@ -372,7 +377,7 @@ c
       integer nx,ny,bnx,bny,mnx,mny,wnu,wnv
       integer nbeam,nsave,ndiscard,offcorr,nout
       logical defWt,Natural,doset,systemp(2),mfs,doimag,mosaic,sdb,idb
-      logical double,doamp,dophase,dosin
+      logical double,doamp,dophase,dosin,dobeam,dores
 c
       integer tno,tvis
       integer nUWts,nMMap
@@ -382,7 +387,7 @@ c
 c
       integer NSLOP
       parameter(NSLOP=2)
-      character slops(NSLOP)*12,slopmode*12
+      character slops(NSLOP)*12,slopmode*12,resstr*8,beamstr*8
 c
 c  Externals.
 c
@@ -393,8 +398,8 @@ c
       data slops/'zero        ','interpolate '/
 c-----------------------------------------------------------------------
       version = versan ('invert',
-     :                  '$Revision: 1.16 $',
-     :                  '$Date: 2012/09/18 01:52:21 $')
+     :                  '$Revision: 1.17 $',
+     :                  '$Date: 2013/06/06 02:10:13 $')
 c
 c  Get the input parameters. Convert all angular things into
 c  radians as soon as possible!!
@@ -423,8 +428,18 @@ c
 c
       call keyr('cell',cellx,0.)
       call keyr('cell',celly,cellx)
-      cellx = abs(cellx * pi/180/3600)
-      celly = abs(celly * pi/180/3600)
+      call keya('cell',resstr,' ')
+      dores = resstr(1:1).eq.'r'
+      if (dores) then
+        if (cellx.lt.2.5.or.celly.lt.2.5) then
+          call bug('w','Adjusting cellsize to avoid undersampling')
+          cellx=max(2.5,cellx)
+          celly=max(2.5,celly)
+        endif
+      else
+        cellx = abs(cellx * pi/180/3600)
+        celly = abs(celly * pi/180/3600)
+      endif
       call keyr('fwhm',fwhmx,0.)
       call keyr('fwhm',fwhmy,fwhmx)
       fwhmx = fwhmx * pi/180/3600
@@ -432,6 +447,8 @@ c
 c
       call keyi('imsize',nx,0)
       call keyi('imsize',ny,nx)
+      call keya('imsize',beamstr,' ')
+      dobeam = beamstr(1:1).eq.'b'
       if(max(nx,ny).gt.MAXDIM)call bug('f','Output image too big')
 c
       defWt = .not.keyprsnt('sup')
@@ -480,7 +497,7 @@ c
 c
 c  Determine the max u and v values to map.
 c
-      if(cellx*celly.gt.0)then
+      if(cellx*celly.gt.0.and..not.dores)then
         umax = 0.5 / cellx
         vmax = 0.5 / celly
       else
@@ -500,9 +517,16 @@ c
 c  Set appropriate values for cellx and celly if needed. Try to make
 c  the pixels square if the X and Y resolutions are approx the same.
 c
-      if(cellx*celly.le.0)then
-        cellx = max( 0.25 / umax, 0.3*fwhmx)
-        celly = max( 0.25 / vmax, 0.3*fwhmy)
+      if (dores) then
+        ppbx = cellx
+        ppby = celly
+      else
+        ppbx = 3
+        ppby = 3
+      endif
+      if(cellx*celly.le.0..or.dores)then
+        cellx = max( 0.25 / umax, 0.3*fwhmx) *3/ppbx
+        celly = max( 0.25 / vmax, 0.3*fwhmy) *3/ppby
         if(max(cellx,celly).lt.2*min(cellx,celly))then
           cellx = min(cellx,celly)
           celly = cellx
@@ -530,7 +554,7 @@ c
 c
 c  Determine the default image size, if needed.
 c
-      if(nx*ny.eq.0)call HdDefSiz(nx,ny)
+      if(nx*ny.eq.0.or.dobeam)call HdDefSiz(nx,ny)
 c
 c  Fiddle the sizes and determine the size of the output beam.
 c
@@ -1466,7 +1490,7 @@ c-----------------------------------------------------------------------
       logical flags(MAXCHAN,MAXPOL),more
       real uumax,vvmax,rms2,Wt,SumWt,rms2f(MAXCHAN),Wtf(MAXCHAN)
       double precision uvw(5),dSumWt,dfreq0
-      character num*8
+      character num*10
 c
 c  Externals.
 c
