@@ -75,7 +75,9 @@ c@ region
 c       This specifies the region to be Cleaned.  See the User's Manual
 c       for instructions on how to specify this.  The default is
 c       generally inadequate, and a smaller region should be explicitly
-c       specified.
+c       specified. An easy way to do this is using the percentage option
+c       of region. When the beam is the same size as the image use 
+c       region=perc(33), for a 'double' size beam use region=perc(66).
 c@ minpatch
 c       The minimum patch size when performing minor iterations.
 c       Default is 511, but make it larger if you are having problems
@@ -101,7 +103,7 @@ c       x and y pixel coordinate (in the output model; this goes from 1
 c       to N), the "I" component and the "I*alpha" component.  The
 c       default is to not create a log file.
 c
-c$Id: mfclean.for,v 1.8 2012/08/27 04:41:59 wie017 Exp $
+c$Id: mfclean.for,v 1.9 2013/06/11 05:38:50 wie017 Exp $
 c--
 c  History:
 c    rjs   Nov89 - Original version.
@@ -204,8 +206,8 @@ c-----------------------------------------------------------------------
       external  itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('mfclean',
-     *                 '$Revision: 1.8 $',
-     *                 '$Date: 2012/08/27 04:41:59 $')
+     *                 '$Revision: 1.9 $',
+     *                 '$Date: 2013/06/11 05:38:50 $')
 c
 c  Get the input parameters.
 c
