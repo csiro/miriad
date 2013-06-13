@@ -43,6 +43,9 @@ c	  nocal    Do not copy the items dealing with antenna gain
 c	           calibration.
 c	  nopass   Do not copy the items dealing with bandpass
 c	           calibration (this includes the cgains and wgains tables).
+c         relax    With mode=apply, relax the interpolation interval
+c                  limits to 0.5 days (the gpcal default).Use this when 
+c                  the gain tables were created by selfcal or gpscal.
 c--
 c  History:
 c    rjs  16jul91 Original version.
@@ -69,11 +72,12 @@ c    rjs  23jan07 Correct some logical errors and also copy "leakage2" table.
 c    mhw  02sep09 Handle multiple bandpass solution intervals
 c    mhw  11aug11 Copy gainsf and leakagef tables
 c    mhw  13may13 Handle gainsf in 'merge' and 'apply' mode
+c    mhw  12jun13 Fix apply mode, add relax option
 c  Bugs:
 c    None?
 c------------------------------------------------------------------------
 	character version*80
-	logical dopol,docal,dopass,docopy
+	logical dopol,docal,dopass,docopy,relax
 	integer iostat,tIn,tOut
 	character vis*64,out*64,mode*8,line*64
 	double precision interval
@@ -84,14 +88,14 @@ c
         character*80 versan
 c
 	version = versan('gpcopy',
-     *                   '$Revision: 1.6 $',
-     *                   '$Date: 2013/05/20 00:01:28 $')
+     *                   '$Revision: 1.7 $',
+     *                   '$Date: 2013/06/13 02:22:16 $')
 	call keyini
 	call keya('vis',vis,' ')
 	if(vis.eq.' ')call bug('f','Input data-set must be given')
 	call keya('out',out,' ')
 	if(out.eq.' ')call bug('f','Output data-set must be given')
-	call GetOpt(dopol,docal,dopass)
+	call GetOpt(dopol,docal,dopass,relax)
 	call GetMode(mode)
 	docopy = mode.eq.'create'.or.mode.eq.'copy'
 	call keyfin
@@ -139,7 +143,7 @@ c
 	    call GnMerge(tIn,tOut)
 	  else if(mode.eq.'apply'.and.docal)then
 	    call output('Applying gain table')
-	    call GnApply(tIn,tOut)
+	    call GnApply(tIn,tOut,relax)
 	  else
 	    call output('Copying gain table')
 	    if(hdprsnt(tIn,'interval'))then
@@ -245,10 +249,10 @@ c
 	if(nout.eq.0) mode = 'copy'
 	end
 c************************************************************************
-	subroutine GetOpt(dopol,docal,dopass)
+	subroutine GetOpt(dopol,docal,dopass,relax)
 c
 	implicit none
-	logical dopol,docal,dopass
+	logical dopol,docal,dopass,relax
 c
 c  Get extra processing options.
 c
@@ -256,18 +260,20 @@ c  Output:
 c    dopol	If true, copy polarization tables.
 c    docal	If true, copy gain tables.
 c    dopass	If true, copy bandpass tables.
+c    relax      If true, relax interpolation limits
 c------------------------------------------------------------------------
 	integer nopt
-	parameter(nopt=3)
+	parameter(nopt=4)
 	logical present(nopt)
 	character opts(nopt)*8
 c
-	data opts/'nopol   ','nocal   ','nopass  '/
+	data opts/'nopol   ','nocal   ','nopass  ','relax   '/
 c
 	call options('options',opts,present,nopt)
 	dopol = .not.present(1)
 	docal = .not.present(2)
 	dopass  = .not.present(3)
+        relax = present(4)
 	if(.not.docal.and..not.dopol.and..not.dopass)
      *    call bug('f','No work to be performed')
 	end
@@ -464,10 +470,11 @@ c
 c
 	end
 c************************************************************************
-	subroutine GnApply(tIn,tOut)
+	subroutine GnApply(tIn,tOut,relax)
 c
 	implicit none
 	integer tIn,tOut
+        logical relax
 c
 c  Apply one gains table to a second.
 c
@@ -478,7 +485,7 @@ c
 	integer ngains,nfeeds,ntau,nsols1,nsols2,nsols,nfbin,maxtimes
         integer maxgains
 	double precision int1,int2,freq(maxfbin)
-	integer pGain1,pGain2,pGainO,pTim1,pTim2,pTimO
+	integer pGain1,pGain2,pGain,pTim1,pTim2,pTim
 c
 c  Get info about the two gain tables.
 c
@@ -487,14 +494,18 @@ c
 c
 c  Allocate memory.
 c
-        maxtimes = nsols1+nsols2
+        if (relax) then
+          int1 = max(0.5d0,int1)
+          int2 = max(0.5d0,int2)
+        endif
+        maxtimes = nsols1*3+nsols2*3+2
         maxgains = maxtimes*ngains*(nfbin+1)
 	call memAlloc(pGain1,maxgains,'c')
 	call memAlloc(pTim1,maxtimes,'d')
 	call memAlloc(pGain2,maxgains,'c')
 	call memAlloc(pTim2,maxtimes,'d')
-	call memAlloc(pGainO,maxgains,'c')
-	call memAlloc(pTimO,maxtimes,'d')
+	call memAlloc(pGain,maxgains,'c')
+	call memAlloc(pTim,maxtimes,'d')
 c
 c  Load the two tables.
 c
@@ -505,18 +516,18 @@ c
 c
 c  Now apply them.
 c
-	call GnApply1(ngains,nfeeds,ntau,nfbin,maxtimes,maxgains,
-     *	    memc(pGain1),memd(pTim1),nsols1,int1,
-     *	    memc(pGain2),memd(pTim2),nsols2,int2,
-     *	    memc(pGainO),memd(pTimO),nsols)
+        call GnApply1(ngains,nfeeds,ntau,nfbin,maxtimes,maxgains,
+     *	  memc(pGain1),memd(pTim1),nsols1,int1,
+     *	  memc(pGain2),memd(pTim2),nsols2,int2,
+     *	  memc(pGain),memd(pTim),nsols)        
 c
         if (nsols.gt.0) then
-          call uvGnWrit(tOut,memc(pGainO),memd(pTimO),freq,ngains,
+          call uvGnWrit(tOut,memc(pGain),memd(pTim),freq,ngains,
      *    nsols,nfbin,maxgains,maxtimes,maxfbin,.true.)
 c
 c  Make the interval the larger of the individual intervals.
 c
-	  if(int1.lt.int2)call wrhdd(tOut,'interval',int1)
+	  call wrhdd(tOut,'interval',max(int1,int2))
 c
 c  Set the new number of solution intervals.
 c
@@ -531,8 +542,8 @@ c
 	call memFree(pTim1,maxtimes,'d')
 	call memFree(pGain2,maxgains,'c')
 	call memFree(pTim2,maxtimes,'d')
-	call memFree(pGainO,maxgains,'c')
-	call memFree(pTimO,maxtimes,'d')
+	call memFree(pGain,maxgains,'c')
+	call memFree(pTim,maxtimes,'d')
 c
 	end
 c************************************************************************
@@ -642,16 +653,16 @@ c************************************************************************
 	subroutine GnApply1(ngains,nfeeds,ntau,nfbin,maxsols,maxgains,
      *	  Gains1,Times1,nsols1,int1,
      *    Gains2,Times2,nsols2,int2,
-     *    GainsO,TimesO,nsols)
+     *    Gains,Times,nsols)
 c
 	implicit none
 	integer ngains,nfeeds,ntau,nfbin,maxsols,maxgains,nsols1,nsols2
         integer nsols
-	double precision Times1(nsols1),Times2(nsols2),TimesO(maxsols)
+	double precision Times1(nsols1),Times2(nsols2),Times(maxsols)
         double precision int1,int2
 	complex Gains1(ngains,nsols1,0:nfbin)
         complex Gains2(ngains,nsols2,0:nfbin)
-        complex GainsO(maxgains)
+        complex Gains(maxgains)
 c
 c  Merge and write two gain tables.
 c  Input:
@@ -666,18 +677,11 @@ c------------------------------------------------------------------------
 	parameter(tol=0.5d0/(24.d0*3600.d0))
 	integer slot,offset,i,i1,i2,j1,j2,indx1,indx2,n,k
 	double precision t,ta,tb,ti1,ti2,tj1,tj2,tend
-	complex Null(NMAX)
 	logical pre,post
 c	
 c  Check.
 c
 	if(ngains.gt.NMAX)call bug('f','Too many gains for me!')
-c
-c  Zero out the null gains record.
-c
-	do i=1,ngains
-	  Null(i) = 0
-	enddo
 c
 	offset = 0
         n=nfbin
@@ -717,19 +721,23 @@ c
 	      if(j2.eq.0) j2 = i2
 c
 	      if(pre) then
+                if (offset+ngains.gt.maxgains) 
+     *            call bug('f','Buffer overflow in GnApply1')
                 slot=slot+1
-	        TimesO(slot)=T
+	        Times(slot)=ta-tol
                 do i=1,ngains
-                  GainsO(offset+i)=0
+                  Gains(offset+i)=0
                 enddo
                 offset=offset+ngains
               endif
 c
 c  Interpolate the gain at the start of the interval.
 c
+              if (offset+ngains.gt.maxgains) 
+     *          call bug('f','Buffer overflow in GnApply1')
               slot = slot + 1
-              TimesO(slot) = ta
-	      call GnInterp(GainsO(offset+1),ta,ngains,nfeeds,ntau,
+              Times(slot) = ta
+	      call GnInterp(Gains(offset+1),ta,ngains,nfeeds,ntau,
      *                      ti1,Gains1(1,i1,k),tj1,Gains1(1,j1,k),
      *                      ti2,Gains2(1,i2,k),tj2,Gains2(1,j2,k))
               offset = offset + ngains
@@ -737,17 +745,19 @@ c
 c  Interpolate a gain at the end of the interval, if needed.
 c
 	      if(post)then
+                if (offset+2*ngains.gt.maxgains) 
+     *            call bug('f','Buffer overflow in GnApply1')
                 slot = slot + 1
-                TimesO(slot) = tb
-	        call GnInterp(GainsO(offset+1),tb,ngains,nfeeds,ntau,
+                Times(slot) = tb
+	        call GnInterp(Gains(offset+1),tb,ngains,nfeeds,ntau,
      *                        ti1,Gains1(1,i1,k),tj1,Gains1(1,j1,k),
      *                        ti2,Gains2(1,i2,k),tj2,Gains2(1,j2,k))
                 offset = offset + ngains
 
                 slot=slot+1
-	        TimesO(slot)=tb+tol
+	        Times(slot)=tb+tol
                 do i=1,ngains
-                  GainsO(offset+i)=0
+                  Gains(offset+i)=0
                 enddo
                 offset=offset+ngains
               endif
