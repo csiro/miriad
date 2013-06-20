@@ -43,7 +43,7 @@ c                      single plane, average the input images in
 c                      frequency, instead of producing a cube
 c                      containing all planes.
 c
-c$Id: imcomb.for,v 1.9 2012/09/18 04:32:13 wie017 Exp $
+c$Id: imcomb.for,v 1.10 2013/06/20 05:09:32 wie017 Exp $
 c--
 c  History:
 c    rjs  29nov94 Original version.
@@ -61,6 +61,7 @@ c    rjs  17may06 Changes to make it more robust with images that span
 c                 360 degrees.
 c    rjs  31may06 Changes to use new calling sequence of pcvt.
 c    mhw  29aug12 Add fqaver option
+c    mhw  20jun13 Fix fqaver option - failed for > MAXOPEN files
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -74,20 +75,20 @@ c-----------------------------------------------------------------------
      *        nrms, nsize(3,MAXIN), off(3), pData, pFlags, pWts, tOut,
      *        tno(MAXIN)
       real    blctrc(6,MAXIN), rms(MAXIN), rms0
-      character in(MAXIN)*64, line*80, out*64, tin*64, version*80
+      double precision f(MAXIN)
+      character in(MAXIN)*64, line*80, out*64, version*80
 
       character stcat*80, versan*80
       external  stcat, versan
 c-----------------------------------------------------------------------
       version = versan ('imcomb',
-     *                  '$Revision: 1.9 $',
-     *                  '$Date: 2012/09/18 04:32:13 $')
+     *                  '$Revision: 1.10 $',
+     *                  '$Date: 2013/06/20 05:09:32 $')
 c
 c  Get the inputs.
 c
       call keyini
       call mkeyf('in',in,MAXIN,nin)
-      call keya('tin',tin,' ')
       call keya('out',out,' ')
       call mkeyr('rms',rms,MAXIN,nrms)
       call GetOpt(mosaic,nonorm,relax,fqaver)
@@ -145,7 +146,9 @@ c
           endif
         endif
         if (rms(i).le.0) call bug('f','Invalid rms value')
-
+        if (fqaver) then
+          call rdhdd(tno(i),'crval3',f(i),0.d0)
+        endif
         if (i.gt.nOpen) then
           call coFin(tno(i))
           call xyclose(tno(i))
@@ -177,7 +180,7 @@ c
 c  Create the output.
 c
       call xyopen(tOut,out,'new',naxis,nOut)
-      call hdout(tno,rms,nIn,tOut,off,fqaver.and.nOut(3).eq.1,version)
+      call hdout(tno,rms,nIn,tOut,off,f,fqaver.and.nOut(3).eq.1,version)
 c
 c  Allocate arrays.
 c
@@ -240,12 +243,13 @@ c-----------------------------------------------------------------------
 
       end
 c***********************************************************************
-      subroutine hdout(tin,rms,nIn,tout,off,fqaver,version)
+      subroutine hdout(tin,rms,nIn,tout,off,f,fqaver,version)
 
       integer nIn,tin(nIn),tout
       real rms(nIn)
       integer off(3)
       logical fqaver
+      double precision f(nIn)
       character version*(*)
 
 c  Make up the header of the output file.
@@ -267,8 +271,11 @@ c-----------------------------------------------------------------------
       character itoaf*2
       external  itoaf
 c-----------------------------------------------------------------------
-      double precision f,fout
+      double precision fout
       real wt
+      logical ok
+      
+      ok=.true.
       
 c     Start with a verbatim copy of the header.
       call headcp(tIn, tOut, 0, 0, 0, 0)
@@ -286,12 +293,18 @@ c  Fill in average value of 3rd axis for 2d images
         fout=0
         wt=0
         do i=1, nIn
-          call rdhdd(tIn(i), 'crval3', f, 0d0)
-          fout = fout + log(f)/rms(i)**2
-          wt = wt + 1/rms(i)**2
+          if (f(i).gt.0) then
+            fout = fout + log(f(i))/rms(i)**2
+            wt = wt + 1/rms(i)**2
+          else
+            ok = .false.
+          endif
         enddo
-        fout = exp(fout/wt)
-        call wrhdd(tOut,'crval3',fout)
+c  If we found strange freq values, it's probably a velocity axis       
+        if (ok) then
+          fout = exp(fout/wt)
+          call wrhdd(tOut,'crval3',fout)
+        endif
       endif
 
 c     Create history.
