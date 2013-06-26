@@ -45,6 +45,8 @@ c         real      Plot the real part of the data.  Default.
 c         imaginary Plot the imaginary part of the data.
 c         amplitude Plot the amplitude of the data.
 c         phase     Plot the phase of the data.
+c@ title
+c       Specify a title for the plot, default is the first file read
 c@ options
 c       Extra processing options.  Several can be given, separated by
 c       commas.  Minimum match is supported.
@@ -58,7 +60,7 @@ c@ log
 c       File in which to write the data, if y-axis is amplitude.
 c       The default is no logfile.
 c
-c$Id: psrplt.for,v 1.5 2010/10/26 03:07:44 wie017 Exp $
+c$Id: psrplt.for,v 1.6 2013/06/26 23:50:40 wie017 Exp $
 c--
 c  History:
 c    rjs  03jun96 Original version.
@@ -68,6 +70,7 @@ c    rjs  29feb00 mode keyword to allow plots of real/imag/amp.
 c    rjs  08may00 Change incorrect call of keyf to keya.
 c    rjs  03may01 Added mode=phase.
 c    mhw  26oct10 Fix indexing calculations for acc array, add range kw
+c    mhw  27jun13 Add title parameter
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mirconst.h'
@@ -81,17 +84,17 @@ c-----------------------------------------------------------------------
      :        flags(MAXCHAN1)
       integer i, ibin, ijk, ipol, j, k, llog, mpol, nbad, nbin, nchan,
      :        ngood, nout, npol, nread, polIndx(POLMIN:POLMAX),
-     :        pols(MAXPOL), tno,mbin
+     :        pols(MAXPOL), tno,mbin, l
       real    sig2,w,wt(MAXCHAN1,MAXBIN,MAXPOL),range(2)
       complex acc(MAXCHAN1*MAXBIN*MAXPOL), data(MAXCHAN1)
       double precision offset(2), preamble(4), sfreq(MAXCHAN1), shift(2)
       character device*80, flux*9, fluxes(NFLUX)*9, logfile*80,
      :        uvflags*16, version*80, xaxes(NXAXES)*9, xaxis*9,
-     :        yaxes(NYAXES)*9, yaxis*9
+     :        yaxes(NYAXES)*9, yaxis*9, title*80
 
 c     Externals.
       logical uvDatOpn,keyprsnt
-      integer pgbeg
+      integer pgbeg,len1
       character itoaf*8, versan*80
 
       data xaxes/'bin      '/
@@ -99,8 +102,8 @@ c     Externals.
       data fluxes/'real     ','imaginary','amplitude','phase    '/
 c-----------------------------------------------------------------------
       version = versan('psrplt',
-     :                 '$Revision: 1.5 $',
-     :                 '$Date: 2010/10/26 03:07:44 $')
+     :                 '$Revision: 1.6 $',
+     :                 '$Date: 2013/06/26 23:50:40 $')
 
 c     Get parameters.
       call output(version)
@@ -117,6 +120,7 @@ c     Get parameters.
       dochan = yaxis.eq.'channel'
       call keyr('range',range(1),0.d0)
       call keyr('range',range(2),0.d0)
+      call keya('title',title,' ')
       dolog = (keyprsnt('log').and.(.not.dogrey))
       if(dolog) call keya('log',logfile,' ')
 c
@@ -183,6 +187,14 @@ c
 c  Loop the loop until we have no more files.
 c
       dowhile(uvDatOpn(tno))
+c
+c  Set default title to first file name, strip trailing /
+c      
+        if (len1(title).eq.0) then
+          call uvDatGta('name',title)
+          l = len1(title)
+          if (title(l:l).eq.'/') title(l:l)=' '
+        endif
         call uvDatRd(preamble,data,flags,MAXCHAN1,nchan)
         if(nchan.eq.1.and.dogrey)
      *          call bug('f','Only one channel to plot against')
@@ -257,10 +269,10 @@ c
 
       if(dogrey)then
         call FrPlot(sfreq,acc,wt,MAXCHAN1,nchan,nbin,pols(1),
-     *                                  flux,dochan,range)
+     *                                  flux,dochan,range,title)
       else
         call PrPlot(acc,wt,MAXCHAN1,MAXBIN,nchan,npol,nbin,
-     *                   pols,flux,llog,dolog,logfile)
+     *                   pols,flux,llog,dolog,logfile,title)
         continue
       endif
 
@@ -268,11 +280,11 @@ c
       end
 c***********************************************************************
       subroutine FrPlot(sfreq,acc,wt,mchan,nchan,nbin,pol,flux,dochan,
-     *                  range)
+     *                  range,title1)
 
       integer mchan,nchan,nbin,pol
       logical dochan
-      character flux*(*)
+      character flux*(*),title1*(*)
       double precision sfreq(nchan)
       complex acc(mchan,nbin)
       real wt(mchan,nbin),range(2)
@@ -323,6 +335,7 @@ c
       call pgimag(memr(pImage),nbin,nchan,1,nbin,1,nchan,
      *            range(1),range(2),tr)
       call pgbox('BCNST',0.,0,'BCNST',0.,0)
+      
       if(flux.eq.'imaginary')then
         title = 'Imaginary Part: Stokes = '//polsc2p(pol)
       else if(flux.eq.'real')then
@@ -332,6 +345,8 @@ c
       else
         title = 'Ampltitude: Stokes = '//polsc2p(pol)
       endif
+      l = len1(title)
+      if (len1(title1).gt.0) title=title(1:l)//' - '//title1
       l = len1(title)
       if(dochan)then
         call pglab('Bin Number','Channel Number',title(1:l))
@@ -413,9 +428,9 @@ c
       end
 c***********************************************************************
       subroutine PrPlot(acc,wt,mchan,mbin,nchan,npol,nbin,pols,flux,
-     +          llog,dolog,logfile)
+     +          llog,dolog,logfile,title)
 
-      character logfile*(*),flux*(*)
+      character logfile*(*),flux*(*),title*(*)
       integer nchan,npol,nbin,mchan,mbin,llog
       integer pols(npol)
       logical dolog
@@ -489,13 +504,13 @@ c
       call pgswin(xlo,xhi,ylo,yhi)
       call pgbox('BCNST',0.,0,'BCNST',0.,0)
       if(flux.eq.'real')then
-        call Label('Bin Number','Real Part',pols,npol)
+        call Label('Bin Number','Real Part',title,pols,npol)
       else if(flux.eq.'imaginary')then
-        call Label('Bin Number','Imaginary Part',pols,npol)
+        call Label('Bin Number','Imaginary Part',title,pols,npol)
       else if(flux.eq.'phase')then
-        call Label('Bin Number','Phase (degrees)',pols,npol)
+        call Label('Bin Number','Phase (degrees)',title,pols,npol)
       else
-        call Label('Bin Number','Amplitude',pols,npol)
+        call Label('Bin Number','Amplitude',title,pols,npol)
       endif
       do j=1,npol
         if(npnt(j).gt.0)then
@@ -544,20 +559,21 @@ c
 
       end
 c***********************************************************************
-      subroutine Label(xtitle,ytitle,pols,npol)
+      subroutine Label(xtitle,ytitle,title,pols,npol)
 
       integer npol,pols(npol)
-      character xtitle*(*),ytitle*(*)
+      character xtitle*(*),ytitle*(*),title*(*)
 c-----------------------------------------------------------------------
-      real vlen,xlen,ylen,xloc
+      real vlen,xlen,ylen,xloc,yloc
       character ctemp*3
       integer i,l
 
       character polsc2p*2
       integer len1
 c-----------------------------------------------------------------------
-      call pglab(xtitle,ytitle,' ')
-
+      call pglab(xtitle,ytitle,title)
+      yloc = 2.0
+      if (title.ne.' ') yloc=0.5
       vlen = 0
       do i=1,npol
         ctemp = polsc2p(pols(i))
@@ -579,7 +595,7 @@ c-----------------------------------------------------------------------
           ctemp(l:l) = ','
         endif
         call pgsci(i)
-        call pgmtxt('T',2.0,xloc,0.,ctemp(1:l))
+        call pgmtxt('T',yloc,xloc,0.,ctemp(1:l))
         call pglen(5,ctemp(1:l),xlen,ylen)
         xloc = xloc + xlen
       enddo
