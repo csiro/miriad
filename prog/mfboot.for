@@ -81,7 +81,7 @@ c	  noapply Do not apply the scale factor - just evaluate it.
 c         nospec Do not try to determine and correct the spectral index across
 c                the band.
 c
-c$Id: mfboot.for,v 1.10 2012/09/25 09:43:58 wie017 Exp $
+c$Id: mfboot.for,v 1.11 2013/06/27 03:56:24 wie017 Exp $
 c--
 c  History:
 c    rjs     15jan06 Original version adapted from plboot.
@@ -91,10 +91,10 @@ c    rjs     07jul06 Increase size of MAXPNT again.
 c    mhw     07sep09 Use central frequency for planet parameters
 c    mhw     24mar10 Correct spectral index too
 c    mhw     16jun11 Fix triple mode spectral index correction
+c    mhw     27jun13 Fix nospec option
 c------------------------------------------------------------------------
 	include 'maxdim.h'
-	character version*(*)
-	parameter(version='mfBoot: version 1.0 07-Jul-06')
+	character version*80
 	integer MAXVIS,MAXPNT
 	parameter(MAXVIS=32,MAXPNT=4000000)
 c
@@ -118,11 +118,14 @@ c  Externals.
 c
 	logical uvDatOpn,uvVarUpd,hdPrsnt
 	integer plLook
-	character streal*16
+	character streal*16, versan*80
+        
+        version = versan('mfboot',
+     *                   '$Revision: 1.11 $',  
+     *                   '$Date: 2013/06/27 03:56:24 $')
 c
 c  Get the user input.
 c
-	call output(version)
 	call keyini
 	call uvDatInp('vis','xcefdwl')
 	call uvDatSet('stokes',0)
@@ -253,12 +256,14 @@ c
 	      call uvrdvri(lVis,'nants',nants,0)
 	      call gainWri(lVis,fac,time0,nants)
 	    endif
-            if(hdPrsnt(lVis,'bandpass')) then
-              call bpSca(lVis,f0,alpha)
-	    else
-	      call bug('w','Cannot adjust spectral slope because'//
-     *                     ' there is no bandpass table')        
-	    endif         
+            if (.not.nospec) then
+              if(hdPrsnt(lVis,'bandpass')) then
+                call bpSca(lVis,f0,alpha)
+	      else
+	        call bug('w','Cannot adjust spectral slope because'//
+     *                       ' there is no bandpass table')        
+	      endif 
+            endif        
 	    call hisopen(lVis,'append')
 	    call hiswrite(lVis,'MFBOOT: Miriad '//version)
 	    call hisinput(lVis,'MFBOOT')
