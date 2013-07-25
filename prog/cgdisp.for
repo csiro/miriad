@@ -589,10 +589,11 @@ c       The OFFSET directive is not applied to ANY position fields in
 c       succeeding directives that have %OTYPEs that are "hms" or "dms".
 c       I am too lazy to code it.
 c
-c$Id: cgdisp.for,v 1.21 2012/06/25 04:11:16 wie017 Exp $
+c$Id: cgdisp.for,v 1.22 2013/07/25 01:15:53 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
+c    pjt   2013jul24  committed ptrdiff based alloc/free
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -607,7 +608,7 @@ c     Plotting parameters.
       real    WEDWID, TFDISP
       parameter (NXDEF = 4, NYDEF = 4, WEDWID = 0.05, TFDISP = 0.5)
 
-      integer ipim, ipnim, ipim2, ipnim2, ipimm
+      ptrdiff ipim, ipnim, ipim2, ipnim2, ipimm
       integer csize(maxnax,MAXCON), gsize(maxnax), vsize(maxnax,2),
      *  msize(maxnax), bsize(maxnax), lc(MAXCON), lg, lv(2), lm, lb,
      *  lhead, concol(MAXCON), veccol, boxcol, bemcol, ovrcol, labcol
@@ -660,8 +661,8 @@ c     Plotting parameters.
       data getvsc /.true./
 c-----------------------------------------------------------------------
       version = versan ('cgdisp',
-     *                  '$Revision: 1.21 $',
-     *                  '$Date: 2012/06/25 04:11:16 $')
+     *                  '$Revision: 1.22 $',
+     *                  '$Date: 2013/07/25 01:15:53 $')
 
 c     Get user inputs.
       call inputs(maxchan, MAXLEV, MAXCON, MAXTYP, ltypes, ncon, cin,
@@ -687,13 +688,13 @@ c     axis descriptors.
      *   ngrps, grpbeg, ngrp)
 
 c     Try to allocate memory for images.
-      call memalloc(ipim,  win(1)*win(2), 'r')
-      call memalloc(ipnim, win(1)*win(2), 'i')
+      call memallop(ipim,  win(1)*win(2), 'r')
+      call memallop(ipnim, win(1)*win(2), 'i')
       if (vin(1).ne.' ' .and. vin(2).ne.' ') then
-        call memalloc(ipim2,  win(1)*win(2), 'r')
-        call memalloc(ipnim2, win(1)*win(2), 'i')
+        call memallop(ipim2,  win(1)*win(2), 'r')
+        call memallop(ipnim2, win(1)*win(2), 'i')
       endif
-      if (mskin.ne.' ') call memalloc(ipimm,  win(1)*win(2), 'l')
+      if (mskin.ne.' ') call memallop(ipimm,  win(1)*win(2), 'l')
 
 c     Compute contour levels for each contour image.
       if (ncon.gt.0) then
@@ -1046,13 +1047,13 @@ c       Page plot device.
 c     Close down.
       call pgend
 
-      call memfree(ipim,  win(1)*win(2), 'r')
-      call memfree(ipnim, win(1)*win(2), 'i')
+      call memfrep(ipim,  win(1)*win(2), 'r')
+      call memfrep(ipnim, win(1)*win(2), 'i')
       if (vin(1).ne.' '  .and. vin(2).ne.' ') then
-        call memfree(ipim2,  win(1)*win(2), 'r')
-        call memfree(ipnim2, win(1)*win(2), 'i')
+        call memfrep(ipim2,  win(1)*win(2), 'r')
+        call memfrep(ipnim2, win(1)*win(2), 'i')
       endif
-      if (mskin.ne.' ') call memfree(ipimm, win(1)*win(2), 'i')
+      if (mskin.ne.' ') call memfrep(ipimm, win(1)*win(2), 'i')
 
       do i = 1, ncon
         call coFin(lc(i))
