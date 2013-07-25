@@ -212,10 +212,10 @@ c
 c
 c Set up calibration flags
 c
-	uvflags = 'd3'
-	if(.not.present(1))uvflags(3:3) = 'c'
-	if(.not.present(2))uvflags(4:4) = 'e'
-	if(.not.present(3))uvflags(5:5) = 'f'
+	uvflags = 'd3l'
+	if(.not.present(1))uvflags(4:4) = 'c'
+	if(.not.present(2))uvflags(5:5) = 'e'
+	if(.not.present(3))uvflags(6:6) = 'f'
 	end
 c************************************************************************
 	subroutine BufIni
