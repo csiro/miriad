@@ -2,7 +2,7 @@
 # GNUmakefile used to compile Miriad.
 #
 # Original: 2006/08/28, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.38 2011/08/17 05:25:36 cal103 Exp $
+# $Id: GNUmakefile,v 1.39 2013/08/06 02:02:35 wie017 Exp $
 #-----------------------------------------------------------------------------
 ifeq "$(MIR)" ""
   # Try to deduce basic Miriad environment variables.  Obviously this only
@@ -19,7 +19,7 @@ ifeq "$(MAKEMODE)" "system"
   # Subdirectories in which to invoke "allsys", in order.
   #------------------------------------------------------
   ALLSYSD  += $(findstring linpack,$(SUBDIRS))
-  ALLSYSD  += tools scripts inc subs prog spec guides
+  ALLSYSD  += tools scripts inc subs prog spec specdoc guides
 
   show ::
 	-@ echo ""
