@@ -79,7 +79,10 @@ c	  nopass   Do not apply bandpass corrections. By default these
 c	           are applied if they exist.
 c         uvpol    Print out fractional linear polarisation and 
 c                  polarisation position angle (provided Stokes I,Q,U are
-c                  requested). 
+c                  requested)
+c         long     Write long lines (>80 characters wide) with results in
+c                  more significant figures.
+c         . 
 c--
 c  History:
 c    rjs   5mar93 Original version.
@@ -92,19 +95,18 @@ c    rjs  17aug94 Handle offsets somewhat better.
 c    rjs  09mar97 CHange label "visibs" to "corrs" and change doc file.
 c    rjs  12oct98 Changed printing format.
 c    heb/rjs 20nov98 Added options=uvpol to print out polarization params.
-c    rjs  24jun99 Increase max number of sources.  
+c    rjs  24jun99 Increase max number of sources. 
+c    mhw  06aug13 Add long option 
 c  Bugs:
 c    ?? Perfect?
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
 	integer MAXPOL,MAXSRC,PolMin,PolMax
-	character version*(*)
 	parameter(MAXPOL=4,MAXSRC=1024,PolMin=-9,PolMax=4)
-	parameter(version='UvFlux: version 1.0 24-Jun-99')
 c
-	character uvflags*16,polcode*2,line*132
-	logical docal,dopol,dopass,found,doshift,douvpol,ok
+	character uvflags*16,polcode*2,line*132,dash*100
+	logical docal,dopol,dopass,found,doshift,douvpol,ok,long
 	character sources(MAXSRC)*32,source*32
 	double precision fluxr(MAXPOL,MAXSRC),fluxi(MAXPOL,MAXSRC)
 	double precision amp(MAXPOL,MAXSRC),amp2(MAXPOL,MAXSRC)
@@ -112,7 +114,7 @@ c
 	double precision shift(2),shft(2)
 	complex vecaver
 	real vecscat,scalscat,temp,vecamp,vecpha,scalamp,sig2
-	integer i,j,t,nlines,lmax
+	integer i,j,t,nlines,lmax,l
 	integer ncnt(MAXPOL,MAXSRC)
 	integer PolIndx(PolMin:PolMax),p(MAXPOL),pp(MAXPOL)
 	integer nsrc,npol,isrc,ipol,vsource,tno
@@ -124,18 +126,25 @@ c
 	double precision preamble(4)
 	complex data(MAXCHAN)
 	logical flags(MAXCHAN)
+	character version*80
 c
 c  Externals.
 c
 	logical uvDatOpn,uvVarUpd
-	character PolsC2P*2
+	character PolsC2P*2, versan*80
 	integer len1
 c
 c  Get the user parameters.
 c
-	call output(version)
+	version = versan('uvflux',
+     :                   '$Revision: 1.2 $',
+     :                   '$Date: 2013/08/08 05:49:50 $')
 	call keyini
-	call GetOpt(docal,dopol,dopass,douvpol)
+	call GetOpt(docal,dopol,dopass,douvpol,long)
+        l=80
+        if (long) l=93      
+        dash='--------------------------------------------------'//
+     *       '--------------------------------------------------'
 c
 c  Determine the shift.
 c
@@ -282,19 +291,29 @@ c  Print out the results.
 c
 	lmax = max(lmax,12)
 	nlines = 0
-	call output('---------------------------------------------'//
-     *		'-----------------------------------')
-	source = 'Source'
-	call output(source(1:lmax-1)//'Pol Theoretic   Vector Average'//
-     *		'      RMS      Average  RMS Amp  Number')
-	source = ' '
-	call output(source(1:lmax-1)//'       RMS        (real,imag) '//
-     *		'    Scatter      Amp    Scatter  Corrs')
-	source = '------'
+	call output(dash(1:l))
+        if (long) then
+	  source = 'Source'
+	  call output(source(1:lmax-1)//'Pol  Theoretic      '//
+     *		'Vector Average         RMS      Average     RMS Amp'//
+     *          '    Number')
+	  source = ' '
+	  call output(source(1:lmax-1)//'        RMS         '//
+     *		' (real,imag)         Scatter      Amp       Scatter'//
+     *          '    Corrs')
+	  call output(dash(1:l))
+        else
+	  source = 'Source'
+	  call output(source(1:lmax-1)//'Pol Theoretic   '//
+     *		'Vector Average      RMS      Average  RMS Amp  Number')
+	  source = ' '
+	  call output(source(1:lmax-1)//'       RMS        '//
+     *		'(real,imag)     Scatter      Amp    Scatter  Corrs')
+	  source = '------'
 
-	call output(source(1:lmax-1)//'--- -------- -----------------'//
-     *		'--- -------  --------- --------  ------')
-
+	  call output(source(1:lmax-1)//'--- -------- ---------------'//
+     *	  '----- -------  --------- --------  ------')
+        endif
 c
 	do isrc=1,nsrc
 	  source = sources(isrc)
@@ -315,11 +334,21 @@ c
      *			- (amp(ipol,isrc) / ncnt(ipol,isrc))**2
 	      scalscat = sqrt(abs(scalscat))
 	      sig2 = sqrt(rms2(ipol,isrc)/ncnt(ipol,isrc))
-	      write(line,
-     *		'(a,a,1pe8.1,1pe11.3,1pe11.3,1pe8.1,1pe11.3,1pe9.2,i8)')
+              if (long) then
+                write(line,
+     *		'(a,a,1pe11.3,1pe12.4,1pe12.4,1pe11.3,'//
+     *          '1pe12.4,1pe11.3,i10)')
      *		source(1:lmax),polcode,sig2,fluxr(ipol,isrc),
      *		fluxi(ipol,isrc),vecscat,
      *		scalamp,scalscat,ncnt(ipol,isrc)
+              else
+                write(line,
+     *		'(a,a,1pe8.1,1pe11.3,1pe11.3,1pe8.1,'//
+     *          '1pe11.3,1pe9.2,i8)')
+     *		source(1:lmax),polcode,sig2,fluxr(ipol,isrc),
+     *		fluxi(ipol,isrc),vecscat,
+     *		scalamp,scalscat,ncnt(ipol,isrc)
+              endif
 	      call output(line)
 	      source = ' '
 	      nlines = nlines + 1
@@ -340,22 +369,19 @@ c
               mlpc = ml*100
               psi = 0.5*atan2(fluxr(vU,isrc),fluxr(vQ,isrc))
               psideg = psi*180/pi
-	      call output('-----------------------------------------'//
-     *		    '---------------------------------------')
+	      call output(dash(1:l))
               call output('         % Linear Pol     '//
      *              'Lin Pol PA (degrees)')
               call output('         ------------     ----------')
               write(line, '(2f17.3,2f35.3)') mlpc,psideg
               call output(line)
-	      call output('-----------------------------------------'//
-     *		    '---------------------------------------')
+	      call output(dash(1:l))
 	    endif
           endif 
 	enddo
 c
 	if(nlines.eq.0)call bug('f','No valid data found')
-	call output('---------------------------------------------'//
-     *		'-----------------------------------')
+        call output(dash(1:l))
 c
 	end
 c************************************************************************
@@ -391,26 +417,29 @@ c
 c
 	end
 c************************************************************************
-	subroutine GetOpt(docal,dopol,dopass,douvpol)
+	subroutine GetOpt(docal,dopol,dopass,douvpol,long)
 c
 	implicit none
-	logical docal,dopol,dopass,douvpol
+	logical docal,dopol,dopass,douvpol,long
 c
 c  Outputs:
 c    docal	Apply calibration corrections.
 c    dopol	Apply polarisation leakage corrections.
 c    dopass	Apply bandpass corrections.
 c    douvpol    Print out additional polarisation parameters.
+c    long       Print out results in 'long' format
 c------------------------------------------------------------------------
 	integer NOPT
-	parameter(NOPT=4)
+	parameter(NOPT=5)
 	character opts(NOPT)*8
 	logical present(NOPT)
-	data opts/'nocal   ','nopol   ','nopass  ','uvpol   '/
+	data opts/'nocal   ','nopol   ','nopass  ','uvpol   ',
+     *      'long    '/
 c
 	call options('options',opts,present,NOPT)
 	docal = .not.present(1)
 	dopol = .not.present(2)
 	dopass= .not.present(3)
         douvpol= present(4)
+        long = present(5)
 	end
