@@ -80,6 +80,9 @@ c	           are applied if they exist.
 c         uvpol    Print out fractional linear polarisation and 
 c                  polarisation position angle (provided Stokes I,Q,U are
 c                  requested)
+c         vlbi     Average amplitude of vector average for each integration.
+c                  data are vector averaged over channel and baseline,
+c                  and amplitude averaged for each integration interval.
 c         long     Write long lines (>80 characters wide) with results in
 c                  more significant figures.
 c         . 
@@ -95,7 +98,8 @@ c    rjs  17aug94 Handle offsets somewhat better.
 c    rjs  09mar97 CHange label "visibs" to "corrs" and change doc file.
 c    rjs  12oct98 Changed printing format.
 c    heb/rjs 20nov98 Added options=uvpol to print out polarization params.
-c    rjs  24jun99 Increase max number of sources. 
+c    rjs  24jun99 Increase max number of sources.  
+c    mchw 17jul11 VLBI: average amplitude of vector average for each integration.
 c    mhw  06aug13 Add long option 
 c  Bugs:
 c    ?? Perfect?
@@ -106,7 +110,7 @@ c------------------------------------------------------------------------
 	parameter(MAXPOL=4,MAXSRC=1024,PolMin=-9,PolMax=4)
 c
 	character uvflags*16,polcode*2,line*132,dash*100
-	logical docal,dopol,dopass,found,doshift,douvpol,ok,long
+	logical docal,dopol,dopass,found,doshift,douvpol,ok,dovlbi,long
 	character sources(MAXSRC)*32,source*32
 	double precision fluxr(MAXPOL,MAXSRC),fluxi(MAXPOL,MAXSRC)
 	double precision amp(MAXPOL,MAXSRC),amp2(MAXPOL,MAXSRC)
@@ -114,6 +118,7 @@ c
 	double precision shift(2),shft(2)
 	complex vecaver
 	real vecscat,scalscat,temp,vecamp,vecpha,scalamp,sig2
+	real vlbir,vlbii
 	integer i,j,t,nlines,lmax,l
 	integer ncnt(MAXPOL,MAXSRC)
 	integer PolIndx(PolMin:PolMax),p(MAXPOL),pp(MAXPOL)
@@ -123,7 +128,7 @@ c
 	integer vI,vQ,vU
 c
 	integer nchan
-	double precision preamble(4)
+	double precision preamble(4),time0
 	complex data(MAXCHAN)
 	logical flags(MAXCHAN)
 	character version*80
@@ -137,10 +142,10 @@ c
 c  Get the user parameters.
 c
 	version = versan('uvflux',
-     :                   '$Revision: 1.2 $',
-     :                   '$Date: 2013/08/08 05:49:50 $')
+     :                   '$Revision: 1.3 $',
+     :                   '$Date: 2013/08/11 23:07:10 $')
 	call keyini
-	call GetOpt(docal,dopol,dopass,douvpol,long)
+	call GetOpt(docal,dopol,dopass,douvpol,dovlbi,long)
         l=80
         if (long) l=93      
         dash='--------------------------------------------------'//
@@ -169,6 +174,8 @@ c
 	isrc = 0
 	nsrc = 0
 	npol = 0
+	vlbir = 0.
+	vlbii = 0.
 	do i=PolMin,PolMax
 	  PolIndx(i) = 0
 	enddo
@@ -185,6 +192,7 @@ c
 	  call uvVarIni(tno,vsource)
 	  call uvVarSet(vsource,'source')
 	  call uvDatRd(preamble,data,flags,MAXCHAN,nchan)
+          time0 = preamble(3)
 	  dowhile(nchan.gt.0)
 c
 c  Determine the polarisation.
@@ -253,11 +261,26 @@ c
 		fluxi(ipol,isrc) = fluxi(ipol,isrc) + aimag(data(i))
 		rms2(ipol,isrc) = rms2(ipol,isrc) + sig2
 		temp = abs(data(i))
-		amp(ipol,isrc)  = amp(ipol,isrc) + temp
+                if(dovlbi)then
+		  vlbir = vlbir + real(data(i))
+		  vlbii = vlbii + aimag(data(i))
+                else
+		  amp(ipol,isrc)  = amp(ipol,isrc) + temp
+                endif
 		amp2(ipol,isrc) = amp2(ipol,isrc) + temp*temp
 		ncnt(ipol,isrc) = ncnt(ipol,isrc) + 1
 	      endif
 	    enddo
+c
+c  VLBI average amplitude of vector average for each integration interval.
+c
+            if(dovlbi.and.preamble(3).ne.time0)then
+		temp = abs(cmplx(vlbir,vlbii))
+		amp(ipol,isrc)  = amp(ipol,isrc) + temp
+                time0 = preamble(3)
+	        vlbir = 0.
+	        vlbii = 0.
+            endif
 c
 c  Loop the loop.
 c
@@ -417,29 +440,31 @@ c
 c
 	end
 c************************************************************************
-	subroutine GetOpt(docal,dopol,dopass,douvpol,long)
+	subroutine GetOpt(docal,dopol,dopass,douvpol,dovlbi,long)
 c
 	implicit none
-	logical docal,dopol,dopass,douvpol,long
+	logical docal,dopol,dopass,douvpol,dovlbi,long
 c
 c  Outputs:
 c    docal	Apply calibration corrections.
 c    dopol	Apply polarisation leakage corrections.
 c    dopass	Apply bandpass corrections.
 c    douvpol    Print out additional polarisation parameters.
+c    dovlbi     Average amplitude of vector average for each integration.
 c    long       Print out results in 'long' format
 c------------------------------------------------------------------------
 	integer NOPT
-	parameter(NOPT=5)
+	parameter(NOPT=6)
 	character opts(NOPT)*8
 	logical present(NOPT)
 	data opts/'nocal   ','nopol   ','nopass  ','uvpol   ',
-     *      'long    '/
+     * 'vlbi    ','long    '/
 c
 	call options('options',opts,present,NOPT)
 	docal = .not.present(1)
 	dopol = .not.present(2)
 	dopass= .not.present(3)
         douvpol= present(4)
-        long = present(5)
+        dovlbi = present(5)
+        long = present(6)
 	end
