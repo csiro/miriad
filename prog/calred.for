@@ -7,7 +7,26 @@ c: uv analysis, plotting
 c+
 c	CALRED is a program used to analyse flux densities of sources
 c	where phase stability is poor. It uses either the amplitude of
-c	the data or an averaged triple product.
+c	the data or an averaged triple product. Normally a point source
+c       model is assumed, but if a planet is found in the input, CALRED
+c       uses the model visibility for each baseline/channel to correct
+c       the calculations.
+c
+c       CALRED produces a table with the following columns:
+c       Sca (mJy) - the scalar average fluxdensity estimate, calculated
+c          as the rms of the visibility amplitudes
+c       Vec (mJy) - the vector average fluxdensity estimate,
+c           not listed with options=triple
+c       Tri (mJy) - the triple product fluxdensity estimate, this
+c          is the cube root of the real part of the average of 
+c          V12*V23*conj(V13) (note that this can be negative).
+c          Only listed with options=triple.
+c       Con - the confusion percentage, calculated from the ratio of the
+c          rms in the imaginary and real component of the triple ampl.
+c       The - the theoretical noise in mJy
+c       Act - the actual noise in mJy
+c       NCorr - the number of correlations contributing
+c       
 c@ vis
 c	The input visibility datasets. Several datasets can be given.
 c@ select
@@ -31,7 +50,7 @@ c	  nopass    Do not perform bandpass calibration on the data.
 c	  norm      Divide the noise estimates by the square root of the
 c	            number of points.
 c
-c$Id: calred.for,v 1.6 2011/01/26 22:00:08 wie017 Exp $
+c$Id: calred.for,v 1.7 2013/08/15 05:10:19 wie017 Exp $
 c--
 c  History:
 c    rjs  23feb00 Original version.
@@ -45,6 +64,7 @@ c    rjs  08aug04 The algorithm to determine the confusion was
 c	          hopelessly flawed. Correct this.
 c    rjs  02jul05 Improved error estimates.
 c    mhw  07sep09 More digits for correlation count
+c    mhw  15aug13 Expand docs and digits.
 c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
@@ -55,7 +75,7 @@ c-----------------------------------------------------------------------
 	parameter(PolMin=-8,PolMax=4)
 c
 	logical dotrip,polp,dopara,donorm
-	character con*6,line*80,sources(MAXSRC)*16,uvflags*16,version*80
+	character con*8,line*80,sources(MAXSRC)*16,uvflags*16,version*80
 	real scat2,SSms,flux,flux2,SSmm,rp,ip,SconN,SConD,norm
 	integer ncorr
 	complex SSdm
@@ -87,8 +107,8 @@ c
 	character versan*80
 c-----------------------------------------------------------------------
       version = versan ('calred',
-     :                  '$Revision: 1.6 $',
-     :                  '$Date: 2011/01/26 22:00:08 $')
+     :                  '$Revision: 1.7 $',
+     :                  '$Date: 2013/08/15 05:10:19 $')
 c
 c Lets go! Get user inputs.
 c
@@ -227,11 +247,11 @@ c
 c  We have grabbed and averaged all the relevant data.
 c
 	if(dotrip)then
-	  call output('Source        Sca(mJy)  Tri(mJy) Con  '//
-     *						'The  Act   NCorr')
+	  call output('Source         Sca(mJy)   Tri(mJy)   Con    '//
+     *				'The      Act   NCorr')
 	else
-	  call output('Source        Sca(mJy)  Vec(mJy) Con  '//
-     *						'The  Act   NCorr')
+	  call output('Source         Sca(mJy)   Vec(mJy)   Con    '//
+     *				'The      Act   NCorr')
 	endif
 	do j=1,nsrc
 	  scat2 = 0
@@ -280,18 +300,18 @@ c
 	      else
 		scat2 = scat2**0.3333
 	      endif
-	      write(con,'(i6)')
-     *		nint(100*min(0.82*sqrt(SconN/SConD),1.))
+	      write(con,'(F8.1)')
+     *		100*min(0.82*sqrt(SconN/SConD),1.)
 	    else
 	      flux = SSdm
-	      con = '     -'
+	      con = '     -  '
 	    endif
 	    scat2 = scat2/sqrt(norm)
 	    write(line,10)sources(j),1000*flux2,
      *			1000*flux,con,
-     *			nint(1000*SSms),nint(1000*scat2),
+     *			1000*SSms,1000*scat2,
      *			ncorr
-  10	    format(a14,F9.1,F10.1,a6,i6,i6,i9)
+  10	    format(a14,F9.1,F10.1,a8,F8.1,F8.1,i9)
 	    call output(line)
 	  endif
 	enddo
