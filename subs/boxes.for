@@ -70,7 +70,7 @@ c  CARMA Customizations:
 c
 c  2011-Jul-13  pkgw  Add box(m) shorthand for box(-m,-m,m,m)
 c
-c $Id: boxes.for,v 1.9 2013/06/04 05:52:12 wie017 Exp $
+c $Id: boxes.for,v 1.10 2013/08/21 05:21:24 wie017 Exp $
 c--
 c***********************************************************************
 
@@ -114,7 +114,7 @@ c-----------------------------------------------------------------------
       logical   coordini, more, dounit
       integer   boxtype, i, ilat, ilng, ispc, k2, length,k1, lu(3), n,
      *          nshape, nsize(MAXNAX), offset, spare, tmp(4)
-      character algo*8, spec*4096, type*9, types(NTYPES)*10, units*8,
+      character algo*8, spec*4096, type*10, types(NTYPES)*10, units*8,
      *          wtype*16, xytype*6, ztype*6
 
       external  keyprsnt, len1
