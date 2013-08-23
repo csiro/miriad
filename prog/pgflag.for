@@ -57,6 +57,8 @@ c       W                Apply the flagging specified by the patch
 c                        file, in reverse (ie. good <-> bad)
 c       b                Blow away the dust: flag all visibilities
 c                        with less than 3 good neighbours.
+c       e                Extend the flagging to all sequences in
+c                        time or channel with less than 20% good data
 c       f                Flag the selected range of data on the
 c                        currently displayed baseline only.
 c       F                Flag the selected range of data on all
@@ -208,11 +210,11 @@ c     using the * command to see the effect of background subtraction and
 c     the < command to see the effects of SumThreshold flagging. 
 c     If too much or too little was flagged, change the parameters with
 c     the 'T' command and undo the flagging with the 'rr' command and try
-c     again. Once the right parameters are found you can abort with 'a' and
-c     run pgflag with command set to "<" or "<b" to flag the entire dataset.
-c     You can use options=nodisp if you don't want to watch the flagging, 
-c     if you do want to see what is happening, you'll want to specify  
-c     command='=<' or the like to scale the data for the display.
+c     again. Once the right parameters are found you can abort with 'a' 
+c     and run pgflag with command set to "<" or "<be" to flag the entire 
+c     dataset. You can use options=nodisp if you don't want to watch the
+c     flagging. If you do want to see what is happening, you'll want to 
+c     specify command='=<' or the like to scale the data for the display.
 c
 c@ vis
 c     Input visibility dataset to be flagged. No default.
@@ -245,7 +247,7 @@ c@ mode
 c     Display ``amplitude'' or ``phase''. By default, ``amplitude''
 c     is selected. For mode=``phase'', the phase is in degrees.
 c@ flagpar
-c     Parameters for SumThreshold flagging (and dusting)
+c     Parameters for SumThreshold flagging, dusting and extending
 c     (see Offringa et al,2010, MNRAS 405,155)
 c     1 : Threshold in estimated sigma's (estimated using the 
 c         median absolute deviation), default 7
@@ -262,6 +264,10 @@ c     5 : Power of two of the maximum number of points used in the
 c         SumThreshold operation (e.g., 5 -> 32 points). Default 5.
 c     6 : Dust the plot - flag points with less than flagpar(6) 
 c         unflagged neighbours. Useful range 1-4, default 3.
+c     7 : Extend flags to all points which are in a time or
+c         channel sequence with less than flagpar(7) % good data,
+c         default 20. This process 'eats' away at the data from the
+c         flagged areas. (See Offringa et al 2012, A&A 539,A95)
 c@ patch
 c     The name of the flagging patch file, either to write (if the
 c     'patch' option is specified), or to use for the 'w' or 'W'
@@ -271,8 +277,8 @@ c     The name of a log file to which will be output the entire set
 c     of flagging actions, in text format.
 c@ command
 c     Specify a series of commands for non-interactive flagging.
-c     E.g., '<b' will apply SumThreshold flagging followed
-c      by blowing away the dust, for each baseline;
+c     E.g., '<be' will apply SumThreshold flagging followed
+c      by blowing away the dust and extending the flags for each baseline;
 c     '=vx=v' will autoscale the data, do a clip operation, then
 c      subtract the channel average, autoscale and clip again before
 c      moving on to the next baseline. There is no need to specify
@@ -303,7 +309,7 @@ c       nocal   Do not apply antenna gain calibration.
 c       nopass  Do not apply bandpass correction.
 c       nopol   Do not apply polarisation leakage correction.
 c
-c$Id: pgflag.for,v 1.23 2012/11/27 03:40:21 ste616 Exp $
+c$Id: pgflag.for,v 1.24 2013/08/23 04:50:13 wie017 Exp $
 c--
 c
 c  History:
@@ -393,6 +399,7 @@ c                 contains all the flagging that we have done, and that
 c                 can be used later to repeat the exact procedure.
 c                 The same stuff can be made into a human-readable
 c                 text log file.
+c    mhw 23Aug13  Add 'e' command for extension of flags
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mirconst.h'
@@ -413,7 +420,7 @@ c Data storage.
 c
       double precision day0,cfreq(MAXCHAN)
       integer lScr,nchan,ntime,nvis,chanoff,chanw,nbl,cbl
-      integer newbl,tbl,mbl,mant,k1,k2,toklen,bindex
+      integer newbl,tbl,mbl,mant,k1,k2,toklen
       integer pant1,pant2,pchan1,pchan2,pflag
       real t1(MAXTIME),ttol,curs_x,curs_y
       logical blpres(MAXBASE),nosrc,nodisp,logstats,needplot,needread
@@ -440,7 +447,7 @@ c
       logical use_fiddle,keep_looping,colour_from_window
       logical colour_from_region,max_makeregion,ok
       real fiddle_min,fiddle_max,datamin,datamax,fiddlefraction
-      real flagpar(6),level,result
+      real flagpar(7),level,result
 c
 c Externals
 c
@@ -448,8 +455,8 @@ c
       logical uvDatOpn
 
       version = versan ('pgflag',
-     :                  '$Revision: 1.23 $',
-     :                  '$Date: 2012/11/27 03:40:21 $')
+     :                  '$Revision: 1.24 $',
+     :                  '$Date: 2013/08/23 04:50:13 $')
 
 c
 c Get user inputs
@@ -464,6 +471,8 @@ c
       call keyr('flagpar',flagpar(4),3.0)
       call keyr('flagpar',flagpar(5),5.0)
       call keyr('flagpar',flagpar(6),3.0)
+      call keyr('flagpar',flagpar(7),20.0)
+      flagpar(7)=flagpar(7)/100
       call keya('command',command,' ')
       call keya('patch',patchfile,' ')
       call keya('log',logfile,' ')
@@ -1257,6 +1266,16 @@ c     available
             call dust(memI(iFlg),t1,nchan,ntime,
      *                nint(flagpar(6)),chans,times,bases,flagval,
      *                MAXEDIT,nflags,cbl)
+         elseif (pressed(1:1).eq.'e') then
+            if (nodisp) call output('Extend flagged areas...')
+            needplot=.true.
+            plot_main=.true.
+            plot_points=.true.
+            plot_average=.true.
+            plot_top=.true.
+            call expand(memI(iFlg),t1,nchan,ntime,
+     *                flagpar(7),chans,times,bases,flagval,
+     *                MAXEDIT,nflags,cbl)
          elseif (pressed(1:1).eq.'T') then
             call output('Change SumThreshold parameters')
             write(promp,'(A,F4.1,A)') 
@@ -1267,7 +1286,7 @@ c     available
               if (ok) flagpar(1)=max(1.,result)
             endif 
             write(promp,'(A,F4.1,A)') 
-     *        'Conv size - channels (',flagpar(2),') : '
+     *        'Conv size - channels  (',flagpar(2),'): '
             call prompt(string,length,promp)
             if (length.gt.0) then
               call atorf(string,result,ok)
@@ -1281,7 +1300,7 @@ c     available
               if (ok) flagpar(3)=max(0.,result)
             endif 
             write(promp,'(A,I2,A)') 
-     *        'Iterations      (',nint(flagpar(4)),'): '
+     *        'Iterations              (',nint(flagpar(4)),'): '
             call prompt(string,length,promp)
             if (length.gt.0) then
               call atoif(string,iresult,ok)
@@ -1295,11 +1314,18 @@ c     available
               if (ok) flagpar(5)=max(1,iresult)
             endif
             write(promp,'(A,I2,A)') 
-     *        'Minumum # neighbours   (',nint(flagpar(6)),'): '
+     *        'Minumum # neighbours    (',nint(flagpar(6)),'): '
             call prompt(string,length,promp)
             if (length.gt.0) then
               call atoif(string,iresult,ok)
               if (ok) flagpar(6)=max(1,iresult)
+            endif
+            write(promp,'(A,F4.1,A)') 
+     *        'Percentage            (',flagpar(7)*100,'): '
+            call prompt(string,length,promp)
+            if (length.gt.0) then
+              call atorf(string,result,ok)
+              if (ok) flagpar(7)=max(0.,result)/100
             endif
          elseif ((pressed(1:1).eq.'w').or.(pressed(1:1).eq.'W')) then
 c     Take the specified patch file and do the flagging.
@@ -2105,10 +2131,9 @@ c-----------------------------------------------------------------------
       integer WIDTH, MAXX, MAXY
       parameter(WIDTH=20, MAXX=8192, MAXY=8640)
       real buf(MAXY*4),level,sum,mad
-      integer count,N,step,wid,tot
+      integer N,step,wid, count
 c
       integer i,j,k,l
-      character string*80
 c
 c compile stats
       integer nclippix
@@ -2222,8 +2247,26 @@ c
           endif
         enddo
       enddo
+      
+      call stats(iflag,Nx,Ny,t1,nflags, MAXEDIT)
 
-
+      end
+      
+c***********************************************************************
+      subroutine Stats(iflag,Nx,Ny,t1,nflags,MAXEDIT)
+      include 'maxdim.h'
+c
+      integer Nx, Ny, nflags, MAXEDIT
+      real t1(Ny)
+      integer iflag(Nx,Ny,2)
+c
+c  Display baseline flagging stats
+c
+c-----------------------------------------------------------------------
+      integer count,tot
+c
+      integer i,j
+      character string*80
 c
 c  Show the flag statistics
 c
@@ -2243,7 +2286,7 @@ c
         call output(string)
       endif
       if (nflags.eq.MAXEDIT) then
-        call output('Threshold flagging exceeded max #flags')
+        call output('Flagging exceeded max #flags')
       endif
 c
       end
@@ -3456,6 +3499,158 @@ c
 	  enddo
         enddo
       enddo
+      call stats(iflag,xdim,ydim,t1,nflags,MAXEDIT)
+      end
+c***********************************************************************
+      subroutine expand(iflag,t1,xdim,ydim,frac,
+     *  chans,times,bases,flagval,MAXEDIT,nflags,cbl)
+c
+      integer xdim,ydim,iflag(xdim,ydim,2)
+      integer cbl, nFlags, MAXEDIT
+      real t1(ydim),frac
+      integer chans(2,MAXEDIT),times(2,MAXEDIT),bases(2,MAXEDIT)
+      logical flagval(MAXEDIT)
+c
+c  Expand the flagged areas by applying the Scale Invariant Rank operator
+c  to the array - flag pixels in all ranges where the 
+c  fraction of good pixels is less than frac, Applied first in time,
+c  then in channel. Exclude fully flagged times and channels from the
+c  algorithm to avoid 'eating away' too much good data. 
+c
+c  Input:
+c    iflag	Flags for the data.
+c    xdim	Number of channels.
+c    ydim	Number of time slots.
+c    frac       Minimum fracion of unflagged pixels in range
+c    chans,times,bases Channels, Times and Baselines to flag
+c    flagval    Flag value for each edit operation
+c    MAXEDIT,nflags Max and current number of flags
+c    cbl        Current baseline number
+c  Output:
+c    iflag	The input with bad areas flagged out
+c
+c-----------------------------------------------------------------------
+c 
+      include 'maxdim.h'
+      integer p(MAXDIM),q(MAXDIM)
+      integer inx(MAXDIM),iny(MAXDIM)
+      real psi(MAXDIM),m(MAXDIM)
+      integer ix,iy,nx,ny
+      logical good
+c
+      if(ydim.gt.MAXDIM)call bug('f','Too many times')
+c
+c  Exclude time gaps and completely flagged times
+c
+      ny=0
+      do iy=1,ydim
+        if (t1(iy).gt.0) then
+          good = .false.
+          ix=1
+          do while (.not.good.and.ix.le.xdim)
+            good=good.or.(iflag(ix,iy,2).gt.0)
+            ix=ix+1
+          enddo
+          if (good) then
+            ny=ny+1
+            iny(ny)=iy
+          endif
+        endif
+      enddo
+        
+c
+c  Determine what to flag, use Offringa's linear time SIR algorithm
+c
+c  Do the time direction
+c     
+      do ix=1,xdim
+        do iy=1,ny
+          psi(iy) = frac - iflag(ix,iny(iy),2)
+        enddo
+        m(1)=0
+        do iy=2,ny+1
+          m(iy) = m(iy-1) + psi(iy-1)
+        enddo
+        p(1)=1
+        do iy=2,ny
+          p(iy)=p(iy-1)
+          if (m(p(iy)).gt.m(iy)) p(iy)=iy
+        enddo
+        q(ny)=ny+1
+        do iy=ny-1,1,-1
+          q(iy)=q(iy+1)
+          if (m(q(iy)).lt.m(iy+1)) q(iy)=iy+1
+        enddo
+        do iy=1,ny
+          if (iflag(ix,iny(iy),2).gt.0.and.m(q(iy)).ge.m(p(iy))
+     *        .and.nflags.lt.MAXEDIT) then
+            iflag(ix,iny(iy),2)=0
+            nflags = nflags + 1
+            times(1,nflags)=iny(iy)
+            times(2,nflags)=iny(iy)
+            chans(1,nflags)=ix
+            chans(2,nflags)=ix
+            bases(1,nflags)=cbl
+            bases(2,nflags)=1
+            flagval(nflags)=.true.
+          endif
+        enddo
+      enddo
+      
+c
+c  Exclude completely flagged channels
+c
+      nx=0
+      do ix=1,xdim
+          good = .false.
+          iy=1
+          do while (.not.good.and.iy.le.ny)
+            good=good.or.(iflag(ix,iny(iy),2).gt.0)
+            iy=iy+1
+          enddo
+          if (good) then
+            nx=nx+1
+            inx(nx)=ix
+          endif
+      enddo
+c
+c  Do the channel direction
+c     
+      do iy=1,ny
+        do ix=1,nx
+          psi(ix) = frac - iflag(inx(ix),iny(iy),2)
+        enddo
+        m(1)=0
+        do ix=2,nx+1
+          m(ix) = m(ix-1) + psi(ix-1)
+        enddo
+        p(1)=1
+        do ix=2,nx
+          p(ix)=p(ix-1)
+          if (m(p(ix)).gt.m(ix)) p(ix)=ix
+        enddo
+        q(nx)=nx+1
+        do ix=nx-1,1,-1
+          q(ix)=q(ix+1)
+          if (m(q(ix)).lt.m(ix+1)) q(ix)=ix+1
+        enddo
+        do ix=1,nx
+          if (iflag(inx(ix),iny(iy),2).gt.0.and.
+     *        m(q(ix)).ge.m(p(ix)).and.nflags.lt.MAXEDIT) then
+            iflag(inx(ix),iny(iy),2)=0
+            nflags = nflags + 1
+            times(1,nflags)=iny(iy)
+            times(2,nflags)=iny(iy)
+            chans(1,nflags)=inx(ix)
+            chans(2,nflags)=inx(ix)
+            bases(1,nflags)=cbl
+            bases(2,nflags)=1
+            flagval(nflags)=.true.
+          endif
+        enddo
+      enddo
+      call stats(iflag,xdim,ydim,t1,nflags,MAXEDIT)
+      
       end
 c***********************************************************************
 	subroutine AvRange(Ny,t1,cstart,cend)
@@ -4135,10 +4330,10 @@ c    string     The formatted command.
 c-----------------------------------------------------------------------
       include 'mirconst.h'
       include 'maxdim.h'
-      integer chan1,chan2,l,i,j,tbl,ls,base1,base2
+      integer chan1,chan2,l,i,j,tbl,base1,base2
       character time1*18,time2*18
 c      double precision time1,time2
-      character flagval*4,baseflag*7,selectant*13
+      character flagval*4,baseflag*7
       double precision dt1,dt2
 c
 c  Externals.
