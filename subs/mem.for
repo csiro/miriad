@@ -16,6 +16,7 @@ c    rjs  24dec92 Doc changes only, for jm.
 c    rjs  28jun93 Improvement to membuf routine, to bring it better in
 c		  line with the 27jul92 changes.
 c    rjs  22jul09 Use new ptrdiff type.
+c    mhw  28aug13 Use ptrdiff type more widely
 c************************************************************************
 c* MemBuf -- Return suggested memory buffer size.
 c& rjs
@@ -195,8 +196,8 @@ c		be an index into a double precision array.
 c--
 c------------------------------------------------------------------------
 	include 'maxdim.h'
-	ptrdiff p,q,pntd
-	integer nc,sized,elsize
+	ptrdiff p,q,pntd,sized
+	integer nc,elsize
 	integer Data(MAXBUF)
 	common Data
 c
@@ -407,8 +408,8 @@ c		be an index into a double precision array.
 c--
 c------------------------------------------------------------------------
 	include 'maxdim.h'
-	ptrdiff p,q,pntd
-	integer nc,sized,elsize
+	ptrdiff p,q,pntd,sized
+	integer nc,elsize
 	integer Data(MAXBUF)
 	common Data
 c
@@ -431,7 +432,8 @@ c
 	p = 0
 	nc = align
 	elsize = mmSize(ichar(type))
-	sized = ( (size*elsize-1)/align + 1 ) * align
+        sized = size
+	sized = ( (sized*elsize-1)/align + 1 ) * align
 c
 	dowhile(q.gt.0.and.Data(q+1).lt.sized+nc)
 	  nc = 0
@@ -489,8 +491,8 @@ c		  'c'	Complex.
 c--
 c------------------------------------------------------------------------
 	include 'maxdim.h'
-	ptrdiff p,q,pntd,qd
-	integer sized,elsize
+	ptrdiff p,q,pntd,qd,sized
+	integer elsize
 	integer Data(MAXBUF)
 	common Data
 c
@@ -508,7 +510,8 @@ c
 	elsize = mmSize(ichar(type))
 	pntd = (pnt-1)*elsize
 	qd = pntd/intsize + 1
-	sized = ( (size*elsize-1)/align + 1 ) * align
+        sized = size
+	sized = ( (sized*elsize-1)/align + 1 ) * align
 c
 c  Free memory which was obtained with mmalloc.
 c
