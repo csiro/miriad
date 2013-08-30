@@ -62,7 +62,7 @@ c@ maxwidth
 c        The maximum bandwidth (in GHz) for each output frequency band.
 c        Default is no subdivision of input bands. The maxwidth limit
 c        is only applied when splitting by frequency.
-c $Id: uvsplit.for,v 1.14 2012/06/13 23:59:36 wie017 Exp $
+c $Id: uvsplit.for,v 1.15 2013/08/30 01:49:21 wie017 Exp $
 c--
 c  History:
 c    rjs  13oct93 Original version.
@@ -92,7 +92,7 @@ c------------------------------------------------------------------------
 	integer MAXSELS
 	parameter(MAXSELS=256)
 c
-	character version*80
+	character version*72
 	character vis*64,dtype*1
 	integer tvis
 	real sels(MAXSELS),maxwidth
@@ -104,11 +104,11 @@ c
 c  Externals.
 c
 	logical SelProbe
-        character versan*80
+        character versan*72
 c------------------------------------------------------------------------
         version = versan ('uvsplit',
-     *                    '$Revision: 1.14 $',
-     *                    '$Date: 2012/06/13 23:59:36 $')
+     *                    '$Revision: 1.15 $',
+     *                    '$Date: 2013/08/30 01:49:21 $')
 c
 c  Get the input parameters.
 c

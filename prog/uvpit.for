@@ -41,7 +41,7 @@ c	  residual The output data-set is the residual visibilities.
 c	           If an output is being created, the default is to make
 c	           this the fitted model.
 c
-c$Id: uvpit.for,v 1.5 2010/04/30 08:23:28 cal103 Exp $
+c$Id: uvpit.for,v 1.6 2013/08/30 01:49:21 wie017 Exp $
 c--
 c  History:
 c    rjs  13dec90  Original version.
@@ -68,7 +68,7 @@ c
 	real tol,epsfcn
 	parameter(tol=1e-6,epsfcn=1e-3)
 c
-	character out*64, ltype*16, version*80
+	character out*64, ltype*16, version*72
 	integer lIn,lOut
 	integer nread,ifail,i,nvar,npol
 	real x(MAXVAR),rms
@@ -81,7 +81,7 @@ c
 c
 c  Externals.
 c
-        character itoaf*8, versan*80
+        character itoaf*8, versan*72
 	logical uvDatOpn
         external FUNCTION
 c
@@ -90,8 +90,8 @@ c
 	include 'mem.h'
 c-----------------------------------------------------------------------
       version = versan ('uvpit',
-     :                  '$Revision: 1.5 $',
-     :                  '$Date: 2010/04/30 08:23:28 $')
+     :                  '$Revision: 1.6 $',
+     :                  '$Date: 2013/08/30 01:49:21 $')
 c
 c  Get the inputs.
 c

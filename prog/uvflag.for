@@ -152,8 +152,8 @@ c the flagging is done.
 c Then it asks for the next visibility file and does the whole process
 c again until the list is exhausted.
 
-      character*80 versan
-      character*80 version
+      character*72 versan
+      character*72 version
 
       character*64     vis
 
@@ -175,8 +175,8 @@ c again until the list is exhausted.
       data	       usech / MAXCHAN * .true. /
 
       version = versan('uvflag',
-     *                 '$Revision: 1.6 $',
-     *                 '$Date: 2013/03/27 03:01:18 $')
+     *                 '$Revision: 1.7 $',
+     *                 '$Date: 2013/08/30 01:49:21 $')
 
       call keyini
       call keyf( 'vis', vis, ' ' )

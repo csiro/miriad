@@ -106,7 +106,7 @@ c    mhw  26aug09 Handle multiple bandpass solution intervals
 c  Bugs:
 c------------------------------------------------------------------------
 	integer MAXSELS,MAXSOLN
-	character version*80
+	character version*72
 	parameter(MAXSELS=256,MAXSOLN=1024)
 	include 'gpplt.h'
 	integer iostat,tIn,nx,ny,nfeeds,nants,nsols,ierr,symbol,nchan
@@ -126,7 +126,7 @@ c  Externals.
 c
 	logical hdprsnt
 	integer pgbeg,len1
-        character*80 versan
+        character*72 versan
 c
 	data Feeds/'I','X','Y'/
 c

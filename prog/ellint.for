@@ -86,7 +86,7 @@ c
 c@ log
 c       The output log file. The default is the terminal.
 c
-c$Id: ellint.for,v 1.6 2010/11/22 06:27:38 cal103 Exp $
+c$Id: ellint.for,v 1.7 2013/08/30 01:49:21 wie017 Exp $
 c--
 c  History:
 c    mchw  aug 1982     Original version.
@@ -155,12 +155,12 @@ c
       logical mask(maxdim),dopb,keep,domedian,domode,natural,dotab
       logical dout,dospline
       character in*80,logf*80,line*132,cin*1,ctype*9,caxis*13,units*13
-      character btype*25,pbtype*16,out*80, version*80
+      character btype*25,pbtype*16,out*80, version*72
 c
 c  Externals.
 c
       integer len1
-      character itoaf*1, versan*80
+      character itoaf*1, versan*72
       real pbget
       double precision seval
 
@@ -169,8 +169,8 @@ c
       real totalj,medsmooth,fmed(maxdim),fmed1(maxdim)
 c-----------------------------------------------------------------------
       version = versan('ellint',
-     +                 '$Revision: 1.6 $',
-     +                 '$Date: 2010/11/22 06:27:38 $')
+     +                 '$Revision: 1.7 $',
+     +                 '$Date: 2013/08/30 01:49:21 $')
 
 c Get inputs.
 c

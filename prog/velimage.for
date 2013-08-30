@@ -46,7 +46,7 @@ c       Options.  Minimum match is active.
 c         relax  ignore axis descriptor mismatches
 c                (e.g. pixel increments etc).  Use with care.
 c
-c$Id: velimage.for,v 1.5 2011/10/06 00:51:03 cal103 Exp $
+c$Id: velimage.for,v 1.6 2013/08/30 01:49:21 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -68,12 +68,12 @@ c-----------------------------------------------------------------------
       character cax*1, ctype(MAXNAX)*16, ctypei*16, inName(3)*80,
      *          outNam*80, wflag*1, version*72
 
-      character itoaf*1, versan*80
+      character itoaf*1, versan*72
       external  itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('velimage',
-     *                 '$Revision: 1.5 $',
-     *                 '$Date: 2011/10/06 00:51:03 $')
+     *                 '$Revision: 1.6 $',
+     *                 '$Date: 2013/08/30 01:49:21 $')
 
 c     Get the input parameters.
       call keyini

@@ -103,7 +103,7 @@ c       x and y pixel coordinate (in the output model; this goes from 1
 c       to N), the "I" component and the "I*alpha" component.  The
 c       default is to not create a log file.
 c
-c$Id: mfclean.for,v 1.9 2013/06/11 05:38:50 wie017 Exp $
+c$Id: mfclean.for,v 1.10 2013/08/30 01:49:21 wie017 Exp $
 c--
 c  History:
 c    rjs   Nov89 - Original version.
@@ -193,7 +193,7 @@ c-----------------------------------------------------------------------
       integer naxis,n1,n2,n1d,n2d,ic,jc,nx,ny,ntmp
       integer xmin,xmax,ymin,ymax,xoff,yoff,zoff
       character MapNam*64,BeamNam*64,ModelNam*64,OutNam*64,line*72
-      character logf*64, version*80
+      character logf*64, version*72
       integer lMap,lBeam,lModel,lOut
       integer nMap(3),nBeam(3),nModel(3),nOut(4)
       real EstASum
@@ -202,12 +202,12 @@ c-----------------------------------------------------------------------
       real dat(maxBuf)
       common dat
 
-      character itoaf*8, versan*80
+      character itoaf*8, versan*72
       external  itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('mfclean',
-     *                 '$Revision: 1.9 $',
-     *                 '$Date: 2013/06/11 05:38:50 $')
+     *                 '$Revision: 1.10 $',
+     *                 '$Date: 2013/08/30 01:49:21 $')
 c
 c  Get the input parameters.
 c

@@ -48,7 +48,7 @@ c         detaper    This indicates that the input image is not fully
 c                    primary beam corrected. Such images are formed by
 c                    LINMOS with options=taper or by MOSMEM.
 c
-c$Id: demos.for,v 1.6 2012/09/18 03:51:35 wie017 Exp $
+c$Id: demos.for,v 1.7 2013/08/30 01:49:21 wie017 Exp $
 c--
 c  History:
 c    rjs  25apr90 Original version.
@@ -91,12 +91,12 @@ c-----------------------------------------------------------------------
      *          vis(MAXVIS)*64
 
       integer   len1
-      character itoaf*3, versan*80
+      character itoaf*3, versan*72
       external  itoaf, len1, versan
 c-----------------------------------------------------------------------
       version = versan('demos',
-     *                 '$Revision: 1.6 $',
-     *                 '$Date: 2012/09/18 03:51:35 $')
+     *                 '$Revision: 1.7 $',
+     *                 '$Date: 2013/08/30 01:49:21 $')
 c
 c  Get the input parameters.
 c

@@ -44,7 +44,7 @@ c	Task enrichment options.  Minimum match is active.
 c	  natural   Assume keywords "center" and "radius" are in natural
 c	            units rather than arcsec.
 c
-c$Id: ellplt.for,v 1.4 2010/04/30 08:23:28 cal103 Exp $
+c$Id: ellplt.for,v 1.5 2013/08/30 01:49:21 wie017 Exp $
 c--
 c  History:
 c    rjs   06mar97	Adapted from ellint.
@@ -62,7 +62,7 @@ c
 	character in*64,cin*2,xlab*24,ylab*24,device*64,logf*64
 	logical natural
 	double precision center(2),cdelt(2),crpix(2),rts
-        character version*80
+        character version*72
 c
 	integer MAXPNT
 	parameter(MAXPNT=1000000)
@@ -72,11 +72,11 @@ c
 c  Externals.
 c
 	integer pgbeg
-	character itoaf*8, versan*80
+	character itoaf*8, versan*72
 c-----------------------------------------------------------------------
       version = versan ('ellplt',
-     :                  '$Revision: 1.4 $',
-     :                  '$Date: 2010/04/30 08:23:28 $')
+     :                  '$Revision: 1.5 $',
+     :                  '$Date: 2013/08/30 01:49:21 $')
 c
 c Get inputs.
 c

@@ -43,7 +43,7 @@ c       The number of channels to average together to derive a point for
 c       the tsys spectrum. Defaults to 1.
 c@ out
 c       The name of the output uv data set. No default.
-c$Id: atrecal.for,v 1.3 2012/03/21 00:32:59 wie017 Exp $
+c$Id: atrecal.for,v 1.4 2013/08/30 01:49:21 wie017 Exp $
 c--
 c  Recalibrate CABB data
 c  CABB data has auto correlations with noise cal OFF in bin 1 and ON in
@@ -74,7 +74,7 @@ c    mhw  06mar12 Use JyperK from uv file for conversion
 c
 c------------------------------------------------------------------------
         include 'maxdim.h'
-        character version*80
+        character version*72
         character uvflags*12,ltype*16,out*64
         integer npol,Snpol,tIn,tOut,vupd,nread,nrec,i,nbin,naver
         real inttime,jyperk
@@ -88,13 +88,13 @@ c
 c  Externals.
 c
         logical uvDatOpn,uvVarUpd
-        character versan*80
+        character versan*72
 c
 c  Get the input parameters.
 c
         version=versan('atrecal',
-     :                 '$Revision: 1.3 $',
-     :                 '$Date: 2012/03/21 00:32:59 $')   
+     :                 '$Revision: 1.4 $',
+     :                 '$Date: 2013/08/30 01:49:21 $')   
         call keyini
         call GetOpt(uvflags,relax,spect)
         call uvDatInp('vis',uvflags)

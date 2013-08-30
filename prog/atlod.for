@@ -176,7 +176,7 @@ c       For concatenated spectra the width of a single zoom is used.
 c       Note that noise and artefacts go up quickly towards the band 
 c       edge so making this much smaller will not gain you much.
 c
-c$Id: atlod.for,v 1.44 2013/01/29 04:55:22 wie017 Exp $
+c$Id: atlod.for,v 1.45 2013/08/30 01:49:21 wie017 Exp $
 c--
 c
 c  Program Structure:
@@ -340,13 +340,13 @@ c    mhw  12sep12 Drop edge channels for 16cm data with birdie option
 c    mhw  07dec12 Fix 29may12 opcor code again - how did it ever work?
 c    mhw  29jan13 Fix nscans skip and read code - RPEOF call hangs
 c
-c $Id: atlod.for,v 1.44 2013/01/29 04:55:22 wie017 Exp $
+c $Id: atlod.for,v 1.45 2013/08/30 01:49:21 wie017 Exp $
 c-----------------------------------------------------------------------
 
         integer MAXFILES,MAXTIMES,MAXSIM
         parameter(MAXFILES=128,MAXTIMES=32,MAXSIM=34)
 c
-        character in(MAXFILES)*128,line*64,out*64,t1*18,t2*18,version*80
+        character in(MAXFILES)*128,line*64,out*64,t1*18,t2*18,version*72
         integer tno,ntimes
         integer ifile,ifsel(MAXSIM),nsel,nfreq,iostat,nfiles,nopcorr,i
         double precision rfreq(2),times(2,MAXTIMES)
@@ -358,11 +358,11 @@ c
 c
 c  Externals.
 c
-        character itoaf*8, rperr*32, versan*80
+        character itoaf*8, rperr*32, versan*72
 c-----------------------------------------------------------------------
       version = versan ('atlod',
-     :                  '$Revision: 1.44 $',
-     :                  '$Date: 2013/01/29 04:55:22 $')
+     :                  '$Revision: 1.45 $',
+     :                  '$Date: 2013/08/30 01:49:21 $')
 c
 c  Get the input parameters.
 c

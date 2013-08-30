@@ -470,7 +470,7 @@ c       3) Check the rms of the background. If this is high then firstly
 c          the fit may not be good (as per 1), and secondly the source
 c          is in a noisy area and should be treated with caution anyway.
 c
-c$Id: sfind.for,v 1.16 2012/02/20 07:37:00 cal103 Exp $
+c$Id: sfind.for,v 1.17 2013/08/30 01:49:21 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -526,11 +526,11 @@ c-----------------------------------------------------------------------
       data dmm /1e30, -1e30, -1.0/
       data gaps, doabut, dotr /.false., .false., .false./
 
-      character versan*80, version*80
+      character versan*72, version*72
 c-----------------------------------------------------------------------
       version = versan('sfind',
-     *                 '$Revision: 1.16 $',
-     *                 '$Date: 2012/02/20 07:37:00 $')
+     *                 '$Revision: 1.17 $',
+     *                 '$Date: 2013/08/30 01:49:21 $')
 c
 c Get user inputs
 c

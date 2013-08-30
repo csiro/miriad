@@ -22,7 +22,7 @@ c
 c       full    Instructs UVACFLAG to tell you about every record
 c               it flags.  The default is a summary at the end.
 c
-c$Id: uvacflag.for,v 1.6 2012/01/17 03:47:09 wie017 Exp $
+c$Id: uvacflag.for,v 1.7 2013/08/30 01:49:21 wie017 Exp $
 c--
 c
 c     mhw  19nov07 Original version, adapted uvpflag into uvacflag
@@ -32,7 +32,7 @@ c-----------------------------------------------------------------------
       integer match_time,match_freq
       parameter (maxpol = 4, maxbin=32, maxrec=10000000,
      +           maxtime=10000, maxfreq=100)
-      character versan*80, version*80
+      character versan*72, version*72
 c
       complex data(maxchan)
       double precision pream(4), freq,df, timelist(maxtime),
@@ -53,8 +53,8 @@ c
 c
 c-----------------------------------------------------------------------
       version = versan ('uvacflag',
-     :                  '$Revision: 1.6 $',
-     :                  '$Date: 2012/01/17 03:47:09 $')
+     :                  '$Revision: 1.7 $',
+     :                  '$Date: 2013/08/30 01:49:21 $')
 
       ntot=0
       ngood=0

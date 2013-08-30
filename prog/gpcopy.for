@@ -76,7 +76,7 @@ c    mhw  12jun13 Fix apply mode, add relax option
 c  Bugs:
 c    None?
 c------------------------------------------------------------------------
-	character version*80
+	character version*72
 	logical dopol,docal,dopass,docopy,relax
 	integer iostat,tIn,tOut
 	character vis*64,out*64,mode*8,line*64
@@ -85,11 +85,11 @@ c
 c  Externals.
 c
 	logical hdprsnt
-        character*80 versan
+        character*72 versan
 c
 	version = versan('gpcopy',
-     *                   '$Revision: 1.7 $',
-     *                   '$Date: 2013/06/13 02:22:16 $')
+     *                   '$Revision: 1.8 $',
+     *                   '$Date: 2013/08/30 01:49:21 $')
 	call keyini
 	call keya('vis',vis,' ')
 	if(vis.eq.' ')call bug('f','Input data-set must be given')

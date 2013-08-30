@@ -239,7 +239,7 @@ c       The output logfile name. The default is the terminal.
 c@ comment
 c       A one line comment which is written into the logfile.
 c
-c$Id: uvplt.for,v 1.15 2013/03/28 03:54:04 wie017 Exp $
+c$Id: uvplt.for,v 1.16 2013/08/30 01:49:21 wie017 Exp $
 c--
 c
 c  History:
@@ -356,7 +356,7 @@ c Externals
 c
       integer membuf
       logical uvdatopn
-      character itoaf*2, versan*80, version*80
+      character itoaf*2, versan*72, version*72
 c
 c Initialize
 c
@@ -371,8 +371,8 @@ c
       data polmsk /13*0/
 c-----------------------------------------------------------------------
       version = versan ('uvplt',
-     *                  '$Revision: 1.15 $',
-     *                  '$Date: 2013/03/28 03:54:04 $')
+     *                  '$Revision: 1.16 $',
+     *                  '$Date: 2013/08/30 01:49:21 $')
 c
 c  Get the parameters given by the user and check them for blunders
 c

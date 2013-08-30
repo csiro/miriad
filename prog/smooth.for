@@ -50,7 +50,7 @@ c          image is blanked).
 c       "force"     Force masking of pixels in the output image which
 c          are masked in the input image.
 c
-c$Id: smooth.for,v 1.4 2010/11/22 05:21:31 cal103 Exp $
+c$Id: smooth.for,v 1.5 2013/08/30 01:49:21 wie017 Exp $
 c--
 c
 c  History:
@@ -89,7 +89,7 @@ c-----------------------------------------------------------------------
      *          type(NTYPE)*8, version*72
 
       logical   hdprsnt
-      character versan*80
+      character versan*72
       external  hdprsnt, versan
 
       common data
@@ -97,8 +97,8 @@ c-----------------------------------------------------------------------
       data type  /'gaussian', 'boxcar'/
 c-----------------------------------------------------------------------
       version = versan('smooth',
-     *                 '$Revision: 1.4 $',
-     *                 '$Date: 2010/11/22 05:21:31 $')
+     *                 '$Revision: 1.5 $',
+     *                 '$Date: 2013/08/30 01:49:21 $')
 c
 c  Get the input parameters.
 c

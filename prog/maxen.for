@@ -75,7 +75,7 @@ c                    This will give better stability if you are daring
 c                    enough to deconvolve more than the inner quarter of
 c                    the dirty image.
 c
-c$Id: maxen.for,v 1.5 2011/10/31 00:37:30 wie017 Exp $
+c$Id: maxen.for,v 1.6 2013/08/30 01:49:21 wie017 Exp $
 c--
 c  History:
 c    rjs   nov88 - Original version.
@@ -156,12 +156,12 @@ c-----------------------------------------------------------------------
       common Data
 
       integer   ismax
-      character itoaf*4, versan*80
+      character itoaf*4, versan*72
       external  ismax, itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('maxen',
-     *                 '$Revision: 1.5 $',
-     *                 '$Date: 2011/10/31 00:37:30 $')
+     *                 '$Revision: 1.6 $',
+     *                 '$Date: 2013/08/30 01:49:21 $')
 c
 c  Get the input parameters.
 c

@@ -139,7 +139,7 @@ c	formal errors in each (0.0 if not a free parameter); line 3 has
 c	the values of all three spectral terms; line 4 has the formal
 c	errors in those terms (again 0.0 if not included in the fit).
 c
-c$Id: uvsfit.for,v 1.4 2012/11/01 00:44:52 wie017 Exp $
+c$Id: uvsfit.for,v 1.5 2013/08/30 01:49:21 wie017 Exp $
 c--
 c  History:
 c    dmcc 12jan12  Original version, adapted from uvfit version 14jan05.
@@ -151,7 +151,7 @@ c-----------------------------------------------------------------------
 	integer maxOut
 	parameter (maxOut=4)
 c
-	character out(maxOut)*64, ltype*16, version*80, line*80
+	character out(maxOut)*64, ltype*16, version*72, line*80
 	character logfile*64
 	integer lIn,lOut,nout
 	integer nread,ifail1,ifail2,i,nvar,npol,pol,iOut
@@ -162,13 +162,13 @@ c
 c
 c  Externals.
 c
-        character itoaf*8, versan*80
+        character itoaf*8, versan*72
 	logical uvDatOpn
         external FUNCTION
 c-----------------------------------------------------------------------
       version = versan ('uvsfit',
-     :                  '$Revision: 1.4 $',
-     :                  '$Date: 2012/11/01 00:44:52 $')
+     :                  '$Revision: 1.5 $',
+     :                  '$Date: 2013/08/30 01:49:21 $')
 c
 c  Get the inputs.
 c  Relative to original uvfit, insist on cross-corrlelations with flag 'x'.

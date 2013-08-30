@@ -24,7 +24,7 @@ c       Output log file.  Default is "hermes.log".
 c@ out
 c       Output image.  Units JY/PIXEL.  No default.
 c
-c$Id: hermes.for,v 1.6 2011/10/05 07:10:00 cal103 Exp $
+c$Id: hermes.for,v 1.7 2013/08/30 01:49:21 wie017 Exp $
 c--
 c  History:
 c    D.Mitchell 01Jun89  Initial version.
@@ -38,16 +38,16 @@ c-----------------------------------------------------------------------
       integer   i, icrpix, iimax, iimin, imsize, ioff, j, jcrpix, jjmax,
      *          jjmin, joff, lout, nsize(3)
       real      pixel, row(MAXDIM)
-      character in*64, log*64, out*64, version*80
+      character in*64, log*64, out*64, version*72
 
       external  versan
-      character versan*80
+      character versan*72
 
       data row /MAXDIM*0.0/
 c-----------------------------------------------------------------------
       version = versan ('hermes',
-     *                '$Revision: 1.6 $',
-     *                '$Date: 2011/10/05 07:10:00 $')
+     *                '$Revision: 1.7 $',
+     *                '$Date: 2013/08/30 01:49:21 $')
 c
 c  Get the input parameters.
 c

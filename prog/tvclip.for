@@ -175,7 +175,7 @@ c
 c< select
 c     NOTE: The default is to use all visibilities.
 c
-c$Id: tvclip.for,v 1.9 2012/01/17 03:47:09 wie017 Exp $
+c$Id: tvclip.for,v 1.10 2013/08/30 01:49:21 wie017 Exp $
 c--
 c
 c  History:
@@ -276,7 +276,7 @@ c
       character Modes(NMODE)*10
       character Lines(2)*8
       character Commands(MAXCMD)*10
-      character version*80
+      character version*72
       integer Lin, nchan, MostChan, channel
       integer maxxpix, maxypix, levels, msglen
       integer jx0, jy0, nout, ncmd
@@ -298,7 +298,7 @@ c  Externals.
 c
       integer Len1
       logical KeyPrsnt
-      character versan*80
+      character versan*72
 c
       data Modes / 'amplitude', 'phase','real', 'imaginary'/
       data Lines / 'channel', 'wide'/
@@ -308,8 +308,8 @@ c-----------------------------------------------------------------------
 c  Announce program.
 c
       version = versan ('tvclip',
-     :                  '$Revision: 1.9 $',
-     :                  '$Date: 2012/01/17 03:47:09 $')
+     :                  '$Revision: 1.10 $',
+     :                  '$Date: 2013/08/30 01:49:21 $')
 c-----------------------------------------------------------------------
 c  Use the key routines to get the user input parameters.
 c

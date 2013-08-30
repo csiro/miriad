@@ -138,7 +138,7 @@ c       nosrc   Do not cause a break in the display when the source
 c               changes. Normally TVFLAG puts a gap in the display
 c               whenever the source changes.
 c
-c$Id: tvflag.for,v 1.7 2012/01/17 03:47:09 wie017 Exp $
+c$Id: tvflag.for,v 1.8 2013/08/30 01:49:21 wie017 Exp $
 c--
 c
 c  History:
@@ -240,7 +240,7 @@ c
       character Vis*132, Server*132
       character Line*30, errmsg*80
       character apri*9
-      character Opts(NOPT)*10, version*80
+      character Opts(NOPT)*10, version*72
       integer Lin, nchan, MostChan, channel
       integer maxxpix, maxypix, levels, msglen
       integer jx0, jy0, nout
@@ -260,7 +260,7 @@ c  Externals.
 c
       integer Len1
       logical KeyPrsnt
-      character versan*80
+      character versan*72
 c
       data Opts / 'amplitude', 'phase','real', 'imaginary'/
 c
@@ -269,8 +269,8 @@ c-----------------------------------------------------------------------
 c  Announce program.
 c
       version = versan ('tvflag',
-     :                  '$Revision: 1.7 $',
-     :                  '$Date: 2012/01/17 03:47:09 $')
+     :                  '$Revision: 1.8 $',
+     :                  '$Date: 2013/08/30 01:49:21 $')
 c-----------------------------------------------------------------------
 c  Use the key routines to get the user input parameters.
 c

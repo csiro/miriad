@@ -31,7 +31,7 @@ c
 c@ log
 c	The list output file name. The default is the terminal.
 c
-c$Id: uvclip.for,v 1.4 2010/04/30 08:23:28 cal103 Exp $
+c$Id: uvclip.for,v 1.5 2013/08/30 01:49:21 wie017 Exp $
 c--
 c
 c  History:
@@ -89,7 +89,7 @@ c-----------------------------------------------------------------------
       character opts(NOPTS)*9,
      -          calday*18,
      -          file*64,
-     -          version*80
+     -          version*72
 
       logical   present(NOPTS),
      -          baseline(MAXBASE),
@@ -104,7 +104,7 @@ c-----------------------------------------------------------------------
 c     external declarations
 
       integer   len1
-      character versan*80
+      character versan*72
 
 c     initialise some variables
 
@@ -116,8 +116,8 @@ c     initialise some variables
      -            '  ', 'I ', 'Q ', 'U ', 'V ' /
 c-----------------------------------------------------------------------
       version = versan ('uvclip',
-     :                  '$Revision: 1.4 $',
-     :                  '$Date: 2010/04/30 08:23:28 $')
+     :                  '$Revision: 1.5 $',
+     :                  '$Date: 2013/08/30 01:49:21 $')
 
 c     +++ read inputs
 

@@ -156,7 +156,7 @@ c
 c Note that this program does not report its version number so that gif
 c and ps output can be piped.
 c
-c$Id: mbspect.for,v 1.21 2012/09/03 05:28:06 wie017 Exp $
+c$Id: mbspect.for,v 1.22 2013/08/30 01:49:21 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -184,18 +184,18 @@ c-----------------------------------------------------------------------
       double precision coord(2), pixcen(3), pixcrd(3), world(3)
       character algo*3, comment*80, cpoly*64, dec1*13, dec2*13,
      *          device*64, in*132, logf*132, object*9, out*132, ra1*13,
-     *          ra2*13, str*3, txt*72, unit0*16, version*80, xaxis*64,
+     *          ra2*13, str*3, txt*72, unit0*16, version*72, xaxis*64,
      *          xlabel*64, yaxis*64, ylabel*64, xlab*64, ylab*64
 
       external  hangle, itoaf, keyprsnt, len1, pgbeg, rangle, versan
       logical   keyprsnt
       integer   len1, pgbeg
-      character hangle*12, itoaf*3, rangle*12, versan*80
+      character hangle*12, itoaf*3, rangle*12, versan*72
 c-----------------------------------------------------------------------
 c     Don't report the ID so that gif and ps output can be piped.
       version = versan ('-mbspect',
-     *                  '$Revision: 1.21 $',
-     *                  '$Date: 2012/09/03 05:28:06 $')
+     *                  '$Revision: 1.22 $',
+     *                  '$Date: 2013/08/30 01:49:21 $')
 
 c     Get inputs.
       call keyini

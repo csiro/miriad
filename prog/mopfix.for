@@ -59,7 +59,7 @@ c       'doextrap'  Use linear extrapolation if gap between flanking
 c                   position stamps exceeds maxgap.
 c       'noref'     Eliminate the reference scans from the file.
 c
-c$Id: mopfix.for,v 1.12 2011/02/09 03:36:20 wie017 Exp $
+c$Id: mopfix.for,v 1.13 2013/08/30 01:49:21 wie017 Exp $
 c--
 c 28jun04 - tw - created from rpfread and mapread
 c 13jul04 - tw - write OBSTYPE card for LiveData
@@ -112,12 +112,12 @@ c-----------------------------------------------------------------------
       equivalence (sc_buffer(1), sc_cal(1,1,1))
 
       integer   len1
-      character hangle*12, rangle*12, versan*80
+      character hangle*12, rangle*12, versan*72
       external  hangle, len1, rangle, versan
 c-----------------------------------------------------------------------
       versn = versan ('mopfix',
-     *                '$Revision: 1.12 $',
-     *                '$Date: 2011/02/09 03:36:20 $')
+     *                '$Revision: 1.13 $',
+     *                '$Date: 2013/08/30 01:49:21 $')
 
 c Get input parameters
       call keyini ()

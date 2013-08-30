@@ -107,7 +107,7 @@ c	           If an output is being created, the default is to make
 c	           this the fitted model.
 c         
 c
-c$Id: uvfit.for,v 1.9 2012/10/19 03:17:45 wie017 Exp $
+c$Id: uvfit.for,v 1.10 2013/08/30 01:49:21 wie017 Exp $
 c--
 c  History:
 c    rjs  13dec90  Original version.
@@ -136,7 +136,7 @@ c-----------------------------------------------------------------------
         integer maxOut
         parameter (maxOut=10)
 c
-	character out(maxOut)*64, ltype*16, version*80
+	character out(maxOut)*64, ltype*16, version*72
         character calday1*20, calday2*20
         character*16 fix2(MAXSRC)
 	integer lIn,lOut,nout
@@ -151,13 +151,13 @@ c
 c
 c  Externals.
 c
-        character itoaf*8, dtoaf*8, versan*80
+        character itoaf*8, dtoaf*8, versan*72
 	logical uvDatOpn
         external FUNCTION,FUNCTION1
 c-----------------------------------------------------------------------
       version = versan ('uvfit',
-     :                  '$Revision: 1.9 $',
-     :                  '$Date: 2012/10/19 03:17:45 $')
+     :                  '$Revision: 1.10 $',
+     :                  '$Date: 2013/08/30 01:49:21 $')
 c
 c  Get the inputs.
 c

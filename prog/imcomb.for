@@ -43,7 +43,7 @@ c                      single plane, average the input images in
 c                      frequency, instead of producing a cube
 c                      containing all planes.
 c
-c$Id: imcomb.for,v 1.10 2013/06/20 05:09:32 wie017 Exp $
+c$Id: imcomb.for,v 1.11 2013/08/30 01:49:21 wie017 Exp $
 c--
 c  History:
 c    rjs  29nov94 Original version.
@@ -76,14 +76,14 @@ c-----------------------------------------------------------------------
      *        tno(MAXIN)
       real    blctrc(6,MAXIN), rms(MAXIN), rms0
       double precision f(MAXIN)
-      character in(MAXIN)*64, line*80, out*64, version*80
+      character in(MAXIN)*64, line*80, out*64, version*72
 
-      character stcat*80, versan*80
+      character stcat*80, versan*72
       external  stcat, versan
 c-----------------------------------------------------------------------
       version = versan ('imcomb',
-     *                  '$Revision: 1.10 $',
-     *                  '$Date: 2013/06/20 05:09:32 $')
+     *                  '$Revision: 1.11 $',
+     *                  '$Date: 2013/08/30 01:49:21 $')
 c
 c  Get the inputs.
 c

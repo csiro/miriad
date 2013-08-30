@@ -53,7 +53,7 @@ c    * The xy phase is not applied to the polarisation solution.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
-	character version*80
+	character version*72
 	integer MAXSELS
 	parameter(MAXSELS=256)
 c
@@ -68,13 +68,13 @@ c
 c
 c  External
 c
-        character*80 versan
+        character*72 versan
 c
 c  Get the input parameters.
 c
 	version = versan('gpboot',
-     *                   '$Revision: 1.7 $',
-     *                   '$Date: 2013/03/25 01:19:23 $')
+     *                   '$Revision: 1.8 $',
+     *                   '$Date: 2013/08/30 01:49:21 $')
 
 c       limit on ratio of scalings for adjacent frequency bins
         fl = 0.1

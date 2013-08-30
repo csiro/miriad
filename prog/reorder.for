@@ -16,7 +16,7 @@ c       "312" make input axis 3 the first output axis, input axis 1
 c       the second output axis, etc.  Use "-" to reverse the pixel
 c       order on an axis.  Do not include dummy axes in mode.
 c
-c$Id: reorder.for,v 1.4 2010/11/22 05:29:46 cal103 Exp $
+c$Id: reorder.for,v 1.5 2013/08/30 01:49:21 wie017 Exp $
 c--
 c
 c  History:
@@ -51,14 +51,14 @@ c-----------------------------------------------------------------------
 
       integer   len1
       logical   hdprsnt
-      character versan*80
+      character versan*72
       external  hdprsnt, len1, versan
 
       common ref
 c-----------------------------------------------------------------------
       version = versan('reorder',
-     *                 '$Revision: 1.4 $',
-     *                 '$Date: 2010/11/22 05:29:46 $')
+     *                 '$Revision: 1.5 $',
+     *                 '$Date: 2013/08/30 01:49:21 $')
 
 c     Get the input parameters.
       call keyini

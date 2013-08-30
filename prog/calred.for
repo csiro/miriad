@@ -50,7 +50,7 @@ c	  nopass    Do not perform bandpass calibration on the data.
 c	  norm      Divide the noise estimates by the square root of the
 c	            number of points.
 c
-c$Id: calred.for,v 1.7 2013/08/15 05:10:19 wie017 Exp $
+c$Id: calred.for,v 1.8 2013/08/30 01:49:21 wie017 Exp $
 c--
 c  History:
 c    rjs  23feb00 Original version.
@@ -75,7 +75,7 @@ c-----------------------------------------------------------------------
 	parameter(PolMin=-8,PolMax=4)
 c
 	logical dotrip,polp,dopara,donorm
-	character con*8,line*80,sources(MAXSRC)*16,uvflags*16,version*80
+	character con*8,line*80,sources(MAXSRC)*16,uvflags*16,version*72
 	real scat2,SSms,flux,flux2,SSmm,rp,ip,SconN,SConD,norm
 	integer ncorr
 	complex SSdm
@@ -104,11 +104,11 @@ c
 c  Externals.
 c
 	logical uvDatOpn,uvVarUpd
-	character versan*80
+	character versan*72
 c-----------------------------------------------------------------------
       version = versan ('calred',
-     :                  '$Revision: 1.7 $',
-     :                  '$Date: 2013/08/15 05:10:19 $')
+     :                  '$Revision: 1.8 $',
+     :                  '$Date: 2013/08/30 01:49:21 $')
 c
 c Lets go! Get user inputs.
 c

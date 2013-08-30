@@ -94,7 +94,7 @@ c       only as many channels as there are planes in the model cube.
 c       The various uv variables that describe the windows are adjusted
 c       accordingly.  No default. 
 c
-c$Id: uvmodel.for,v 1.6 2012/01/17 03:47:09 wie017 Exp $
+c$Id: uvmodel.for,v 1.7 2013/08/30 01:49:21 wie017 Exp $
 c--
 c
 c  History:
@@ -161,11 +161,11 @@ c-----------------------------------------------------------------------
       external  hdprsnt, header, keyprsnt, polsp2c, versan
       logical   hdprsnt, keyprsnt
       integer   polsp2c
-      character versan*80
+      character versan*72
 c-----------------------------------------------------------------------
       version = versan('uvmodel',
-     *                 '$Revision: 1.6 $',
-     *                 '$Date: 2012/01/17 03:47:09 $')
+     *                 '$Revision: 1.7 $',
+     *                 '$Date: 2013/08/30 01:49:21 $')
 
 c     Get the input parameters.
       call keyini

@@ -73,7 +73,7 @@ c-----------------------------------------------------------------------
 	include 'mem.h'
         include 'mirconst.h'
 	integer MAXFEED,MAXSELS
-	character version*80
+	character version*72
 	parameter(MAXFEED=2,MAXSELS=300)
 c
 	character vis*64
@@ -91,7 +91,7 @@ c  Externals.
 c
 	integer hsize
 	logical hdprsnt
-        character versan*80
+        character versan*72
 	external MultOp,RepOp,FlagOp,AmpOp,PhasOp,ScalOp,InvOp
 c
 c  Get the input parameters.

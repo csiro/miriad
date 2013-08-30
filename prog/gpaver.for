@@ -33,7 +33,7 @@ c  Bugs and Shortcomings:
 c    ? Perfect ?
 c------------------------------------------------------------------------
 	include 'maxdim.h'
-	character version*80
+	character version*72
 	logical dovec
 	double precision interval
 	character vis*64
@@ -42,11 +42,11 @@ c------------------------------------------------------------------------
 c
 c  Externals
 c
-        character versan*80
+        character versan*72
 c------------------------------------------------------------------------
         version = versan('gpaver',
-     *                   '$Revision: 1.2 $',
-     *                   '$Date: 2012/04/26 02:52:56 $')       
+     *                   '$Revision: 1.3 $',
+     *                   '$Date: 2013/08/30 01:49:21 $')       
 c
 c  Get the input parameters.
 c

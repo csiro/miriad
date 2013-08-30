@@ -47,7 +47,7 @@ c         shift  Determine an optimum shift of the phase centre to
 c                be applied before the error is evaluated. This
 c                shift will minimise the error in some sense.
 c
-c$Id: conterr.for,v 1.4 2010/11/22 06:33:55 cal103 Exp $
+c$Id: conterr.for,v 1.5 2013/08/30 01:49:21 wie017 Exp $
 c--
 c  History:
 c    rjs  28oct93 Original version.
@@ -68,15 +68,15 @@ c-----------------------------------------------------------------------
      *          nx, ny, order(2), pCont, pErr
       real      dnu, maxerr, nu, off1, off2, thetax, thetay, x, y
       double precision cdelt1, cdelt2, crpix1, crpix2, f0, finc
-      character aorder*3, hline*80, in*64, line*80, out*64, version*80
+      character aorder*3, hline*80, in*64, line*80, out*64, version*72
 
       logical   hdprsnt
-      character versan*80
+      character versan*72
       external  hdprsnt, versan
 c-----------------------------------------------------------------------
       version = versan('conterr',
-     *                 '$Revision: 1.4 $',
-     *                 '$Date: 2010/11/22 06:33:55 $')
+     *                 '$Revision: 1.5 $',
+     *                 '$Date: 2013/08/30 01:49:21 $')
 c
 c  Get the input parameters.
 c

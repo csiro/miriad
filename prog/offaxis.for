@@ -47,7 +47,7 @@ c                   The default is to apply these if they are available.
 c         nopass    Do not apply bandpass calibration. The default is to
 c                   apply these calibrations if they are available.
 c
-c$Id: offaxis.for,v 1.4 2010/08/03 08:25:26 cal103 Exp $
+c$Id: offaxis.for,v 1.5 2013/08/30 01:49:21 wie017 Exp $
 c--
 c  History:
 c    rjs  02may96 Original version.
@@ -73,15 +73,15 @@ c-----------------------------------------------------------------------
       real      chi, clip
       double precision preamble(5), sfreq(MAXCHAN)
       complex   sim(MAXCHAN,4), uvdata(MAXCHAN,4)
-      character ltype*16, model*64, out*64, uvflags*16, version*80
+      character ltype*16, model*64, out*64, uvflags*16, version*72
 
 c     Externals.
       logical   uvDatOpn
-      character itoaf*8, versan*80
+      character itoaf*8, versan*72
 c-----------------------------------------------------------------------
       version = versan('offaxis',
-     :                 '$Revision: 1.4 $',
-     :                 '$Date: 2010/08/03 08:25:26 $')
+     :                 '$Revision: 1.5 $',
+     :                 '$Date: 2013/08/30 01:49:21 $')
 c
 c  Get and check the inputs.
 c

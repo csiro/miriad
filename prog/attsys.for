@@ -52,7 +52,7 @@ c         nocal     Do not apply the gains file.
 c         nopass    Do not apply bandpass corrections.
 c         nopol     Do not apply polarization corrections. 
 c
-c $Id: attsys.for,v 1.8 2012/02/27 04:07:27 wie017 Exp $
+c $Id: attsys.for,v 1.9 2013/08/30 01:49:21 wie017 Exp $
 c--
 c  History:
 c    17jul00 rjs  Original version.
@@ -63,7 +63,7 @@ c    12jan12 mhw  Fix array indexing and add inverse option
 c    23feb12 mhw  Add scale option
 c------------------------------------------------------------------------
 	include 'maxdim.h'
-	character version*80
+	character version*72
 	integer lVis,lOut,vupd,pol,npol,i1,i2,i,j,k
 	logical updated,doapply,auto,redo,update,inv,scale
 	character vis*64,out*64,type*1,uvflags*12
@@ -79,11 +79,11 @@ c
 c  Externals.
 c
 	logical uvvarUpd
-        character versan*80
+        character versan*72
 c
 	version = versan('attsys',
-     *                   '$Revision: 1.8 $',
-     *                   '$Date: 2012/02/27 04:07:27 $')
+     *                   '$Revision: 1.9 $',
+     *                   '$Date: 2013/08/30 01:49:21 $')
 	call keyini
 	call GetOpt(uvflags,doapply,auto,redo,inv,scale)
 	call uvDatInp('vis',uvflags)

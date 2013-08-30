@@ -70,7 +70,7 @@ c                is used.
 c@ out
 c       The output restored image.  No default.
 c
-c$Id: restor.for,v 1.9 2013/02/15 00:20:59 wie017 Exp $
+c$Id: restor.for,v 1.10 2013/08/30 01:49:21 wie017 Exp $
 c--
 c
 c  History:
@@ -119,12 +119,12 @@ c-----------------------------------------------------------------------
       character beam*64, iomode*8, line*72, map*64, mode*16, modl*64,
      *          outNam*64, version*72
 
-      character itoaf*4, versan*80
+      character itoaf*4, versan*72
       external  itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('restor',
-     *                 '$Revision: 1.9 $',
-     *                 '$Date: 2013/02/15 00:20:59 $')
+     *                 '$Revision: 1.10 $',
+     *                 '$Date: 2013/08/30 01:49:21 $')
 
 c     Get the input parameters.
       call keyini

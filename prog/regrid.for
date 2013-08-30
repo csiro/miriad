@@ -233,7 +233,7 @@ c       Interpolation tolerance.  Tolerate an error of the specified
 c       amount in converting pixel locations in the input to the output.
 c       Must be less that 0.5.  The default is 0.05.
 c
-c$Id: regrid.for,v 1.16 2013/06/02 23:00:29 wie017 Exp $
+c$Id: regrid.for,v 1.17 2013/08/30 01:49:21 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -261,11 +261,11 @@ c-----------------------------------------------------------------------
       double precision cdelt, crpix, crval, desc(4,MAXNAX), latpol,
      *          llrot, lonpol, phi0, pv(0:29), theta0
       character algo*3, ctype*16, in*64, keyw*8, line*64, out*64,
-     *          pcode*3, pcodes(NPCODE)*3, tin*64, version*80
+     *          pcode*3, pcodes(NPCODE)*3, tin*64, version*72
 
       external  hdprsnt, itoaf, keyprsnt, versan
       logical   hdprsnt, keyprsnt
-      character itoaf*2, versan*80
+      character itoaf*2, versan*72
 
 c     Projection codes.
       data pcodes /
@@ -275,8 +275,8 @@ c     Projection codes.
      *  'pco', 'tsc', 'csc', 'qsc', 'hpx'/
 c-----------------------------------------------------------------------
       version = versan ('regrid',
-     *                  '$Revision: 1.16 $',
-     *                  '$Date: 2013/06/02 23:00:29 $')
+     *                  '$Revision: 1.17 $',
+     *                  '$Date: 2013/08/30 01:49:21 $')
 
 c     Get the input parameters.
       call keyini

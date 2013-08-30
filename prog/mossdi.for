@@ -35,7 +35,7 @@ c       Extra processing options:
 c         positive   Constrain the deconvolved image to be positive
 c                    valued.
 c
-c$Id: mossdi.for,v 1.8 2011/10/31 00:37:30 wie017 Exp $
+c$Id: mossdi.for,v 1.9 2013/08/30 01:49:21 wie017 Exp $
 c--
 c  History:
 c    rjs 31oct94 - Original version.
@@ -66,14 +66,14 @@ c-----------------------------------------------------------------------
       ptrdiff   pEst, pRes, pStep, pStepR, pWt
       real      clip, cutoff, dmax, dmin, drms, flux, gain
       character BeamNam*64, line*64, MapNam*64, ModelNam*64, OutNam*64,
-     *          version*80
+     *          version*72
 
-      character itoaf*8, versan*80
+      character itoaf*8, versan*72
       external  itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('mossdi',
-     *                 '$Revision: 1.8 $',
-     *                 '$Date: 2011/10/31 00:37:30 $')
+     *                 '$Revision: 1.9 $',
+     *                 '$Date: 2013/08/30 01:49:21 $')
 c
 c  Get the input parameters.
 c

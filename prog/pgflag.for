@@ -309,7 +309,7 @@ c       nocal   Do not apply antenna gain calibration.
 c       nopass  Do not apply bandpass correction.
 c       nopol   Do not apply polarisation leakage correction.
 c
-c$Id: pgflag.for,v 1.24 2013/08/23 04:50:13 wie017 Exp $
+c$Id: pgflag.for,v 1.25 2013/08/30 01:49:21 wie017 Exp $
 c--
 c
 c  History:
@@ -409,7 +409,7 @@ c
       integer MAXTIME,MAXEDIT
       parameter(MAXTIME=10000,MAXEDIT=10000000)
 c
-      character versan*80, version*80
+      character versan*72, version*72
       character device*80,xaxis*12,yaxis*12,uvflags*12,val*16
       character device2*80
       integer devicenum,device2num
@@ -455,8 +455,8 @@ c
       logical uvDatOpn
 
       version = versan ('pgflag',
-     :                  '$Revision: 1.24 $',
-     :                  '$Date: 2013/08/23 04:50:13 $')
+     :                  '$Revision: 1.25 $',
+     :                  '$Date: 2013/08/30 01:49:21 $')
 
 c
 c Get user inputs

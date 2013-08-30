@@ -224,7 +224,7 @@ c       replaced with 0, or to be estimated by linear interpolation of
 c       two adjacent good channels.  See the Users Guide for the merits
 c       and evils of the two approaches.  The default is 'zero'.
 c
-c$Id: invert.for,v 1.17 2013/06/06 02:10:13 wie017 Exp $
+c$Id: invert.for,v 1.18 2013/08/30 01:49:21 wie017 Exp $
 c--
 c  History
 c    rjs        89  Initial version
@@ -371,7 +371,7 @@ c
       real umax,vmax,wdu,wdv,tu,tv,rms,robust
       real ChanWt(MAXPOL*MAXCHAN)
       character maps(MAXPOL)*64,beam*64,uvflags*16,mode*16,vis*64
-      character line*64, version*80
+      character line*64, version*72
       double precision ra0,dec0,offset(2),lmn(3),x(2)
       integer i,j,k,nmap,tscr,nvis,nchan,npol,npnt,coObj,pols(MAXPOL)
       integer nx,ny,bnx,bny,mnx,mny,wnu,wnv
@@ -393,13 +393,13 @@ c  Externals.
 c
       logical keyprsnt
       integer nextpow2
-      character itoaf*10, polsc2p*3, versan*80
+      character itoaf*10, polsc2p*3, versan*72
 c
       data slops/'zero        ','interpolate '/
 c-----------------------------------------------------------------------
       version = versan ('invert',
-     :                  '$Revision: 1.17 $',
-     :                  '$Date: 2013/06/06 02:10:13 $')
+     :                  '$Revision: 1.18 $',
+     :                  '$Date: 2013/08/30 01:49:21 $')
 c
 c  Get the input parameters. Convert all angular things into
 c  radians as soon as possible!!

@@ -47,7 +47,7 @@ c       The output log file.  The default is the terminal.
 c@ options
 c       None yet.  Reserved for alternative models.
 c
-c$Id: velfit.for,v 1.3 2010/10/11 05:45:23 cal103 Exp $
+c$Id: velfit.for,v 1.4 2013/08/30 01:49:21 wie017 Exp $
 c--
 c  History:
 c    30sep92  mchw  New task for Miriad.
@@ -79,12 +79,12 @@ c-----------------------------------------------------------------------
      *          logNam*80, version*72
 
       integer   len1
-      character itoaf*1, versan*80
+      character itoaf*1, versan*72
       external  itoaf, len1, versan
 c-----------------------------------------------------------------------
       version = versan('velfit',
-     *                 '$Revision: 1.3 $',
-     *                 '$Date: 2010/10/11 05:45:23 $')
+     *                 '$Revision: 1.4 $',
+     *                 '$Date: 2013/08/30 01:49:21 $')
 
 c     Get inputs.
       call keyini

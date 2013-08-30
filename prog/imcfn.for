@@ -98,7 +98,7 @@ c       a plot device but not an output or beam image if you just
 c       want to see the plots but don't want to spend ages computing
 c       the beam integral.
 c
-c$Id: imcfn.for,v 1.7 2010/11/22 06:07:54 cal103 Exp $
+c$Id: imcfn.for,v 1.8 2013/08/30 01:49:21 wie017 Exp $
 c--
 c  History:
 c    nebk 13sep95 Original version
@@ -124,7 +124,7 @@ c-----------------------------------------------------------------------
      *          title*80, version*72, xlabel*80, ylabel*80
 
       integer   pgbeg
-      character versan*80
+      character versan*72
       external  pgbeg, versan
 
       data c /MAXPC*0d0/
@@ -133,8 +133,8 @@ c-----------------------------------------------------------------------
       data ymin2, ymax2 /1e30, -1e30/
 c-----------------------------------------------------------------------
       version = versan('imcfn',
-     *                 '$Revision: 1.7 $',
-     *                 '$Date: 2010/11/22 06:07:54 $')
+     *                 '$Revision: 1.8 $',
+     *                 '$Date: 2013/08/30 01:49:21 $')
 
 c     Get the inputs.
       call keyini

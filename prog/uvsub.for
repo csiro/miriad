@@ -52,7 +52,7 @@ c       Lines beginning with "#" are ignored.
 c@ out
 c       The name of the output visibility data set (no default).
 c
-c$Id: uvsub.for,v 1.5 2010/04/30 08:23:28 cal103 Exp $
+c$Id: uvsub.for,v 1.6 2013/08/30 01:49:21 wie017 Exp $
 c--
 c  History:
 c    05jan94 nebk  Original version.
@@ -73,14 +73,14 @@ c-----------------------------------------------------------------------
       double precision arg, delv, model(4,MAXMOD), preamble(4),
      :        sfreq(MAXCHAN), vel(MAXCHAN), uv(2), x(2)
       complex data(MAXCHAN)
-      character ltype*8, modl*80, out*80, versan*80, version*80, vis*80
+      character ltype*8, modl*80, out*80, versan*72, version*72, vis*80
 
       character ltypes(2)*8
       data ltypes /'channel ','velocity'/
 c-----------------------------------------------------------------------
       version = versan ('uvsub',
-     :                  '$Revision: 1.5 $',
-     :                  '$Date: 2010/04/30 08:23:28 $')
+     :                  '$Revision: 1.6 $',
+     :                  '$Date: 2013/08/30 01:49:21 $')
 
 c     Get the inputs
       call keyini

@@ -51,7 +51,7 @@ c       map, and subtracted from the input cube.
 c       If "cont" alone is provided, ONLY the continuum map is written,
 c       no output cube is written.
 c
-c$Id: pcsub.for,v 1.4 2010/11/22 05:31:43 cal103 Exp $
+c$Id: pcsub.for,v 1.5 2013/08/30 01:49:21 wie017 Exp $
 c--
 c  History:
 c    nebk  2may89 Original version. (AVSUB.FOR)
@@ -92,12 +92,12 @@ c-----------------------------------------------------------------------
      *          cm(MAXDIM,MAXPOWER+1), rope(MAXDIM*MAXCHAN), y(MAXDIM)
       character aline*72, cont*128, in*128, out*128, version*72
 
-      character versan*80
+      character versan*72
       external  versan
 c-----------------------------------------------------------------------
       version = versan('pcsub',
-     *                 '$Revision: 1.4 $',
-     *                 '$Date: 2010/11/22 05:31:43 $')
+     *                 '$Revision: 1.5 $',
+     *                 '$Date: 2013/08/30 01:49:21 $')
       call bug('w','Use this program only in EXISTING cont= mode')
 
 c     Get the input parameters.

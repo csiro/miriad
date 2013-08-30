@@ -589,7 +589,7 @@ c       The OFFSET directive is not applied to ANY position fields in
 c       succeeding directives that have %OTYPEs that are "hms" or "dms".
 c       I am too lazy to code it.
 c
-c$Id: cgdisp.for,v 1.22 2013/07/25 01:15:53 wie017 Exp $
+c$Id: cgdisp.for,v 1.23 2013/08/30 01:49:21 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -614,7 +614,7 @@ c     Plotting parameters.
      *  lhead, concol(MAXCON), veccol, boxcol, bemcol, ovrcol, labcol
       logical doaxlab, doaylab, donxlab(2), donylab(2)
       character cin(MAXCON)*64, gin*64, vin(2)*64, mskin*64, bin*64,
-     *  ltypes(MAXTYP)*6, versan*80, version*80
+     *  ltypes(MAXTYP)*6, versan*72, version*72
 
       real levs(MAXLEV,MAXCON), pixr(2,maxchan), tr(6), bmin(MAXCON+4),
      *  bmaj(MAXCON+4), bpa(MAXCON+4), scale(2), cs(4), pixr2(2),
@@ -661,8 +661,8 @@ c     Plotting parameters.
       data getvsc /.true./
 c-----------------------------------------------------------------------
       version = versan ('cgdisp',
-     *                  '$Revision: 1.22 $',
-     *                  '$Date: 2013/07/25 01:15:53 $')
+     *                  '$Revision: 1.23 $',
+     *                  '$Date: 2013/08/30 01:49:21 $')
 
 c     Get user inputs.
       call inputs(maxchan, MAXLEV, MAXCON, MAXTYP, ltypes, ncon, cin,

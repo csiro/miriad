@@ -23,7 +23,7 @@ c         relax  This instructs IMCAT to ignore axis descriptor
 c                mismatches (e.g. pixel increments etc).  Use this with
 c                care.
 c
-c$Id: imcat.for,v 1.7 2011/08/03 01:45:42 cal103 Exp $
+c$Id: imcat.for,v 1.8 2013/08/30 01:49:21 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -43,12 +43,12 @@ c-----------------------------------------------------------------------
       character caxis*1, in(MAXMAP)*80, out*80, version*72, wflag*1
 
       logical   hdprsnt
-      character itoaf*1, versan*80
+      character itoaf*1, versan*72
       external  hdprsnt, itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('imcat',
-     *                 '$Revision: 1.7 $',
-     *                 '$Date: 2011/08/03 01:45:42 $')
+     *                 '$Revision: 1.8 $',
+     *                 '$Date: 2013/08/30 01:49:21 $')
 
 c     Get the input parameters.
       call keyini

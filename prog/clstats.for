@@ -90,8 +90,8 @@ c-------------------------------------------------------------------------
       integer lenline,imax,ncmax
       logical pos
       character line*80,positns*3
-      character*80 head1,head2,version
-      character versan*80
+      character*80 head1,head2
+      character*72 version,versan
       external  versan
 
 c.....dynamic memory pointers
@@ -99,8 +99,8 @@ c.....dynamic memory pointers
 c-----------------------------------------------------------------------
 
       version = versan('clstats',
-     *                 '$Revision: 1.3 $',
-     *                 '$Date: 2012/07/19 02:38:31 $')
+     *                 '$Revision: 1.4 $',
+     *                 '$Date: 2013/08/30 01:49:21 $')
 
 c.....Get the parameters from the user.
       call keyini

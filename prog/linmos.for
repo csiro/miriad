@@ -75,7 +75,7 @@ c                      function.  Otherwise it will be 1 or 0 (blanked).
 c         frequency    Rather than a mosaiced image, produce an image 
 c                      giving the effective frequency across the field.
 c
-c$Id: linmos.for,v 1.22 2013/05/08 02:19:11 wie017 Exp $
+c$Id: linmos.for,v 1.23 2013/08/30 01:49:21 wie017 Exp $
 c--
 c
 c  History:
@@ -156,15 +156,15 @@ c-----------------------------------------------------------------------
       real      blctrc(4,MAXIN), extent(4), rms(MAXIN), sigt, xoff,
      *          yoff, bw, wt
       double precision f, fout
-      character inName*64, inbuf*(MAXLEN), outNam*64, version*80
+      character inName*64, inbuf*(MAXLEN), outNam*64, version*72
 
       integer   len1
-      character versan*80
+      character versan*72
       external  len1, versan
 c-----------------------------------------------------------------------
       version = versan ('linmos',
-     *                  '$Revision: 1.22 $',
-     *                  '$Date: 2013/05/08 02:19:11 $')
+     *                  '$Revision: 1.23 $',
+     *                  '$Date: 2013/08/30 01:49:21 $')
 
 c     Get and check inputs.
       call keyini

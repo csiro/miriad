@@ -29,7 +29,7 @@ c@ nmin
 c     Minimum number of pixels in each clump.
 c     Any clumps with fewer pixels are rejected (default=4).
 c
-c$Id: clfind.for,v 1.9 2012/07/19 02:38:31 wie017 Exp $
+c$Id: clfind.for,v 1.10 2013/08/30 01:49:21 wie017 Exp $
 c--
 c       this used to be a parameter, but - as discussed in the paper -
 c       we don't want users to mess with this. (:-)
@@ -74,18 +74,18 @@ c-----------------------------------------------------------------------
      *          nstop
       real      beamx, beamy
       double precision bmaj, bmin, bpa, cdelt1, cdelt2
-      character filein*40, filecf*40, line1*80, line2*80, version*80,
+      character filein*40, filecf*40, line1*80, line2*80, version*72,
      *          xtension*3
 
       integer   len1
-      character versan*80
+      character versan*72
       external  len1, versan
 
       ptrdiff   Ia, Ipos, Ipos1, Ireg, It
 c-----------------------------------------------------------------------
       version = versan('clfind',
-     *                 '$Revision: 1.9 $',
-     *                 '$Date: 2012/07/19 02:38:31 $')
+     *                 '$Revision: 1.10 $',
+     *                 '$Date: 2013/08/30 01:49:21 $')
 
 c     Get the parameters from the user.
       call keyini

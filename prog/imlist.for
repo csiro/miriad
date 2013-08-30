@@ -34,7 +34,7 @@ c
 c@ log
 c       The output log file.  The default is the terminal.
 c
-c$Id: imlist.for,v 1.3 2010/05/12 08:47:38 cal103 Exp $
+c$Id: imlist.for,v 1.4 2013/08/30 01:49:21 wie017 Exp $
 c--
 c  nebk   may89  Original version.
 c  nebk   jul89  Add ability to read flagging mask.
@@ -84,14 +84,14 @@ c-----------------------------------------------------------------------
       integer blc(MAXNAX),trc(MAXNAX)
       integer lin,fldsize,npnt
       logical more,dodata,dostat,domos
-      character in*64,out*64,format*10, version*80
+      character in*64,out*64,format*10, version*72
 
 c     Externals.
-      character versan*80
+      character versan*72
 c-----------------------------------------------------------------------
       version = versan ('imlist',
-     :                  '$Revision: 1.3 $',
-     :                  '$Date: 2010/05/12 08:47:38 $')
+     :                  '$Revision: 1.4 $',
+     :                  '$Date: 2013/08/30 01:49:21 $')
 c
 c  Get the input parameters.
 c

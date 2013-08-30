@@ -34,7 +34,7 @@ c       ambiguity is needed.
 c         sum       Produce sum rather than average of pixels in
 c                   each bin
 c
-c$Id: imbin.for,v 1.8 2010/11/22 06:10:00 cal103 Exp $
+c$Id: imbin.for,v 1.9 2013/08/30 01:49:21 wie017 Exp $
 c--
 c
 c  History:
@@ -64,17 +64,17 @@ c-----------------------------------------------------------------------
       double precision cdelti(MAXNAX), cdelto(MAXNAX), crpixi(MAXNAX),
      *          crpixo(MAXNAX), crvali(MAXNAX)
       character in*64, itoaf*1, line*80, opts(NOPTS)*8, out*64, str*1,
-     *          version*80
+     *          version*72
 
 c     Externals.
       logical hdprsnt
-      character versan*80
+      character versan*72
 
       data opts /'sum     '/
 c-----------------------------------------------------------------------
       version = versan ('imbin',
-     *                  '$Revision: 1.8 $',
-     *                  '$Date: 2010/11/22 06:10:00 $')
+     *                  '$Revision: 1.9 $',
+     *                  '$Date: 2013/08/30 01:49:21 $')
 
       do i = 1, MAXNAX
         blc(i) = 1

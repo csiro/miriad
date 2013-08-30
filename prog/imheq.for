@@ -41,7 +41,7 @@ c       PGPLOT device to show plots of the histograms & discretized
 c       cumulative histogram. Will plot after each plane, so really
 c       of use only for single plane images
 c
-c$Id: imheq.for,v 1.4 2010/11/22 05:47:50 cal103 Exp $
+c$Id: imheq.for,v 1.5 2013/08/30 01:49:21 wie017 Exp $
 c--
 c
 c  History:
@@ -63,14 +63,14 @@ c-----------------------------------------------------------------------
      *          cumhis(MAXBIN), xp(MAXBIN), ymax, yp(MAXBIN,2)
       character device*80, in*80, out*80, version*72
 
-      character versan*80
+      character versan*72
       external  versan
 
       data bmin2, bmax2 /1e32, -1e32/
 c-----------------------------------------------------------------------
       version = versan('imheq',
-     *                 '$Revision: 1.4 $',
-     *                 '$Date: 2010/11/22 05:47:50 $')
+     *                 '$Revision: 1.5 $',
+     *                 '$Date: 2013/08/30 01:49:21 $')
 
 c     Get the input parameters.
       call output(version)

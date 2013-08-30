@@ -24,7 +24,7 @@ c@ region
 c       Full region specifications are supported.  Defaults to the
 c       entire image.
 c
-c$Id: impoly.for,v 1.4 2010/11/22 05:43:36 cal103 Exp $
+c$Id: impoly.for,v 1.5 2013/08/30 01:49:21 wie017 Exp $
 c--
 c
 c       maxorder        maximum order allowed for the polynomial fit
@@ -78,12 +78,12 @@ c-----------------------------------------------------------------------
       CHARACTER in*80, mesg*80, msg*100, out*80, version*72
 
       INTEGER   len1
-      CHARACTER versan*80
+      CHARACTER versan*72
       EXTERNAL  len1, versan
 c-----------------------------------------------------------------------
       version = versan('impoly',
-     *                 '$Revision: 1.4 $',
-     *                 '$Date: 2010/11/22 05:43:36 $')
+     *                 '$Revision: 1.5 $',
+     *                 '$Date: 2013/08/30 01:49:21 $')
 
 c     Get inputs.
       CALL keyini

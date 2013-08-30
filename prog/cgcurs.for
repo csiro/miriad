@@ -195,7 +195,7 @@ c       (which is ~ 1/40 of the view surface height) for the plot axis
 c       labels and the velocity/channel labels.
 c       Defaults choose something sensible.
 c
-c$Id: cgcurs.for,v 1.12 2012/03/02 00:55:01 cal103 Exp $
+c$Id: cgcurs.for,v 1.13 2013/08/30 01:49:21 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -226,7 +226,7 @@ c-----------------------------------------------------------------------
 
       character labtyp(2)*6
       character img(2)*64, pdev*64, xlabel*40, ylabel*40,
-     *  trfun*3, levtyp*1, result*3, val3form*20, versan*80, version*80
+     *  trfun*3, levtyp*1, result*3, val3form*20, versan*72, version*72
 
       logical cgdisp, cgspec, cmore, cursor, display, do3pix, do3val,
      *        doabs, doabut, doaxlab, doaylab, doblnk, dobox, docont,
@@ -239,8 +239,8 @@ c-----------------------------------------------------------------------
       data gaps, doabut /.false., .false./
 c-----------------------------------------------------------------------
       version = versan ('cgcurs',
-     *                  '$Revision: 1.12 $',
-     *                  '$Date: 2012/03/02 00:55:01 $')
+     *                  '$Revision: 1.13 $',
+     *                  '$Date: 2013/08/30 01:49:21 $')
 
 c     Get user inputs.
       call inputs(MAXLEV, img, ibin, jbin, kbin, levtyp, slev, levs,

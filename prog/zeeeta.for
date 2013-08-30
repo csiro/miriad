@@ -36,7 +36,7 @@ c@ aveop
 c       'a' to average spectra before computing eta.  Only if blc,trc
 c       set.
 c
-c$Id: zeeeta.for,v 1.5 2011/10/05 06:46:10 cal103 Exp $
+c$Id: zeeeta.for,v 1.6 2013/08/30 01:49:21 wie017 Exp $
 c--
 c
 c  History:
@@ -53,11 +53,11 @@ c-----------------------------------------------------------------------
       character ader*2, aveop*1, in*24, out*24, version*72
 
       external  versan
-      character versan*80
+      character versan*72
 c-----------------------------------------------------------------------
       version = versan('zeeeta',
-     *                 '$Revision: 1.5 $',
-     *                 '$Date: 2011/10/05 06:46:10 $')
+     *                 '$Revision: 1.6 $',
+     *                 '$Date: 2013/08/30 01:49:21 $')
 
 c     Get user inputs.
       call keyini

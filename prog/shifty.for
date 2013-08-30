@@ -16,7 +16,7 @@ c       No default.
 c@ out
 c       The output image.  No default.
 c
-c$Id: shifty.for,v 1.4 2010/11/22 05:22:18 cal103 Exp $
+c$Id: shifty.for,v 1.5 2013/08/30 01:49:21 wie017 Exp $
 c--
 c  History:
 c    rjs  21nov90 Original version.
@@ -31,12 +31,12 @@ c-----------------------------------------------------------------------
      *          nsize2(3), shift(2)
       character in1*64, in2*64, out*64, text*80, version*72
 
-      character versan*80
+      character versan*72
       external  versan
 c-----------------------------------------------------------------------
       version = versan('shifty',
-     *                 '$Revision: 1.4 $',
-     *                 '$Date: 2010/11/22 05:22:18 $')
+     *                 '$Revision: 1.5 $',
+     *                 '$Date: 2013/08/30 01:49:21 $')
 
 c     Get the input parameters and check them.
       call keyini

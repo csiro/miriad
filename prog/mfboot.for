@@ -81,7 +81,7 @@ c	  noapply Do not apply the scale factor - just evaluate it.
 c         nospec Do not try to determine and correct the spectral index across
 c                the band.
 c
-c$Id: mfboot.for,v 1.11 2013/06/27 03:56:24 wie017 Exp $
+c$Id: mfboot.for,v 1.12 2013/08/30 01:49:21 wie017 Exp $
 c--
 c  History:
 c    rjs     15jan06 Original version adapted from plboot.
@@ -94,7 +94,7 @@ c    mhw     16jun11 Fix triple mode spectral index correction
 c    mhw     27jun13 Fix nospec option
 c------------------------------------------------------------------------
 	include 'maxdim.h'
-	character version*80
+	character version*72
 	integer MAXVIS,MAXPNT
 	parameter(MAXVIS=32,MAXPNT=4000000)
 c
@@ -118,11 +118,11 @@ c  Externals.
 c
 	logical uvDatOpn,uvVarUpd,hdPrsnt
 	integer plLook
-	character streal*16, versan*80
+	character streal*16, versan*72
         
         version = versan('mfboot',
-     *                   '$Revision: 1.11 $',  
-     *                   '$Date: 2013/06/27 03:56:24 $')
+     *                   '$Revision: 1.12 $',  
+     *                   '$Date: 2013/08/30 01:49:21 $')
 c
 c  Get the user input.
 c

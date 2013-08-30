@@ -47,7 +47,7 @@ c       Interpolation tolerance, in minutes.  This gives the maximum gap
 c       between two integrations to interpolate across.  The default is
 c       2 minutes.
 c
-c$Id: uvdiff.for,v 1.7 2010/04/30 08:23:28 cal103 Exp $
+c$Id: uvdiff.for,v 1.8 2013/08/30 01:49:21 wie017 Exp $
 c--
 c  History:
 c    04-jun-96 rjs  Preliminary version.
@@ -73,18 +73,18 @@ c-----------------------------------------------------------------------
       double precision lst, preamble(8)
       complex data1(MAXCHAN), data2(MAXCHAN)
       character ctemp*12, ltype*16, mode*12, modes(NMODES)*12, out*64,
-     *          version*80, vis1*64, vis2*64
+     *          version*72, vis1*64, vis2*64
 
 c     Externals.
       logical hdprsnt
-      character versan*80
+      character versan*72
 
       data modes/'difference  ','one         ','two         ',
      *           '-difference ','-one        ','-two        '/
 c-----------------------------------------------------------------------
       version = versan ('uvdiff',
-     :                  '$Revision: 1.7 $',
-     :                  '$Date: 2010/04/30 08:23:28 $')
+     :                  '$Revision: 1.8 $',
+     :                  '$Date: 2013/08/30 01:49:21 $')
 
 c     Get the input parameters.
       call keyini

@@ -80,7 +80,7 @@ c	  nocal     Do not perform gain calibration.
 c	  nopol     Do not perform polarisation calibration on the data.
 c	  nopass    Do not perform bandpass calibration on the data.
 c
-c$Id: closure.for,v 1.7 2013/05/10 04:42:03 ste616 Exp $
+c$Id: closure.for,v 1.8 2013/08/30 01:49:21 wie017 Exp $
 c--
 c  History:
 c    rjs   7sep94 Original version.
@@ -108,7 +108,7 @@ c-----------------------------------------------------------------------
 	parameter(PolMin=-8,PolMax=4,MAXPOL=2)
 c
 	logical avall,notrip,doamp,doerr,quad,dolog
-	character uvflags*16,device*64,version*80
+	character uvflags*16,device*64,version*72
 	real interval,yrange(2)
 	integer nx,ny,nread,i,j,mpnts,mplots,tno,pnt1,pnt2
 	integer npol,polcvt(PolMin:PolMax),p,ant1,ant2,nants,bl
@@ -141,11 +141,11 @@ c
 c  Externals.
 c
 	logical uvDatOpn
-	character versan*80
+	character versan*72
 c-----------------------------------------------------------------------
       version = versan ('closure',
-     :                  '$Revision: 1.7 $',
-     :                  '$Date: 2013/05/10 04:42:03 $')
+     :                  '$Revision: 1.8 $',
+     :                  '$Date: 2013/08/30 01:49:21 $')
 c
 c Lets go! Get user inputs.
 c

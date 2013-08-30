@@ -151,7 +151,7 @@ c                    solution for the observation already exists.  This
 c                    preliminary solution must be formed from a
 c                    calibrator with known Stokes-V.
 c
-c$Id: gpcal.for,v 1.15 2013/01/29 00:55:15 wie017 Exp $
+c$Id: gpcal.for,v 1.16 2013/08/30 01:49:21 wie017 Exp $
 c--
 c  History:
 c    rjs,nebk 1may91 Original version.
@@ -295,12 +295,12 @@ c-----------------------------------------------------------------------
       double precision time(MAXDSOLN)
 
       logical   keyprsnt, uvDatOpn
-      character itoaf*3, versan*80
+      character itoaf*3, versan*72
       external  itoaf, keyprsnt, uvDatOpn
 c-----------------------------------------------------------------------
       version = versan('gpcal',
-     *                 '$Revision: 1.15 $',
-     *                 '$Date: 2013/01/29 00:55:15 $')
+     *                 '$Revision: 1.16 $',
+     *                 '$Date: 2013/08/30 01:49:21 $')
 c
 c  Get inputs.
 c

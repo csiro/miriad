@@ -76,7 +76,7 @@ c                 instead of giving a fatal error
 c         bmfit   Fit focus and pointing offsets to aperture E-field
 c                 maps.
 c
-c$Id: imhol.for,v 1.4 2010/11/22 05:46:53 cal103 Exp $
+c$Id: imhol.for,v 1.5 2013/08/30 01:49:21 wie017 Exp $
 c--
 c  History:
 c    nebk 21may92 Original version.
@@ -103,12 +103,12 @@ c-----------------------------------------------------------------------
       character bflag, blstr*7, inIm*64, inRe*64, line*80, outMag(2)*64,
      *          outPA(2)*64, ustr*8, version*72
 
-      character versan*80
+      character versan*72
       external  versan
 c-----------------------------------------------------------------------
       version = versan('imhol',
-     *                 '$Revision: 1.4 $',
-     *                 '$Date: 2010/11/22 05:46:53 $')
+     *                 '$Revision: 1.5 $',
+     *                 '$Date: 2013/08/30 01:49:21 $')
 
 c     Get the inputs.
       call keyini

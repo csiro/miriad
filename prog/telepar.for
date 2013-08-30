@@ -12,7 +12,7 @@ c@ telescop
 c       Name of the observatory.  Several can be given.  If none are
 c       given, TELEPAR simply lists the known observatories.
 c
-c$Id: telepar.for,v 1.7 2012/08/06 23:55:09 wie017 Exp $
+c$Id: telepar.for,v 1.8 2013/08/30 01:49:21 wie017 Exp $
 c--
 c  History:
 c    rjs  20jun91 Original version.
@@ -37,14 +37,14 @@ c-----------------------------------------------------------------------
       logical ok
       integer i, n, nobs
       double precision value
-      character observ*12, observs(MAXOBS)*12, string*20, version*80
+      character observ*12, observs(MAXOBS)*12, string*20, version*72
 
 c     Externals.
-      character rangle*20, versan*80
+      character rangle*20, versan*72
 c-----------------------------------------------------------------------
       version = versan ('telepar',
-     :                  '$Revision: 1.7 $',
-     :                  '$Date: 2012/08/06 23:55:09 $')
+     :                  '$Revision: 1.8 $',
+     :                  '$Date: 2013/08/30 01:49:21 $')
 
       call keyini
       call mkeya('telescop',observs,MAXOBS,nobs)

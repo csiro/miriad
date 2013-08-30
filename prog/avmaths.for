@@ -40,7 +40,7 @@ c
 c       Pixels are blanked if the input pixel is blanked, the averaged
 c       channel pixel is blanked, or the output is undefined.
 c
-c$Id: avmaths.for,v 1.6 2010/11/22 04:57:55 cal103 Exp $
+c$Id: avmaths.for,v 1.7 2013/08/30 01:49:21 wie017 Exp $
 c--
 c  History:
 c    nebk 26jul90 Original version.
@@ -78,16 +78,16 @@ c-----------------------------------------------------------------------
      *          size(MAXNAX), size3, trc(MAXNAX), xblc, xtrc, yblc, ytrc
       real      buffer(MAXBUF), rline(MAXDIM)
       double precision cdelt3, zav
-      character aline*72, in*80, out*80, str*1, version*80
+      character aline*72, in*80, out*80, str*1, version*72
 
-      character itoaf*1, versan*80
+      character itoaf*1, versan*72
       external  itoaf, versan
 
       common buffer
 c-----------------------------------------------------------------------
       version = versan('avmaths',
-     *                 '$Revision: 1.6 $',
-     *                 '$Date: 2010/11/22 04:57:55 $')
+     *                 '$Revision: 1.7 $',
+     *                 '$Date: 2013/08/30 01:49:21 $')
 c
 c  Get the input parameters.
 c

@@ -44,7 +44,7 @@ c       List of stokes parameters, default is xx,xy,yx,yy
 c@ options
 c       cabb - interpret spwin to match CABB output (combine overlaps)
 c
-c$Id: rpgen.for,v 1.4 2010/04/30 08:23:28 cal103 Exp $
+c$Id: rpgen.for,v 1.5 2013/08/30 01:49:21 wie017 Exp $
 c--
 c The program rpgen is roughly based on uvgen but currently
 c dummy fills most of the data fields.
@@ -52,7 +52,7 @@ c-----------------------------------------------------------------------
 	integer MAXSRC,MAXPOL,MAXWIN
 	parameter(MAXSRC=32,MAXPOL=4,MAXWIN=18)
 c
-	character sources(MAXSRC)*24,out*64,version*80
+	character sources(MAXSRC)*24,out*64,version*72
 	integer nsrc,nspw,npol,pol(MAXPOL),nchan(MAXWIN)
 	integer i,nant,jstat,isrc
 	double precision radec(MAXSRC,2),freq(MAXWIN),bw(MAXWIN),
@@ -64,11 +64,11 @@ c
 c
 c  Externals.
 c
-	character versan*80
+	character versan*72
 c-----------------------------------------------------------------------
       version = versan ('rpgen',
-     :                  '$Revision: 1.4 $',
-     :                  '$Date: 2010/04/30 08:23:28 $')
+     :                  '$Revision: 1.5 $',
+     :                  '$Date: 2013/08/30 01:49:21 $')
 c
 c  Get the input parameters.
 c

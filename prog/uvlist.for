@@ -120,7 +120,7 @@ c   23apr10 rjs  - Recognised blanked antenna numbers in "array" printout.
 c   27mar13 mhw  - Print > 10000 channels correctly
 c------------------------------------------------------------------------
 	include 'maxdim.h'
-	character*80 version,versan
+	character*72 version,versan
 c
 	character out*50,last*1,date*18,uvflags*8
 	complex data(MAXCHAN)
@@ -137,8 +137,8 @@ c
 	logical uvVarUpd,uvDatOpn
 c
       version = versan('uvlist',
-     *                 '$Revision: 1.7 $',
-     *                 '$Date: 2013/04/04 21:24:43 $')
+     *                 '$Revision: 1.8 $',
+     *                 '$Date: 2013/08/30 01:49:21 $')
 
 c
 c  Read the inputs.

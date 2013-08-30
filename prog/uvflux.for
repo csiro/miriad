@@ -131,19 +131,19 @@ c
 	double precision preamble(4),time0
 	complex data(MAXCHAN)
 	logical flags(MAXCHAN)
-	character version*80
+	character version*72
 c
 c  Externals.
 c
 	logical uvDatOpn,uvVarUpd
-	character PolsC2P*2, versan*80
+	character PolsC2P*2, versan*72
 	integer len1
 c
 c  Get the user parameters.
 c
 	version = versan('uvflux',
-     :                   '$Revision: 1.3 $',
-     :                   '$Date: 2013/08/11 23:07:10 $')
+     :                   '$Revision: 1.4 $',
+     :                   '$Date: 2013/08/30 01:49:21 $')
 	call keyini
 	call GetOpt(docal,dopol,dopass,douvpol,dovlbi,long)
         l=80

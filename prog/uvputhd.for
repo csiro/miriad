@@ -75,10 +75,10 @@ c    Default: not used, in which case the offset is 0, in which case
 c    fractional days are really Julian Days.
 c@ out
 c    Name of the output dataset. No default.
-c$Id: uvputhd.for,v 1.3 2012/04/04 01:26:27 mci156 Exp $
+c$Id: uvputhd.for,v 1.4 2013/08/30 01:49:21 wie017 Exp $
 c-----------------------------------------------------------------------
 	include 'uvputhd.h'
-	character version*80
+	character version*72
 	character varval(MAXVAL)*30,hdvar*10,time0*32
         character outfile*80,infile*80,tabfile*80
         character except(20)*10,newtype*1,line*256,ctype*1
@@ -91,11 +91,11 @@ c-----------------------------------------------------------------------
 c
 c Externals
 c
-        character*80 versan
+        character*72 versan
 c-----------------------------------------------------------------------
         version = versan ('uvputhd',
-     :                    '$Revision: 1.3 $',
-     :                    '$Date: 2012/04/04 01:26:27 $')
+     :                    '$Revision: 1.4 $',
+     :                    '$Date: 2013/08/30 01:49:21 $')
 	call keyini
 	call keyf('vis',infile,' ')
 	call keya('hdvar',hdvar,' ')

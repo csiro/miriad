@@ -96,7 +96,7 @@ c@ clip
 c       This sets the relative clip level in Steer mode. Values are
 c       typically 0.75 to 0.9. The default is image dependent.
 c
-c$Id: clean.for,v 1.12 2011/10/31 00:37:30 wie017 Exp $
+c$Id: clean.for,v 1.13 2013/08/30 01:49:21 wie017 Exp $
 c--
 c
 c  History:
@@ -181,7 +181,7 @@ c-----------------------------------------------------------------------
       real Histo(MAXP/2+1),BemPatch(MAXBEAM)
       integer ICmp(MAXCMP1),JCmp(MAXCMP1)
 
-      character Mode*8,Moded*8,Text*7,flags*8,version*80
+      character Mode*8,Moded*8,Text*7,flags*8,version*72
       real Cutoff,Gain,Phat,Speed,Clip,defClip,Limit
       logical NegStop,Positive,Pad,Asym,NegFound,More,FFTIni,steermsg
       integer MaxNiter,oNiter,Niter,totNiter,minPatch,maxPatch
@@ -197,11 +197,11 @@ c-----------------------------------------------------------------------
       common Data
 
 c     Externals.
-      character itoaf*8, versan*80
+      character itoaf*8, versan*72
 c-----------------------------------------------------------------------
       version = versan ('clean',
-     *                  '$Revision: 1.12 $',
-     *                  '$Date: 2011/10/31 00:37:30 $')
+     *                  '$Revision: 1.13 $',
+     *                  '$Date: 2013/08/30 01:49:21 $')
 c
 c  Get the input parameters.
 c

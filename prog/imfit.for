@@ -101,7 +101,7 @@ c         residual The output data-set is the residual image.
 c                  If an output is being created, the default is to make
 c                  this the fitted model.
 c
-c$Id: imfit.for,v 1.10 2012/12/06 01:01:24 wie017 Exp $
+c$Id: imfit.for,v 1.11 2013/08/30 01:49:21 wie017 Exp $
 c--
 c  History:
 c    mchw 22apr94 new task.
@@ -136,7 +136,7 @@ c-----------------------------------------------------------------------
       integer MAXBOX,MAXVAR
       parameter (MAXBOX=1024,MAXVAR=30)
 
-      character in*64, out*64, object*32, version*80
+      character in*64, out*64, object*32, version*72
       real clip,x(MAXVAR),covar(MAXVAR*MAXVAR),rms,trms
       real bmaj,bmin,bpa,bvol,bvolp
       logical dores,inten,defsrc,doOut,dofit
@@ -147,12 +147,12 @@ c-----------------------------------------------------------------------
 
 c     Externals.
       logical PolsPara
-      character itoaf*2, versan*80
+      character itoaf*2, versan*72
       external FUNCTION
 c-----------------------------------------------------------------------
       version = versan ('imfit',
-     *                '$Revision: 1.10 $',
-     *                '$Date: 2012/12/06 01:01:24 $')
+     *                '$Revision: 1.11 $',
+     *                '$Date: 2013/08/30 01:49:21 $')
 
 c     Get the input parameters.
       call keyini

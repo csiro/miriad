@@ -40,7 +40,7 @@ c------------------------------------------------------------------------
 	include 'maxdim.h'
         include 'mem.h'
 	integer MAXFEED,MAXTIME
-	character version*80
+	character version*72
 	parameter(MAXFEED=2,MAXTIME=64)
 c
 	character vis*64
@@ -54,7 +54,7 @@ c
 c
 c  Externals.
 c
-	character itoaf*8,versan*80
+	character itoaf*8,versan*72
 c
 c  Get the input parameters.
 c
