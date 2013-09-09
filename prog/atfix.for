@@ -131,12 +131,12 @@ c    24feb06 rjs  Fix bug in tsyscal=none and some tidying.
 c    27feb06 rjs  Fix bug when there are multiple frequencies.
 c    25sep06 tw/rjs  Fix bug precluding inst phase correction without dantpos
 c    08jan07 rjs  Small documentation correction.
+c    09sep13 mhw  Fix optimization bug causing tsys jumps at freq change
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
-	character version*(*)
+	character version*72
 	integer MAXSELS,ATANT
-	parameter(version='AtFix: version 1.0 08-Jan-07')
 	parameter(MAXSELS=256,ATANT=6)
 c
 	real sels(MAXSELS),xyz(3*MAXANT)
@@ -162,8 +162,11 @@ c
 	logical uvvarUpd,selProbe,hdPrsnt,keyprsnt
 	integer uvscan
 	real elescale
+        character*72 versan
 c
-	call output(version)
+	version = versan('atfix',
+     :                   '$Revision: 1.6 $',
+     :                   '$Date: 2013/09/09 03:03:04 $')
 	call keyini
 	call keya('vis',vis,' ')
 	call selInput('select',sels,MAXSELS)
@@ -1020,7 +1023,7 @@ c
 	logical neednew,needupd
 	character type*1
 	character line*80
-	logical updated,doatm
+	logical updated
 	integer length
 c
 c  Externals.
@@ -1074,6 +1077,8 @@ c
      *	    xtsys(1,1,ntcal),ytsys(1,1,ntcal),
      *	    xtrec(1,1,ntcal),ytrec(1,1,ntcal))
 	  tvalid(ntcal) = .true.
+          if (ntcal.gt.161.and.ntcal.lt.167) 
+     *         print *,ntcal,xtsys(1,1,ntcal),xtrec(1,1,ntcal),doatm
 c	else if(neednew)then
 c	  call bug('w',
 c     *	  'New frequency without new system temperature measurement')
@@ -1226,9 +1231,9 @@ c
 	      data(k) = fac * data(k)
 	    enddo
 	  enddo
+	  if(k.ne.nread)call bug('f','Channel number inconsistency')
 	endif
 c
-	if(k.ne.nread)call bug('f','Channel number inconsistency')
 c
 	end
 c************************************************************************
@@ -1290,6 +1295,13 @@ c
 	          ytcur(i,j) = (t+Tb(j))/fac(j)
 	        enddo
 	      enddo
+              if (t1.gt.161.and.t1.lt.167) then
+                print *,'time: ',t1,t2 
+                print *,tfreq(t1),tfreq(t2),Tb(1),fac(1)
+                print *,a1,a2,xtrec(1,1,t1),xtrec(1,1,t2)
+                print *,'tsys',xtsys(1,1,t1),xtsys(1,1,t2)
+                print *,xtcur(1,1)
+              endif
 	    else
 	      do j=1,nwin
 	        do i=1,nants

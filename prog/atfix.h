@@ -17,8 +17,8 @@ c       allow for 5 days worth of syscal records, at one every 10sec.
 	real xtrec(MAXANT,MAXWIN,MAXTCAL),ytrec(MAXANT,MAXWIN,MAXTCAL)
 	real xtsys(MAXANT,MAXWIN,MAXTCAL),ytsys(MAXANT,MAXWIN,MAXTCAL)
 	real xtcur(MAXANT,MAXWIN),ytcur(MAXANT,MAXWIN)
-	logical tvalid(MAXTCAL)
+	logical doatm,tvalid(MAXTCAL)
 	common /attcal/ttime,tfreq,ntcal,nants,t1,t2,tmode,
-     *		vtcal1,vtcal2,
+     *		vtcal1,vtcal2,doatm,
      *		tvalid,xtsys,ytsys,xtrec,ytrec,xtcur,ytcur
 c
