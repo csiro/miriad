@@ -103,7 +103,7 @@ c       x and y pixel coordinate (in the output model; this goes from 1
 c       to N), the "I" component and the "I*alpha" component.  The
 c       default is to not create a log file.
 c
-c$Id: mfclean.for,v 1.10 2013/08/30 01:49:21 wie017 Exp $
+c$Id: mfclean.for,v 1.11 2013/09/11 00:14:07 mci156 Exp $
 c--
 c  History:
 c    rjs   Nov89 - Original version.
@@ -206,8 +206,8 @@ c-----------------------------------------------------------------------
       external  itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('mfclean',
-     *                 '$Revision: 1.10 $',
-     *                 '$Date: 2013/08/30 01:49:21 $')
+     *                 '$Revision: 1.11 $',
+     *                 '$Date: 2013/09/11 00:14:07 $')
 c
 c  Get the input parameters.
 c
@@ -282,7 +282,7 @@ c
       n1d = 2*min(n1d,xmin-1,nMap(1)-xmax,nx-1) + 1
       n2d = min(jc-1,n2-jc) - ny + 1
       n2d = 2*min(n2d,ymin-1,nMap(2)-ymax,ny-1) + 1
-      write(line,'(a,i4,a,i4)')'Sub-beam size is',n1d,' by',n2d
+      write(line,'(a,i6,a,i6)')'Sub-beam size is',n1d,' by',n2d
       call output(line)
       if (n1d.lt.5 .or. n2d.lt.5) then
         call bug('w','Sub-beam size is too small')
