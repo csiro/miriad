@@ -81,8 +81,8 @@ c       and "heq" (histogram equalization).  The colour lookup table is
 c       an integer from 1 to 8 specifying a lookup table.  Valid values
 c       are 1 (b&w), 2 (rainbow), 3 (linear pseudo colour), 4 (floating
 c       zero colour contours), 5 (fixed zero colour contours), 6 (rgb),
-c       7 (background), 8 (heat), and 9 (absolute b&w).  Negative
-c       reverses the lookup table.
+c       7 (background), 8 (heat), 9 (absolute b&w), 10-19 (cubehelix).
+c       Negate the number to reverse the lookup table.
 c
 c       The transfer function changes available with OPTIONS=FIDDLE are
 c       in addition (on top of) to the selections here, but the colour
@@ -337,10 +337,11 @@ c       XSIZ and YSIZ are the spatial half-sizes in ARCSEC over which
 c       each spectrum is spatially averaged.  These are optional and
 c       default to 0 (no binning, just a spectrum at each spatial pixel)
 c
-c$Id: cgspec.for,v 1.16 2012/03/13 02:21:33 wie017 Exp $
+c$Id: cgspec.for,v 1.17 2013/09/12 23:51:21 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
+c    mhw   2013sep13  Add cubehelix colour scheme
 c
 c Ideas:
 c  * Be cleverer for sub-cubes which have spectra partly all zero
@@ -418,8 +419,8 @@ c-----------------------------------------------------------------------
       data axC /'xyzabcd'/
 c-----------------------------------------------------------------------
       version = versan ('cgspec',
-     *                  '$Revision: 1.16 $',
-     *                  '$Date: 2012/03/13 02:21:33 $')
+     *                  '$Revision: 1.17 $',
+     *                  '$Date: 2013/09/12 23:51:21 $')
 
 c     Get user inputs.
       call inputs(MAXLEV, MAXCON, MAXSPEC, MAXTYP, ltypes, ncon, nspec,

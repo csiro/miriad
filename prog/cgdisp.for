@@ -139,6 +139,7 @@ c               6: rgb
 c               7: background
 c               8: heat
 c               9: absolute b&w
+c              10-19: cubehelix (by D. Green, google cubehelix for info)
 c           Negate the table number to reverse the lookup table.
 c
 c       The transfer function changes available with OPTIONS=FIDDLE
@@ -589,11 +590,12 @@ c       The OFFSET directive is not applied to ANY position fields in
 c       succeeding directives that have %OTYPEs that are "hms" or "dms".
 c       I am too lazy to code it.
 c
-c$Id: cgdisp.for,v 1.23 2013/08/30 01:49:21 wie017 Exp $
+c$Id: cgdisp.for,v 1.24 2013/09/12 23:51:21 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c    pjt   2013jul24  committed ptrdiff based alloc/free
+c    mhw   2013sep13  Add cubehelix colour scheme
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -661,8 +663,8 @@ c     Plotting parameters.
       data getvsc /.true./
 c-----------------------------------------------------------------------
       version = versan ('cgdisp',
-     *                  '$Revision: 1.23 $',
-     *                  '$Date: 2013/08/30 01:49:21 $')
+     *                  '$Revision: 1.24 $',
+     *                  '$Date: 2013/09/12 23:51:21 $')
 
 c     Get user inputs.
       call inputs(maxchan, MAXLEV, MAXCON, MAXTYP, ltypes, ncon, cin,
