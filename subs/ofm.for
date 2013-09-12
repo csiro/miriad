@@ -113,6 +113,7 @@ c   nebk 10feb95  Add OFMCOL and OFMINQ
 c   nebk 10apr95  Add OFMTABW
 c   nebk 14apr95  Add OFMCMP. Remove OFMINQ
 c   nebk 31apr95  Better fixed zero colour contours
+c   mhw  10sep13  Add CubeHelix colour table
 c***********************************************************************
 c
       subroutine ofmapp 
@@ -167,6 +168,7 @@ c               6 => RGB
 c               7 => Background
 c               8 => Heat
 c	        9 => Absolute b&w
+c              10-19 => Cube helix
 c            If negative, then reverse
 c  Output in common
 c    iofm    Type of ofm
@@ -1044,6 +1046,7 @@ c               6 => RGB
 c               7 => Background
 c               8 => Heat
 c	        9 => Absolute b&w
+c              10-19 => Cube helix
 c-----------------------------------------------------------------------
       implicit none
       include 'ofm.h'
@@ -1086,7 +1089,7 @@ c
 c Step to next ofm and tell user
 c
           iofm = iofm + 1   
-          if (iofm.gt.9) iofm = 1
+          if (iofm.gt.19) iofm = 1
 c
 c Tabulate the new ACTIVE and SAVE ofms
 c     
@@ -1307,6 +1310,7 @@ c               6 => RGB
 c               7 => Background
 c               8 => Heat
 c	        9 => Absolute b&w
+c              10-19 => Cube Helix
 c
 c  Output
 c    dofcc   True if generated fixed zero colour contours
@@ -1319,13 +1323,14 @@ c-----------------------------------------------------------------------
       real imin, imax
       logical dofcc
 c-----------------------------------------------------------------------
-      if (iofm.lt.1 .or .iofm.gt.9) then
+      if (iofm.lt.1 .or .iofm.gt.19) then
         iofm = 1
         call bug ('w', 'Unrecognized lookup table, setting b&w')
       end if
       dofcc = .false.
 c
-      if (iofm.eq.1 .or. iofm.eq.4 .or. iofm.eq.5 .or. iofm.eq.9) then
+      if (iofm.eq.1 .or. iofm.eq.4 .or. iofm.eq.5 .or. 
+     :    (iofm.ge.9.and.iofm.le.19)) then
 c
 c Set ACTIVE and SAVE tables that are generated algorithmically
 c
@@ -1353,6 +1358,26 @@ c
           else
             call ofmtabw (imin, imax)
           end if
+        else if (iofm.eq.10) then
+          call ofmhlx(0.5,-1.5,1.0,1.0)
+        else if (iofm.eq.11) then
+          call ofmhlx(1.5,-1.5,1.0,1.0)
+        else if (iofm.eq.12) then
+          call ofmhlx(2.5,-1.5,1.0,1.0)
+        else if (iofm.eq.13) then
+          call ofmhlx(0.5,-1.5,1.5,1.0)
+        else if (iofm.eq.14) then
+          call ofmhlx(0.5,-2.0,1.4,1.0)
+        else if (iofm.eq.15) then
+          call ofmhlx(1.0,-2.0,1.4,1.0)
+        else if (iofm.eq.16) then
+          call ofmhlx(1.5,-2.0,1.4,1.0)
+        else if (iofm.eq.17) then
+          call ofmhlx(3.0,-1.5,1.4,1.0)
+        else if (iofm.eq.18) then
+          call ofmhlx(1.0,1.5,1.4,1.0)
+        else if (iofm.eq.19) then
+          call ofmhlx(2.5,1.5,1.2,1.4)
         end if
       else
 c
@@ -1388,6 +1413,7 @@ c               6 => RGB
 c               7 => Background
 c               8 => Heat
 c	        9 => Absolute b&w (not done here)
+c              10-19 => Cube Helix (not done here)
 c
 c  Output in common
 c    ofmb    BASIC ofm for Red [ofm(i,1)], Green [ofm(i,2)]
@@ -2555,4 +2581,116 @@ c-----------------------------------------------------------------------
       end if
       call lcase (cch)
 c
+      end
+c
+c
+      subroutine ofmhlx(start,rots,hue,gamma)      
+c-----------------------------------------------------------------------
+c Calculates a "cube helix" colour table. See cubhlx for details
+c
+c    start colour (1=red, 2=green, 3=blue; e.g. 0.5=purple);
+c    rots  rotations in colour (typically -1.5 to 1.5, e.g. -1.0
+c          is one blue->green->red cycle);
+c    hue   for hue intensity scaling (in the range 0.0 (b+w) to 1.0
+c          to be strictly correct, larger values may be ok with
+c          particular start/end colours);
+c    gamma set the gamma correction for intensity, normally 1.0
+c-----------------------------------------------------------------------
+      real start,rots,hue,gamma
+c
+      include 'ofm.h'
+      integer i,nlo,nhi
+      character*80 line
+c
+      call output('Tabulating cubehelix colour table')
+   10 format(2x,'start=',f3.1,', rot=',f4.1,', hue=',f3.1,
+     * ', gamma=',f3.1)  
+      write(line,10) start,rots,hue,gamma  
+      call output(line)
+      call cubhlx(start,rots,hue,gamma,na,
+     *            ofms(1,1),ofms(1,2),ofms(1,3),nlo,nhi)
+      do i=1,na
+        ofma(i,1)=ofms(i,1)   
+        ofma(i,2)=ofms(i,2)   
+        ofma(i,3)=ofms(i,3)   
+      enddo
+      end
+c
+      subroutine cubhlx(start,rots,hue,gamma,nlev,red,grn,blu,nlo,nhi)
+c-----------------------------------------------------------------------
+c Calculates a "cube helix" colour table. the colours are a tapered
+c helix around the diagonal of the [r,g,b] colour cube, from black
+c [0,0,0] to white [1,1,1] deviations away from the diagonal vary
+c quadratically, increasing from zero at black, to a maximum, then
+c decreasing to zero at white, all the time rotating in colour.
+c
+c the input parameters controlling the colour helix are:
+c
+c    start colour (1=red, 2=green, 3=blue; e.g. 0.5=purple);
+c    rots  rotations in colour (typically -1.5 to 1.5, e.g. -1.0
+c          is one blue->green->red cycle);
+c    hue   for hue intensity scaling (in the range 0.0 (b+w) to 1.0
+c          to be strictly correct, larger values may be ok with
+c          particular start/end colours);
+c    gamma set the gamma correction for intensity.
+c    nlev  the number of levels, size of red/grn/blu arrays
+c
+c the routine returns a colour table nlev elements long in red, grn
+c and blu (each element in the range 0.0 to 1.0), and the numbers,
+c nlo and nhi, of red, green or blue values that had to be clipped
+c because they were too low or too high.
+c-----------------------------------------------------------------------
+c dave green --- mrao --- 2011 june 13th
+c-----------------------------------------------------------------------
+c see:
+c   green, d. a., 2011, bulletin of the astronomical society of india,
+c      vol.39, p.289
+c-----------------------------------------------------------------------
+c
+      integer   nlev,i,nlo,nhi
+      real      start,rots,hue,gamma
+      real      red(nlev),grn(nlev),blu(nlev)
+      real      pi,fract,angle,amp
+c
+      pi=4.0*atan(1.0)
+      nlo=0
+      nhi=0
+c
+      do 1000 i=1,nlev
+        fract=float(i-1)/float(nlev-1)
+        angle=2*pi*(start/3.0+1.0+rots*fract)
+        fract=fract**gamma
+        amp=hue*fract*(1-fract)/2.0
+        red(i)=fract+amp*(-0.14861*cos(angle)+1.78277*sin(angle))
+        grn(i)=fract+amp*(-0.29227*cos(angle)-0.90649*sin(angle))
+        blu(i)=fract+amp*(+1.97294*cos(angle))
+c
+        if(red(i).lt.0.0)then
+          red(i)=0.0
+          nlo=nlo+1
+        endif
+        if(grn(i).lt.0.0)then
+          grn(i)=0.0
+          nlo=nlo+1
+        endif
+        if(blu(i).lt.0.0)then
+          blu(i)=0.0
+          nlo=nlo+1
+        endif
+c
+        if(red(i).gt.1.0)then
+          red(i)=1.0
+          nhi=nhi+1
+        endif
+        if(grn(i).gt.1.0)then
+          grn(i)=1.0
+          nhi=nhi+1
+        endif
+        if(blu(i).gt.1.0)then
+          blu(i)=1.0
+          nhi=nhi+1
+        endif
+ 1000 continue
+c
+      return
       end
