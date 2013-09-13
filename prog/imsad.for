@@ -879,7 +879,7 @@ c
       tfvp(3) = 0.3
       tfvp(4) = 0.9
 
-      if (dofid) call ofmmod(tfvp,1,0.0,0,0.0,0.0)
+      if (dofid) call ofmmod(tfvp,1,0.0,0,range2(1),range2(2))
 
       end
 
