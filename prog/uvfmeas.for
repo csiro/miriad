@@ -78,7 +78,7 @@ c       overplot onto the spectrum. The coefficients must relate to the
 c       same type of fit (ie. log space or raw values) as the main fit
 c       would use.
 c
-c$Id: uvfmeas.for,v 1.1 2012/05/08 22:56:40 ste616 Exp $
+c$Id: uvfmeas.for,v 1.2 2013/09/19 04:54:35 ste616 Exp $
 c--
 c  History:
 c    jbs  05jan12 Derived from uvspec.
@@ -105,20 +105,22 @@ c
 	integer tIn,vupd,poly,ncnt(MAXPOL,MAXCHAN),ipol,npol
 	integer nxy(2),nchan,nread,nplot,PolIndx(PolMin:PolMax)
 	integer p(MAXPOL),pp(MAXPOL),lmax,mnchan,vecavgn,scalavgn
-	integer dnx,dny
+	integer dnx,dny,tcm(2*MAXCHAN-2)
 	real yrange(2),inttime,temp,scalamp(MAXCHAN),scalscat(MAXCHAN)
 	real vecamp(MAXCHAN),vecpha(MAXCHAN),vecscat(MAXCHAN),sig2
 	real work2(4*maxdim),weight(maxdim),fit(maxdim),serr
 	real xrange(2),yp(MAXCHAN),scalavga,vecavgs,scalavgs
 	real uvdist(MAXPNT),uvdistamp(MAXPNT),uvdistfreq(MAXPNT)
 	real sexpect,qualn,qualp,plotfit(11),ufit(maxdim)
+	real fitdiffsum,plfitx(maxdim)
 	double precision x(2*MAXCHAN-2),xf(2*MAXCHAN-2)
-	double precision xp(2*MAXCHAN-2)
+	double precision xp(2*MAXCHAN-2),txf(2*MAXCHAN-2)
+	double precision mx(2*MAXCHAN-2)
 	complex data(MAXCHAN),vecaver(MAXCHAN)
-	logical flags(MAXCHAN)
+	logical flags(MAXCHAN),fpresnt
 	integer hann,ibin,i,j,nlines,t,plot(MAXPLT+1),nplts,k
 	integer tncnt,chplot(MAXCHAN),ant1,ant2,bl,nants
-	integer nuvdist
+	integer nuvdist,nachan
 	real hc(maxco),hw(maxco),fitparams(11),fluxlines(2)
 c
 c  Externals.
@@ -129,8 +131,8 @@ c
 	character versan*80
 c-----------------------------------------------------------------------
 	version = versan ('uvfmeas',
-     :                    '$Revision: 1.1 $',
-     :                    '$Date: 2012/05/08 22:56:40 $')
+     :                    '$Revision: 1.2 $',
+     :                    '$Date: 2013/09/19 04:54:35 $')
 c
 c  Get the input parameters.
 c
@@ -222,6 +224,7 @@ c
 	enddo
 	lmax=0
 	mnchan=0
+	nachan=0
 	nuvdist=1
 c
 c  Open the input file(s).
@@ -276,31 +279,52 @@ c
 c
 c  Accumulate the data for the flux measurement.
 c
-	    call uvinfo(tIn,'sfreq',xf)
+	    call uvinfo(tIn,'sfreq',txf)
+c
+c  Make it possible to plot over a large frequency range.
+c
+	    do i=1,nchan
+	       fpresnt=.false.
+	       do j=1,nachan
+		  if (txf(i).eq.xf(j)) then
+		     fpresnt=.true.
+		     tcm(i)=j
+		     exit
+		  endif
+	       enddo
+	       if (fpresnt.eqv..false.) then
+		  nachan=nachan+1
+		  xf(nachan)=txf(i)
+		  tcm(i)=nachan
+	       endif
+	    enddo
+c
+c  Calculate the required quantities.
+c
 	    do i=1,nchan
 	       if (flags(i)) then
-		  chplot(i)=1
-		  fluxr(ipol,i)=fluxr(ipol,i)+real(data(i))
-		  fluxi(ipol,i)=fluxi(ipol,i)+aimag(data(i))
-		  rms2(ipol,i) = rms2(ipol,i) + sig2
+		  chplot(tcm(i))=1
+		  fluxr(ipol,tcm(i))=fluxr(ipol,tcm(i))+real(data(i))
+		  fluxi(ipol,tcm(i))=fluxi(ipol,tcm(i))+aimag(data(i))
+		  rms2(ipol,tcm(i)) = rms2(ipol,tcm(i)) + sig2
 		  temp=abs(data(i))
-		  amp(ipol,i)=amp(ipol,i)+temp
-		  amp2(ipol,i)=amp2(ipol,i)+temp*temp
-		  ncnt(ipol,i)=ncnt(ipol,i)+1
+		  amp(ipol,tcm(i))=amp(ipol,tcm(i))+temp
+		  amp2(ipol,tcm(i))=amp2(ipol,tcm(i))+temp*temp
+		  ncnt(ipol,tcm(i))=ncnt(ipol,tcm(i))+1
 		  u=preamble(1)/1000.0
 		  v=preamble(2)/1000.0
 c		  if (u.ne.0.0.or.v.ne.0.0) then
-		  uvdist(nuvdist)=real(sqrt(u*u+v*v)*xf(i)/xf(1))
+		  uvdist(nuvdist)=real(sqrt(u*u+v*v)*txf(i)/txf(1))
 c		  uvdist(nuvdist)=real(sqrt(u*u+v*v))
 c		     write(line,'(1f10.3)') uvdist(nuvdist)
 c		     call output(line)
-		     uvdistamp(nuvdist)=real(data(i))
-		     uvdistfreq(nuvdist)=real(xf(i))
+		  uvdistamp(nuvdist)=real(data(i))
+		  uvdistfreq(nuvdist)=real(txf(i))
 c		     if (uvdist(nuvdist).gt.0.0) then
-			nuvdist=nuvdist+1
-			if (nuvdist.ge.MAXPNT) then
-			   call bug('f','Too many points!')
-			endif
+		  nuvdist=nuvdist+1
+		  if (nuvdist.ge.MAXPNT) then
+		     call bug('f','Too many points!')
+		  endif
 c		     endif
 c		  endif
 	       endif
@@ -329,7 +353,10 @@ c	    endif
 c
 c  Accumulate more data, if we are time averaging.
 c
-	    call GetXAxis(tIn,xaxis,xtitle,x,nplot)
+	    call GetXAxis(tIn,xaxis,xtitle,mx,nplot)
+	    do i=1,nchan
+	       x(tcm(i))=mx(i)
+	    enddo
 c	    if(avall)preamble(5) = 257
 c	    call uvrdvrr(tIn,'inttime',inttime,0.)
 c	    call BufAcc(preamble,inttime,data,flags,
@@ -442,7 +469,8 @@ c  Do a fit.
      *       '   Uncertainty: ',scalavgs
 	   call output(line)
 	   nchan=0
-	   do j=1,mnchan
+c	   do j=1,mnchan
+	   do j=1,nachan
 	      if (chplot(j).eq.1) then
 		 nchan=nchan+1
 		 xp(nchan)=x(j)
@@ -458,7 +486,7 @@ c  Do a fit.
 	   nplts=1
 	   if (poly.gt.0) then
 	      call polyfit(poly,nchan,xp,work2,weight,yp,fit,serr,dolog,
-     *          fitparams,dopfit,plotfit,ufit)
+     *          fitparams,dopfit,plotfit,ufit,plfitx)
 	      if (dovec) then
 		 call output('Vector Average Fit Coefficients:')
 	      else
@@ -510,11 +538,24 @@ c		 write(line,'(1pe11.3,1pe11.3)') uvdist(j),uvdistamp(j)
 c		 call output(line)
 c	      endif
 	   enddo
+c
+	   if (dopfit.and.poly.gt.0) then
+c  Calculate the average error with the supplied fit.
+	      fitdiffsum=0.0
+	      do j=1,nchan
+		 fitdiffsum = fitdiffsum + abs(fit(i) - ufit(i)) /
+     *               ufit(i)
+	      enddo
+	      fitdiffsum = fitdiffsum / nchan
+	      write(line,'(a,1pe11.3)') 'Average fit error: ',fitdiffsum
+	      call output(line)
+	   endif
+c
 	   call SetAxisD(xp,nchan,xrange)
 	   call Plotit(nchan,xp,yp,xrange,yrange,plot,
      *         nplts,xtitle,ytitle,0,dble(0.),real(0.),p,npol,hann,hc,
      *         hw,logf,MAXPNT,poly,fit,fluxlines,2,i,uvdist,uvdistamp,
-     *         nuvdist,qualn,qualp,douv,dopfit,ufit)
+     *         nuvdist,qualn,qualp,douv,dopfit,ufit,plfitx)
 	   write(line,'(a,1pe11.3,a,1pe11.3)') 
      *      'Calibrator quality: value = ',qualn,' ratio = ',qualp
 	   call output(line)
@@ -1108,7 +1149,7 @@ c************************************************************************
      *		  plot,nplts,xtitle,ytitle,bl,time,inttime,
      *		  pol,npol,hann,hc,hw,logf,MAXPNT,poly,fit,
      *            fluxlines,nflux,wpol,uvd,uva,nuvd,qualn,
-     *            qualp,plotuv,dopfit,ufit)
+     *            qualp,plotuv,dopfit,ufit,plfitx)
 c
 	implicit none
 	integer npnts,bl,nplts,plot(*),npol,pol(*),hann,MAXPNT
@@ -1116,7 +1157,7 @@ c
 	double precision time,xp(*)
         real x(MAXPNT),fit(*),fluxlines(*)
 	real inttime,hc(*),hw(*),xrange(2),yrange(2),yp(*)
-	real uvd(*),uva(*),qualn,qualp,ufit(*)
+	real uvd(*),uva(*),qualn,qualp,ufit(*),plfitx(*)
 	character xtitle*(*),ytitle*(*),logf*(*)
 	logical plotuv,dopfit
 c
@@ -1181,13 +1222,15 @@ c
 c  Plot the fit if we've done it.
 	  if (poly.ge.0) then
 	     call pgsci(mod(i-1,NCOL)+2)
-	     call pgline(plot(i+1)-plot(i),x(plot(i)),fit(plot(i)))
+	     call pgline(plot(i+1)-plot(i),plfitx(plot(i)),
+     *                   fit(plot(i)))
 	     call pgmtxt('T',0.6,0.0,0.0,'Fit Line')
 	  endif
 	  if (dopfit) then
 	     call pgsci(mod(i-1,NCOL)+2)
 	     call pgsls(2)
-	     call pgline(plot(i+1)-plot(i),x(plot(i)),ufit(plot(i)))
+	     call pgline(plot(i+1)-plot(i),plfitx(plot(i)),
+     *                   ufit(plot(i)))
 	     call pgsls(1)
 	  endif
           if (logf.ne.' ') then
@@ -1356,12 +1399,12 @@ c	call pghist(nuvd,uva,yranged(1),yranged(2),100,0)
 c***********************************************************************
 	subroutine polyfit(poly,nchan,value,work2,weight,
      *                     spec,fit,serr,dolog,fitparams,
-     *                     dopfit,ufitparams,ufit)
+     *                     dopfit,ufitparams,ufit,plfitx)
 
 	integer nchan,poly
 	real spec(*),fit(*),work2(*),weight(*),serr,ufit(*)
 	double precision value(*)
-	real xlim1,xlim2,fitparams(*),ufitparams(*)
+	real xlim1,xlim2,fitparams(*),ufitparams(*),plfitx(*)
 	logical dolog,dopfit
 c-----------------------------------------------------------------------
 c     Polynomial fit of spectrum
@@ -1383,7 +1426,7 @@ c-----------------------------------------------------------------------
 	integer i,j,ifail,npts,niter,sn
 	double precision dfit
 	real coef(11),test2,work3(24),rvalue(nchan)
-	real rspec(nchan),d(nchan),ss,sa
+	real rspec(nchan),d(nchan),ss,sa,minx,maxx,tx
 	character*80 line
 	logical hasneg
 c-----------------------------------------------------------------------
@@ -1475,6 +1518,7 @@ c
 	      ufit(i)=ufitparams(1)
 	      do j = 2, 10
 		 ufit(i)=ufit(i)+ufitparams(j)*(rvalue(i)**(j-1))
+c		 ufit(i)=ufit(i)+ufitparams(j)*(plfitx(i)**(j-1))
 	      enddo
 	   endif
 	   if (poly.gt.0) then
@@ -1482,6 +1526,8 @@ c
 		 if (rvalue(i).ne.0.0) then
 		    dfit=dfit+dble(coef(j))*dble(rvalue(i))**(j-1)
 		    fit(i)=fit(i)+coef(j)*(rvalue(i)**(j-1))
+c		    dfit=dfit+dble(coef(j))*dble(plfitx(i))**(j-1)
+c		    fit(i)=fit(i)+coef(j)*(plfitx(i)**(j-1))
 		 endif
 	      enddo
 	   endif
@@ -1531,6 +1577,38 @@ c  Iteration count
 c  Return the fit coefficients.
  1000	do i=1,poly+1
 	   fitparams(i)=coef(i)
+	enddo
+c  Make the final fit, over the entire range.
+	minx=real(value(1))
+	maxx=real(value(1))
+	do i=2,nchan
+	   minx=min(real(value(i)),minx)
+	   maxx=max(real(value(i)),maxx)
+	enddo
+	do i=1,nchan
+	   plfitx(i)=minx+real(i-1)*(maxx-minx)/real(nchan)
+	   fit(i)=fitparams(1)
+	   tx=plfitx(i)
+	   if (dolog) then
+	      tx=log10(tx)
+	   endif
+	   if (dopfit) then
+	      ufit(i)=ufitparams(1)
+	      do j=2,10
+		 ufit(i)=ufit(i)+ufitparams(j)*(tx**(j-1))
+	      enddo
+	   endif
+	   if (poly.gt.0) then
+	      do j=2,poly+1
+		 fit(i)=fit(i)+fitparams(j)*(tx**(j-1))
+	      enddo
+	   endif
+	   if (dolog) then
+	      fit(i)=10**(fit(i))
+	      if (dopfit) then
+		 ufit(i)=10**(ufit(i))
+	      endif
+	   endif
 	enddo
 c
 	end
