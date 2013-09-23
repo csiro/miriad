@@ -85,7 +85,7 @@ c       overplot onto the spectrum. The coefficients must relate to the
 c       same type of fit (ie. log space or raw values) as the main fit
 c       would use.
 c
-c$Id: uvfmeas.for,v 1.3 2013/09/23 05:51:33 ste616 Exp $
+c$Id: uvfmeas.for,v 1.4 2013/09/23 06:14:37 ste616 Exp $
 c--
 c  History:
 c    jbs  05jan12 Derived from uvspec.
@@ -108,12 +108,12 @@ c
 	double precision fluxr(MAXPOL,MAXCHAN),fluxi(MAXPOL,MAXCHAN)
 	double precision amp(MAXPOL,MAXCHAN),amp2(MAXPOL,MAXCHAN)
 	double precision rms2(MAXPOL,MAXCHAN),u,v
-	double precision vecavgr,vecavgi,time0,tmin,tmax,tprev,tt
+	double precision vecavgr,vecavgi
 	integer tIn,vupd,poly,ncnt(MAXPOL,MAXCHAN),ipol,npol
 	integer nxy(2),nchan,nread,nplot,PolIndx(PolMin:PolMax)
 	integer p(MAXPOL),pp(MAXPOL),lmax,mnchan,vecavgn,scalavgn
 	integer dnx,dny,tcm(2*MAXCHAN-2)
-	real yrange(2),inttime,temp,scalamp(MAXCHAN),scalscat(MAXCHAN)
+	real yrange(2),temp,scalamp(MAXCHAN),scalscat(MAXCHAN)
 	real vecamp(MAXCHAN),vecpha(MAXCHAN),vecscat(MAXCHAN),sig2
 	real work2(4*maxdim),weight(maxdim),fit(maxdim),serr
 	real xrange(2),yp(MAXCHAN),scalavga,vecavgs,scalavgs
@@ -125,21 +125,20 @@ c
 	double precision mx(2*MAXCHAN-2)
 	complex data(MAXCHAN),vecaver(MAXCHAN)
 	logical flags(MAXCHAN),fpresnt
-	integer hann,ibin,i,j,nlines,t,plot(MAXPLT+1),nplts,k
-	integer tncnt,chplot(MAXCHAN),ant1,ant2,bl,nants
+	integer hann,ibin,i,j,t,plot(MAXPLT+1),nplts,k
+	integer tncnt,chplot(MAXCHAN),nants
 	integer nuvdist,nachan
 	real hc(maxco),hw(maxco),fitparams(11),fluxlines(2)
 c
 c  Externals.
 c
-	integer nextpow2
-	logical uvDatOpn,uvVarUpd
+	logical uvDatOpn
 	character PolsC2P*2
 	character versan*80
 c-----------------------------------------------------------------------
 	version = versan ('uvfmeas',
-     :                    '$Revision: 1.3 $',
-     :                    '$Date: 2013/09/23 05:51:33 $')
+     :                    '$Revision: 1.4 $',
+     :                    '$Date: 2013/09/23 06:14:37 $')
 c
 c  Get the input parameters.
 c
@@ -320,43 +319,16 @@ c
 		  ncnt(ipol,tcm(i))=ncnt(ipol,tcm(i))+1
 		  u=preamble(1)/1000.0
 		  v=preamble(2)/1000.0
-c		  if (u.ne.0.0.or.v.ne.0.0) then
 		  uvdist(nuvdist)=real(sqrt(u*u+v*v)*txf(i)/txf(1))
-c		  uvdist(nuvdist)=real(sqrt(u*u+v*v))
-c		     write(line,'(1f10.3)') uvdist(nuvdist)
-c		     call output(line)
 		  uvdistamp(nuvdist)=real(data(i))
 		  uvdistfreq(nuvdist)=real(txf(i))
-c		     if (uvdist(nuvdist).gt.0.0) then
 		  nuvdist=nuvdist+1
 		  if (nuvdist.ge.MAXPNT) then
 		     call bug('f','Too many points!')
 		  endif
-c		     endif
-c		  endif
 	       endif
 	    enddo
 	    nuvdist=nuvdist-1
-c
-c  Determine if we need to flush out the averaged data.
-c
-c	    doflush = uvVarUpd(vupd)
-c	    doflush = nread.ne.nchan
-c	    T0 = min(preamble(4),T0)
-c	    T1 = max(preamble(4),T1)
-c	    doflush = (doflush.or.T1-T0.gt.interval).and.buffered
-c
-c  Pull the chain and flush out and plot the accumulated data
-c  in the case of time averaging.
-c
-c	    if(doflush)then
-c	      call BufFlush(nobase,hann,hc,hw,first,
-c     *	        device,x,nplot,xtitle,ytitle,nxy,yrange,logf,poly,
-c     *          subpoly,xrange,dolog)
-c	      T0 = preamble(4)
-c	      T1 = T0
-c	      buffered = .false.
-c	    endif
 c
 c  Accumulate more data, if we are time averaging.
 c
@@ -364,26 +336,12 @@ c
 	    do i=1,nchan
 	       x(tcm(i))=mx(i)
 	    enddo
-c	    if(avall)preamble(5) = 257
-c	    call uvrdvrr(tIn,'inttime',inttime,0.)
-c	    call BufAcc(preamble,inttime,data,flags,
-c     *        nread,ibin)
-c	    buffered = .true.
 	    nchan = nread
 c
 c  Keep on going. Read in another record.
 c
 	    call uvDatRd(preamble,data,flags,maxchan,nread)
 	  enddo
-c
-c  Flush out and plot anything remaining.
-c
-c	  if(buffered)then
-c	    call BufFlush(nobase,hann,hc,hw,first,
-c     *	      device,x,nplot,xtitle,ytitle,nxy,yrange,logf,poly,
-c     *        subpoly,xrange,dolog)
-c	    buffered = .false.
-c	  endif
 	  call uvDatCls
 	enddo
 c
@@ -453,7 +411,6 @@ c
 		 scalavgs=scalavgs+scalscat(j)
 		 sig2 =sig2+sqrt(rms2(ipol,j)/ncnt(ipol,j))
 		 source = ' '
-c		 nlines = nlines + 1
 	      endif
 	   enddo
 	   vecavgr=vecavgr/real(vecavgn)
@@ -713,7 +670,6 @@ c------------------------------------------------------------------------
 	integer NX,NY
 	parameter(NX=6,NY=4)
 c
-	integer n
 	character xaxes(NX)*10,yaxes(NY)*9
 	data xaxes/'channel   ','frequency ','velocity  ','felocity  ',
      *		   'lag       ','dfrequency'/
@@ -772,286 +728,6 @@ c------------------------------------------------------------------------
 	include 'uvspec.h'
 	free = 1
 	mbase = 0
-	end
-c************************************************************************
-	subroutine BufFlush(nobase,hann,hc,hw,
-     *	        first,device,x,n,xtitle,ytitle,nxy,yrange,logf,
-     *          poly,subpoly,xrange,dolog)
-c
-	implicit none
-	logical nobase,first,subpoly,dolog
-	character device*(*),xtitle*(*),ytitle*(*),logf*(*)
-	integer n,nxy(2),hann,poly
-	real yrange(2),hc(*),hw(*),xrange(*)
-	double precision x(n)
-c
-c  Plot the averaged data. On the first time through, also initialise the
-c  plot device.
-c
-c------------------------------------------------------------------------
-	include 'uvspec.h'
-	integer PolMin,PolMax
-	parameter(PolMin=-8,PolMax=4)
-	integer MAXPLT,MAXPNT
-	parameter(MAXPNT=1000000,MAXPLT=1024)
-        double precision xp(MAXPNT)
-	real inttime,yp(MAXPNT),work2(4*maxdim),weight(maxdim)
-	real fit(maxdim),serr,fitp(MAXPNT),temp
-	integer plot(MAXPLT+1)
-	double precision time
-	integer i,j,ngood,ng,ntime,npnts,nplts,nprev,p,k
-	logical Hit(PolMin:PolMax)
-	integer npol,pol(MAXPOL)
-c
-c  Determine the number of good baselines.
-c
-	ngood = 0
-	do j=1,mbase
-	  if(cnt(j).gt.0)ngood = ngood + 1
-	enddo
-	if(ngood.le.0)return
-c
-c  Initialise the plot device, if this is the first time through.
-c
-	ng = ngood
-	if(nobase) ng = 1
-	if(first)call PltIni(device,ng,nxy)
-	first = .false.
-c
-c  Autoscale the X axis.
-c
-	call SetAxisD(x,n,xrange,dolog)
-c
-c  Now loop through the good baselines, plotting them.
-c
-	inttime = 0
-	time = 0
-	ntime = 0
-	npnts = 0
-	nplts = 0
-	npol = 0
-	do i=PolMin,PolMax
-	  Hit(i) = .false.
-	enddo
-c
-	do j=1,mbase
-	  if(cnt(j).gt.0)then
-	    inttime = inttime + preamble(6,j)
-	    time = time + preamble(4,j)
-	    ntime = ntime + cnt(j)
-c
-c  Average the data in each polarisation. If there is only one scan in the
-c  average, not bother to average it.
-c
-	    do i=1,npols(j)
-	      if(.not.Hit(pols(i,j)))then
-		npol = npol + 1
-		if(npol.gt.MAXPOL)call bug('f','Too many polarisations')
-		pol(npol) = pols(i,j)
-		Hit(Pols(i,j)) = .true.
-	      endif
-	      nprev = npnts
-	      p = pnt(i,j)
-	      if(cntp(i,j).ge.1)then
-		 call VisExt(x,buf(p),buf2(p),bufr(p),count(p),
-     *		    nchan(i,j),
-     *		    xp,yp,MAXPNT,npnts)
-	      endif
-c
-c  Did we find another plot.
-c
-	      if(npnts.gt.nprev)then
-		nplts = nplts + 1
-		if(nplts.gt.MAXPLT)call bug('f',
-     *		  'Buffer overflow(plots), when accumulating plots')
-		plot(nplts) = nprev + 1
-		plot(nplts+1) = npnts + 1
-	      endif
-	    enddo
-	    if(.not.nobase.and.npnts.gt.0)then
-	      npol = 0
-	      do i=PolMin,PolMax
-		Hit(i) = .false.
-	      enddo
-	      npnts = 0
-	      nplts = 0
-	      ntime = 0
-	      time = 0
-	      inttime = 0
-	    endif
-	  endif
-	enddo
-c
-c  Reset the counters.
-c
-	free = 1
-	mbase = 0
-c
-	end
-c************************************************************************
-	subroutine VisExt(x,buf,buf2,bufr,count,nchan,
-     *		    xp,yp,MAXPNT,npnts)
-c
-	implicit none
-	integer nchan,npnts,MAXPNT,count(nchan)
-	real buf2(nchan),bufr(nchan),yp(MAXPNT)
-	double precision x(nchan),xp(MAXPNT)
-	complex buf(nchan)
-c------------------------------------------------------------------------
-	include 'mirconst.h'
-	integer k
-	real temp
-	complex ctemp
-c
-c  Externals
-c
-        character*8 itoaf
-c
-	do k=1,nchan
-	  if(count(k).gt.0)then
-	     temp = abs(buf(k)) / count(k)
-	     npnts = npnts + 1
-	     if(npnts.gt.MAXPNT)call bug('f',
-     *	      'Buffer overflow('//itoaf(npnts)//
-     *        '> MAXPNT), when accumulating plots')
-	     xp(npnts) = x(k)
-	     yp(npnts) = temp
-	  endif
-	enddo
-c
-	end
-c************************************************************************
-	subroutine BufAcc(preambl,inttime,data,flags,nread,
-     *     ibin)
-c
-	implicit none
-	integer nread,ibin
-	double precision preambl(5)
-	real inttime
-	complex data(nread)
-	logical flags(nread)
-c
-c  This accumulates the visibility data. The accumulated data is left
-c  in common.
-c
-c  Input
-c    ibin       Bin number of current block of data (or 0)
-c  Input/Output:
-c    preambl	Preamble. Destroyed on output.
-c    data	The correlation data to be averaged. Destroyed on output.
-c    flags	The data flags.
-c    nread	The number of channels.
-c------------------------------------------------------------------------
-	include 'uvspec.h'
-	integer i,i1,i2,p,bl,pol
-	real t
-	logical ok,doflag
-c
-c  Does this spectrum contain some good data.
-c
-	ok = .false.
-	doflag=.false.
-	if(.not.ok)then
-	  do i=1,nread
-	    ok = ok.or.(flags(i).neqv.doflag)
-	  enddo
-	endif
-	if(.not.ok)return
-c
-c  Determine the baseline number.
-c
-	call BasAnt(preambl(5),i1,i2)
-	bl = (i2*(i2-1))/2 + i1
-c
-c  Zero up to, and including, this baseline.
-c
-	do i=mbase+1,bl
-	  cnt(i) = 0
-	enddo
-	mbase = max(mbase,bl)
-c
-c  Add in this visibility.
-c
-	if(cnt(bl).eq.0)then
-	  cnt(bl) = 1
-	  npols(bl) = 0
-	  preamble(1,bl) = preambl(1)
-	  preamble(2,bl) = preambl(2)
-	  preamble(3,bl) = preambl(3)
-	  preamble(4,bl) = preambl(4)
-	  preamble(5,bl) = preambl(5)
-	  preamble(6,bl) = inttime
-	else
-	  cnt(bl) = cnt(bl) + 1
-	  preamble(1,bl) = preamble(1,bl) + preambl(1)
-	  preamble(2,bl) = preamble(2,bl) + preambl(2)
-	  preamble(3,bl) = preamble(3,bl) + preambl(3)
-	  preamble(4,bl) = preamble(4,bl) + preambl(4)
-	  preamble(5,bl) = preamble(5,bl) + preambl(5)
-	  preamble(6,bl) = preamble(6,bl) + inttime
-	endif
-c
-c  Determine the polarisation.
-c
-	call uvDatGti('pol',pol)
-	p = 0
-	do i=1,npols(bl)
-	  if(pols(i,bl).eq.pol) p = i
-	enddo
-c
-c  A new baseline. Set up the description of it.
-c
-	if(p.eq.0)then
-	  npols(bl) = npols(bl) + 1
-	  p = npols(bl)
-	  if(p.gt.MAXPOL) call bug('f',
-     *	    'Too many polarizations, in BufAcc')
-	  pols(p,bl) = pol
-	  cntp(p,bl) = 1
-	  nchan(p,bl) = nread
-	  pnt(p,bl) = free
-	  free = free + nread
-	  if(free.gt.MAXAVER)call bug('f',
-     *	    'Too much data to accumulate, in BufAcc')
-c
-c  Copy across the new data.
-c
-	  p = pnt(p,bl) - 1
-	  do i=1,nread
-	    if(doflag.neqv.flags(i))then
-	      if(ibin.eq.0.or.ibin.eq.2) buf(i+p) = data(i)
-	      if (ibin.eq.1) buf(i+p) = -data(i)
-              t = abs(data(i))
-              bufr(i+p) = t
-	      buf2(i+p) = t*t
-	      count(i+p) = 1
-	    else
-	      buf(i+p) = (0.0,0.0)
-              bufr(i+p) = 0.0
-	      buf2(i+p) = 0.0
-	      count(i+p) = 0
-	    endif
-	  enddo
-c
-c  Else accumulate new data for old baseline.
-c
-	else
-	  cntp(p,bl) = cntp(p,bl) + 1
-	  nread = min(nread,nchan(p,bl))
-	  nchan(p,bl) = nread
-	  p = pnt(p,bl) - 1
-	  do i=1,nread
-	    if(doflag.neqv.flags(i))then
-	      t = abs(data(i))
-              if (ibin.eq.1) buf(i+p) = buf(i+p) - data(i)
-              if (ibin.eq.0.or.ibin.eq.2) buf(i+p) = buf(i+p) + data(i)
-              bufr(i+p) = bufr(i+p) + t
-	      buf2(i+p) = buf2(i+p) + t*t
-	      count(i+p) = count(i+p) + 1
-	    endif
-	  enddo
-	endif
-c
 	end
 c************************************************************************
 	subroutine PltIni(device,ngood,nxy)
@@ -1411,7 +1087,7 @@ c***********************************************************************
 	integer nchan,poly
 	real spec(*),fit(*),work2(*),weight(*),serr,ufit(*)
 	double precision value(*)
-	real xlim1,xlim2,fitparams(*),ufitparams(*),plfitx(*)
+	real fitparams(*),ufitparams(*),plfitx(*)
 	logical dolog,dopfit
 c-----------------------------------------------------------------------
 c     Polynomial fit of spectrum
@@ -1434,7 +1110,6 @@ c-----------------------------------------------------------------------
 	double precision dfit
 	real coef(11),test2,work3(24),rvalue(nchan)
 	real rspec(nchan),d(nchan),ss,sa,minx,maxx,tx
-	character*80 line
 	logical hasneg
 c-----------------------------------------------------------------------
 c  Number of clipping iterations
@@ -1464,8 +1139,6 @@ c  Count unclipped values
 	do i = 1, nchan
 	   if (weight(i).gt.0.0)  npts=npts+1
 	enddo
-c	write(line,'(a,i6)'), 'npts = ',npts
-c	call output(line)
 	if (npts.eq.0) goto 1000
 
 c  Initialize
@@ -1525,7 +1198,6 @@ c
 	      ufit(i)=ufitparams(1)
 	      do j = 2, 10
 		 ufit(i)=ufit(i)+ufitparams(j)*(rvalue(i)**(j-1))
-c		 ufit(i)=ufit(i)+ufitparams(j)*(plfitx(i)**(j-1))
 	      enddo
 	   endif
 	   if (poly.gt.0) then
@@ -1533,8 +1205,6 @@ c		 ufit(i)=ufit(i)+ufitparams(j)*(plfitx(i)**(j-1))
 		 if (rvalue(i).ne.0.0) then
 		    dfit=dfit+dble(coef(j))*dble(rvalue(i))**(j-1)
 		    fit(i)=fit(i)+coef(j)*(rvalue(i)**(j-1))
-c		    dfit=dfit+dble(coef(j))*dble(plfitx(i))**(j-1)
-c		    fit(i)=fit(i)+coef(j)*(plfitx(i)**(j-1))
 		 endif
 	      enddo
 	   endif
@@ -1618,160 +1288,4 @@ c  Make the final fit, over the entire range.
 	   endif
 	enddo
 c
-	end
-c************************************************************************
-	subroutine IntFlush(nants,npol,time,quad,avall,
-     *	  init,Corrs,CorrPnt,Flags,FlagPnt,nchan,sigma2,maxbase,maxpol,
-     *	  ntrip,trip,triptime,tripsig2,maxtrip)
-c
-	integer nants,npol,maxbase,maxpol,maxtrip
-	double precision time,triptime(maxtrip)
-	integer CorrPnt(maxbase,maxpol),FlagPnt(maxbase,maxpol)
-	integer ntrip(maxtrip),nchan(maxbase,maxpol)
-	logical quad,avall,init(maxbase,maxpol),Flags(*)
-	real sigma2(maxbase,maxpol),tripsig2(maxtrip)
-	complex Corrs(*),trip(maxtrip)
-c------------------------------------------------------------------------
-	real flux
-	integer p,i4,i3,i2,i1,bl12,bl13,bl23,bl14,bl34,k,i,nread
-	integer pflag12,pflag13,pflag23,pdata12,pdata23,pdata13
-	integer pflag14,pflag34,        pdata14,pdata34
-	complex denom
-c
-	do p=1,npol
-	  if(avall)then
-	    k = 1
-	  else
-	    k = 0
-	  endif
-c
-c  Quad quantity.
-c
-	  if(quad)then
-	    do i4=4,nants
-	    do i3=3,i4-1
-	      do i2=2,i3-1
-	        do i1=1,i2-1
-	 	  if(.not.avall)k = k + 1
-	          bl12 = ((i2-1)*(i2-2))/2 + i1
-	          bl34 = ((i4-1)*(i4-2))/2 + i3
-	          bl14 = ((i4-1)*(i4-2))/2 + i1
-	          bl23 = ((i3-1)*(i3-2))/2 + i2
-		  if(init(bl12,p).and.init(bl34,p).and.init(bl14,p).and.
-     *		     init(bl23,p))then
-		    if(ntrip(k).eq.0)then
-		      triptime(k) = 0
-		      tripsig2(k) = 0
-	 	      trip(k) = 0
-		    endif
-		    nread = min(nchan(bl12,p),nchan(bl34,p),
-     *				nchan(bl14,p),nchan(bl23,p))
-		    pdata12 = corrpnt(bl12,p) - 1
-		    pdata34 = corrpnt(bl34,p) - 1
-		    pdata14 = corrpnt(bl14,p) - 1
-		    pdata23 = corrpnt(bl23,p) - 1
-		    pflag12 = flagpnt(bl12,p) - 1
-		    pflag34 = flagpnt(bl34,p) - 1
-		    pflag14 = flagpnt(bl14,p) - 1
-		    pflag23 = flagpnt(bl23,p) - 1
-		    do i=1,nread
-		      if(Flags(pflag12+i).and.Flags(pflag34+i).and.
-     *		         Flags(pflag14+i).and.Flags(pflag23+i))then
-			flux = 0.25*(abs(Corrs(pdata12+i)) + 
-     *				     abs(Corrs(pdata34+i)) +
-     *				     abs(Corrs(pdata14+i)) +
-     *				     abs(Corrs(pdata23+i)))
-			denom = Corrs(pdata14+i)*conjg(Corrs(pdata23+i))
-			if(abs(real(denom))+abs(aimag(denom)).eq.0.or.
-     *			   abs(flux).eq.0)call bug('f',
-     *		  'Flux quantity identically zero when doing division')
-		        trip(k) = trip(k) +
-     *			  (Corrs(pdata12+i) *       Corrs(pdata34+i))/
-     *			  denom
-		        tripsig2(k) = tripsig2(k) + 
-     *			  (sigma2(bl12,p) + sigma2(bl34,p) +
-     *			   sigma2(bl14,p) + sigma2(bl23,p))/(flux*flux)
-		        triptime(k) = triptime(k) + time
-		        ntrip(k) = ntrip(k) + 1
-		      endif
-		    enddo
-		  endif
-	        enddo
-	      enddo
-	      enddo
-	    enddo
-c
-c  Triple quantity.
-c
-	  else
-	    do i3=3,nants
-	      do i2=2,i3-1
-	        do i1=1,i2-1
-	 	  if(.not.avall)k = k + 1
-	          bl12 = ((i2-1)*(i2-2))/2 + i1
-	          bl13 = ((i3-1)*(i3-2))/2 + i1
-	          bl23 = ((i3-1)*(i3-2))/2 + i2
-		  if(init(bl12,p).and.init(bl13,p).and.init(bl23,p))then
-		    if(ntrip(k).eq.0)then
-		      triptime(k) = 0
-		      tripsig2(k) = 0
-	 	      trip(k) = 0
-		    endif
-		    nread = min(nchan(bl12,p),nchan(bl13,p),
-     *				nchan(bl23,p))
-		    pdata12 = corrpnt(bl12,p) - 1
-		    pdata13 = corrpnt(bl13,p) - 1
-		    pdata23 = corrpnt(bl23,p) - 1
-		    pflag12 = flagpnt(bl12,p) - 1
-		    pflag13 = flagpnt(bl13,p) - 1
-		    pflag23 = flagpnt(bl23,p) - 1
-		    do i=1,nread
-		      if(Flags(pflag12+i).and.Flags(pflag13+i).and.
-     *		         Flags(pflag23+i))then
-		        trip(k) = trip(k) + Corrs(pdata12+i)
-     *					* Corrs(pdata23+i)
-     *				  * conjg(Corrs(pdata13+i))
-		        tripsig2(k) = tripsig2(k) + sigma2(bl12,p)
-     *						+ sigma2(bl23,p)
-     *						+ sigma2(bl13,p)
-		        triptime(k) = triptime(k) + time
-		        ntrip(k) = ntrip(k) + 1
-		      endif
-		    enddo
-		  endif
-	        enddo
-	      enddo
-	    enddo
-	  endif
-c
-c  Reset the baseline.
-c
-	  do i=1,(nants*(nants-1))/2
-	    init(i,p) = .false.
-	  enddo
-	enddo
-	end
-c************************************************************************
-	subroutine PolIdx(p,npol,polcvt,PolMin,PolMax,MAXPOL)
-c
-	integer p,PolMin,PolMax,npol,MAXPOL
-	integer polcvt(PolMin:PolMax)
-c------------------------------------------------------------------------
-	integer pol
-c
-c  Externals.
-c
-	logical polspara
-c
-	p = 0
-	call uvDatGti('pol',pol)
-	if(pol.lt.PolMin.or.pol.gt.PolMax)return
-	if(polcvt(pol).eq.0)then
-	  if(PolsPara(pol))then
-	    npol = npol + 1
-	    if(npol.gt.MAXPOL)call bug('f','Too many polarisations')
-	    polcvt(pol) = npol
-	  endif
-	endif
-	p = polcvt(pol)
 	end
