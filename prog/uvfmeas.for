@@ -7,8 +7,13 @@ c               centre.
 c& jbs
 c: uv analysis
 c+
-c	UVSPEC plots averaged spectra of a visibility dataset. Averaging can
-c	be in both time and frequency
+c	UVFMEAS plots averaged spectra of a visibility dataset. It is
+c       used to measure the spectral behaviour of a continuum source,
+c       and can perform high order polynomial fits to the data. In this
+c       way, a flux density at a particular frequency can be more
+c       accurately determined. Multiple sets at different frequencies
+c       can be simultaneously plotted, allowing you to make a global
+c       fit over a wider range of frequencies, which may be more accurate.
 c@ vis
 c	The name of the input uv data sets. Several can be given (wild
 c	cards are supported). No default.
@@ -21,7 +26,9 @@ c	The default is all channels (or all wide channels if there are no
 c	spectral channels).
 c@ stokes
 c	The Stokes/polarization types to be plotted. The default is to
-c	plot those polarizations present in the input files.
+c	plot those polarizations present in the input files. Stokes
+c       parameters will not however be overplot on each other; only one
+c       polarization will be plotted at a time.
 c@ hann
 c	Hanning smoothing width (an odd integer).  Smoothing is
 c	applied after averaging. Default is 1 (no Hanning smoothing).
@@ -78,7 +85,7 @@ c       overplot onto the spectrum. The coefficients must relate to the
 c       same type of fit (ie. log space or raw values) as the main fit
 c       would use.
 c
-c$Id: uvfmeas.for,v 1.2 2013/09/19 04:54:35 ste616 Exp $
+c$Id: uvfmeas.for,v 1.3 2013/09/23 05:51:33 ste616 Exp $
 c--
 c  History:
 c    jbs  05jan12 Derived from uvspec.
@@ -131,8 +138,8 @@ c
 	character versan*80
 c-----------------------------------------------------------------------
 	version = versan ('uvfmeas',
-     :                    '$Revision: 1.2 $',
-     :                    '$Date: 2013/09/19 04:54:35 $')
+     :                    '$Revision: 1.3 $',
+     :                    '$Date: 2013/09/23 05:51:33 $')
 c
 c  Get the input parameters.
 c
