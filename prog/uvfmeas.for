@@ -68,6 +68,12 @@ c                        as a calibrator.
 c          'plotfit'     Plot a user-specified fit over the spectrum. The
 c                        coefficients of the fit are given with the fitp
 c                        parameter.
+c          'machine'     Output the fit coefficients on a single line,
+c                        separated by spaces, suitable for parsing by
+c                        another program.
+c          'mfflux'      Output the fit coefficients in a way that can be
+c                        input as the flux parameter in mfcal. Only really
+c                        works for order=1 (linear fit).
 c@ yrange
 c	The min and max range along the y axis of the plots. The default
 c	is to autoscale.
@@ -84,8 +90,11 @@ c       The coefficients of a fit that you would like this task to
 c       overplot onto the spectrum. The coefficients must relate to the
 c       same type of fit (ie. log space or raw values) as the main fit
 c       would use.
+c@ feval
+c       A frequency (in GHz) at which to evaluate the fit, and output
+c       the flux density in Jy.
 c
-c$Id: uvfmeas.for,v 1.4 2013/09/23 06:14:37 ste616 Exp $
+c$Id: uvfmeas.for,v 1.5 2013/09/25 04:23:57 ste616 Exp $
 c--
 c  History:
 c    jbs  05jan12 Derived from uvspec.
@@ -101,9 +110,10 @@ c
 	character version*80
 	character uvflags*8,device*64,xaxis*12,yaxis*12,logf*64
 	character xtitle*64,ytitle*64,cpoly*64,source*32,osource*32
-	character line*132,PolCode*2
+	character line*132,PolCode*2,oline*132
 	logical nobase,avall,first,buffered,doflush,qfirst
-	logical doshift,subpoly,dolog,dovec,douv,dopfit
+	logical doshift,subpoly,dolog,dovec,douv,dopfit,domachine
+	logical domfflux
 	double precision interval,T0,T1,preamble(5),shift(2),lmn(3)
 	double precision fluxr(MAXPOL,MAXCHAN),fluxi(MAXPOL,MAXCHAN)
 	double precision amp(MAXPOL,MAXCHAN),amp2(MAXPOL,MAXCHAN)
@@ -119,7 +129,7 @@ c
 	real xrange(2),yp(MAXCHAN),scalavga,vecavgs,scalavgs
 	real uvdist(MAXPNT),uvdistamp(MAXPNT),uvdistfreq(MAXPNT)
 	real sexpect,qualn,qualp,plotfit(11),ufit(maxdim)
-	real fitdiffsum,plfitx(maxdim)
+	real fitdiffsum,plfitx(maxdim),evxp,evfx,polyeval,feval
 	double precision x(2*MAXCHAN-2),xf(2*MAXCHAN-2)
 	double precision xp(2*MAXCHAN-2),txf(2*MAXCHAN-2)
 	double precision mx(2*MAXCHAN-2)
@@ -137,14 +147,15 @@ c
 	character versan*80
 c-----------------------------------------------------------------------
 	version = versan ('uvfmeas',
-     :                    '$Revision: 1.4 $',
-     :                    '$Date: 2013/09/23 06:14:37 $')
+     :                    '$Revision: 1.5 $',
+     :                    '$Date: 2013/09/25 04:23:57 $')
 c
 c  Get the input parameters.
 c
 	call output(version)
 	call keyini
-	call GetOpt(uvflags,nobase,avall,dolog,dovec,douv,dopfit)
+	call GetOpt(uvflags,nobase,avall,dolog,dovec,douv,dopfit,
+     *              domachine,domfflux)
 	call GetAxis(xaxis,yaxis)
 	call uvDatInp('vis',uvflags)
 	interval=99999.d0
@@ -164,6 +175,7 @@ c
 	do i=1,10
 	   call keyr('fitp',plotfit(i),0.0)
 	enddo
+	call keyr('feval',feval,0.0)
         call keya('log',logf,' ')
 	call keya('order',cpoly,' ')
 	if (cpoly.eq.' ') then
@@ -472,6 +484,43 @@ c	   do j=1,mnchan
 		 endif
 		 call output(line)
 	      enddo
+	      if (domachine) then
+		 write(line, '(a)') 'Coeff:'
+		 do j=1,poly+1
+		    oline=line
+		    write(line,'(a,1pe11.3)') oline(1:len_trim(oline)),
+     *                 fitparams(j)
+		 enddo
+		 oline=line
+		 if (dolog) then
+		    write(line,'(a,a)') oline(1:len_trim(oline)),' log'
+		 else
+		    write(line,'(a,a)') oline(1:len_trim(oline)),' lin'
+		 endif
+		 call output(line)
+	      endif
+	      if (domfflux) then
+c              Evaluate at the integer frequency closest to the first.
+		 evxp=float(int(xp(1)))
+		 if (dolog) then
+		    evxp=log10(evxp)
+		 endif
+		 evfx=polyeval(poly,dolog,evxp,fitparams)
+		 evxp=float(int(xp(1)))
+		 write(line,'(a11,f7.4,a1,f5.1,a1,f7.4)') 
+     *	           'MFCAL flux=',evfx,',',evxp,',',fitparams(2)
+		 call output(line)
+	      endif
+	      if (feval.gt.0.0) then
+		 evxp=feval
+		 if (dolog) then
+		    evxp=log10(evxp)
+		 endif
+		 evfx=polyeval(poly,dolog,evxp,fitparams)
+		 write(line,'(a,f7.3,a,f8.4,a)') 
+     *	           'Flux density at ',feval,' GHz = ',evfx,' Jy.'
+		 call output(line)
+	      endif
 	      write(line,'(a,1pe11.3)') 'Scatter around fit: ',serr
 	      call output(line)
 c	      write(line,'(a,1pe11.3)')
@@ -679,10 +728,11 @@ c
 	yaxis = yaxes(1)
 	end
 c************************************************************************
-	subroutine GetOpt(uvflags,nobase,avall,dolog,dovec,douv,dopfit)
+	subroutine GetOpt(uvflags,nobase,avall,dolog,dovec,douv,dopfit,
+     *                    domachine,domfflux)
 c
 	implicit none
-        logical nobase,avall,dolog,dovec,douv,dopfit
+        logical nobase,avall,dolog,dovec,douv,dopfit,domachine,domfflux
 	character uvflags*(*)
 c
 c  Determine the flags to pass to the uvdat routines.
@@ -694,11 +744,12 @@ c    avall
 c    dolog
 c------------------------------------------------------------------------
 	integer nopts
-	parameter(nopts=7)
+	parameter(nopts=9)
 	character opts(nopts)*9
 	logical present(nopts),docal,dopol,dopass
 	data opts/'nocal    ','nopol    ','nopass   ','log      ',
-     *            'plotvec  ','uvhist   ','plotfit  '/
+     *            'plotvec  ','uvhist   ','plotfit  ','machine  ',
+     *            'mfflux   '/
 c
 	call options('options',opts,present,nopts)
 	docal = .not.present(1)
@@ -708,6 +759,8 @@ c
 	dovec=present(5)
 	douv=present(6)
 	dopfit=present(7)
+	domachine=present(8)
+	domfflux=present(9)
 	nobase=.true.
 	avall=.true.
 	uvflags = 'dswl3'
@@ -1087,7 +1140,7 @@ c***********************************************************************
 	integer nchan,poly
 	real spec(*),fit(*),work2(*),weight(*),serr,ufit(*)
 	double precision value(*)
-	real fitparams(*),ufitparams(*),plfitx(*)
+	real fitparams(*),ufitparams(*),plfitx(*),polyeval
 	logical dolog,dopfit
 c-----------------------------------------------------------------------
 c     Polynomial fit of spectrum
@@ -1193,26 +1246,16 @@ c
 	do i = 1, nchan
 	   d(i)=0.0
 	   dfit=dble(coef(1))
-	   fit(i)=coef(1)
+	   fit(i)=polyeval(poly,dolog,rvalue(i),coef)
 	   if (dopfit) then
-	      ufit(i)=ufitparams(1)
-	      do j = 2, 10
-		 ufit(i)=ufit(i)+ufitparams(j)*(rvalue(i)**(j-1))
-	      enddo
+	      ufit(i)=polyeval(9,dolog,rvalue(i),ufitparams)
 	   endif
 	   if (poly.gt.0) then
 	      do j = 2, poly+1
 		 if (rvalue(i).ne.0.0) then
 		    dfit=dfit+dble(coef(j))*dble(rvalue(i))**(j-1)
-		    fit(i)=fit(i)+coef(j)*(rvalue(i)**(j-1))
 		 endif
 	      enddo
-	   endif
-	   if (dolog) then
-	      fit(i)=10**(fit(i))
-	      if (dopfit) then
-		 ufit(i)=10**(ufit(i))
-	      endif
 	   endif
 	   if (dolog.and.weight(i).gt.0.0) then
 	      d(i)=real(dble(spec(i))-10**dfit)
@@ -1264,28 +1307,42 @@ c  Make the final fit, over the entire range.
 	enddo
 	do i=1,nchan
 	   plfitx(i)=minx+real(i-1)*(maxx-minx)/real(nchan)
-	   fit(i)=fitparams(1)
 	   tx=plfitx(i)
 	   if (dolog) then
 	      tx=log10(tx)
 	   endif
+	   fit(i)=polyeval(poly,dolog,tx,fitparams)
 	   if (dopfit) then
-	      ufit(i)=ufitparams(1)
-	      do j=2,10
-		 ufit(i)=ufit(i)+ufitparams(j)*(tx**(j-1))
-	      enddo
-	   endif
-	   if (poly.gt.0) then
-	      do j=2,poly+1
-		 fit(i)=fit(i)+fitparams(j)*(tx**(j-1))
-	      enddo
-	   endif
-	   if (dolog) then
-	      fit(i)=10**(fit(i))
-	      if (dopfit) then
-		 ufit(i)=10**(ufit(i))
-	      endif
+	      ufit(i)=polyeval(9,dolog,tx,ufitparams)
 	   endif
 	enddo
+c
+	end
+c***********************************************************************
+	real function polyeval(poly,dolog,freq,fitparams)
+c
+	integer poly
+	real fitparams(*),freq
+	logical dolog
+c-----------------------------------------------------------------------
+c   Evaluate the polynomial fit at a particular frequency.
+c
+c  Inputs:
+c    poly           order of fit
+c    dolog          The fit is in log space
+c    freq           The frequency to evaluate at
+c    fitparams      The polynomial fit parameters
+c-----------------------------------------------------------------------
+	integer i
+	if (poly.gt.0) then
+	   polyeval=fitparams(1)
+	   do i=2,poly+1
+	      polyeval=polyeval+fitparams(i)*(freq**(i-1))
+	   enddo
+	endif
+	if (dolog) then
+	   polyeval=10**polyeval
+	endif
+	return
 c
 	end
