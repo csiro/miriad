@@ -94,7 +94,7 @@ c@ feval
 c       A frequency (in GHz) at which to evaluate the fit, and output
 c       the flux density in Jy.
 c
-c$Id: uvfmeas.for,v 1.5 2013/09/25 04:23:57 ste616 Exp $
+c$Id: uvfmeas.for,v 1.6 2013/09/25 06:00:00 ste616 Exp $
 c--
 c  History:
 c    jbs  05jan12 Derived from uvspec.
@@ -147,8 +147,8 @@ c
 	character versan*80
 c-----------------------------------------------------------------------
 	version = versan ('uvfmeas',
-     :                    '$Revision: 1.5 $',
-     :                    '$Date: 2013/09/25 04:23:57 $')
+     :                    '$Revision: 1.6 $',
+     :                    '$Date: 2013/09/25 06:00:00 $')
 c
 c  Get the input parameters.
 c
@@ -556,8 +556,8 @@ c
 c  Calculate the average error with the supplied fit.
 	      fitdiffsum=0.0
 	      do j=1,nchan
-		 fitdiffsum = fitdiffsum + abs(fit(i) - ufit(i)) /
-     *               ufit(i)
+		 fitdiffsum = fitdiffsum + abs(fit(j) - ufit(j)) /
+     *               ufit(j)
 	      enddo
 	      fitdiffsum = fitdiffsum / nchan
 	      write(line,'(a,1pe11.3)') 'Average fit error: ',fitdiffsum
