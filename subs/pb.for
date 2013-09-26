@@ -79,8 +79,9 @@ c   12may11   mhw    Add bandwidth
 c   18apr12   mchw   Add GBT
 c   29June12  mchw   use FWHM values measured in CARMA memo 52
 c   18sep12   mhw    Use input frequencies for pb model
+c   26sep13   mhw    Add new ATCA 16cm fits - test as ATCA16 
 c
-c $Id: pb.for,v 1.13 2012/09/25 03:30:53 wie017 Exp $
+c $Id: pb.for,v 1.14 2013/09/26 05:51:05 wie017 Exp $
 c***********************************************************************
 c* pbList -- List known primary beam types.
 c& rjs
@@ -846,16 +847,17 @@ c-----------------------------------------------------------------------
       integer i
       logical init
       save init
+      real fl,fh
 c
 c Set coefficients for each telescope and frequency range
 c
-      integer NCOEFF,NATCAL1,NATCAL2,NATCAL3,NATCAK,NATCAW
+      integer NCOEFF,NATCAL1,NATCAL2,NATCAL3,NATCAK,NATCAW,NATCA16
       parameter (NCOEFF=5,NATCAL3=3,NATCAL1=5,NATCAL2=7)
-      parameter (NATCAK=4,NATCAW=4)
+      parameter (NATCAK=4,NATCAW=4,NATCA16=5)
       real atcas(NCOEFF),atcac(NCOEFF),atcax(NCOEFF)
       real atcak2(NATCAK),atcak(NCOEFF),atcaw(NATCAW)
       real atcal3(NATCAL3),atcal1(NATCAL1),atcal2(NATCAL2)
-      real vla(NCOEFF)
+      real atca16(NATCA16,14),vla(NCOEFF)
 
       data init/.false./
       data atcal1 /1.0, 8.99e-4, 2.15e-6, -2.23e-9,  1.56e-12/
@@ -866,6 +868,20 @@ c
      *                -7.5132629268134E-19,
      *                 1.9083641820123E-23/
       data atcal3/0.023, 0.631, 4.0/
+      data atca16/1.0, +2.27e-03, -2.21e-06, +1.75e-09, +6.68e-13,
+     *            1.0, +1.46e-03, +2.29e-06, -4.15e-09, +2.54e-12,
+     *            1.0, +1.50e-03, +2.45e-07, -6.93e-10, +1.05e-12,
+     *            1.0, +1.41e-03, +2.15e-07, -3.77e-10, +8.16e-13,
+     *            1.0, +1.40e-03, -4.75e-08, +6.82e-11, +5.27e-13,
+     *            1.0, +1.22e-03, +5.62e-07, -4.80e-10, +5.99e-13,
+     *            1.0, +1.24e-03, -1.31e-07, +6.85e-10, +7.82e-14,
+     *            1.0, +1.21e-03, -7.08e-08, +8.89e-10, -3.52e-14,
+     *            1.0, +1.26e-03, -3.49e-08, +7.74e-10, +3.95e-14,
+     *            1.0, +1.20e-03, +1.43e-07, +8.18e-10, -4.56e-14,
+     *            1.0, +1.24e-03, -8.58e-08, +1.13e-09, -1.43e-13,
+     *            1.0, +1.24e-03, -3.30e-08, +1.09e-09, -1.42e-13,
+     *            1.0, +1.22e-03, +2.19e-07, +9.06e-10, -8.53e-14,
+     *            1.0, +1.39e-03, -3.51e-07, +1.53e-09, -2.39e-13/
       data atcas /1.0, 1.02e-3, 9.48e-7, -3.68e-10, 4.88e-13/
       data atcac /1.0, 1.08e-3, 1.31e-6, -1.17e-9,  1.07e-12/
       data atcax /1.0, 1.04e-3,  8.36e-7,  -4.68e-10, 5.50e-13/
@@ -908,6 +924,18 @@ c
       call pbAdd('ATCA.3',  1.15,1.88,    58.713*2*0.514497/1.22,
      *                1e-3,BLOCKED, NATCAL3,atcal3,
      *                'Blocked aperture J1(x)/x form')
+c
+c  The new 16cm ATCA beam fits - some of these fits need improving
+c  and updates are expected - put this in for testing purposes
+c     
+      do i=1, 14
+         fl = 1.298+(i-1)*1.28 - 0.064
+         fh = fl + 0.128
+         if (i.eq.0) fl=1.0
+         if (i.eq.14) fh=3.2
+        call pbAdd('ATCA16', fl,fh, 47.9, 0.03, IPOLY,
+     *                NATCA16,atca16(1,i),'Reciprocal 4th order poly')
+      enddo 
       call pbAdd('ATCA',    2.10,2.60,    49.7, 0.03,  IPOLY,
      *                NCOEFF,atcas,'Reciprocal 4th order poly')
       call pbAdd('ATCA',    4.00,6.90,    48.3, 0.03,  IPOLY,
