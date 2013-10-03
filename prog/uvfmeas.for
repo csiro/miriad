@@ -94,7 +94,7 @@ c@ feval
 c       A frequency (in GHz) at which to evaluate the fit, and output
 c       the flux density in Jy.
 c
-c$Id: uvfmeas.for,v 1.6 2013/09/25 06:00:00 ste616 Exp $
+c$Id: uvfmeas.for,v 1.7 2013/10/03 04:44:24 ste616 Exp $
 c--
 c  History:
 c    jbs  05jan12 Derived from uvspec.
@@ -147,8 +147,8 @@ c
 	character versan*80
 c-----------------------------------------------------------------------
 	version = versan ('uvfmeas',
-     :                    '$Revision: 1.6 $',
-     :                    '$Date: 2013/09/25 06:00:00 $')
+     :                    '$Revision: 1.7 $',
+     :                    '$Date: 2013/10/03 04:44:24 $')
 c
 c  Get the input parameters.
 c
@@ -331,16 +331,20 @@ c
 		  ncnt(ipol,tcm(i))=ncnt(ipol,tcm(i))+1
 		  u=preamble(1)/1000.0
 		  v=preamble(2)/1000.0
-		  uvdist(nuvdist)=real(sqrt(u*u+v*v)*txf(i)/txf(1))
-		  uvdistamp(nuvdist)=real(data(i))
-		  uvdistfreq(nuvdist)=real(txf(i))
-		  nuvdist=nuvdist+1
-		  if (nuvdist.ge.MAXPNT) then
-		     call bug('f','Too many points!')
+		  if (douv) then
+		     uvdist(nuvdist)=real(sqrt(u*u+v*v)*txf(i)/txf(1))
+		     uvdistamp(nuvdist)=real(data(i))
+		     uvdistfreq(nuvdist)=real(txf(i))
+		     nuvdist=nuvdist+1
+		     if (nuvdist.ge.MAXPNT) then
+			call bug('f','Too many points!')
+		     endif
 		  endif
 	       endif
 	    enddo
-	    nuvdist=nuvdist-1
+	    if (douv) then
+	       nuvdist=nuvdist-1
+	    endif
 c
 c  Accumulate more data, if we are time averaging.
 c
@@ -528,29 +532,32 @@ c     *          'Scatter for single visibility: ',
 c     *          (serr*sqrt(real(nuvdist)))
 c	      call output(line)
 	   endif
-	   do j=1,nuvdist
+	   if (douv) then
+	      do j=1,nuvdist
 c	      uvdistfreq(j)=xf(int(uvdistfreq(j)))
 c	      uvdist(j)=uvdist(j)*uvdistfreq(j)/xf(1)
-	      if (poly.gt.0) then
-		 sexpect=fitparams(1)
-		 do k=2,poly+1
+		 if (poly.gt.0) then
+		    sexpect=fitparams(1)
+		    do k=2,poly+1
+		       if (dolog) then
+			  sexpect=sexpect+fitparams(k)*
+     *                      (log10(uvdistfreq(j)))**(k-1)
+		       else
+			  sexpect=sexpect+fitparams(k)*
+     *                      uvdistfreq(j)**(k-1)
+		       endif
+		    enddo
 		    if (dolog) then
-		       sexpect=sexpect+fitparams(k)*
-     *                  (log10(uvdistfreq(j)))**(k-1)
-		    else
-		       sexpect=sexpect+fitparams(k)*uvdistfreq(j)**(k-1)
+		       sexpect=10**(sexpect)
 		    endif
-		 enddo
-		 if (dolog) then
-		    sexpect=10**(sexpect)
+		    uvdistamp(j)=uvdistamp(j)-real(sexpect)
 		 endif
-		 uvdistamp(j)=uvdistamp(j)-real(sexpect)
-	      endif
 c	      if (uvdist(j).le.0.0) then
 c		 write(line,'(1pe11.3,1pe11.3)') uvdist(j),uvdistamp(j)
 c		 call output(line)
 c	      endif
-	   enddo
+	      enddo
+	   endif
 c
 	   if (dopfit.and.poly.gt.0) then
 c  Calculate the average error with the supplied fit.
@@ -569,9 +576,11 @@ c
      *         nplts,xtitle,ytitle,0,dble(0.),real(0.),p,npol,hann,hc,
      *         hw,logf,MAXPNT,poly,fit,fluxlines,2,i,uvdist,uvdistamp,
      *         nuvdist,qualn,qualp,douv,dopfit,ufit,plfitx)
-	   write(line,'(a,1pe11.3,a,1pe11.3)') 
-     *      'Calibrator quality: value = ',qualn,' ratio = ',qualp
-	   call output(line)
+	   if (douv) then
+	      write(line,'(a,1pe11.3,a,1pe11.3)') 
+     *          'Calibrator quality: value = ',qualn,' ratio = ',qualp
+	      call output(line)
+	   endif
 	   call output('---------------------------------------------'//
      *		'-----------------------------------')
 	enddo
