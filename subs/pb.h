@@ -11,10 +11,10 @@ c
 	integer pbhead
 	real xc(MAXOBJ),yc(MAXOBJ),x0(MAXOBJ),y0(MAXOBJ),fwhm(MAXOBJ)
 	real freq(MAXOBJ), xn(MAXOBJ), yn(MAXOBJ), bandw(MAXOBJ)
-	integer pnt(MAXOBJ)
+	integer pnt(MAXOBJ),pnt2(MAXOBJ)
         logical conv(MAXOBJ)
 c
 	common/pb1com/ f1,f2,cutoff,pbfwhm,pbvals,xc,yc,x0,y0,fwhm,freq,
      *	    maxrad,xn,yn,bandw, pbtype,npbvals,npb,indx,nvals,pbHead,
-     *      pnt,conv
+     *      pnt,pnt2,conv
 	common/pb1comc/pb,descrip
