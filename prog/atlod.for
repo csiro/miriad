@@ -176,7 +176,7 @@ c       For concatenated spectra the width of a single zoom is used.
 c       Note that noise and artefacts go up quickly towards the band 
 c       edge so making this much smaller will not gain you much.
 c
-c$Id: atlod.for,v 1.45 2013/08/30 01:49:21 wie017 Exp $
+c$Id: atlod.for,v 1.46 2013/10/22 04:29:05 wie017 Exp $
 c--
 c
 c  Program Structure:
@@ -339,14 +339,15 @@ c    mhw  15jun12 Fix index errors in opcor change
 c    mhw  12sep12 Drop edge channels for 16cm data with birdie option
 c    mhw  07dec12 Fix 29may12 opcor code again - how did it ever work?
 c    mhw  29jan13 Fix nscans skip and read code - RPEOF call hangs
+c    mhw  22oct13 Apply patches by vjm to fix some string overflows
 c
-c $Id: atlod.for,v 1.45 2013/08/30 01:49:21 wie017 Exp $
+c $Id: atlod.for,v 1.46 2013/10/22 04:29:05 wie017 Exp $
 c-----------------------------------------------------------------------
 
         integer MAXFILES,MAXTIMES,MAXSIM
         parameter(MAXFILES=128,MAXTIMES=32,MAXSIM=34)
 c
-        character in(MAXFILES)*128,line*64,out*64,t1*18,t2*18,version*72
+        character in(MAXFILES)*128,line*72,out*72,t1*18,t2*18,version*72
         integer tno,ntimes
         integer ifile,ifsel(MAXSIM),nsel,nfreq,iostat,nfiles,nopcorr,i
         double precision rfreq(2),times(2,MAXTIMES)
@@ -361,8 +362,8 @@ c
         character itoaf*8, rperr*32, versan*72
 c-----------------------------------------------------------------------
       version = versan ('atlod',
-     :                  '$Revision: 1.45 $',
-     :                  '$Date: 2013/08/30 01:49:21 $')
+     :                  '$Revision: 1.46 $',
+     :                  '$Date: 2013/10/22 04:29:05 $')
 c
 c  Get the input parameters.
 c
@@ -775,23 +776,11 @@ c
         character string*(*)
 c
 c-----------------------------------------------------------------------
-        character line*72
+        character line*85
         include 'atlod.h'
 c
         call output(string)
         line = 'ATLOD:    '//string
-        call hiswrite(tno,line)
-        end
-c***********************************************************************
-        subroutine liners(string)
-c
-        character string*(*)
-c
-c-----------------------------------------------------------------------
-        character line*72
-        include 'atlod.h'
-c
-        line = 'ATLOD:     '//string
         call hiswrite(tno,line)
         end
 c***********************************************************************
@@ -821,7 +810,7 @@ c     *     card(i)(1:8).eq.'SCANTYPE'.or.card(i)(1:8).eq.'CACALCNT'.or.
 c     *     card(i)(1:8).eq.'POINTCOR'.or.card(i)(1:8).eq.'POINTINF'
 c     *                                                         )then
           if(card(i)(1:8).eq.'OBSLOG')then
-            call liners(card(i)(20:))
+            call liner(' '//card(i)(20:))
           else if(card(i)(1:8).eq.'POINTCOR')then
             call crackpnt(card(i),refpnt,nants,ok)
             if(.not.ok)then
