@@ -10,6 +10,10 @@ c       MFCLEAN.  It does this by convolving both the flux and "flux
 c       time spectral index" planes of the models by a Gaussian, and
 c       then performing a division.
 c
+c       It can also handle 'pre-convolved' images with flux and flux
+c       times spectral index planes such as those produced by restor
+c       with options=mfs or linmos with options=alpha.
+c
 c       It has two modes of operation.  One is to give a single input
 c       model (Stokes I or V even) which consists of two planes.  MFSPIN
 c       will then compute the spectral index image from that.  The
@@ -20,11 +24,14 @@ c@ model
 c       The model produced by MFCLEAN.  No default.  Normally this will
 c       be a single image such as a model for Stokes I or V.  However,
 c       you can also give it two models, one for Stokes Q and one for
-c       Stokes U (see the discussion above).
+c       Stokes U (see the discussion above). If the input already has
+c       units of 'JY/BEAM' (e.g. output from restor with options=mfs)
+c       the convolution step is skipped.
+c       
 c@ beam
 c       The input dirty beam.  This is only required to determine the
-c       beam size.  If the fwhm parameter is given, the beam will not be
-c       used.
+c       beam size.  If the fwhm parameter is given, or the input is
+c       already convolved, the beam will not be used.
 c@ clip
 c       The division clip level.  One or two numbers can be given.  If
 c       two values are given, then flux pixel values in this range are
@@ -41,10 +48,7 @@ c       This will normally be two numbers, giving the
 c       full-width at half-maximum of the major and minor axes of the
 c       gaussian. If only one number is given, the gaussian will have
 c       equal major and minor axes. If no values are given, they are
-c       computed by fitting a gaussian to the given dirty beam. Note
-c       that the fitting routine will probably give different values to
-c       the AIPS MX and APCLN tasks. Generally the value computed by
-c       MFSPIN is to be preferred to the APCLN and MX values.
+c       computed by fitting a gaussian to the given dirty beam.
 c@ pa
 c       The position angle, in degrees, of the Gaussian, measured east
 c       from north.  The default is determined from the dirty beam fit
@@ -62,12 +66,13 @@ c       the linearly polarized intensity spectral index image, and the
 c       second will receive an estimate of the rotation measure (units
 c       of rad/m**2).
 c
-c$Id: mfspin.for,v 1.9 2013/05/13 02:15:03 wie017 Exp $
+c$Id: mfspin.for,v 1.10 2013/10/22 03:34:26 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c    mhw  27oct11  Use ptrdiff type for memory allocations
 c    mhw  13may13  Read mosaic table for pointing centre if present
+c    mhw  22oct13  Cope with restored (I,I*alpha) images
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mirconst.h'
@@ -86,18 +91,18 @@ c-----------------------------------------------------------------------
      *          fwhm1, fwhm2, pa, Patch(NP*NP)
       double precision nu0
       character beam*128, line*72, modl1*128, modl2*128, out1*128,
-     *          out2*128, pbtype*16, version*72
+     *          out2*128, pbtype*16, version*72, bunit*16
 
       integer   nextpow2
-      logical   keyprsnt
+      logical   keyprsnt, doconv
       character versan*72
       external  keyprsnt, nextpow2, versan
 
       common dat
 c-----------------------------------------------------------------------
       version = versan('mfspin',
-     *                 '$Revision: 1.9 $',
-     *                 '$Date: 2013/05/13 02:15:03 $')
+     *                 '$Revision: 1.10 $',
+     *                 '$Date: 2013/10/22 03:34:26 $')
 c
 c  Get the input parameters.
 c
@@ -127,10 +132,21 @@ c
       if (modl1.eq.' ') call bug('f','Input model name missing')
       if (Out1.eq.' ')  call bug('f','Output map name missing')
       doQU = modl2.ne.' '
+c
+c  Open the model, and get various info about it.
+c
+      call xyopen(lMod1,modl1,'old',3,nsize)
+      mModel = nsize(1)
+      nModel = nsize(2)
+      if (nsize(3).ne.2) call bug('f',
+     *        'Model does not appear to be of the correct type')
+      call rdhda(lMod1,'bunit',bunit,' ')
+      call ucase(bunit)
+      doconv = index(bunit,'/BEAM').eq.0
 
       fwhm1 = fwhm1 * AS2R
       fwhm2 = fwhm2 * AS2R
-      NeedFwhm = fwhm1*fwhm2.eq.0
+      NeedFwhm = fwhm1*fwhm2.eq.0.and.doconv
       if (beam.eq.' ' .and. NeedFwhm)
      *  call bug('f','Either beam or fwhm must be given')
 c
@@ -165,21 +181,14 @@ c
 c
 c  Keep the user awake with spurious information.
 c
-      write(line,'(a,f6.2,a,f6.2,a)')
+      if (doconv) then
+        write(line,'(a,f6.2,a,f6.2,a)')
      *   'Using Gaussian beam fwhm of',fwhm1*R2AS,' by',fwhm2*R2AS,
      *   ' arcsec.'
-      call output(line)
-      write(line,'(a,f6.1,a)')'Position angle: ',pa,' degrees.'
-      call output(line)
-c
-c  Open the model, and get various info about it.
-c
-      call xyopen(lMod1,modl1,'old',3,nsize)
-      mModel = nsize(1)
-      nModel = nsize(2)
-      if (nsize(3).ne.2) call bug('f',
-     *        'Model does not appear to be of the correct type')
-
+        call output(line)
+        write(line,'(a,f6.1,a)')'Position angle: ',pa,' degrees.'
+        call output(line)
+      endif
       call GetInfo(lMod1,mModel,nModel,
      *  pol1,nu0,cdelt1,cdelt2,crpix1,crpix2)
       twoclip = twoclip .or.
@@ -213,18 +222,20 @@ c
 c
 c  Get the characteristics of the gaussian.
 c
-      mBeam = nextpow2(mModel)
-      nBeam = nextpow2(nModel)
-      xBeam = mBeam/2 + 1
-      yBeam = nBeam/2 + 1
+      if (doconv) then
+        mBeam = nextpow2(mModel)
+        nBeam = nextpow2(nModel)
+        xBeam = mBeam/2 + 1
+        yBeam = nBeam/2 + 1
 c
 c  Get the Fourier transform of the gaussian.
 c
-      call MemAllop(Gaus,mBeam*nBeam,'r')
-      call GetBeam(mBeam,nBeam,xBeam,yBeam,dat(Gaus),
-     *  cdelt1,cdelt2,fwhm1,fwhm2,pa)
-      call CnvlIniA(handle,dat(Gaus),mBeam,nBeam,xBeam,yBeam,0.0,'s')
-      call MemFrep(Gaus,mBeam*nBeam,'r')
+        call MemAllop(Gaus,mBeam*nBeam,'r')
+        call GetBeam(mBeam,nBeam,xBeam,yBeam,dat(Gaus),
+     *    cdelt1,cdelt2,fwhm1,fwhm2,pa)
+        call CnvlIniA(handle,dat(Gaus),mBeam,nBeam,xBeam,yBeam,0.0,'s')
+        call MemFrep(Gaus,mBeam*nBeam,'r')
+      endif
 c
 c  Allocate all the memory we could possible want.
 c
@@ -237,11 +248,15 @@ c
         Flux2 = Flux1
       endif
 c
-c  Convolve the flux planes and determine the runs.
+c  Convolve or read the flux planes and determine the runs.
 c
-      call CnvlF(handle,lMod1,mModel,nModel,dat(Flux1),'c')
-      if (doQU) call CnvlF(handle,lMod2,mModel,nModel,dat(Flux2),'c')
-
+      if (doconv) then
+        call CnvlF(handle,lMod1,mModel,nModel,dat(Flux1),'c')
+        if (doQU) call CnvlF(handle,lMod2,mModel,nModel,dat(Flux2),'c')
+      else
+        call ReadPlane(lMod1,mModel,nModel,dat(Flux1))
+        if (doQU) call ReadPlane(lMod2,mModel,nModel,dat(Flux2))
+      endif
       call Clipper(twoclip,doQU,clip,
      *    dat(Flux1),dat(Flux2),mModel,nModel,Runs,maxruns,nruns)
       if (nruns.eq.0) call bug('f','No good pixels selected')
@@ -254,11 +269,19 @@ c
 c  Now convolve and compact the "alpha" plane.
 c
       call xysetpl(lMod1,1,2)
-      call CnvlF(handle,lMod1,mModel,nModel,dat(Alpha1),'c')
+      if (doconv) then
+        call CnvlF(handle,lMod1,mModel,nModel,dat(Alpha1),'c')
+      else
+        call ReadPlane(lMod1,mModel,nModel,dat(Alpha1))
+      endif
       call Compact(dat(Alpha1),mModel,nModel,Runs,nRuns,npix)
       if (doQU) then
         call xysetpl(lMod2,1,2)
-        call CnvlF(handle,lMod2,mModel,nModel,dat(Alpha2),'c')
+        if (doconv) then
+          call CnvlF(handle,lMod2,mModel,nModel,dat(Alpha2),'c')
+        else
+          call ReadPlane(lMod1,mModel,nModel,dat(Alpha2))
+        endif
         call Compact(dat(Alpha2),mModel,nModel,Runs,nRuns,npix)
       endif
 c
@@ -276,7 +299,7 @@ c  Save the spectral index map.
 c
       call WriteOut(out1,dat(Alpha1),npix,mModel,nModel,
      *        Runs,nruns,lMod1,version,fwhm1,fwhm2,pa,
-     *        pbcorr,pbtype,.true.)
+     *        pbcorr,pbtype,.true.,doconv)
 c
 c  Save the rotation measure map, if required.
 c
@@ -285,7 +308,7 @@ c
           call CorrRM(npix,dat(Alpha2),nu0)
           call WriteOut(out2,dat(Alpha2),npix,mModel,nModel,
      *        Runs,nruns,lMod1,version,fwhm1,fwhm2,pa,
-     *        pbcorr,pbtype,.false.)
+     *        pbcorr,pbtype,.false.,doconv)
         else
           call bug('w','Second output data-set name ignored')
         endif
@@ -666,14 +689,14 @@ c-----------------------------------------------------------------------
 c***********************************************************************
 
       subroutine WriteOut(Out,Data,npix,nx,ny,Runs,nRuns,
-     *  lMod,version,fwhm1,fwhm2,pa,pbcorr,pbtype,si)
+     *  lMod,version,fwhm1,fwhm2,pa,pbcorr,pbtype,si,doconv)
 
       integer lMod,nx,ny,nRuns,npix
       integer Runs(3,nRuns+1)
       real Data(npix)
       character version*(*),out*(*),pbtype*(*)
       real fwhm1,fwhm2,pa
-      logical pbcorr,si
+      logical pbcorr,si,doconv
 c-----------------------------------------------------------------------
 c  Write out the convolved model to the output file.
 c
@@ -687,6 +710,7 @@ c    version    Program version.
 c    fwhm1,fwhm2,pa Gaussian parameters -- for output history.
 c    pbcorr     Primary beam corrected?
 c    si         Spectral index map?
+c    doconv     Convolution with beam performed?
 c-----------------------------------------------------------------------
       include 'mirconst.h'
 
@@ -712,6 +736,7 @@ c     Make a verbatim copy of the header.
 c     Update items that have changed.
       if (si) then
         call wrbtype(lOut,'spectral_index')
+        call wrhda(lOut,'bunit','VALUE')
       else
         call wrbtype(lOut,'rotation_measure')
         call wrhda(lOut,'bunit','RAD/M/M')
@@ -722,14 +747,15 @@ c     Write the history file.
       line = 'MFSPIN: Miriad '//version
       call hiswrite(lOut,line)
       call hisinput(lOut,'MFSPIN')
-
-      call wrhdr(lOut,'bmaj', fwhm1)
-      call wrhdr(lOut,'bmin', fwhm2)
-      call wrhdr(lOut,'bpa',  pa)
-      write(line, 100) fwhm1*R2AS, fwhm2*R2AS, pa
-100   format('MFSPIN: Beam = ', 1pe10.3, ' x ', 1pe10.3,
+      if (doconv) then
+        call wrhdr(lOut,'bmaj', fwhm1)
+        call wrhdr(lOut,'bmin', fwhm2)
+        call wrhdr(lOut,'bpa',  pa)
+        write(line, 100) fwhm1*R2AS, fwhm2*R2AS, pa
+100     format('MFSPIN: Beam = ', 1pe10.3, ' x ', 1pe10.3,
      *        ' arcsec, pa = ', 1pe10.3, ' degrees')
-      call hiswrite(lOut,line)
+        call hiswrite(lOut,line)
+      endif
 
       if (pbcorr .and. si) then
         line = 'MFSPIN: Corrected with primary beam type '//pbtype
@@ -1161,3 +1187,20 @@ c       No, treat a regular synthesis image.
 
 c
       end
+
+c***********************************************************************
+      subroutine ReadPlane(lu,n1,n2,Dat1)
+c
+      integer lu,n1,n2
+      real Dat1(n1,n2)
+c
+c  Read the image into memory from a disk file.
+c-----------------------------------------------------------------------
+      integer i
+c
+      do i=1,n2
+        call xyread(lu,i,Dat1(1,i))
+      enddo
+c
+      end
+
