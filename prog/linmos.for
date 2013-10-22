@@ -74,8 +74,16 @@ c                      options=taper is used, this will be a smooth
 c                      function.  Otherwise it will be 1 or 0 (blanked).
 c         frequency    Rather than a mosaiced image, produce an image 
 c                      giving the effective frequency across the field.
+c         alpha        If an I*alpha plane is present in the input, 
+c                      produce a mosaiced version of this as well.
+c                      You can feed the output image to mfspin to
+c                      produce the mosaiced spectral index image.
+c                      The spectral index mosaic becomes unreliable  
+c                      when the fractional bandwidth is > 0.4 (this
+c                      is because higher orders are needed to model
+c                      the primary beam response with frequency).
 c
-c$Id: linmos.for,v 1.23 2013/08/30 01:49:21 wie017 Exp $
+c$Id: linmos.for,v 1.24 2013/10/22 03:34:15 wie017 Exp $
 c--
 c
 c  History:
@@ -126,6 +134,7 @@ c    mhw  03mar11 Add bandwidth
 c    mhw  18sep12 Use correct frequencies when not all the same
 c    mhw  23jan13 Handle 2nd plane (mfs I*alpha) in input
 c    mhw  03may13 Extension to previous and add options=frequency
+c    mhw  14oct13 Add alpha option
 c
 c  Bugs:
 c    * Blanked images are not handled when interpolation is necessary.
@@ -148,7 +157,7 @@ c-----------------------------------------------------------------------
       parameter (MAXIN=8192, MAXLEN=MAXIN*64, MAXOPN=6, TOL=0.01)
 
       logical   defrms, dosen, dogain, dofreq, docar, exact, taper, mfs
-      logical   cube
+      logical   cube, doalpha
       integer   axLen(3,MAXIN), i, itemp, k1(MAXIN), k2(MAXIN), length,
      *          lIn(MAXIN), lOut, lScr, lWts, nIn, nOpen, nOut(4),
      *          naxis, offset, nbw
@@ -163,8 +172,8 @@ c-----------------------------------------------------------------------
       external  len1, versan
 c-----------------------------------------------------------------------
       version = versan ('linmos',
-     *                  '$Revision: 1.23 $',
-     *                  '$Date: 2013/08/30 01:49:21 $')
+     *                  '$Revision: 1.24 $',
+     *                  '$Date: 2013/10/22 03:34:15 $')
 
 c     Get and check inputs.
       call keyini
@@ -201,9 +210,11 @@ c     Get and check inputs.
       if (nbw.eq.1) bw=0.0
 
 c     Get processing options.
-      call getOpt(dosen,dogain,dofreq,taper)
+      call getOpt(dosen,dogain,dofreq,taper,doalpha)
       call keyfin
 
+      if (doalpha.and.nbw.eq.1)
+     * call bug('w','opions=alpha requires bw>0')
       if (nIn.eq.1 .and. taper) call bug('f',
      *  'options=taper reduces to no correction for single pointings')
       if (nIn.eq.1 .and. dofreq .and. bw.eq.0.) 
@@ -284,10 +295,14 @@ c     Create the output image and make a header for it.
         endif
       endif
       nOut(3) = axLen(3,1)
-      if (nOut(3).eq.2.and.bw.gt.0) then
-         mfs = .true.
-         call output('Doing mfs type pb correction')
-         nOut(3)=1
+      if (nOut(3).eq.2) then
+        if (bw.gt.0.0) then
+          mfs = .true.
+          call output('Doing mfs type pb correction')
+          if (.not.doalpha) nOut(3)=1
+        else
+          nOut(3)=1
+        endif
       else if (nOut(3).gt.2) then
          cube = .true.        
       endif
@@ -354,9 +369,9 @@ c     Close down.
 
 ***************************************************************** getOpt
 
-      subroutine getOpt(dosen,dogain,dofreq,taper)
+      subroutine getOpt(dosen,dogain,dofreq,taper,doalpha)
 
-      logical dosen,dogain,dofreq,taper
+      logical dosen,dogain,dofreq,taper,doalpha
 c-----------------------------------------------------------------------
 c  Get processing options.
 c
@@ -368,12 +383,14 @@ c    dofreq     True if we are to produce an image of the effective
 c               frequency.
 c    taper      True if the output is to be tapered to achieve quasi-
 c               uniform noise across the image.
+c    doalpha    True if we are to produce a mosaic of both I and I*alpha
 c-----------------------------------------------------------------------
       integer NOPTS
-      parameter (NOPTS=4)
+      parameter (NOPTS=5)
       logical present(NOPTS)
       character opts(NOPTS)*11
-      data opts/'sensitivity','gain       ','taper      ','frequency  '/
+      data opts/'sensitivity','gain       ','taper      ','frequency  ',
+     *          'alpha      '/
 c-----------------------------------------------------------------------
       call options('options',opts,present,NOPTS)
 
@@ -381,6 +398,7 @@ c-----------------------------------------------------------------------
       dogain = present(2)
       taper  = present(3)
       dofreq = present(4)
+      doalpha = present(5)
 
       if (dosen .and. dogain .or. dosen .and. dofreq .or. 
      *    dogain .and. dofreq) call bug('f',
@@ -418,6 +436,8 @@ c               the normal mosaic or sensitivity function.
 c    dofreq     True if we are to compute the effective frequency
 c    bw         Bandwidth, to average the response in frequency
 c    mfs        Use mfs I*alpha plane to do wideband pb correction
+
+
 c    nbw        Number of bandwidth bins to use
 c  Scratch:
 c    In         Used for the interpolated version of the input.
@@ -534,7 +554,6 @@ c       Get a plane from the scratch array.
           t = (jf-0.5d0)/nf-0.5d0
           fj = f + t*bw
 c
-c          print *,'Using pb cor freq = ',fj
           if (f.gt.0) fac = log(fj/f)
           if (dootf) then
             call pbInitcc(pbObj,pbtype,lOut,'aw/aw/ap',x,xn,fj,b)
@@ -553,7 +572,7 @@ c         Determine the offsets to start reading.
 c         Process this plane.
           do j = ylo, yhi
             call getDat(lIn,nx,xoff,yoff,xlo,xhi,j,pbObj,
-     *                  In,pBeam,n1,interp,mask,mfs,fac)
+     *                  In,pBeam,n1,interp,mask,mfs,fac,k,fj)
             yoff = yoff + 1
 
             do i = xlo, xhi
@@ -602,11 +621,12 @@ c       Release the primary beam object.
 ***************************************************************** getDat
 
       subroutine getDat(lIn,nx,xoff,yoff,xlo,xhi,j,pbObj,
-     *                  In,Pb,n1,interp,mask,mfs,fac)
+     *                  In,Pb,n1,interp,mask,mfs,fac,k,fr)
 
-      integer lIn,xoff,yoff,xlo,xhi,n1,j,pbObj,nx
+      integer lIn,xoff,yoff,xlo,xhi,n1,j,pbObj,nx,k
       logical interp,mask,mfs
       real In(n1),Pb(n1),fac
+      double precision fr
 c-----------------------------------------------------------------------
 c  Get a row of data (either from xyread or the interpolation routines).
 c
@@ -619,6 +639,10 @@ c    n1
 c    interp
 c    mask
 c    pbObj      Primary beam object.
+c    mfs        Use I*alpha plane
+c    fac        mfs factor
+c    k          plane in input cube
+c    fr         frequency
 c  Output:
 c    In         Image data.
 c    Pb         Primary beam response (zeroed out where the data are
@@ -627,12 +651,26 @@ c-----------------------------------------------------------------------
       include 'maxdim.h'
 
       logical   flags(MAXDIM)
-      integer   i
-      real      dat(MAXDIM)
+      integer   i,ixl,ixh
+      real      dat(MAXDIM), Pbd(MAXDIM)
 
-      real     PbGet
+      real     PbGet,PbDer
       external pbget, xyread
 c-----------------------------------------------------------------------
+c     Determine the primary beam.
+      do i = xlo, xhi
+        Pb(i) = PbGet(pbObj,real(i),real(j))
+        if (mfs.and.k.eq.2) Pbd(i) = PbDer(pbObj,real(i),real(j))
+      enddo
+
+c     Zero the primary beam where the data are flagged.
+      if (mask) then
+        call xyflgrd(lIn,yoff,flags)
+        do i = xlo, xhi
+          if (.not.flags(i-xoff+1)) Pb(i) = 0
+        enddo
+      endif
+
 c     Get the data.
       if (interp) then
         call IntpRd(lIn,yoff,In(xoff),xyread)
@@ -645,35 +683,25 @@ c     Get the data.
         call xyread(lIn,yoff,In(xoff))
       endif
       if (mfs) then
-        call xysetpl(lIn,1,2)
+        call xysetpl(lIn,1,3-k)
         if (interp) then
           call IntpRd(lIn,yoff,Dat,xyread)
         else 
           call xyread(lIn,yoff,Dat)
         endif
         if (.not.interp.and.(xoff.lt.1 .or. xoff+nx-1.gt.n1)) then
-          do i = xlo, xhi
-             In(i) = In(i)+Dat(i-xoff+1)*fac
-          enddo
+          ixl = xlo
+          ixh = xhi
         else
-          do i = xoff, xoff+nx-1
-             In(i) = In(i) + Dat(i-xoff+1)*fac
-          enddo
+          ixl = xoff
+          ixh = xoff+nx-1
         endif
-        call xysetpl(lIn,1,1)
-      endif
-
-c     Determine the primary beam.
-      do i = xlo, xhi
-        Pb(i) = PbGet(pbObj,real(i),real(j))
-      enddo
-
-c     Zero the primary beam where the data are flagged.
-      if (mask) then
-        call xyflgrd(lIn,yoff,flags)
         do i = xlo, xhi
-          if (.not.flags(i-xoff+1)) Pb(i) = 0
+           if (k.eq.1) In(i) = In(i)+Dat(i-xoff+1)*fac
+           if (k.eq.2.and.Pb(i).gt.0) In(i) = 
+     *         In(i)-(Dat(i-xoff+1)+In(i)*fac)*fr*Pbd(i)/Pb(i)
         enddo
+        call xysetpl(lIn,1,k)
       endif
 
       end
