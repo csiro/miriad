@@ -13,21 +13,25 @@ c	The input dataset containing the visibility calibration tables.
 c--
 c  History:
 c    rjs     14may09 Original version.
+c    mhw     31oct13 List gainsf/leakagef table info
 c-----------------------------------------------------------------------
+        include 'maxdim.h'
+        include 'mem.h'
 	character version*(*)
 	parameter(version='GpList: version 1.0 14-May-09')
 	character vis*80,line*64,senmodl*8
-	integer nfeeds,ntau,nsols,ngains,nants,size,iostat
-	integer nchan,nspect,off,i,nschan
-	double precision freqs(2),interval
+	integer nfeeds,ntau,nsols,ngains,nants,size,iostat, nLeaks
+	integer nchan,nspect,off,i,nschan, maxgains, nfbin, nfbin2
+	double precision freqs(2),interval,freq(MAXFBIN)
 	integer pnants,p2nants
 	integer iGains,iLeak,iPass,tVis
-	logical dopol,dopol2
+        integer pGains,pTimes
+	logical dopol,dopol2,dopolf
 c
 c  Externals.
 c
 	integer hsize
-	character itoaf*9
+	character itoaf*9, dtoaf*6
 	logical hdprsnt
 c
 c  Get the input parameters.
@@ -92,6 +96,35 @@ c
      *		'Error closing second leakage table')
 	endif
 c
+c  Check for frequency dependent leakages
+c
+        dopolf = hdprsnt(tVis,'leakagef')
+        if(dopolf)then
+          call output(' ')
+          call output('Frequency dependent Polarisation calibration')
+          call output('--------------------------------------------')
+	  call rdhdi(tVis,'nfbin',  nfbin,  0)
+          call haccess(tVis,iLeak,'leakagef','read',iostat)
+          if (iostat.ne.0) then
+            call mybug(iostat,'Error checking the  leakagef table')
+          endif
+          nLeaks = (hsize(iLeak)-8)/8
+          if (nLeaks.lt.3) call bug('w',
+     *      'Freq Dep leakage table size too small')
+          call hreadi(iLeak,nfbin2,4,4,iostat)
+          if (iostat.ne.0) then
+            call mybug(iostat,'Error checking the  leakagef table')
+          endif
+          call output('Number of bins:    '//itoaf(nfbin2))
+          if (nfbin2.ne.nfbin) call bug('f',
+     *       'Number of bins in header and leakagef table differ')
+          nLeaks = (nLeaks/nfbin-1)/2
+          call output('Number of antenas: '//itoaf(nLeaks))
+	  call hdaccess(iLeak,iostat)
+	  if(iostat.ne.0)call myBug(iostat,
+     *		'Error closing leakagef table')
+        endif    
+c
 c  Give information about bandpass calibration tables.
 c
 	if(hdprsnt(tVis,'bandpass'))then
@@ -155,8 +188,8 @@ c
 	  call output(' ')
 	  call output('Antenna gain calibration')
 	  call output('------------------------')
-	  call output('Number of antennas: '//itoaf(nants))
-	  call output('Number of feeds:    '//itoaf(nfeeds))
+	  call output('Number of antennas:  '//itoaf(nants))
+	  call output('Number of feeds:     '//itoaf(nfeeds))
 	  call output('Number of solutions: '//itoaf(nsols))
 	  call rdhdd(tVis,'interval',interval,0.d0)
 	  interval = 24*60 * interval
@@ -186,6 +219,57 @@ c
 	    if(nfeeds.ne.2)call bug('w','Polarisation calibration'//
      *		' present but only single feed gains')
 	  endif
+	endif
+c
+c  Give information about the antenna gainsf table.
+c
+	if(hdprsnt(tVis,'gainsf'))then
+	  call rdhdi(tVis,'ngains',ngains,0)
+	  call rdhdi(tVis,'nfeeds',nfeeds,1)
+	  call rdhdi(tVis,'ntau',  ntau,  0)
+	  call rdhdi(tVis,'nfbin',  nfbin,  0)
+	  if(nfeeds.le.0.or.nfeeds.gt.2.or.mod(ngains,nfeeds+ntau).ne.0
+     *	    .or.ntau.gt.1.or.ntau.lt.0)
+     *	    call bug('f','Bad number of gains or feeds in '//vis)
+          if (nfbin.le.1) call bug('f','Bad number of bins in '//vis)
+	  nants = ngains / (nfeeds + ntau)
+	  call rdhdi(tVis,'nsols',nsols,0)
+	  if(nsols.le.0)
+     *	    call bug('f','Bad number of antenna gain solutions')
+	  call output(' ')
+	  call output('Freq Dependent Antenna gain calibration')
+	  call output('---------------------------------------')
+	  call output('Number of antennas:  '//itoaf(nants))
+	  call output('Number of feeds:     '//itoaf(nfeeds))
+	  call output('Number of solutions: '//itoaf(nsols))
+	  call output('Number of freq bins: '//itoaf(nfbin))
+	  call rdhdd(tVis,'interval',interval,0.d0)
+	  interval = 24*60 * interval
+	  write(line,'(a,f6.1)')'Interpolation tolerance (minutes):',
+     *				interval
+	  call output(line)
+	  call rdhda(tVis,'senmodel',senmodl,' ')
+	  if(senmodl.eq.'GSV')then
+	    call output('Theoretical variance estimates'//
+     *			' scale with calibration gains')
+	  else
+	    call output('Theoretical variance estimates'//
+     *			' are independent of calibration')
+	  endif
+	  if(ntau.ne.0)call output('Delay terms are present')
+          maxgains = nsols*nants*2*maxfbin
+          call memAlloc(pGains,maxgains,'c')
+          call memAlloc(pTimes,nsols,'d')
+          call  uvGnRead(tVis,memc(pGains),memc(pTimes),freq,ngains,
+     *      nfeeds,ntau,nsols,nfbin,maxgains,nsols,maxfbin)
+          do i=1,nfbin
+            if (freq(i).gt.0)
+     *        call output('Mean frequency for bin '//itoaf(i)//
+     *        ': '//dtoaf(freq(i),1,4)//' GHz') 
+          enddo
+	  call output(' ')
+          call memfree(pGains,maxgains,'c')
+          call memfree(pTimes,nsols,'d')
 	endif
 c
 c  Close up everything.
