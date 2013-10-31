@@ -151,7 +151,7 @@ c                    solution for the observation already exists.  This
 c                    preliminary solution must be formed from a
 c                    calibrator with known Stokes-V.
 c
-c$Id: gpcal.for,v 1.16 2013/08/30 01:49:21 wie017 Exp $
+c$Id: gpcal.for,v 1.17 2013/10/31 00:47:07 wie017 Exp $
 c--
 c  History:
 c    rjs,nebk 1may91 Original version.
@@ -243,6 +243,7 @@ c    mhw     03sep10 Use mean freq of all data used for flux cal
 c    mhw     15feb11 Solve for leakage in frequency bins
 c    mhw     15oct12 Remove freq dep gains and leakages if nfbin=1
 c    mhw     24jan13 Avoid producing NaNs in the gains or leakages
+c    mhw     31oct13 Check nchan>=nfbin
 c
 c  Miscellaneous notes:
 c ---------------------
@@ -299,8 +300,8 @@ c-----------------------------------------------------------------------
       external  itoaf, keyprsnt, uvDatOpn
 c-----------------------------------------------------------------------
       version = versan('gpcal',
-     *                 '$Revision: 1.16 $',
-     *                 '$Date: 2013/08/30 01:49:21 $')
+     *                 '$Revision: 1.17 $',
+     *                 '$Date: 2013/10/31 00:47:07 $')
 c
 c  Get inputs.
 c
@@ -2359,6 +2360,8 @@ c-----------------------------------------------------------------------
       call uvrewind(tIn)
       call uvDatRd(preamble,Data(1,XX),flag(1,XX),MAXCHAN,nchan)
       if (nchan.eq.0) call bug('f','No data read from input file')
+      if (nchan.lt.nfbin) call bug('f',
+     *   'The number of channels is less than the number of bins')
 c
 c  Get the source and frequency of the first data.
 c
