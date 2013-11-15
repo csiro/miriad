@@ -50,6 +50,12 @@ c       significantly across the field.
 c       An optional second parameter can be given to set the number
 c       of frequencies to divide the bandwidth into, it defaults to 10.
 c
+c@ cutoff
+c       The cutoff level to use for the primary beam. Normally the 
+c       built-in level for each beam model is used. This can be useful
+c       e.g., to restrict polarization mosaics to use only the part of  
+c       the beam with low instrumental polarization. Defaults to zero 
+c       which means use the built-in level.
 c@ options
 c       Extra processing options.  Several can be given, separated by
 c       commas.  Minimum match is supported.  Possible values are:
@@ -83,7 +89,7 @@ c                      when the fractional bandwidth is > 0.4 (this
 c                      is because higher orders are needed to model
 c                      the primary beam response with frequency).
 c
-c$Id: linmos.for,v 1.24 2013/10/22 03:34:15 wie017 Exp $
+c$Id: linmos.for,v 1.25 2013/11/15 04:43:54 wie017 Exp $
 c--
 c
 c  History:
@@ -135,6 +141,7 @@ c    mhw  18sep12 Use correct frequencies when not all the same
 c    mhw  23jan13 Handle 2nd plane (mfs I*alpha) in input
 c    mhw  03may13 Extension to previous and add options=frequency
 c    mhw  14oct13 Add alpha option
+c    mhw  15nov13 Add cutoff keyword
 c
 c  Bugs:
 c    * Blanked images are not handled when interpolation is necessary.
@@ -163,7 +170,7 @@ c-----------------------------------------------------------------------
      *          naxis, offset, nbw
       ptrdiff   pOut, pWts
       real      blctrc(4,MAXIN), extent(4), rms(MAXIN), sigt, xoff,
-     *          yoff, bw, wt
+     *          yoff, bw, wt, cutoff
       double precision f, fout
       character inName*64, inbuf*(MAXLEN), outNam*64, version*72
 
@@ -172,8 +179,8 @@ c-----------------------------------------------------------------------
       external  len1, versan
 c-----------------------------------------------------------------------
       version = versan ('linmos',
-     *                  '$Revision: 1.24 $',
-     *                  '$Date: 2013/10/22 03:34:15 $')
+     *                  '$Revision: 1.25 $',
+     *                  '$Date: 2013/11/15 04:43:54 $')
 
 c     Get and check inputs.
       call keyini
@@ -208,6 +215,9 @@ c     Get and check inputs.
       nbw = max(1,nbw)
       if (bw.le.0.0) nbw=1
       if (nbw.eq.1) bw=0.0
+      call keyr('cutoff',cutoff,0.0)
+      if (cutoff.ge.1.0.or.cutoff.lt.0.0) 
+     * call bug('f','Specify a cutoff between 0 and 1') 
 
 c     Get processing options.
       call getOpt(dosen,dogain,dofreq,taper,doalpha)
@@ -337,7 +347,7 @@ c     Process each of the files.
      *                             'old',3,axLen(1,i))
         call process(i,lScr,lWts,lIn(i),lOut,memR(pOut),memR(pWts),
      *    axLen(1,i),axLen(2,i),nOut(1),nOut(2),nOut(3),dogain,
-     *    dofreq,blctrc(1,i),rms(i),bw,mfs,nbw)
+     *    dofreq,blctrc(1,i),rms(i),bw,mfs,nbw,cutoff)
         call xyclose(lIn(i))
       enddo
 
@@ -408,12 +418,12 @@ c-----------------------------------------------------------------------
 **************************************************************** process
 
       subroutine process(fileno,lScr,lWts,lIn,lOut,Out,Wts,
-     *  nx,ny,n1,n2,n3,dogain,dofreq,blctrc,rms,bw,mfs,nbw)
+     *  nx,ny,n1,n2,n3,dogain,dofreq,blctrc,rms,bw,mfs,nbw,cutoff)
 
       integer fileno,lScr,lWts,lIn,lOut
       integer nx,ny,n1,n2,n3,nbw
       real Out(n1,n2),Wts(n1,n2)
-      real blctrc(4),rms,bw
+      real blctrc(4),rms,bw,cutoff
       logical dogain,dofreq,mfs
 c-----------------------------------------------------------------------
 c  First determine the initial weight to apply to each pixel and
@@ -436,7 +446,7 @@ c               the normal mosaic or sensitivity function.
 c    dofreq     True if we are to compute the effective frequency
 c    bw         Bandwidth, to average the response in frequency
 c    mfs        Use mfs I*alpha plane to do wideband pb correction
-
+c    cutoff     Specify beam cutoff level
 
 c    nbw        Number of bandwidth bins to use
 c  Scratch:
@@ -576,7 +586,7 @@ c         Process this plane.
             yoff = yoff + 1
 
             do i = xlo, xhi
-              if (pBeam(i).eq.0.0) then
+              if (pBeam(i).lt.cutoff) then
 c               The weight is zero.
                 go to 10
               endif
