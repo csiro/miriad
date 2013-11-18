@@ -188,7 +188,10 @@ c                   centre.  A similar result could be obtained by
 c                   running 'puthd' on the output map, e.g.
 c                     puthd in=<map>/ctype1 value=RA---SIN
 c                     puthd in=<map>/ctype2 value=DEC--SIN
-c                   and likewise for the beam.
+c                   and likewise for the beam
+c         ncp       Force invert to use the NCP projection even when
+c                   significant non E-W baselines are present. 
+c                   Use with care..
 c@ mode
 c       This determines the algorithm to be used in imaging.
 c       Possible values are:
@@ -224,7 +227,7 @@ c       replaced with 0, or to be estimated by linear interpolation of
 c       two adjacent good channels.  See the Users Guide for the merits
 c       and evils of the two approaches.  The default is 'zero'.
 c
-c$Id: invert.for,v 1.18 2013/08/30 01:49:21 wie017 Exp $
+c$Id: invert.for,v 1.19 2013/11/18 22:25:34 wie017 Exp $
 c--
 c  History
 c    rjs        89  Initial version
@@ -377,7 +380,7 @@ c
       integer nx,ny,bnx,bny,mnx,mny,wnu,wnv
       integer nbeam,nsave,ndiscard,offcorr,nout
       logical defWt,Natural,doset,systemp(2),mfs,doimag,mosaic,sdb,idb
-      logical double,doamp,dophase,dosin,dobeam,dores
+      logical double,doamp,dophase,dosin,doncp,dobeam,dores
 c
       integer tno,tvis
       integer nUWts,nMMap
@@ -398,8 +401,8 @@ c
       data slops/'zero        ','interpolate '/
 c-----------------------------------------------------------------------
       version = versan ('invert',
-     :                  '$Revision: 1.18 $',
-     :                  '$Date: 2013/08/30 01:49:21 $')
+     :                  '$Revision: 1.19 $',
+     :                  '$Date: 2013/11/18 22:25:34 $')
 c
 c  Get the input parameters. Convert all angular things into
 c  radians as soon as possible!!
@@ -410,7 +413,7 @@ c
       if(nmap.eq.0)call bug('f','An output must be given')
 
       call GetOpt(uvflags,double,systemp,mfs,sdb,mosaic,doimag,
-     *        doamp,dophase,dosin,mode)
+     *        doamp,dophase,dosin,doncp,mode)
       idb = beam.ne.' '.and.doimag
       sdb = beam.ne.' '.and.sdb
       call uvDatInp('vis',uvflags)
@@ -549,7 +552,7 @@ c
       endif
       if(npnt.ne.1.and.mode.ne.'fft')
      *  call bug('f','Only mode=fft is supported with options=mosaic')
-      call HdSet(dosin,cellx,celly,ra0,dec0,freq0)
+      call HdSet(dosin,doncp,cellx,celly,ra0,dec0,freq0)
       call HdCoObj(coObj)
 c
 c  Determine the default image size, if needed.
@@ -1392,17 +1395,17 @@ c
       end
 c***********************************************************************
       subroutine GetOpt(uvflags,double,systemp,mfs,sdb,mosaic,doimag,
-     *        doamp,dophase,dosin,mode)
+     *        doamp,dophase,dosin,doncp,mode)
 c
       character uvflags*(*),mode*(*)
       logical systemp(2),mfs,sdb,doimag,mosaic,double,doamp,dophase,
-     * dosin
+     * dosin,doncp
 c
 c  Get extra processing options.
 c
 c-----------------------------------------------------------------------
       integer NOPTS, NMODES
-      parameter (NOPTS=13, NMODES=3)
+      parameter (NOPTS=14, NMODES=3)
 
       integer nmode
       logical present(NOPTS)
@@ -1411,7 +1414,7 @@ c-----------------------------------------------------------------------
       data opts/'nocal    ','nopol    ','nopass   ','double   ',
      *          'systemp  ','mfs      ','sdb      ','mosaic   ',
      *          'imaginary','amplitude','phase    ','sin      ',
-     *          'fsystemp '/
+     *          'ncp      ','fsystemp '/
       data modes/'fft     ','dft     ','median  '/
 c-----------------------------------------------------------------------
       call options('options',opts,present,NOPTS)
@@ -1432,7 +1435,8 @@ c     Extra processing options.
       doamp   = present(10)
       dophase = present(11)
       dosin   = present(12)
-      systemp(2) = present(13).and.mfs
+      doncp   = present(13)
+      systemp(2) = present(14).and.mfs
 
 c     Check options.
       if(sdb.and..not.mfs)call bug('f',
@@ -1442,8 +1446,10 @@ c     Check options.
      *  'I cannot cope with options=imaginary,sdb simultaneously')
       if(systemp(1).and.systemp(2)) call bug('f',
      *  'Please choose only one of systemp and fsystemp')
-      if(present(13).and..not.mfs) call bug('w',
+      if(present(14).and..not.mfs) call bug('w',
      *  'The fsystemp option is ignored unless mfs is specified')
+      if(present(12).and.present(13)) call bug('f',
+     *  'Choose at most one of options sin and ncp')
 
 c     Imaging algorithm.
       call keymatch('mode',NMODES,modes,1,mode,nmode)
