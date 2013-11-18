@@ -51,10 +51,13 @@ c       An optional second parameter can be given to set the number
 c       of frequencies to divide the bandwidth into, it defaults to 10.
 c
 c@ cutoff
-c       The cutoff level to use for the primary beam. Normally the 
-c       built-in level for each beam model is used. This can be useful
+c       The cutoff level to use for the primary beam, e.g., use 0.5 to
+c       restrict the contribution of each input cube to the pixels inside 
+c       the half power beam width. Normally the built-in level for each
+c       beam model is used (generally <0.1). This can be useful
 c       e.g., to restrict polarization mosaics to use only the part of  
-c       the beam with low instrumental polarization. Defaults to zero 
+c       the beam with low instrumental polarization. Use pbplot to see
+c       what radius each level corresponds to. Defaults to zero 
 c       which means use the built-in level.
 c@ options
 c       Extra processing options.  Several can be given, separated by
@@ -89,7 +92,7 @@ c                      when the fractional bandwidth is > 0.4 (this
 c                      is because higher orders are needed to model
 c                      the primary beam response with frequency).
 c
-c$Id: linmos.for,v 1.25 2013/11/15 04:43:54 wie017 Exp $
+c$Id: linmos.for,v 1.26 2013/11/18 03:02:07 wie017 Exp $
 c--
 c
 c  History:
@@ -179,8 +182,8 @@ c-----------------------------------------------------------------------
       external  len1, versan
 c-----------------------------------------------------------------------
       version = versan ('linmos',
-     *                  '$Revision: 1.25 $',
-     *                  '$Date: 2013/11/15 04:43:54 $')
+     *                  '$Revision: 1.26 $',
+     *                  '$Date: 2013/11/18 03:02:07 $')
 
 c     Get and check inputs.
       call keyini
