@@ -20,7 +20,7 @@ c
 	integer MAXAVER,MAXPOL
 	parameter(MAXAVER=2000000,MAXPOL=4)
 	complex buf(MAXAVER)
-        real    bufr(MAXAVER),buf2(MAXAVER)
+        real    bufr(MAXAVER),buf2(2,MAXAVER)
 	integer count(MAXAVER)
 	integer pnt(MAXPOL,MAXBASE),nchan(MAXPOL,MAXBASE),free,mbase
 	integer npols(MAXBASE),pols(MAXPOL,MAXBASE),cnt(MAXBASE)

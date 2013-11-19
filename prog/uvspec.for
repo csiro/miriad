@@ -46,7 +46,8 @@ c	                 UVSPEC corrects for polarization corss-talk.
 c	   'ampscalar'   When plotting amplitude, this causes it to perform
 c	                 scalar averaging. By default it does vector averaging.
 c	   'rms'         When plotting amplitude, this causes it to plot
-c		         the rms amplitude. by default it does vector averaging.
+c		         the rms amplitude. By default it does vector averaging.
+c          'mnoise'      When plotting noise, plot the error in the mean.           
 c          'sdo'         Plot the difference between bin 2 and bin 1 (these
 c                        contain the CABB noise cal source on and off 
 c                        autocorrelations, giving the Synchr. Detected Ouput)
@@ -73,6 +74,8 @@ c	   amplitude     Plot amplitude.
 c	   phase         Plot phase.
 c	   real          Plot real part of the data.
 c	   imaginary     Plot imaginary part of the data.
+c          noise         Plot the standard deviation of the data
+c          
 c	The default is axis=channel,amplitude.
 c@ yrange
 c	The min and max range along the y axis of the plots. The default
@@ -86,7 +89,7 @@ c@ log
 c	Log file into which the spectra are dumped in the order in which
 c	they are plotted.  Really only useful if your plot is quite simple.
 c
-c$Id: uvspec.for,v 1.9 2012/09/20 05:30:41 wie017 Exp $
+c$Id: uvspec.for,v 1.10 2013/11/19 02:15:34 wie017 Exp $
 c--
 c  History:
 c    rjs  18sep92 Derived from uvaver.
@@ -121,6 +124,7 @@ c	          plot.
 c    mhw  02feb10 Add sdo option to look at CABB autocorrelation data bins
 c    mhw  21apr10 Fix axis label and plot accuracy issues for high res data
 c    mhw  07sep12 Add hdr option, useful for plotting rfi
+c    mhw  18nov13 Add noise, mnoise
 c  Bugs:
 c------------------------------------------------------------------------
 	include 'mirconst.h'
@@ -133,7 +137,7 @@ c
 	character uvflags*8,device*64,xaxis*12,yaxis*12,logf*64
 	character xtitle*64,ytitle*64
 	logical ampsc,rms,nobase,avall,first,buffered,doflush,dodots
-	logical doshift,doflag,doall,dolag,dosdo,dohdr
+	logical doshift,doflag,doall,dolag,dosdo,dohdr,domnoise
 	double precision interval,T0,T1,preamble(5),shift(2),lmn(3)
 	integer tIn,vupd
 	integer nxy(2),nchan,nread,nplot
@@ -154,7 +158,7 @@ c
 	call output(version)
 	call keyini
 	call GetOpt(uvflags,ampsc,rms,nobase,avall,dodots,
-     *    doflag,doall,dosdo,dohdr)
+     *    doflag,doall,dosdo,dohdr,domnoise)
 	call GetAxis(xaxis,yaxis)
 	dolag = xaxis.eq.'lag'
 	call uvDatInp('vis',uvflags)
@@ -180,6 +184,8 @@ c
 	nobase = nobase.or.avall
         if (hann.lt.1 .or. hann.gt.maxco) call bug('f',
      *    'Illegal Hanning smoothing width')
+        if (domnoise.and.yaxis.ne.'noise')
+     *    call bug('w','mnoise option ignored')   
 c
 c  Convert the shifts, and determine whether a shift is to be performed.
 c
@@ -245,8 +251,8 @@ c  Pull the chain and flush out and plot the accumulated data
 c  in the case of time averaging.
 c
 	    if(doflush)then
-	      call BufFlush(ampsc,rms,nobase,dodots,dohdr,hann,hc,hw,
-     *	        first,device,x,nplot,xtitle,ytitle,nxy,yrange,logf)
+	      call BufFlush(ampsc,rms,nobase,dodots,dohdr,domnoise,hann,
+     *	       hc,hw,first,device,x,nplot,xtitle,ytitle,nxy,yrange,logf)
 	      T0 = preamble(4)
 	      T1 = T0
 	      buffered = .false.
@@ -270,8 +276,8 @@ c
 c  Flush out and plot anything remaining.
 c
 	  if(buffered)then
-	    call BufFlush(ampsc,rms,nobase,dodots,dohdr,hann,hc,hw,
-     *	      first,device,x,nplot,xtitle,ytitle,nxy,yrange,logf)
+	    call BufFlush(ampsc,rms,nobase,dodots,dohdr,domnoise,hann,
+     *	      hc,hw,first,device,x,nplot,xtitle,ytitle,nxy,yrange,logf)
 	    buffered = .false.
 	  endif
 	  call uvDatCls
@@ -416,13 +422,14 @@ c    xaxis
 c    yaxis
 c------------------------------------------------------------------------
 	integer NX,NY
-	parameter(NX=6,NY=4)
+	parameter(NX=6,NY=5)
 c
 	integer n
 	character xaxes(NX)*10,yaxes(NY)*9
 	data xaxes/'channel   ','frequency ','velocity  ','felocity  ',
      *		   'lag       ','dfrequency'/
-	data yaxes/'amplitude','phase    ','real     ','imaginary'/
+	data yaxes/'amplitude','phase    ','real     ','imaginary',
+     *             'noise    '/
 c
 	call keymatch('axis',NX,xaxes,1,xaxis,n)
 	if(n.eq.0)xaxis = xaxes(1)
@@ -431,10 +438,11 @@ c
 	end
 c************************************************************************
 	subroutine GetOpt(uvflags,ampsc,rms,nobase,avall,dodots,
-     *		doflag,doall,dosdo,dohdr)
+     *		doflag,doall,dosdo,dohdr,domnoise)
 c
 	implicit none
         logical ampsc,rms,nobase,avall,dodots,doflag,doall,dosdo,dohdr
+        logical domnoise
 	character uvflags*(*)
 c
 c  Determine the flags to pass to the uvdat routines.
@@ -450,12 +458,13 @@ c    doflag
 c    doall
 c------------------------------------------------------------------------
 	integer nopts
-	parameter(nopts=12)
+	parameter(nopts=13)
 	character opts(nopts)*9
 	logical present(nopts),docal,dopol,dopass
 	data opts/'nocal    ','nopol    ','ampscalar','nopass   ',
      *		  'nobase   ','avall    ','dots     ','rms      ',
-     *            'flagged  ','all      ','sdo      ','hdr      '/
+     *            'flagged  ','all      ','sdo      ','hdr      ',
+     *            'mnoise   '/
 c
 	call options('options',opts,present,nopts)
 	docal = .not.present(1)
@@ -472,6 +481,7 @@ c
 	doall  =   present(10)
         dosdo  =   present(11)
         dohdr  =   present(12)
+        domnoise=   present(13)
 	if(doflag.and.doall)call bug('f',
      *	  'The "flagged" and "all" options are mutually exclusive')
 c
@@ -495,11 +505,11 @@ c------------------------------------------------------------------------
 	mbase = 0
 	end
 c************************************************************************
-	subroutine BufFlush(ampsc,rms,nobase,dodots,dohdr,hann,hc,hw,
-     *	        first,device,x,n,xtitle,ytitle,nxy,yrange,logf)
+	subroutine BufFlush(ampsc,rms,nobase,dodots,dohdr,domnoise,hann,
+     *	        hc,hw,first,device,x,n,xtitle,ytitle,nxy,yrange,logf)
 c
 	implicit none
-	logical ampsc,rms,nobase,first,dodots,dohdr
+	logical ampsc,rms,nobase,first,dodots,dohdr,domnoise
 	character device*(*),xtitle*(*),ytitle*(*),logf*(*)
 	integer n,nxy(2),hann
 	real yrange(2),hc(*),hw(*)
@@ -520,7 +530,7 @@ c------------------------------------------------------------------------
 	double precision time
 	integer i,j,ngood,ng,ntime,npnts,nplts,nprev,p
 	logical doamp,doampsc,dorms,dophase,doreal,doimag,dopoint,dolag
-	logical dosdo,Hit(PolMin:PolMax)
+	logical dosdo,donoise,Hit(PolMin:PolMax)
 	integer npol,pol(MAXPOL)
         
 c
@@ -539,6 +549,8 @@ c
 	doreal  = ytitle(1:4).eq.'Real'
 	doimag  = ytitle(1:9).eq.'Imaginary'
         dosdo   = index(ytitle,'SDO').gt.0
+        donoise = ytitle(1:5).eq.'Noise'
+        if(domnoise) ytitle = 'Noise in mean'
 c
 c  Determine the number of good baselines.
 c
@@ -594,10 +606,10 @@ c
 		  call LagExt(x,buf(p),count(p),nchan(i,j),n,
      *		    xp,yp,MAXPNT,npnts)
 		else
-		  call VisExt(x,buf(p),buf2(p),bufr(p),count(p),
+		  call VisExt(x,buf(p),buf2(1,p),bufr(p),count(p),
      *		    nchan(i,j),
      *		    doamp,doampsc,dorms,dophase,doreal,doimag,dohdr,
-     *		    xp,yp,MAXPNT,npnts)
+     *		    donoise,domnoise,xp,yp,MAXPNT,npnts)
 		endif
 	      endif
 c
@@ -644,12 +656,13 @@ c
 c************************************************************************
 	subroutine VisExt(x,buf,buf2,bufr,count,nchan,
      *		    doamp,doampsc,dorms,dophase,doreal,doimag,
-     *		    dohdr,xp,yp,MAXPNT,npnts)
+     *		    dohdr,donoise,domnoise,xp,yp,MAXPNT,npnts)
 c
 	implicit none
 	integer nchan,npnts,MAXPNT,count(nchan)
 	logical doamp,doampsc,dorms,dophase,doreal,doimag,dohdr
-	real buf2(nchan),bufr(nchan),yp(MAXPNT)
+        logical donoise,domnoise
+	real bufr(nchan),buf2(2,nchan),yp(MAXPNT)
 	double precision x(nchan),xp(MAXPNT)
 	complex buf(nchan)
 c------------------------------------------------------------------------
@@ -671,7 +684,7 @@ c
 	      temp = bufr(k) / count(k)
               if (dohdr) temp = log10(1+temp)
 	    else if(dorms)then
-	      temp = sqrt(buf2(k) / count(k))
+	      temp = sqrt((buf2(1,k)+buf2(2,k)) / count(k))
               if (dohdr) temp = log10(1+temp)
 	    else if(dophase)then
 	      ctemp = buf(k)
@@ -684,6 +697,11 @@ c
 	      temp = real(buf(k)) / count(k)
 	    else if(doimag)then
 	      temp = aimag(buf(k)) / count(k)
+            else if (donoise) then
+              temp = (buf2(1,k)+buf2(2,k))/(2*count(k))-
+     *        ((real(buf(k))/count(k))**2+(aimag(buf(k))/count(k))**2)/2
+              if (domnoise) temp=temp/count(k)
+              temp = sqrt(abs(temp))
 	    endif
 	    npnts = npnts + 1
 	    if(npnts.gt.MAXPNT)call bug('f',
@@ -762,7 +780,7 @@ c    nread	The number of channels.
 c------------------------------------------------------------------------
 	include 'uvspec.h'
 	integer i,i1,i2,p,bl,pol
-	real t
+	real re,im
 	logical ok
 c
 c  Does this spectrum contain some good data.
@@ -838,14 +856,17 @@ c
 	    if(doall.or.(doflag.neqv.flags(i)))then
 	      if(ibin.eq.0.or.ibin.eq.2) buf(i+p) = data(i)
 	      if (ibin.eq.1) buf(i+p) = -data(i)
-              t = abs(data(i))
-              bufr(i+p) = t
-	      buf2(i+p) = t*t
+              re = real(data(i))
+              im = aimag(data(i))
+              bufr(i+p) = abs(data(i))
+	      buf2(1,i+p) = re*re
+              buf2(2,i+p) = im*im
 	      count(i+p) = 1
 	    else
 	      buf(i+p) = (0.0,0.0)
               bufr(i+p) = 0.0
-	      buf2(i+p) = 0.0
+	      buf2(1,i+p) = 0.0
+	      buf2(2,i+p) = 0.0
 	      count(i+p) = 0
 	    endif
 	  enddo
@@ -859,11 +880,13 @@ c
 	  p = pnt(p,bl) - 1
 	  do i=1,nread
 	    if(doall.or.(doflag.neqv.flags(i)))then
-	      t = abs(data(i))
               if (ibin.eq.1) buf(i+p) = buf(i+p) - data(i)
               if (ibin.eq.0.or.ibin.eq.2) buf(i+p) = buf(i+p) + data(i)
-              bufr(i+p) = bufr(i+p) + t
-	      buf2(i+p) = buf2(i+p) + t*t
+              re = real(data(i))
+              im = aimag(data(i))
+              bufr(i+p) = bufr(i+p) + abs(data(i))
+	      buf2(1,i+p) = buf2(1,i+p) + re*re
+              buf2(2,i+p) = buf2(2,i+p) + im*im
 	      count(i+p) = count(i+p) + 1
 	    endif
 	  enddo
