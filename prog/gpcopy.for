@@ -90,8 +90,8 @@ c
         character*72 versan
 c
 	version = versan('gpcopy',
-     *                   '$Revision: 1.9 $',
-     *                   '$Date: 2013/11/20 01:10:27 $')
+     *                   '$Revision: 1.10 $',
+     *                   '$Date: 2013/11/20 01:20:50 $')
 	call keyini
 	call keya('vis',vis,' ')
 	if(vis.eq.' ')call bug('f','Input data-set must be given')
@@ -515,6 +515,7 @@ c
 c  Now apply them.
 c
         if (relax) then
+          int1 = max(0.5d0,int1)
           call GnApply1(ngains,nfeeds,ntau,nfbin,
      *	  memc(pGain1),memd(pTim1),nsols1,int1,
      *	  memc(pGain2),memd(pTim2),nsols2,
