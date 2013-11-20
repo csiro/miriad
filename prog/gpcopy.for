@@ -44,8 +44,9 @@ c	           calibration.
 c	  nopass   Do not copy the items dealing with bandpass
 c	           calibration (this includes the cgains and wgains tables).
 c         relax    With mode=apply, relax the interpolation interval
-c                  limits to 0.5 days (the gpcal default).Use this when 
-c                  the gain tables were created by selfcal or gpscal.
+c                  limits to 0.5 days (the gpcal default) and adjust
+c                  only the existing output gains. Useful when combining
+c                  gain tables created by selfcal or gpscal.
 c--
 c  History:
 c    rjs  16jul91 Original version.
@@ -73,6 +74,7 @@ c    mhw  02sep09 Handle multiple bandpass solution intervals
 c    mhw  11aug11 Copy gainsf and leakagef tables
 c    mhw  13may13 Handle gainsf in 'merge' and 'apply' mode
 c    mhw  12jun13 Fix apply mode, add relax option
+c    mhw  20nov13 Change the way the relax option works
 c  Bugs:
 c    None?
 c------------------------------------------------------------------------
@@ -88,8 +90,8 @@ c
         character*72 versan
 c
 	version = versan('gpcopy',
-     *                   '$Revision: 1.8 $',
-     *                   '$Date: 2013/08/30 01:49:21 $')
+     *                   '$Revision: 1.9 $',
+     *                   '$Date: 2013/11/20 01:10:27 $')
 	call keyini
 	call keya('vis',vis,' ')
 	if(vis.eq.' ')call bug('f','Input data-set must be given')
@@ -494,10 +496,6 @@ c
 c
 c  Allocate memory.
 c
-        if (relax) then
-          int1 = max(0.5d0,int1)
-          int2 = max(0.5d0,int2)
-        endif
         maxtimes = nsols1*3+nsols2*3+2
         maxgains = maxtimes*ngains*(nfbin+1)
 	call memAlloc(pGain1,maxgains,'c')
@@ -516,10 +514,17 @@ c
 c
 c  Now apply them.
 c
-        call GnApply1(ngains,nfeeds,ntau,nfbin,maxtimes,maxgains,
+        if (relax) then
+          call GnApply1(ngains,nfeeds,ntau,nfbin,
+     *	  memc(pGain1),memd(pTim1),nsols1,int1,
+     *	  memc(pGain2),memd(pTim2),nsols2,
+     *	  memc(pGain),memd(pTim),nsols)
+        else
+          call GnApply2(ngains,nfeeds,ntau,nfbin,maxtimes,maxgains,
      *	  memc(pGain1),memd(pTim1),nsols1,int1,
      *	  memc(pGain2),memd(pTim2),nsols2,int2,
-     *	  memc(pGain),memd(pTim),nsols)        
+     *	  memc(pGain),memd(pTim),nsols)
+        endif
 c
         if (nsols.gt.0) then
           call uvGnWrit(tOut,memc(pGain),memd(pTim),freq,ngains,
@@ -650,7 +655,87 @@ c
 c
 	end
 c************************************************************************
-	subroutine GnApply1(ngains,nfeeds,ntau,nfbin,maxsols,maxgains,
+	subroutine GnApply1(ngains,nfeeds,ntau,nfbin,
+     *	  Gains1,Times1,nsols1,int1,
+     *    Gains2,Times2,nsols2,
+     *    Gains,Times,nsols)
+c
+	implicit none
+	integer ngains,nfeeds,ntau,nfbin,nsols1,nsols2
+        integer nsols
+	double precision Times1(nsols1),Times2(nsols2),Times(nsols1)
+        double precision int1
+	complex Gains1(ngains,nsols1,0:nfbin)
+        complex Gains2(ngains,nsols2,0:nfbin)
+        complex Gains(ngains,nsols1,0:nfbin)
+c
+c  Apply gain table 1 to table 2 in 'relaxed' mode.
+c  This just evaluates table1 gains at the times of table2 gains and
+c  multiplies the gains.
+c  Input:
+c    nearly everything
+c  Output:
+c    nsols	Number of gain solutions.
+c------------------------------------------------------------------------
+	include 'maxdim.h'
+	integer NMAX
+	double precision tol
+	parameter(NMAX=3*MAXANT)
+	parameter(tol=0.5d0/(24.d0*3600.d0))
+	integer i,j,i1,j1,indx1,k,n
+	double precision t,ti1,tj1
+        logical zero
+c	
+c  Check.
+c
+	if(ngains.gt.NMAX)call bug('f','Too many gains for me!')
+c
+c  Cleanup table1 - remove slots with all zero gains
+c
+        i=1
+        n=nsols1
+        do while (i.le.n)
+          zero=.true.
+          j=1
+          do while (zero.and.j.le.ngains)
+            zero=abs(gains1(j,i,0)).eq.0.
+            j=j+1
+          enddo
+          if (zero) then
+            n=n-1
+            do i1=i,n
+              times1(i1)=times1(i1+1)
+              do k=0,nfbin
+                do j=1,ngains
+                  gains1(j,i1,k)=gains1(j,i1+1,k)
+                enddo
+              enddo
+            enddo
+          else
+            i=i+1
+          endif
+        enddo
+        nsols1=n
+c
+        indx1 = 1
+	do i=1,nsols2
+          t = Times2(i)
+	  Times(i) = t
+	  call GnGet(t,nsols1,Times1,int1,indx1,i1,j1,ti1,tj1)
+          do k=0,nfbin
+            do j=1,ngains
+              Gains(j,i,k) = Gains2(j,i,k)
+            enddo
+	    call GnInterp1(Gains(1,i,k),t,ngains,nfeeds,ntau,
+     *                     ti1,Gains1(1,i1,k),tj1,Gains1(1,j1,k))
+          enddo
+	enddo
+
+	nsols = nsols2
+c
+	end
+c************************************************************************
+	subroutine GnApply2(ngains,nfeeds,ntau,nfbin,maxsols,maxgains,
      *	  Gains1,Times1,nsols1,int1,
      *    Gains2,Times2,nsols2,int2,
      *    Gains,Times,nsols)
@@ -664,7 +749,7 @@ c
         complex Gains2(ngains,nsols2,0:nfbin)
         complex Gains(maxgains)
 c
-c  Merge and write two gain tables.
+c  Merge and apply two gain tables.
 c  Input:
 c    nearly everything
 c  Output:
@@ -883,6 +968,53 @@ c
 		g2 = Gains2j(i) * (1 + (mag-1)*epsi2) * (g2/mag)**epsi2
 	      endif
 	      GainsO(i) = g1*g2
+	    endif
+	  endif
+	enddo
+c
+	end
+c************************************************************************
+	subroutine GnInterp1(Gains,t,ngains,nfeeds,ntau,
+     *	                     ti1,Gains1i,tj1,Gains1j)
+c
+	implicit none
+	integer ngains,nfeeds,ntau
+	double precision t,ti1,tj1
+	complex Gains(ngains)
+	complex Gains1i(ngains),Gains1j(ngains)
+c
+c  Interpolate first gain to second gain
+c------------------------------------------------------------------------
+	integer i
+	complex g,g1
+	real epsi,mag
+	logical dotau,bad,bad1i,bad1j
+c
+	epsi = (tj1-t)/(tj1-ti1)
+c
+	do i=1,ngains
+	  dotau = ntau.gt.0.and.mod(i-nfeeds,nfeeds+ntau).eq.1
+	  if(dotau)then
+	    Gains(i) = Gains(i) +
+     *		       Gains1j(i) - epsi*(Gains1j(i) - Gains1i(i))
+	  else
+	    bad = abs(real(Gains(i)))+abs(aimag(Gains(i))).eq.0
+	    bad1j = abs(real(Gains1j(i)))+abs(aimag(Gains1j(i))).eq.0
+	    bad1i = abs(real(Gains1i(i)))+abs(aimag(Gains1i(i))).eq.0
+	    if(bad.or.(bad1i.and.bad1j))then
+	      Gains(i) = 0
+	    else
+              g = Gains(i)
+	      if(bad1j)then
+		g1 = Gains1i(i)
+	      else if(bad1i)then
+		g1 = Gains1j(i)
+	      else
+		g1 = Gains1i(i)/Gains1j(i)
+		mag = abs(g1)
+		g1 = Gains1j(i) * (1 + (mag-1)*epsi) * (g1/mag)**epsi
+	      endif
+	      Gains(i) = g*g1
 	    endif
 	  endif
 	enddo
