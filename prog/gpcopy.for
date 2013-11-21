@@ -43,10 +43,12 @@ c	  nocal    Do not copy the items dealing with antenna gain
 c	           calibration.
 c	  nopass   Do not copy the items dealing with bandpass
 c	           calibration (this includes the cgains and wgains tables).
-c         relax    With mode=apply, relax the interpolation interval
-c                  limits to 0.5 days (the gpcal default) and adjust
-c                  only the existing output gains. Useful when combining
-c                  gain tables created by selfcal or gpscal.
+c         relax    Relax the interpolation interval limits to 0.5 days. 
+c                  Use this when copying gain tables created by selfcal
+c                  or gpscal to other sources. 
+c                  With mode=apply: simply adjust the existing output gains,
+c                  rather than doing the default merge & multiply of solutions.
+c                  
 c--
 c  History:
 c    rjs  16jul91 Original version.
@@ -90,8 +92,8 @@ c
         character*72 versan
 c
 	version = versan('gpcopy',
-     *                   '$Revision: 1.10 $',
-     *                   '$Date: 2013/11/20 01:20:50 $')
+     *                   '$Revision: 1.11 $',
+     *                   '$Date: 2013/11/21 01:28:24 $')
 	call keyini
 	call keya('vis',vis,' ')
 	if(vis.eq.' ')call bug('f','Input data-set must be given')
@@ -142,7 +144,7 @@ c
 	  docal = .not.docopy.and.hdprsnt(tOut,'gains')
 	  if(mode.eq.'merge'.and.docal)then
 	    call output('Merging gain table')
-	    call GnMerge(tIn,tOut)
+	    call GnMerge(tIn,tOut,relax)
 	  else if(mode.eq.'apply'.and.docal)then
 	    call output('Applying gain table')
 	    call GnApply(tIn,tOut,relax)
@@ -150,6 +152,7 @@ c
 	    call output('Copying gain table')
 	    if(hdprsnt(tIn,'interval'))then
 	      call rdhdd(tIn,'interval',interval,0.d0)
+              if (relax) interval=max(interval,0.5d0)
 	      write(line,'(a,f7.2)')
      *		'Interpolation tolerance set to (minutes):',
      *		24*60*interval
@@ -399,10 +402,11 @@ c
 	if(iostat.ne.0)call bugno('f',iostat)
 	end
 c************************************************************************
-	subroutine GnMerge(tIn,tOut)
+	subroutine GnMerge(tIn,tOut,relax)
 c
 	implicit none
 	integer tIn,tOut
+        logical relax
 c
 c  Merge two gain tables together. The tables must be the same
 c  in terms of antennas, feeds and ntau. They must also not
@@ -460,6 +464,8 @@ c
 c
 c  Make the interval the larger of the individual intervals.
 c
+        int1 = max(int1, int2)
+        if (relax) int1 = max(int1, 0.5d0)
 	if(int1.gt.int2)call wrhdd(tOut,'interval',int1)
 c
 c  Assume that freq0 (if present) is the same for both,
