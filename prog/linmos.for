@@ -92,7 +92,7 @@ c                      when the fractional bandwidth is > 0.4 (this
 c                      is because higher orders are needed to model
 c                      the primary beam response with frequency).
 c
-c$Id: linmos.for,v 1.26 2013/11/18 03:02:07 wie017 Exp $
+c$Id: linmos.for,v 1.27 2013/11/22 03:34:49 wie017 Exp $
 c--
 c
 c  History:
@@ -182,8 +182,8 @@ c-----------------------------------------------------------------------
       external  len1, versan
 c-----------------------------------------------------------------------
       version = versan ('linmos',
-     *                  '$Revision: 1.26 $',
-     *                  '$Date: 2013/11/18 03:02:07 $')
+     *                  '$Revision: 1.27 $',
+     *                  '$Date: 2013/11/22 03:34:49 $')
 
 c     Get and check inputs.
       call keyini
@@ -589,7 +589,7 @@ c         Process this plane.
             yoff = yoff + 1
 
             do i = xlo, xhi
-              if (pBeam(i).lt.cutoff) then
+              if (pBeam(i).le.cutoff) then
 c               The weight is zero.
                 go to 10
               endif
