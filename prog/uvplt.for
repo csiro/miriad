@@ -239,7 +239,7 @@ c       The output logfile name. The default is the terminal.
 c@ comment
 c       A one line comment which is written into the logfile.
 c
-c$Id: uvplt.for,v 1.16 2013/08/30 01:49:21 wie017 Exp $
+c$Id: uvplt.for,v 1.17 2013/12/03 03:09:12 wie017 Exp $
 c--
 c
 c  History:
@@ -371,8 +371,8 @@ c
       data polmsk /13*0/
 c-----------------------------------------------------------------------
       version = versan ('uvplt',
-     *                  '$Revision: 1.16 $',
-     *                  '$Date: 2013/08/30 01:49:21 $')
+     *                  '$Revision: 1.17 $',
+     *                  '$Date: 2013/12/03 03:09:12 $')
 c
 c  Get the parameters given by the user and check them for blunders
 c
@@ -3333,7 +3333,7 @@ c-----------------------------------------------------------------------
      *  plfidx
       logical dobase
 cc
-      character str1*2,aline*80
+      character aline*80
       integer i, j
       character itoaf*3,stcat*80
 c-----------------------------------------------------------------------
@@ -3349,8 +3349,6 @@ c
 c
 c No more room for this combination
 c
-            str1 = itoaf(ifile)
-
             if (dobase) then
                if (pl4dim.gt.1) then
                  call bug('w',
@@ -3437,13 +3435,13 @@ c-----------------------------------------------------------------------
       else if (axis.eq.'uvangle') then
         label = 'uv p.a. (degrees)'
       else if (axis.eq.'amplitude') then
-        label = 'Amplitude'
+        label = 'Amplitude (Jy)'
       else if (axis.eq.'phase') then
         label = 'Phase (degrees)'
       else if (axis.eq.'real') then
-        label = 'Real'
+        label = 'Real (Jy)'
       else if (axis.eq.'imag') then
-        label = 'Imaginary'
+        label = 'Imaginary (Jy)'
       else
         call bug('w', 'Unrecognized '//xory//' axis')
         label = 'unknown'

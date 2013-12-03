@@ -89,7 +89,7 @@ c@ log
 c	Log file into which the spectra are dumped in the order in which
 c	they are plotted.  Really only useful if your plot is quite simple.
 c
-c$Id: uvspec.for,v 1.10 2013/11/19 02:15:34 wie017 Exp $
+c$Id: uvspec.for,v 1.11 2013/12/03 03:09:12 wie017 Exp $
 c--
 c  History:
 c    rjs  18sep92 Derived from uvaver.
@@ -125,6 +125,7 @@ c    mhw  02feb10 Add sdo option to look at CABB autocorrelation data bins
 c    mhw  21apr10 Fix axis label and plot accuracy issues for high res data
 c    mhw  07sep12 Add hdr option, useful for plotting rfi
 c    mhw  18nov13 Add noise, mnoise
+c    mhw  03dec13 Add units to Y axis
 c  Bugs:
 c------------------------------------------------------------------------
 	include 'mirconst.h'
@@ -532,6 +533,7 @@ c------------------------------------------------------------------------
 	logical doamp,doampsc,dorms,dophase,doreal,doimag,dopoint,dolag
 	logical dosdo,donoise,Hit(PolMin:PolMax)
 	integer npol,pol(MAXPOL)
+        character stcat*80
         
 c
 c  Determine the conversion of the data.
@@ -551,6 +553,8 @@ c
         dosdo   = index(ytitle,'SDO').gt.0
         donoise = ytitle(1:5).eq.'Noise'
         if(domnoise) ytitle = 'Noise in mean'
+        if (.not.dophase) ytitle=stcat(ytitle,' (Jy)')
+        if (dophase) ytitle=stcat(ytitle,' (deg)')
 c
 c  Determine the number of good baselines.
 c
