@@ -8,6 +8,12 @@ c	UVSFIT is a Miriad task which fits model components to a visibility
 c	dataset. UVSFIT differs from UVFIT by fitting explicitly for the
 c       frequency dependence of source flux. Optionally the model or
 c       residual visibilities can be written out.
+c       UVSFIT can only handle a limited number of visibilities in fitting
+c       mode. You can reduce the data volume by averaging in frequency
+c       using the line parameter (apply bandpass first) or selecting a 
+c       subset of the data. If you want to produce model or residual 
+c       visibilities at full resolution for all the data, you can
+c       run UVSFIT again with all source parameters specified and fixed.
 c	
 c@ vis
 c	Name of the input visibility file or files. No default.
@@ -16,8 +22,7 @@ c	Normal Stokes/polarisation parameter (e.g. i,q,u,v,ii etc).
 c	Only a single polarisation can be requested. The default is
 c	`ii' (i.e. Stokes-I for an unpolarised source).
 c@ line
-c	Normal line-type processing with normal defaults. However, you
-c	must select only a single channel!!
+c	Normal line-type processing with normal defaults.
 c@ select
 c	Normal data selection. Default is all cross-correlation data.
 c@ object
@@ -139,12 +144,13 @@ c	formal errors in each (0.0 if not a free parameter); line 3 has
 c	the values of all three spectral terms; line 4 has the formal
 c	errors in those terms (again 0.0 if not included in the fit).
 c
-c$Id: uvsfit.for,v 1.5 2013/08/30 01:49:21 wie017 Exp $
+c$Id: uvsfit.for,v 1.6 2013/12/05 01:59:50 wie017 Exp $
 c--
 c  History:
 c    dmcc 12jan12  Original version, adapted from uvfit version 14jan05.
 c    dmcc 10oct12  Adapted for spectral curvature and for general use.
 c    dmcc 22oct12  Include ref freq in output log; fix errors in logging.
+c    mhw  05dec13  Don't read/accumulate data if not fitting
 c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'uvsfit.h'
@@ -167,8 +173,8 @@ c
         external FUNCTION
 c-----------------------------------------------------------------------
       version = versan ('uvsfit',
-     :                  '$Revision: 1.5 $',
-     :                  '$Date: 2013/08/30 01:49:21 $')
+     :                  '$Revision: 1.6 $',
+     :                  '$Date: 2013/12/05 01:59:50 $')
 c
 c  Get the inputs.
 c  Relative to original uvfit, insist on cross-corrlelations with flag 'x'.
@@ -193,51 +199,51 @@ c
      *	  call bug('f','Only a single polarisation can be selected')
 	if(npol.eq.0)call uvDatSet('stokes',0)
 c
-c  Open the visibility file, and read all the data.
-c
-	call output('Reading the data ...')
-        nvis = 0
-	dowhile(uvDatOpn(lIn))
-	  call uvDatRd(preamble,data,flags,MAXCHAN,nread)
-          dowhile(nread.ge.1)
-	    call uvinfo(lIn,'sfreq',sfreq)
-
-	    do i=1,nread
-	      if(flags(i))then
-	        nvis = nvis + 1
-	        if(nvis.gt.MAXVIS)call bug('f','Buffer overflow')
-	        u(nvis) = preamble(1)*sfreq(i)
-	        v(nvis) = preamble(2)*sfreq(i)
-	        vis(nvis) = data(i)
-		freq(nvis) = sfreq(i)
-	      endif
-	    enddo
-	    call uvDatRd(preamble,data,flags,MAXCHAN,nread)
-	  enddo
-	  call uvDatCls
-	enddo
-        if(nvis.le.0)call bug('f','No valid data found')
-        call output('Total number of correlations: '//itoaf(nvis))
-
-c
-c  Set the reference frequency
-c
-	if (freqref .eq. 0.0) then
-	   freqref = freq(1)
-	endif
-c
 c  Pack the things that we are going to solve for.
 c
 	call PackPar(x,nvar)
 	if(nout.eq.0.and.nvar.eq.0)
      *	  call bug('f','Nothing to be done -- check inputs!')
-	if(nvar.ge.2*nvis)call bug('f','Too few correlations to fit')
+c
+c  Open the visibility file, and read all the data.
+c
+        if (nvar.gt.0) then
+	  call output('Reading the data ...')
+          nvis = 0
+	  dowhile(uvDatOpn(lIn))
+	    call uvDatRd(preamble,data,flags,MAXCHAN,nread)
+            dowhile(nread.ge.1)
+	      call uvinfo(lIn,'sfreq',sfreq)
+
+	      do i=1,nread
+	        if(flags(i))then
+	          nvis = nvis + 1
+	          if(nvis.gt.MAXVIS)call bug('f','Buffer overflow')
+	          u(nvis) = preamble(1)*sfreq(i)
+	          v(nvis) = preamble(2)*sfreq(i)
+	          vis(nvis) = data(i)
+		  freq(nvis) = sfreq(i)
+	        endif
+	      enddo
+	      call uvDatRd(preamble,data,flags,MAXCHAN,nread)
+	    enddo
+	    call uvDatCls
+	  enddo
+          if(nvis.le.0)call bug('f','No valid data found')
+          call output('Total number of correlations: '//itoaf(nvis))
+
+c
+c  Set the reference frequency
+c
+	  if (freqref .eq. 0.0) then
+	     freqref = freq(1)
+	  endif
+	  if(nvar.ge.2*nvis)call bug('f','Too few correlations to fit')
 c
 c  Call the least squares solver.
 c
-	if(nvar.gt.0)then
-	   write(line,24) nvar
- 24	   format('Performing the fitting process: ',i2,' params...')
+	  write(line,24) nvar
+ 24	  format('Performing the fitting process: ',i2,' params...')
 	  call output(line)
 	  call lsqfit(FUNCTION,2*nvis,nvar,x,covar,rms,ifail1,ifail2)
 	  call Upackpar(x,nvar)
@@ -259,17 +265,14 @@ c  Write out the results.
 c
 	iOut = 0
 	if (nout.gt.0) then
-c	if(out.ne.' ')then
 	   call output('Generating output file ...')
-	   call uvDatRew()
-	   call uvDatGta('ltype',ltype)
+	   call uvDatRew()  
 	   dowhile(uvDatOpn(lIn))
 	     iOut = iOut+1
 	     if (iOut.gt.nOut) then
 		call bug('f','Too few output files given')
 	     end if
-c	   if(.not.uvDatOpn(lIn))
-c     *	    call bug('f','Error opening input file')
+             if (iOut.eq.1) call uvDatGta('ltype',ltype) 
 	     call VarInit(lIn,ltype)
 c
 	     call uvopen(lOut,out(iOut),'new')
@@ -297,6 +300,7 @@ c
 		  u(i) = preamble(1) * sfreq(i)
 		  v(i) = preamble(2) * sfreq(i)
 	       enddo
+               if (freqref.eq.0) freqref=sfreq(1)
 	       if(dores)then
 		  call Eval(u,v,Model,nread)
 		  do i=1,nread
