@@ -586,8 +586,8 @@ c  Peak velocity and acceleration rates, in radians/sec, and radians/sec/sec.
 c  Also the critical time and distances in az and el.
 c
 	real azrate,elrate,acc,tcritaz,xcritaz,tcritel,xcritel
-	parameter(azrate=36./60.*pi/180.)
-	parameter(elrate=18./60.*pi/180.)
+	parameter(azrate=40./60.*pi/180.)
+	parameter(elrate=20./60.*pi/180.)
 	parameter(acc=400./60./60.*pi/180.)
 c
 	parameter(tcritaz = 2.*azrate/acc)
