@@ -83,8 +83,11 @@ c@ nxy
 c	Number of plots in the x and y directions. The default is
 c	determined from the number of plots that are requested.
 c@ log
-c	Log file into which the spectra are dumped in the order in which
-c	they are plotted.  Really only useful if your plot is quite simple.
+c	Log file into which the averaged data are dumped. If the option
+c       'uvhist' is specified, the log file will contain the bin values:
+c       uvdist val Np
+c       Otherwise, the log file will contain the spectral values and fit:
+c       freq fluxdensity fluxfit
 c@ fitp
 c       The coefficients of a fit that you would like this task to
 c       overplot onto the spectrum. The coefficients must relate to the
@@ -94,7 +97,7 @@ c@ feval
 c       A frequency (in GHz) at which to evaluate the fit, and output
 c       the flux density in Jy.
 c
-c$Id: uvfmeas.for,v 1.7 2013/10/03 04:44:24 ste616 Exp $
+c$Id: uvfmeas.for,v 1.8 2013/12/12 21:48:55 ste616 Exp $
 c--
 c  History:
 c    jbs  05jan12 Derived from uvspec.
@@ -147,8 +150,8 @@ c
 	character versan*80
 c-----------------------------------------------------------------------
 	version = versan ('uvfmeas',
-     :                    '$Revision: 1.7 $',
-     :                    '$Date: 2013/10/03 04:44:24 $')
+     :                    '$Revision: 1.8 $',
+     :                    '$Date: 2013/12/12 21:48:55 $')
 c
 c  Get the input parameters.
 c
@@ -919,7 +922,7 @@ c------------------------------------------------------------------------
 	real xranged(2),yranged(2),xoff,delta1,delta2
 	real xlen,ylen,xloc,size,linex(2),liney(2),dint
 	real qualat,qualt
-	integer k1,k2,bdn
+	integer k1,k2,bdn(nd)
 	real bda(nd),bdc(nd)
 c
 c  Externals.
@@ -979,12 +982,14 @@ c  Plot the fit if we've done it.
 	     call pgsls(1)
 	  endif
           if (logf.ne.' ') then
-  	    do j = 1, plot(i+1)-plot(i)
-	      write(line,'(1pe13.6,2x,1pe13.6,2x,1pe13.6)') 
-     *		xp(plot(i)+j-1),yp(plot(i)+j-1),fit(plot(i)+j-1)
- 	      call logwrit(line)
-            end do
-	  end if
+	     if (plotuv.eqv..false.) then
+		do j = 1, plot(i+1)-plot(i)
+		   write(line,'(1pe13.6,2x,1pe13.6,2x,1pe13.6)') 
+     *		    xp(plot(i)+j-1),yp(plot(i)+j-1),fit(plot(i)+j-1)
+		   call logwrit(line)
+		end do
+	     end if
+	  endif
 	enddo
 c  Plot any flux indicator lines.
 	do i=1,nflux
@@ -1106,16 +1111,16 @@ c
 	do j=1,nd
 	   bda(j)=0.
 	   bdc(j)=dint*(j-1)
-	   bdn=0
+	   bdn(j)=0
 	   do k=1,nuvd
 	      if (uvd(k).ge.(dint*(j-1)).and.
      *            uvd(k).lt.(dint*j)) then
 		 bda(j)=bda(j)+uva(k)
-		 bdn=bdn+1
+		 bdn(j)=bdn(j)+1
 	      endif
 	   enddo
-	   if (bdn.gt.0) then
-	      bda(j)=bda(j)/real(bdn)
+	   if (bdn(j).gt.0) then
+	      bda(j)=bda(j)/real(bdn(j))
 	   endif
 	   qualat=qualat+abs(bda(j))
 	   qualt=qualt+bda(j)
@@ -1132,6 +1137,13 @@ c	call output(line)
 	   call pgpt(nuvd,uvd,uva,-1)
 	   call pgsci(2)
 	   call pgbin(nd,bdc,bda,0)
+	   if (logf.ne.' ') then
+	      do j=1,nd
+		 write(line,'(1pe13.6,2x,1pe13.6,2x,i10)')
+     *            bdc(j),bda(j),bdn(j)
+		 call logwrit(line)
+	      enddo
+	   endif
 	   call pgsci(1)
 	   write(title,'(a,a,a)') 'Stokes ',pollab(1:lp),
      *       ' Calibrator Quality Measurement'
