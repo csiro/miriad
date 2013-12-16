@@ -47,6 +47,7 @@ c@ cycles
 c	Number of cycles to spend on-source at each source. Default is 2.
 c@ interval
 c	Integration cycle time. Default is 10 seconds.
+c       Optional second argument gives the drive settling time. Default 1.5 seconds.
 c@ origin
 c	The output mosaic file stores positions as an offset from
 c	some position. You have to give this value in your sched file.
@@ -74,7 +75,8 @@ c--
 c   History:
 c     rjs  31-dec-00 Get it to work for 1 source.
 c     rjs  20-dec-03 Get it to work for 2 sources!
-c     rjs  26-mar-05 options=fixed. More precision. Minor enhancements.
+c     rjs  26-mar-05 options=fixed. More precision. Minor enhancements.'
+c     mhw  16dec13  Fix slew rates, add drive settling time
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 	integer MAXSRC
@@ -86,7 +88,7 @@ c
 	character ssource*16
 	double precision ra(MAXSRC),dec(MAXSRC),lst,long
 	double precision ra0,dec0,raprev,decprev,raref,decref
-	real interval,dt,dra,ddec
+	real interval,dt,dra,ddec,drsettle
 	logical ok,doref,fixed,nolst
 c
 c  Externals.
@@ -101,6 +103,7 @@ c
 	call keyini
 	call keya('source',sfile,' ')
 	call keyr('interval',interval,10.)
+        call keyr('interval',drsettle,1.5)
 	call keyi('cycles',cycles,2)
 	call keya('out',out,'mosaic.mos')
 	nolst = .not.keyprsnt('lst')
@@ -160,7 +163,7 @@ c
 	else
 	  call output('Optimising the slew time ...')
 	  call sorter(source,ra,dec,nsrc,lst,interval,
-     *					cycles,ra0,dec0,indx)
+     *					cycles,ra0,dec0,drsettle,indx)
 	endif
 c
 c  Some comments.
@@ -179,7 +182,7 @@ c
 	decprev = dec0
 	do i=1,nsrc
 	  i0 = indx(i)
-	  call atdrive(raprev,decprev,ra(i0),dec(i0),lst,dt,ok)
+	  call atdrive(raprev,decprev,ra(i0),dec(i0),lst,dt,drsettle,ok)
 	  length = len1(source(i0))
 	  if(.not.ok)
      *	    call bug('f','Source is not up: '//source(i0)(1:length))
@@ -202,8 +205,8 @@ c
 c  Give messages to keep the user awake.
 c
 	  if(dt.gt.0)then
-	    write(line,'(a,i4,a)')'Drive time to '//
-     *	    source(i0)(1:length)//' is',nint(dt),' seconds'
+	    write(line,'(a,f6.1,a)')'Drive time to '//
+     *	    source(i0)(1:length)//' is',nint(dt*2)/2.0,' seconds'
 	    call output(line)
 	  endif
 	  lst = lst + ncycles*interval * 2*pi/(24.*3600.)*366.25/365.25
@@ -282,12 +285,12 @@ c
 	end
 c************************************************************************
 	subroutine sorter(source,ra,dec,nsrc,lst,interval,
-     *	  cycles,ra0,dec0,indx)
+     *	  cycles,ra0,dec0,drsettle,indx)
 c
 	implicit none
 	integer nsrc,cycles,indx(nsrc)
 	double precision ra(nsrc),dec(nsrc),lst,ra0,dec0
-	real interval
+	real interval,drsettle
 	character source(nsrc)*(*)
 c
 c  Sort the travelling salesman problem for a salesman slewing the ATCA
@@ -310,14 +313,14 @@ c
 c
 c  Get the feel for the rms drive time.
 c
-	E = tottime(ra,dec,nsrc,lst,interval,cycles,ra0,dec0)
+	E = tottime(ra,dec,nsrc,lst,interval,cycles,ra0,dec0,drsettle)
 	sume = E
 	sume2 = E**2
 	n = 1
 c
 	do i=1,NTRY
 	  call switcher(rand,.true.)
-	  E = tottime(ra,dec,nsrc,lst,interval,cycles,ra0,dec0)
+	  E = tottime(ra,dec,nsrc,lst,interval,cycles,ra0,dec0,drsettle)
 	  sume = sume + E
 	  sume2 = sume2 + E**2
 	  n = n + 1
@@ -340,7 +343,7 @@ c
 	dowhile(more)
 	  call switcher(rand,.true.)
 	  oldE = E
-	  E = tottime(ra,dec,nsrc,lst,interval,cycles,ra0,dec0)
+	  E = tottime(ra,dec,nsrc,lst,interval,cycles,ra0,dec0,drsettle)
 	  p = (oldE - E)/T
 	  if(p.lt.-20)then
 	    p = 0
@@ -493,12 +496,12 @@ c
 	end
 c************************************************************************
 	real function tottime(ra,dec,nsrc,lst,interval,
-     *	  cycles,ra0,dec0)
+     *	  cycles,ra0,dec0,drsettle)
 c
 	implicit none
 	integer nsrc
 	double precision ra(nsrc),dec(nsrc),lst,ra0,dec0
-	real interval
+	real interval,drsettle
 	integer cycles
 c
 c  Determine the total time for this configuration.
@@ -521,7 +524,8 @@ c
 	 ical0 = calidx(ical)
 	 do isrc=1,nscal(ical0)
 	  i1 = scalidx(isrc,ical0)
-	  call atdrive(raprev,decprev,ra(i1),dec(i1),lst0,dt,ok)
+	  call atdrive(raprev,decprev,ra(i1),dec(i1),lst0,dt,
+     *      drsettle,ok)
 	  if(.not.ok)then
 	    tottime = 100000.
 	    return
@@ -557,11 +561,11 @@ c
 	if(iostat.ne.0)call bugno('f',iostat)
 	end
 c************************************************************************
-	subroutine atdrive(ra1,dec1,ra2,dec2,lst,dt,ok)
+	subroutine atdrive(ra1,dec1,ra2,dec2,lst,dt,drsettle,ok)
 c
 	implicit none
 	double precision ra1,dec1,ra2,dec2,lst
-	real dt
+	real dt,drsettle
 	logical ok
 c
 c  Determine drive time between sources for the atca antennas.
@@ -633,6 +637,7 @@ c
 	  more = abs(max(dtaz,dtel) - dt).gt.1
 	  dt = max(dtaz,dtel)
 	enddo
+        dt=dt+drsettle
 c
 	end
 c************************************************************************
