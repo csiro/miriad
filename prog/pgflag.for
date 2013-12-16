@@ -41,7 +41,7 @@ c
 c     To act upon this selection, or the plot itself, the user
 c     should press one of the following keys while the cursor is
 c     inside the main plot area:
-c     aAbcCdfFgGhHjJkKlLmMnpPqrRsStTuvVwWxXzZ ,<.?;[]12=!@*
+c     aAbcCdDfFgGhHjJkKlLmMnpPqrRsStTuvVwWxXzZ ,<.?;[]12=!@*
 c
 c     Exiting PGFLAG:
 c       a                Abort the editing procedure and quit
@@ -201,6 +201,9 @@ c                        chans and 20 times centred on this sample.
 c       P                Display the current selection on the secondary
 c                        plot device as a spectrum. This command will
 c                        work only if device2 is specified.
+c       D                Dump the current page on to the tertiary plot
+c                        device. This command will only work if
+c                        device3 is specified.
 c
 c     Non interactive flagging:
 c     Using the command parameter and the flagpar parameters you can use
@@ -243,6 +246,9 @@ c@ device2
 c     PGPLOT plot device/type, which must be interactive. This optional
 c     plot device will be used to display spectra from the selected
 c     region, if requested.
+c@ device3
+c     PGPLOT plot device/type, which does not need to be interactive.
+c     This optional plot device is the destination for the D command.
 c@ mode
 c     Display ``amplitude'' or ``phase''. By default, ``amplitude''
 c     is selected. For mode=``phase'', the phase is in degrees.
@@ -309,7 +315,7 @@ c       nocal   Do not apply antenna gain calibration.
 c       nopass  Do not apply bandpass correction.
 c       nopol   Do not apply polarisation leakage correction.
 c
-c$Id: pgflag.for,v 1.25 2013/08/30 01:49:21 wie017 Exp $
+c$Id: pgflag.for,v 1.26 2013/12/16 04:48:03 ste616 Exp $
 c--
 c
 c  History:
@@ -399,7 +405,8 @@ c                 contains all the flagging that we have done, and that
 c                 can be used later to repeat the exact procedure.
 c                 The same stuff can be made into a human-readable
 c                 text log file.
-c    mhw 23Aug13  Add 'e' command for extension of flags
+c    mhw 23Aug13  Add 'e' command for extension of flags.
+c    jbs 16Dec13  Add hardcopy output option D.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mirconst.h'
@@ -411,8 +418,8 @@ c
 c
       character versan*72, version*72
       character device*80,xaxis*12,yaxis*12,uvflags*12,val*16
-      character device2*80
-      integer devicenum,device2num
+      character device2*80,device3*80
+      integer devicenum,device2num,device3num
       logical selgen,noapply
       integer npol,tno,i,j,length
 c
@@ -455,8 +462,8 @@ c
       logical uvDatOpn
 
       version = versan ('pgflag',
-     :                  '$Revision: 1.25 $',
-     :                  '$Date: 2013/08/30 01:49:21 $')
+     :                  '$Revision: 1.26 $',
+     :                  '$Date: 2013/12/16 04:48:03 $')
 
 c
 c Get user inputs
@@ -464,6 +471,7 @@ c
       call keyini
       call keya('device',device,' ')
       call keya('device2',device2,' ')
+      call keya('device3',device3,' ')
       call GetAxis(xaxis,yaxis)
       call keyr('flagpar',flagpar(1),7.0)
       call keyr('flagpar',flagpar(2),1.0)
@@ -516,12 +524,25 @@ c
               call bug('f','Unable to open PGPLOT device')
            endif
         endif
+        device3num=0
+        if (device3.ne.' ') then
+           device3num=pgopen(device3)
+           if (device3num.le.0) then
+              call pgldev
+              call bug('f', 'Unable to open PGPLOT device')
+           endif
+        endif
         call pgslct(devicenum)
         call pgqinf('CURSOR',val,length)
         if(val.eq.'NO')call bug('f','PGPLOT device is not interactive')
         call pgask(.false.)
         if (device2num.gt.0) then
            call pgslct(device2num)
+           call pgask(.false.)
+           call pgslct(devicenum)
+        endif
+        if (device3num.gt.0) then
+           call pgslct(device3num)
            call pgask(.false.)
            call pgslct(devicenum)
         endif
@@ -1276,6 +1297,29 @@ c     available
             call expand(memI(iFlg),t1,nchan,ntime,
      *                flagpar(7),chans,times,bases,flagval,
      *                MAXEDIT,nflags,cbl)
+         elseif (pressed(1:1).eq.'D') then
+            if (device3num.gt.0) then
+               write(*,*) 'Dumping current screen to file.'
+               call pgslct(device3num)
+               call pgpap(11.69,0.7074)
+               call pgpage()
+               plot_top=.true.
+               plot_average=.true.
+               plot_main=.true.
+               plot_points=.true.
+               call MakePlot(memI(iFlg),memR(iDat),t1,nchan,ntime,
+     *              cbl,curr_zooms,meas_channel,meas_freq,meas_time,
+     *              meas_amp,plot_top,plot_average,plot_main,points,
+     *              plot_points,yaxis,chanoff,chanw,subavgc,subavgt,
+     *              subbkgnd,datamin,datamax,fiddle_min,fiddle_max,
+     *              use_fiddle,colour_from_window,colour_from_region,
+     *              fiddle_active,flagpar)
+               call pgslct(devicenum)
+               plot_top=.false.
+               plot_average=.false.
+               plot_main=.false.
+               plot_points=.false.
+            endif
          elseif (pressed(1:1).eq.'T') then
             call output('Change SumThreshold parameters')
             write(promp,'(A,F4.1,A)') 
@@ -1535,6 +1579,10 @@ c
         call pgclos()
         if (device2num.gt.0) then
            call pgslct(device2num)
+           call pgclos()
+        endif
+        if (device3num.gt.0) then
+           call pgslct(device3num)
            call pgclos()
         endif
       endif
@@ -2632,7 +2680,7 @@ c-----------------------------------------------------------------------
       real xchrhgt,ychrhgt,chrhgt,req_ychrhgt,chrhgt_fraction
       real ylinespacing,xcolumnbuffer
       character meas_baseline*256
-      integer i,j
+      integer i,j,outscale
       logical acc,erasetop,setlims
       real curr_xpos,biggest_xworld,column_width,check_width,tmp
       real curr_ypos,tr(6)
@@ -2641,14 +2689,19 @@ c
 c     Setup the PGPLOT view area
 c
       call pgqvsz(3,vp_xmin,vp_xmax,vp_ymin,vp_ymax)
-      xleft=real(LEFT_MARGIN_PIXELS)/vp_xmax
-      xright=1.0-real(RIGHT_MARGIN_PIXELS)/vp_xmax
-      ybot=real(BOTTOM_MARGIN_PIXELS)/vp_ymax
-      ytop=1.0-real(TOP_MARGIN_PIXELS+Y_BUFFER_PIXELS)/vp_ymax
-      xbuffer=real(X_BUFFER_PIXELS)/vp_xmax
-      ybuffer=real(Y_BUFFER_PIXELS)/vp_ymax
-      arrowbox_frac_x=real(ARROWBOX_WIDTH_PIXELS)/vp_xmax
-      arrowbox_frac_y=real(ARROWBOX_WIDTH_PIXELS)/vp_ymax
+      outscale=1
+      if (vp_xmax.gt.5000) then
+         outscale=10
+      endif
+      xleft=real(LEFT_MARGIN_PIXELS*outscale)/vp_xmax
+      xright=1.0-real(RIGHT_MARGIN_PIXELS*outscale)/vp_xmax
+      ybot=real(BOTTOM_MARGIN_PIXELS*outscale)/vp_ymax
+      ytop=1.0-real((TOP_MARGIN_PIXELS+Y_BUFFER_PIXELS)*outscale)/
+     *  vp_ymax
+      xbuffer=real(X_BUFFER_PIXELS*outscale)/vp_xmax
+      ybuffer=real(Y_BUFFER_PIXELS*outscale)/vp_ymax
+      arrowbox_frac_x=real(ARROWBOX_WIDTH_PIXELS*outscale)/vp_xmax
+      arrowbox_frac_y=real(ARROWBOX_WIDTH_PIXELS*outscale)/vp_ymax
 c
 c     Print the top info
 c
@@ -2660,6 +2713,9 @@ c     Determine character height that will give six lines
 c     in the top section
 c
       call pgqcs(4,xchrhgt,ychrhgt)
+      if (ychrhgt.gt.100) then
+         ychrhgt = ychrhgt / 16.
+      endif
       call pgqch(chrhgt)
       req_ychrhgt=real(TOPBOX_WORLD_YRANGE)/real(n_toplines+1)
       chrhgt_fraction=req_ychrhgt/ychrhgt
@@ -2741,7 +2797,8 @@ c     get the column width
                colpos(i,j,1)=curr_xpos
                colpos(i,j,2)=curr_xpos+column_width
                biggest_xworld=max(colpos(i,j,2),biggest_xworld)
-               if (biggest_xworld .gt. (real(TOPBOX_WORLD_XRANGE)
+               if (biggest_xworld .gt.
+     *             (real(TOPBOX_WORLD_XRANGE)
      *           -xcolumnbuffer)) acc = .false.
                colpos(i,j,3)=curr_ypos
                if (i .eq. 1) then
@@ -2763,7 +2820,8 @@ c     string is left-justified
          enddo
          if (acc .eqv. .false.) then
 c     shrink the text a bit
-            chrhgt_fraction=(real(TOPBOX_WORLD_XRANGE)-xcolumnbuffer)/
+            chrhgt_fraction=(real(TOPBOX_WORLD_XRANGE)-
+     *        xcolumnbuffer)/
      *        biggest_xworld
             chrhgt=chrhgt*chrhgt_fraction
             call pgsch(chrhgt)
