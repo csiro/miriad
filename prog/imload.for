@@ -6,12 +6,13 @@ c& rjs
 c: image conversion, analysis.
 c+
 c	ImLoad reads in an image given as pixel values in an ascii file.
-c	You can put as many pixels per line as you like (upto MAXDIM;
-c	typically 2048) in the text file so that an image row can
-c	be on one line or straddle many lines.  The first row of pixels 
-c	read from the text file is the bottom row of the image.
+c       Lines should have no more than 256 characters, but a row of 
+c       pixels can span multiple lines in the file.
+c       The first row of pixels read from the text file is the bottom 
+c       row of the image.
 c@ in
 c	Text file containing the image pixel values. No default.
+c       Please split lines longer than 256 characters. 
 c@ imsize
 c	Image size. 1 to 3 values nx,ny,nz. Default ny=nx, and nz=1.
 c@ out
@@ -28,7 +29,7 @@ c    nebk  15nov93  DOc change
 c    nebk  03jun04  CHange an IMWRITE to IMLOAD
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='ImLoad: version  15-Nov-93')
+	parameter(version='ImLoad: version  19-Dec-2013')
 	character*64 image*64,out*64
 	integer lout,nsize(3)
 c
