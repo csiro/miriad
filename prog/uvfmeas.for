@@ -97,7 +97,7 @@ c@ feval
 c       A frequency (in GHz) at which to evaluate the fit, and output
 c       the flux density in Jy.
 c
-c$Id: uvfmeas.for,v 1.8 2013/12/12 21:48:55 ste616 Exp $
+c$Id: uvfmeas.for,v 1.9 2014/01/07 01:13:35 ste616 Exp $
 c--
 c  History:
 c    jbs  05jan12 Derived from uvspec.
@@ -150,8 +150,8 @@ c
 	character versan*80
 c-----------------------------------------------------------------------
 	version = versan ('uvfmeas',
-     :                    '$Revision: 1.8 $',
-     :                    '$Date: 2013/12/12 21:48:55 $')
+     :                    '$Revision: 1.9 $',
+     :                    '$Date: 2014/01/07 01:13:35 $')
 c
 c  Get the input parameters.
 c
@@ -1110,11 +1110,11 @@ c
 	qualt=0.0
 	do j=1,nd
 	   bda(j)=0.
-	   bdc(j)=dint*(j-1)
+	   bdc(j)=dint*(j-1)+xranged(1)
 	   bdn(j)=0
 	   do k=1,nuvd
-	      if (uvd(k).ge.(dint*(j-1)).and.
-     *            uvd(k).lt.(dint*j)) then
+	      if (uvd(k).ge.(dint*(j-1)+xranged(1)).and.
+     *            uvd(k).lt.(dint*j+xranged(1))) then
 		 bda(j)=bda(j)+uva(k)
 		 bdn(j)=bdn(j)+1
 	      endif
