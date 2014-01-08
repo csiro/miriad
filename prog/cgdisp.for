@@ -590,12 +590,13 @@ c       The OFFSET directive is not applied to ANY position fields in
 c       succeeding directives that have %OTYPEs that are "hms" or "dms".
 c       I am too lazy to code it.
 c
-c$Id: cgdisp.for,v 1.24 2013/09/12 23:51:21 wie017 Exp $
+c$Id: cgdisp.for,v 1.25 2014/01/08 00:57:53 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c    pjt   2013jul24  committed ptrdiff based alloc/free
 c    mhw   2013sep13  Add cubehelix colour scheme
+c    mhw   2014jan08  Fix circle overlay for non lat/long axes
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -663,8 +664,8 @@ c     Plotting parameters.
       data getvsc /.true./
 c-----------------------------------------------------------------------
       version = versan ('cgdisp',
-     *                  '$Revision: 1.24 $',
-     *                  '$Date: 2013/09/12 23:51:21 $')
+     *                  '$Revision: 1.25 $',
+     *                  '$Date: 2014/01/08 00:57:53 $')
 
 c     Get user inputs.
       call inputs(maxchan, MAXLEV, MAXCON, MAXTYP, ltypes, ncon, cin,
@@ -3602,8 +3603,8 @@ c         Some other axis types.  rho is measured from the x-axis.
 
           do j = 1, nVtx
             theta = dble(2*(j-1))*DD2R
-            x = rmaj * cos(phi)
-            y = rmin * sin(phi)
+            x = rmaj * cos(theta)
+            y = rmin * sin(theta)
             wIn(1) = wCen(1) + x*cosrho + y*sinrho
             wIn(2) = wCen(2) - x*sinrho + y*cosrho
 
