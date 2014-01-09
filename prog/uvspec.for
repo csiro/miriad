@@ -89,7 +89,7 @@ c@ log
 c	Log file into which the spectra are dumped in the order in which
 c	they are plotted.  Really only useful if your plot is quite simple.
 c
-c$Id: uvspec.for,v 1.11 2013/12/03 03:09:12 wie017 Exp $
+c$Id: uvspec.for,v 1.12 2014/01/09 00:50:40 wie017 Exp $
 c--
 c  History:
 c    rjs  18sep92 Derived from uvaver.
@@ -553,8 +553,10 @@ c
         dosdo   = index(ytitle,'SDO').gt.0
         donoise = ytitle(1:5).eq.'Noise'
         if(domnoise) ytitle = 'Noise in mean'
-        if (.not.dophase) ytitle=stcat(ytitle,' (Jy)')
-        if (dophase) ytitle=stcat(ytitle,' (deg)')
+        if (first) then
+          if (.not.dophase) ytitle=stcat(ytitle,' (Jy)')
+          if (dophase) ytitle=stcat(ytitle,' (deg)')
+        endif
 c
 c  Determine the number of good baselines.
 c
