@@ -383,8 +383,8 @@ c-----------------------------------------------------------------------
       integer MW
       parameter(MW=4)
       character version*(*)
-      parameter(version = 'Uvgen: $Revision: 1.7 $, '//
-     *  '$Date: 2013/09/24 23:21:13 $')
+      parameter(version = 'Uvgen: $Revision: 1.8 $, '//
+     *  '$Date: 2014/01/10 03:35:04 $')
       integer ALTAZ,EQUATOR,XYEW
       parameter(ALTAZ=0,EQUATOR=1,XYEW=3)
       integer PolRR,PolLL,PolRL,PolLR,PolXX,PolYY,PolXY,PolYX
@@ -616,7 +616,7 @@ c
 c  Check other things to simulate.
 c
       donoise = tsys.gt.0
-      dogains = arms.gt.0.or.prms.gt.0.or.patm.gt.0.
+      dogains = arms.gt.0.or.prms.gt.0.or.patm.gt.0.or.doband
       doleak = leakrms.gt.0
       doatm = patm.gt.0.
 
