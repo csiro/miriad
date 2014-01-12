@@ -97,7 +97,7 @@ c@ feval
 c       A frequency (in GHz) at which to evaluate the fit, and output
 c       the flux density in Jy.
 c
-c$Id: uvfmeas.for,v 1.9 2014/01/07 01:13:35 ste616 Exp $
+c$Id: uvfmeas.for,v 1.10 2014/01/12 02:09:13 ste616 Exp $
 c--
 c  History:
 c    jbs  05jan12 Derived from uvspec.
@@ -116,7 +116,7 @@ c
 	character line*132,PolCode*2,oline*132
 	logical nobase,avall,first,buffered,doflush,qfirst
 	logical doshift,subpoly,dolog,dovec,douv,dopfit,domachine
-	logical domfflux
+	logical domfflux,warnprint
 	double precision interval,T0,T1,preamble(5),shift(2),lmn(3)
 	double precision fluxr(MAXPOL,MAXCHAN),fluxi(MAXPOL,MAXCHAN)
 	double precision amp(MAXPOL,MAXCHAN),amp2(MAXPOL,MAXCHAN)
@@ -150,8 +150,8 @@ c
 	character versan*80
 c-----------------------------------------------------------------------
 	version = versan ('uvfmeas',
-     :                    '$Revision: 1.9 $',
-     :                    '$Date: 2014/01/07 01:13:35 $')
+     :                    '$Revision: 1.10 $',
+     :                    '$Date: 2014/01/12 02:09:13 $')
 c
 c  Get the input parameters.
 c
@@ -247,6 +247,7 @@ c
 	mnchan=0
 	nachan=0
 	nuvdist=1
+	warnprint=.false.
 c
 c  Open the input file(s).
 c
@@ -335,18 +336,25 @@ c
 		  u=preamble(1)/1000.0
 		  v=preamble(2)/1000.0
 		  if (douv) then
-		     uvdist(nuvdist)=real(sqrt(u*u+v*v)*txf(i)/txf(1))
-		     uvdistamp(nuvdist)=real(data(i))
-		     uvdistfreq(nuvdist)=real(txf(i))
-		     nuvdist=nuvdist+1
-		     if (nuvdist.ge.MAXPNT) then
-			call bug('f','Too many points!')
+		     if (nuvdist.lt.MAXPNT) then
+			uvdist(nuvdist)=real(sqrt(u*u+v*v)*
+     *                    txf(i)/txf(1))
+			uvdistamp(nuvdist)=real(data(i))
+			uvdistfreq(nuvdist)=real(txf(i))
+			nuvdist=nuvdist+1
+		     else if (warnprint.eqv..false.) then
+			write(oline,'(a,a)') 'Only a subset will be ',
+     *                   'plotted in uv histogram.'
+			call bug('w',oline)
+			warnprint=.true.
 		     endif
 		  endif
 	       endif
 	    enddo
 	    if (douv) then
-	       nuvdist=nuvdist-1
+	       if (nuvdist.le.MAXPNT) then
+		  nuvdist=nuvdist-1
+	       endif
 	    endif
 c
 c  Accumulate more data, if we are time averaging.
