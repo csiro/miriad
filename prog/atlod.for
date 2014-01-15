@@ -176,7 +176,7 @@ c       For concatenated spectra the width of a single zoom is used.
 c       Note that noise and artefacts go up quickly towards the band 
 c       edge so making this much smaller will not gain you much.
 c
-c$Id: atlod.for,v 1.46 2013/10/22 04:29:05 wie017 Exp $
+c$Id: atlod.for,v 1.47 2014/01/15 04:28:11 wie017 Exp $
 c--
 c
 c  Program Structure:
@@ -341,7 +341,7 @@ c    mhw  07dec12 Fix 29may12 opcor code again - how did it ever work?
 c    mhw  29jan13 Fix nscans skip and read code - RPEOF call hangs
 c    mhw  22oct13 Apply patches by vjm to fix some string overflows
 c
-c $Id: atlod.for,v 1.46 2013/10/22 04:29:05 wie017 Exp $
+c $Id: atlod.for,v 1.47 2014/01/15 04:28:11 wie017 Exp $
 c-----------------------------------------------------------------------
 
         integer MAXFILES,MAXTIMES,MAXSIM
@@ -362,8 +362,8 @@ c
         character itoaf*8, rperr*32, versan*72
 c-----------------------------------------------------------------------
       version = versan ('atlod',
-     :                  '$Revision: 1.46 $',
-     :                  '$Date: 2013/10/22 04:29:05 $')
+     :                  '$Revision: 1.47 $',
+     :                  '$Date: 2014/01/15 04:28:11 $')
 c
 c  Get the input parameters.
 c
@@ -2919,8 +2919,8 @@ c
 c
 c  Give summary about flagging.
 c
-        if(version.le.' ')version='unknown'
-        call liner('RPFITS file version is '//version)
+        if(rpfitsversion.le.' ')rpfitsversion='unknown'
+        call liner('RPFITS file version is '//rpfitsversion)
         call PokeStat(nrec,fgbad,fgoffsrc,fginvant,fgsysc,fgsam,fgcal)
 c
 c  We are done. Close up, and return the error code.
