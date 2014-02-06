@@ -89,7 +89,7 @@ c@ log
 c	Log file into which the spectra are dumped in the order in which
 c	they are plotted.  Really only useful if your plot is quite simple.
 c
-c$Id: uvspec.for,v 1.12 2014/01/09 00:50:40 wie017 Exp $
+c$Id: uvspec.for,v 1.13 2014/02/06 00:26:54 wie017 Exp $
 c--
 c  History:
 c    rjs  18sep92 Derived from uvaver.
@@ -126,6 +126,7 @@ c    mhw  21apr10 Fix axis label and plot accuracy issues for high res data
 c    mhw  07sep12 Add hdr option, useful for plotting rfi
 c    mhw  18nov13 Add noise, mnoise
 c    mhw  03dec13 Add units to Y axis
+c    mhw  06feb14 Fix bug in last change
 c  Bugs:
 c------------------------------------------------------------------------
 	include 'mirconst.h'
@@ -553,10 +554,6 @@ c
         dosdo   = index(ytitle,'SDO').gt.0
         donoise = ytitle(1:5).eq.'Noise'
         if(domnoise) ytitle = 'Noise in mean'
-        if (first) then
-          if (.not.dophase) ytitle=stcat(ytitle,' (Jy)')
-          if (dophase) ytitle=stcat(ytitle,' (deg)')
-        endif
 c
 c  Determine the number of good baselines.
 c
@@ -565,6 +562,10 @@ c
 	  if(cnt(j).gt.0)ngood = ngood + 1
 	enddo
 	if(ngood.le.0)return
+        if (first) then
+          if (.not.dophase) ytitle=stcat(ytitle,' (Jy)')
+          if (dophase) ytitle=stcat(ytitle,' (deg)')
+        endif
 c
 c  Initialise the plot device, if this is the first time through.
 c
