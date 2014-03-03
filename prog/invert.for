@@ -227,7 +227,7 @@ c       replaced with 0, or to be estimated by linear interpolation of
 c       two adjacent good channels.  See the Users Guide for the merits
 c       and evils of the two approaches.  The default is 'zero'.
 c
-c$Id: invert.for,v 1.19 2013/11/18 22:25:34 wie017 Exp $
+c$Id: invert.for,v 1.20 2014/03/03 04:49:43 wie017 Exp $
 c--
 c  History
 c    rjs        89  Initial version
@@ -361,6 +361,7 @@ c    mhw   07nov11  Add warning for uniform weighting and mfs
 c    mhw   17jan12  Handle larger files by using ptrdiff type more
 c    mhw   06mar12  Add fsystemp option
 c    mhw   03jun13  Add beam and res options to imsize and cellsize
+c    mhw   03mar14  Fix bug in theoretical rms for large datasets
 c  Bugs:
 c-----------------------------------------------------------------------
       include 'mirconst.h'
@@ -401,8 +402,8 @@ c
       data slops/'zero        ','interpolate '/
 c-----------------------------------------------------------------------
       version = versan ('invert',
-     :                  '$Revision: 1.19 $',
-     :                  '$Date: 2013/11/18 22:25:34 $')
+     :                  '$Revision: 1.20 $',
+     :                  '$Date: 2014/03/03 04:49:43 $')
 c
 c  Get the input parameters. Convert all angular things into
 c  radians as soon as possible!!
@@ -1172,14 +1173,15 @@ c-----------------------------------------------------------------------
       integer maxrun
       parameter(maxrun=8*MAXCHAN+8)
 c
-      real Wts(maxrun/(InData+2)),Vis(maxrun),logFreq0,Wt,SumWt,t
+      double precision SumWt,RMS2d
+      real Wts(maxrun/(InData+2)),Vis(maxrun),logFreq0,Wt,t
       integer i,j,k,l,size,step,n,u,v,offcorr,nbeam,ncorr,ipnt
       logical doshift
       ptrdiff offset
 c
 c  Miscellaneous initialisation.
 c
-      RMS2 = 0
+      RMS2d = 0
       SumWt = 0
       doshift = abs(lmn(1)) + abs(lmn(2)).gt.0
 c
@@ -1263,7 +1265,7 @@ c
           umax = max( umax, abs(Vis(k+InU)) )
           vmax = max( vmax, abs(Vis(k+InV)) )
           SumWt = SumWt + Wts(i)
-          RMS2 = RMS2 + Wts(i)*Wts(i)*Vis(k+InRms)
+          RMS2d = RMS2d + Wts(i)*Wts(i)*Vis(k+InRms)
           k = k + Size
         enddo
 c
@@ -1342,7 +1344,7 @@ c
 c  Finish up the RMS noise estimates.
 c
       if(SumWt.gt.0)then
-        RMS2 = sqrt(RMS2 / SumWt/SumWt )
+        RMS2 = sqrt(RMS2d / SumWt/SumWt )
       else
         RMS2 = 0
       endif
