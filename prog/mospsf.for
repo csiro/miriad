@@ -29,7 +29,7 @@ c       function.  The default is the reference frequency of the beam-
 c       cube.  The point-spread function is reasonably independent of
 c       frequency for most spectral line observations.
 c
-c$Id: mospsf.for,v 1.5 2013/08/30 01:49:21 wie017 Exp $
+c$Id: mospsf.for,v 1.6 2014/03/07 05:54:19 wie017 Exp $
 c--
 c
 c  History:
@@ -59,8 +59,8 @@ c-----------------------------------------------------------------------
       external  keyprsnt, versan
 c-----------------------------------------------------------------------
       version = versan('mospsf',
-     *                 '$Revision: 1.5 $',
-     *                 '$Date: 2013/08/30 01:49:21 $')
+     *                 '$Revision: 1.6 $',
+     *                 '$Date: 2014/03/07 05:54:19 $')
 
 c     Get the input parameters.
       call keyini
@@ -138,15 +138,16 @@ c-----------------------------------------------------------------------
 c  Write the header for the output image.
 c-----------------------------------------------------------------------
       character itoaf*2
+      integer iostat
       external  itoaf
 c-----------------------------------------------------------------------
 c     Make a verbatim copy of the input header.
       call headcp(tIn, tOut, 0, 0, 0, 0)
 
 c     Delete header parameters that shouldn't have been copied.
-      call hdelete(tIn, tOut, 'bmaj')
-      call hdelete(tIn, tOut, 'bmin')
-      call hdelete(tIn, tOut, 'bpa')
+      call hdelete(tOut, 'bmaj',iostat)
+      call hdelete(tOut, 'bmin',iostat)
+      call hdelete(tOut, 'bpa',iostat)
 
 c     Copy the mask (not done by headcp).
       call hdcopy(tIn, tOut, 'mask')
