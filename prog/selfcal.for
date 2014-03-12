@@ -99,7 +99,7 @@ c       the linetype parameters used to construct the map.  If you wish
 c       to override this, or if the info is not in the header, or if you
 c       are using a point source model, this parameter can be useful.
 c
-c$Id: selfcal.for,v 1.12 2013/08/30 01:49:21 wie017 Exp $
+c$Id: selfcal.for,v 1.13 2014/03/12 04:40:36 wie017 Exp $
 c--
 c
 c  History:
@@ -159,6 +159,7 @@ c    dpr  17apr01 Increase MaxMod to 128
 c    mhw  16jan12 Use ptrdiff for scr routines to handle larger files
 c    mhw  10apr13 Add nfbin parameter
 c    mhw  09may13 Add mmfs option
+c    mhw  12mar14 Initialize nchan in point source case
 c
 c  Bugs/Shortcomings:
 c   * Selfcal should check that the user is not mixing different
@@ -186,8 +187,8 @@ c     Externals.
       external  hdprsnt, header, versan
 c-----------------------------------------------------------------------
       version = versan('selfcal',
-     *                 '$Revision: 1.12 $',
-     *                 '$Date: 2013/08/30 01:49:21 $')
+     *                 '$Revision: 1.13 $',
+     *                 '$Date: 2014/03/12 04:40:36 $')
 c
 c  Get the input parameters.
 c
@@ -281,9 +282,9 @@ c
         call output('Reading the visibility file ...')
         call SelfSet(.true.,MinAnts)
         call SelApply(tvis,sels,.true.)
+        call getFreq(tvis,sfreq,numchan)
         call Model(flag2,tvis,0,offset,flux,tscr,
      *                        NHEAD,header,nchan,nvis)
-        call getFreq(tvis,sfreq,numchan)
         call SelfIni(nfbin)
         call output('Accumulating statistics ...')
         call SelfAcc(tscr,numchan,numchan,1,nvis,interval,sfreq)
