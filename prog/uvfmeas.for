@@ -97,7 +97,7 @@ c@ feval
 c       A frequency (in GHz) at which to evaluate the fit, and output
 c       the flux density in Jy.
 c
-c$Id: uvfmeas.for,v 1.10 2014/01/12 02:09:13 ste616 Exp $
+c$Id: uvfmeas.for,v 1.11 2014/03/14 00:26:22 wie017 Exp $
 c--
 c  History:
 c    jbs  05jan12 Derived from uvspec.
@@ -145,13 +145,14 @@ c
 c
 c  Externals.
 c
+        integer len1
 	logical uvDatOpn
 	character PolsC2P*2
 	character versan*80
 c-----------------------------------------------------------------------
 	version = versan ('uvfmeas',
-     :                    '$Revision: 1.10 $',
-     :                    '$Date: 2014/01/12 02:09:13 $')
+     :                    '$Revision: 1.11 $',
+     :                    '$Date: 2014/03/14 00:26:22 $')
 c
 c  Get the input parameters.
 c
@@ -503,14 +504,14 @@ c	   do j=1,mnchan
 		 write(line, '(a)') 'Coeff:'
 		 do j=1,poly+1
 		    oline=line
-		    write(line,'(a,1pe11.3)') oline(1:len_trim(oline)),
+		    write(line,'(a,1pe11.3)') oline(1:len1(oline)),
      *                 fitparams(j)
 		 enddo
 		 oline=line
 		 if (dolog) then
-		    write(line,'(a,a)') oline(1:len_trim(oline)),' log'
+		    write(line,'(a,a)') oline(1:len1(oline)),' log'
 		 else
-		    write(line,'(a,a)') oline(1:len_trim(oline)),' lin'
+		    write(line,'(a,a)') oline(1:len1(oline)),' lin'
 		 endif
 		 call output(line)
 	      endif
