@@ -81,8 +81,9 @@ c   29June12  mchw   use FWHM values measured in CARMA memo 52
 c   18sep12   mhw    Use input frequencies for pb model
 c   26sep13   mhw    Add new ATCA 16cm fits - test as ATCA16 
 c   11oct13   mhw    Update ATCA 16cm fits, add freq interpolation
+c   08apr14   mhw    Fix freq interpolation in OTF mode
 c
-c $Id: pb.for,v 1.16 2013/10/11 00:57:30 wie017 Exp $
+c $Id: pb.for,v 1.17 2014/04/08 04:55:22 wie017 Exp $
 c***********************************************************************
 c* pbList -- List known primary beam types.
 c& rjs
@@ -331,8 +332,11 @@ c-----------------------------------------------------------------------
       xn(pbObj)=x2c(1)
       yn(pbObj)=x2c(2)
       conv(pbObj)=.true.
-      if (pnt2(pbObj).gt.0) conv(pnt2(pbObj))=.true.
-
+      if (pnt2(pbObj).gt.0) then
+        xn(pnt2(pbObj))=x2c(1)
+        yn(pnt2(pbObj))=x2c(2)
+        conv(pnt2(pbObj))=.true.
+      endif
       end
 
 c***********************************************************************
@@ -991,8 +995,8 @@ c
      *                'Blocked aperture J1(x)/x form')
 c
 c  The new 16cm ATCA beam fits based on data collected by Jamie Stevens
-c  Fit (using data from x=0-50 cutoff at 0.06 level since first 'null'
-c only goes down to 0.055 around 2GHz. Non symmetric beyond first null.
+c  Fit (using data from x=0-50) cutoff at 0.06 level since first 'null'
+c  only goes down to 0.055 around 2GHz. Non symmetric beyond first null.
 c     
       fh = 1.204
       do i=1, 7
