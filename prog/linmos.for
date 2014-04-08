@@ -92,7 +92,7 @@ c                      when the fractional bandwidth is > 0.4 (this
 c                      is because higher orders are needed to model
 c                      the primary beam response with frequency).
 c
-c$Id: linmos.for,v 1.27 2013/11/22 03:34:49 wie017 Exp $
+c$Id: linmos.for,v 1.28 2014/04/08 04:56:17 wie017 Exp $
 c--
 c
 c  History:
@@ -145,6 +145,7 @@ c    mhw  23jan13 Handle 2nd plane (mfs I*alpha) in input
 c    mhw  03may13 Extension to previous and add options=frequency
 c    mhw  14oct13 Add alpha option
 c    mhw  15nov13 Add cutoff keyword
+c    mhw  08apr14 Fix cube/mfs detection
 c
 c  Bugs:
 c    * Blanked images are not handled when interpolation is necessary.
@@ -182,8 +183,8 @@ c-----------------------------------------------------------------------
       external  len1, versan
 c-----------------------------------------------------------------------
       version = versan ('linmos',
-     *                  '$Revision: 1.27 $',
-     *                  '$Date: 2013/11/22 03:34:49 $')
+     *                  '$Revision: 1.28 $',
+     *                  '$Date: 2014/04/08 04:56:17 $')
 
 c     Get and check inputs.
       call keyini
@@ -999,7 +1000,7 @@ c-----------------------------------------------------------------------
       integer   iax, k
       double precision cdelt(3,2), cdelt1(2), crpix(3,2), crval(3,2),
      *          discr, frq(2), lat(2), lng(2), x, y, z
-      character cax*1, ctype(3,2)*16, cunit*16
+      character cax*1, ctype(3,2)*16
 
       save cdelt, cdelt1, crpix, crval, ctype, doInit, frq, lat, lng
 
@@ -1010,8 +1011,6 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
       if (doInit) then
         k = 1
-        call rdhda(lIn, 'cunit3',cunit,' ')
-        cube = cube.or.cunit.ne.'GHz'
       else
         k = 2
       endif
@@ -1025,6 +1024,9 @@ c     Read the axis descriptors.
         call rdhda(lIn, 'ctype'//cax, ctype(iax,k), ' ')
       enddo
       
+      if (doInit) then
+        cube = cube .or. ctype(3,1)(1:4).ne.'FREQ'
+      endif
 
 c     Projection-plane coordinates of pixel (1,1,1).
       cdelt1(k) = cdelt(1,k) / cos(crval(2,k))
