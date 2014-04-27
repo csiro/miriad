@@ -33,11 +33,12 @@ c	a single planet or point source. See the help on ``select'' for more
 c	information. For planets, you may wish to select just the shortest
 c	spacing, where the planet is strongest.
 c@ flux
-c       Three numbers, giving the source flux density, a reference frequency
-c       (in GHz) and the source spectral index. The flux and spectral index
-c       are at the reference frequency. If no values are given, then MFBOOT
-c       checks whether the source is one of a set of known sources or a planet, 
-c       and uses the appropriate flux variation with frequency. 
+c       Three to five numbers, giving the source flux density, a reference 
+c       frequency (in GHz), the source spectral index and optionally two
+c       higher order terms. The flux and spectral index are at the reference 
+c       frequency. If no values are given, then MFBOOT checks whether the
+c       source is one of a set of known sources or a planet, and uses
+c       the appropriate flux variation with frequency. 
 c       MFBOOT has built-in models for a few calibrators as well as the
 c	planets - see calplot and plplt.
 c
@@ -81,7 +82,7 @@ c	  noapply Do not apply the scale factor - just evaluate it.
 c         nospec Do not try to determine and correct the spectral index across
 c                the band.
 c
-c$Id: mfboot.for,v 1.12 2013/08/30 01:49:21 wie017 Exp $
+c$Id: mfboot.for,v 1.13 2014/04/27 23:34:53 wie017 Exp $
 c--
 c  History:
 c    rjs     15jan06 Original version adapted from plboot.
@@ -92,6 +93,7 @@ c    mhw     07sep09 Use central frequency for planet parameters
 c    mhw     24mar10 Correct spectral index too
 c    mhw     16jun11 Fix triple mode spectral index correction
 c    mhw     27jun13 Fix nospec option
+c    mhw     24apr14 Allow higher order flux models
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*72
@@ -102,7 +104,7 @@ c
 	character psource*32
 	logical noapply,nospec
 	integer nvis,lVis,vsource,nchan,iplanet,i,n(2),nants
-	real fac,f(2),m(2),s,uflux(3),clip
+	real fac,f(2),m(2),s,uflux(5),clip
         real f0,f1,f2,fac1,fac2,alpha
 	double precision SumXX(2),SumXY(2),SumF(2),preamble(4),time0
 	complex data(MAXCHAN),d(2)
@@ -121,8 +123,8 @@ c
 	character streal*16, versan*72
         
         version = versan('mfboot',
-     *                   '$Revision: 1.12 $',  
-     *                   '$Date: 2013/08/30 01:49:21 $')
+     *                   '$Revision: 1.13 $',  
+     *                   '$Date: 2014/04/27 23:34:53 $')
 c
 c  Get the user input.
 c
@@ -133,6 +135,8 @@ c
 	call keyr('flux',uflux(1),0.0)
 	call keyr('flux',uflux(2),0.0)
 	call keyr('flux',uflux(3),0.0)
+	call keyr('flux',uflux(4),0.0)
+	call keyr('flux',uflux(5),0.0)
 	call keyr('clip',clip,0.0)
 	call getopt(mode,noapply,nospec)
 	call keyfin
@@ -377,7 +381,7 @@ c
 	character source*(*)
 	double precision time,uv(2)
 	integer iplanet
-	real uflux(3),clip
+	real uflux(5),clip
 c
 	complex d(2)
 	real m(2),f(2),s
@@ -388,7 +392,7 @@ c------------------------------------------------------------------------
 	double precision sfreq(MAXCHAN),cfreq
 	real model(MAXCHAN),pltbv(MAXCHAN)
 	integer i,ierr
-	real a,b,cospa,sinpa,bmaj,bmin,bpa,rms2
+	real a,b,cospa,sinpa,bmaj,bmin,bpa,rms2,lfr,alpha
         double precision sub(3),dist
 	logical ok
 	character line*80
@@ -413,7 +417,9 @@ c
 	if(iplanet.ne.0)then
 	  if(uflux(1).gt.0)then
             do i=1,nchan
-              pltbv(i) = uflux(1)*(sfreq(i)/cfreq)**uflux(3)
+              lfr = log(sfreq(i)/cfreq)
+              alpha = uflux(3) + lfr*(uflux(4)+lfr*uflux(5))
+              pltbv(i) = uflux(1)*(sfreq(i)/cfreq)**alpha
             enddo
 	  else
             do i=1,nchan
@@ -436,7 +442,9 @@ c
 	  ok = abs(model(1)).ge.abs(clip*a*sfreq(1)*sfreq(1)*0.5)
 	else if(uflux(1).gt.0)then
 	  do i=1,nchan
-	    model(i) = uflux(1)*(sfreq(i)/cfreq)**uflux(3)
+            lfr = log(sfreq(i)/cfreq)
+            alpha = uflux(3) + lfr*(uflux(4)+lfr*uflux(5))
+	    model(i) = uflux(1)*(sfreq(i)/cfreq)**alpha
 	  enddo
 	else
 	  call calstoke(source,'i',sfreq,model,nchan,ierr)

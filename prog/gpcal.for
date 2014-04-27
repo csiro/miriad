@@ -62,6 +62,10 @@ c       flux is determined by assuming that the rms gain amplitude is 1.
 c       If the option "qusolve" is used, the given fluxes for Q and U
 c       are used as the initial estimates.  Also see the "oldflux"
 c       option.
+c@ spec
+c       The reference frequency (GHz), spectral index and up to two  
+c       higher order terms. Only used if nfbin>1. The spectral index 
+c       terms default to zero.
 c@ refant
 c       The reference antenna.  Default is 3.  The reference antenna
 c       must be present throughout the observation.  Any solution
@@ -151,7 +155,7 @@ c                    solution for the observation already exists.  This
 c                    preliminary solution must be formed from a
 c                    calibrator with known Stokes-V.
 c
-c$Id: gpcal.for,v 1.17 2013/10/31 00:47:07 wie017 Exp $
+c$Id: gpcal.for,v 1.18 2014/04/27 23:34:53 wie017 Exp $
 c--
 c  History:
 c    rjs,nebk 1may91 Original version.
@@ -244,6 +248,7 @@ c    mhw     15feb11 Solve for leakage in frequency bins
 c    mhw     15oct12 Remove freq dep gains and leakages if nfbin=1
 c    mhw     24jan13 Avoid producing NaNs in the gains or leakages
 c    mhw     31oct13 Check nchan>=nfbin
+c    mhw     24apr14 Add spectral index terms
 c
 c  Miscellaneous notes:
 c ---------------------
@@ -278,10 +283,10 @@ c-----------------------------------------------------------------------
      *          vsolve, xyref, xysol, xyvary
       integer   i, j, k, jmax, maxsoln, minant, nants, nbl, niter, 
      *          nsoln, nxyphase, off, refant, tIn, nfbin, n, fbin
-      real      epsi, epsi1, fac, flux(4,0:MAXFBIN), 
-     *          oldFlux(4,0:MAXFBIN), pcent,
+      real      epsi, epsi1, fac, flux(4,0:MAXFBIN), alpha(3), al,
+     *          oldFlux(4,0:MAXFBIN), pcent, lfr,
      *          tol, ttol, xyphase(MAXANT)
-      double precision freq(0:MAXFBIN), interval(2)
+      double precision freq(0:MAXFBIN), interval(2),reffreq
       character line*80, source*32, uvflags*8, version*72
 
       logical present(MAXANT)
@@ -300,8 +305,8 @@ c-----------------------------------------------------------------------
       external  itoaf, keyprsnt, uvDatOpn
 c-----------------------------------------------------------------------
       version = versan('gpcal',
-     *                 '$Revision: 1.17 $',
-     *                 '$Date: 2013/10/31 00:47:07 $')
+     *                 '$Revision: 1.18 $',
+     *                 '$Date: 2014/04/27 23:34:53 $')
 c
 c  Get inputs.
 c
@@ -316,6 +321,10 @@ c
       call keyr('flux',flux(2,0),0.0)
       call keyr('flux',flux(3,0),0.0)
       call keyr('flux',flux(4,0),0.0)
+      call keyr('spec',reffreq,1.0)
+      call keyr('spec',alpha(1),0.0)
+      call keyr('spec',alpha(2),0.0)
+      call keyr('spec',alpha(3),0.0)
       call keyi('refant',refant,3)
       call keyi('minants',minant,2)
       call mkeyr('xyphase',xyphase,MAXANT,nxyphase)
@@ -338,6 +347,7 @@ c
         interval(1) = 1
         interval(2) = 1
       endif
+      if (reffreq.le.0) call bug('f','Invalid ref frequency')
       if (nfbin.le.1) nfbin=1
       if (nfbin.gt.MAXFBIN) then
         nfbin=MAXFBIN
@@ -439,6 +449,15 @@ c
           if (freq(fbin).gt.0.d0) 
      *      call getiquv(source,freq(fbin),oldflx,flux(1,fbin),defflux)
         enddo
+      else
+        do i=0,n
+          lfr = log(freq(i)/reffreq)
+          al = alpha(1)+lfr*(alpha(2)+lfr*alpha(3))
+          do j=1,4
+            flux(j,i) = flux(j,0)*(freq(i)/reffreq)**al
+          enddo
+        enddo
+        
       endif
 
       if (defflux .and. .not.qusolve) call bug('w',

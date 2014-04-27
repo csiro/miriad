@@ -30,14 +30,15 @@ c	value is 0.
 c@ select
 c	Standard uv selection. The default is to select all data.
 c@ flux
-c	Three numbers, giving the source flux density, a reference frequency
-c	(in GHz) and the source spectral index. The flux and spectral index
-c	are at the reference frequency. If no values are given, then MFCAL
-c	checks whether the source is one of a set of known sources, and uses the
-c	appropriate flux variation with frequency. Otherwise the default flux
-c	is determined so that the rms gain amplitude is 1, and the default
-c	spectral index is 0. The default reference frequency is the mean of
-c	the frequencies in the input data. Also see the `oldflux' option.
+c	Three to five numbers, giving the source flux density, a reference 
+c	frequency (in GHz) and the source spectral index parameters. 
+c       The flux and spectral index parameters are at the reference frequency.
+c	If no values are given, then MFCAL checks whether the source is one
+c	of a set of known sources, and uses the appropriate flux variation
+c	with frequency. Otherwise the default flux is determined so that 
+c	the rms gain amplitude is 1, and the default spectral index is 0.
+c	The default reference frequency is the mean of the frequencies in 
+c	the input data. Also see the `oldflux' option.
 c@ refant
 c	The reference antenna. Default is 3. The reference antenna needs
 c	to be present throughout the observation. Any solution intervals
@@ -81,7 +82,7 @@ c	            density scale. See the help on "oldflux" for more
 c	            information.
 c@ tol
 c	Solution convergence tolerance. Default is 0.001.
-c$Id: mfcal.for,v 1.14 2013/04/02 03:14:11 wie017 Exp $
+c$Id: mfcal.for,v 1.15 2014/04/27 23:34:53 wie017 Exp $
 c--
 c  History:
 c    rjs   8jul92 Original version.
@@ -130,6 +131,7 @@ c    mhw  14apr11 Fix hash function overflow by moving to double for VisId
 c                 Also use mem.h for dynamic memory
 c    vjm  24oct12 Tidy up text explaining the interval options.
 c    mhw  02apr13 Avoid producing NaNs when there are zeroes in the data
+c    mhw  24apr14 Allow higher order flux models
 c
 c  Problems:
 c    * Should do simple spectral index fit.
@@ -143,8 +145,8 @@ c------------------------------------------------------------------------
 	parameter(MAXSOLN=1024,MAXPOL=2)
 c
 	character version*(*)
-	parameter(version='MfCal: $Revision: 1.14 $, '//
-     *             '$Date: 2013/04/02 03:14:11 $')
+	parameter(version='MfCal: $Revision: 1.15 $, '//
+     *             '$Date: 2014/04/27 23:34:53 $')
 c
 	integer tno
 	integer pWGains,pFreq,pSource,pPass,pGains,pTau
@@ -155,7 +157,7 @@ c
 	integer npol,nants,nsoln,Count(MAXSOLN),nchan,refant,minant
         integer npsoln,Range(2,MAXSOLN)
 	integer niter,edge(2),PolMap(MAXPOL),pee(MAXPOL)
-	real flux(3),tol,epsi
+	real flux(5),tol,epsi
 	double precision freq0,sfreq(MAXSPECT),sdf(MAXSPECT)
 	double precision freqc(MAXSPECT)
 	double precision interval(3),time(MAXSOLN)
@@ -181,6 +183,8 @@ c
 	call keyr('flux',flux(1),1.0)
 	call keyr('flux',flux(2),0.0)
 	call keyr('flux',flux(3),0.0)
+	call keyr('flux',flux(4),0.0)
+	call keyr('flux',flux(5),0.0)
 	call keyi('edge',edge(1),0)
 	call keyi('edge',edge(2),edge(1))
 	call keyd('interval',interval(1),5.0d0)
@@ -1065,7 +1069,7 @@ c************************************************************************
 c
 	implicit none
 	integer nchan
-	real flux,alpha,sflux(nchan)
+	real flux,alpha(3),sflux(nchan)
 	double precision freq(nchan),freq0
 	logical defflux,oldflux
 	character Source*(*)
@@ -1087,6 +1091,7 @@ c    source	Flux of the source at each frequency.
 c------------------------------------------------------------------------
 	integer i,ierr
 	character umsg*64,src*16
+        real al,lfr
 c
 	ierr = 2
 	src = source
@@ -1102,13 +1107,15 @@ c
 	endif
 	if(defflux)call CalStoke(src,'i',freq,sflux,nchan,ierr)
 	if(ierr.eq.2)then
-	  if(alpha.eq.0)then
+	  if(alpha(1).eq.0.and.alpha(2).eq.0.and.alpha(3).eq.0)then
 	    do i=1,nchan
 	      sflux(i) = flux
 	    enddo
 	  else
 	    do i=1,nchan
-	      sflux(i) = flux * (freq(i)/freq0) ** alpha
+              lfr = log(freq(i)/freq0)
+              al = alpha(1)+lfr*(alpha(2)+lfr*alpha(3))
+	      sflux(i) = flux * (freq(i)/freq0) ** al
 	    enddo
 	  endif
 	else if(ierr.eq.1)then
