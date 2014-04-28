@@ -74,6 +74,9 @@ c                        another program.
 c          'mfflux'      Output the fit coefficients in a way that can be
 c                        input as the flux parameter in mfcal. Only really
 c                        works for order=1 (linear fit).
+c          'malpha'      Output the alpha coefficients on a single line,
+c                        separated by spaces, suitable for parsing by
+c                        another program.
 c@ yrange
 c	The min and max range along the y axis of the plots. The default
 c	is to autoscale.
@@ -97,7 +100,7 @@ c@ feval
 c       A frequency (in GHz) at which to evaluate the fit, and output
 c       the flux density in Jy.
 c
-c$Id: uvfmeas.for,v 1.11 2014/03/14 00:26:22 wie017 Exp $
+c$Id: uvfmeas.for,v 1.12 2014/04/28 04:38:27 ste616 Exp $
 c--
 c  History:
 c    jbs  05jan12 Derived from uvspec.
@@ -116,7 +119,7 @@ c
 	character line*132,PolCode*2,oline*132
 	logical nobase,avall,first,buffered,doflush,qfirst
 	logical doshift,subpoly,dolog,dovec,douv,dopfit,domachine
-	logical domfflux,warnprint
+	logical domfflux,warnprint,domalpha
 	double precision interval,T0,T1,preamble(5),shift(2),lmn(3)
 	double precision fluxr(MAXPOL,MAXCHAN),fluxi(MAXPOL,MAXCHAN)
 	double precision amp(MAXPOL,MAXCHAN),amp2(MAXPOL,MAXCHAN)
@@ -133,6 +136,7 @@ c
 	real uvdist(MAXPNT),uvdistamp(MAXPNT),uvdistfreq(MAXPNT)
 	real sexpect,qualn,qualp,plotfit(11),ufit(maxdim)
 	real fitdiffsum,plfitx(maxdim),evxp,evfx,polyeval,feval
+	real a1,a2,a3
 	double precision x(2*MAXCHAN-2),xf(2*MAXCHAN-2)
 	double precision xp(2*MAXCHAN-2),txf(2*MAXCHAN-2)
 	double precision mx(2*MAXCHAN-2)
@@ -151,15 +155,15 @@ c
 	character versan*80
 c-----------------------------------------------------------------------
 	version = versan ('uvfmeas',
-     :                    '$Revision: 1.11 $',
-     :                    '$Date: 2014/03/14 00:26:22 $')
+     :                    '$Revision: 1.12 $',
+     :                    '$Date: 2014/04/28 04:38:27 $')
 c
 c  Get the input parameters.
 c
 	call output(version)
 	call keyini
 	call GetOpt(uvflags,nobase,avall,dolog,dovec,douv,dopfit,
-     *              domachine,domfflux)
+     *              domachine,domfflux,domalpha)
 	call GetAxis(xaxis,yaxis)
 	call uvDatInp('vis',uvflags)
 	interval=99999.d0
@@ -520,12 +524,60 @@ c              Evaluate at the integer frequency closest to the first.
 		 evxp=float(int(xp(1)))
 		 if (dolog) then
 		    evxp=log10(evxp)
+		    evfx=polyeval(poly,dolog,evxp,fitparams)
+		    if (poly.le.3) then
+		       if (poly.eq.3) then
+			  a3 = fitparams(4)
+		       else
+			  a3 = 0.
+		       endif
+		       if (poly.ge.2) then
+			  a2 = fitparams(3)+3*fitparams(4)*evxp
+		       else
+			  a2 = 0.
+		       endif
+		       if (poly.ge.1) then
+			  a1 = fitparams(2)+2*fitparams(3)*evxp+
+     *                       3*fitparams(4)*evxp*evxp
+		       else
+			  a1 = 0.
+		       endif
+		       evxp=float(int(xp(1)))
+		       if (poly.eq.3) then
+			  write(line,
+     *                     '(a11,f7.4,a1,f5.1,a1,f7.4,a1,f7.4,a1,f7.4)')
+     *	                  'MFCAL flux=',evfx,',',evxp,',',a1,',',a2,',',
+     *                    a3
+			  write(oline,
+     *                     '(a,f7.4,a1,f7.4,a1,f7.4)')
+     *                     'Alpha: ',a1,' ',a2,' ',a3
+		       else
+			  if (poly.eq.2) then
+			     write(line,
+     *                     '(a11,f7.4,a1,f5.1,a1,f7.4,a1,f7.4)')
+     *	                  'MFCAL flux=',evfx,',',evxp,',',a1,',',a2
+			  write(oline,
+     *                     '(a,f7.4,a1,f7.4)')
+     *                     'Alpha: ',a1,' ',a2
+			  else
+			     write(line,
+     *                     '(a11,f7.4,a1,f5.1,a1,f7.4)')
+     *	                  'MFCAL flux=',evfx,',',evxp,',',a1
+			  write(oline,
+     *                     '(a,f7.4)')
+     *                     'Alpha: ',a1
+			  endif
+		       endif
+		       call output(line)
+		       if (domalpha.eqv..true.) then
+			  call output(oline)
+		       endif
+		    else
+		       call output('mfflux requires order <= 3')
+		    endif
+		 else
+		    call output('Must use log fitting for mfflux')
 		 endif
-		 evfx=polyeval(poly,dolog,evxp,fitparams)
-		 evxp=float(int(xp(1)))
-		 write(line,'(a11,f7.4,a1,f5.1,a1,f7.4)') 
-     *	           'MFCAL flux=',evfx,',',evxp,',',fitparams(2)
-		 call output(line)
 	      endif
 	      if (feval.gt.0.0) then
 		 evxp=feval
@@ -750,10 +802,11 @@ c
 	end
 c************************************************************************
 	subroutine GetOpt(uvflags,nobase,avall,dolog,dovec,douv,dopfit,
-     *                    domachine,domfflux)
+     *                    domachine,domfflux,domalpha)
 c
 	implicit none
         logical nobase,avall,dolog,dovec,douv,dopfit,domachine,domfflux
+	logical domalpha
 	character uvflags*(*)
 c
 c  Determine the flags to pass to the uvdat routines.
@@ -765,12 +818,12 @@ c    avall
 c    dolog
 c------------------------------------------------------------------------
 	integer nopts
-	parameter(nopts=9)
-	character opts(nopts)*9
+	parameter(nopts=10)
+	character opts(nopts)*10
 	logical present(nopts),docal,dopol,dopass
 	data opts/'nocal    ','nopol    ','nopass   ','log      ',
      *            'plotvec  ','uvhist   ','plotfit  ','machine  ',
-     *            'mfflux   '/
+     *            'mfflux   ','malpha   '/
 c
 	call options('options',opts,present,nopts)
 	docal = .not.present(1)
@@ -782,6 +835,13 @@ c
 	dopfit=present(7)
 	domachine=present(8)
 	domfflux=present(9)
+	domalpha=present(10)
+c
+c       malpha only makes sense with mfflux
+c
+	if (domalpha.eqv..true.) then
+	   domfflux = .true.
+	endif
 	nobase=.true.
 	avall=.true.
 	uvflags = 'dswl3'
