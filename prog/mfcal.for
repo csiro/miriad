@@ -82,7 +82,7 @@ c	            density scale. See the help on "oldflux" for more
 c	            information.
 c@ tol
 c	Solution convergence tolerance. Default is 0.001.
-c$Id: mfcal.for,v 1.15 2014/04/27 23:34:53 wie017 Exp $
+c$Id: mfcal.for,v 1.16 2014/04/29 00:50:17 ste616 Exp $
 c--
 c  History:
 c    rjs   8jul92 Original version.
@@ -145,8 +145,8 @@ c------------------------------------------------------------------------
 	parameter(MAXSOLN=1024,MAXPOL=2)
 c
 	character version*(*)
-	parameter(version='MfCal: $Revision: 1.15 $, '//
-     *             '$Date: 2014/04/27 23:34:53 $')
+	parameter(version='MfCal: $Revision: 1.16 $, '//
+     *             '$Date: 2014/04/29 00:50:17 $')
 c
 	integer tno
 	integer pWGains,pFreq,pSource,pPass,pGains,pTau
@@ -158,7 +158,7 @@ c
         integer npsoln,Range(2,MAXSOLN)
 	integer niter,edge(2),PolMap(MAXPOL),pee(MAXPOL)
 	real flux(5),tol,epsi
-	double precision freq0,sfreq(MAXSPECT),sdf(MAXSPECT)
+	double precision freq0,sfreq(MAXSPECT),sdf(MAXSPECT),mfreq0
 	double precision freqc(MAXSPECT)
 	double precision interval(3),time(MAXSOLN)
 	character line*64,uvflags*16,Source*64
@@ -281,8 +281,8 @@ c
 c
 c  Determine the reference frequency.
 c
-	freq0 = flux(2)
-	if(freq0.le.0)call AverFreq(nspect,nschan,sfreq,sdf,freq0)
+	mfreq0 = flux(2)
+	call AverFreq(nspect,nschan,sfreq,sdf,freq0)
 c
 c  Generate the frequencies for each channel in the total passband.
 c
@@ -294,7 +294,7 @@ c  Generate the source model.
 c
 	call MemAlloc(pSource,nchan,'r')
 	call SrcGen(Source,oldflux,defflux,
-     *	  MemR(pSource),nchan,MemD(pFreq),freq0,flux(1),flux(3))
+     *	  MemR(pSource),nchan,MemD(pFreq),mfreq0,flux(1),flux(3))
 c
 c  Now make the frequency relative to the reference frequency.
 c
