@@ -100,7 +100,7 @@ c@ feval
 c       A frequency (in GHz) at which to evaluate the fit, and output
 c       the flux density in Jy.
 c
-c$Id: uvfmeas.for,v 1.12 2014/04/28 04:38:27 ste616 Exp $
+c$Id: uvfmeas.for,v 1.13 2014/04/29 00:40:14 ste616 Exp $
 c--
 c  History:
 c    jbs  05jan12 Derived from uvspec.
@@ -155,8 +155,8 @@ c
 	character versan*80
 c-----------------------------------------------------------------------
 	version = versan ('uvfmeas',
-     :                    '$Revision: 1.12 $',
-     :                    '$Date: 2014/04/28 04:38:27 $')
+     :                    '$Revision: 1.13 $',
+     :                    '$Date: 2014/04/29 00:40:14 $')
 c
 c  Get the input parameters.
 c
@@ -525,20 +525,26 @@ c              Evaluate at the integer frequency closest to the first.
 		 if (dolog) then
 		    evxp=log10(evxp)
 		    evfx=polyeval(poly,dolog,evxp,fitparams)
+		    evxp = evxp / log10(exp(1.))
 		    if (poly.le.3) then
 		       if (poly.eq.3) then
-			  a3 = fitparams(4)
+			  a3 = fitparams(4)*log10(exp(1.))*
+     *                         log10(exp(1.))
 		       else
 			  a3 = 0.
 		       endif
 		       if (poly.ge.2) then
-			  a2 = fitparams(3)+3*fitparams(4)*evxp
+			  a2 = fitparams(3)*log10(exp(1.))+
+     *                         3*fitparams(4)*evxp*log10(exp(1.))*
+     *                         log10(exp(1.))
 		       else
 			  a2 = 0.
 		       endif
 		       if (poly.ge.1) then
-			  a1 = fitparams(2)+2*fitparams(3)*evxp+
-     *                       3*fitparams(4)*evxp*evxp
+			  a1 = fitparams(2)+2*fitparams(3)*evxp*
+     *                       log10(exp(1.))+
+     *                       3*fitparams(4)*evxp*evxp*log10(exp(1.))*
+     *                       log10(exp(1.))
 		       else
 			  a1 = 0.
 		       endif
