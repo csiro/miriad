@@ -315,7 +315,7 @@ c       nocal   Do not apply antenna gain calibration.
 c       nopass  Do not apply bandpass correction.
 c       nopol   Do not apply polarisation leakage correction.
 c
-c$Id: pgflag.for,v 1.26 2013/12/16 04:48:03 ste616 Exp $
+c$Id: pgflag.for,v 1.27 2014/04/30 01:21:30 wie017 Exp $
 c--
 c
 c  History:
@@ -407,6 +407,7 @@ c                 The same stuff can be made into a human-readable
 c                 text log file.
 c    mhw 23Aug13  Add 'e' command for extension of flags.
 c    jbs 16Dec13  Add hardcopy output option D.
+c    mhw 30Apr14  Make less verbose in nodisp mode
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mirconst.h'
@@ -452,7 +453,7 @@ c
       logical flagval(MAXEDIT),some_unflagged,scale_locked
       logical going_forward,going_backward,fiddle_active
       logical use_fiddle,keep_looping,colour_from_window
-      logical colour_from_region,max_makeregion,ok
+      logical colour_from_region,max_makeregion,ok,verbose
       real fiddle_min,fiddle_max,datamin,datamax,fiddlefraction
       real flagpar(7),level,result
 c
@@ -462,8 +463,8 @@ c
       logical uvDatOpn
 
       version = versan ('pgflag',
-     :                  '$Revision: 1.26 $',
-     :                  '$Date: 2013/12/16 04:48:03 $')
+     :                  '$Revision: 1.27 $',
+     :                  '$Date: 2014/04/30 01:21:30 $')
 
 c
 c Get user inputs
@@ -493,6 +494,7 @@ c
       endif
       logstats=.true.
       call GetOpt(selgen,noapply,nosrc,nodisp,genpatch,uvflags)
+      verbose = .not.nodisp
       if (command.eq.''.and.nodisp) call bug('f','Nothing to do')
       if (device.eq.' '.and..not.nodisp) 
      *   call bug('f','A PGPLOT device must be given')
@@ -1042,7 +1044,7 @@ c     plot value, on this baseline, or on all baselines
             region_width=0
             last_nflags=nflags
 	    call Thres(memR(iDat),memI(iFlg),nchan,ntime,chans,times,
-     *          bases,flagval,MAXEDIT,nflags,cbl,t1,-datamax,0)
+     *          bases,flagval,MAXEDIT,nflags,cbl,t1,-datamax,0,verbose)
             do_flag=.true.
             if (pressed(1:1).eq.'V') then
               do i=last_nflags+1,nflags
@@ -1262,7 +1264,7 @@ c     available
          elseif (pressed(1:1).eq.'<') then
             write(status,'(A,I3,1x,I3)') 
      *        'Do SumThreshold operation on baseline ',f_a1,f_a2
-            call output(status)
+            if (verbose) call output(status)
             needplot=.true.
             plot_main=.true.
             plot_points=.true.
@@ -1275,10 +1277,10 @@ c     available
      *          flagpar(2),flagpar(3))
 	      call Thres(memR(iDat),memI(iFlg),nchan,ntime,chans,times,
      *          bases,flagval,MAXEDIT,nflags,cbl,t1,level,
-     *          nint(flagpar(5)))
+     *          nint(flagpar(5)),verbose)
             enddo 
          elseif (pressed(1:1).eq.'b') then
-            if (nodisp) call output('Blow away the dust...')
+            if (verbose) call output('Blow away the dust...')
             needplot=.true.
             plot_main=.true.
             plot_points=.true.
@@ -1286,9 +1288,9 @@ c     available
             plot_top=.true.
             call dust(memI(iFlg),t1,nchan,ntime,
      *                nint(flagpar(6)),chans,times,bases,flagval,
-     *                MAXEDIT,nflags,cbl)
+     *                MAXEDIT,nflags,cbl,verbose)
          elseif (pressed(1:1).eq.'e') then
-            if (nodisp) call output('Extend flagged areas...')
+            if (verbose) call output('Extend flagged areas...')
             needplot=.true.
             plot_main=.true.
             plot_points=.true.
@@ -1296,7 +1298,7 @@ c     available
             plot_top=.true.
             call expand(memI(iFlg),t1,nchan,ntime,
      *                flagpar(7),chans,times,bases,flagval,
-     *                MAXEDIT,nflags,cbl)
+     *                MAXEDIT,nflags,cbl,verbose)
          elseif (pressed(1:1).eq.'D') then
             if (device3num.gt.0) then
                write(*,*) 'Dumping current screen to file.'
@@ -2161,7 +2163,8 @@ c
       end
 c***********************************************************************
       subroutine Thres(array,iflag,Nx,Ny,chans,times,bases,flagval,
-     *                 MAXEDIT,nflags,cbl,t1,cliplev,nThresholds)
+     *                 MAXEDIT,nflags,cbl,t1,cliplev,nThresholds,
+     *                 verbose)
       include 'maxdim.h'
 c
       integer Nx, Ny, cbl, nFlags, MAXEDIT
@@ -2170,7 +2173,7 @@ c
       integer iflag(Nx,Ny,2)
       integer nThresholds
       integer chans(2,MAXEDIT),times(2,MAXEDIT),bases(2,MAXEDIT)
-      logical flagval(MAXEDIT)
+      logical flagval(MAXEDIT),verbose
 c
 c  Apply a SumThreshold operation to the data.
 c  If cliplev<0, just do a clip operation.
@@ -2296,17 +2299,18 @@ c
         enddo
       enddo
       
-      call stats(iflag,Nx,Ny,t1,nflags, MAXEDIT)
+      call stats(iflag,Nx,Ny,t1,nflags, MAXEDIT,verbose)
 
       end
       
 c***********************************************************************
-      subroutine Stats(iflag,Nx,Ny,t1,nflags,MAXEDIT)
+      subroutine Stats(iflag,Nx,Ny,t1,nflags,MAXEDIT,verbose)
       include 'maxdim.h'
 c
       integer Nx, Ny, nflags, MAXEDIT
       real t1(Ny)
       integer iflag(Nx,Ny,2)
+      logical verbose
 c
 c  Display baseline flagging stats
 c
@@ -2331,7 +2335,7 @@ c
       if (tot.gt.0) then
         write(string,'(F5.1,A)')  (100.0*count)/tot,
      *         '% of the data on this baseline is now flagged'
-        call output(string)
+        if (verbose) call output(string)
       endif
       if (nflags.eq.MAXEDIT) then
         call output('Flagging exceeded max #flags')
@@ -3488,13 +3492,13 @@ c
       end
 c***********************************************************************
       subroutine dust(iflag,t1,xdim,ydim,minN,
-     *  chans,times,bases,flagval,MAXEDIT,nflags,cbl)
+     *  chans,times,bases,flagval,MAXEDIT,nflags,cbl,verbose)
 c
       integer xdim,ydim,iflag(xdim,ydim,2),minN
       integer cbl, nFlags, MAXEDIT
       real t1(ydim)
       integer chans(2,MAXEDIT),times(2,MAXEDIT),bases(2,MAXEDIT)
-      logical flagval(MAXEDIT)
+      logical flagval(MAXEDIT),verbose
 c
 c  Dust the array - flag all pixels with less than minN neighbours 
 c
@@ -3557,17 +3561,17 @@ c
 	  enddo
         enddo
       enddo
-      call stats(iflag,xdim,ydim,t1,nflags,MAXEDIT)
+      call stats(iflag,xdim,ydim,t1,nflags,MAXEDIT,verbose)
       end
 c***********************************************************************
       subroutine expand(iflag,t1,xdim,ydim,frac,
-     *  chans,times,bases,flagval,MAXEDIT,nflags,cbl)
+     *  chans,times,bases,flagval,MAXEDIT,nflags,cbl,verbose)
 c
       integer xdim,ydim,iflag(xdim,ydim,2)
       integer cbl, nFlags, MAXEDIT
       real t1(ydim),frac
       integer chans(2,MAXEDIT),times(2,MAXEDIT),bases(2,MAXEDIT)
-      logical flagval(MAXEDIT)
+      logical flagval(MAXEDIT),verbose
 c
 c  Expand the flagged areas by applying the Scale Invariant Rank operator
 c  to the array - flag pixels in all ranges where the 
@@ -3707,7 +3711,7 @@ c
           endif
         enddo
       enddo
-      call stats(iflag,xdim,ydim,t1,nflags,MAXEDIT)
+      call stats(iflag,xdim,ydim,t1,nflags,MAXEDIT,verbose)
       
       end
 c***********************************************************************
