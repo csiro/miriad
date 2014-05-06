@@ -22,8 +22,8 @@ c       CLEAN loop gain. The default is 0.1.
 c@ niters
 c       The maximum number of iterations. The default is 100.
 c@ cutoff
-c       Iterating stops if the maximum falls below this level.  The
-c       default is 0.
+c       Iterating stops if the absolute maximum residual falls below t
+c       his level.  The default is 0.
 c@ clip
 c       This sets the relative clip level.  Values are typically 0.75 to
 c       0.9.  The default is 0.9.
@@ -35,7 +35,7 @@ c       Extra processing options:
 c         positive   Constrain the deconvolved image to be positive
 c                    valued.
 c
-c$Id: mossdi.for,v 1.9 2013/08/30 01:49:21 wie017 Exp $
+c$Id: mossdi.for,v 1.10 2014/05/06 14:58:01 wie017 Exp $
 c--
 c  History:
 c    rjs 31oct94 - Original version.
@@ -72,8 +72,8 @@ c-----------------------------------------------------------------------
       external  itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('mossdi',
-     *                 '$Revision: 1.9 $',
-     *                 '$Date: 2013/08/30 01:49:21 $')
+     *                 '$Revision: 1.10 $',
+     *                 '$Date: 2014/05/06 14:58:01 $')
 c
 c  Get the input parameters.
 c
