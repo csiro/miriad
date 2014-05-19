@@ -102,7 +102,7 @@ c@ feval
 c       A frequency (in GHz) at which to evaluate the fit, and output
 c       the flux density in Jy.
 c
-c$Id: uvfmeas.for,v 1.14 2014/05/15 23:51:58 ste616 Exp $
+c$Id: uvfmeas.for,v 1.15 2014/05/19 05:46:29 ste616 Exp $
 c--
 c  History:
 c    jbs  05jan12 Derived from uvspec.
@@ -133,7 +133,7 @@ c
 	integer dnx,dny,tcm(2*MAXCHAN-2),polynpts
 	real yrange(2),temp,scalamp(MAXCHAN),scalscat(MAXCHAN)
 	real vecamp(MAXCHAN),vecpha(MAXCHAN),vecscat(MAXCHAN),sig2
-	real work2(4*maxdim),weight(maxdim),fit(maxdim),serr
+	real work2(4*maxdim),weight(maxdim),fit(maxdim),serr,rchisq
 	real xrange(2),yp(MAXCHAN),scalavga,vecavgs,scalavgs
 	real uvdist(MAXPNT),uvdistamp(MAXPNT),uvdistfreq(MAXPNT)
 	real sexpect,qualn,qualp,plotfit(11),ufit(maxdim)
@@ -157,8 +157,8 @@ c
 	character versan*80
 c-----------------------------------------------------------------------
 	version = versan ('uvfmeas',
-     :                    '$Revision: 1.14 $',
-     :                    '$Date: 2014/05/15 23:51:58 $')
+     :                    '$Revision: 1.15 $',
+     :                    '$Date: 2014/05/19 05:46:29 $')
 c
 c  Get the input parameters.
 c
@@ -475,8 +475,9 @@ c	   do j=1,mnchan
 	      if (chplot(j).eq.1.and.ncnt(ipol,j).gt.0) then
 		 nchan=nchan+1
 		 xp(nchan)=x(j)
+		 weight(nchan) = 1./rms2(ipol,j)
 		 if (dovec) then
-		    yp(nchan)=fluxr(i,j)
+		    yp(nchan)=fluxr(ipol,j)
 		 else
 		    yp(nchan)=scalamp(j)
 		 endif
@@ -487,7 +488,7 @@ c	   do j=1,mnchan
 	   nplts=1
 	   if (poly.gt.0) then
 	      call polyfit(poly,nchan,xp,work2,weight,yp,fit,serr,dolog,
-     *          fitparams,dopfit,plotfit,ufit,plfitx,polynpts)
+     *          fitparams,dopfit,plotfit,ufit,plfitx,polynpts,rchisq)
 	      if (dovec) then
 		 call output('Vector Average Fit Coefficients:')
 	      else
@@ -601,6 +602,8 @@ c              Evaluate at the integer frequency closest to the first.
 		 call output(line)
 	      endif
 	      write(line,'(a,1pe11.3)') 'Scatter around fit: ',serr
+	      call output(line)
+	      write(line,'(a,1pe11.3)') 'Reduced chi squared: ', rchisq
 	      call output(line)
 c
 c       Form the normalised residuals.
@@ -1327,12 +1330,12 @@ c	call pghist(nuvd,uva,yranged(1),yranged(2),100,0)
 c***********************************************************************
 	subroutine polyfit(poly,nchan,value,work2,weight,
      *                     spec,fit,serr,dolog,fitparams,
-     *                     dopfit,ufitparams,ufit,plfitx,npts)
+     *                     dopfit,ufitparams,ufit,plfitx,npts,rchisq)
 
 	integer nchan,poly,npts
 	real spec(*),fit(*),work2(*),weight(*),serr,ufit(*)
 	double precision value(*)
-	real fitparams(*),ufitparams(*),plfitx(*),polyeval
+	real fitparams(*),ufitparams(*),plfitx(*),polyeval,rchisq
 	logical dolog,dopfit
 c-----------------------------------------------------------------------
 c     Polynomial fit of spectrum
@@ -1354,7 +1357,7 @@ c-----------------------------------------------------------------------
 	real clip
 	integer i,j,ifail,niter,sn
 	double precision dfit
-	real coef(11),test2,work3(24),rvalue(nchan)
+	real coef(11),test2,test3,work3(24),rvalue(nchan)
 	real rspec(nchan),d(nchan),ss,sa,minx,maxx,tx
 	logical hasneg
 c	character line*80
@@ -1368,7 +1371,7 @@ c  Clip level (sigma)
 c  Apply mask and check for negative numbers.
 	hasneg=.FALSE.
 	do i = 1, nchan
-	   weight(i)=1.0
+c	   weight(i)=1.0
 	   if (spec(i).le.0.) then
 	      hasneg=.TRUE.
 	   endif
@@ -1427,20 +1430,14 @@ c  Polynomial fit
 	endif
 	if (ifail.ne.0) call bug('f', 'Clipped polynomial fit error')
 c
-c  RMS error corrected for dof (trap zero divides)
-c
-	if (npts.eq.11 .and. poly.eq.10) then
-	   serr=0.0
-	else
-	   serr=test2/sqrt(real(npts-poly-1))
-	endif
-c
 c  Evaluate polynomial
 c
+	test3=0.0
 	do i = 1, nchan
 	   d(i)=0.0
 	   dfit=dble(coef(1))
 	   fit(i)=polyeval(poly,dolog,rvalue(i),coef)
+	   test3=test3+(weight(i)**2)*(spec(i)-fit(i))**2
 	   if (dopfit) then
 	      ufit(i)=polyeval(9,dolog,rvalue(i),ufitparams)
 	   endif
@@ -1455,6 +1452,16 @@ c
 	      d(i)=real(dble(spec(i))-10**dfit)
 	   endif
 	enddo
+c
+c  RMS error corrected for dof (trap zero divides)
+c
+	if (npts.eq.11 .and. poly.eq.10) then
+	   rchisq=0.0
+	   serr=0.0
+	else
+	   serr=test2/sqrt(real(npts-poly-1))
+	   rchisq=test3/real(npts-poly-1)
+	endif
 
 c  sigma clip
 	if (dolog) then
