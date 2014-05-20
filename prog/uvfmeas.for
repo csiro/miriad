@@ -102,7 +102,7 @@ c@ feval
 c       A frequency (in GHz) at which to evaluate the fit, and output
 c       the flux density in Jy.
 c
-c$Id: uvfmeas.for,v 1.15 2014/05/19 05:46:29 ste616 Exp $
+c$Id: uvfmeas.for,v 1.16 2014/05/20 23:34:33 ste616 Exp $
 c--
 c  History:
 c    jbs  05jan12 Derived from uvspec.
@@ -157,8 +157,8 @@ c
 	character versan*80
 c-----------------------------------------------------------------------
 	version = versan ('uvfmeas',
-     :                    '$Revision: 1.15 $',
-     :                    '$Date: 2014/05/19 05:46:29 $')
+     :                    '$Revision: 1.16 $',
+     :                    '$Date: 2014/05/20 23:34:33 $')
 c
 c  Get the input parameters.
 c
@@ -488,7 +488,8 @@ c	   do j=1,mnchan
 	   nplts=1
 	   if (poly.gt.0) then
 	      call polyfit(poly,nchan,xp,work2,weight,yp,fit,serr,dolog,
-     *          fitparams,dopfit,plotfit,ufit,plfitx,polynpts,rchisq)
+     *          fitparams,dopfit,plotfit,ufit,plfitx,polynpts,rchisq,
+     *          PolCode)
 	      if (dovec) then
 		 call output('Vector Average Fit Coefficients:')
 	      else
@@ -1330,13 +1331,15 @@ c	call pghist(nuvd,uva,yranged(1),yranged(2),100,0)
 c***********************************************************************
 	subroutine polyfit(poly,nchan,value,work2,weight,
      *                     spec,fit,serr,dolog,fitparams,
-     *                     dopfit,ufitparams,ufit,plfitx,npts,rchisq)
+     *                     dopfit,ufitparams,ufit,plfitx,npts,rchisq,
+     *                     PolCode)
 
 	integer nchan,poly,npts
 	real spec(*),fit(*),work2(*),weight(*),serr,ufit(*)
 	double precision value(*)
 	real fitparams(*),ufitparams(*),plfitx(*),polyeval,rchisq
 	logical dolog,dopfit
+	character PolCode*2
 c-----------------------------------------------------------------------
 c     Polynomial fit of spectrum
 c
@@ -1373,7 +1376,11 @@ c  Apply mask and check for negative numbers.
 	do i = 1, nchan
 c	   weight(i)=1.0
 	   if (spec(i).le.0.) then
-	      hasneg=.TRUE.
+	      if (PolCode.eq.'I') then
+		 weight(i)=0.0
+	      else
+		 hasneg=.TRUE.
+	      endif
 	   endif
 	enddo
 	if (hasneg.and.dolog) then
@@ -1408,7 +1415,7 @@ c  Polynomial fit
 	      do i=1,nchan
 		 rvalue(i)=real(value(i))
 		 rspec(i)=spec(i)
-		 if (dolog) then
+		 if (dolog.and.weight(i).gt.0.0) then
 		    rvalue(i)=log10(rvalue(i))
 		    rspec(i)=log10(spec(i))
 		 endif
@@ -1437,7 +1444,9 @@ c
 	   d(i)=0.0
 	   dfit=dble(coef(1))
 	   fit(i)=polyeval(poly,dolog,rvalue(i),coef)
-	   test3=test3+(weight(i)**2)*(spec(i)-fit(i))**2
+	   if (weight(i).gt.0.0) then
+	      test3=test3+(weight(i)**2)*(spec(i)-fit(i))**2
+	   endif
 	   if (dopfit) then
 	      ufit(i)=polyeval(9,dolog,rvalue(i),ufitparams)
 	   endif
