@@ -383,8 +383,8 @@ c-----------------------------------------------------------------------
       integer MW
       parameter(MW=4)
       character version*(*)
-      parameter(version = 'Uvgen: $Revision: 1.8 $, '//
-     *  '$Date: 2014/01/10 03:35:04 $')
+      parameter(version = 'Uvgen: $Revision: 1.9 $, '//
+     *  '$Date: 2014/05/21 04:34:59 $')
       integer ALTAZ,EQUATOR,XYEW
       parameter(ALTAZ=0,EQUATOR=1,XYEW=3)
       integer PolRR,PolLL,PolRL,PolLR,PolXX,PolYY,PolXY,PolYX
@@ -1671,6 +1671,7 @@ c
 c  Outputs via the uvgencom common.
 c-----------------------------------------------------------------------
       integer i
+      include 'maxdim.h'
       include 'uvgen.h'
 c
 c  Determine down-conversion chain characteristics.

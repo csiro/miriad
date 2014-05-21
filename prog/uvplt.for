@@ -239,7 +239,7 @@ c       The output logfile name. The default is the terminal.
 c@ comment
 c       A one line comment which is written into the logfile.
 c
-c$Id: uvplt.for,v 1.17 2013/12/03 03:09:12 wie017 Exp $
+c$Id: uvplt.for,v 1.18 2014/05/21 04:34:59 wie017 Exp $
 c--
 c
 c  History:
@@ -330,7 +330,7 @@ c Plotting pointers, dimensions and masks
 c
       integer polmsk(-8:4), basmsk(maxbase)
       integer nfiles, npols, nbases, pl1dim, pl2dim, pl3dim,
-     *  pl4dim, maxpnt, xo, yo, elo(2), eho(2), plfidx, pidx,
+     *  pl4dim, maxpnts, xo, yo, elo(2), eho(2), plfidx, pidx,
      *  plbidx, stbidx
 c
 c Plot counters
@@ -371,8 +371,8 @@ c
       data polmsk /13*0/
 c-----------------------------------------------------------------------
       version = versan ('uvplt',
-     *                  '$Revision: 1.17 $',
-     *                  '$Date: 2013/12/03 03:09:12 $')
+     *                  '$Revision: 1.18 $',
+     *                  '$Date: 2014/05/21 04:34:59 $')
 c
 c  Get the parameters given by the user and check them for blunders
 c
@@ -414,7 +414,7 @@ c is in the file.
 c
       call chopup(twopass, maxbuf2, maxbase, maxbase2, maxpol, maxfile,
      *   nfiles, npols, nbases, dobase, doavall, dosymb, docol, dorms,
-     *   pl1dim, pl2dim, pl3dim, pl4dim, maxpnt, xo, yo, elo, eho)
+     *   pl1dim, pl2dim, pl3dim, pl4dim, maxpnts, xo, yo, elo, eho)
 c
 c  Initialize counters  and accumulators
 c
@@ -484,7 +484,7 @@ c
      *            ifile.ne.1) jfile = jfile - 1
               call avdump(dorms, dovec, dobase, dodoub, doavall,
      *           nbases, npols, pl1dim, pl2dim, pl3dim, pl4dim,
-     *           maxpnt, maxbase, maxpol, maxfile, buffer(ip),
+     *           maxpnts, maxbase, maxpol, maxfile, buffer(ip),
      *           npts, xo, yo, elo, eho, xaxis, xrtest, xmin, xmax,
      *           yaxis, yrtest, ymin, ymax, nsum, xsumr, xsumsqr, xsumi,
      *           xsumsqi, ysumr, ysumsqr, ysumi, ysumsqi, xave, yave,
@@ -607,7 +607,7 @@ c
 c
 c Put points into plot buffer
 c
-                  if (npts(plbidx,pidx,plfidx).lt.maxpnt) then
+                  if (npts(plbidx,pidx,plfidx).lt.maxpnts) then
                     call bufput(false, pl1dim, pl2dim, pl3dim, pl4dim,
      *                 maxbase, maxpol, maxfile, plbidx, pidx, plfidx,
      *                 xrtest, yrtest, xmin, xmax, ymin, ymax, xvalr,
@@ -616,7 +616,7 @@ c
 c
 c Add -u and -v if requested
 c
-                    if (npts(plbidx,pidx,plfidx).lt.maxpnt .and.
+                    if (npts(plbidx,pidx,plfidx).lt.maxpnts .and.
      *                  dodoub) then
                       if (xaxis.eq.'uc' .or. xaxis.eq.'vc')
      *                   xvalr = -xvalr
@@ -639,7 +639,7 @@ c See if we have filled up ALL of the allocated plot buffer for this
 c file and go on to the next file if plotting files with different
 c symbols
 c
-900       call fullup(maxbase, pl2dim, pl3dim, pl4dim, maxpnt, maxpol,
+900       call fullup(maxbase, pl2dim, pl3dim, pl4dim, maxpnts, maxpol,
      *                 npts(1,1,plfidx), ifile, allfull)
 c
 c Read next visibility
@@ -652,7 +652,7 @@ c Issue a message if any (but not all) of the baseline/polarization
 c plot buffers were filled up and close the current file
 c
         if (.not.allfull)
-     *    call pntful(dobase, pl2dim, pl3dim, pl4dim, maxpnt, maxbase,
+     *    call pntful(dobase, pl2dim, pl3dim, pl4dim, maxpnts, maxbase,
      *       maxpol, maxfile, ifile, plfidx, a1a2, npts)
         call uvdatcls
 c
@@ -661,7 +661,7 @@ c so can get correct numbers for TELLUSE
 c
       if (doave .and. ifile.eq.nfiles .and. .not.allfull)
      *  call avdump(dorms, dovec, dobase, dodoub, doavall, nbases,
-     *     npols, pl1dim, pl2dim, pl3dim, pl4dim, maxpnt, maxbase,
+     *     npols, pl1dim, pl2dim, pl3dim, pl4dim, maxpnts, maxbase,
      *     maxpol, maxfile, buffer(ip), npts, xo, yo, elo, eho,
      *     xaxis, xrtest, xmin, xmax, yaxis, yrtest, ymin, ymax,
      *     nsum, xsumr, xsumsqr, xsumi, xsumsqi, ysumr, ysumsqr, ysumi,
@@ -820,7 +820,7 @@ c-----------------------------------------------------------------------
 ************************************************************************
 
       subroutine avdump (dorms, dovec, dobase, dodoub, doavall, nbases,
-     *   npols, pl1dim, pl2dim, pl3dim, pl4dim, maxpnt, maxbase,
+     *   npols, pl1dim, pl2dim, pl3dim, pl4dim, maxpnts, maxbase,
      *   maxpol, maxfile, buffer, npts, xo, yo, elo, eho, xaxis,
      *   xrtest, xmin, xmax, yaxis, yrtest, ymin, ymax, nsum, xsumr,
      *   xsumsqr, xsumi, xsumsqi, ysumr, ysumsqr, ysumi, ysumsqi,
@@ -840,7 +840,7 @@ c    doavall       Everything on subplot averaged together
 c    nbases        Number of baselines encountered in file so far
 c    npols         Number of polarizations encountered in fiel so far
 c    pl*dim        * = 1-> 4.  DImensions of  BUFFER
-c    maxpnt        Maximum number of points allowed per allocated
+c    maxpnts        Maximum number of points allowed per allocated
 c                  baseline, polarization and file.
 c
 c    maxbase       Size of first dimension of statistics arrays
@@ -892,7 +892,7 @@ c-----------------------------------------------------------------------
      *  xave(maxbase,maxpol), yave(maxbase,maxpol),
      *  xsig(maxbase,maxpol), ysig(maxbase,maxpol)
 
-      integer xo, yo, elo(2), eho(2), inc, plfidx, maxpnt
+      integer xo, yo, elo(2), eho(2), inc, plfidx, maxpnts
       real xmin, xmax, ymin, ymax
       character xaxis*(*), yaxis*(*)
 cc
@@ -925,7 +925,7 @@ c
             plbidx = i
             if (.not.dobase) plbidx = 1
 
-            if (npts(plbidx,j,plfidx).lt.maxpnt) then
+            if (npts(plbidx,j,plfidx).lt.maxpnts) then
               call bufput(dorms, pl1dim, pl2dim, pl3dim, pl4dim,
      *           maxbase, maxpol, maxfile, plbidx, j, plfidx,
      *           xrtest, yrtest, xmin, xmax, ymin, ymax, xave(i,j),
@@ -934,7 +934,7 @@ c
 c
 c User may want -u and/or -v as well.
 c
-              if (npts(plbidx,j,plfidx).lt.maxpnt .and.
+              if (npts(plbidx,j,plfidx).lt.maxpnts .and.
      *            dodoub) then
                 if (xaxis.eq.'uc' .or. xaxis.eq.'vc')
      *            xave(i,j) = -xave(i,j)
@@ -1442,7 +1442,7 @@ c
 
       subroutine chopup (twopass, maxbuf2, maxbase, maxbase2, maxpol,
      *   maxfile, nfiles, npols, nbases, dobase, doavall, dosymb,
-     *   docol, dorms,pl1dim, pl2dim, pl3dim, pl4dim, maxpnt,
+     *   docol, dorms,pl1dim, pl2dim, pl3dim, pl4dim, maxpnts,
      *   xo, yo, elo, eho)
 c-----------------------------------------------------------------------
 c     Chop up the allocated memory. Allow for error bars, as well as
@@ -1482,7 +1482,7 @@ c  Output:
 c               The plot buffer is dimensioned
 c                 buffer(pl1dim,pl2dim,pl3dim,pl4dim)
 c                        points  basel  pol    files
-c    maxpnt     Maximum number of points allowed to plot for each
+c    maxpnts     Maximum number of points allowed to plot for each
 c               baseline, polarization and file
 c    pl1dim     Dimensions of first index in BUFFER when passed to
 c               subroutines.  First dimension contains:
@@ -1501,7 +1501,7 @@ c
 c-----------------------------------------------------------------------
       integer maxbuf2, maxbase, maxbase2, maxpol, maxfile
       integer nfiles, npols, nbases, pl1dim, pl2dim, pl3dim, pl4dim,
-     *maxpnt, xo, yo, elo(2), eho(2)
+     *maxpnts, xo, yo, elo(2), eho(2)
       logical dobase, doavall, dosymb, docol, dorms(2), twopass
 cc
       integer nbuf, off
@@ -1566,18 +1566,18 @@ c
 c Compute maximum number of points allowed to plot for each
 c baseline, polarization and file
 c
-      maxpnt = maxbuf2 / (nbuf * pl2dim * pl3dim * pl4dim)
-      if (maxpnt.lt.1) call bug('f',
+      maxpnts = maxbuf2 / (nbuf * pl2dim * pl3dim * pl4dim)
+      if (maxpnts.lt.1) call bug('f',
      *  'Insufficient memory to do anything useful -- select less data')
 c
 c Dimension of first index of BUFFER when passed to subroutines
 c
-      pl1dim = nbuf * maxpnt
+      pl1dim = nbuf * maxpnts
 c
 c Offsets for X and Y points in BUFFER
 c
       xo = 0
-      yo = maxpnt
+      yo = maxpnts
 c
 c Offsets for X,Y lo and high errors in buffer.  Careful, do not
 c use these pointers when not asking for error bars, as they
@@ -1587,17 +1587,17 @@ c
       elo(2) = 0
       eho(1) = 0
       eho(2) = 0
-      off = maxpnt
+      off = maxpnts
       if (dorms(1)) then
-        off = off + maxpnt
+        off = off + maxpnts
         elo(1) = off
-        off = off + maxpnt
+        off = off + maxpnts
         eho(1) = off
       endif
       if (dorms(2)) then
-        off = off + maxpnt
+        off = off + maxpnts
         elo(2) = off
-        eho(2) = off + maxpnt
+        eho(2) = off + maxpnts
       endif
 
       nbases = 0
@@ -1675,14 +1675,14 @@ c-----------------------------------------------------------------------
 
 ************************************************************************
 
-      subroutine fullup (maxbase, pl2dim, pl3dim, pl4dim, maxpnt,
+      subroutine fullup (maxbase, pl2dim, pl3dim, pl4dim, maxpnts,
      *                   maxpol, npts, plfidx, allfull)
 c-----------------------------------------------------------------------
 c     Find out when plot buffer for this file COMPLETELY full
 c
 c  Input
 c    maxpol        Size of second dimension of NPTS
-c    maxpnt        Maximum number of points allowed for each
+c    maxpnts        Maximum number of points allowed for each
 c                  baseline and polarization combination
 c    pl*dim        Sizes of last 3 BUFFER dimensions (baseline,
 c                  polarization and file)
@@ -1692,7 +1692,7 @@ c                  for each baseline and polarization combination
 c  Output
 c    allfull       True if no space left for this file
 c-----------------------------------------------------------------------
-      integer maxpnt, maxpol, pl2dim, pl3dim, pl4dim, plfidx, maxbase,
+      integer maxpnts, maxpol, pl2dim, pl3dim, pl4dim, plfidx, maxbase,
      *  npts(maxbase,maxpol)
       logical allfull
 cc
@@ -1707,7 +1707,7 @@ c
       allfull = .true.
       do j = 1, pl3dim
         do i = 1, pl2dim
-          if (npts(i,j).lt.maxpnt) then
+          if (npts(i,j).lt.maxpnts) then
             allfull = .false.
             goto 999
            endif
@@ -3309,7 +3309,7 @@ c
 
 ************************************************************************
 
-      subroutine pntful (dobase, pl2dim, pl3dim, pl4dim, maxpnt,
+      subroutine pntful (dobase, pl2dim, pl3dim, pl4dim, maxpnts,
      *   maxbase, maxpol, maxfile, ifile, plfidx, a1a2, npts)
 c-----------------------------------------------------------------------
 c     Tell user when bits of plot buffers fill up.
@@ -3318,7 +3318,7 @@ c  Input
 c    dobase        Separate baseline plots
 c    pl*dim        Sizes of last 3 BUFFER dimensions (baseline,
 c                  polarization and file)
-c    maxpnt        Maximum number of points allowed for each
+c    maxpnts        Maximum number of points allowed for each
 c                  baseline and polarization combination
 c    maxbase       Size of first dimension of NPTS
 c    maxpol        Size of second dimension of NPTS
@@ -3328,7 +3328,7 @@ c    plfidx        The BUFFER index into which this file goes
 c    npts          Number of points found so far for each combinaiton
 c                  of baseline, polarization and file
 c-----------------------------------------------------------------------
-      integer pl2dim, pl3dim, pl4dim, maxfile, maxpnt, maxbase,
+      integer pl2dim, pl3dim, pl4dim, maxfile, maxpnts, maxbase,
      *  maxpol, ifile, npts(maxbase,maxpol,maxfile), a1a2(maxbase,2),
      *  plfidx
       logical dobase
@@ -3345,7 +3345,7 @@ c
 c Loop over size of BUFFER baseline dimension
 c
         do i = 1, pl2dim
-          if (npts(i,j,plfidx).eq.maxpnt) then
+          if (npts(i,j,plfidx).eq.maxpnts) then
 c
 c No more room for this combination
 c

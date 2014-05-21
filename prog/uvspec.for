@@ -89,7 +89,7 @@ c@ log
 c	Log file into which the spectra are dumped in the order in which
 c	they are plotted.  Really only useful if your plot is quite simple.
 c
-c$Id: uvspec.for,v 1.13 2014/02/06 00:26:54 wie017 Exp $
+c$Id: uvspec.for,v 1.14 2014/05/21 04:34:59 wie017 Exp $
 c--
 c  History:
 c    rjs  18sep92 Derived from uvaver.
@@ -524,10 +524,10 @@ c------------------------------------------------------------------------
 	include 'uvspec.h'
 	integer PolMin,PolMax
 	parameter(PolMin=-8,PolMax=4)
-	integer MAXPLT,MAXPNT
-	parameter(MAXPNT=1000000,MAXPLT=1024)
-        double precision xp(MAXPNT)
-	real xrange(2),inttime,yp(MAXPNT)
+	integer MAXPLT,maxpnts
+	parameter(maxpnts=1000000,MAXPLT=1024)
+        double precision xp(maxpnts)
+	real xrange(2),inttime,yp(maxpnts)
 	integer plot(MAXPLT+1)
 	double precision time
 	integer i,j,ngood,ng,ntime,npnts,nplts,nprev,p
@@ -611,12 +611,12 @@ c
 	      if(cntp(i,j).ge.1)then
 		if(dolag)then
 		  call LagExt(x,buf(p),count(p),nchan(i,j),n,
-     *		    xp,yp,MAXPNT,npnts)
+     *		    xp,yp,maxpnts,npnts)
 		else
 		  call VisExt(x,buf(p),buf2(1,p),bufr(p),count(p),
      *		    nchan(i,j),
      *		    doamp,doampsc,dorms,dophase,doreal,doimag,dohdr,
-     *		    donoise,domnoise,xp,yp,MAXPNT,npnts)
+     *		    donoise,domnoise,xp,yp,maxpnts,npnts)
 		endif
 	      endif
 c
@@ -633,7 +633,7 @@ c
 	    if(.not.nobase.and.npnts.gt.0)then
 	      call Plotit(npnts,xp,yp,xrange,yrange,dodots,plot,nplts,
      *		xtitle,ytitle,j,time/ntime,inttime/nplts,pol,npol,
-     *		dopoint,hann,hc,hw,logf,MAXPNT,dohdr)
+     *		dopoint,hann,hc,hw,logf,maxpnts,dohdr)
 c
 	      npol = 0
 	      do i=PolMin,PolMax
@@ -652,7 +652,7 @@ c  Do the final plot.
 c
 	if(npnts.gt.0)call Plotit(npnts,xp,yp,xrange,yrange,dodots,
      *	  plot,nplts,xtitle,ytitle,0,time/ntime,inttime/nplts,
-     *	  pol,npol,dopoint,hann,hc,hw,logf,MAXPNT,dohdr)
+     *	  pol,npol,dopoint,hann,hc,hw,logf,maxpnts,dohdr)
 c
 c  Reset the counters.
 c
@@ -663,14 +663,14 @@ c
 c************************************************************************
 	subroutine VisExt(x,buf,buf2,bufr,count,nchan,
      *		    doamp,doampsc,dorms,dophase,doreal,doimag,
-     *		    dohdr,donoise,domnoise,xp,yp,MAXPNT,npnts)
+     *		    dohdr,donoise,domnoise,xp,yp,maxpnts,npnts)
 c
 	implicit none
-	integer nchan,npnts,MAXPNT,count(nchan)
+	integer nchan,npnts,maxpnts,count(nchan)
 	logical doamp,doampsc,dorms,dophase,doreal,doimag,dohdr
         logical donoise,domnoise
-	real bufr(nchan),buf2(2,nchan),yp(MAXPNT)
-	double precision x(nchan),xp(MAXPNT)
+	real bufr(nchan),buf2(2,nchan),yp(maxpnts)
+	double precision x(nchan),xp(maxpnts)
 	complex buf(nchan)
 c------------------------------------------------------------------------
 	include 'mirconst.h'
@@ -711,9 +711,9 @@ c
               temp = sqrt(abs(temp))
 	    endif
 	    npnts = npnts + 1
-	    if(npnts.gt.MAXPNT)call bug('f',
+	    if(npnts.gt.maxpnts)call bug('f',
      *	      'Buffer overflow('//itoaf(npnts)//
-     *        '> MAXPNT), when accumulating plots')
+     *        '> maxpnts), when accumulating plots')
 	    xp(npnts) = x(k)
 	    yp(npnts) = temp
 	  endif
@@ -722,12 +722,12 @@ c
 	end
 c************************************************************************
 	subroutine LagExt(x,buf,count,nchan,n,
-     *		    xp,yp,MAXPNT,npnts)
+     *		    xp,yp,maxpnts,npnts)
 c
 	implicit none
-	integer nchan,n,npnts,MAXPNT,count(nchan)
-	double precision x(n),xp(MAXPNT)
-        real yp(MAXPNT)
+	integer nchan,n,npnts,maxpnts,count(nchan)
+	double precision x(n),xp(maxpnts)
+        real yp(maxpnts)
 	complex buf(nchan)
 c------------------------------------------------------------------------
 	include 'maxdim.h'
@@ -755,7 +755,7 @@ c
 	  k0 = k0 + 1
 	  if(k0.gt.n)k0 = k0 - n
 	  npnts = npnts + 1
-	  if(npnts.gt.MAXPNT)call bug('f',
+	  if(npnts.gt.maxpnts)call bug('f',
      *		'Buffer overflow: Too many points to plot')
 	  xp(npnts) = x(k)
 	  yp(npnts) = rbuf(k0)
@@ -1001,12 +1001,12 @@ c
 c************************************************************************
 	subroutine Plotit(npnts,xp,yp,xrange,yrange,dodots,
      *		  plot,nplts,xtitle,ytitle,bl,time,inttime,
-     *		  pol,npol,dopoint,hann,hc,hw,logf,MAXPNT,dohdr)
+     *		  pol,npol,dopoint,hann,hc,hw,logf,maxpnts,dohdr)
 c
 	implicit none
-	integer npnts,bl,nplts,plot(nplts+1),npol,pol(npol),hann,MAXPNT
+	integer npnts,bl,nplts,plot(nplts+1),npol,pol(npol),hann,maxpnts
 	double precision time,xp(npnts)
-        real x(MAXPNT)
+        real x(maxpnts)
 	real inttime,hc(*),hw(*),xrange(2),yrange(2),yp(npnts)
 	logical dopoint,dodots,dohdr
 	character xtitle*(*),ytitle*(*),logf*(*)

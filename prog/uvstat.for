@@ -45,8 +45,8 @@ c    rjs  12nov93  Call logclose.
 c    rjs  10oct97  Significant tidy up.
 c----------------------------------------------------------------------c
 	include 'maxdim.h'
-	integer MAXPNT
-	parameter(MAXPNT=100000)
+	integer MAXPNTS
+	parameter(MAXPNTS=100000)
 	character*(*) version
 	parameter(version='UVSTAT: version 1.0 10-Oct-97')
 	double precision preamble(4),time0
@@ -55,7 +55,7 @@ c----------------------------------------------------------------------c
 	character date*18,line*80,uvflags*16
 	complex data(maxchan)
 	logical flags(maxchan),ok
-	real xx(MAXPNT),yy(MAXPNT)
+	real xx(MAXPNTS),yy(MAXPNTS)
 	real xlo,xhi,ylo,yhi,xmin,xmax,ymin,ymax,x,y
 	double precision dtemp
 c
@@ -117,7 +117,7 @@ c
 c
 	  if(ok)then
 	    nvis = nvis + 1
-	    if(nvis.gt.MAXPNT)call bug('f','Too many points to plot')
+	    if(nvis.gt.MAXPNTS)call bug('f','Too many points to plot')
 	    xx(nvis) = x
 	    yy(nvis) = y
 	  endif

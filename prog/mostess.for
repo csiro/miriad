@@ -59,7 +59,7 @@ c         verbose    Give lots of messages during the iterations.  The
 c                    default is to give a one line message at each
 c                    iteration.
 c
-c$Id: mostess.for,v 1.9 2013/08/30 01:49:21 wie017 Exp $
+c$Id: mostess.for,v 1.10 2014/05/21 04:34:59 wie017 Exp $
 c--
 c  History:
 c    rjs   7aug95  Adapted from MOSMEM.
@@ -73,9 +73,6 @@ c-----------------------------------------------------------------------
 
       integer gull,cornwell
       parameter (gull=1,cornwell=2)
-
-      integer MAXPNT
-      parameter (MAXPNT=350)
 
       logical   converge, doflux, positive, verbose
       integer   i, icentre, jcentre, lBeam, lDef, lMap,
@@ -99,8 +96,8 @@ c-----------------------------------------------------------------------
       external  ismax, itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('mostess',
-     *                 '$Revision: 1.9 $',
-     *                 '$Date: 2013/08/30 01:49:21 $')
+     *                 '$Revision: 1.10 $',
+     *                 '$Date: 2014/05/21 04:34:59 $')
 c
 c  Get the input parameters.
 c

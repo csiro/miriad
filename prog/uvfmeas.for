@@ -102,7 +102,7 @@ c@ feval
 c       A frequency (in GHz) at which to evaluate the fit, and output
 c       the flux density in Jy.
 c
-c$Id: uvfmeas.for,v 1.16 2014/05/20 23:34:33 ste616 Exp $
+c$Id: uvfmeas.for,v 1.17 2014/05/21 04:34:59 wie017 Exp $
 c--
 c  History:
 c    jbs  05jan12 Derived from uvspec.
@@ -111,9 +111,9 @@ c  Bugs:
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'maxdim.h'
-        integer maxco,MAXPOL,PolMin,PolMax,MAXPLT,MAXPNT
+        integer maxco,MAXPOL,PolMin,PolMax,MAXPLT,MAXPNTS
         parameter (maxco=15,MAXPOL=4,PolMin=-9,PolMax=4,MAXPLT=1024)
-	parameter (MAXPNT=10000000)
+	parameter (MAXPNTS=10000000)
 c
 	character version*80
 	character uvflags*8,device*64,xaxis*12,yaxis*12,logf*64
@@ -135,7 +135,7 @@ c
 	real vecamp(MAXCHAN),vecpha(MAXCHAN),vecscat(MAXCHAN),sig2
 	real work2(4*maxdim),weight(maxdim),fit(maxdim),serr,rchisq
 	real xrange(2),yp(MAXCHAN),scalavga,vecavgs,scalavgs
-	real uvdist(MAXPNT),uvdistamp(MAXPNT),uvdistfreq(MAXPNT)
+	real uvdist(MAXPNTS),uvdistamp(MAXPNTS),uvdistfreq(MAXPNTS)
 	real sexpect,qualn,qualp,plotfit(11),ufit(maxdim)
 	real fitdiffsum,plfitx(maxdim),evxp,evfx,polyeval,feval
 	real a1,a2,a3,ypres(MAXCHAN),ksdfac,ksprob
@@ -157,8 +157,8 @@ c
 	character versan*80
 c-----------------------------------------------------------------------
 	version = versan ('uvfmeas',
-     :                    '$Revision: 1.16 $',
-     :                    '$Date: 2014/05/20 23:34:33 $')
+     :                    '$Revision: 1.17 $',
+     :                    '$Date: 2014/05/21 04:34:59 $')
 c
 c  Get the input parameters.
 c
@@ -346,7 +346,7 @@ c
 		  u=preamble(1)/1000.0
 		  v=preamble(2)/1000.0
 		  if (douv) then
-		     if (nuvdist.lt.MAXPNT) then
+		     if (nuvdist.lt.MAXPNTS) then
 			uvdist(nuvdist)=real(sqrt(u*u+v*v)*
      *                    txf(i)/txf(1))
 			uvdistamp(nuvdist)=real(data(i))
@@ -362,7 +362,7 @@ c
 	       endif
 	    enddo
 	    if (douv) then
-	       if (nuvdist.le.MAXPNT) then
+	       if (nuvdist.le.MAXPNTS) then
 		  nuvdist=nuvdist-1
 	       endif
 	    endif
@@ -668,7 +668,7 @@ c
 	   call SetAxisD(xp,nchan,xrange)
 	   call Plotit(nchan,xp,yp,xrange,yrange,plot,
      *         nplts,xtitle,ytitle,0,dble(0.),real(0.),p,npol,hann,hc,
-     *         hw,logf,MAXPNT,poly,fit,fluxlines,2,i,uvdist,uvdistamp,
+     *         hw,logf,MAXPNTS,poly,fit,fluxlines,2,i,uvdist,uvdistamp,
      *         nuvdist,qualn,qualp,douv,dopfit,ufit,plfitx,doreshist,
      *         ypres,ksdfac,ksprob,polynpts,osource)
 	   if (douv) then
@@ -1001,16 +1001,16 @@ c
 c************************************************************************
 	subroutine Plotit(npnts,xp,yp,xrange,yrange,
      *		  plot,nplts,xtitle,ytitle,bl,time,inttime,
-     *		  pol,npol,hann,hc,hw,logf,MAXPNT,poly,fit,
+     *		  pol,npol,hann,hc,hw,logf,MAXPNTS,poly,fit,
      *            fluxlines,nflux,wpol,uvd,uva,nuvd,qualn,
      *            qualp,plotuv,dopfit,ufit,plfitx,plotreshist,
      *            ypres,ksdfac,ksprob,polynpts,srcname)
 c
 	implicit none
-	integer npnts,bl,nplts,plot(*),npol,pol(*),hann,MAXPNT
+	integer npnts,bl,nplts,plot(*),npol,pol(*),hann,MAXPNTS
 	integer poly,nflux,wpol,nuvd,polynpts
 	double precision time,xp(*)
-        real x(MAXPNT),fit(*),fluxlines(*)
+        real x(MAXPNTS),fit(*),fluxlines(*)
 	real inttime,hc(*),hw(*),xrange(2),yrange(2),yp(*)
 	real uvd(*),uva(*),qualn,qualp,ufit(*),plfitx(*)
 	real ypres(npnts),ksdfac,ksprob,probks

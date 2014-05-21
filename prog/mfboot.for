@@ -82,7 +82,7 @@ c	  noapply Do not apply the scale factor - just evaluate it.
 c         nospec Do not try to determine and correct the spectral index across
 c                the band.
 c
-c$Id: mfboot.for,v 1.13 2014/04/27 23:34:53 wie017 Exp $
+c$Id: mfboot.for,v 1.14 2014/05/21 04:34:59 wie017 Exp $
 c--
 c  History:
 c    rjs     15jan06 Original version adapted from plboot.
@@ -97,8 +97,8 @@ c    mhw     24apr14 Allow higher order flux models
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*72
-	integer MAXVIS,MAXPNT
-	parameter(MAXVIS=32,MAXPNT=4000000)
+	integer MAXVIS,MAXPNTS
+	parameter(MAXVIS=32,MAXPNTS=4000000)
 c
 	character vis(MAXVIS)*64,source*32,line*64,device*64,mode*8
 	character psource*32
@@ -109,7 +109,7 @@ c
 	double precision SumXX(2),SumXY(2),SumF(2),preamble(4),time0
 	complex data(MAXCHAN),d(2)
 	logical flags(MAXCHAN)
-	real xval(MAXPNT),ydval(MAXPNT),ymval(MAXPNT)
+	real xval(MAXPNTS),ydval(MAXPNTS),ymval(MAXPNTS)
 	integer npnt,SumN(2)
 c
 	complex db(2,MAXBASE)
@@ -123,8 +123,8 @@ c
 	character streal*16, versan*72
         
         version = versan('mfboot',
-     *                   '$Revision: 1.13 $',  
-     *                   '$Date: 2014/04/27 23:34:53 $')
+     *                   '$Revision: 1.14 $',  
+     *                   '$Date: 2014/05/21 04:34:59 $')
 c
 c  Get the user input.
 c
@@ -198,7 +198,7 @@ c
      *         db,mb,fb,sb,nb,nbl)
 	    else
 	      call acc(mode.eq.'vector',preamble,d,m,f,s,n,
-     *		SumXX,SumXY,SumF,SumN,MAXPNT,npnt,xval,ydval,ymval)
+     *		SumXX,SumXY,SumF,SumN,MAXPNTS,npnt,xval,ydval,ymval)
 	    endif
 	    call uvDatRd(preamble,data,flags,MAXCHAN,nchan)
 	  enddo

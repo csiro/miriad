@@ -58,16 +58,16 @@ c  History:
 c    rjs     27nov06 Start on original version.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
-	integer MAXSOL,MAXPNT,MAXITER
-	parameter(MAXSOL=200,MAXITER=30,MAXPNT=2000000)
+	integer MAXSOL,MAXPNTS,MAXITER
+	parameter(MAXSOL=200,MAXITER=30,MAXPNTS=2000000)
 
 	character version*(*)
 	parameter(version='tmcal: version 1.0 27-Nov-2006')
 c
-	complex data(MAXPNT)
-	real chi1(MAXPNT),chi2(MAXPNT),wt(MAXPNT),time(MAXPNT)
-	real modiqu(3,MAXPNT),qu(2),temp
-	integer bl(MAXPNT),pid(MAXPNT),npnt
+	complex data(MAXPNTS)
+	real chi1(MAXPNTS),chi2(MAXPNTS),wt(MAXPNTS),time(MAXPNTS)
+	real modiqu(3,MAXPNTS),qu(2),temp
+	integer bl(MAXPNTS),pid(MAXPNTS),npnt
 	double precision timeoff
 c
 	integer nsol,npart
@@ -138,7 +138,7 @@ c
 	call output('Reading the data ...')
 	call DatRead(tIn,nants,defflux,circ,flux,npart,
      *	  timeoff,
-     *	  MAXPNT,data,wt,modiqu,chi1,chi2,bl,time,pid,npnt)
+     *	  MAXPNTS,data,wt,modiqu,chi1,chi2,bl,time,pid,npnt)
 c
 c  Break the data into solution intervals.
 c
@@ -703,16 +703,16 @@ c
 c************************************************************************
 	subroutine DatRead(tIn,nants,defflux,circ,flux,npart,
      *	  timeoff,
-     *	  MAXPNT,data,wt,modiqu,chi1,chi2,bl,time,pid,npnt)
+     *	  MAXPNTS,data,wt,modiqu,chi1,chi2,bl,time,pid,npnt)
 c
 	implicit none
-	integer tIn,nants,MAXPNT,bl(MAXPNT),pid(MAXPNT),npnt
+	integer tIn,nants,MAXPNTS,bl(MAXPNTS),pid(MAXPNTS),npnt
 	integer npart
 	logical defflux,circ
-	real flux(3),wt(MAXPNT),modiqu(3,MAXPNT)
-	real chi1(MAXPNT),chi2(MAXPNT),time(MAXPNT)
+	real flux(3),wt(MAXPNTS),modiqu(3,MAXPNTS)
+	real chi1(MAXPNTS),chi2(MAXPNTS),time(MAXPNTS)
 	double precision timeoff
-	complex data(MAXPNT)
+	complex data(MAXPNTS)
 c
 c  Read in the data, average over frequency, and save the data. Work out the model of 
 c  the data.
@@ -721,7 +721,7 @@ c  Input:
 c    tIn
 c    nants
 c    flux
-c    MAXPNT
+c    MAXPNTS
 c  Input/Output:
 c    defflux
 c    npart
@@ -804,7 +804,7 @@ c
 c  Save information on the accepted visibility.
 c
 	    npnt = npnt + 1
-	    if(npnt.gt.MAXPNT)call bug('f','Buffer overflow')
+	    if(npnt.gt.MAXPNTS)call bug('f','Buffer overflow')
 	    Data(npnt) = Sum/n
 	    if(rms2.le.0)then
 	     Wt(npnt) = 1
