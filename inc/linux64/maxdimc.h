@@ -20,7 +20,7 @@
 *
 *  MAXBASE, MAXCHAN, and MAXWIDE are not used by anything.
 *
-* $Id: maxdimc.h,v 1.9 2011/10/31 00:46:33 wie017 Exp $
+* $Id: maxdimc.h,v 1.10 2014/05/21 04:32:23 wie017 Exp $
 *---------------------------------------------------------------------------*/
 /* Maximum buffer size for xyzio (N.B. see comment above). */
 #define MAXBUF  16777216
@@ -45,3 +45,6 @@
 
 /* Maximum number of wideband channels. */
 #define MAXWIDE 18
+
+/* Maximum number of mosaic pointings. */
+#define MAXPNT 20000

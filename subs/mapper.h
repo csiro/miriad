@@ -10,8 +10,8 @@ c    cgf	The convolutional gridding function.
 c    xcorr,ycorr Correction arrays.
 c
 	include 'maxdim.h'
-	integer MAXPNT,MAXCGF,MAXT
-	parameter(MAXPNT=10000,MAXCGF=2048,MAXT=5)
+	integer MAXCGF,MAXT
+	parameter(MAXCGF=2048,MAXT=5)
 c
 	real scale(MAXPNT)
 	real cgf(MAXCGF),xcorr(MAXDIM),ycorr(MAXDIM),umax,vmax

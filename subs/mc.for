@@ -23,6 +23,7 @@ c
 c  Initialise the mosaic convolver routnes, ready to subtract off a
 c  gaussian.
 c------------------------------------------------------------------------
+        include 'maxdim.h'
 	include 'mc.h'
 c
 	call mcInitF(tno1)
@@ -113,6 +114,7 @@ c
 c
 c  Initialise for convolving a plane.
 c------------------------------------------------------------------------
+        include 'maxdim.h'
 	include 'mc.h'
 c
 	if(mosini)call mosMFin
@@ -734,6 +736,7 @@ c
 c  Tidy up the mosaic convolution routines.
 c
 c------------------------------------------------------------------------
+        include 'maxdim.h'
 	include 'mc.h'
 	integer k
 c

@@ -1,5 +1,5 @@
 C=======================================================================
-C $Id: maxdim.h,v 1.7 2012/04/26 02:48:39 wie017 Exp $
+C $Id: maxdim.h,v 1.8 2014/05/21 04:32:23 wie017 Exp $
 C-----------------------------------------------------------------------
 C     Size of an INTEGER array used to implement a memory heap.  This
 C     array is the sole variable in blank COMMON in Miriad.  The default
@@ -40,5 +40,9 @@ C     Maximum number of wideband channels.
 C     Maximum number of frequency bins in gains table
       INTEGER   MAXFBIN
       PARAMETER(MAXFBIN = 16)
+
+C     Maximum number of mosaic pointings
+      INTEGER   MAXPNT
+      PARAMETER(MAXPNT = 20000)
 C=======================================================================
 
