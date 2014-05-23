@@ -102,7 +102,7 @@ c@ feval
 c       A frequency (in GHz) at which to evaluate the fit, and output
 c       the flux density in Jy.
 c
-c$Id: uvfmeas.for,v 1.17 2014/05/21 04:34:59 wie017 Exp $
+c$Id: uvfmeas.for,v 1.18 2014/05/23 03:10:44 ste616 Exp $
 c--
 c  History:
 c    jbs  05jan12 Derived from uvspec.
@@ -157,8 +157,8 @@ c
 	character versan*80
 c-----------------------------------------------------------------------
 	version = versan ('uvfmeas',
-     :                    '$Revision: 1.17 $',
-     :                    '$Date: 2014/05/21 04:34:59 $')
+     :                    '$Revision: 1.18 $',
+     :                    '$Date: 2014/05/23 03:10:44 $')
 c
 c  Get the input parameters.
 c
@@ -1370,6 +1370,11 @@ c  Number of clipping iterations
 	
 c  Clip level (sigma)
 	clip=3.0
+
+c  Initialise the fit parameters.
+        do i=1,11
+	   fitparams(i) = 0.
+	enddo
 
 c  Apply mask and check for negative numbers.
 	hasneg=.FALSE.
