@@ -102,7 +102,7 @@ c@ feval
 c       A frequency (in GHz) at which to evaluate the fit, and output
 c       the flux density in Jy.
 c
-c$Id: uvfmeas.for,v 1.18 2014/05/23 03:10:44 ste616 Exp $
+c$Id: uvfmeas.for,v 1.19 2014/05/24 04:24:04 ste616 Exp $
 c--
 c  History:
 c    jbs  05jan12 Derived from uvspec.
@@ -157,8 +157,8 @@ c
 	character versan*80
 c-----------------------------------------------------------------------
 	version = versan ('uvfmeas',
-     :                    '$Revision: 1.18 $',
-     :                    '$Date: 2014/05/23 03:10:44 $')
+     :                    '$Revision: 1.19 $',
+     :                    '$Date: 2014/05/24 04:24:04 $')
 c
 c  Get the input parameters.
 c
@@ -932,7 +932,7 @@ c
 	  call pgldev
 	  call bug('f','Error opening graphics device')
 	endif
-	call pgsch(real(max(nx,ny))**0.4)
+	call pgsch(real(max(nx,ny))**0.6)
 	call pgqinf('hardcopy',hard,hlen)
 	if(hard.eq.'YES')call pgscf(2)
 	end
@@ -1044,7 +1044,7 @@ c
         symbol = 17
 c
 	call pgpage
-	call pgsch(2.)
+c	call pgsch(2.)
 	call pgvstd
 c
         xoff = 0
