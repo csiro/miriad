@@ -1,3 +1,4 @@
+************************************************************************
       program fits
 
 c= fits - Conversion between Miriad and FITS image and uv formats
@@ -130,7 +131,7 @@ c         velocity=lsr
 c       indicates that fits is to determine the observatory velocity
 c       wrt the LSR frame using an appropriate model.
 c
-c$Id: fits.for,v 1.28 2014/05/01 00:40:44 wie017 Exp $
+c$Id: fits.for,v 1.29 2014/06/05 01:28:54 sau078 Exp $
 c--
 c
 c  Bugs:
@@ -168,8 +169,8 @@ c-----------------------------------------------------------------------
       character versan*72
 c-----------------------------------------------------------------------
       version = versan('fits',
-     *                 '$Revision: 1.28 $',
-     *                 '$Date: 2014/05/01 00:40:44 $')
+     *                 '$Revision: 1.29 $',
+     *                 '$Date: 2014/06/05 01:28:54 $')
 c
 c  Get the input parameters.
 c
@@ -1428,17 +1429,18 @@ c-----------------------------------------------------------------------
       include 'mirconst.h'
       include 'fits.h'
 
-      logical   badan, badapp, badepo, badmnt, found, more
+      logical   badan, badapp, badepo, badmnt, found, more,docio
       integer   i, itemp, j, n, naxis, nd, nval, nxyz, sta(MAXANT), t
       real      defepoch, diff, rsdf(MAXFREQ*MAXIF)
       double precision coord(3,4), d0, dtemp, eporef, freq, r0, rfreq,
      *          vddef, veldef, xc, xyz(3,MAXANT), yc, zc
       character cax*2, ctype*8, defsrc*16, type*1, units*16
-
+c
 c     Externals.
+c
       character itoaf*2
       double precision fuvGetT0,Epo2jul,Jul2epo
-c-----------------------------------------------------------------------
+c
 c  Set default nants, source and freq ids.
 c
       inited = .false.
@@ -1516,6 +1518,8 @@ c  Load the antenna table.
 c
       call output(' ')
       call output('Analysing the extension tables ...')
+      docio = telescop.eq.'askap'
+      if(docio)call bug('i','Fudging ASKAP antenna table')
       nconfig = 0
       call ftabLoc(lu,'AIPS AN',found)
       anfound = found
@@ -1551,7 +1555,8 @@ c
         call fitrdhdd(lu,'ARRAYY',yc,0d0)
         call fitrdhdd(lu,'ARRAYZ',zc,0d0)
         call ftabGetd(lu,'STABXYZ',0,xyz)
-          call antproc(lefty,xc,yc,zc,xyz,n,sta,nd,antpos(1,nconfig),
+        call antproc(lefty,docio,xc,yc,zc,xyz,n,sta,nd,
+     *	      antpos(1,nconfig),
      *        lat(nconfig),long(nconfig),badan)
         llok = llok .or. .not.badan
 c
@@ -1630,7 +1635,8 @@ c
           call fitrdhdd(lu,'ARRAYY',yc,0d0)
           call fitrdhdd(lu,'ARRAYZ',zc,0d0)
           call ftabGetd(lu,'ORBXYZ',0,xyz)
-          call antproc(lefty,xc,yc,zc,xyz,n,sta,nd,antpos(1,nconfig),
+          call antproc(lefty,.false.,xc,yc,zc,xyz,n,sta,nd,
+     *	      antpos(1,nconfig),
      *        lat(nconfig),long(nconfig),badan)
           llok = llok .or. .not.badan
 
@@ -1848,42 +1854,42 @@ c
       call Sortie(sindx,srcids,nsrc)
 
       end
-
 c***********************************************************************
-
-      subroutine antproc(lefty,xc,yc,zc,xyz,n,sta,nd,antpos,
-     *                                                lat,long,badan)
-
-      integer n,nd
-      integer sta(n)
-      double precision xc,yc,zc,antpos(nd,3),lat,long,xyz(3,n)
-      logical lefty,badan
-c-----------------------------------------------------------------------
+	subroutine antproc(lefty,docio,xc,yc,zc,xyz,n,sta,nd,antpos,
+     *							lat,long,badan)
+c
+	implicit none
+	integer n,nd
+	integer sta(n)
+	double precision xc,yc,zc,antpos(nd,3),lat,long,xyz(3,n)
+	logical lefty,badan,docio
+c
 c  Fiddle the antenna information.
 c
 c  Intput:
-c    lefty      The antenna table is in a left handed coordinate system.
-c    xc,yc,zc   Array centre.
-c    xyz        Antenna positions relative to the array centre.
-c    n          Number of antennas.
+c    lefty	The antenna table is in a left handed coordinate system.
+c    xc,yc,zc	Array centre.
+c    xyz	Antenna positions relative to the array centre.
+c    n		Number of antennas.
 c
 c  Output:
-c    badan      The antenna coordinates were bad, and the remaining
-c               values are unset.
-c    lat,long   The latitude and longitude of the observatory.
-c    antpos     Antenna positions, in Miriad format.
+c    badan	The antenna coordinates were bad, and the remaining
+c		values are unset.
+c    lat,long	The latitude and longitude of the observatory.
+c    antpos	Antenna positions, in Miriad format.
 c-----------------------------------------------------------------------
-      include 'mirconst.h'
-
-      integer   i, idx
-      double precision cost, height, r, sint, temp
-c-----------------------------------------------------------------------
-c     Initialise the antenna table.
-      do i = 1, nd
-        antpos(i,1) = 999999
-        antpos(i,2) = 999999
-        antpos(i,3) = 999999
-      enddo
+	include 'mirconst.h'
+	double precision r,cost,sint,height,temp,xref,yref,zref
+	logical dolocal
+	integer i,idx
+c
+c  Initialise the antenna table to zeros.
+c
+	do i=1,nd
+	  antpos(i,1) = 999999
+	  antpos(i,2) = 999999
+	  antpos(i,3) = 999999
+	enddo
 c
 c  Determine the latitude, longitude and height of the first antenna
 c  (which is taken to be the observatory lat,long,height). Handle
@@ -1892,50 +1898,62 @@ c
 c  Convert them to the Miriad system: y is local East, z is parallel to
 c  pole Units are nanosecs.
 c
-      badan = .false.
-      if (abs(xc)+abs(yc)+abs(yc).eq.0) then
-        call goodxyz(idx,xyz,n)
-        if (idx.ne.0) then
-          call xyz2llh(xyz(1,idx),xyz(2,idx),xyz(3,idx),
-     *      lat,long,height)
-          r = sqrt(xyz(1,idx)*xyz(1,idx) + xyz(2,idx)*xyz(2,idx))
-          cost = xyz(1,idx) / r
-          sint = xyz(2,idx) / r
-          do i = 1, n
-            temp = xyz(1,i)*cost + xyz(2,i)*sint - r
-            antpos(sta(i),1) = temp * (1d9/DCMKS)
-            temp = -xyz(1,i)*sint + xyz(2,i)*cost
-            antpos(sta(i),2) = temp * (1d9/DCMKS)
-            antpos(sta(i),3) = (xyz(3,i)-xyz(3,idx)) * (1d9/DCMKS)
-          enddo
-        else
-          call bug('w','Bad antenna coordinates ignored')
-          lat = 0
-          long = 0
-          height = 0
-          badan = .true.
-        endif
-      else
-        call xyz2llh(xc,yc,zc,lat,long,height)
-        do i = 1, n
-          antpos(sta(i),1) = xyz(1,i)*(1d9/DCMKS)
-          antpos(sta(i),2) = xyz(2,i)*(1d9/DCMKS)
-          antpos(sta(i),3) = xyz(3,i)*(1d9/DCMKS)
-        enddo
-      endif
+	badan = .false.
+	if(abs(xc)+abs(yc)+abs(yc).eq.0)then
+	  call goodxyz(idx,xyz,n)
+	  if(idx.ne.0)then
+	    xref = xyz(1,idx)
+	    yref = xyz(2,idx)
+	    zref = xyz(3,idx)
+	    dolocal = .false.
+	  else
+	    badan = .true.
+	  endif
+	else
+	  xref = xc
+	  yref = yc
+	  zref = zc
+	  dolocal = .not.docio
+	endif
+c
+	if(badan)then
+	  call bug('w','Bad antenna coordinates ignored')
+	  lat = 0
+	  long = 0
+	  height = 0
+	else
+	  call xyz2llh(xref,yref,zref,lat,long,height)
+	  if(dolocal)then
+	    do i=1,n
+	      antpos(sta(i),1) = (1d9/DCMKS) * xyz(1,i)
+	      antpos(sta(i),2) = (1d9/DCMKS) * xyz(2,i)
+	      antpos(sta(i),3) = (1d9/DCMKS) * xyz(3,i)
+	    enddo
+	  else
+	    r = sqrt(xref*xref + yref*yref)
+	    cost = xref / r
+	    sint = yref / r
+	    do i=1,n
+	      temp = (xyz(1,i)+xc)*cost + (xyz(2,i)+yc)*sint - r
+	      antpos(sta(i),1) = (1d9/DCMKS) * temp
+	      temp = -(xyz(1,i)+xc)*sint + (xyz(2,i)+yc)*cost
+	      antpos(sta(i),2) = (1d9/DCMKS) * temp
+	      antpos(sta(i),3) = (1d9/DCMKS) * (xyz(3,i)+zc-zref)
+	    enddo
+	  endif
 c
 c  If the antenna table uses a left-handed system, convert it to a
 c  right-handed system.
 c
-      if (lefty .and. .not.badan) then
-        long = -long
-        do i = 1, nd
-          antpos(i,2) = -antpos(i,2)
-        enddo
-      endif
-
-      end
-
+	  if(lefty)then
+	    long = -long
+	    do i=1,nd
+	      if(antpos(i,2).ne.999999)antpos(i,2) = -antpos(i,2)
+	    enddo
+	  endif
+	endif
+c
+	end
 c***********************************************************************
 
       subroutine goodxyz(idx,xyz,n)
