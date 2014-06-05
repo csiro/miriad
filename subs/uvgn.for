@@ -35,7 +35,7 @@ c    31oct11 mhw  Use ptrdiff for memory allocation
 c    24feb11 mhw  Handle freq bins in gains and leakage
 c    22jun12 pjt  Fixed some ptrdiff
 c
-c $Id: uvgn.for,v 1.18 2012/06/24 23:18:11 wie017 Exp $
+c $Id: uvgn.for,v 1.19 2014/06/05 03:49:47 wie017 Exp $
 c***********************************************************************
 
       subroutine uvGnIni(tno1,dogains1,dopass1)
@@ -604,7 +604,9 @@ c
 c  If all is good, interpolate the gains to the current time interval.
 c
           if (flag(k)) then
-            epsi = (timetab(t2)-time)/(timetab(t2)-timetab(t1))
+            epsi = 0
+            if (t1.ne.t2) 
+    *         epsi = (timetab(t2)-time)/(timetab(t2)-timetab(t1))
 
             g = ga1/ga2
             mag = abs(g)
