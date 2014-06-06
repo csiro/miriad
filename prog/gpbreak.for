@@ -35,6 +35,7 @@ c    rjs     25nov93 Use library version of mkeyt.
 c    rjs     31jan97 Fix "feeds" keyword, which could never have worked.
 c    rjs      5mar97 Check that there are no delays in the gain table.
 c    mhw      1dec11 Handle freq bins (gainsf table)
+c    mhw      6jun14 Fix missing argument in GainEdt
 c  Bugs and Shortcomings:
 c------------------------------------------------------------------------
 	include 'maxdim.h'
@@ -153,7 +154,7 @@ c
 c
 c  Edit the gains.
 c
-	call GainEdt(nsols+numtime,nsols,nants*nfeeds,memd(pTimes),
+	call GainEdt(nsols+numtime,nsols,nants*nfeeds,nfbin,memd(pTimes),
      *	             memc(pGains),memc(pGains2),mask,btimes,numtime)
 c
 c  Write out the gains.
