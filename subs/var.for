@@ -54,6 +54,7 @@ c    pjt   3jan11 added delaylx,delayry to the var list
 c    mhw  24nov11 added ifchain to spectral variables
 c    pjt  25apr12 added bfmask, and check for bfmask
 c    mhw  21jun12 merge ATNF & CARMA mods
+c    rjs  Added height, antname to list to copy.
 c************************************************************************
 c*VarInit -- Initialise the copy routines.
 c:uv-data
@@ -110,7 +111,7 @@ c
 	integer i
 c
 	integer nvar,nline,nwide,nvelo
-	parameter(nvar=107,nline=12,nwide=3,nvelo=6)
+	parameter(nvar=109,nline=12,nwide=3,nvelo=6)
         character var(nvar)*8,line(nline)*8,wide(nwide)*8,velo(nvelo)*8
 c
 c  Variables to check for a change, for line=channel.
@@ -130,7 +131,7 @@ c
 c
 c  Variables to copy whenever they change.
 c
-	data var/     'airtemp ','ambpsys ','antaz   ','antdiam ',
+	data (var(i),i=1,88)/    'airtemp ','ambpsys ','antaz   ',
      *     'antel   ','antpos  ','atten   ','axismax ','axisoff ',
      *     'axisrms ','bin     ','cable   ','calcode ','chi     ',
      *     'chi2    ','corbit  ','corbw   ','corfin  ','cormode ',
@@ -147,11 +148,13 @@ c
      *     'plmin   ','pltb    ','pntdec  ','pntra   ','precipmm',
      *     'pressmb ','project ','psys    ','psysattn','purpose ',
      *     'ra      ','refpnt  ','relhumid','rmspath ','sctype  ',
-     *     'smonrms ','source  ','tau230  ','tcorr   ','telescop',
+     *     'smonrms ','source  ','tau230  ','tcorr   ','telescop'/
+	data (var(i),i=89,nvar)/
      *     'temp    ','themt   ','tif2    ','tpower  ','tsis    ',
      *     'ut      ','veldop  ','veltype ','version ','vsource ',
      *     'wind    ','winddir ','windmph ','xtsys   ','ytsys   ',
-     *     'xsampler','ysampler','xyamp   '/
+     *     'xsampler','ysampler','xyamp   ','antname ','height  ',
+     *	   'antdiam '/
 c------------------------------------------------------------------------
 	avall = .false.
 c
