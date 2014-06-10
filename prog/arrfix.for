@@ -175,11 +175,11 @@ c------------------------------------------------------------------------
 	integer j
 c
         integer NTABLE
-        parameter(NTABLE=13)
+        parameter(NTABLE=14)
         character tables(NTABLE)*8
         data tables/'interval','nsols   ','ngains  ','nfeeds  ',
      *   'ntau    ','gains   ','freq0   ','leakage ','bandpass',
-     *   'freqs   ','nspect0 ','nchan0  ','senmodel'/
+     *   'freqs   ','nspect0 ','nchan0  ','senmodel','nbpsols '/
 c
         do j=1,NTABLE
            call hdcopy(lVis,lOut,tables(j))
