@@ -3,7 +3,7 @@ c  fits.h
 c-----------------------------------------------------------------------
 c  Include file for fits.for.
 c
-c  $Id: fits.h,v 1.5 2012/02/24 03:48:13 cal103 Exp $
+c  $Id: fits.h,v 1.6 2014/06/10 02:46:36 sau078 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
 
@@ -34,13 +34,14 @@ c-----------------------------------------------------------------------
      *          freqref(MAXCONFG), lat(MAXCONFG), long(MAXCONFG),
      *          raapp(MAXSRC), raepo(MAXSRC), restfreq(MAXSRC*MAXIF),
      *          sdf(MAXIF*MAXFREQ), sfreq(MAXIF*MAXFREQ),
-     *          timeoff(MAXCONFG), timeref, tprev, veldop(MAXSRC)
+     *          timeoff(MAXCONFG), timeref, tprev, veldop(MAXSRC),
+     *		height(MAXCONFG)
       character observer*16, source(MAXSRC)*20, telescop*16
 
       common /tables/ raepo, decepo, raapp, decapp, dra, ddec, sfreq,
      *          freqoff, restfreq, veldop, antpos, timeoff, freqref,
-     *          epoch, lat, long, tprev, timeref, eq, sdf, dnu, evec,
-     *          systemp, jyperk, velref, nsrc, nif, nchan, nfreq,
+     *          epoch, lat, long, height, tprev, timeref, eq, sdf, dnu,
+     *		evec, systemp, jyperk, velref, nsrc, nif, nchan, nfreq,
      *          nconfig, nants, srcids, freqids, srcid, freqid, srcidx,
      *          freqidx, sindx, findx, mount, velsys, config, mosaic,
      *          velcomp, llok, emok, systok, jok, inited

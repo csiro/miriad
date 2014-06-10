@@ -131,7 +131,7 @@ c         velocity=lsr
 c       indicates that fits is to determine the observatory velocity
 c       wrt the LSR frame using an appropriate model.
 c
-c$Id: fits.for,v 1.29 2014/06/05 01:28:54 sau078 Exp $
+c$Id: fits.for,v 1.30 2014/06/10 02:46:09 sau078 Exp $
 c--
 c
 c  Bugs:
@@ -169,8 +169,8 @@ c-----------------------------------------------------------------------
       character versan*72
 c-----------------------------------------------------------------------
       version = versan('fits',
-     *                 '$Revision: 1.29 $',
-     *                 '$Date: 2014/06/05 01:28:54 $')
+     *                 '$Revision: 1.30 $',
+     *                 '$Date: 2014/06/10 02:46:09 $')
 c
 c  Get the input parameters.
 c
@@ -1452,6 +1452,7 @@ c
       call fitrdhda(lu,'TELESCOP',telescop,' ')
       if (telescop.eq.' ')
      *  call fitrdhda(lu,'INSTRUME',telescop,' ')
+      call lcase(telescop)
       tel = telescop
       call fitrdhda(lu,'OBSERVER',observer,' ')
       call fitrdhda(lu,'OBJECT',defsrc,' ')
@@ -1508,7 +1509,7 @@ c  Set default values for reference freq, lat, long, mount, evector.
 c  Also determine the only values for systemp and jyperk.
 c
       call telpar(telescop,systemp,systok,jyperk,jok,
-     *  llok,lat,long,emok,evec,mount)
+     *  llok,lat,long,height,emok,evec,mount)
       if (.not.emok .and. dochi) call bug('w',
      *  'Insufficient information to determine parallactic angle')
       emok = emok .and. dochi
@@ -1557,7 +1558,7 @@ c
         call ftabGetd(lu,'STABXYZ',0,xyz)
         call antproc(lefty,docio,xc,yc,zc,xyz,n,sta,nd,
      *	      antpos(1,nconfig),
-     *        lat(nconfig),long(nconfig),badan)
+     *        lat(nconfig),long(nconfig),height(nconfig),badan)
         llok = llok .or. .not.badan
 c
 c  Get the reference freqeuncy. Note that multiple bugs in AIPS
@@ -1637,7 +1638,7 @@ c
           call ftabGetd(lu,'ORBXYZ',0,xyz)
           call antproc(lefty,.false.,xc,yc,zc,xyz,n,sta,nd,
      *	      antpos(1,nconfig),
-     *        lat(nconfig),long(nconfig),badan)
+     *        lat(nconfig),long(nconfig),height(nconfig),badan)
           llok = llok .or. .not.badan
 
           freqref(nconfig) = 1d-9*Coord(uvCrval,uvFreq)
@@ -1856,12 +1857,13 @@ c
       end
 c***********************************************************************
 	subroutine antproc(lefty,docio,xc,yc,zc,xyz,n,sta,nd,antpos,
-     *							lat,long,badan)
+     *						lat,long,height,badan)
 c
 	implicit none
 	integer n,nd
 	integer sta(n)
 	double precision xc,yc,zc,antpos(nd,3),lat,long,xyz(3,n)
+	double precision height
 	logical lefty,badan,docio
 c
 c  Fiddle the antenna information.
@@ -1876,10 +1878,11 @@ c  Output:
 c    badan	The antenna coordinates were bad, and the remaining
 c		values are unset.
 c    lat,long	The latitude and longitude of the observatory.
+c    height	Altitude above sea level of the observatory.
 c    antpos	Antenna positions, in Miriad format.
 c-----------------------------------------------------------------------
 	include 'mirconst.h'
-	double precision r,cost,sint,height,temp,xref,yref,zref
+	double precision r,cost,sint,temp,xref,yref,zref
 	logical dolocal
 	integer i,idx
 c
@@ -2227,11 +2230,11 @@ c
 c***********************************************************************
 
       subroutine telpar(telescop,systemp,systok,jyperk,jok,
-     *        latlong,latitude,longitud,polinfo,chioff,mount)
+     *        latlong,latitude,longitud,height,polinfo,chioff,mount)
 
       character telescop*(*)
       integer mount
-      double precision latitude,longitud
+      double precision latitude,longitud,height
       real chioff,systemp,jyperk
       logical latlong,polinfo,systok,jok
 c-----------------------------------------------------------------------
@@ -2247,6 +2250,7 @@ c    jok        True if jyperk has been initialised.
 c    jyperk     System gain.
 c    latlong    True if the latitude and longitude are known.
 c    latitude)  Observatory latitude and longitude, in radians.
+c    height     Observatory height.
 c    longitud)
 c    polinfo    True if mount and chioff have been initialised.
 c    chioff     The position angle of the X feed with respect to the
@@ -2296,6 +2300,8 @@ c
         call obspar(telescop,'latitude',latitude,latlong)
         call obspar(telescop,'longitude',longitud,ok)
         latlong = latlong .and. ok
+	call obspar(telescop,'height',height,ok)
+	if(.not.ok)height = 0.d0
 c
 c  Mount and evector.
 c
@@ -2477,6 +2483,7 @@ c
         if (llok) then
           call uvputvrd(tno,'latitud',lat(config),1)
           call uvputvrd(tno,'longitu',long(config),1)
+	  call uvputvrd(tno,'height',height(config),1)
         endif
         if (emok) then
           call uvputvrr(tno,'evector',evec,1)
@@ -3191,7 +3198,8 @@ c-----------------------------------------------------------------------
 
       real zero(3)
       character anname*8,rdate*32
-      double precision iatutc,gstia0,gstia1,degpdy,xyzd(3)
+      double precision iatutc,gstia0,gstia1,degpdy,xyzc(3),xyzd(3)
+      double precision cost,sint,temp
       integer i
 
 c     Externals.
@@ -3229,10 +3237,12 @@ c
 c
 c  Fill out information in the antenna table header.
 c
-      call llh2xyz(lat,long,height,xyzd(1),xyzd(2),xyzd(3))
-      call fitwrhdd(tOut,'ARRAYX',xyzd(1))
-      call fitwrhdd(tOut,'ARRAYY',xyzd(2))
-      call fitwrhdd(tOut,'ARRAYZ',xyzd(3))
+      call llh2xyz(lat,long,height,xyzc(1),xyzc(2),xyzc(3))
+      cost = cos(long)
+      sint = sin(long)
+      call fitwrhdd(tOut,'ARRAYX',0.d0)
+      call fitwrhdd(tOut,'ARRAYY',0.d0)
+      call fitwrhdd(tOut,'ARRAYZ',0.d0)
       call fitwrhdd(tOut,'GSTIA0',gstia0)
       call fitwrhdd(tOut,'DEGPDY',degpdy)
       call fitwrhdd(tOut,'FREQ',  rfreq)
@@ -3251,15 +3261,25 @@ c
 c
 c  Zero out the unused fields.
 c
-      zero(1) = 0
-      zero(2) = 0
-      zero(3) = 0
+      zero(1) = 0.
+      zero(2) = 0.
+      zero(3) = 0.
       do i = 1, nants
         anname = 'ANT'//itoaf(i)
         call ftabputa(tOut,'ANNAME', i,anname)
-        xyzd(1) = DCMKS*1d-9*xyz(i,1)
-        xyzd(2) = DCMKS*1d-9*xyz(i,2)
-        xyzd(3) = DCMKS*1d-9*xyz(i,3)
+	if(xyz(i,1).eq.999999.d0.and.
+     *	   xyz(i,2).eq.999999.d0.and.
+     *	   xyz(i,3).eq.999999.d0)then
+	  xyzd(1) = 0.d0
+	  xyzd(2) = 0.d0
+	  xyzd(3) = 0.d0
+	else
+          temp =  xyz(i,1)*cost - xyz(i,2)*sint
+          xyzd(1) = DCMKS*1d-9*temp + xyzc(1)
+          temp =  xyz(i,1)*sint + xyz(i,2)*cost
+          xyzd(2) = DCMKS*1d-9*temp + xyzc(2)
+          xyzd(3) = DCMKS*1d-9*xyz(i,3) + xyzc(3)
+	endif
         call ftabputd(tOut,'STABXYZ',i,xyzd)
         call ftabputi(tOut,'NOSTA',  i,i)
         call ftabputi(tOut,'MNTSTA', i,mount)
@@ -3318,7 +3338,7 @@ c
       parameter (uvData=uvRandom+1)
 
       integer pols(PolMin:PolMax),discard(PolMin:PolMax),pnt(maxPol)
-      integer ncopy,totcopy,l,l2,InPnt,OutPnt,Bl,P,iP,i,j,jd,k,length
+      integer ncopy,totcopy,l,l2,InPnt,OutPnt,Bl,P,iP,i,j,jd,k
       integer iSrc
       logical copied(maxPol)
       character num*8,num2*8
@@ -3357,7 +3377,6 @@ c
         i = i + PolInc
       enddo
 
-      length = uvRandom + 1 + 3*nchan
       ncopy = 0
       totcopy = 0
       Time = 0
@@ -4204,12 +4223,12 @@ c-----------------------------------------------------------------------
       call bug('i','Assuming equinox of coordinates is B1950')
       call bug('i','Assuming TAN projection')
 
-      call rdhdi(lIn, 'naxis1', naxis1, 0)
-      call rdhdi(lIn, 'naxis2', naxis2, 0)
-      call rdhdd(lIn, 'cdelt1', cdelt1, 1d0)
-      call rdhdd(lIn, 'crval1', crval1, 0d0)
-      call rdhdd(lIn, 'cdelt2', cdelt2, 1d0)
-      call rdhdd(lIn, 'crval2', crval2, 0d0)
+      call rdhdi(lOut, 'naxis1', naxis1, 0)
+      call rdhdi(lOut, 'naxis2', naxis2, 0)
+      call rdhdd(lOut, 'cdelt1', cdelt1, 1d0)
+      call rdhdd(lOut, 'crval1', crval1, 0d0)
+      call rdhdd(lOut, 'cdelt2', cdelt2, 1d0)
+      call rdhdd(lOut, 'crval2', crval2, 0d0)
 
       crpix1 = dble(naxis1/2 + 1)
       crpix2 = dble(naxis2/2 + 1)
