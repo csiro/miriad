@@ -73,6 +73,10 @@ c         nopol    Do not apply the polarization leakage table
 c                  to the data.
 c         nopass   Do not apply the bandpass table correctsions
 c                  to the data.
+c         topo     Label the frequencies as topocentric. Use this when
+c                  exporting spectral line data from non doppler tracking
+c                  arrays like ATCA, EVLA, ALMA, to CASA to get the 
+c                  velocities right.
 c
 c       These options apply for op=xyin only.
 c         rawdss   Use the conventions for raw Digital Sky Survey FITS
@@ -131,7 +135,7 @@ c         velocity=lsr
 c       indicates that fits is to determine the observatory velocity
 c       wrt the LSR frame using an appropriate model.
 c
-c$Id: fits.for,v 1.30 2014/06/10 02:46:09 sau078 Exp $
+c$Id: fits.for,v 1.31 2014/06/17 05:36:03 wie017 Exp $
 c--
 c
 c  Bugs:
@@ -160,7 +164,7 @@ c-----------------------------------------------------------------------
       parameter (MAXBOXES=2048)
 
       logical   altr, compress, dobl, docal, dochi, dopass, dopol, dss,
-     *          lefty, nod2, varwt
+     *          lefty, nod2, varwt, topo
       integer   boxes(MAXBOXES), velsys
       real      altrpix, altrval
       character in*128, op*8, out*128, uvdatop*12, version*72
@@ -169,8 +173,8 @@ c-----------------------------------------------------------------------
       character versan*72
 c-----------------------------------------------------------------------
       version = versan('fits',
-     *                 '$Revision: 1.30 $',
-     *                 '$Date: 2014/06/10 02:46:09 $')
+     *                 '$Revision: 1.31 $',
+     *                 '$Date: 2014/06/17 05:36:03 $')
 c
 c  Get the input parameters.
 c
@@ -187,7 +191,7 @@ c
 c  Get options.
 c
       call getopt(docal,dopol,dopass,dss,nod2,dochi,compress,
-     *                                        lefty,varwt,dobl)
+     *                                  lefty,varwt,dobl,topo)
       if (op.eq.'uvout') then
         uvdatop = 'sdlb3'
         if (docal) uvdatop(7:7) = 'c'
@@ -208,7 +212,7 @@ c
         call uvin(in,out,velsys,altr,altrpix,altrval,dochi,
      *                          compress,lefty,varwt,dobl,version)
       else if (op.eq.'uvout') then
-        call uvout(out,version)
+        call uvout(out,version,topo)
       else if (op.eq.'xyin') then
         call xyin(in,out,version,dss,nod2)
       else if (op.eq.'xyout') then
@@ -295,10 +299,10 @@ c-----------------------------------------------------------------------
 c***********************************************************************
 
       subroutine getopt(docal,dopol,dopass,dss,nod2,dochi,
-     *                                  compress,lefty,varwt,dobl)
+     *                               compress,lefty,varwt,dobl,topo)
 
       logical docal,dopol,dopass,dss,dochi,nod2,compress,lefty,varwt
-      logical dobl
+      logical dobl,topo
 c-----------------------------------------------------------------------
 c  Get a couple of the users options from the command line
 c
@@ -314,14 +318,15 @@ c    lefty   Assume antenna table uses a left-handed system.
 c    varwt   Interpret the visibility weight as the reciprocal of the
 c            noise variance.
 c    dobl    Apply AIPS baseline-dependent calibration.
+c    topo    Label frequency reference frame as topocentric
 c-----------------------------------------------------------------------
       integer nopt
-      parameter (nopt = 11)
+      parameter (nopt = 12)
       character opts(nopt)*8
       logical present(nopt),olddss
       data opts /'nocal   ','nopol   ','nopass  ','rawdss  ',
      *           'nod2    ','nochi   ','compress','lefty   ',
-     *           'varwt   ','dss     ','blcal   '/
+     *           'varwt   ','dss     ','blcal   ','topo    '/
 c-----------------------------------------------------------------------
       call options('options', opts, present, nopt)
       docal    = .not.present(1)
@@ -335,6 +340,7 @@ c-----------------------------------------------------------------------
       varwt    =      present(9)
       olddss   =      present(10)
       dobl     =      present(11)
+      topo     =      present(12)
 
       if (olddss) then
         call bug('w','Option DSS is deprecated. Please use RAWDSS')
@@ -2674,9 +2680,10 @@ c-----------------------------------------------------------------------
 c
       end
 c***********************************************************************
-      subroutine uvout(out,version)
+      subroutine uvout(out,version, topo)
 c
       character out*(*),version*(*)
+      logical topo
 c
 c  Write out a UV FITS file.
 c
@@ -2797,7 +2804,7 @@ c
         if (repsi.gt.0.001*restfreq) call bug('w',
      *    'Rest frequencies varied between channels by > 0.1%')
         restfreq = 1e9 * restfreq
-        if (restfreq.gt.0) then
+        if (.not.topo.and.restfreq.gt.0) then
           call uvrdvra(tIn,'veltype',veltype,'VELO-LSR')
           call uvfit2(tIn,'velocity',nread,dv,v0,vepsi)
           v0 = 1000d0 * v0
@@ -2808,6 +2815,8 @@ c
             if (veltype.eq.vtype(i)) velref = i
           enddo
           if (velref.gt.3) velref = velref - 3 + 256
+        else
+          velref = 259
         endif
       endif
 c
