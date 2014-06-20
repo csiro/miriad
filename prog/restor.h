@@ -7,7 +7,7 @@ c    ???????  mchw  Original version.
 c    13mar92  mjs   restore -> restor name mod
 c-------------------------------------------------
 	integer nPM
-	parameter(nPM=11)
+	parameter(nPM=101)
 	real Patch(nPM*nPM)
 	integer sxxc(nPM*nPM),syyc(nPM*nPM),sxyc(nPM*nPM)
 	common/PatchCom/Patch,sxxc,syyc,sxyc

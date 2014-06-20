@@ -70,7 +70,7 @@ c                is used.
 c@ out
 c       The output restored image.  No default.
 c
-c$Id: restor.for,v 1.10 2013/08/30 01:49:21 wie017 Exp $
+c$Id: restor.for,v 1.11 2014/06/20 05:36:13 wie017 Exp $
 c--
 c
 c  History:
@@ -106,6 +106,7 @@ c    rjs  28jun01  Doc change only.
 c    mchw 07feb02  Change beamwidth format to handle ATA and ALMA.
 c    mhw  27oct11  Use ptrdiff type for memory allocations
 c    mhw  17jan13  Add mfs option
+c    mhw  20jun14  Increase size of beam patch for fitting, avoid NaN
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mem.h'
@@ -123,8 +124,8 @@ c-----------------------------------------------------------------------
       external  itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('restor',
-     *                 '$Revision: 1.10 $',
-     *                 '$Date: 2013/08/30 01:49:21 $')
+     *                 '$Revision: 1.11 $',
+     *                 '$Date: 2014/06/20 05:36:13 $')
 
 c     Get the input parameters.
       call keyini
@@ -616,7 +617,7 @@ c    fwhm       Beam major and minor axes (radians).
 c    bpa        Beam position angle (degrees).
 c-----------------------------------------------------------------------
       integer   NP
-      parameter (NP=11)
+      parameter (NP=101)
 
       integer   nPd, xBeam, yBeam
       real      cdelt1, cdelt2, patch(NP*NP)
@@ -725,7 +726,7 @@ c-----------------------------------------------------------------------
 
       integer   i, ifail, j, k
       real      aa(3*3), dfdx(3*nPM*nPM), dx(3), f(nPM*nPM),
-     *          fp(nPM*nPM), t1, t2, x(3)
+     *          fp(nPM*nPM), t1, t2, x(3),xp(3)
 
       external derive, func
 c-----------------------------------------------------------------------
@@ -746,6 +747,9 @@ c     Form the initial estimate of the Gaussian beam by using the least
 c     squares solution of a "linearised" version of the problem.  This
 c     should be robust, though somewhat inaccurate.
       call linEst(nP,xBeam,yBeam,Beam,x)
+      xp(1)=x(1)
+      xp(2)=x(2)
+      xp(3)=x(3)
 
 c     Now perform the fit using a proper least squares routine.
       call nllsqu(3,nP*nP,x,dx,MAXITER,0.0,0.005/3,.true.,ifail,
@@ -762,7 +766,11 @@ c     units and the pa is in degrees.  Use linear (small-field) approx.
       t2 = sqrt((x(1)-x(2))**2 + x(3)**2)
       fwhm(1) = 0.5 * (t1 - t2)
       fwhm(2) = 0.5 * (t1 + t2)
-      fwhm(1) = sqrt(4.0*log(2.0)/fwhm(1))
+      if (fwhm(1).gt.0) then
+        fwhm(1) = sqrt(4.0*log(2.0)/fwhm(1))
+      else
+        call bug('f','Beam fit failed - beam too elongated')
+      endif
       fwhm(2) = sqrt(4.0*log(2.0)/fwhm(2))
       if (x(3).ne.0.0) then
         pa = atan2(-x(3),x(1)-x(2)) * R2D / 2.0
