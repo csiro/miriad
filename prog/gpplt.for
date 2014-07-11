@@ -1039,6 +1039,10 @@ c
 	  call LogWrite(line,more)
 	  line = '# Number of antennas: '//itoaf(nants)
 	  call LogWrite(line,more)
+          if (fbin.gt.0) then
+            line = '# Frequency bin: '//itoaf(fbin)
+            call LogWrite(line,more)
+          endif
 c
 	  do isol=1,nsols
 	    offset = (isol-1)*nants*nfeeds
