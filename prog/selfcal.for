@@ -99,7 +99,7 @@ c       the linetype parameters used to construct the map.  If you wish
 c       to override this, or if the info is not in the header, or if you
 c       are using a point source model, this parameter can be useful.
 c
-c$Id: selfcal.for,v 1.13 2014/03/12 04:40:36 wie017 Exp $
+c$Id: selfcal.for,v 1.14 2014/07/16 05:02:08 wie017 Exp $
 c--
 c
 c  History:
@@ -160,6 +160,7 @@ c    mhw  16jan12 Use ptrdiff for scr routines to handle larger files
 c    mhw  10apr13 Add nfbin parameter
 c    mhw  09may13 Add mmfs option
 c    mhw  12mar14 Initialize nchan in point source case
+c    mhw  16jul14 Fixed binned solution interpolation
 c
 c  Bugs/Shortcomings:
 c   * Selfcal should check that the user is not mixing different
@@ -187,8 +188,8 @@ c     Externals.
       external  hdprsnt, header, versan
 c-----------------------------------------------------------------------
       version = versan('selfcal',
-     *                 '$Revision: 1.13 $',
-     *                 '$Date: 2014/03/12 04:40:36 $')
+     *                 '$Revision: 1.14 $',
+     *                 '$Date: 2014/07/16 05:02:08 $')
 c
 c  Get the input parameters.
 c
@@ -550,7 +551,11 @@ c-----------------------------------------------------------------------
       do i = 1, nHash+1
         Hash(i) = 0
       enddo
-
+      
+      do i=1,nfbin
+        freq(i)   = 0.d0
+        wfreq(i)  = 0.d0
+      enddo
       nBl = (nants*(nants-1))/2
       SolSize = 3 + 4*nBl + 2*nants
       maxSol = min(nHash,max(minSol,(MemBuf()-10)/SolSize))
@@ -682,7 +687,7 @@ c-----------------------------------------------------------------------
      *  nfbin,nhash,Hash,Indx,interval,
      *  Memc(pSumVM),Memr(pSumVV),Memr(pSumMM),
      *  Memr(pWeight),Memi(pCount),Memd(prTime),Memr(pstpTim),
-     *  Memr(pstrTim),sfreq,freq)
+     *  Memr(pstrTim),sfreq,freq,wfreq)
 
       end
 
@@ -690,7 +695,8 @@ c***********************************************************************
 
       subroutine SelfAcc1(tscr,nchan0,nchan,start,nvis,nBl,maxSol,
      *  nSols,nfbin,nHash,Hash,Indx,interval,
-     *  SumVM,SumVV,SumMM,Weight,Count,rTime,StpTime,StrTime,sfreq,freq)
+     *  SumVM,SumVV,SumMM,Weight,Count,rTime,StpTime,StrTime,sfreq,freq,
+     *  wfreq)
 
       integer tscr,nchan0,nchan,start,nvis,nBl,maxSol,nSols,nfbin
       integer nHash,Hash(nHash+1),Indx(nHash)
@@ -699,7 +705,8 @@ c***********************************************************************
       real    SumVV(nBl,maxSol,0:nfbin),SumMM(maxSol,0:nfbin)
       real    Weight(nBl,maxSol,0:nfbin)
       integer count(maxSol,0:nfbin)
-      double precision rTime(maxSol),freq(0:nfbin),sfreq(nchan)
+      double precision rTime(maxSol),freq(0:nfbin),wfreq(0:nfbin)
+      double precision sfreq(nchan)
       real    StpTime(maxSol), StrTime(maxSol)
 c-----------------------------------------------------------------------
 c  This reads through the scratch file which contains the visibility
@@ -762,7 +769,7 @@ c-----------------------------------------------------------------------
       real      mm, out(MAXLEN), sMM(0:MAXFBIN), sTime
       real      sVV(0:MAXFBIN), vv, wgt
       complex   sVM(0:MAXFBIN), vm
-      double precision wfreq(MAXFBIN),sF(MAXFBIN)
+      double precision sF(MAXFBIN)
 c-----------------------------------------------------------------------
       if (nchan.gt.MAXCHAN) call bug('f','Too many channels')
       length = NHEAD + 5*nchan
@@ -827,10 +834,8 @@ c       large number of correlations in the solution interval.
           sMM(fbin)    = 0.0
           sVV(fbin)    = 0.0
           sVM(fbin)    = (0.0,0.0)
-          freq(fbin)   = 0.d0
           if (fbin.gt.0) then
             sF(fbin)     = 0.d0
-            wfreq(fbin)  = 0.d0
           endif
         enddo
         chn=start-1
@@ -912,7 +917,6 @@ c-----------------------------------------------------------------------
 
 c     Calculate geometric mean frequency for each bin 
       do fbin=1,nfbin
-        freq(fbin)=0.d0
         if (wfreq(fbin).gt.0) freq(fbin)=exp(freq(fbin)/wfreq(fbin))
       enddo
 
