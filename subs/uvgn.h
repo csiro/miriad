@@ -40,7 +40,7 @@ c
 	parameter(MAXTAB=8096,MAXFEEDS=2,MAXSPECT=MAXWIN)
 	parameter(MAXGAINS=3*MAXANT, MAXSOLN=1024)
 	integer t1,t2,nsols,nants,nfeeds,ntau,ngains,gitem,solno(MAXTAB)
-        integer nbpsols,bpsolno,nfbin
+        integer nbpsols,bpsolno,nfbin,fimode
         integer b(2,MAXCHAN)
         real fac(MAXCHAN)
 	double precision timetab(0:MAXTAB),dtime,bptimes(MAXSOLN)
@@ -63,7 +63,7 @@ c  The common blocks.
 c
 	common/UvGnA/timetab,dtime,bptimes,gains,t1,t2,nsols,nants,
      *	  nfeeds,ngains,ntau,nbpsols,gitem,solno,bpsolno,
-     *    gflag,dogains,dotau,freq,nfbin,b,fac
+     *    gflag,dogains,dotau,freq,nfbin,fimode,b,fac
 c
 	common/UvGnB/ncgains,nwgains,ncbase,nwbase,pCgains,pWgains,
      *		docgains,dowgains

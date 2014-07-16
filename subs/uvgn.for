@@ -34,8 +34,9 @@ c    27aug09 mhw  Handle multiple bandpass solution intervals
 c    31oct11 mhw  Use ptrdiff for memory allocation
 c    24feb11 mhw  Handle freq bins in gains and leakage
 c    22jun12 pjt  Fixed some ptrdiff
+c    16jul14 mhw  Add frequency interpolation options
 c
-c $Id: uvgn.for,v 1.20 2014/06/06 02:14:51 wie017 Exp $
+c $Id: uvgn.for,v 1.21 2014/07/16 05:04:18 wie017 Exp $
 c***********************************************************************
 
       subroutine uvGnIni(tno1,dogains1,dopass1)
@@ -79,6 +80,7 @@ c
      *    'Bad number of gains or feeds')
         if (nants.gt.MAXANT) call bug('f',
      *    'Too many antennae for me to handle, in uvGnIni')
+        call rdhdi(tno,'fimode',fimode,0)
       else
         nants = MAXANT
         ngains = MAXANT
@@ -651,10 +653,17 @@ c
           else
             do i = 1, nread
               if (flag(b(1,i)).and.flag(b(2,i))) then
-                g = gain(b(1,i))/gain(b(2,i))
-                mag = abs(g)
-                data(i) = data(i)*gain(b(2,i))*(1+(mag-1)*fac(i))*
-     *            (g/mag)**fac(i)
+                if (fimode.eq.2) then
+c                 fimode=2: use single gain amp per bin, but interpolate phase
+                   g = gain(b(2,i))/gain(b(1,i))
+                  mag = abs(g)
+                  data(i) = data(i)*gain(b(1,i))*(g/mag)**(1-fac(i))            
+                else
+                  g = gain(b(1,i))/gain(b(2,i))
+                  mag = abs(g)
+                  data(i) = data(i)*gain(b(2,i))*(1+(mag-1)*fac(i))*
+     *              (g/mag)**fac(i)
+                endif
               else
                 flags(i) = .false.
               endif
@@ -692,21 +701,27 @@ c************************************************************************
               b(1,chan) = i
             endif
           enddo
-          b(2,chan) = 0
-          d2 = abs(chnfreq(chan))
-          do i=1,nfbin
-            d = abs(chnfreq(chan)-freq(i))
-            if (i.ne.b(1,chan).and.d.lt.d2) then
-              d2 = d
-              b(2,chan) = i
-            endif
-          enddo
-          if (b(2,chan).eq.0) b(2,chan)=b(1,chan)
-          if (b(1,chan).eq.b(2,chan)) then
-            fac(chan) = 0
+          if (fimode.eq.1) then
+c           use nearest freq bin instead of linear interpolation
+            b(2,chan)=b(1,chan)
+            fac=0
           else
-            fac(chan) = (freq(b(2,chan))-chnfreq(chan))/
-     *                  (freq(b(2,chan))-freq(b(1,chan)))
+            b(2,chan) = 0
+            d2 = abs(chnfreq(chan))
+            do i=1,nfbin
+              d = abs(chnfreq(chan)-freq(i))
+              if (i.ne.b(1,chan).and.d.lt.d2) then
+                d2 = d
+                b(2,chan) = i
+              endif
+            enddo
+            if (b(2,chan).eq.0) b(2,chan)=b(1,chan)
+            if (b(1,chan).eq.b(2,chan)) then
+              fac(chan) = 0
+            else
+              fac(chan) = (freq(b(2,chan))-chnfreq(chan))/
+     *                    (freq(b(2,chan))-freq(b(1,chan)))
+            endif
           endif
         enddo
         end
