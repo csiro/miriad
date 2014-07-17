@@ -28,7 +28,7 @@ c
 	logical dowt,dopmps,doxyp,opcorr,hires,cabb,dopack,dotsys
 	real wts(2*ATCONT-2),edgepc
 	real axisrms(ATANT),axismax(ATANT),mdata(9)
-	double precision obsra,obsdec,lat,long,ra,dec
+	double precision obsra,obsdec,lat,long,ra,dec,xyzref(3)
 	character sname*64
 	integer refnant,nopcorr
 	real refpnt(2,ATANT)
@@ -36,7 +36,7 @@ c
 c
 	common/atlodd/sname
 	common/atlodc/sfreq,sdf,restfreq,time,obsra,obsdec,lat,long,
-     *	    ra,dec,
+     *	    xyzref,ra,dec,
      *	  data,
      *	  xtsys,ytsys,xgtp,ygtp,xsdo,ysdo,xcaljy,ycaljy,chi,
      *    xyphase,xyamp,xsampler,ysampler,u,v,w,inttime,
