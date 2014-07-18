@@ -81,7 +81,6 @@ c         If axis = phase                 [degrees;       2 values]
 c         If axis = hangle                [hh,mm,ss.s;    6 values]
 c         If axis = rms                   [flux units;    2 values]
 c         If axis = lst                   [decimal hours; 2 values]
-c         If axis = freq                  [GHz;           2 values]
 c
 c       For axis types other than 'time' or 'hangle', one or other of
 c       the limits may be set with the other self-scaled by specifying
@@ -132,7 +131,7 @@ c         nocal   Do not apply antenna gain calibration.
 c         nopass  Do not apply bandpass correction.
 c         nopol   Do not apply polarisation leakage correction.
 c
-c$Id: blflag.for,v 1.20 2013/05/23 03:43:33 wie017 Exp $
+c$Id: blflag.for,v 1.21 2014/07/18 02:45:48 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -165,8 +164,8 @@ c     Data store (48*MAXBUF bytes).
       character itoaf*10, versan*72
 c-----------------------------------------------------------------------
       version = versan('blflag',
-     *                 '$Revision: 1.20 $',
-     *                 '$Date: 2013/05/23 03:43:33 $')
+     *                 '$Revision: 1.21 $',
+     *                 '$Date: 2014/07/18 02:45:48 $')
 
 c     Get the input parameters.
       call keyini
@@ -368,7 +367,7 @@ c-----------------------------------------------------------------------
       nofqaver=present(9)
       if (scalar .and. rms)
      *  call bug('f','Options scalar and rms cannot be used together')
-      uvflags = 'sdlwb'
+      uvflags = 'sdlb'
       if (.not.present(2)) uvflags(6:6) = 'c'
       if (.not.present(3)) uvflags(7:7) = 'f'
       if (.not.present(4)) uvflags(8:8) = 'e'
@@ -502,20 +501,21 @@ c-----------------------------------------------------------------------
 
       logical   flush
       integer   ant1, ant2, bl, bnext, chInc, ic, jc, mchan, n, nchan
-      real      dTime, temp, uvsq, var, x, y
-      double precision lst, preamble(4), ra, time
+      real      dTime, uvd1, var1, x, y
+      real      uvd(MAXCHAN), var(MAXCHAN)
+      double precision lst, preamble(4), ra, time, sfreq(MAXCHAN)
 
       external  getVal
       real      getVal
 c-----------------------------------------------------------------------
 c     Initialise accumulators.
-      uvsq = 0.0
-      var  = 0.0
       do ic = 1, MAXCHAN
         npnt(ic)  = 0
         corr(ic)  = (0.0,0.0)
         corr1(ic) = (0.0,0.0)
         corr2(ic) = (0.0,0.0)
+        uvd(ic) = 0
+        var(ic) = 0
       enddo
 
       do bl = 1, MAXBASE
@@ -533,6 +533,7 @@ c     Initialise accumulators.
 c     Let's get going.
       call output('Reading the data...')
       call uvDatRd(preamble,visDat,flags,MAXCHAN,nchan)
+      call uvinfo(lIn,'sfreq',sfreq)
       if (nchan.eq.0) call bug('f','No visibility data found')
       if (nchan.eq.MAXCHAN) call bug('f','Too many channels for me')
 
@@ -566,10 +567,10 @@ c                 Use 0 to indicate the whole spectrum.
 
 c               Compute the requested x, and y values.
                 dTime = real(time - time0)
-                x = getVal(rms,scalar,xaxis,dTime,lst,ra,jc,uvsq,var,
-     *                npnt(ic),corr(ic),corr1(ic),corr2(ic))
-                y = getVal(rms,scalar,yaxis,dTime,lst,ra,jc,uvsq,var,
-     *                npnt(ic),corr(ic),corr1(ic),corr2(ic))
+                x = getVal(rms,scalar,xaxis,dTime,lst,ra,jc,uvd(ic),
+     *                var(ic),npnt(ic),corr(ic),corr1(ic),corr2(ic))
+                y = getVal(rms,scalar,yaxis,dTime,lst,ra,jc,uvd(ic),
+     *                var(ic),npnt(ic),corr(ic),corr1(ic),corr2(ic))
 
 c               Store it if within range.
                 if (x.ge.xmin .and. x.le.xmax .and.
@@ -590,13 +591,13 @@ c           Finished if no visibility read last time.
             if (nchan.le.0) return
 
 c           Reset the accumulators.
-            uvsq = 0.0
-            var  = 0.0
             do ic = 1, mchan
               npnt(ic)  = 0
               corr(ic)  = (0.0,0.0)
               corr1(ic) = (0.0,0.0)
               corr2(ic) = (0.0,0.0)
+              uvd(ic) = 0
+              var(ic) = 0
             enddo
 
             call uvrdvrd(lIn,'lst',lst,0d0)
@@ -606,6 +607,9 @@ c           Reset the accumulators.
 c         Accumulate Stokes for this baseline.
           jc = 1
           n  = 0
+          uvd1 = sqrt(preamble(1)*preamble(1) +
+     *                preamble(2)*preamble(2))
+          call uvDatGtr('variance',var1)
           do ic = 1, nchan
             if (flags(ic)) then
               n = n + 1
@@ -614,18 +618,14 @@ c         Accumulate Stokes for this baseline.
               corr1(jc) = corr1(jc) + abs(visDat(ic))
               corr2(jc) = corr2(jc) + cmplx(real(visDat(ic))**2,
      *                                     aimag(visDat(ic))**2)
+              uvd(jc) = uvd(jc) + sfreq(ic) * uvd1
+              var(jc) = var(jc) + var1
             endif
 
 c           chInc is set to 1 for nofqaver, otherwise 0.
             jc = jc + chInc
           enddo
 
-          if (n.gt.0) then
-            call uvDatGtr('variance',temp)
-            var  = var  + n * temp
-            uvsq = uvsq + n * (preamble(1)*preamble(1) +
-     *                         preamble(2)*preamble(2))
-          endif
         endif
 
 c       Finished if no visibility read last time.
@@ -676,7 +676,7 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      real function getVal(rms,scalar,axis,dTime,lst,ra,chan,uvsq,var,
+      real function getVal(rms,scalar,axis,dTime,lst,ra,chan,uvd,var,
      *  npnt,corr,corr1,corr2)
 
       logical   rms, scalar
@@ -684,7 +684,7 @@ c***********************************************************************
       real      dTime
       double precision lst, ra
       integer   chan
-      real      uvsq, var
+      real      uvd, var
       integer   npnt
       complex   corr, corr1, corr2
 c-----------------------------------------------------------------------
@@ -711,7 +711,7 @@ c-----------------------------------------------------------------------
       else if (axis.eq.'phase') then
         getVal = atan2(aimag(visDat),real(visDat))*R2D
       else if (axis.eq.'uvdistance') then
-        getVal = 0.001 * sqrt(uvsq/npnt)
+        getVal = 0.001 * uvd/npnt
       else if (axis.eq.'rms') then
         getVal = sqrt(var/npnt)
       else if (axis.eq.'time') then
