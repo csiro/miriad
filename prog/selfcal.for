@@ -9,7 +9,7 @@ c       visibility data.  Either phase only or amplitude and phase
 c       calibration can be performed.  The input to SELCAL are a
 c       visibility data file, and model images.  This program then
 c       calculates the visibilities corresponding to the model,
-c       accumulates the statistics needed to determine the antennae
+c       accumulates the statistics needed to determine the antenna
 c       solutions, and then calculates the self-cal solutions.
 c@ vis
 c       Name of input visibility data file. No default.
@@ -64,8 +64,8 @@ c         relax      Relax the convergence criteria. This is useful when
 c                    selfcal'ing with a very poor model.
 c         noscale    Do not scale the gains.  By default the gains are
 c                    scaled so that the rms gain amplitude is 1.  In
-c                    this way, the total flux is not contrained to agree
-c                    with the model.
+c                    this way, the total flux is not constrained to
+c                    agree with the model.
 c         mosaic     This causes SELFCAL to select only those
 c                    visibilities whose observing center is within plus
 c                    or minus three pixels of the model reference pixel.
@@ -81,7 +81,7 @@ c       The default is 3 for options=phase and 4 for options=amplitude.
 c@ refant
 c       This sets the reference antenna, which is given a phase angle of
 c       zero.  The default, for a given solution interval, is the
-c       antennae with the greatest weight.
+c       antenna with the greatest weight.
 c@ flux
 c       If MODEL is blank, then the flux density (Jy) of a point source
 c       model can be specified here.  The default is 1.
@@ -99,7 +99,7 @@ c       the linetype parameters used to construct the map.  If you wish
 c       to override this, or if the info is not in the header, or if you
 c       are using a point source model, this parameter can be useful.
 c
-c$Id: selfcal.for,v 1.14 2014/07/16 05:02:08 wie017 Exp $
+c$Id: selfcal.for,v 1.15 2014/07/18 01:24:26 wie017 Exp $
 c--
 c
 c  History:
@@ -188,8 +188,8 @@ c     Externals.
       external  hdprsnt, header, versan
 c-----------------------------------------------------------------------
       version = versan('selfcal',
-     *                 '$Revision: 1.14 $',
-     *                 '$Date: 2014/07/16 05:02:08 $')
+     *                 '$Revision: 1.15 $',
+     *                 '$Date: 2014/07/18 01:24:26 $')
 c
 c  Get the input parameters.
 c
