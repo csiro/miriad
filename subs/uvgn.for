@@ -35,8 +35,9 @@ c    31oct11 mhw  Use ptrdiff for memory allocation
 c    24feb11 mhw  Handle freq bins in gains and leakage
 c    22jun12 pjt  Fixed some ptrdiff
 c    16jul14 mhw  Add frequency interpolation options
+c    18jul14 mhw  Fix array bounds violations in uvGnPsMa
 c
-c $Id: uvgn.for,v 1.21 2014/07/16 05:04:18 wie017 Exp $
+c $Id: uvgn.for,v 1.22 2014/07/18 04:54:00 wie017 Exp $
 c***********************************************************************
 
       subroutine uvGnIni(tno1,dogains1,dopass1)
@@ -1506,24 +1507,24 @@ c             data.
                 l = nint(chan-0.5)
                 nearest = l.lt.0 .or. l.ge.nschan(i0)-1
                 l = l + ischan(i0)
-                r11=tab(l,k,ib)
-                r12=tab(l+1,k,ib)
-                if (.not.nearest) nearest =
+                if (.not.nearest) then
+                  r11=tab(l,k,ib)
+                  r12=tab(l+1,k,ib)
+                  nearest =
      *              abs(real(r11))+ abs(aimag(r11)).eq.0 .or.
      *              abs(real(r12))+ abs(aimag(r12)).eq.0
+                endif
                 if (nearest) then
                   l = nint(chan)
                   flags(off,k) = l.ge.0 .and. l.lt.nschan(i0)
                   l = l + ischan(i0)
-                  r11=tab(l,k,ib)
-                  r12=tab(l+1,k,ib)
-                  if (ib.lt.nbpsols) then
-                    r21=tab(l,k,ib+1)
-                    r22=tab(l+1,k,ib+1)
-                  endif
-                  if (flags(off,k)) flags(off,k) =
-     *              real(r11).ne.0 .or. aimag(r11).ne.0
                   if (flags(off,k)) then
+                    r11=tab(l,k,ib)
+                    flags(off,k) = real(r11).ne.0 .or. aimag(r11).ne.0
+                  endif
+                  if (flags(off,k)) then
+                    r21=0
+                    if (ib.lt.nbpsols) r21=tab(l,k,ib+1)
                     fac=factor
                     if (abs(r21).eq.0) fac=0
                     dat(off,k) = (1-fac)*r11+fac*r21
