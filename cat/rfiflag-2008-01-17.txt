@@ -1,9 +1,6 @@
 # CABB rfi flagging
-# after http://www.narrabri.atnf.csiro.au/operations/rfi/rfi_ext.html
-1059 1075 # Mt Dowe analog TV (until Dec 2012)
-1103 1117
-1145 1159
-1165 1191  # Mt Dowe digital TV
+# after http://www.narrabri.atnf.csiro.au/operations/rfi_ext.html
+1165 1191  # Mt Dowe
 1217 1239  # GPS L2 precision code
 1240 1252  # Glonass Satellite positioning
 1380 1382  # GPS L3 code
@@ -15,14 +12,13 @@
 1525 1628  # L-band Satellite downlinks
 #1713 1755  # 1.8 GHz Terrestrial Microwave Link Band - not often seen
 #1832 1860
-#2222 2250  # 2.1GHz Terrestrial Microwave Link Band - not often seen
-#2237 2265
-#2251 2279
-#2266 2294
+2222 2250  # 2.1GHz Terrestrial Microwave Link Band
+2237 2265
+2251 2279
+2266 2294
 # wireless networks, microwave ovens, shouldn't bee seen on site if all is well
 #2400 2484  # 2.4GHz ISM unlicensed band
 2489 2496  # S-band Globalstar satellite phone system downlinks
-2879 2881  # Gunnedah weather radar
 5622 5628  # Moree weather radar
 # following RFI is not often seen, uncomment if needed
 #5725 5875  # 5.8 GHz ISM unlicensed band
