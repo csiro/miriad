@@ -55,6 +55,7 @@ c    rjs   19sep04    Copy across sensitivity model, if appropriate.
 c    rjs   18sep05    Correct incorrect type of keyd call.
 c    rjs   14dec11    Copy across nbpsols item.
 c    mrc   09apr13    Fix handling of negative dec between 0 and -1
+c    rjs   24jul14    Correctly handle w coordinate.
 c***********************************************************************
 c= Uvedit - Editing of the baseline of a UV data set.
 c& jm
@@ -220,7 +221,7 @@ c
       character PROG*(*)
       parameter (PROG = 'UVEDIT: ')
       character VERSION*(*)
-      parameter (VERSION = 'version 1.8 14-Dec-2011')
+      parameter (VERSION = 'version 1.8 24-Jul-2014')
 c
       double precision SECRAD, ASECRAD
 c  -------------(SECRAD = DPI / (12.d0 * 3600.d0))
@@ -264,10 +265,10 @@ c
       double precision lo1, lo2
       double precision cosHA, sinHA, cosdec, sindec
       double precision delX, delY, delZ
-      double precision bxnew, bynew, bznew
+      double precision bxnew, bynew, bznew, bxy, byx
       double precision BX, BY, BZ
-      double precision uu, vv
-      double precision preamble(4)
+      double precision uu, vv, ww
+      double precision preamble(5)
       double precision dummy(3 * MAXANT)
       double precision antpos(MAXANT, 3)
       double precision XYZ(MAXANT, 3), newxyz(MAXANT, 3)
@@ -564,6 +565,7 @@ c
         srcfound = allsrc
         changed = .FALSE.
         call UvOpen(Lin, Vis(j), 'old')
+	call UvSet(Lin,'preamble','uvw/time/baseline',0,0.0,0.0,0.0)
         call UvTrack(Lin, 'antpos', 'u')
         call TrackIt(Lin, except, Nexcept)
         call UvNext(Lin)
@@ -624,6 +626,8 @@ c
             call UvOpen(Lout, Outfile, 'new')
             mesg = PROG // 'Writing visibilities to: '// Outfile
             call Output(mesg)
+	    call UvSet(
+     *		     Lout,'preamble','uvw/time/baseline',0,0.0,0.0,0.0)
             if (docorr)
      *        call uvset(Lout, 'corr', corrtype, 0, 0.0, 0.0, 0.0)
 c
@@ -745,7 +749,7 @@ c
                     enddo
                     call UvPutvrd(Lout, 'antpos', dummy, Nant * 3)
                   endif
-                  call BasAnt(preamble(4), ant1, ant2)
+                  call BasAnt(preamble(5), ant1, ant2)
                   BX = antpos(ant2, 1) - antpos(ant1, 1)
                   BY = antpos(ant2, 2) - antpos(ant1, 2)
                   BZ = antpos(ant2, 3) - antpos(ant1, 3)
@@ -849,13 +853,15 @@ c
 c Get original uv coordinates.
                   uu = preamble(1)
                   vv = preamble(2)
+		  ww = preamble(3)
                   phase = 0.0
 c Time.
                   timphz = -uu * cosdec * timeoff
                   if (dotime) phase = phase - timphz
 c Ra and Dec.
                   if (dorad) then
-                    call Getrdphz(Lin,RA+delra,dec+deldec,uu,vv,radphz)
+                    call Getrdphz(Lin,RA+delra,dec+deldec,
+     *						uu,vv,ww,radphz)
                     phase = phase - radphz
                   endif
 c Antenna.
@@ -876,7 +882,7 @@ c  Set headers variables to new values.
 c
 c  Get new uv coordinates...
                   if (dotime) then
-                    preamble(3) = preamble(3) + (timeoff / (2 * PI))
+                    preamble(4) = preamble(4) + (timeoff / (2 * PI))
                     HA = HA + timeoff
                   endif
                   if (dorad) HA = HA - delra
@@ -887,18 +893,21 @@ c  Get new uv coordinates...
                     sindec = sin(obsdec + deldec)
                   endif
                   if (douv) then
-                    uu = (bxnew * sinHA) + (bynew * cosHA)
-                    vv = (((-bxnew * cosHA) + (bynew * sinHA)) * sindec)
-     *                 + (bznew * cosdec)
+                    bxy =  (bxnew * sinHA) + (bynew * cosHA)
+                    byx = -(bxnew * cosHA) + (bynew * sinHA)
+                    uu =   bxy
+                    vv =  (byx * sindec) + (bznew * cosdec)
+		    ww = -(byx * cosdec) + (bznew * sindec)
 c
                     call uvrdvrd(Lin, 'epoch', epoch, 2000.0d0)
                     jepoch = epo2jul(epoch, ' ')
-                    call prerotat(jepoch, RA, dec, preamble(3), theta)
+                    call prerotat(jepoch, RA, dec, preamble(4), theta)
                     costh = cos(theta)
                     sinth = sin(theta)
 c
                     preamble(1) = (uu * costh) + (vv * sinth)
                     preamble(2) = (vv * costh) - (uu * sinth)
+		    preamble(3) = ww
                   endif
 c
 c  Get particular headers necessary to do editing (these items have
@@ -1162,11 +1171,11 @@ c
 c
       end
 c************************************************************************
-      subroutine Getrdphz(Lin,RA,dec,uu,vv,radphz)
+      subroutine Getrdphz(Lin,RA,dec,uu,vv,ww,radphz)
 c
       implicit none
       integer Lin
-      double precision RA,dec,uu,vv
+      double precision RA,dec,uu,vv,ww
       real radphz
 c
 c  Determine the phase shift to apply to center the dataset at a particular
@@ -1180,7 +1189,7 @@ c  Output:
 c    radphz
 c------------------------------------------------------------------------
       real dra, ddec
-      double precision x1(2),x2(2)
+      double precision x1(2),lmn(3)
 c
       call uvrdvrr(Lin, 'dra', dra, 0.0)
       call uvrdvrr(Lin, 'ddec', ddec, 0.0)
@@ -1190,9 +1199,9 @@ c
       x1(2) = dec + ddec
 c
       call coInit(Lin)
-      call coCvt(Lin,'aw/aw',x1,'op/op',x2)
+      call coLMN(Lin,'aw/aw',x1,lmn)
       call coFin(Lin)
-      radphz = (uu * x2(1)) + (vv * x2(2))
+      radphz = (uu * lmn(1)) + (vv * lmn(2)) + (ww*(lmn(3)-1))
 c
       end
 c***********************************************************************
