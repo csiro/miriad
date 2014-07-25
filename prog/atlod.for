@@ -176,7 +176,7 @@ c       For concatenated spectra the width of a single zoom is used.
 c       Note that noise and artefacts go up quickly towards the band 
 c       edge so making this much smaller will not gain you much.
 c
-c$Id: atlod.for,v 1.48 2014/07/17 03:45:42 sau078 Exp $
+c$Id: atlod.for,v 1.49 2014/07/25 02:12:09 wie017 Exp $
 c--
 c
 c  Program Structure:
@@ -340,8 +340,10 @@ c    mhw  12sep12 Drop edge channels for 16cm data with birdie option
 c    mhw  07dec12 Fix 29may12 opcor code again - how did it ever work?
 c    mhw  29jan13 Fix nscans skip and read code - RPEOF call hangs
 c    mhw  22oct13 Apply patches by vjm to fix some string overflows
+c    rjs  17jul14 Changes to correct antenna table
+c    mhw  25jul14 Deal with historical rfiflag files 
 c
-c $Id: atlod.for,v 1.48 2014/07/17 03:45:42 sau078 Exp $
+c $Id: atlod.for,v 1.49 2014/07/25 02:12:09 wie017 Exp $
 c-----------------------------------------------------------------------
 
         integer MAXFILES,MAXTIMES,MAXSIM
@@ -362,8 +364,8 @@ c
         character itoaf*8, rperr*32, versan*72
 c-----------------------------------------------------------------------
       version = versan ('atlod',
-     :                  '$Revision: 1.48 $',
-     :                  '$Date: 2014/07/17 03:45:42 $')
+     :                  '$Revision: 1.49 $',
+     :                  '$Date: 2014/07/25 02:12:09 $')
 c
 c  Get the input parameters.
 c
@@ -1854,7 +1856,7 @@ c
      *                  nopcorr)
                       if(nchan.gt.0)then
                         call rfiFlag(flags,NDATA,nifs,nfreq,sfreq,
-     *                             sdf,birdie,edgepc,tdash)
+     *                               sdf,birdie,edgepc,tdash)
                         if(.not.hires)call uvputvri(tno,'bin',bin,1)
                         call uvputvri(tno,'pol',polcode(1,p),1)
                         call uvputvrr(tno,'inttime',inttime(bl),1)
@@ -3637,23 +3639,44 @@ c***********************************************************************
 c
         logical rfiflag
 c-----------------------------------------------------------------------
-        double precision f1,f2
-        character*80 filename,string,stcat
-        integer lu,iostat,l
         integer MAXRFI, nrfi
         parameter(MAXRFI=99)
         double precision rfifreq(2,MAXRFI)
-        common/rficom/rfifreq,nrfi
+        logical inirfi
+        common/rficom/rfifreq,nrfi,inirfi
         nrfi=0
-        if (.not.rfiflag) return
+        inirfi=.not.rfiflag
+        end
+c***********************************************************************
+        subroutine rfiRead(time)
 c
-c  Read rfiflag.txt file from current directory or $MIRCAT
+        double precision time
+c-----------------------------------------------------------------------
+        double precision f1,f2
+        character*80 filename,string,stcat
+        integer lu,iostat,l
+        double precision J17JAN08,J04FEB11
+        parameter (J17JAN08=2454482.5,J04FEB11=2455596.5)
+        integer MAXRFI, nrfi
+        parameter(MAXRFI=99)
+        double precision rfifreq(2,MAXRFI)
+        logical inirfi
+        common/rficom/rfifreq,nrfi,inirfi
+c
+c  Read rfiflag.txt file from current directory or 
+c  appropriate one from $MIRCAT
 c
         filename='./rfiflag.txt'
         call txtopen(lu,filename,'old',iostat)
         if (iostat.ne.0) then
           call getenv('MIRCAT',filename)
-          filename = stcat(filename,'/rfiflag.txt')
+          if (time.lt.J17JAN08) then
+            filename = stcat(filename,'/rfiflag-2008-01-17.txt')
+          else if (time.lt.J04FEB11) then
+            filename = stcat(filename,'/rfiflag-2011-02-04.txt')
+          else
+            filename = stcat(filename,'/rfiflag.txt')
+          endif
           call txtopen(lu,filename,'old',iostat)
         endif
         if (iostat.ne.0) then
@@ -3685,6 +3708,7 @@ c
      *     ' frequency ranges'
           call output(string)
         endif
+        inirfi = .true.
 
         end
 
@@ -3699,10 +3723,13 @@ c-----------------------------------------------------------------------
         real edge
 c
         double precision c1,c2,tmp,cfreq,J17AUG10
-        integer MAXRFI, NBIRDIE1, NBIRDIE2, nrfi,ch1,ch2,i,j,k,offset
-        parameter(MAXRFI=99,NBIRDIE1=11,NBIRDIE2=3,J17AUG10=2455425.5)
+        integer NBIRDIE1, NBIRDIE2, ch1,ch2,i,j,k,offset
+        parameter(NBIRDIE1=11,NBIRDIE2=3,J17AUG10=2455425.5)
+        integer MAXRFI, nrfi
+        parameter(MAXRFI=99)
         double precision rfifreq(2,MAXRFI)
-        common/rficom/rfifreq,nrfi
+        logical inirfi
+        common/rficom/rfifreq,nrfi,inirfi
 c
 c  CABB 1MHz continuum mode birdies (2049*1 MHz)
 c  CABB 64 MHz continuum mode birdies (33*64 MHz)
@@ -3712,6 +3739,7 @@ c
         data b1/640,256,768,1408,1280,1920,1792,1176,156,128,1152/
         data b2/8,16,24/
 c        
+        if (.not.inirfi) call rfiRead(time)
         if (nrfi.gt.0) then
           offset=1
           do i=1,nifs
