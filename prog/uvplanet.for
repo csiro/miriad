@@ -38,6 +38,10 @@ c	needed to avoid ambiguity. Possible options are:
 c	   replace     Replace the data with the blackbody disk and point
 c	               sources (the normal behaviour is to subtract the
 c	               blackbody disk and point sources).
+c	   pparam      Normally uvplanet uses its own ephemerides to determine
+c	               planet major and minor axes and position angle to model
+c	               the planets disk. The pparam option causes uvplanet to use
+c	               
 c	   magnetic    For Jupiter only: The magnetic axis is used to 
 c	               set planet orientation parameters. This overrides the
 c	               normal behaviour of using the spin axis.
@@ -116,18 +120,21 @@ c    16jan01 rjs  Recompute uv coordinates and handle large shifts
 c	          correctly when shifting the source. Handle limb
 c		  darkening model.
 c    21jan01 rjs  Protect limb darkening calculation from the zero spacing.
+c    12mar12 rjs  Correct location of call to uvvarOnit
+c    01mar14 rjs  Increase buffer size.
+c    05aug14 rjs  Added pparam option.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
 	integer MAXSCAN,MAXSRC
-	parameter(MAXSCAN=1024,MAXSRC=200)
+	parameter(MAXSCAN=10240,MAXSRC=200)
 	character version*(*)
-	parameter(version='uvPlanet: version 1.0 21-Jan-01')
+	parameter(version='uvPlanet: version 1.0 05-Aug-14')
 c
 	character out*64,ltype*16,uvflags*16
 	real pltb,limb
 	integer lIn,lOut
-	logical dojaxis,arcane,first,dorep
+	logical dojaxis,arcane,first,dorep,pparam
 	integer jscan,tscan
 	double precision jdata(6,MAXSCAN),tdata(6,MAXSCAN)
 	integer nsrc
@@ -144,7 +151,7 @@ c  Get the input parameters.
 c
 	call output(version)
 	call keyini
-	call GetOpt(dorep,dojaxis,arcane,uvflags)
+	call GetOpt(dorep,dojaxis,pparam,arcane,uvflags)
 	call uvDatInp('vis',uvflags)
 	call keyr('pltb',pltb,0.)
 	call keyr('pltb',limb,0.)
@@ -186,12 +193,12 @@ c
 	    call hisinput(lOut,'UVPLANET')
 	    call hisclose(lOut)
 	    first = .false.
+	    call VarOnit(lIn,lOut,ltype)
 	  endif
-	  call VarOnit(lIn,lOut,ltype)
 c
 c  Do the work.
 c
-	  call Process(lIn,lOut,pltb,limb,dorep,dojaxis,
+	  call Process(lIn,lOut,pltb,limb,dorep,dojaxis,pparam,
      *	    tscan,tdata,jscan,jdata,sra,sdec,flux,nsrc)
 c
 c  All said and done. Close up shop.
@@ -203,10 +210,10 @@ c
 	call uvclose(lOut)
 	end
 c************************************************************************
-	subroutine GetOpt(dorep,dojaxis,arcane,uvflags)
+	subroutine GetOpt(dorep,dojaxis,pparam,arcane,uvflags)
 c
 	implicit none
-	logical dojaxis,arcane,dorep
+	logical dojaxis,arcane,dorep,pparam
 	character uvflags*(*)
 c
 c  Determine extra processing options.
@@ -215,17 +222,18 @@ c  Output:
 c    uvflags
 c------------------------------------------------------------------------
 	integer NOPTS
-	parameter(NOPTS=6)
+	parameter(NOPTS=7)
 	logical present(NOPTS)
 	character opts(NOPTS)*8
 c
 	data opts/'magnetic','nocal   ','nopol   ','nopass  ',
-     *		  'arcane  ','replace '/
+     *		  'arcane  ','replace ','pparam  '/
 c
 	call options('options',opts,present,NOPTS)
 	dojaxis = present(1)
 	arcane  = present(5)
 	dorep   = present(6)
+	pparam  = present(7)
 c
 c  Determine the flags to pass to the uvDat routines.
 c    d - Data selection.
@@ -241,12 +249,12 @@ c
 c
 	end
 c************************************************************************
-	subroutine Process(lIn,lOut,pltb,limb,dorep,dojaxis,
+	subroutine Process(lIn,lOut,pltb,limb,dorep,dojaxis,pparam,
      *			tscan,tdata,jscan,jdata,sra,sdec,flux,nsrc)
 c
 	implicit none
 	integer lIn,lOut
-	logical dojaxis,dorep
+	logical dojaxis,dorep,pparam
 	real pltb,limb
 	integer tscan,jscan,nsrc
 	double precision tdata(6,*),jdata(6,*),sra(*),sdec(*)
@@ -259,6 +267,7 @@ c    lIn
 c    lOut
 c    dojaxis	Write out the position angle related to the magnetic
 c		axis (not spin axis).
+c    pparam     Believe bmaj,bmin,bpa in dataset (if present).
 c    pltb	Planet brightness temperature to subtract off.
 c    limb	Limb darkening parameter.
 c------------------------------------------------------------------------
@@ -270,7 +279,7 @@ c------------------------------------------------------------------------
 	double precision preamble(5),sub(3)
 	double precision lamIII,latitude,utc,tdb,uu,vv
 	double precision tra,tdec,jra,jdec
-	real a,b,disk,bmaj,bmin,bpa,cospa,sinpa,temp
+	real a,b,disk,bmaj,bmin,bpa,cospa,sinpa,temp,temp1,temp2,temp3
 	real z,q,y
 	logical flags(MAXCHAN)
 	double precision freq(MAXCHAN),dist
@@ -328,6 +337,17 @@ c
 	  if(iplanet.ne.0)then
 	    tdb = utc + deltime(utc,'tdb')
 	    call plpar(tdb,iplanet,sub,dist,bmaj,bmin,bpa)
+	    if(pparam)then
+	      temp1 = 3600.*180./PI*bmaj
+	      temp2 = 3600.*180./PI*bmin
+	      temp3 = 180./PI*bpa
+	      call uvrdvrr(lIn,'plmaj',bmaj,temp1)
+	      call uvrdvrr(lIn,'plmin',bmin,temp2)
+	      call uvrdvrr(lIn,'plangle',bpa,temp3)
+	      bmaj = PI/180./3600.*bmaj
+	      bmin = PI/180./3600.*bmin
+	      bpa = PI/180.*bpa
+	    endif
 	  endif
 c
 c  Fix the phase error in the observations.
@@ -425,9 +445,9 @@ c
 	  endif
 c
 	  if(iplanet.ne.0)then
-	    call uvputvrr(lOut,'plangle',180/PI*bpa,1)
-	    call uvputvrr(lOut,'plmaj',3600*180/PI*bmaj,1)
-	    call uvputvrr(lOut,'plmin',3600*180/PI*bmin,1)
+	    call uvputvrr(lOut,'plangle',180./PI*bpa,1)
+	    call uvputvrr(lOut,'plmaj',3600.*180./PI*bmaj,1)
+	    call uvputvrr(lOut,'plmin',3600.*180./PI*bmin,1)
 	  endif
 c
 c  All done. Loop the loop.
@@ -504,6 +524,8 @@ c------------------------------------------------------------------------
 	double precision val
 c
 	include 'mirconst.h'
+	double precision D2PI
+	parameter(D2PI=2.d0*DPI)
 	double precision scale(6),offset(6)
 c
 c  Externals.
@@ -511,7 +533,7 @@ c
 	integer len1,tinNext
 	character itoaf*8
 c
-	data scale/ 1.d0,1.d0,DTWOPI,DTWOPI,DTWOPI,DTWOPI/
+	data scale/ 1.d0,1.d0,D2PI,D2PI,D2PI,D2PI/
 	data offset/2 400 000.5d0,2 400 000.5d0,0.d0, 0.d0, 0.d0, 0.d0/
 c
 c  Open the input text file.
