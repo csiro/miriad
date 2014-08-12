@@ -4207,7 +4207,7 @@ Things to look out for while flagging are:
 \begin{itemize}
 \item Shadowing: when in a short array, it is possible for one antenna to be
 partially blocked by another antenna. To flag based on this, use
-\verb+select=shadow(26)+ in your \task{uvflag} command.
+\verb+select=shadow(22.5)+ in your \task{uvflag} command.
 \item Seeing monitor measurements: the seeing monitor is an independent interferometer which constantly
 measures the atmospheric phase stability to a geostationary satellite.
 The baseline length is 220m, and the satellite elevation
