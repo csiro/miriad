@@ -65,7 +65,9 @@ c                    selfcal'ing with a very poor model.
 c         noscale    Do not scale the gains.  By default the gains are
 c                    scaled so that the rms gain amplitude is 1.  In
 c                    this way, the total flux is not constrained to
-c                    agree with the model.
+c                    agree with the model. If you are using nfbin>1
+c                    you may need this to make the data follow the 
+c                    spectral shape of the model.
 c         mosaic     This causes SELFCAL to select only those
 c                    visibilities whose observing center is within plus
 c                    or minus three pixels of the model reference pixel.
@@ -99,7 +101,7 @@ c       the linetype parameters used to construct the map.  If you wish
 c       to override this, or if the info is not in the header, or if you
 c       are using a point source model, this parameter can be useful.
 c
-c$Id: selfcal.for,v 1.15 2014/07/18 01:24:26 wie017 Exp $
+c$Id: selfcal.for,v 1.16 2014/08/22 01:09:57 wie017 Exp $
 c--
 c
 c  History:
@@ -188,8 +190,8 @@ c     Externals.
       external  hdprsnt, header, versan
 c-----------------------------------------------------------------------
       version = versan('selfcal',
-     *                 '$Revision: 1.15 $',
-     *                 '$Date: 2014/07/18 01:24:26 $')
+     *                 '$Revision: 1.16 $',
+     *                 '$Date: 2014/08/22 01:09:57 $')
 c
 c  Get the input parameters.
 c
