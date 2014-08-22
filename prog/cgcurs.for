@@ -195,7 +195,7 @@ c       (which is ~ 1/40 of the view surface height) for the plot axis
 c       labels and the velocity/channel labels.
 c       Defaults choose something sensible.
 c
-c$Id: cgcurs.for,v 1.13 2013/08/30 01:49:21 wie017 Exp $
+c$Id: cgcurs.for,v 1.14 2014/08/22 01:54:42 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -239,8 +239,8 @@ c-----------------------------------------------------------------------
       data gaps, doabut /.false., .false./
 c-----------------------------------------------------------------------
       version = versan ('cgcurs',
-     *                  '$Revision: 1.13 $',
-     *                  '$Date: 2013/08/30 01:49:21 $')
+     *                  '$Revision: 1.14 $',
+     *                  '$Date: 2014/08/22 01:54:42 $')
 
 c     Get user inputs.
       call inputs(MAXLEV, img, ibin, jbin, kbin, levtyp, slev, levs,
@@ -377,7 +377,7 @@ c     Work out view port encompassing all sub-plots.  Also return
 c     the viewport size of sub-plots.
       call vpsizcg(.false., dofid, 0, ' ', ' ', 0, ' ', MAXLEV,
      *  nlevs, srtlev, levs, slev, nx, ny, cs, xdispl, ydispb,
-     *  gaps, doabut, dotr, wedcod, WEDWID, TFDISP, labtyp, vxmin,
+     *  gaps, doabut, dotr, wedcod, WEDWID, TFDISP, 0, labtyp, vxmin,
      *  vymin, vymax, vxgap, vygap, vxsize, vysize, tfvp, wdgvp)
 
 c     Adjust viewport increments and start locations if equal scales

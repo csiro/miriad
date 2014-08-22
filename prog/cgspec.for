@@ -337,7 +337,7 @@ c       XSIZ and YSIZ are the spatial half-sizes in ARCSEC over which
 c       each spectrum is spatially averaged.  These are optional and
 c       default to 0 (no binning, just a spectrum at each spatial pixel)
 c
-c$Id: cgspec.for,v 1.17 2013/09/12 23:51:21 wie017 Exp $
+c$Id: cgspec.for,v 1.18 2014/08/22 01:54:42 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -419,8 +419,8 @@ c-----------------------------------------------------------------------
       data axC /'xyzabcd'/
 c-----------------------------------------------------------------------
       version = versan ('cgspec',
-     *                  '$Revision: 1.17 $',
-     *                  '$Date: 2013/09/12 23:51:21 $')
+     *                  '$Revision: 1.18 $',
+     *                  '$Date: 2014/08/22 01:54:42 $')
 
 c     Get user inputs.
       call inputs(MAXLEV, MAXCON, MAXSPEC, MAXTYP, ltypes, ncon, nspec,
@@ -550,7 +550,7 @@ c     Set label displacements from axes.
 c     Work out view port sizes and increments.
       call vpsizcg(dofull, dofid, ncon, gin, ' ', nspec, ' ',
      *  MAXLEV, nlevs, srtlev, levs, slev, 1, 1, cs, xdispl, ydispb,
-     *  gaps, doabut, dotr, 1, WEDWID, TFDISP, labtyp, vxmin, vymin,
+     *  gaps, doabut, dotr, 1, WEDWID, TFDISP, labtyp, 0, vxmin, vymin,
      *  vymax, vxgap, vygap, vxsize, vysize, tfvp, wdgvp)
 
 c     Adjust viewport increments and start locations if equal scales

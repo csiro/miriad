@@ -470,7 +470,7 @@ c       3) Check the rms of the background. If this is high then firstly
 c          the fit may not be good (as per 1), and secondly the source
 c          is in a noisy area and should be treated with caution anyway.
 c
-c$Id: sfind.for,v 1.17 2013/08/30 01:49:21 wie017 Exp $
+c$Id: sfind.for,v 1.18 2014/08/22 01:54:42 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -529,8 +529,8 @@ c-----------------------------------------------------------------------
       character versan*72, version*72
 c-----------------------------------------------------------------------
       version = versan('sfind',
-     *                 '$Revision: 1.17 $',
-     *                 '$Date: 2013/08/30 01:49:21 $')
+     *                 '$Revision: 1.18 $',
+     *                 '$Date: 2014/08/22 01:54:42 $')
 c
 c Get user inputs
 c
@@ -635,7 +635,7 @@ c the viewport size of sub-plots.
 c
        call vpsizcg(.false., dofid, 0, ' ', ' ', 0, ' ', maxlev,
      *   nlevs, srtlev, levs, slev, nx, ny, cs, xdispl, ydispb,
-     *   gaps, doabut, dotr, wedcod, wedwid, tfdisp, labtyp, vxmin,
+     *   gaps, doabut, dotr, wedcod, wedwid, tfdisp, labtyp, 0, vxmin,
      *   vymin, vymax, vxgap, vygap, vxsize, vysize, tfvp, wdgvp)
 c
 c Adjust viewport increments and start locations if equal scales
