@@ -392,6 +392,22 @@ c       both and differently, would be over-ruled.  If you give only
 c       one value, the second defaults to that.
 c       Defaults choose scales to fill the page optimally. To default
 c       the first but the second, use 0.0,scale(2)
+c@ comment1
+c       A comment line to add at the bottom of the plot, use quotes 
+c       if the comment includes spaces. The comments will not appear
+c       when options=full is specified.
+c@ comment2
+c       A comment line to add at the bottom of the plot, use quotes 
+c       if the comment includes spaces.
+c@ comment3
+c       A comment line to add at the bottom of the plot, use quotes 
+c       if the comment includes spaces.
+c@ comment4
+c       A comment line to add at the bottom of the plot, use quotes 
+c       if the comment includes spaces.
+c@ comment5
+c       A comment line to add at the bottom of the plot, use quotes 
+c       if the comment includes spaces.
 c@ olay
 c       The name of a file containing a list of overlay descriptions.
 c       Wild card expansion is active and the default is no overlays.
@@ -590,13 +606,14 @@ c       The OFFSET directive is not applied to ANY position fields in
 c       succeeding directives that have %OTYPEs that are "hms" or "dms".
 c       I am too lazy to code it.
 c
-c$Id: cgdisp.for,v 1.25 2014/01/08 00:57:53 wie017 Exp $
+c$Id: cgdisp.for,v 1.26 2014/08/22 01:53:49 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c    pjt   2013jul24  committed ptrdiff based alloc/free
 c    mhw   2013sep13  Add cubehelix colour scheme
 c    mhw   2014jan08  Fix circle overlay for non lat/long axes
+c    mhw   2014aug22  Add optional comment lines on plot
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -634,11 +651,11 @@ c     Plotting parameters.
      *  cnaxis(MAXCON), vnaxis(2), bnaxis, mnaxis, cols(MAXLEV,MAXCON)
       integer  nx, ny, ierr, pgbeg, ilen, igr, nlast, ngrps,
      *  ncon, i, j, nvec, ipage, jj, npixr, wedcod, bgcol,
-     *  ncols(MAXCON), jplot, fs, firstimage
+     *  ncols(MAXCON), jplot, fs, firstimage, ncomm
 
       character labtyp(2)*6, levtyp(MAXCON)*1, trfun(maxchan)*3
       character pdev*132, xlabel*40, ylabel*40, hard*20, ofile*64,
-     *  aline*72, val3form*20
+     *  aline*72, val3form*20, comments(5)*132
 
       logical solneg(MAXCON), doblv(2), bemprs(MAXCON+4)
       logical do3val, do3pix, dofull, gaps, eqscale, doblc, doblg,
@@ -664,8 +681,8 @@ c     Plotting parameters.
       data getvsc /.true./
 c-----------------------------------------------------------------------
       version = versan ('cgdisp',
-     *                  '$Revision: 1.25 $',
-     *                  '$Date: 2014/01/08 00:57:53 $')
+     *                  '$Revision: 1.26 $',
+     *                  '$Date: 2014/08/22 01:53:49 $')
 
 c     Get user inputs.
       call inputs(maxchan, MAXLEV, MAXCON, MAXTYP, ltypes, ncon, cin,
@@ -676,7 +693,7 @@ c     Get user inputs.
      *  ofile, dobeam, beaml, beamb, relax, rot90, signs, mirror,
      *  dowedge, doerase, doepoch, dofid, dosing, nofirst, grid, dotr,
      *  dodist, conlab, doabut, docorner, val3form, ncols, cols, fs,
-     *  hs, firstimage, blacklab)
+     *  hs, firstimage, blacklab, ncomm, comments)
 
 c     Open images as required.
       call sesame(relax, maxnax, MAXCON, ncon, cin, lc, csize, cnaxis,
@@ -766,10 +783,10 @@ c     Set label displacements from axes.
       call setdspcg(lhead, labtyp, blc, trc, xdispl, ydispb)
 
 c     Work out view port sizes and increments.
-      call vpsizcg(dofull, dofid, ncon, gin, vin, 0, bin, MAXLEV,
-     *   nlevs, srtlev, levs, slev, nx, ny, cs, xdispl, ydispb,
-     *   gaps, doabut, dotr, wedcod, WEDWID, TFDISP, labtyp, vxmin,
-     *   vymin, vymax, vxgap, vygap, vxsize, vysize, tfvp, wdgvp)
+      call vpsizcg(dofull, dofid, ncon, gin, vin, 0, bin,
+     *   MAXLEV, nlevs, srtlev, levs, slev, nx, ny, cs, xdispl, ydispb,
+     *   gaps, doabut, dotr, wedcod, WEDWID, TFDISP, labtyp, ncomm, 
+     *   vxmin, vymin, vymax, vxgap, vygap, vxsize, vysize, tfvp, wdgvp)
 
 c     Adjust viewport increments and start locations if equal scales
 c     requested or if scales provided by user.
@@ -1034,6 +1051,12 @@ c       Plot annotation.
      *      lc, lg, lv, lb, MAXLEV, nlevs, levs, srtlev, slev, npixr,
      *      trfun, pixr, vfac, bfac, vymin, blc, trc, cs, ydispb,
      *      ibin, jbin, kbin, labtyp, gmm, cmm)
+          call pgsci(1)
+        endif
+        if (ncomm.gt.0 .and. (jj.eq.nx*ny .or. j.eq.ngrps)) then
+          call pgslw(1)
+          call pgsci(labcol)
+          call commann(comments, vymin, cs, ydispb, labtyp)
           call pgsci(1)
         endif
 
@@ -2156,6 +2179,39 @@ c     Write box information.
      *   call annboxcg(lb, bin, bfac, yinc, xpos, ypos)
 
       end
+c***********************************************************************
+
+      subroutine commann(comments, vymin, pcs, ydispb, labtyp)
+
+      real vymin, pcs, ydispb
+      character*(*) comments(5), labtyp(2)
+c-----------------------------------------------------------------------
+c  Full annotation of plot with contour levels, RA and DEC etc.
+c
+c  Input
+c       vymin      y viewsurface normalized device coordinate
+c                  at which the lowest sub-plot x-axis is drawn
+c       pcs        PGPLOT character size parameters for plot labels
+c       ydispb     Displacement of x-axis label in character heights
+c       labtyp     Axis label types
+c-----------------------------------------------------------------------
+      real xpos, ypos, yinc
+      integer i, ip
+      external  len1
+      integer   len1
+c-----------------------------------------------------------------------
+c     Setup chores and and annotate with reference values.
+      call annin1cg(vymin, pcs, ydispb, labtyp, xpos, ypos, yinc)
+      do i=1,5
+        ip = len1(comments(i))
+        if (ip.gt.0) then
+          call pgtext(xpos, ypos, comments(i)(1:ip))
+
+c         Increment location.
+          ypos = ypos - yinc
+        endif
+      enddo
+      end
 
 c***********************************************************************
 
@@ -2297,17 +2353,17 @@ c***********************************************************************
      *     scale, ofile, dobeam, beaml, beamb, relax, rot90, signs,
      *     mirror, dowedge, doerase, doepoch, dofid, dosing, nofirst,
      *     grid, dotr, dodist, conlab, doabut, docorner, val3form,
-     *     ncols, cols, fs, hs, firstimage, blacklab)
+     *     ncols, cols, fs, hs, firstimage, blacklab, ncomm, comments)
 
       integer maxlev, maxcon, maxtyp, maxgr, ncon, nvec, npixr
       real levs(maxlev,maxcon), pixr(2,maxgr), scale(2), cs(*),
      *  slev(maxcon), break(maxcon), vecfac, vecmax, boxfac, hs(3)
       integer nx, ny, nlevs(maxcon), lwid(maxcon+3), vecinc(2),
      *  boxinc(2), ibin(2), jbin(2), kbin(2), coltab(maxgr),
-     *  cols(maxlev,maxcon), ncols(maxcon), fs, firstimage
+     *  cols(maxlev,maxcon), ncols(maxcon), fs, firstimage, ncomm
       character*(*) labtyp(2), cin(maxcon), gin, vin(2), bin, mskin,
      *  pdev, ofile, trfun(maxgr), levtyp(maxcon), ltypes(maxtyp),
-     *  val3form
+     *  val3form, comments(5)*132
       logical do3val, do3pix, dofull, gaps, eqscale, solneg(maxcon),
      *  dobeam, beaml, beamb, relax, rot90, signs, mirror, dowedge,
      *  doerase, doepoch, dofid, dosing, nofirst, grid, dotr,
@@ -2397,6 +2453,8 @@ c   hs         PGPLOT hatching style
 c   firstimage first image specified (used for beam plotting). Given
 c              in bemprs format (see below)
 c   blacklab   True if labels are black for white background devices
+c   ncomm      Number of comment lines
+c   comments   Comment lines to write at bottom of plot
 c-----------------------------------------------------------------------
       integer nmaxim
       parameter (nmaxim = 8)
@@ -2736,7 +2794,18 @@ c     give them bl.
       call keyr('scale', scale(2), scale(1))
       if (scale(1).lt.0.0) scale(1) = 0.0
       if (scale(2).lt.0.0) scale(2) = 0.0
-
+      
+      ncomm=0
+      if (.not.dofull) then
+        call keya('comment1',comments(1),' ')
+        call keya('comment2',comments(2),' ')
+        call keya('comment3',comments(3),' ')
+        call keya('comment4',comments(4),' ')
+        call keya('comment5',comments(5),' ')
+        do i=1,5
+          if (comments(i).ne.' ') ncomm=ncomm+1
+        enddo
+      endif
       end
 
 c***********************************************************************
