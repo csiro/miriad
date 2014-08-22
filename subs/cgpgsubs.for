@@ -39,7 +39,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: cgpgsubs.for,v 1.13 2012/03/22 05:57:05 cal103 Exp $
+c $Id: cgpgsubs.for,v 1.14 2014/08/22 01:54:11 wie017 Exp $
 c***********************************************************************
 
 c* annboxCG -- Annotate plot with information from a box image
@@ -324,7 +324,68 @@ c
       ypos = ypos - yinc
 
       end
+c***********************************************************************
 
+c* annin1CG -- Init. plot annotation
+c& nebk
+c: plotting
+c+
+      subroutine annin1cg (vymin, pcs, ydispb, labtyp,
+     *                     xpos, ypos, yinc)
+
+      real      vymin, pcs, ydispb
+      character labtyp(2)*(*)
+      real      xpos, ypos, yinc
+c  ---------------------------------------------------------------------
+c  Setup chores for the full plot annotation.  
+c  The window is redefined to be the same as the
+c  available part of the view-surface in normalized device coords
+c  (0 -> 1) to make life easier.
+c
+c  Input
+c    vymin    y viewsurface normalized device coordinate
+c             at which the lowest sub-plot x-axis is drawn
+c    pcs      PGPLOT character size parameters for plot labelling
+c             (not the annotation)
+c    ydispb   Displacement of x-axis label in character heights
+c    labtyp   Axis label types
+c  Output
+c    x,ypos   World coordinate of next line of text to be written
+c    yinc     World increment between lines of text
+c-----------------------------------------------------------------------
+      real      acs, xht, xhta, ychinc, ygap, yht, yhta, yoff
+c-----------------------------------------------------------------------
+c     Define viewport to space left at bottom of viewsurface and define
+c     the window to something easy to use here.  Define character size
+c     for annotation.
+      call pgsvp(0.0, 1.0, 0.0, vymin)
+      call pgswin(0.0, 1.0, 0.0, vymin)
+      call anndefcg(acs, ychinc, ygap)
+
+c     Find size of one character in n.d.c. for axis labels and
+c     annotation.
+      call pgsch(pcs)
+      call pgqcs(0, xht, yht)
+      call pgsch(acs)
+      call pgqcs(0, xhta, yhta)
+
+c     Find start of annotation, allowing for x-label and a bit of space
+c     between label and annotation.
+      if (labtyp(1).eq.'none') then
+        yoff = (1.0 + ygap)*yhta
+      else
+        yoff = ydispb*yht + (1.0 + ygap)*yhta
+      endif
+
+c     Increment between annotation lines in world coordinates (recall
+c     n.d.c. = world coordinates with the above viewport deifnitions).
+      yinc = ychinc * yhta
+
+      xpos = 0.0
+      ypos = vymin - yoff
+      
+      end
+      
 c***********************************************************************
 
 c* anniniCG -- Init. plot annotation and write reference values to plot
@@ -347,7 +408,7 @@ c  (0 -> 1) to make life easier.
 c
 c  Input
 c    lh       Image handle
-c    no3      DOn't write ref pix for third axis
+c    no3      Don't write ref pix for third axis
 c    vymin    y viewsurface normalized device coordinate
 c             at which the lowest sub-plot x-axis is drawn
 c    pcs      PGPLOT character size parameters for plot labelling
@@ -2032,11 +2093,11 @@ c+
       subroutine vpsizcg (dofull, dofid, ncon, gin, vin, nspec, bin,
      *  maxlev, nlevs, srtlev, levs, slev, nx, ny, pcs, xdispl,
      *  ydispb, gaps, doabut, dotr, wedcod, wedwid, tfdisp, labtyp,
-     *  vxmin, vymin, vymax, vxgap, vygap, vxsize, vysize,
+     *  ncomm, vxmin, vymin, vymax, vxgap, vygap, vxsize, vysize,
      *  tfvp, wdgvp)
 
       integer maxlev, nlevs(*), srtlev(maxlev,*), nx, ny, ncon,
-     *  wedcod, nspec
+     *  wedcod, nspec, ncomm
       real vxmin, vymin, vymax, vxgap, vygap, vxsize, vysize, pcs,
      *  ydispb, xdispl,  wedwid, tfvp(4), tfdisp, wdgvp(4),
      *  levs(maxlev,*), slev
@@ -2077,6 +2138,7 @@ c    wedwid      Fraction of full viewport for wedge width (wedcod=1)
 c    tfdisp      Displacement of transfer function plot from right
 c                axis in char heights
 c    labtyp      Axis labels
+c    ncomm       Number of comment lines below plot
 c  Output
 c    vxmin       X-min of viewport window in normalized device coords
 c    vymin,vymax Y viewport range. Viewport encompasses all sub-plots
@@ -2219,7 +2281,17 @@ c
         else
           vymin = ((annlines*ychinc)+ygap)*yhta
         endif
-      else
+      else if (ncomm.gt.0) then
+        annlines = ncomm
+        call anndefcg(acs, ychinc, ygap)
+        call pgsch(acs)
+        call pgqcs(0, xhta, yhta)
+        if (labtyp(1).ne.'none') then
+          vymin = (ydispb*yht) + ((annlines*ychinc)+ygap)*yhta
+        else
+          vymin = ((annlines*ychinc)+ygap)*yhta
+        endif
+      else  
         vymin = (ydispb + 0.5) * yht
       endif
 c
