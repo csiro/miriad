@@ -30,6 +30,7 @@ c	   nopol       Do not apply polarization corrections.
 c--
 c  History:
 c    rjs  24jan07 Original version.
+c    mhw  12jun14 Cope with >2^30 visibilities
 c  Bugs:
 c------------------------------------------------------------------------
 	include 'maxdim.h'
@@ -40,8 +41,8 @@ c
 	logical flags(MAXCHAN)
 	complex data(MAXCHAN)
 	double precision preamble(4)
-	double precision SumV2,SumS2
-	integer n,lIn,nchan,i
+	double precision SumV2,SumS2,n
+	integer lIn,nchan,i
 	real var,expect,rms
 c
 c  Externals.
