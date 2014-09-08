@@ -5363,6 +5363,36 @@ the antenna gains ({\it e.g.} re-run \task{gpcal} or the like), then you will
 overwrite the old antenna gains table, and will need to re-insert the
 break-points.
 
+\subsection{Interpolation of binned gain solutions}
+When you have used \task{gpcal} or \task{selfcal} with {\tt nfbin}$>1$,
+the calibration routines normally do linear interpolation between the frequency bins
+to correct each frequency channel. This default behaviour is what you would want for
+CABB data.
+
+You can change this behaviour by setting the header variable {\tt fimode} (for
+`frequency interpolation mode') to 1 or 2 using {\task puthd}:
+
+\begin{center}
+\begin{tabular}{|l|l|}
+\hline
+\multicolumn{2}{|c|}{{\bf PUTHD}} \\
+\hline
+in=file.uv/fimode        & Set the frequency interpolation mode.\\
+value=0                  & Set the interpolation to default \\
+			 & behaviour. \\
+\hline
+\end{tabular}
+\end{center}
+
+The options for {\tt value} are as follows:\\
+{\tt fimode} = 0 or absent: normal linear interpolation between binned
+gains and phases.\\
+{\tt fimode} = 1: no interpolation between bins; a single solution value
+is applied for each bin.\\
+{\tt fimode} = 2: do linear interpolation of phases and use a single value
+per bin for calibration of amplitude (use for MWA data).
+
+
 \section{High precision polarimetric calibration}
 The ATCA potentially can produce polarimetric data to very high precision, with
 polarimetric measurements down to the level of 1 part in 100000 of Stokes I.
