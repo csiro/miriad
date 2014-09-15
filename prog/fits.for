@@ -135,7 +135,7 @@ c         velocity=lsr
 c       indicates that fits is to determine the observatory velocity
 c       wrt the LSR frame using an appropriate model.
 c
-c$Id: fits.for,v 1.31 2014/06/17 05:36:03 wie017 Exp $
+c$Id: fits.for,v 1.32 2014/09/15 04:39:01 sau078 Exp $
 c--
 c
 c  Bugs:
@@ -173,8 +173,8 @@ c-----------------------------------------------------------------------
       character versan*72
 c-----------------------------------------------------------------------
       version = versan('fits',
-     *                 '$Revision: 1.31 $',
-     *                 '$Date: 2014/06/17 05:36:03 $')
+     *                 '$Revision: 1.32 $',
+     *                 '$Date: 2014/09/15 04:39:01 $')
 c
 c  Get the input parameters.
 c
@@ -2434,19 +2434,20 @@ c-----------------------------------------------------------------------
       integer LSRRADIO
       parameter (LSRRADIO=257)
       include 'fits.h'
-      integer i,j,k
+      integer i,j,k,l
       logical newsrc,newfreq,newconfg,newlst,newchi,newvel,neweq
       logical neweph
       real chi,chi2,dT
       double precision lst,vel,az,el
       double precision sfreq0(MAXIF),sdf0(MAXIF),rfreq0(MAXIF)
-
-c     Externals.
-      integer binsrchi
+c
+c  Externals.
+c
+      integer binsrchi,len1
       double precision eqeq
-c-----------------------------------------------------------------------
+c
       if (.not.inited) call TabInit(tno)
-
+c
       newsrc = srcid.ne.sid
       if (newsrc) then
         srcid = sid
@@ -2512,7 +2513,8 @@ c
           call uvputvrr(tno,'ddec',real(ddec(srcidx)),1)
         endif
         call uvputvrr(tno,'epoch',real(epoch(srcidx)),1)
-        call uvputvra(tno,'source',source(srcidx))
+	l = len1(source(srcidx))
+        if(l.gt.0)call uvputvra(tno,'source',source(srcidx)(1:l))
       endif
 c
 c  Write out source/frequency information.
