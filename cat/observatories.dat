@@ -27,7 +27,7 @@
 #                               sec - arcsec
 #                 mount        Telescope mount:
 #                                0: ALTAZ
-#                                1: EQUATORIAL
+#                                1: EQUATOR
 #                                3: XYEW
 #                                4: NASMYTH
 #                 nants        Number of antennas normally in the array.
@@ -44,8 +44,12 @@
 #		 Technology)
 #    09-jun-09 Bob Sault - Add askap and ata. Correct longitude of alma.
 #    18-jun-09 Bob Sault - Add EVLA.
+#    02-aug-10 Bob Sault - Correct longitude of GMRT.
+#    28-apr-14 Bob Sault - Change WSRT mount to "EQUATOR" and change comments.
+#			   Additional info for ASKAP.
+#    18-sep-14 Bob Sault - Change evector for ASKAP.
 #
-# $Id: observatories.dat,v 1.6 2009/07/12 23:35:50 sau078 Exp $
+# $Id: observatories.dat,v 1.7 2014/09/17 23:32:42 sau078 Exp $
 #-----------------------------------------------------------------------------
 
 # Atacama Large Millimeter Array - provisional.
@@ -89,9 +93,13 @@ alma		systemp		   40.0
 
 # ASKAP
 askap		antdiam		   12.0
+askap		evector		   45.0
 askap		ew		    0.0
+askap		height		121.3529
+askap		jyperk		50
 askap		latitude	-1  26 42 15.00
 askap		longitude	+1 116 39 32.0 
+askap		mount		EQUATOR
 askap		nants		   36.0
 askap		systemp		   50.0
 
@@ -169,7 +177,7 @@ evla		systemp		   37.5
 gmrt		antdiam		   45.0
 gmrt		height		  650.0
 gmrt		latitude	+1  19 06 00.0
-gmrt		longitude	-1 074 03 00.0
+gmrt		longitude	+1 074 03 00.0
 
 # Hatcreek mm array (BIMA).
 # Jyperk and systemp given by Wright from 3mm vlbi.
@@ -216,6 +224,17 @@ jcmt		mount		ALTAZ
 jcmt		nants		    2.0
 jcmt		subdiam		    0.75
 jcmt		systemp		  500.0
+
+# Kat-7 antennas
+# The jyperk and systemp values are pure guesses.
+kat-7		antdiam		12
+kat-7		height		1100
+kat-7		jyperk		44
+kat-7		latitude	-1 30 42 47.62
+kat-7		longitude	+1 21 26 38.04
+kat-7		mount		ALTAZ
+kat-7		nants		7
+kat-7		systemp		30
 
 # Kitt Peak mm single dish (NRAO).
 # Jyperk and systemp given by Wright from 3mm vlbi.
@@ -384,6 +403,6 @@ wsrt		height		    5.0
 wsrt		jyperk		    8.0
 wsrt		latitude	+1  52 43 53.84
 wsrt		longitude	+1 006 36 15.01
-wsrt		mount		EQUATORIAL
+wsrt		mount		EQUATOR
 wsrt		nants		   14.0
 wsrt		systemp		   30.0
