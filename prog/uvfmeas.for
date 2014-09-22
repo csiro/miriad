@@ -103,7 +103,7 @@ c@ feval
 c       A frequency (in GHz) at which to evaluate the fit, and output
 c       the flux density in Jy.
 c
-c$Id: uvfmeas.for,v 1.20 2014/09/22 01:03:42 ste616 Exp $
+c$Id: uvfmeas.for,v 1.21 2014/09/22 01:33:27 ste616 Exp $
 c--
 c  History:
 c    jbs  05jan12 Derived from uvspec.
@@ -158,8 +158,8 @@ c
 	character versan*80
 c-----------------------------------------------------------------------
 	version = versan ('uvfmeas',
-     :                    '$Revision: 1.20 $',
-     :                    '$Date: 2014/09/22 01:03:42 $')
+     :                    '$Revision: 1.21 $',
+     :                    '$Date: 2014/09/22 01:33:27 $')
 c
 c  Get the input parameters.
 c
@@ -1119,8 +1119,8 @@ c  Plot any flux indicator lines.
 		 call pgmtxt('T',0.6,1.0,1.0,'Scalar Average')
 	      endif
 	   enddo
-	   call pgsci(1)
 	endif
+	call pgsci(1)
 c
 c  The polarisation label.
 c
