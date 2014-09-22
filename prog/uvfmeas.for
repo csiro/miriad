@@ -79,6 +79,7 @@ c                        separated by spaces, suitable for parsing by
 c                        another program.
 c          'reshist'     Plot a histogram of the normalised residuals
 c                        from the fit.
+c          'nolines'     Do not plot the vector and scalar average lines.
 c@ yrange
 c	The min and max range along the y axis of the plots. The default
 c	is to autoscale.
@@ -102,7 +103,7 @@ c@ feval
 c       A frequency (in GHz) at which to evaluate the fit, and output
 c       the flux density in Jy.
 c
-c$Id: uvfmeas.for,v 1.19 2014/05/24 04:24:04 ste616 Exp $
+c$Id: uvfmeas.for,v 1.20 2014/09/22 01:03:42 ste616 Exp $
 c--
 c  History:
 c    jbs  05jan12 Derived from uvspec.
@@ -121,7 +122,7 @@ c
 	character line*132,PolCode*2,oline*132
 	logical nobase,avall,first,buffered,doflush,qfirst
 	logical doshift,subpoly,dolog,dovec,douv,dopfit,domachine
-	logical domfflux,warnprint,domalpha,doreshist
+	logical domfflux,warnprint,domalpha,doreshist,dolines
 	double precision interval,T0,T1,preamble(5),shift(2),lmn(3)
 	double precision fluxr(MAXPOL,MAXCHAN),fluxi(MAXPOL,MAXCHAN)
 	double precision amp(MAXPOL,MAXCHAN),amp2(MAXPOL,MAXCHAN)
@@ -157,15 +158,15 @@ c
 	character versan*80
 c-----------------------------------------------------------------------
 	version = versan ('uvfmeas',
-     :                    '$Revision: 1.19 $',
-     :                    '$Date: 2014/05/24 04:24:04 $')
+     :                    '$Revision: 1.20 $',
+     :                    '$Date: 2014/09/22 01:03:42 $')
 c
 c  Get the input parameters.
 c
 	call output(version)
 	call keyini
 	call GetOpt(uvflags,nobase,avall,dolog,dovec,douv,dopfit,
-     *              domachine,domfflux,domalpha,doreshist)
+     *              domachine,domfflux,domalpha,doreshist,dolines)
 	call GetAxis(xaxis,yaxis)
 	call uvDatInp('vis',uvflags)
 	interval=99999.d0
@@ -670,7 +671,7 @@ c
      *         nplts,xtitle,ytitle,0,dble(0.),real(0.),p,npol,hann,hc,
      *         hw,logf,MAXPNTS,poly,fit,fluxlines,2,i,uvdist,uvdistamp,
      *         nuvdist,qualn,qualp,douv,dopfit,ufit,plfitx,doreshist,
-     *         ypres,ksdfac,ksprob,polynpts,osource)
+     *         ypres,ksdfac,ksprob,polynpts,osource,dolines)
 	   if (douv) then
 	      write(line,'(a,1pe11.3,a,1pe11.3)') 
      *          'Calibrator quality: value = ',qualn,' ratio = ',qualp
@@ -838,11 +839,11 @@ c
 	end
 c************************************************************************
 	subroutine GetOpt(uvflags,nobase,avall,dolog,dovec,douv,dopfit,
-     *                    domachine,domfflux,domalpha,doreshist)
+     *                    domachine,domfflux,domalpha,doreshist,dolines)
 c
 	implicit none
         logical nobase,avall,dolog,dovec,douv,dopfit,domachine,domfflux
-	logical domalpha,doreshist
+	logical domalpha,doreshist,dolines
 	character uvflags*(*)
 c
 c  Determine the flags to pass to the uvdat routines.
@@ -854,12 +855,12 @@ c    avall
 c    dolog
 c------------------------------------------------------------------------
 	integer nopts
-	parameter(nopts=11)
-	character opts(nopts)*11
+	parameter(nopts=12)
+	character opts(nopts)*9
 	logical present(nopts),docal,dopol,dopass
 	data opts/'nocal    ','nopol    ','nopass   ','log      ',
      *            'plotvec  ','uvhist   ','plotfit  ','machine  ',
-     *            'mfflux   ','malpha   ','reshist  '/
+     *            'mfflux   ','malpha   ','reshist  ','nolines  '/
 c
 	call options('options',opts,present,nopts)
 	docal = .not.present(1)
@@ -873,6 +874,7 @@ c
 	domfflux=present(9)
 	domalpha=present(10)
 	doreshist=present(11)
+	dolines = .not.present(12)
 c
 c       malpha only makes sense with mfflux
 c
@@ -1004,7 +1006,7 @@ c************************************************************************
      *		  pol,npol,hann,hc,hw,logf,MAXPNTS,poly,fit,
      *            fluxlines,nflux,wpol,uvd,uva,nuvd,qualn,
      *            qualp,plotuv,dopfit,ufit,plfitx,plotreshist,
-     *            ypres,ksdfac,ksprob,polynpts,srcname)
+     *            ypres,ksdfac,ksprob,polynpts,srcname,dolines)
 c
 	implicit none
 	integer npnts,bl,nplts,plot(*),npol,pol(*),hann,MAXPNTS
@@ -1015,7 +1017,7 @@ c
 	real uvd(*),uva(*),qualn,qualp,ufit(*),plfitx(*)
 	real ypres(npnts),ksdfac,ksprob,probks
 	character xtitle*(*),ytitle*(*),logf*(*),srcname*32
-	logical plotuv,dopfit,plotreshist
+	logical plotuv,dopfit,plotreshist,dolines
 c
 c  Draw a plot
 c------------------------------------------------------------------------
@@ -1103,20 +1105,22 @@ c  Plot the fit if we've done it.
 	  endif
 	enddo
 c  Plot any flux indicator lines.
-	do i=1,nflux
-	   call pgsci(2+i)
-	   linex(1)=xranged(1)
-	   linex(2)=xranged(2)
-	   liney(1)=fluxlines(i)
-	   liney(2)=fluxlines(i)
-	   call pgline(2,linex,liney)
-	   if (i.eq.1) then
-	      call pgmtxt('T',0.6,0.5,0.5,'Vector Average')
-	   else if (i.eq.2) then
-	      call pgmtxt('T',0.6,1.0,1.0,'Scalar Average')
-	   endif
-	enddo
-	call pgsci(1)
+	if (dolines.eqv..true.) then
+	   do i=1,nflux
+	      call pgsci(2+i)
+	      linex(1)=xranged(1)
+	      linex(2)=xranged(2)
+	      liney(1)=fluxlines(i)
+	      liney(2)=fluxlines(i)
+	      call pgline(2,linex,liney)
+	      if (i.eq.1) then
+		 call pgmtxt('T',0.6,0.5,0.5,'Vector Average')
+	      else if (i.eq.2) then
+		 call pgmtxt('T',0.6,1.0,1.0,'Scalar Average')
+	      endif
+	   enddo
+	   call pgsci(1)
+	endif
 c
 c  The polarisation label.
 c
