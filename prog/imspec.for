@@ -284,7 +284,7 @@ c@ log
 c       If specified, output is written to the file given by log=
 c       instead of to the terminal.
 c
-c$Id: imspec.for,v 1.9 2012/04/11 08:12:34 wie017 Exp $
+c$Id: imspec.for,v 1.10 2014/09/26 05:24:07 wie017 Exp $
 c--
 c
 c  History:
@@ -303,8 +303,8 @@ c-----------------------------------------------------------------------
       character versan*72
 c-----------------------------------------------------------------------
       version = versan('imspec',
-     *                 '$Revision: 1.9 $',
-     *                 '$Date: 2012/04/11 08:12:34 $')
+     *                 '$Revision: 1.10 $',
+     *                 '$Date: 2014/09/26 05:24:07 $')
 
       call inputs(lIn,naxis,dim,corners,boxes,cut,counts,beaminfo,
      *  axlabel,device,MAXBOXES)
@@ -1647,7 +1647,7 @@ c***********************************************************************
 c-----------------------------------------------------------------------
       integer          nstat
       character*80     line, temp
-      character*17     fmt
+      character*20     fmt
       character*9      typ, cubetype
       character*5      itoaf
       integer          i, j, len1
@@ -1664,7 +1664,7 @@ c         Construct the output line for the typed list.
 
           if (plotvar(EFMT).eq.1) then
             write(fmt,10) nstat-1
- 10         format('(',i1,'(1pe10.3),i8)')
+ 10         format('(',i1,'(1pe10.3,1x),i8)')
           else if (plotvar(GSPAC).eq.1) then
             write(fmt,20) nstat-1
  20         format('(',i1,'(1pg10.2),i8)')
