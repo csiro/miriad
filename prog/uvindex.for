@@ -22,7 +22,7 @@ c	Extra processing options. Currently there is but one of these:
 c	  mosaic  Do not generate messages for different pointings
 c	          of a mosaic.
 c
-c $Id: uvindex.for,v 1.6 2013/08/30 01:49:21 wie017 Exp $
+c $Id: uvindex.for,v 1.7 2014/09/30 13:58:54 wie017 Exp $
 c--
 c
 c  History:
@@ -66,7 +66,7 @@ c----------------------------------------------------------------------c
 	include 'maxdim.h'
 	integer MAXSRC,MAXFREQ,MAXSPECT
 	integer PolMin,PolMax,PolI
-	parameter(MAXSRC=8192,MAXFREQ=128,MAXSPECT=18)
+	parameter(MAXSRC=8192,MAXFREQ=128,MAXSPECT=MAXWIN)
 	parameter(PolMin=-8,PolMax=4,PolI=1)
 c
 	integer pols(PolMin:PolMax),pol
@@ -99,8 +99,8 @@ c
 	logical uvvarupd
 c----------------------------------------------------------------------c
         version = versan ('uvindex',
-     *                    '$Revision: 1.6 $',
-     *                    '$Date: 2013/08/30 01:49:21 $')
+     *                    '$Revision: 1.7 $',
+     *                    '$Date: 2014/09/30 13:58:54 $')
 c
 c  Get the parameters given by the user.
 c
