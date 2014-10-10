@@ -82,8 +82,10 @@ c   18sep12   mhw    Use input frequencies for pb model
 c   26sep13   mhw    Add new ATCA 16cm fits - test as ATCA16 
 c   11oct13   mhw    Update ATCA 16cm fits, add freq interpolation
 c   08apr14   mhw    Fix freq interpolation in OTF mode
+c   09oct14   mhw    Make new ATCA 16cm fits the default, rename old
+c                    fits to ATCA.L and ATCA.S
 c
-c $Id: pb.for,v 1.17 2014/04/08 04:55:22 wie017 Exp $
+c $Id: pb.for,v 1.18 2014/10/10 03:24:33 wie017 Exp $
 c***********************************************************************
 c* pbList -- List known primary beam types.
 c& rjs
@@ -521,23 +523,25 @@ c
 c Deal with second closest pb (for freq interpolation)
 c      
       df = f2(k)-f1(k)
-      if (kd2.gt.0.and.((abs(f-f1(kd2)).lt.df).or.
-     *   (abs(f-f2(kd)).lt.df))) then
-        pbObj2 = pbHead
-        if (pbObj2.eq.0) 
-     *    call bug('f','Exhausted all primary beam objects')
-        call bug('i','Interpolating beam models in frequency')
-        pbHead = pnt(pbHead)
-        pnt2(pbObj) = pbObj2
-        pnt(pbObj2) = kd2
-        freq(pbObj2) = freq(pbObj)
-        bandw(pbObj2) = bandw(pbObj)
-        fwhm(pbObj2) = pbfwhm(kd2) / f
-        x0(pbObj2) = x0(pbObj)
-        y0(pbObj2) = y0(pbObj)
-        xc(pbObj2) = xc(pbObj)
-        yc(pbObj2) = yc(pbObj)
-        conv(pbObj2) = .false.
+      if (kd2.gt.0) then
+        if(abs(f-f1(kd2)).lt.df.or.
+     *     abs(f-f2(kd2)).lt.df) then
+          pbObj2 = pbHead
+          if (pbObj2.eq.0) 
+     *      call bug('f','Exhausted all primary beam objects')
+          call bug('i','Interpolating beam models in frequency')
+          pbHead = pnt(pbHead)
+          pnt2(pbObj) = pbObj2
+          pnt(pbObj2) = kd2
+          freq(pbObj2) = freq(pbObj)
+          bandw(pbObj2) = bandw(pbObj)
+          fwhm(pbObj2) = pbfwhm(kd2) / f
+          x0(pbObj2) = x0(pbObj)
+          y0(pbObj2) = y0(pbObj)
+          xc(pbObj2) = xc(pbObj)
+          yc(pbObj2) = yc(pbObj)
+          conv(pbObj2) = .false.
+        endif
       endif
       
 
@@ -986,7 +990,7 @@ c
 c  Make the list of known primary beam objects. The ATCA primary beams
 c  are taken from ATNF technical memo by Wieringa and Kesteven.
 c
-      call pbAdd('ATCA',    1.15,1.88,    47.9, 0.03,  IPOLY,
+      call pbAdd('ATCA.L',    1.15,1.88,    47.9, 0.03,  IPOLY,
      *                NATCAL1,atcal1,'Recipocal 4th order poly')
       call pbAdd('ATCA.2',  1.15,1.88,    47.9, 0.002, POLY,
      *                NATCAL2,atcal2,'Sixth order poly')
@@ -1002,12 +1006,10 @@ c
       do i=1, 7
          fl = fh
          fh = fl + 0.256
-         if (i.eq.1) fl=1.1
-         if (i.eq.7) fh=3.1
-        call pbAdd('ATCA16', fl,fh, 48.5, 0.06, IPOLY,
+        call pbAdd('ATCA', fl,fh, 48.5, 0.06, IPOLY,
      *                NATCA16,atca16(1,i),'Reciprocal 4th order poly')
       enddo 
-      call pbAdd('ATCA',    2.10,2.60,    49.7, 0.03,  IPOLY,
+      call pbAdd('ATCA.S',    2.10,2.60,    49.7, 0.03,  IPOLY,
      *                NCOEFF,atcas,'Reciprocal 4th order poly')
       call pbAdd('ATCA',    4.00,6.90,    48.3, 0.03,  IPOLY,
      *                NCOEFF,atcac,'Reciprocal 4th order poly')
