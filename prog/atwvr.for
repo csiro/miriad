@@ -125,7 +125,6 @@ c
      *       i1,i2,sign*phase,visph,visph+sign*phase
             call logwrit(line)
           endif
-          print *,uvdist,i1,i2,apply
 c
 c  Copy to the output.
 c
