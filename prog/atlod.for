@@ -176,7 +176,7 @@ c       For concatenated spectra the width of a single zoom is used.
 c       Note that noise and artefacts go up quickly towards the band 
 c       edge so making this much smaller will not gain you much.
 c
-c$Id: atlod.for,v 1.49 2014/07/25 02:12:09 wie017 Exp $
+c$Id: atlod.for,v 1.50 2014/10/20 00:51:26 wie017 Exp $
 c--
 c
 c  Program Structure:
@@ -343,7 +343,7 @@ c    mhw  22oct13 Apply patches by vjm to fix some string overflows
 c    rjs  17jul14 Changes to correct antenna table
 c    mhw  25jul14 Deal with historical rfiflag files 
 c
-c $Id: atlod.for,v 1.49 2014/07/25 02:12:09 wie017 Exp $
+c $Id: atlod.for,v 1.50 2014/10/20 00:51:26 wie017 Exp $
 c-----------------------------------------------------------------------
 
         integer MAXFILES,MAXTIMES,MAXSIM
@@ -364,8 +364,8 @@ c
         character itoaf*8, rperr*32, versan*72
 c-----------------------------------------------------------------------
       version = versan ('atlod',
-     :                  '$Revision: 1.49 $',
-     :                  '$Date: 2014/07/25 02:12:09 $')
+     :                  '$Revision: 1.50 $',
+     :                  '$Date: 2014/10/20 00:51:26 $')
 c
 c  Get the input parameters.
 c
@@ -3783,7 +3783,7 @@ c
               ch2=2049*(1.0-edge/200)
 c
 c             20cm band range 1131-1875, 13cm band range 1975-2675
-c             new 16cm band: 1050-3150
+c             new 16cm band: 1050-3500
 c
               cfreq=sfreq(i)+(nfreq(i)/2)*sdf(i)
               if (cfreq.gt.1.d0.and.cfreq.lt.3.0d0) then
@@ -3797,7 +3797,7 @@ c
                   endif
                 else
                   c1=(1.05-sfreq(i))/sdf(i)
-                  c2=(3.15-sfreq(i))/sdf(i)
+                  c2=(3.50-sfreq(i))/sdf(i)
                 endif
                 ch1=max(ch1,min(nint(c1),nint(c2)))
                 ch2=min(ch2,max(nint(c1),nint(c2)))
