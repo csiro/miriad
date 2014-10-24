@@ -315,7 +315,7 @@ c       nocal   Do not apply antenna gain calibration.
 c       nopass  Do not apply bandpass correction.
 c       nopol   Do not apply polarisation leakage correction.
 c
-c$Id: pgflag.for,v 1.28 2014/10/23 23:00:02 wie017 Exp $
+c$Id: pgflag.for,v 1.29 2014/10/24 04:16:34 wie017 Exp $
 c--
 c
 c  History:
@@ -463,8 +463,8 @@ c
       logical uvDatOpn
 
       version = versan ('pgflag',
-     :                  '$Revision: 1.28 $',
-     :                  '$Date: 2014/10/23 23:00:02 $')
+     :                  '$Revision: 1.29 $',
+     :                  '$Date: 2014/10/24 04:16:34 $')
 
 c
 c Get user inputs
@@ -3935,9 +3935,15 @@ c
             t=buf(2)+(dble(buf(3))-day0)
             do pnt=1,ntime
                if (t1(pnt).gt.-1.0) then
-                  if (((t1(pnt).le.t).and.(t.lt.t1(pnt+1))).or.
-     *               ((t1(pnt+1).eq.-2).and.(t.lt.t1(pnt+2))).or.
-     *               ((t1(pnt).le.t).and.(pnt.eq.ntime)))goto 10
+                  if (pnt.le.ntime-1) then
+                     if ((t1(pnt).le.t).and.(t.lt.t1(pnt+1))) goto 10
+                     if (pnt.le.ntime-2) then
+                        if ((t1(pnt+1).eq.-2).and.
+     *                      (t.lt.t1(pnt+2))) goto 10
+                     endif
+                  else
+                     if(t1(pnt).le.t) goto 10
+                  endif
                endif
             enddo
 c            write(status,'(A,F20.10)') 'Time slot miscalculation',t
