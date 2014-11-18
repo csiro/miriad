@@ -92,7 +92,7 @@ c                      when the fractional bandwidth is > 0.4 (this
 c                      is because higher orders are needed to model
 c                      the primary beam response with frequency).
 c
-c$Id: linmos.for,v 1.28 2014/04/08 04:56:17 wie017 Exp $
+c$Id: linmos.for,v 1.29 2014/11/18 04:14:07 wie017 Exp $
 c--
 c
 c  History:
@@ -146,6 +146,7 @@ c    mhw  03may13 Extension to previous and add options=frequency
 c    mhw  14oct13 Add alpha option
 c    mhw  15nov13 Add cutoff keyword
 c    mhw  08apr14 Fix cube/mfs detection
+c    mhw  18nov14 Improve clipping of large mosaics
 c
 c  Bugs:
 c    * Blanked images are not handled when interpolation is necessary.
@@ -168,7 +169,7 @@ c-----------------------------------------------------------------------
       parameter (MAXIN=8192, MAXLEN=MAXIN*64, MAXOPN=6, TOL=0.01)
 
       logical   defrms, dosen, dogain, dofreq, docar, exact, taper, mfs
-      logical   cube, doalpha
+      logical   cube, doalpha, nodata
       integer   axLen(3,MAXIN), i, itemp, k1(MAXIN), k2(MAXIN), length,
      *          lIn(MAXIN), lOut, lScr, lWts, nIn, nOpen, nOut(4),
      *          naxis, offset, nbw
@@ -183,8 +184,8 @@ c-----------------------------------------------------------------------
       external  len1, versan
 c-----------------------------------------------------------------------
       version = versan ('linmos',
-     *                  '$Revision: 1.28 $',
-     *                  '$Date: 2014/04/08 04:56:17 $')
+     *                  '$Revision: 1.29 $',
+     *                  '$Date: 2014/11/18 04:14:07 $')
 
 c     Get and check inputs.
       call keyini
@@ -345,15 +346,17 @@ c     Allocate memory.
 c     Process each of the files.
       call scrOpen(lScr)
       call scrOpen(lWts)
+      nodata=.true.
       do i = 1, nIn
         call output('Processing image '//inbuf(k1(i):k2(i)))
         if (i.gt.nOpen) call xyopen(lIn(i),InBuf(k1(i):k2(i)),
      *                             'old',3,axLen(1,i))
         call process(i,lScr,lWts,lIn(i),lOut,memR(pOut),memR(pWts),
      *    axLen(1,i),axLen(2,i),nOut(1),nOut(2),nOut(3),dogain,
-     *    dofreq,blctrc(1,i),rms(i),bw,mfs,nbw,cutoff)
+     *    dofreq,blctrc(1,i),rms(i),bw,mfs,nbw,cutoff,nodata)
         call xyclose(lIn(i))
       enddo
+      if (nodata) call bug('f','No data for output image')
 
 c     Determine the maximum noise to aim at.
       if (taper) then
@@ -422,13 +425,14 @@ c-----------------------------------------------------------------------
 **************************************************************** process
 
       subroutine process(fileno,lScr,lWts,lIn,lOut,Out,Wts,
-     *  nx,ny,n1,n2,n3,dogain,dofreq,blctrc,rms,bw,mfs,nbw,cutoff)
+     *  nx,ny,n1,n2,n3,dogain,dofreq,blctrc,rms,bw,mfs,nbw,cutoff,
+     *  nodata)
 
       integer fileno,lScr,lWts,lIn,lOut
       integer nx,ny,n1,n2,n3,nbw
       real Out(n1,n2),Wts(n1,n2)
       real blctrc(4),rms,bw,cutoff
-      logical dogain,dofreq,mfs
+      logical dogain,dofreq,mfs,nodata
 c-----------------------------------------------------------------------
 c  First determine the initial weight to apply to each pixel and
 c  accumulate info so that we can determine the normalisation factor
@@ -453,6 +457,8 @@ c    mfs        Use mfs I*alpha plane to do wideband pb correction
 c    cutoff     Specify beam cutoff level
 
 c    nbw        Number of bandwidth bins to use
+c  Output:
+c    nodata   True if no data was accepted for the output image
 c  Scratch:
 c    In         Used for the interpolated version of the input.
 c    Out        Used for the output.
@@ -500,8 +506,10 @@ c     round it to integer values.
       ylo = nint(Sect(2) + 0.5 - TOL)
       xhi = nint(Sect(3) - 0.5 + TOL)
       yhi = nint(Sect(4) - 0.5 + TOL)
-      if (xlo.gt.xhi .or. ylo.gt.yhi) return
-
+      if (xlo.gt.xhi .or. ylo.gt.yhi) then
+        call bug('w','Entire image clipped')
+        return
+      endif
 c     If we are interpolating, initialise the interpolation routine.
       if (interp) then
         Sect(1) = (nx-1)/(blctrc(3)-blctrc(1))*(xlo-blctrc(1)) + 1
@@ -552,7 +560,7 @@ c      do pb calculations for nf freqs across band
         endif
 
 c       Get a plane from the scratch array.
-        if (fileno.eq.1) then
+        if (nodata) then
           do j = 1, n2
             do i = 1, n1
               Wts(i,j) = 0
@@ -617,9 +625,10 @@ c             Accumulate data.
           enddo
         enddo
 c       Save the output.
-        if (fileno.eq.1) then
+        if (nodata) then
           call putSec(lScr,Out,k,n1,n2,1,n1,1,n2)
           call putSec(lWts,Wts,k,n1,n2,1,n1,1,n2)
+          nodata = .false.
         else
           call putSec(lScr,Out,k,n1,n2,xlo,xhi,ylo,yhi)
           call putSec(lWts,Wts,k,n1,n2,xlo,xhi,ylo,yhi)
