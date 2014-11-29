@@ -92,7 +92,7 @@ c                      when the fractional bandwidth is > 0.4 (this
 c                      is because higher orders are needed to model
 c                      the primary beam response with frequency).
 c
-c$Id: linmos.for,v 1.29 2014/11/18 04:14:07 wie017 Exp $
+c$Id: linmos.for,v 1.30 2014/11/29 05:02:03 wie017 Exp $
 c--
 c
 c  History:
@@ -184,8 +184,8 @@ c-----------------------------------------------------------------------
       external  len1, versan
 c-----------------------------------------------------------------------
       version = versan ('linmos',
-     *                  '$Revision: 1.29 $',
-     *                  '$Date: 2014/11/18 04:14:07 $')
+     *                  '$Revision: 1.30 $',
+     *                  '$Date: 2014/11/29 05:02:03 $')
 
 c     Get and check inputs.
       call keyini
@@ -469,7 +469,7 @@ c-----------------------------------------------------------------------
       real      TOL
       parameter (TOL=0.01)
 
-      logical interp, mask, dootf
+      logical interp, mask, dootf, somedata
       integer i, j, k, pbObj, xhi, xlo, xoff, yhi, ylo, yoff, iax
       integer nf, jf
       real    In(MAXDIM), pBeam(MAXDIM), Sect(4), sigma, xinc, yinc, wgt
@@ -479,7 +479,8 @@ c-----------------------------------------------------------------------
 
       logical  hdprsnt
       external hdprsnt
-c-----------------------------------------------------------------------
+c----------------------------------------------------------------------
+      somedata=.false.
 c     Determine if we have to interpolate.
       interp = .false.
       do i = 1, 4
@@ -628,7 +629,7 @@ c       Save the output.
         if (nodata) then
           call putSec(lScr,Out,k,n1,n2,1,n1,1,n2)
           call putSec(lWts,Wts,k,n1,n2,1,n1,1,n2)
-          nodata = .false.
+          somedata = .true.
         else
           call putSec(lScr,Out,k,n1,n2,xlo,xhi,ylo,yhi)
           call putSec(lWts,Wts,k,n1,n2,xlo,xhi,ylo,yhi)
@@ -637,6 +638,9 @@ c       Save the output.
 c       Release the primary beam object.
         call pbFin(pbObj)
       enddo
+      if (nodata) then
+        nodata = .not.somedata
+      endif
       call coFin(lIn)
 
       end
