@@ -84,8 +84,9 @@ c   11oct13   mhw    Update ATCA 16cm fits, add freq interpolation
 c   08apr14   mhw    Fix freq interpolation in OTF mode
 c   09oct14   mhw    Make new ATCA 16cm fits the default, rename old
 c                    fits to ATCA.L and ATCA.S
+c   01dec14   mhw    Reduce repetitive printout & fix compiler warnings
 c
-c $Id: pb.for,v 1.18 2014/10/10 03:24:33 wie017 Exp $
+c $Id: pb.for,v 1.19 2014/12/01 03:31:18 wie017 Exp $
 c***********************************************************************
 c* pbList -- List known primary beam types.
 c& rjs
@@ -260,7 +261,9 @@ c               object.
 c  Output:
 c    pbObj      The primary beam object.
 c-----------------------------------------------------------------------
-      call pbInitc(pbObj,pbtype,coObj,'op',0d0,0d0,0.0)
+      double precision x(1)
+c-----------------------------------------------------------------------
+      call pbInitc(pbObj,pbtype,coObj,'op',x,0d0,0.0)
 
       end
 
@@ -287,7 +290,9 @@ c    bw         Bandwidth
 c  Output:
 c    pbObj      The primary beam object.
 c-----------------------------------------------------------------------
-      call pbInitc(pbObj,pbtype,coObj,'op',0d0,0d0,bw)
+      double precision x(1)
+c-----------------------------------------------------------------------
+      call pbInitc(pbObj,pbtype,coObj,'op',x,0d0,bw)
 
       end
 
@@ -376,8 +381,12 @@ c-----------------------------------------------------------------------
       integer l1,l2,iax,k,kd,k2,kd2,pbObj2
       double precision dtemp,x2(2),antdiam,f,df
       double precision crpix,crval,cdelt1,cdelt2
-      real error,t,alpha
+      real error,t,alpha,z(1)
       character ctype*16,line*64
+      logical done1,done2
+      save done1,done2
+      data done1/.false./
+      data done2/.false./
 
 c     Externals.
       integer len1
@@ -441,7 +450,7 @@ c
         call obspar(ctype(1:l1),'antdiam',antdiam,ok)
         if (ok) then
           call pbAdd(ctype(1:l1),0.1,1e4,real(1100d0/antdiam),
-     *                        0.05,GAUS,0,0.0,'Truncated Gaussian')
+     *                        0.05,GAUS,0,z,'Truncated Gaussian')
           more = .false.
           k = npb
         endif
@@ -457,7 +466,10 @@ c
         k = kd
         line = 'Using nearest frequency band'//
      *    ' for primary beam type '//type
-        call bug('w',line)
+        if (.not.done1) then
+          call bug('w',line)
+          done1=.true.
+        endif
       endif
 c
 c  Find the nearest neighbouring matching primary beam.
@@ -529,7 +541,10 @@ c
           pbObj2 = pbHead
           if (pbObj2.eq.0) 
      *      call bug('f','Exhausted all primary beam objects')
-          call bug('i','Interpolating beam models in frequency')
+          if (.not.done2) then
+            call bug('i','Interpolating beam models in frequency')
+            done2=.true.
+          endif
           pbHead = pnt(pbHead)
           pnt2(pbObj) = pbObj2
           pnt(pbObj2) = kd2
@@ -543,7 +558,6 @@ c
           conv(pbObj2) = .false.
         endif
       endif
-      
 
       end
 
@@ -935,8 +949,10 @@ c
       real atcak2(NATCAK),atcak(NCOEFF),atcaw(NATCAW)
       real atcal3(NATCAL3),atcal1(NATCAL1),atcal2(NATCAL2)
       real atca16(NATCA16,7),vla(NCOEFF)
+      real z(1)
 
       data init/.false./
+      data z/0.0/
       data atcal1 /1.0, 8.99e-4, 2.15e-6, -2.23e-9,  1.56e-12/
       data atcal2 /1.0,-1.0781341990755E-03,
      *                 4.6179146405726E-07,
@@ -1049,27 +1065,27 @@ c  At 230 GHz, the 10m FWHM ~ 0.53', the 6m FWHM ~ 0.86'
 c
 c      call pbAdd('OVRO',24.0,350.0,   107.3, 0.05, GAUS,0,0.0,
 c     *                           'Truncated Gaussian')
-      call pbAdd('OVRO',24.0,350.0,   121.0, 0.05, GAUS,0,0.0,
+      call pbAdd('OVRO',24.0,350.0,   121.0, 0.05, GAUS,0,z,
      *                           'Truncated Gaussian')
 c
 c  The Hat Ck primary beam is a gaussian of size is 191.67 arcmin.GHz
 c  according to "John L"
 c
-      call pbAdd('HATCREEK',24.0,270.0,   194.5, 0.05, GAUS,0,0.0,
+      call pbAdd('HATCREEK',24.0,270.0,   194.5, 0.05, GAUS,0,z,
      *                           'Truncated Gaussian')
 c
 c  Add BIMA and ATA.  The old HATCREEK antennas are now the BIMA
 c  antennas at CARMA.
 c
-      call pbAdd('BIMA',24.0,270.0,   194.5, 0.05, GAUS,0,0.0,
+      call pbAdd('BIMA',24.0,270.0,   194.5, 0.05, GAUS,0,z,
      *                           'Truncated Gaussian')
 c
 c   ATA  FWHM = 3.70 degrees  = 222 arcmin at 1 GHz.
 c   ATA antenna pattern measurements (Gerry Harp 30 Jan 2009)
 c
-      call pbAdd('ATA',0.5,12.0,   222.0, 0.05, GAUS,0,0.0,
+      call pbAdd('ATA',0.5,12.0,   222.0, 0.05, GAUS,0,z,
      *                           'Truncated Gaussian')
-      call pbAdd('GBT',0.1,115.0,   12.6, 0.05, GAUS,0,0.0,
+      call pbAdd('GBT',0.1,115.0,   12.6, 0.05, GAUS,0,z,
      *                           'Truncated Gaussian')
 c
 c  The following values for the WSRT are derived from the NEWSTAR
@@ -1082,18 +1098,18 @@ c  number came out of new measurements of the primary beam
 c  characteristics, but is (as yet) not written in stone.  Check with
 c  Rob Braun or Tom Oosterloo for more info.
 c
-      call pbAdd('WSRT',    0.0,0.5,       51.54, 0.02,  COS6,0,0.0,
+      call pbAdd('WSRT',    0.0,0.5,       51.54, 0.02,  COS6,0,z,
      *                           'Cos**6 function')
-      call pbAdd('WSRT',    0.5,8.0,  49.87*1.07, 0.02,  COS6,0,0.0,
+      call pbAdd('WSRT',    0.5,8.0,  49.87*1.07, 0.02,  COS6,0,z,
      *                           'Cos**6 function')
 c
 c  Miscellaneous.
 c
-      call pbAdd('FST',     1.00,2.00,     67.00, 0.05, GAUS,0,0.0,
+      call pbAdd('FST',     1.00,2.00,     67.00, 0.05, GAUS,0,z,
      *                           'Truncated Gaussian')
-      call pbAdd('GAUS',    0.0,999.0,       1.00, 0.05, GAUS,0,0.0,
+      call pbAdd('GAUS',    0.0,999.0,       1.00, 0.05, GAUS,0,z,
      *                           'Truncated Gaussian')
-      call pbAdd('SINGLE',  0.0,999.0,       0.00, 0.5,  SINGLE,0,0.0,
+      call pbAdd('SINGLE',  0.0,999.0,       0.00, 0.5,  SINGLE,0,z,
      *                           'Single dish')
 c
 c  LOFAR - for simulations
