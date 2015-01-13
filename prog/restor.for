@@ -70,7 +70,7 @@ c                is used.
 c@ out
 c       The output restored image.  No default.
 c
-c$Id: restor.for,v 1.11 2014/06/20 05:36:13 wie017 Exp $
+c$Id: restor.for,v 1.12 2015/01/13 22:27:33 wie017 Exp $
 c--
 c
 c  History:
@@ -107,6 +107,7 @@ c    mchw 07feb02  Change beamwidth format to handle ATA and ALMA.
 c    mhw  27oct11  Use ptrdiff type for memory allocations
 c    mhw  17jan13  Add mfs option
 c    mhw  20jun14  Increase size of beam patch for fitting, avoid NaN
+c    mhw  14jan15  Retry beamfit with higher threshold before giving up
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mem.h'
@@ -124,8 +125,8 @@ c-----------------------------------------------------------------------
       external  itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('restor',
-     *                 '$Revision: 1.11 $',
-     *                 '$Date: 2014/06/20 05:36:13 $')
+     *                 '$Revision: 1.12 $',
+     *                 '$Date: 2015/01/13 22:27:33 $')
 
 c     Get the input parameters.
       call keyini
@@ -724,9 +725,9 @@ c-----------------------------------------------------------------------
       integer   MAXITER
       parameter (MAXITER=100)
 
-      integer   i, ifail, j, k
+      integer   i, ifail, j, k,retry
       real      aa(3*3), dfdx(3*nPM*nPM), dx(3), f(nPM*nPM),
-     *          fp(nPM*nPM), t1, t2, x(3),xp(3)
+     *          fp(nPM*nPM), t1, t2, x(3),xp(3), thresh
 
       external derive, func
 c-----------------------------------------------------------------------
@@ -746,14 +747,25 @@ c     Initialise the arrays ready for the optimisation routine.
 c     Form the initial estimate of the Gaussian beam by using the least
 c     squares solution of a "linearised" version of the problem.  This
 c     should be robust, though somewhat inaccurate.
-      call linEst(nP,xBeam,yBeam,Beam,x)
-      xp(1)=x(1)
-      xp(2)=x(2)
-      xp(3)=x(3)
+c     A retry has been built in to cope with beams with high sidelobes
+      retry = 2
+      thresh=0.1
+      do while (retry.gt.0)
+        call linEst(nP,xBeam,yBeam,Beam,thresh,x)
+        xp(1)=x(1)
+        xp(2)=x(2)
+        xp(3)=x(3)
 
-c     Now perform the fit using a proper least squares routine.
-      call nllsqu(3,nP*nP,x,dx,MAXITER,0.0,0.005/3,.true.,ifail,
-     *  func,derive,f,fp,dx,dfdx,aa)
+c       Now perform the fit using a proper least squares routine.
+        call nllsqu(3,nP*nP,x,dx,MAXITER,0.0,0.005/3,.true.,ifail,
+     *    func,derive,f,fp,dx,dfdx,aa)
+        if (retry.eq.2.and.ifail.eq.3) then
+	   thresh=0.33
+	else
+	   retry=1
+	endif
+	retry=retry-1
+      enddo
       if (ifail.ne.0) call bug('f','Beam fit failed')
 
 c     Convert the results to meaningful units.  The fwhm are in grid
@@ -782,10 +794,10 @@ c     units and the pa is in degrees.  Use linear (small-field) approx.
 
 c***********************************************************************
 
-      subroutine linEst(nP,xBeam,yBeam,beam,b)
+      subroutine linEst(nP,xBeam,yBeam,beam,thresh,b)
 
       integer nP, xBeam, yBeam
-      real    beam(nP,nP), b(3)
+      real    beam(nP,nP), b(3), thresh
 c-----------------------------------------------------------------------
 c  Estimate the parameters for the Gaussian fit using an approximate
 c  but linear technique.  This finds values of b that minimise
@@ -801,13 +813,12 @@ c
 c  Inputs:
 c    nP         Dimension of the beam patch.
 c    x/yBeam    Centre pixel of the beam patch.
+c    thresh     Threshold above which pixels are to be included
 c    beam       The beam patch.
 c
 c  Output:
 c    b          The estimates of the parameters.
 c-----------------------------------------------------------------------
-      real      THRESH
-      parameter (THRESH=0.1)
 
       logical   more
       integer   i,j,ilo,ihi,ilod,ihid,ipvt(3),ifail
@@ -821,7 +832,7 @@ c     Determine the pixel range that spans the main lobe at x=0.
       more = .true.
       ihi = xBeam
       do while (ihi.lt.nP .and. more)
-        more = beam(ihi+1,yBeam).gt.THRESH
+        more = beam(ihi+1,yBeam).gt.thresh
         if (more) ihi = ihi + 1
       enddo
       ilo = xBeam - (ihi-xBeam)
@@ -841,7 +852,7 @@ c     bridges the central lobe.
         ilod = nP + 1
         ihid = 0
         do i = max(ilo-1,1),min(ihi+1,nP)
-          if (beam(i,j).gt.THRESH) then
+          if (beam(i,j).gt.thresh) then
             ilod = min(ilod,i)
             ihid = max(ihid,i)
             x = (i-xBeam)**2
