@@ -1,4 +1,4 @@
-      program imstsp
+      program imstat
 
 c= IMSTAT - calculate and plot map statistics
 c& bpw
@@ -128,7 +128,7 @@ c@ log
 c       If specified, output is written to the file given by log=
 c       instead of to the terminal.
 c
-c$Id: imstat.for,v 1.8 2012/03/13 02:21:33 wie017 Exp $
+c$Id: imstat.for,v 1.9 2015/01/19 02:17:45 wie017 Exp $
 c--
 c  IMSPEC - plots spectra from image data
 c& bpw
@@ -303,8 +303,8 @@ c-----------------------------------------------------------------------
       character versan*72
 c-----------------------------------------------------------------------
       version = versan('imstat',
-     *                 '$Revision: 1.8 $',
-     *                 '$Date: 2012/03/13 02:21:33 $')
+     *                 '$Revision: 1.9 $',
+     *                 '$Date: 2015/01/19 02:17:45 $')
 
       call inputs(lIn,naxis,dim,corners,boxes,cut,counts,beaminfo,
      *  axlabel,device,MAXBOXES)
@@ -1646,8 +1646,8 @@ c***********************************************************************
       integer          dim, level, nlevels
 c-----------------------------------------------------------------------
       integer          nstat
-      character*80     line, temp
-      character*17     fmt
+      character*85     line, temp
+      character*20     fmt
       character*9      typ, cubetype
       character*5      itoaf
       integer          i, j, len1
@@ -1663,8 +1663,13 @@ c         Construct the output line for the typed list.
      *      write(line, '(i6,1x, a)') nint(iarr(i)), carr(i)
 
           if (plotvar(EFMT).eq.1) then
-            write(fmt,10) nstat-1
- 10         format('(',i1,'(1pe10.3),i8)')
+            if (plotvar(GSPAC).eq.1) then
+              write(fmt,10) nstat-1
+ 10           format('(',i1,'(1pe10.3,1x),i8)')
+            else
+              write(fmt,15) nstat-1
+ 15           format('(',i1,'(1pe10.3),i8)')
+	    endif
           else if (plotvar(GSPAC).eq.1) then
             write(fmt,20) nstat-1
  20         format('(',i1,'(1pg10.2),i8)')
