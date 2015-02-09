@@ -77,6 +77,7 @@ c    mhw  11aug11 Copy gainsf and leakagef tables
 c    mhw  13may13 Handle gainsf in 'merge' and 'apply' mode
 c    mhw  12jun13 Fix apply mode, add relax option
 c    mhw  20nov13 Change the way the relax option works
+c    mhw  10feb15 Fix apply/relax mode
 c  Bugs:
 c    None?
 c------------------------------------------------------------------------
@@ -92,8 +93,8 @@ c
         character*72 versan
 c
 	version = versan('gpcopy',
-     *                   '$Revision: 1.11 $',
-     *                   '$Date: 2013/11/21 01:28:24 $')
+     *                   '$Revision: 1.12 $',
+     *                   '$Date: 2015/02/09 22:03:48 $')
 	call keyini
 	call keya('vis',vis,' ')
 	if(vis.eq.' ')call bug('f','Input data-set must be given')
@@ -674,7 +675,7 @@ c
         double precision int1
 	complex Gains1(ngains,nsols1,0:nfbin)
         complex Gains2(ngains,nsols2,0:nfbin)
-        complex Gains(ngains,nsols1,0:nfbin)
+        complex Gains(ngains,nsols2,0:nfbin)
 c
 c  Apply gain table 1 to table 2 in 'relaxed' mode.
 c  This just evaluates table1 gains at the times of table2 gains and
