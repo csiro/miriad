@@ -38,8 +38,9 @@
        22-jul-04  jwr	changed type of "size" in hexists_c() from int to size_t
        05-nov-04  jwr	changed file sizes from size_t to off_t
        02-jan-05  rjs   Correct type of hreada/hwritea "length" parameter. Tidy.
+       29-feb-15  mhw   Avoid storing gains table in header (readback incorrect)
 
- $Id: hio.c,v 1.7 2012/09/04 18:17:15 sau078 Exp $
+ $Id: hio.c,v 1.8 2015/02/19 00:27:52 wie017 Exp $
 */
 
 
@@ -1153,9 +1154,11 @@ private void hcheckbuf_c(ITEM *item,off_t next,int *iostat)
     if(BUFDBUFF)item->io[1].buf = Malloc(BUFSIZE);
   }
 
-/* Open a file if needed. */
+/* Open a file if needed. Avoid storing gains in the header */
 
-  if(item->fd == 0 && item->bsize > CACHESIZE && !(item->flags & ITEM_NOCACHE)){
+  if(item->fd == 0 && 
+     (item->bsize > CACHESIZE || !strcmp(item->name,"gains")) &&
+     !(item->flags & ITEM_NOCACHE)){
     t = item->tree;
     if(item->flags & ITEM_CACHE) t->flags |= TREE_CACHEMOD;
     item->flags &= ~ITEM_CACHE;
