@@ -155,7 +155,7 @@ c                    solution for the observation already exists.  This
 c                    preliminary solution must be formed from a
 c                    calibrator with known Stokes-V.
 c
-c$Id: gpcal.for,v 1.19 2014/04/28 01:00:33 wie017 Exp $
+c$Id: gpcal.for,v 1.20 2015/02/27 07:41:41 ste616 Exp $
 c--
 c  History:
 c    rjs,nebk 1may91 Original version.
@@ -305,8 +305,8 @@ c-----------------------------------------------------------------------
       external  itoaf, keyprsnt, uvDatOpn
 c-----------------------------------------------------------------------
       version = versan('gpcal',
-     *                 '$Revision: 1.19 $',
-     *                 '$Date: 2014/04/28 01:00:33 $')
+     *                 '$Revision: 1.20 $',
+     *                 '$Date: 2015/02/27 07:41:41 $')
 c
 c  Get inputs.
 c
@@ -357,7 +357,7 @@ c
       if (nfbin.gt.1) n = nfbin
       do i=1,n
         do j=1,4
-          flux(j,i) = flux(j,0)
+           call keyr('flux',flux(j,i),flux(j,0))
         enddo
       enddo
 c
