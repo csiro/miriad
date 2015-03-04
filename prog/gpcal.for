@@ -61,7 +61,14 @@ c       flux as the default.  If GPCAL does not know the source, the
 c       flux is determined by assuming that the rms gain amplitude is 1.
 c       If the option "qusolve" is used, the given fluxes for Q and U
 c       are used as the initial estimates.  Also see the "oldflux"
-c       option.
+c       option. You may specify an I,Q,U,V flux density for each of the
+c       nfbins that you request, but all values must be present. If you
+c       set nfbins higher than 1, then any bins without information
+c       provided here will use the values from the first bin. If you
+c       want to use spec to describe the Stokes I flux density, then
+c       you only need to put the flux density at the reference frequency
+c       as the first parameter here, while all other I values are
+c       ignored.
 c@ spec
 c       The reference frequency (GHz), spectral index and up to two  
 c       higher order terms. Only used if nfbin>1. The spectral index 
@@ -155,7 +162,7 @@ c                    solution for the observation already exists.  This
 c                    preliminary solution must be formed from a
 c                    calibrator with known Stokes-V.
 c
-c$Id: gpcal.for,v 1.20 2015/02/27 07:41:41 ste616 Exp $
+c$Id: gpcal.for,v 1.21 2015/03/04 00:38:57 ste616 Exp $
 c--
 c  History:
 c    rjs,nebk 1may91 Original version.
@@ -249,6 +256,7 @@ c    mhw     15oct12 Remove freq dep gains and leakages if nfbin=1
 c    mhw     24jan13 Avoid producing NaNs in the gains or leakages
 c    mhw     31oct13 Check nchan>=nfbin
 c    mhw     24apr14 Add spectral index terms
+c    jbs      4mar15 Read a IQUV from flux for each bin if available.
 c
 c  Miscellaneous notes:
 c ---------------------
@@ -305,8 +313,8 @@ c-----------------------------------------------------------------------
       external  itoaf, keyprsnt, uvDatOpn
 c-----------------------------------------------------------------------
       version = versan('gpcal',
-     *                 '$Revision: 1.20 $',
-     *                 '$Date: 2015/02/27 07:41:41 $')
+     *                 '$Revision: 1.21 $',
+     *                 '$Date: 2015/03/04 00:38:57 $')
 c
 c  Get inputs.
 c
