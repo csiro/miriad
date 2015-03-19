@@ -23,7 +23,10 @@ c@ gain
 c	This gives the complex-valued gain used in the `multiply' and
 c	`replace' options (see below). It is given as an amplitude
 c	and phase (in degrees). For example gain=2,90 produces a gain
-c	with a amplitude of 2 and phase of 90 degrees. The default is 1,0.
+c	with a amplitude of 2 and phase of 90 degrees. 
+c       The first two values specify the continuum solution, if there is
+c       a gain table with n binned solutions, another n*2 values can be
+c       specified. The default is 1,0 for all gains.
 c@ options
 c	This gives extra processing options. Several values can be given,
 c	separated by commas. Option values can be abbreviated to
@@ -81,8 +84,9 @@ c
 	logical dogain,doleak,dup,doinv
 	integer iostat,tVis,itLeak,nants,nfeeds,nsols,ntau,i
 	integer numfeed,feeds(MAXFEED),nleaks,nfbin,ngains,maxgains
-	complex gain,Leaks(2,MAXANT)
-	real amp,phi,sels(MAXSELS)
+	integer numamph,n
+	complex gain(0:MAXFBIN),Leaks(2,MAXANT)
+	real sels(MAXSELS),amph(MAXFBIN+1),phi
 	logical mask(2*MAXANT)
 	integer pGains,pTimes
         double precision freq(MAXFBIN)
@@ -103,8 +107,7 @@ c
 	call keya('vis',vis,' ')
 	if(vis.eq.' ')call bug('f','No input vis data-set given')
 	call SelInput('select',sels,MAXSELS)
-	call keyr('gain',amp,1.)
-	call keyr('gain',phi,0.)
+	call mkeyr('gain',amph,MAXFBIN+1,numamph)
 	call mkeyfd('feeds',feeds,MAXFEED,numfeed)
         call GetOpt(dorep,domult,doflag,doamp,dophas,dorefl,dozm,
      *	  doscal,dup,doinv)
@@ -185,7 +188,15 @@ c     *				memd(pTimes),memc(pGains))
 c
 c  Edit the gains.
 c
-	  gain = amp * cmplx(cos(phi*pi/180.),sin(phi*pi/180.))
+          n=min(numamph,nfbin+1)
+	  do i=0,nfbin
+	    gain(i)=1.0
+	  enddo
+	  do i=1,n
+	    phi=amph(i*2)
+	    gain(i-1)=amph(i*2-1)*
+     *	      cmplx(cos(phi*pi/180.),sin(phi*pi/180.))
+	  enddo
 	  if(dorep) call GainEdt(nsols,nants*nfeeds,nfbin,
      *	    memd(pTimes),memc(pGains),mask,sels,gain,RepOp)
 	  if(domult)call GainEdt(nsols,nants*nfeeds,nfbin,
@@ -371,7 +382,7 @@ c
 	implicit none
 	integer nsols,nants,nfbin
 	double precision times(nsols)
-	complex Gains(nants,nsols,0:nfbin),gain
+	complex Gains(nants,nsols,0:nfbin),gain(0:nfbin)
 	real sels(*)
 	logical mask(nants)
 	external oper
@@ -381,9 +392,10 @@ c
 c  Input:
 c    nsols	number of solutions.
 c    nants	Number of antennae times the number of feeds.
+c    nfbin      Number of frequency bins (0=continuum only)
 c    mask	Antenna/feed mask.
 c    sels	UV selection array.
-c    gain	A complex gain to be used.
+c    gain	Complex gains to be used.
 c    oper	The routine to perform the operation.
 c  Input/Output:
 c    gains	The gains.
@@ -401,7 +413,7 @@ c
 	        if (mask(i)) then
 		   if (SelProbe(sels,'amplitude',
      *			dble(abs(Gains(i,j,k))))) then
-		      call oper(Gains(i,j,k),gain)
+		      call oper(Gains(i,j,k),gain(k))
 		   endif
 	        endif
 	      enddo
