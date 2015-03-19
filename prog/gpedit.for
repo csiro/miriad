@@ -71,6 +71,7 @@ c    tw    16aug03 Allow gain amplitude selection
 c    rjs   02jan05 Correct gain selection.
 c    mhw   01mar11 Added options=invert
 c    mhw   08sep11 Handle freq binned gains
+c    mhw   19mar15 Gain argument now takes binned gains too
 c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
@@ -107,7 +108,7 @@ c
 	call keya('vis',vis,' ')
 	if(vis.eq.' ')call bug('f','No input vis data-set given')
 	call SelInput('select',sels,MAXSELS)
-	call mkeyr('gain',amph,MAXFBIN+1,numamph)
+	call mkeyr('gain',amph,2*(MAXFBIN+1),numamph)
 	call mkeyfd('feeds',feeds,MAXFEED,numfeed)
         call GetOpt(dorep,domult,doflag,doamp,dophas,dorefl,dozm,
      *	  doscal,dup,doinv)
@@ -188,7 +189,7 @@ c     *				memd(pTimes),memc(pGains))
 c
 c  Edit the gains.
 c
-          n=min(numamph,nfbin+1)
+          n=min(numamph/2,nfbin+1)
 	  do i=0,nfbin
 	    gain(i)=1.0
 	  enddo
