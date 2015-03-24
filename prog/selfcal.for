@@ -87,6 +87,10 @@ c       antenna with the greatest weight.
 c@ flux
 c       If MODEL is blank, then the flux density (Jy) of a point source
 c       model can be specified here.  The default is 1.
+c       Additional spectral parameters can be specified as follows:
+c       Reference frequency in GHz, spectral index, up to two higher
+c       order alpha terms (as produced by uvsfit or uvfmeas with 
+c       options=mfflux)
 c@ offset
 c       This gives the offset in arcseconds of a point source model (the
 c       offset is positive to the north and to the east).  This
@@ -101,7 +105,7 @@ c       the linetype parameters used to construct the map.  If you wish
 c       to override this, or if the info is not in the header, or if you
 c       are using a point source model, this parameter can be useful.
 c
-c$Id: selfcal.for,v 1.17 2015/01/27 05:19:48 wie017 Exp $
+c$Id: selfcal.for,v 1.18 2015/03/24 04:30:14 wie017 Exp $
 c--
 c
 c  History:
@@ -164,6 +168,7 @@ c    mhw  09may13 Add mmfs option
 c    mhw  12mar14 Initialize nchan in point source case
 c    mhw  16jul14 Fixed binned solution interpolation
 c    mhw  27jan15 Fix number of solutions written
+c    mhw  24mar15 Add spectral parameters to flux keyword 
 c
 c  Bugs/Shortcomings:
 c   * Selfcal should check that the user is not mixing different
@@ -179,7 +184,7 @@ c-----------------------------------------------------------------------
       logical   mmfs
       integer   i, minants, nModel, nchan, nvis, refant, tmod, tscr,
      *          tvis, nfbin, numchan, start
-      real      clip, flux(2), interval, lstart, lstep, lwidth,
+      real      clip, flux(6), interval, lstart, lstep, lwidth,
      *          offset(2), sels(MAXSELS)
       character flag1*8, flag2*8, ltype*32, Models(MAXMOD)*64,
      *          obstype*32, version*72, vis*64
@@ -191,8 +196,8 @@ c     Externals.
       external  hdprsnt, header, versan
 c-----------------------------------------------------------------------
       version = versan('selfcal',
-     *                 '$Revision: 1.17 $',
-     *                 '$Date: 2015/01/27 05:19:48 $')
+     *                 '$Revision: 1.18 $',
+     *                 '$Date: 2015/03/24 04:30:14 $')
 c
 c  Get the input parameters.
 c
@@ -209,6 +214,10 @@ c
       call keyi('refant',refant,0)
       call keyr('flux',flux(1),1.0)
       flux(2) = 1
+      call keyr('flux',flux(3),0.0)
+      call keyr('flux',flux(4),0.0)
+      call keyr('flux',flux(5),0.0)
+      call keyr('flux',flux(6),0.0)
       call keyr('offset',offset(1),0.0)
       call keyr('offset',offset(2),0.0)
       call keyline(ltype,nchan,lstart,lwidth,lstep)
