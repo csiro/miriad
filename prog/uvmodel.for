@@ -72,7 +72,9 @@ c       should be specified here.  Also used as the default flux in the
 c       apriori option.  The default is 1 (assuming the model parameter
 c       is not given).  The flux can optionally be followed by i,q,u,v
 c       or the other polarisation mnemonics to indicate the polarisation
-c       type.
+c       type. The 3rd-6th parameter optionally specify the reference
+c       frequency in GHZ and the spectral index and higher order terms 
+c       (as given by uvsfit or uvfmeas with options=mfflux).
 c@ offset
 c       The RA and DEC offsets (arcsec) of the point source from the
 c       observing centre.  A point source to the north and east has
@@ -94,7 +96,7 @@ c       only as many channels as there are planes in the model cube.
 c       The various uv variables that describe the windows are adjusted
 c       accordingly.  No default. 
 c
-c$Id: uvmodel.for,v 1.7 2013/08/30 01:49:21 wie017 Exp $
+c$Id: uvmodel.for,v 1.8 2015/03/24 04:56:24 wie017 Exp $
 c--
 c
 c  History:
@@ -138,6 +140,7 @@ c    rjs  26sep97 Re-add mhw's zero option.
 c    rjs  01dec98 More warning messages.
 c    rjs  03apr09 Fix long standing bug in "options=flag"
 c    mhw  17jan12 Use ptrdiff for scr routines to handle larger files
+c    mhw  24jan15 Add spectral parameters to flux keyword
 c-----------------------------------------------------------------------
       include 'maxdim.h'
 
@@ -149,7 +152,7 @@ c-----------------------------------------------------------------------
       integer   i, length, nchan, npol, nread, nsize(3), nvis, pol,
      *          pols(-8:4), tMod, tOut, tScr, tVis
       ptrdiff   off
-      real      buffer(NBUF), clip, flux(2), lstart, lstep, lwidth,
+      real      buffer(NBUF), clip, flux(6), lstart, lstep, lwidth,
      *          offset(2), sels(MAXSELS), sigma
       double precision preamble(5)
       complex   uvdata(MAXCHAN)
@@ -164,8 +167,8 @@ c-----------------------------------------------------------------------
       character versan*72
 c-----------------------------------------------------------------------
       version = versan('uvmodel',
-     *                 '$Revision: 1.7 $',
-     *                 '$Date: 2013/08/30 01:49:21 $')
+     *                 '$Revision: 1.8 $',
+     *                 '$Date: 2015/03/24 04:56:24 $')
 
 c     Get the input parameters.
       call keyini
@@ -178,6 +181,10 @@ c     Get the input parameters.
       call keyr('flux',flux(1),1.0)
       call keya('flux',poltype,'i')
       flux(2) = polsp2c(poltype)
+      call keyr('flux',flux(3),0.0)
+      call keyr('flux',flux(4),0.0)
+      call keyr('flux',flux(5),0.0)
+      call keyr('flux',flux(6),0.0)
       call keyr('sigma',sigma,100.0)
       call keyr('offset',offset(1),0.0)
       call keyr('offset',offset(2),0.0)
