@@ -62,8 +62,9 @@ c    rjs  14dec99 Support for visibility datasets as models.
 c    rjs  14aug00 Re-Added "sources" file support.
 c    rjs  18sep05 Type mismatch error.
 c    mhw  17jan12 Use ptrdiff for scr routines to handle larger files
+c    mhw  24mar15 Add spectral parameters for flux model
 c
-c $Id: model.for,v 1.8 2012/01/17 03:43:37 wie017 Exp $
+c $Id: model.for,v 1.9 2015/03/24 04:30:36 wie017 Exp $
 c***********************************************************************
 c*ModelIni -- Ready the uv data file for processing by the Model routine
 c&rjs
@@ -147,7 +148,7 @@ c+
 
       character flags*(*)
       integer tmod,tvis,tscr,nchan,nhead,nvis
-      real offset(2),level(2)
+      real offset(2),level(6)
       external header
 c-----------------------------------------------------------------------
 c  Calculate the model data corresponding to a visibility data file.
@@ -179,7 +180,10 @@ c               ways.  If the model is Stokes-Q,U or V, or a raw cross-
 c               hands polarisation type (strange!!), or I-alpha map from
 c               multi-freq synthesis, then pixels in the range -Level to
 c               Level are clipped.  If the model is none of the above,
-c               then pixels below Level are clipped.
+c               then pixels below Level are clipped. If it is a point
+c               source model, the second value can be used to specify
+c               the polarization (see gpscal) and values 3-6 can be
+c               used to specify the spectral parameters (see selfcal)
 c    nhead      Number of "header" values to write out to the scratch
 c               file.  These are filled in by the "header" routine.  If
 c               "nhead" is zero, header is not called.
@@ -1023,7 +1027,7 @@ c***********************************************************************
      *    nChan,nvis)
 
       integer   tvis, tScr, nhead, nChan, nvis
-      real      offset(2), level(2)
+      real      offset(2), level(6)
       external  header
 c-----------------------------------------------------------------------
       include 'maxdim.h'
@@ -1032,11 +1036,12 @@ c-----------------------------------------------------------------------
       integer    MAXLEN
       parameter (MAXLEN=5*MAXCHAN+10)
 
-      logical   accept, doOffs, flags(MAXCHAN)
+      logical   accept, doOffs, flags(MAXCHAN),doalpha
       integer   iChan, length, nread, polm
       real      outBuf(MAXLEN)
       double precision flux, l, lmn(3), m, n, n_1, off(2), preamble(6),
-     *          skyfreq(MAXCHAN), theta, thetai, u, v, w
+     *          skyfreq(MAXCHAN), theta, thetai, u, v, w, lfr, alpha,
+     *          reffreq
       complex   vis(MAXCHAN), modVis(MAXCHAN)
       ptrdiff offs
 
@@ -1065,6 +1070,8 @@ c       Compute (l,m,n-1) of the point source.
 
       flux = level(1)
       polm = nint(level(2))
+      doalpha = level(3).gt.0
+      if (doalpha) reffreq = level(3)
 
 c     Compute model visibilities and copy to the scratch file.
       nvis   = 0
@@ -1077,7 +1084,7 @@ c     Compute model visibilities and copy to the scratch file.
           if (doOffs) then
             theta = DTWOPI*(l*u + m*v + n_1*w)
 
-            if (nChan.eq.1) then
+            if (nChan.eq.1.and..not.doalpha) then
 c             Only the ratio matters - skyfreq(iChan) / skyfreq(1).
               skyfreq(1) = 1d0
             else
@@ -1087,10 +1094,21 @@ c             Only the ratio matters - skyfreq(iChan) / skyfreq(1).
 
             do iChan = 1, nChan
               thetai = theta * skyfreq(iChan)
+              if (doalpha) then
+                lfr = log(skyfreq(iChan)/reffreq)
+                alpha = level(4)+lfr*(level(5)+lfr*level(6))
+                flux = level(1) *(skyfreq(iChan)/reffreq)**alpha
+              endif
               modVis(iChan) = cmplx(flux*cos(thetai), flux*sin(thetai))
             enddo
           else
+            if (doalpha) call uvinfo(tvis,'sfreq',skyfreq)
             do iChan = 1, nChan
+              if (doalpha) then
+                lfr = log(skyfreq(iChan)/reffreq)
+                alpha = level(4)+lfr*(level(5)+lfr*level(6))
+                flux = level(1) *(skyfreq(iChan)/reffreq)**alpha
+              endif
               modVis(iChan) = flux
             enddo
           endif
