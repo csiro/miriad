@@ -45,12 +45,15 @@ c	are set to zero. For models of Stokes Q,U,V, or MFS I*alpha models,
 c	any pixels whose absolute value is below the clip level are set
 c	to zero. Default is 0.
 c@ flux
-c	If not model is given, then a point source model is assumed. This
+c	If no model is given, then a point source model is assumed. This
 c	keyword gives the flux of the point source model. Four values can be
 c	given, corresponding to I,Q,U and V respectively. NOTE: The flux
 c	of the model is not adjusted to match the flux of the data, so if
 c	amplitude selfcalibration is being performed, the fluxes given should
 c	accurately portray the fluxes of the source. The default is 1,0,0,0.
+c@ spec
+c       The reference frequency (GHz), spectral index and up to two  
+c       higher order terms. The spectral index terms default to zero.      
 c@ offset
 c	This gives the offset in arcseconds of a point source model (the
 c	offset is positive to the north and to the east). This parameter is
@@ -126,6 +129,7 @@ c    rjs  22mar00 Relax implicit assumption that XX/YY much stronger than XY/YX.
 c    rjs   8jan01 Fix buggy error message
 c    pjt  11feb02 Fix double + sign some complilers don't grok
 c    mhw  16jan12 Use ptrdiff for scr routines to handle larger files
+c    mhw  25mar15 Add spectral parameters
 c------------------------------------------------------------------------
 	include 'gpscal.h'
 	character version*(*)
@@ -138,8 +142,8 @@ c
 	integer tvis,tmod,tscr(4),nfiles
 	integer nModel,minants,refant,nants,nsize(3),nchan,nvis,i
 	real sels(MAXSELS),clip,interval,offset(2),lstart,lwidth,lstep
-	real flux(4),flx(4)
-	double precision Saved(16),Time0
+	real flux(4),flx(6),alpha(3)
+	double precision Saved(16),Time0,reffreq
 	logical phase,amp,doline,mfs,doxy,xyvary,doref,noscale,doclip
 c
 c  Externals.
@@ -166,6 +170,10 @@ c
 	call keyr('flux',flux(PolQ),0.0)
 	call keyr('flux',flux(PolU),0.0)
 	call keyr('flux',flux(PolV),0.0)
+	call keyd('spec',reffreq,0.0)
+	call keyr('spec',alpha(1),0.0)
+	call keyr('spec',alpha(2),0.0)
+	call keyr('spec',alpha(3),0.0)
 	call keyline(ltype,nchan,lstart,lwidth,lstep)
 	doline = ltype.ne.' '
 	call GetOpt(phase,amp,doxy,xyvary,doref,mfs,noscale)
@@ -238,6 +246,10 @@ c
 	      call uvrewind(tvis)
 	      flx(1) = flux(i)
 	      flx(2) = i
+              flx(3) = reffreq
+              flx(4) = alpha(1)
+              flx(5) = alpha(2)
+              flx(6) = alpha(3)
 	      nfiles = nfiles + 1
 	      call Model(flag2,tvis,0,offset,flx,tscr(nfiles),
      *				nhead,Header,nchan,nvis)
