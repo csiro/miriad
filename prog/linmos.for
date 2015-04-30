@@ -24,11 +24,14 @@ c       If not, linear interpolation is performed to regrid using the
 c       first image as the template.  LINMOS's ability to do this is
 c       inferior to task REGRID.  The intensity units of all the inputs,
 c       and the pixel size and alignment of the third dimension are
-c       assumed to be the same.
+c       assumed to be the same. Mosaicing fields with different 
+c       resolution together will cause errors in the fluxdensities of
+c       sources.
 c@ out
 c       The name of the output cube.  No default.  The center and pixel
 c       size of the first input image is used as the grid system of the
-c       output.
+c       output. The synthesized beam parameters are also taken from the
+c       first image header - you may want to pick a better average beam.
 c@ rms
 c       RMS noise level in each of the input cubes.  If not specified,
 c       the value is taken from the 'rms' item in the input image header
@@ -92,7 +95,7 @@ c                      when the fractional bandwidth is > 0.4 (this
 c                      is because higher orders are needed to model
 c                      the primary beam response with frequency).
 c
-c$Id: linmos.for,v 1.30 2014/11/29 05:02:03 wie017 Exp $
+c$Id: linmos.for,v 1.31 2015/04/30 03:49:22 wie017 Exp $
 c--
 c
 c  History:
@@ -184,8 +187,8 @@ c-----------------------------------------------------------------------
       external  len1, versan
 c-----------------------------------------------------------------------
       version = versan ('linmos',
-     *                  '$Revision: 1.30 $',
-     *                  '$Date: 2014/11/29 05:02:03 $')
+     *                  '$Revision: 1.31 $',
+     *                  '$Date: 2015/04/30 03:49:22 $')
 
 c     Get and check inputs.
       call keyini
