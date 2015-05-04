@@ -5,9 +5,9 @@ c& bpw
 c: map combination
 c+
 c       Hanning does a Hann or boxcar smooth on the spectral axis of
-c       a Miriad dataset.  It determines the axis from the header, or
-c       else assumes that it is the z-axis.  Masked pixels are zeroed
-c       before smoothing.
+c       a Miriad image cube.  It determines the axis from the header,
+c       or else assumes that it is the z-axis.  Masked pixels are 
+c       zeroed before smoothing.
 c
 c@ in
 c        The input image.  No default.
@@ -25,7 +25,7 @@ c@ width
 c        The number of channels over which to smooth.  Must be an odd
 c        number.  Default is 3.
 c
-c$Id: hanning.for,v 1.5 2012/03/13 02:21:33 wie017 Exp $
+c$Id: hanning.for,v 1.6 2015/05/04 06:03:23 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -51,8 +51,8 @@ c-----------------------------------------------------------------------
       data axC /'xyzabcd'/
 c-----------------------------------------------------------------------
       version = versan('hanning',
-     *                 '$Revision: 1.5 $',
-     *                 '$Date: 2012/03/13 02:21:33 $')
+     *                 '$Revision: 1.6 $',
+     *                 '$Date: 2015/05/04 06:03:23 $')
 
 c     Get and check the inputs.
       call keyini
