@@ -51,7 +51,7 @@ c       Write spectrum to this ascii file.  Default is no output file.
 c@ comment
 c       A one-line comment which is written into the logfile.
 c
-c$Id: imspect.for,v 1.6 2012/03/09 01:56:00 cal103 Exp $
+c$Id: imspect.for,v 1.7 2015/05/12 00:05:35 wie017 Exp $
 c--
 c
 c  History:
@@ -82,8 +82,8 @@ c-----------------------------------------------------------------------
       character itoaf*3, versan*72
 c-----------------------------------------------------------------------
       version = versan('imspect',
-     *                 '$Revision: 1.6 $',
-     *                 '$Date: 2012/03/09 01:56:00 $')
+     *                 '$Revision: 1.7 $',
+     *                 '$Date: 2015/05/12 00:05:35 $')
 
 c     Get inputs.
       call keyini
@@ -226,9 +226,9 @@ c     Write ascii spectrum if desired.
         call txtwrite(lOut,'Spectral axis type = '//vctype,30,iostat)
         call txtwrite(lOut,comment,len1(comment),iostat)
         do i = 1, nchan
-          write(line,'(1pe12.5,3x,1pe12.5,3x,1pe12.5)')
+          write(line,'(1pe12.5,3x,1pe18.9,3x,1pe12.5)')
      *      chan(i),value(i),spec(i)
-          call txtwrite(lOut, line, 45, iostat)
+          call txtwrite(lOut, line, 48, iostat)
           if (iostat.ne.0) call bug('f', 'Error writing output file')
         enddo
         call txtclose(lOut)

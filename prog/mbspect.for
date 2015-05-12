@@ -156,7 +156,7 @@ c
 c Note that this program does not report its version number so that gif
 c and ps output can be piped.
 c
-c$Id: mbspect.for,v 1.22 2013/08/30 01:49:21 wie017 Exp $
+c$Id: mbspect.for,v 1.23 2015/05/12 00:05:35 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -194,8 +194,8 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 c     Don't report the ID so that gif and ps output can be piped.
       version = versan ('-mbspect',
-     *                  '$Revision: 1.22 $',
-     *                  '$Date: 2013/08/30 01:49:21 $')
+     *                  '$Revision: 1.23 $',
+     *                  '$Date: 2015/05/12 00:05:35 $')
 
 c     Get inputs.
       call keyini
@@ -773,12 +773,12 @@ c     Write ascii spectrum if desired.
         call txtwrite(lOut,'#Intensity axis = '//unit0,
      *                34,iostat)
         call txtwrite(lOut,'#'//comment,1+len1(comment),iostat)
-        call txtwrite(lOut,'#  Channel     Spectral axis '//
-     *     '   Intensity',41,iostat)
+        call txtwrite(lOut,'#  Channel        Spectral axis '//
+     *     '     Intensity',46,iostat)
         do i = 1, nchan
-          write(txt,'(1pe12.5,3x,1pe12.5,3x,1pe12.5)')
+          write(txt,'(1pe12.5,3x,1pe18.9,3x,1pe12.5)')
      *                                        chan(i),value(i),spec(i)
-          call txtwrite(lOut, txt, 45, iostat)
+          call txtwrite(lOut, txt, 48, iostat)
           if (iostat.ne.0) call bug('f', 'Error writing output file')
         enddo
         call txtclose(lOut)
