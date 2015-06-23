@@ -1,0 +1,58 @@
+<html>
+<header>
+<title>Install Miriad using binary installation on a Mac</title> 
+</header>
+<body>
+<h1> Install Miriad using binary installation on a Mac </h1>
+<UL>
+<LI>
+Open a Terminal window, choose where you want to install miriad (this can be your home directory), cd to that directory.
+
+<LI> Download the files  miriad-common.tar.bz2 and  miriad-darwin_x86_64.tar.bz2, e.g., with: 
+<pre>
+curl -O  ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad-darwin_x86_64.tar.bz2
+curl -O ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad-common.tar.bz2
+</pre>
+<LI> Extract the  files: 
+<pre>
+tar xzf miriad-darwin_x86_64.tar.bz2
+tar xzf miriad-common.tar.bz2
+</pre>
+
+<LI> After this there should be a miriad directory with the binary installation. We just need to fix the MIRRC script to make it work. Cut and paste the following incantations:
+
+<pre>
+cd miriad
+export MIR=`pwd`
+sed -e "s,@MIRROOT@,$MIR," scripts/MIRRC.sh.in > MIRRC.sh
+chmod 644 MIRRC.sh 
+cd ..
+</pre>
+
+<LI> Execute the MIRRC.sh script and set your PATH:
+<pre>
+. miriad/MIRRC.sh
+export PATH=$MIRBIN:$PATH
+</pre>
+
+<LI> Now Miriad should be ready to run, change to your data directory and start miriad: e.g.,
+<pre>
+cd ~/data
+miriad
+</pre>
+
+<LI>Every time you start a new terminal window you need to run the MIRRC.sh script again, to avoid this add the MIRRC and export PATH lines above at the end of your  ~/.bash_profile startup file. 
+
+<LI>If the miriad command works, try typing atlod to check it can find the command. If things don't work, send me the terminal output so I can try to figure out what is going on.
+
+<LI> Some things to check:
+<pre>echo $PATH</pre>           - this should show the miriad directory in the executable search PATH
+
+<pre>which atlod</pre>           - should show the location of the atlod binary, in you newly extracted miriad tree
+
+<LI> If all works fine, enjoy using Miriad, and every now and then (and especially before reporting bugs) update to the latest version by repeating the download and extract steps above in the same directory you installed Miriad. Note that if you have an atnf unix account you can just type <pre>mirsync</pre> to update your installation.
+</UL>
+<HR><P>
+<small> miriad @ atnf.csiro.au - 23-Jun-2015</small>
+</BODY>
+</HTML>
