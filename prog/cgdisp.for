@@ -449,10 +449,11 @@ c        "oellipse open ellipse (give centre, half axes and p.a.)
 c        "clear"   nothing, so you can write the overlay ID string (see
 c                  below) without the overlay
 c
-c       Also
-c        "colour"  See below.
-c        "lwid"    See below.
-c        "offset"  See below.
+c       You can specify a directive on a line of its own, it applies to all
+c       overlays that follow, or until overwritten by another directive:
+c        "colour n"  Change colour of marker, specify pgplot colour index
+c        "lwid w"    Change linewidth, specify a value from 1-201
+c        "offset"    See below for details.
 c
 c       XOTYPE and YOTYPE  give the units of the overlay location (and
 c       overlay half-sizes) contained in the file for the x- and y-
@@ -606,7 +607,15 @@ c       The OFFSET directive is not applied to ANY position fields in
 c       succeeding directives that have %OTYPEs that are "hms" or "dms".
 c       I am too lazy to code it.
 c
-c$Id: cgdisp.for,v 1.26 2014/08/22 01:53:49 wie017 Exp $
+c       Example olay file with colour changes:
+c       # default colour is green
+c       ocircle hms dms green_circle no 09 02 34.81 -46 14 00.05 150.0 0 0
+c       color 2
+c       ocircle hms dms red_circle no 09 02 14.0 -46 24 36.0 828.0 0 0
+c       color 4
+c       ocircle hms dms blue_circle no 09 01 01.593  -46 38 55.498  439.09 0 0
+c
+c$Id: cgdisp.for,v 1.27 2015/07/09 23:25:48 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -681,8 +690,8 @@ c     Plotting parameters.
       data getvsc /.true./
 c-----------------------------------------------------------------------
       version = versan ('cgdisp',
-     *                  '$Revision: 1.26 $',
-     *                  '$Date: 2014/08/22 01:53:49 $')
+     *                  '$Revision: 1.27 $',
+     *                  '$Date: 2015/07/09 23:25:48 $')
 
 c     Get user inputs.
       call inputs(maxchan, MAXLEV, MAXCON, MAXTYP, ltypes, ncon, cin,
