@@ -101,7 +101,7 @@ c         residual The output data-set is the residual image.
 c                  If an output is being created, the default is to make
 c                  this the fitted model.
 c
-c$Id: imfit.for,v 1.11 2013/08/30 01:49:21 wie017 Exp $
+c$Id: imfit.for,v 1.12 2015/07/26 23:26:16 wie017 Exp $
 c--
 c  History:
 c    mchw 22apr94 new task.
@@ -128,6 +128,7 @@ c    paj  28Mar03 Fix bug in uncertainty estimates
 c    mhw  16oct12 Add error estimate for integrated flux
 c                 and give position error ellipse
 c    mhw  06dec12 Fix reported position angle of error ellipse
+c    mhw  27jul15 Increase number of digits in error estimates
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -151,8 +152,8 @@ c     Externals.
       external FUNCTION
 c-----------------------------------------------------------------------
       version = versan ('imfit',
-     *                '$Revision: 1.11 $',
-     *                '$Date: 2013/08/30 01:49:21 $')
+     *                '$Revision: 1.12 $',
+     *                '$Date: 2015/07/26 23:26:16 $')
 
 c     Get the input parameters.
       call keyini
@@ -1036,9 +1037,13 @@ c
   40        format('  Offset Position (arcsec):  ',2f10.0)
   41        format('  Offset Position (arcsec):  ',2f10.3)
             call output(line)
-            if (sl0(i)+sm0(i).gt.0) then
-              write(line,45) sfac*sl0(i)*R2AS, sfac*sm0(i)*R2AS
-  45          format('  Positional errors (arcsec):',2f10.3)
+            if (sfac*min(sl0(i),sm0(i))*R2AS.gt.0.01) then
+              write(line,42) sfac*sl0(i)*R2AS, sfac*sm0(i)*R2AS
+  42          format('  Positional errors (arcsec):',2f10.3)
+              call output(line)
+            else if (sl0(i)+sm0(i).gt.0) then
+              write(line,43) sfac*sl0(i)*R2AS, sfac*sm0(i)*R2AS
+  43          format('  Positional errors (arcsec):',2f10.5)
               call output(line)
             endif
             if (spema(i)+spemi(i).gt.0) then
