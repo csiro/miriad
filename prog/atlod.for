@@ -176,7 +176,7 @@ c       For concatenated spectra the width of a single zoom is used.
 c       Note that noise and artefacts go up quickly towards the band 
 c       edge so making this much smaller will not gain you much.
 c
-c$Id: atlod.for,v 1.50 2014/10/20 00:51:26 wie017 Exp $
+c$Id: atlod.for,v 1.51 2015/07/27 05:40:50 wie017 Exp $
 c--
 c
 c  Program Structure:
@@ -341,9 +341,10 @@ c    mhw  07dec12 Fix 29may12 opcor code again - how did it ever work?
 c    mhw  29jan13 Fix nscans skip and read code - RPEOF call hangs
 c    mhw  22oct13 Apply patches by vjm to fix some string overflows
 c    rjs  17jul14 Changes to correct antenna table
-c    mhw  25jul14 Deal with historical rfiflag files 
+c    mhw  25jul14 Deal with historical rfiflag files
+c    mhw  27jul15 Fix problem loading some CABB zoom data
 c
-c $Id: atlod.for,v 1.50 2014/10/20 00:51:26 wie017 Exp $
+c $Id: atlod.for,v 1.51 2015/07/27 05:40:50 wie017 Exp $
 c-----------------------------------------------------------------------
 
         integer MAXFILES,MAXTIMES,MAXSIM
@@ -364,8 +365,8 @@ c
         character itoaf*8, rperr*32, versan*72
 c-----------------------------------------------------------------------
       version = versan ('atlod',
-     :                  '$Revision: 1.50 $',
-     :                  '$Date: 2014/10/20 00:51:26 $')
+     :                  '$Revision: 1.51 $',
+     :                  '$Date: 2015/07/27 05:40:50 $')
 c
 c  Get the input parameters.
 c
@@ -1616,8 +1617,8 @@ c
         if(newfreq)then
           if(doif)then
             do iif=2,nifs
-              if(nbin(iif).ne.nbin(1))    call bug('f',
-     *          'Number of bins differ between IFs. '//
+              if(nbin(iif).gt.0.and.nbin(iif).ne.nbin(1))
+     *           call bug('f','Number of bins differ between IFs. '//
      *          'Use options=noif.')
               if(nstoke(iif).ne.nstoke(1))call bug('f',
      *          'Number of polarisations differ between IFs. '//
