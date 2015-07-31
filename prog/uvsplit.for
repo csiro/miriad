@@ -62,7 +62,7 @@ c@ maxwidth
 c        The maximum bandwidth (in GHz) for each output frequency band.
 c        Default is no subdivision of input bands. The maxwidth limit
 c        is only applied when splitting by frequency.
-c $Id: uvsplit.for,v 1.15 2013/08/30 01:49:21 wie017 Exp $
+c $Id: uvsplit.for,v 1.16 2015/07/31 04:26:02 wie017 Exp $
 c--
 c  History:
 c    rjs  13oct93 Original version.
@@ -84,6 +84,7 @@ c    mhw  29sep09 Fix freq axis mislabeling bug
 c    mhw  14oct09 Separate out identical freqs on different IFs
 c    mhw  06jun11 Split by calcode
 c    mhw  23nov11 Split by ifchain, pass ifchain variable along
+c    mhw  31jul15 Split zooms that are less than 1 MHz apart
 c  Bugs:
 c   the full xtsys and ytsys variables are passed to split files,
 c   but for the systemp variable only the appropriate data (if) is copied
@@ -107,8 +108,8 @@ c
         character versan*72
 c------------------------------------------------------------------------
         version = versan ('uvsplit',
-     *                    '$Revision: 1.15 $',
-     *                    '$Date: 2013/08/30 01:49:21 $')
+     *                    '$Revision: 1.16 $',
+     *                    '$Date: 2015/07/31 04:26:02 $')
 c
 c  Get the input parameters.
 c
@@ -292,9 +293,9 @@ c  Determine the current indices of interest.
 c
 c------------------------------------------------------------------------
 	include 'maxdim.h'
-	character base*32,source*32,c*1,calcode*32,typ*1
+	character base*32,source*32,c*1,calcode*32,typ*1,fstr*8
 	integer maxi,n,nchan,ichan,nwide,length,lenb,i,ii,nsub,j,nindx1
-        integer ifc(MAXWIN)
+        integer ifc(MAXWIN),n1,l
 	double precision sdf(MAXWIN),sfreq(MAXWIN)
 	real wfreq(MAXWIN)
 	logical discard,duplicate,present
@@ -428,11 +429,21 @@ c
                 onchan(ii) = nschan(i)/nsub
                 if (j.gt.1) oschan(ii) = oschan(ii-1)+onchan(ii-1)
                 n = nint(1000*(sfreq(i) +  sdf(i) * ichan))
+                n1 = nint(10000*(sfreq(i) +  sdf(i) * ichan))
+                if (10*n.ne.n1) then
+                  fstr=itoaf(n1)
+                  l=index(fstr,' ')
+                  fstr(l:l)=fstr(l-1:l-1)
+                  fstr(l-1:l-1)='.'
+                else
+                  fstr=itoaf(n)
+                  l=index(fstr,' ')-1
+                endif
                 if (duplicate) then
                   call FileIndx(base(1:length)//'.'//
-     *              stcat(itoaf(n),'.'//itoaf(i)),i,indx(ii),clobber)
+     *              stcat(fstr(1:l),'.'//itoaf(i)),i,indx(ii),clobber)
                 else
-                  call FileIndx(base(1:length)//'.'//itoaf(n),i,
+                  call FileIndx(base(1:length)//'.'//fstr,i,
      *              indx(ii),clobber)
                 endif                
               enddo
