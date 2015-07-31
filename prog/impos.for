@@ -67,7 +67,7 @@ c         altspc    Report FREQ-{HEL,LSR} axes as is, namely
 c                   topocentric, i.e. don't Doppler shift to barycentric
 c                   or LSRK (see help for velsw).
 c
-c$Id: impos.for,v 1.15 2012/03/07 13:14:02 cal103 Exp $
+c$Id: impos.for,v 1.16 2015/07/31 01:20:50 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -85,7 +85,7 @@ c-----------------------------------------------------------------------
      *          strlen(MAXNAX)
       real      map(MAXDIM), value
       double precision rfreq, pixcrd(MAXNAX), win(MAXNAX)
-      character algo*8, axtype*16, bunit*9, ctypes(MAXNAX)*8, file*80,
+      character algo*8, axtype*16, bunit*9, ctypes(MAXNAX)*8, file*256,
      *          labtyp(MAXTYP)*6, opts(NOPTS)*8, sctypes(5)*16,
      *          specsys*16, str1*132, strout(MAXNAX)*80, stypei*16,
      *          stypes(6)*16, text*132, typei(MAXNAX)*6,
@@ -108,8 +108,8 @@ c-----------------------------------------------------------------------
       data nelem, ipix /0, MAXNAX*1/
 c-----------------------------------------------------------------------
       version = versan ('impos',
-     *                  '$Revision: 1.15 $',
-     *                  '$Date: 2012/03/07 13:14:02 $')
+     *                  '$Revision: 1.16 $',
+     *                  '$Date: 2015/07/31 01:20:50 $')
 
 c     Get inputs.
       call keyini
