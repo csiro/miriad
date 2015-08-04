@@ -8,22 +8,25 @@ c: uv analysis
 c+
 c	UVLIN separates line and continuum in a spectral visibility
 c	data-set. It does this by fitting a low order polynomial to the
-c	real and imaginary parts of the line free channels of each spectrum.
+c	real and imaginary parts of the line free channels of each
+c       spectrum.
 c	This polynomial function is taken to represent the continuum, and
 c	any deviation from this is taken to represent the line data.
 c
-c	Optionally a constraint can be added that the line shape is constant,
-c	and its strength is proportional to the continuum level. This is a good
-c	approximation in many recombination line experiments. In this case,
-c	an iterative algorithm is used to estimate the line shape and to
-c	optimally disentangle the line and the continuum.
+c	Optionally a constraint can be added that the line shape is
+c       constant, and its strength is proportional to the continuum 
+c       level. This is a good approximation in many recombination line
+c       experiments. In this case, an iterative algorithm is used to 
+c       estimate the line shape and to optimally disentangle the line
+c       and the continuum.
 c
 c	See the related tasks CONTSEN and CONTERR, which give estimates
 c	of the noise amplification and the residual continuum.
 c@ vis
 c	The name of the input uv data set. No default.
 c@ select
-c	The normal uv selection commands. The default is to select everything.
+c	The normal uv selection commands. The default is to select 
+c       everything.
 c@ line
 c	The normal uv linetype in the form:
 c	  line,nchan,start,width,step
@@ -34,22 +37,23 @@ c@ chans
 c	This specifies the channel ranges that contain only continuum
 c	(line free). It consists of a number of pairs, each pair giving
 c	a start and end channel. These are relative to the channels
-c	selected with the "line" parameter. The default is that all channels
-c	are line-free, which is quite a good approximation if the line is
-c	weak compared to the continuum.
+c	selected with the "line" parameter. The default is that all
+c       channels are line-free, which is quite a good approximation if
+c       the line is weak compared to the continuum.
 c@ out
 c	The name of the output uv data-set. There is no default name.
-c	The output can be either the line, continuum, or fitted line shape,
-c	as specified by the options keyword. The default is to write the
-c	line data.
+c	The output can be either the line, continuum, or fitted line
+c       shape, as specified by the options keyword. The default is to
+c       write the line data.
 c@ order
 c	Order of polynomial used to fit the continuum. The default is 1
 c	(i.e. a linear fit). Possible values are 0 to 5. Also see the
 c	`relax' option.
 c@ offset
-c	An offset (in arcsec) that would shift the data to the center of the
-c	dominant emission. Giving this shift allows UVLIN to reduce the
-c	error involved in approximating the continuum as a polynomial.
+c	An offset (in arcsec) that would shift the data to the center of
+c       the dominant emission. Giving this shift allows UVLIN to reduce
+c       the error involved in approximating the continuum as a 
+c       polynomial.
 c	The shift information is only used in the fitting process -- the
 c	output data is not shifted. The default is 0,0 (no shift).
 c	The following options determine what is written to the output
@@ -66,38 +70,43 @@ c	               continuum data in a visibility record.
 c	   continuum   The output data-set is the continuum data. This
 c	               has the same number of channels as the input
 c	               data-set.
+c          ratio       The output data-set is the input data divided by
+c                      the fitted continuum data.
 c@ options
 c	This gives extra processing options. Several options can be given,
 c	each separated by commas. They may be abbreivated to the minimum
 c	needed to avoid ambiguity. Possible options are:
 c	   sun         With this options, the OFFSET keyword is ignored,
 c	               and a shift appropriate for the Sun is determined
-c	               This can be useful to eliminate solar interference.
+c	               This can be useful to eliminate solar
+c                      interference.
 c	   twofit      If either the OFFSET parameter is set, or the SUN
 c	               option invoked, this options instructs UVLIN to
-c	               perform a simultaneous polynomial fit for a emission
+c	               perform a simultaneous polynomial fit for emission
 c	               both at the phase centre and at the appropriate
 c	               offset.
-c	   nowindow    Normally uvlin processes the different windows separately.
-c	               This will usually give the best result when the different
-c	               windows are at quite different frequencies. However when the
-c	               windows are at similar frequencies, or perhaps even abutting,
-c	               then it is better to perform a single fit over all windows
-c	               simultaneously. The "nowindow" option causes uvlin to do a
-c	               single fit over all windows.
-c	   lpropc      The line shape is constant throughout the data-set,
-c		       and the intensity is proportional to the continuum
-c	               strength. This cannot be used together with
-c	               the 'twofit' option.
+c	   nowindow    Normally uvlin processes the different windows
+c                      separately. This will usually give the best result
+c                      when the different windows are at quite different
+c                      frequencies. However when the windows are at
+c                      similar frequencies, or perhaps even abutting,
+c	               then it is better to perform a single fit over all
+c                      windows simultaneously. The "nowindow" option
+c                      causes uvlin to do a single fit over all windows.
+c	   lpropc      The line shape is constant throughout the
+c                      data-set, and the intensity is proportional to the
+c                      continuum strength. This cannot be used together
+c                      with the 'twofit' option.
 c	   relax       Normally UVLIN attempts to avoid overfitting the
-c	               data by reducing the order of the fit. It does this
-c	               if a significant number of channels are flagged
-c	               (more than 40% bad) or if it believes there is
-c	               inadequate data to perform the fit (less than
-c	               5*(order+1) channels). You can overwrite this
+c	               data by reducing the order of the fit. It does
+c                      this if a significant number of channels are
+c                      flagged (more than 40% bad) or if it believes
+c                      there is inadequate data to perform the fit (less
+c                      than 5*(order+1) channels). You can overwrite this
 c	               conservatism, if you know what you are doing, with
 c	               the `relax' option.
-c	The following options can be used to turn off calibration corrections.
+c	The following options can be used to turn off calibration 
+c       corrections.
 c	The default is to apply any calibration present.
 c	   nocal       Do not apply the gains table.
 c	   nopass      Do not apply bandpass corrections. It is unwise
@@ -120,18 +129,20 @@ c   rjs   16aug94 Zeroth order fits were failing again!
 c   rjs   17aug94 Slightly better handling of offset value.
 c   rjs    9sep94 Handle felocity linetype.
 c   rjs   19sep04 Handle varying jyperk.
-c   pjt   11feb05 Change MAXCH to be more reflective of MAXCHAN (tried MAXCHAN/4)
+c   pjt   11feb05 Change MAXCH to be more reflective of MAXCHAN (tried
+c                 MAXCHAN/4)
 c   jhz   22jul05 Change MAXSPECT and MSPECT to 48.
 c   rjs   18sep05 More rigorously avoid mixed use of arrays.
-c   rjs   24jan07 Added nowin option. Change MAXSPECT and MSPECT to MAXWIN.
+c   rjs   24jan07 Added nowin option. Change MAXSPECT and MSPECT to
+c                 MAXWIN.
+c   mhw   04aug15 Add ratio mode
 c  Bugs:
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
 	integer MAXCH,MAXORDER
-	character version*(*)
+	character version*72
 	parameter(MAXORDER=11,MAXCH=MAXCHAN/4)
-	parameter(version='UvLin: version 1.0 24-Jan-07')
 c
 	logical sun,twofit,relax,lpropc,nowin,cflags(MAXCHAN)
 	character uvflags*16,out*64,ltype*32,mode*12
@@ -140,8 +151,13 @@ c
 	double precision shift(2)
 c
 c  Externals.
-c
+        character  versan*72
 	logical uvDatOpn
+c-----------------------------------------------------------------------
+      version = versan ('uvlin',
+     :                  '$Revision: 1.5 $',
+     :                  '$Date: 2015/08/04 00:07:03 $')
+c
 c
 c  Get the input parameters.
 c
@@ -211,7 +227,7 @@ c
 	call uvopen(lOut,out,'new')
 	call hdcopy(lIn,lOut,'history')
 	call hisopen(lOut,'append')
-	call hiswrite(lOut,'UVLIN: Miriad '//version)
+	call hiswrite(lOut,'UVLIN: '//version)
 	call hisinput(lOut,'UVLIN')
 	call hisclose(lOut)
 	call VarOnit(lIn,lOut,ltype)
@@ -242,9 +258,10 @@ c  Determine what we want to write out.
 c------------------------------------------------------------------------
 	integer nout
 	integer nopt
-	parameter(nopt=4)
+	parameter(nopt=5)
 	character opts(nopt)*9
-	data opts/'line     ','fit      ','chan0    ','continuum'/
+	data opts/'line     ','fit      ','chan0    ','continuum',
+     *            'ratio    '/
 c
 	call keymatch('mode',nopt,opts,1,mode,nout)
 	if(nout.eq.0) mode = 'line'
@@ -878,7 +895,11 @@ c
 	    data(i) = cont(i)
 	  enddo
 	  nread = nchan
-	else
+	else if(mode.eq.'ratio') then
+          do i=1,nchan
+            if (cont(i).ne.0) data(i) = data(i) / cont(i)
+          enddo
+        else
 	  call bug('f','Unrecognised mode in ProcAll')
 	endif
 c
