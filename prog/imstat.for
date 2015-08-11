@@ -55,6 +55,8 @@ c
 c         'sum'         Plot the sum
 c         'mean'        Plot the mean
 c         'rms'         Plot the rms
+c         'rrms'        Plot the robust rms (median absolute 
+c                       deviation from median *1.48)
 c         'maximum'     Plot the maximum
 c         'minimum'     Plot the minimum
 c
@@ -128,7 +130,7 @@ c@ log
 c       If specified, output is written to the file given by log=
 c       instead of to the terminal.
 c
-c$Id: imstat.for,v 1.9 2015/01/19 02:17:45 wie017 Exp $
+c$Id: imstat.for,v 1.10 2015/08/11 06:16:34 wie017 Exp $
 c--
 c  IMSPEC - plots spectra from image data
 c& bpw
@@ -303,8 +305,8 @@ c-----------------------------------------------------------------------
       character versan*72
 c-----------------------------------------------------------------------
       version = versan('imstat',
-     *                 '$Revision: 1.9 $',
-     *                 '$Date: 2015/01/19 02:17:45 $')
+     *                 '$Revision: 1.10 $',
+     *                 '$Date: 2015/08/11 06:16:34 $')
 
       call inputs(lIn,naxis,dim,corners,boxes,cut,counts,beaminfo,
      *  axlabel,device,MAXBOXES)
@@ -1190,7 +1192,7 @@ c-----------------------------------------------------------------------
       integer          pgbeg
       logical          doplot
 
-      real             data(MAXBUF/2)
+      real             data(MAXBUF/2),mdata(MAXBUF/2),tmp
       logical          mask(MAXBUF/2)
 
       integer          runs(3,MAXRUNS), nruns
@@ -1200,6 +1202,7 @@ c-----------------------------------------------------------------------
       integer          npoints(MAXNAX),crners(4)
       double precision maxval(MAXNAX), minval(MAXNAX)
       double precision sum(MAXNAX), sumpbc(MAXNAX), sumsq(MAXNAX)
+      double precision med(MAXNAX),mad(MAXNAX)
 c-----------------------------------------------------------------------
       nlevels = naxis - abs(dim) + 1
       do i = 1, MAXNAX
@@ -1262,8 +1265,11 @@ c             Convert to Kelvin if requested.
                 sumpbc(1)  = 0d0
                 sumsq(1)   = 0d0
                 init(1)    = .false.
+                med(1)     = 0
+                mad(1)     = 0
               endif
               npoints(1) = npoints(1) + 1
+              mdata(npoints(1))=data(i)
               v          = dble(data(i))
               maxval(1)  = max(maxval(1), v)
               minval(1)  = min(minval(1), v)
@@ -1273,11 +1279,22 @@ c             sumpbc(1)  = sumpbc(1) + v*pbccorr(i,coo(1))
             endif
           enddo
         enddo
-
+        if (npoints(1).gt.0) then
+          call qmedian(mdata,npoints(1),tmp)
+          do i=1,npoints(1)
+            mdata(i)=abs(mdata(i)-tmp)
+          enddo
+          med(1) = tmp * npoints(1)
+          call qmedian(mdata,npoints(1),tmp)
+c         convert mad to estimate of rms          
+          mad(1) = tmp * npoints(1) * 1.4826042
+        endif
 c       After looping over all pixels of a selected subcube, add the
 c       results to the statistics of all higher levels.  These are
 c       reinitialized at appropriate times, namely if all subcubes from
 c       one level lower have been handled.
+c       For median and median av. deviation we average the numbers as
+c       we can't keep all the needed data in memory
         if (nlevels.ge.2) then
           do level = 2, nlevels
             init(level) = mod(subcube-1, counts(level)).eq.0
@@ -1289,6 +1306,8 @@ c       one level lower have been handled.
                 sum(level)     = 0d0
                 sumpbc(level)  = 0d0
                 sumsq(level)   = 0d0
+                med(level)     = 0
+                mad(level)     = 0
                 init(level)    = .false.
               endif
               npoints(level) = npoints(level) + npoints(1)
@@ -1297,6 +1316,8 @@ c       one level lower have been handled.
               sum(level)     = sum(level)    + sum(1)
               sumpbc(level)  = sumpbc(level) + sumpbc(1)
               sumsq(level)   = sumsq(level)  + sumsq(1)
+              med(level)     = med(level) + med(1)
+              mad(level)     = mad(level) + mad(1)
             endif
           enddo
         endif
@@ -1304,7 +1325,7 @@ c       one level lower have been handled.
 c       After treating each selected subcube, write out the results.
         call results(subcube, lIn, naxis,abs(dim), counts, axlabel,
      *    doplot, npoints, maxval, minval, sum, sumpbc, beaminfo(SUMBM),
-     *    sumsq)
+     *    sumsq,med,mad)
       enddo
 
       if (doplot) call pgend
@@ -1314,14 +1335,15 @@ c       After treating each selected subcube, write out the results.
 c***********************************************************************
 
       subroutine results(subcube, lIn, naxis, dim, counts, axlabel,
-     *  doplot, npoints, maxval, minval, sum, sumpbc, sumap, sumsq)
+     *  doplot, npoints, maxval, minval, sum, sumpbc, sumap, sumsq,
+     *   med,mad)
 
       integer   subcube, lIn, naxis, dim, counts(0:*)
       character axlabel(*)*(*)
       logical   doplot
       integer   npoints(*)
       double precision maxval(*), minval(*), sum(*), sumpbc(*), sumap,
-     *          sumsq(*)
+     *          sumsq(*),med(*),mad(*)
 c-----------------------------------------------------------------------
 c  Routine controlling when results are written, also doing a few
 c  on-the-spot conversions.
@@ -1357,7 +1379,7 @@ c         Add an entry to the table.
           if (dotail .or. level.eq.1) then
             call tabentry(coo(level),coords(level),cvalues(level),
      *        npoints(level),maxval(level),minval(level),sum(level),
-     *        sumpbc(level),sumap,sumsq(level))
+     *        sumpbc(level),sumap,sumsq(level),med(level),mad(level))
           endif
 
 c         Make output for a level if all subcubes were done and added to
@@ -1441,7 +1463,7 @@ c-----------------------------------------------------------------------
       character cubetype*9, label*32, line*80, typ*9
 
       external  itoaf, len1, rtfmt
-      integer   len1
+      integer   len1,matchnr
       character itoaf*2, rtfmt*256
 c-----------------------------------------------------------------------
       call logwrit(' ')
@@ -1501,7 +1523,12 @@ c     Abbreviate the label to 12 chars.
       if (plotvar(DUNIT).eq.ORIG .or. plotvar(DUNIT).eq.KELVIN) then
         write(line,rtfmt('<>x,a<>,<>x,a<>,''   Sum      Mean      ' //
      *    'rms     Maximum   Minimum    Npoints''',n,4)) typ, label
-        if (NAME.eq.'IMSPEC') line(index(line,'rms') :) = 'Npoints'
+        if (NAME.eq.'IMSPEC') then
+          line(index(line,'rms') :) = 'Npoints'
+        else if (plotvar(SEL).eq.matchnr('rrms',plotopts)) then
+          i = index(line,'Mean')
+          line(i:i+13) = 'Median    Rrms'
+        endif
       else
         write(line,rtfmt('<>x,a<>,<>x,a<>,''   Flux     PBC Flux  ' //
      *    'Npoints''',n,4)) typ, label
@@ -1514,13 +1541,14 @@ c     Abbreviate the label to 12 chars.
 c***********************************************************************
 
       subroutine tabentry(coo, coord, cvalue, npoints, maxval, minval,
-     *  sum, sumpbc, sumap, sumsq)
+     *  sum, sumpbc, sumap, sumsq, med, mad)
 
       integer   coo
       double precision coord
       character cvalue*(*)
       integer   npoints
       double precision maxval, minval, sum, sumpbc, sumap, sumsq
+      double precision med, mad
 c-----------------------------------------------------------------------
 c  First convert from the raw statistics to the useful statistics.
 c  Then add an entry to the arrays later to be used for plotting and
@@ -1529,15 +1557,25 @@ c-----------------------------------------------------------------------
       include 'imstat.h'
 
       logical   ok
+      integer matchnr
       double precision calcrms, rms, stats(NSTATS)
 c-----------------------------------------------------------------------
 c     Convert from raw to useful statistics.
       rms = calcrms(sum, sumsq, npoints, ok)
       if (plotvar(DUNIT).eq.ORIG .or. plotvar(DUNIT).eq.KELVIN) then
         stats(1) = sum
-        if (npoints.ne.0) stats(2) = sum / npoints
-        if (npoints.eq.0) stats(2) = 0.0
-        stats(3) = rms
+        if (npoints.ne.0) then
+          if (plotvar(SEL).eq.matchnr('rrms',plotopts)) then
+            stats(2) = med / npoints
+            stats(3) = mad / npoints
+           else
+            stats(2) = sum / npoints
+            stats(3) = rms
+          endif
+        else
+          stats(2) = 0.0
+          stats(3) = 0.0
+        endif
         stats(4) = maxval
         stats(5) = minval
         stats(6) = npoints
@@ -1608,6 +1646,7 @@ c     Copy array to be plotted to array yarr and make plot.
       if (plotvar(SEL).eq.matchnr('sum',    plotopts)) plt=1
       if (plotvar(SEL).eq.matchnr('mean',   plotopts)) plt=2
       if (plotvar(SEL).eq.matchnr('rms',    plotopts)) plt=3
+      if (plotvar(SEL).eq.matchnr('rrms',   plotopts)) plt=3
       if (plotvar(SEL).eq.matchnr('maximum',plotopts)) plt=4
       if (plotvar(SEL).eq.matchnr('minimum',plotopts)) plt=5
       do i = 1, n
@@ -2052,5 +2091,6 @@ c-----------------------------------------------------------------------
         call pgmtxt('T', BASE+1+YOFF, XOFF, LEFT, plotpar(INFOP))
         call pgmtxt('T', BASE  +YOFF, XOFF, LEFT, plotpar(BOXP))
       endif
+      call pgsch(1.0)
 
       end
