@@ -20,7 +20,7 @@ c 4) Change name to imspec.for
 c plot and options for IMSTAT
 c      parameter    ( NAME = 'IMSTAT' )
 c      character    plotopts*(*)
-c      parameter    ( plotopts = 'mean,sum,rms,maximum,minimum' )
+c      parameter    ( plotopts = 'mean,sum,rms,rrms,maximum,minimum' )
 c      character    defplt*(*), idstr*(*)
 c      parameter    ( defplt = 'rms', idstr = 'statistics' )
 
