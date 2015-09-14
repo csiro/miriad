@@ -12,6 +12,6 @@ f2(lambda) = exp(-(lambda/fwhm2)**2)
 
 set xlabel "Spatial Frequency (wavelengths)"
 set ylabel "Amplitude"
-plot [0:3500] f1(x) title "Parkes" with lines 2, f2(x)-f1(x) title "Tapered ATCA" with lines 5, f2(x) title "Merged" with lines 1
+plot [0:3500] f1(x) title "Parkes", f2(x)-f1(x) title "Tapered ATCA", f2(x) title "Merged"
 
 
