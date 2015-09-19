@@ -1,4 +1,4 @@
-% $Id: mm.inc,v 1.2 2011/05/26 02:11:54 cal103 Exp $
+% $Id: mm.inc,v 1.3 2015/09/19 23:14:35 sau078 Exp $
 
 %\nonstopmode
 %\input{latexdefs.inc}
@@ -125,12 +125,12 @@ approach to calibration.
 
 \section{Some theory}
 \subsection{Atmospheric opacity and system temperature}
-To provide correct flux density units for the visibilities, $V$, from an
+To provide correct flux density units for the visibilities, \MM{V}, from an
 interferometer, the
 measured correlation coefficient at the correlator ($\rho$) needs to be
 scaled by a
 system temperature $T_{\rm sys}$ and a telescope sensitivity
-factor ($K$). The telescope sensitivity factor is determined by the
+factor (\MM{K}). The telescope sensitivity factor is determined by the
 overall antenna size and system efficiency.
 \[
 V = KT_{\rm sys}\rho
@@ -140,7 +140,7 @@ At millimetre wavelengths, the atmosphere can no longer be approximated
 as perfectly transparent. It degrades overall sensitivity in two
 ways: the atmosphere emits radiation, and so raises the
 system temperature, and the atmosphere attenuates the astronomical signal.
-For a zenith opacity $\tau$, observing at an elevation of $e$, and
+For a zenith opacity $\tau$, observing at an elevation of \MM{e}, and
 if the atmosphere is approximated as having a uniform temperature
 $T_{\rm 0}$, then the atmospheric contribution to
 system temperature is
@@ -164,12 +164,11 @@ the physical system
 temperature divided by the atmospheric transmissivity. The
 widespread use of above atmosphere system temperatures in millimetre
 astronomy
-follows on because the above atmosphere system temperature can be measured 
-directly! It
+is in part because it can be measured directly. It
 can be deduced
 by periodically flipping an absorber at atmospheric
 temperature in front of the feed system.
-The technique to do this, the so-called ``chopper wheel''
+The technique to do this is the so-called ``chopper wheel''
 method (e.g.
 \htmladdnormallink{Ulich 1980}
 {http://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1980ApL....21...21U}).
@@ -199,8 +198,9 @@ ATCA antenna gain and primary beam response varies as a result of thermal
 distortions. Changes in temperature, the position of the sun, cloudiness and
 shadows will all affect the gain of the ATCA antennas. Measurements to
 date
-tend to bear this out, with changes in antenna gain of 25\% noted that
-appear to be related to thermal effects.
+tend to bear this out with changes in antenna gain of 25\% in some observations
+being attributed
+to thermal effects.
 Distortion of the dishes by gravity is also significant
 (eg \htmladdnormallink{Subrahmanyan 2005}
 {http://ieeexplore.ieee.org/iel5/8/32084/01492610.pdf?tp=&arnumber=1492610&isnumber=32084}). 
@@ -210,24 +210,24 @@ Because of the way the ATCA panels are set, the antenna gain peaks at
 about 60\degrees\ elevation. 
 
 Note that gravitational
-and thermal distortions coupled - a perfect correction for these effects
-is never possible. 
+and thermal distortions can be coupled -- perfect measurement or correction for these
+effects is never possible. 
 
 To first order, the gain change will be calibrated out provided the 
 secondary calibrator is very close to the target source.
 Applying the standard gain/elevation curve to the data as the first step in
 the data reduction will also help.
 However these two steps will
-not account for the change and the beamshape. This might be an important
+not account for changes in the beamshape. This might be an important
 effect for widefield imaging and mosaicing.
 
 The best way to avoid thermally-induced gain variations is by observing
-in the pre-dawn hours or on a calm cloudy day! The best way to avoid large
-elevation changes in a synthesis is to observe in a hybrid array -- hybrid arrays
-allow a synthesis to be performed without the need to track the source from
+in the pre-dawn hours or on a calm cloudy day. The best way to avoid large
+elevation changes in an observation is to observe in a hybrid array -- hybrid arrays
+allow an observation to be performed without the need to track the source from
 horizon to horizon.
 
-The gain variations must be considered when bootstrapping the flux density 
+Gain variations must be considered when bootstrapping the flux density 
 scale. The best approach to ensuring a good flux scale is to ensure that the
 secondary and the flux density calibrator are observed nearly
 simultaneously and at the same elevation.
@@ -235,8 +235,8 @@ Although this may at first glance sound difficult if not impossible, generally
 it is straightforward. Generally there should be a time when the secondary
 and the flux
 density calibrator are at the same elevation. It may be that one is rising
-while the other is setting, and so they are at significantly different parts
-of the sky (ie significantly different azimuths). Unless the sky is
+while the other is setting, and that they are at significantly different parts
+of the sky (i.e. significantly different azimuths). Unless the sky is
 cloudy, being at different azimuths is not important.
 
 \subsection{Instrumental phase}
@@ -245,7 +245,7 @@ in terms of their physical construction. In particular the offset
 between the elevation and azimuth axis will differ between antennas.
 VLBI astronomers, who have used heterogeneous arrays of antennas, have
 coped with this issue for years. For the ATCA at 3mm, what is presumed to
-be a difference in this offset introduces a instrumental phase error, that
+be a difference in this offset introduces a instrumental phase error that
 needs to be corrected.
 
 \subsection{Atmospheric phase and phase calibration considerations}\label{s:weakcal}
@@ -307,7 +307,7 @@ also readily detected with the ATCA: Mars has hot
 equatorial and cold polar regions.
 
 Although Uranus or Mars (preferably Uranus) are the best flux density
-calibrators, frequently they will not be accessible to an observation. To
+calibrators, frequently they may not be accessible to your observation. To
 account for this, the Narrabri Observatory regularly monitors some 
 additional sources (usually 1253-055 and 1921-293) to allow them to be used
 as flux density calibrators. Be warned though that these sources can
@@ -321,7 +321,7 @@ set the two bands so that they do not overlap. In terms
 of sensitivity, there is 
 nothing to be gained by setting the bands to the same frequency as the noise
 will be common to the the bands.
-However having the bands overlap complicates the data reduction 
+Additionally having the bands overlap complicates the data reduction 
 process in \miriad.
 The best approach is to avoid the problem, by setting the bands so that
 they do not overlap at all, or overlap by a comparatively small amount.
