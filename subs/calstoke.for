@@ -21,6 +21,8 @@ c                 New parabolic fit joins smoothly to low freq fit at 10.7 GHz.
 c    rjs  17may10 EVLA is using different names for calibrators than it used
 c		  to. Change to accommodate this/
 c    mhw  17jul12 Add new JVLA fits
+c    rjs  18sep15 Use fits from Perley/Butler ApJS 2013 paper. Fits from above
+c		  were apparently preliminary.
 c************************************************************************
 c* CalStoke -- Flux characteristics of selected calibrators.
 c& nebk, rjs
@@ -61,7 +63,7 @@ c
       real coeffs(5,nsrc,4), stmp, frange(2,nsrc)
       character names(nnames)*10
       integer srcnum(nnames), isrc, isrcd, ipol, i, j
-      integer coeftype(nsrc,4),coeftype2(nsrc)
+      integer coeftype(nsrc,4),coeftyp2(nsrc)
 c
       save coeffs, names, srcnum, coeftype
 c
@@ -78,10 +80,10 @@ c       OLD1934,  pre 1994 model
 c	3c161	  Ott et al, 1995
 c	3c218	  Ott et al, 1995
 c       1934-638, high freq model, Stevens, 2009 (unpublished)
-c       3c123     Perley et al 2012
-c       3c196     Perley et al 2012
-c       3c295     Perley et al 2012
-c       3c286     Perley et al 2012, polarised fit copied from old model
+c       3c123     Perley and Butler 2013
+c       3c196     Perley and Butler 2013
+c       3c295     Perley and Butler 2013
+c       3c286     Perley and Butler 2013, polarised fit copied from old model
 c
 c     +     1.099506E2,  -44.80922,   4.618715,    0.0,       0.0,
       data ((coeffs(i,j,1),i=1,5),j=1,nsrc) /
@@ -95,11 +97,18 @@ c     +     1.099506E2,  -44.80922,   4.618715,    0.0,       0.0,
      +	  -23.839,	  19.569,    -4.8168,	   0.35836,   0.0,
      +	    1.250,	   0.726,    -0.2286,	   0.0,       0.0,
      +	    4.729,	  -1.025,     0.0130,	   0.0,       0.0,
-     +  -1.237160,     2.005317,   -0.400622,      0.0,       0.0,
-     +     1.8036,       -0.7742,    -0.1508,      0.0142,    0.0,
-     +     1.2984,       -0.8785,    -0.1632,      0.0248,    0.0,
-     +     1.4680,       -0.7429,    -0.3701,      0.0792,    0.0,
-     +     1.2382,       -0.4188,    -0.2076,      0.0444,    0.0/
+     +     -1.237160,      2.005317, -0.400622,    0.0,       0.0,
+     +      1.8077,       -0.8018,    -0.1157,     0.0,       0.0,
+     +	    1.2969,       -0.8690,    -0.1788,     0.0305,    0.0,
+     +      1.4866,       -0.7871,    -0.3440,     0.0749,    0.0,
+     +	    1.2515,       -0.4605,    -0.1715,     0.0336,    0.0/
+c
+c  Below are the parameters from the preliminary version of the Perleey/Butler fits for
+c  3c123, 3c196, 3c295 and 3c286.
+c    +      1.8036,       -0.7742,    -0.1508,     0.0142,    0.0, ! Preliminary revised 3c123
+c    +      1.2984,       -0.8785,    -0.1632,     0.0248,    0.0, ! Preliminary revised 3c196
+c    +      1.4680,       -0.7429,    -0.3701,     0.0792,    0.0, ! Preliminary revised 3c295
+c    +      1.2382,       -0.4188,    -0.2076,     0.0444,    0.0/ ! Preliminary revised 3c286
 c
 c  Q coefficients.
 c
@@ -170,6 +179,7 @@ c
      +		  'OLD1934   ',
      +		  '3C161     ','0624-058  ',
      +		  '3C218     ','0915-119  ',
+     +
      +            '3C123     ','0433+295  ','0437+296  ',
      +            '3C196     ','0809+483  ','0813+482  ',
      +            '3C295     ','1409+524  ','1411+522  ',
@@ -194,7 +204,7 @@ c
 c
 c  What is the freq unit of the fit (MHz=0,GHz=1).
 c
-      data coeftype2 /
+      data coeftyp2 /
      +	0,0,0,0,0,0,0,0,0,0,0,1,1,1,1/
 c
 c Frequency range polynomial fits done over (0.0 means don't know)
@@ -244,7 +254,7 @@ c
 	  if (frange(1,isrcd).ne.0.0 .and. frange(2,isrcd).ne.0.0 .and.
      +	    (x.lt.frange(1,isrcd) .or. x.gt.frange(2,isrcd)))
      +	    ierr=1
-          if (coeftype2(isrcd).eq.0) x = 1000.*x
+          if (coeftyp2(isrcd).eq.0) x = 1000.*x
 	  if(coeftype(isrcd,ipol).eq.loglog.or.
      +	     coeftype(isrcd,ipol).eq.loglin) x = log10(x)
 c
