@@ -103,6 +103,7 @@ c    rjs  13mar98 Change format statement.
 c    nebk 13jul04 More sig figs for leakages
 c    rjs  23jan07 Handle second leakage table.
 c    mhw  26aug09 Handle multiple bandpass solution intervals
+c    mhw  16oct15 Add more decimal places for frequency in log file
 c  Bugs:
 c------------------------------------------------------------------------
 	integer MAXSELS,MAXSOLN
@@ -133,8 +134,8 @@ c
 c  Get the user parameters.
 c
 	version = versan('gpplt',
-     *                   '$Revision: 1.0',
-     *                   '$Date: ')
+     *                   ' 1.0',
+     *                   ' ')
 	call keyini
 	call keya('vis',vis,' ')
 	if(vis.eq.' ')call bug('f','Input data-set must be given')
@@ -1171,9 +1172,9 @@ c
 	    do j1=1,nfeeds*nants,6
 	      j2 = min(j1+5,nfeeds*nants)
 	      if(j1.eq.1)then
-		write(line,'(f10.5,6f10.5)')freq(ichan),(y(j),j=j1,j2)
+		write(line,'(f12.7,6f10.5)')freq(ichan),(y(j),j=j1,j2)
 	      else
-		write(line,'(10x,  6f10.5)')            (y(j),j=j1,j2)
+		write(line,'(12x,  6f10.5)')            (y(j),j=j1,j2)
 	      endif
 	      call LogWrite(line,more)
 	    enddo
