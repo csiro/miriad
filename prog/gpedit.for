@@ -60,9 +60,18 @@ c         extend    Extend the bandpass table to cover the full range of
 c                   channels in the data. Use gain=0 to extend the
 c                   range by replicating the edge value and gain=1 to use
 c                   linear extrapolation of the edge values.
+c         hanning   Hanning smooth the bandpass. (Miriad actually uses
+c                   binomial smoothing when it claims to use hanning)
+c         boxcar    Boxcar smooth the bandpass (i.e., running average)
+c@ width
+c       The smoothing width for hanning or boxcar smoothing of the
+c       bandpass. Width will be increased to next odd number if even.
+c       Default and minimum value is 3. Maximum is 33 for hanning, 
+c       and 257 for boxcar smoothing.
 c
 c       Example:
 c         gpedit vis=cyga gain=14.4,90 select=ant(1,2) feeds=X
+c         gpedit vis=cyga options=boxcar width=15
 c--
 c  History:
 c    rjs    4sep91 gpbreak. gpedit code copied from gpbreak.
@@ -78,7 +87,7 @@ c    rjs   02jan05 Correct gain selection.
 c    mhw   01mar11 Added options=invert
 c    mhw   08sep11 Handle freq binned gains
 c    mhw   19mar15 Gain argument now takes binned gains too
-c    mhw   06oct15 Add bandpass extension
+c    mhw   06oct15 Add bandpass extension, smoothing
 c-----------------------------------------------------------------------
         include 'maxdim.h'
         include 'mem.h'
@@ -89,10 +98,10 @@ c-----------------------------------------------------------------------
 c
         character vis*64
         logical domult,dorep,doflag,doamp,dophas,dorefl,dozm,doscal
-        logical dogain,doleak,dup,doinv,doext
+        logical dogain,doleak,dup,doinv,doext,dohan,dobox,doband
         integer iostat,tVis,itLeak,nants,nfeeds,nsols,ntau,i
         integer numfeed,feeds(MAXFEED),nleaks,nfbin,ngains,maxgains
-        integer numamph,n
+        integer numamph,n,width
         complex gain(0:MAXFBIN),Leaks(2,MAXANT)
         real sels(MAXSELS),amph(MAXFBIN+1),phi
         logical mask(2*MAXANT)
@@ -109,8 +118,8 @@ c
 c  Get the input parameters.
 c
         version = versan('gpedit',
-     *                   '$Revision: 1.0',
-     *                   '$Date: 2015/10/12 04:18:29 $')
+     *                   '$Revision: 1.11 $',
+     *                   '$Date: 2015/10/19 02:53:06 $')
         call keyini
         call keya('vis',vis,' ')
         if(vis.eq.' ')call bug('f','No input vis data-set given')
@@ -118,10 +127,14 @@ c
         call mkeyr('gain',amph,2*(MAXFBIN+1),numamph)
         call mkeyfd('feeds',feeds,MAXFEED,numfeed)
         call GetOpt(dorep,domult,doflag,doamp,dophas,dorefl,dozm,
-     *    doscal,dup,doinv,doext)
+     *    doscal,dup,doinv,doext,dohan,dobox)
         dogain = dorep.or.domult.or.doflag.or.doamp.or.
      *                           dophas.or.doscal.or.dup.or.doinv
         doleak = dorefl.or.dozm
+        doband = (doext.or.dohan.or.dobox)
+        call keyi('width',width,3)
+        width=min(257,(max(3,width)/2)*2+1)
+        if (dohan) width=min(33,width)
         call keyfin
 c
 c  Open the input file. Use the hio routines, as all we want to get
@@ -259,11 +272,11 @@ c
 c
 c  Process the bandpass if needed
 c
-        if(doext) then
+        if(doband) then
 c         We need some access to uv variables
           call hclose(tVis)
           call uvopen(tVis,vis,'old')
-          call PassEdit(tVis,amph(1).gt.0)
+          call PassEdit(tVis,doext,amph(1).gt.0,dohan,dobox,width)
           call uvclose(tVis)
           call hopen(tVis,vis,'old',iostat)
           if(iostat.ne.0)call EditBug(iostat,'Error opening '//vis)
@@ -281,11 +294,11 @@ c
         call hclose(tVis)
         end
 c************************************************************************
-        subroutine PassEdit(tVis,dolin)
+        subroutine PassEdit(tVis,doext,dolin,dohan,dobox,width)
 c
         implicit none
-        integer tVis
-        logical dolin
+        integer tVis,width
+        logical doext,dolin,dohan,dobox
 c
 c  Extend the bandpass to cover the full spectrum
 c------------------------------------------------------------------------
@@ -321,23 +334,24 @@ c
         call MemAllop(pGains0,Size0,'c')
 
 c     Load the frequency table.
-        call haccess(tVis,item,'freqs','read',iostat)
-        if (iostat.ne.0) call bug('f','Error accessing freqs table')
-        off = 8
-        do i = 1, nspect0
-          call hreadi(item,nschan0(i),off,4,iostat)
-          if (iostat.ne.0) call bug('f','Error reading freqs table')
-          off = off + 8
-          call hreadd(item,freqs,off,16,iostat)
-          if (iostat.ne.0) call bug('f','Error reading freqs table')
-          off = off + 16
-          sfreq0(i) = freqs(1)
-          sdf0(i)   = freqs(2)
-        enddo
+        if (doext) then
+          call haccess(tVis,item,'freqs','read',iostat)
+          if (iostat.ne.0) call bug('f','Error accessing freqs table')
+          off = 8
+          do i = 1, nspect0
+            call hreadi(item,nschan0(i),off,4,iostat)
+            if (iostat.ne.0) call bug('f','Error reading freqs table')
+            off = off + 8
+            call hreadd(item,freqs,off,16,iostat)
+            if (iostat.ne.0) call bug('f','Error reading freqs table')
+            off = off + 16
+            sfreq0(i) = freqs(1)
+            sdf0(i)   = freqs(2)
+          enddo
 
-        call hdaccess(item,iostat)
-        if (iostat.ne.0) call bug('f','Error closing freqs table')
-
+          call hdaccess(item,iostat)
+          if (iostat.ne.0) call bug('f','Error closing freqs table')
+        endif
 c     Read in the gains themselves now.
         call haccess(tVis,item,'bandpass','read',iostat)
         if (iostat.ne.0) call bug('f','Error accessing bandpass table')
@@ -377,20 +391,23 @@ c     Get the spectral layout of the data
 c     Figure out how much to extend the bandpass by
         nlow=0
         nhigh=0
-        if (sdf1(1)*sdf0(1).gt.0) then
-          nlow=nint((sfreq0(1)-sfreq1(1))/sdf0(1))
-          nhigh=nint((sfreq1(1)+sdf1(1)*(nchan1-1)-
+        if (doext) then
+          if (sdf1(1)*sdf0(1).gt.0) then
+            nlow=nint((sfreq0(1)-sfreq1(1))/sdf0(1))
+            nhigh=nint((sfreq1(1)+sdf1(1)*(nchan1-1)-
      *               (sfreq0(1)+sdf0(1)*(nchan0-1)))/sdf0(1))
-          if (nchan0+nlow+nhigh.ne.nchan1)
+            if (nchan0+nlow+nhigh.ne.nchan1)
      *    call bug('w','bandpass spectrum size differs from data')
-        else
-          call bug('f','Bandpass and spectrum incompatible')
+          else
+            call bug('f','Bandpass and spectrum incompatible')
+          endif
         endif
-
         Size1 = ngains*(nchan0+nlow+nhigh)*n
         call MemAllop(pGains1,Size1,'c')
-        call PassExt(memC(pGains0),memC(pGains1),ngains,nchan0,
-     *      n,nlow,nhigh,dolin)
+        if (doext) call PassExt(memC(pGains0),memC(pGains1),nchan0,
+     *      ngains,n,nlow,nhigh,dolin)
+        if (dohan.or.dobox) call PassSm(memC(pGains0),memC(pGains1),
+     *      nchan0,ngains,n,dohan,dobox,width)
 
         call haccess(tVis,item,'bandpass','append',iostat)
         if (iostat.ne.0) call bug('f','Error writing bandpass table')
@@ -415,9 +432,10 @@ c     Figure out how much to extend the bandpass by
 c
 c  Update the frequency table
 c
-        call haccess(tVis,item,'freqs','write',iostat)
-        if (iostat.ne.0) call bug('f','Error writing frequency table')
-        call hwritei(item,0,0,4,iostat)
+        if (doext) then
+          call haccess(tVis,item,'freqs','write',iostat)
+          if (iostat.ne.0) call bug('f','Error writing frequency table')
+          call hwritei(item,0,0,4,iostat)
           off = 8
           do i=1,nspect1
             call hwritei(item,nschan1(i),off,4,iostat)
@@ -436,10 +454,12 @@ c
           call hdaccess(item,iostat)
           if(iostat.ne.0)call bug('f','Error closing freq table')
           call wrhdi(tVis,'nchan0',nchan1)
+        endif
+
 c
         end
 c************************************************************************
-        subroutine PassExt(Gains0,Gains1,ngains,nchan0,ntimes,
+        subroutine PassExt(Gains0,Gains1,nchan0,ngains,ntimes,
      *     nlow,nhigh,dolin)
 c
         implicit none
@@ -456,7 +476,7 @@ c------------------------------------------------------------------------
           do ig=1,ngains
             do ich=1,nlow
               if (dolin) then
-                Gains1(ich,ig,itime)=Gains0(1,ig,itime)-(nlow-ich-1)*
+                Gains1(ich,ig,itime)=Gains0(1,ig,itime)-(nlow-ich+1)*
      *           (Gains0(2,ig,itime)-Gains0(1,ig,itime))
               else
                 Gains1(ich,ig,itime)=Gains0(1,ig,itime)
@@ -477,6 +497,48 @@ c------------------------------------------------------------------------
           enddo
         enddo
       end
+
+c************************************************************************
+          subroutine PassSm(Gains0,Gains1,nchan0,ngains,ntimes,
+       *     dohan,dobox,width)
+c
+          implicit none
+          integer ngains,nchan0,ntimes,width
+          complex Gains0(nchan0,ngains,ntimes)
+          complex Gains1(nchan0,ngains,ntimes)
+          logical dohan,dobox
+c
+c  Smooth bandpass gains with hanning or boxcar averaging
+c------------------------------------------------------------------------
+          include 'maxdim.h'
+          integer itime,ig,ich
+          integer MAXWIDTH
+          PARAMETER (MAXWIDTH=257)
+          real work(MAXWIDTH),coeffs(MAXWIDTH),re(MAXCHAN),im(MAXCHAN)
+
+          if (width.gt.MAXWIDTH)
+      *      call bug('f','Smoothing window width too large')
+          if (dohan) call hcoeffs(width,coeffs)
+          if (dobox) call bcoeffs(width,coeffs)
+          do itime=1,ntimes
+            do ig=1,ngains
+              do ich=1,nchan0
+                re(ich)=real(Gains0(ich,ig,itime))
+                im(ich)=imag(Gains0(ich,ig,itime))
+              enddo
+              if (dohan) call hannsm(width,coeffs,nchan0,re,work)
+              if (dohan) call hannsm(width,coeffs,nchan0,im,work)
+              if (dobox) call boxcarsm(width,coeffs,nchan0,re,work)
+              if (dobox) call boxcarsm(width,coeffs,nchan0,im,work)
+              do ich=1,nchan0
+                Gains1(ich,ig,itime)=Complex(re(ich),im(ich))
+              enddo
+            enddo
+          enddo
+        end
+
+
+
 c************************************************************************
         subroutine Leakit(Leaks,nants,sels,dorefl,dozm)
 c
@@ -842,23 +904,24 @@ c-----------------------------------------------------------------------
         end
 c********1*********2*********3*********4*********5*********6*********7*c
         subroutine GetOpt(dorep,domult,doflag,doamp,dophas,dorefl,dozm,
-     *          doscal,dup,doinv, doext)
+     *          doscal,dup,doinv,doext,dohan,dobox)
 c
         implicit none
         logical dorep,domult,doflag,doamp,dophas,dorefl,dozm,doscal
-        logical dup, doinv, doext
+        logical dup, doinv, doext, dohan, dobox
 c
 c  Get the various processing options.
 c
 c-----------------------------------------------------------------------
         integer NOPTS
-        parameter(NOPTS=11)
+        parameter(NOPTS=13)
         character opts(NOPTS)*10
         logical present(NOPTS)
         data opts/'replace  ','multiply ','flag     ',
      *            'amplitude','phase    ','reflect  ',
      *            'zmean    ','scale    ','dup      ',
-     *            'invert   ','extend   '/
+     *            'invert   ','extend   ','hanning  ',
+     *            'boxcar   '/
 c
         call options('options',opts,present,NOPTS)
 c
@@ -873,8 +936,13 @@ c
         dup    = present(9)
         doinv  = present(10)
         doext  = present(11)
+        dohan  = present(12)
+        dobox  = present(13)
         if(.not.(domult.or.dorep.or.doflag.or.doamp.or.dophas.or.
      *    dorefl.or.dozm.or.doscal.or.dup.or.doinv.or.doext))
      *    dorep = .true.
+        if (doext.and.dohan.or.doext.and.dobox.or.dohan.and.dobox)
+     *    call bug('f','Please specify a single option out of '//
+     *      'extend, hanning and boxcar')
 c
         end
