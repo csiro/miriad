@@ -118,8 +118,8 @@ c
 c  Get the input parameters.
 c
         version = versan('gpedit',
-     *                   '$Revision: 1.11 $',
-     *                   '$Date: 2015/10/19 02:53:06 $')
+     *                   '$Revision: 1.12 $',
+     *                   '$Date: 2015/10/20 21:16:30 $')
         call keyini
         call keya('vis',vis,' ')
         if(vis.eq.' ')call bug('f','No input vis data-set given')
@@ -939,7 +939,8 @@ c
         dohan  = present(12)
         dobox  = present(13)
         if(.not.(domult.or.dorep.or.doflag.or.doamp.or.dophas.or.
-     *    dorefl.or.dozm.or.doscal.or.dup.or.doinv.or.doext))
+     *    dorefl.or.dozm.or.doscal.or.dup.or.doinv.or.doext.or.
+     *    dohan.or.dobox))
      *    dorep = .true.
         if (doext.and.dohan.or.doext.and.dobox.or.dohan.and.dobox)
      *    call bug('f','Please specify a single option out of '//
