@@ -96,7 +96,7 @@ c@ clip
 c       This sets the relative clip level in Steer mode. Values are
 c       typically 0.75 to 0.9. The default is image dependent.
 c
-c$Id: clean.for,v 1.13 2013/08/30 01:49:21 wie017 Exp $
+c$Id: clean.for,v 1.14 2015/10/29 01:31:02 sau078 Exp $
 c--
 c
 c  History:
@@ -188,7 +188,7 @@ c-----------------------------------------------------------------------
       integer naxis,n1,n2,icentre,jcentre,nx,ny
       integer blc(3),trc(3),xmin,xmax,ymin,ymax
       integer k,nRun,nPoint,xoff,yoff,zoff
-      character MapNam*64,BeamNam*64,ModelNam*64,OutNam*64,line*72
+      character MapNam*256,BeamNam*256,ModelNam*256,OutNam*256,line*72
       integer lMap,lBeam,lModel,lOut
       integer nMap(3),nBeam(3),nModel(3),nOut(4)
       real EstASum,Flux
@@ -200,8 +200,8 @@ c     Externals.
       character itoaf*8, versan*72
 c-----------------------------------------------------------------------
       version = versan ('clean',
-     *                  '$Revision: 1.13 $',
-     *                  '$Date: 2013/08/30 01:49:21 $')
+     *                  '$Revision: 1.14 $',
+     *                  '$Date: 2015/10/29 01:31:02 $')
 c
 c  Get the input parameters.
 c
