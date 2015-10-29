@@ -140,7 +140,7 @@ c--
 c------------------------------------------------------------------------
 	include 'uvdat.h'
 	integer offset,length,i,n
-	character In*128
+	character In*256
 	logical dostokes,dosingle
 c
 c  Externals.

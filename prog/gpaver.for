@@ -36,7 +36,7 @@ c------------------------------------------------------------------------
 	character version*72
 	logical dovec
 	double precision interval
-	character vis*64
+	character vis*256
 	integer iostat
 	integer tVis
 c
@@ -45,8 +45,8 @@ c
         character versan*72
 c------------------------------------------------------------------------
         version = versan('gpaver',
-     *                   '$Revision: 1.3 $',
-     *                   '$Date: 2013/08/30 01:49:21 $')       
+     *                   '$Revision: 1.4 $',
+     *                   '$Date: 2015/10/29 01:31:20 $')       
 c
 c  Get the input parameters.
 c

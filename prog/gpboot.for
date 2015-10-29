@@ -57,7 +57,7 @@ c------------------------------------------------------------------------
 	integer MAXSELS
 	parameter(MAXSELS=256)
 c
-	character cal*64,vis*64,line*72
+	character cal*256,vis*256,line*72
 	real sels(MAXSELS)
 	real VAmp(2,MAXANT,0:MAXFBIN),CAmp(2,MAXANT,0:MAXFBIN)
         real factor(0:MAXFBIN),fr,fl,afl
@@ -73,8 +73,8 @@ c
 c  Get the input parameters.
 c
 	version = versan('gpboot',
-     *                   '$Revision: 1.8 $',
-     *                   '$Date: 2013/08/30 01:49:21 $')
+     *                   '$Revision: 1.9 $',
+     *                   '$Date: 2015/10/29 01:31:30 $')
 
 c       limit on ratio of scalings for adjacent frequency bins
         fl = 0.1
