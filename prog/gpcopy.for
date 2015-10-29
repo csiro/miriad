@@ -84,7 +84,7 @@ c------------------------------------------------------------------------
 	character version*72
 	logical dopol,docal,dopass,docopy,relax
 	integer iostat,tIn,tOut
-	character vis*64,out*64,mode*8,line*64
+	character vis*256,out*256,mode*8,line*64
 	double precision interval
 c
 c  Externals.
@@ -93,8 +93,8 @@ c
         character*72 versan
 c
 	version = versan('gpcopy',
-     *                   '$Revision: 1.12 $',
-     *                   '$Date: 2015/02/09 22:03:48 $')
+     *                   '$Revision: 1.13 $',
+     *                   '$Date: 2015/10/29 01:31:39 $')
 	call keyini
 	call keya('vis',vis,' ')
 	if(vis.eq.' ')call bug('f','Input data-set must be given')
