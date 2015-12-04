@@ -131,7 +131,7 @@ c         nocal   Do not apply antenna gain calibration.
 c         nopass  Do not apply bandpass correction.
 c         nopol   Do not apply polarisation leakage correction.
 c
-c$Id: blflag.for,v 1.21 2014/07/18 02:45:48 wie017 Exp $
+c$Id: blflag.for,v 1.22 2015/12/04 03:07:29 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -142,7 +142,7 @@ c-----------------------------------------------------------------------
 c     Before increasing MAXDAT, check that it does not cause linking to
 c     fail with truncated relocations.
       integer    MAXDAT
-      parameter (MAXDAT = 2*MAXBUF)
+      parameter (MAXDAT = 64*1024*1024)
 
       logical   finish, havebl(MAXBASE), noapply, nobase, nofqaver, rms,
      *          scalar, selgen
@@ -164,8 +164,8 @@ c     Data store (48*MAXBUF bytes).
       character itoaf*10, versan*72
 c-----------------------------------------------------------------------
       version = versan('blflag',
-     *                 '$Revision: 1.21 $',
-     *                 '$Date: 2014/07/18 02:45:48 $')
+     *                 '$Revision: 1.22 $',
+     *                 '$Date: 2015/12/04 03:07:29 $')
 
 c     Get the input parameters.
       call keyini
