@@ -62,7 +62,7 @@ c
 c  CARMA customizations:
 c    pkgw  2012may25  Extract some error messages from wcslib
 c
-c $Id: co.for,v 1.49 2013/04/23 03:53:30 ste616 Exp $
+c $Id: co.for,v 1.50 2015/12/27 06:25:16 ste616 Exp $
 c***********************************************************************
 
 c* coCtype -- Parse a world coordinate ctype.
@@ -183,7 +183,7 @@ c       Unrecognized, assumed linear.
 
         k = len1(ctypei)
         umsg = 'Assuming the '//ctypei(:k)//' axis is linear.'
-        call bug('w', umsg)
+c        call bug('w', umsg)
         return
       endif
 
@@ -224,7 +224,7 @@ c       Unrecognized projection code, revert to linear.
 
         k = len1(ctypei)
         umsg = 'Assuming the '//ctypei(:k)//' axis is linear.'
-        call bug('w', umsg)
+c        call bug('w', umsg)
 
       else if (axtype.eq.'spectral') then
         if (ctypei.eq.'FREQUENCY') then
@@ -262,7 +262,7 @@ c       Unrecognized spectral code, revert to linear.
 
         k = len1(ctypei)
         umsg = 'Assuming the '//ctypei(:k)//' axis is linear.'
-        call bug('w', umsg)
+c        call bug('w', umsg)
       endif
 
       end
