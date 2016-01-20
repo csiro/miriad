@@ -55,9 +55,12 @@ c       data.  It specifies the FWHM of an image-domain gaussian --
 c       tapering the visibility data is equivalent to convolving with
 c       this image-domain gaussian.
 c
-c       Either one or two values can be given, in arcsec, being the FWHM
-c       in the RA and DEC directions.  If only one value is given, the
-c       taper is assumed to be symmetric.  The default is no taper.
+c       Either one, two or three values can be given. For one or two
+c       values this speciefies the FWHM in arcsec in the RA and DEC
+c       directions.  If only one value is given, the taper is assumed
+c       to be symmetric.  If three values are given, they specify the
+c       FWHM major and minor axis in arcsec and the position angle in
+c       degrees. The default is no taper.
 c
 c       The signal-to-noise ratio will be optimised in the output image
 c       if this parameter is set to the FWHM of typical image features
@@ -227,7 +230,7 @@ c       replaced with 0, or to be estimated by linear interpolation of
 c       two adjacent good channels.  See the Users Guide for the merits
 c       and evils of the two approaches.  The default is 'zero'.
 c
-c$Id: invert.for,v 1.21 2015/10/29 01:31:58 sau078 Exp $
+c$Id: invert.for,v 1.22 2016/01/20 03:03:49 wie017 Exp $
 c--
 c  History
 c    rjs        89  Initial version
@@ -362,6 +365,7 @@ c    mhw   17jan12  Handle larger files by using ptrdiff type more
 c    mhw   06mar12  Add fsystemp option
 c    mhw   03jun13  Add beam and res options to imsize and cellsize
 c    mhw   03mar14  Fix bug in theoretical rms for large datasets
+c    mhw   20jan15  Add position angle to taper specification
 c  Bugs:
 c-----------------------------------------------------------------------
       include 'mirconst.h'
@@ -372,7 +376,7 @@ c
       parameter(MAXPOL=4,MAXRUNS=4*MAXDIM)
 c
       real cellx,celly,fwhmx,fwhmy,freq0,slop,supx,supy,ppbx,ppby
-      real umax,vmax,wdu,wdv,tu,tv,rms,robust
+      real umax,vmax,wdu,wdv,tu,tv,rms,robust,bpa,fw,cp,sp
       real ChanWt(MAXPOL*MAXCHAN)
       character maps(MAXPOL)*256,beam*256,uvflags*16,mode*16,vis*64
       character line*64, version*72
@@ -381,7 +385,7 @@ c
       integer nx,ny,bnx,bny,mnx,mny,wnu,wnv
       integer nbeam,nsave,ndiscard,offcorr,nout
       logical defWt,Natural,doset,systemp(2),mfs,doimag,mosaic,sdb,idb
-      logical double,doamp,dophase,dosin,doncp,dobeam,dores
+      logical double,doamp,dophase,dosin,doncp,dobeam,dores,dorotbm
 c
       integer tno,tvis
       integer nUWts,nMMap
@@ -402,8 +406,8 @@ c
       data slops/'zero        ','interpolate '/
 c-----------------------------------------------------------------------
       version = versan ('invert',
-     :                  '$Revision: 1.21 $',
-     :                  '$Date: 2015/10/29 01:31:58 $')
+     :                  '$Revision: 1.22 $',
+     :                  '$Date: 2016/01/20 03:03:49 $')
 c
 c  Get the input parameters. Convert all angular things into
 c  radians as soon as possible!!
@@ -445,7 +449,18 @@ c
         celly = abs(celly * pi/180/3600)
       endif
       call keyr('fwhm',fwhmx,0.)
-      call keyr('fwhm',fwhmy,fwhmx)
+      call keyr('fwhm',fwhmy,-1.0)
+      if (fwhmy.lt.0) then
+         fwhmy=fwhmx
+      else
+         call keyr('fwhm',bpa,-999.0)
+         dorotbm=(bpa.gt.-998.0)
+         if (dorotbm) then
+            bpa=bpa * pi/180
+            if (fwhmx.lt.fwhmy) call bug('f',
+     *        'Error in fwhm - major axis is smaller than minor axis')
+         endif
+      endif   
       fwhmx = fwhmx * pi/180/3600
       fwhmy = fwhmy * pi/180/3600
 c
@@ -529,8 +544,14 @@ c
         ppby = 3
       endif
       if(cellx*celly.le.0..or.dores)then
-        cellx = max( 0.25 / umax, 0.3*fwhmx) *3/ppbx
-        celly = max( 0.25 / vmax, 0.3*fwhmy) *3/ppby
+        fw=fwhmx
+        cp=1/max(0.01,abs(cos(bpa)))
+        sp=1/max(0.01,abs(sin(bpa)))
+        if (dorotbm) fw=min(abs(fwhmy*cp),abs(fwhmx*sp))
+        cellx = max( 0.25 / umax, 0.3*fw) *3/ppbx
+        fw=fwhmy
+        if (dorotbm) fw=min(abs(fwhmy*sp),abs(fwhmx*cp))
+        celly = max( 0.25 / vmax, 0.3*fw) *3/ppby
         if(max(cellx,celly).lt.2*min(cellx,celly))then
           cellx = min(cellx,celly)
           celly = cellx
@@ -631,8 +652,8 @@ c
       else
         call output('Applying the weights ...')
       endif
-      call Wter(tscr,Natural,memr(UWts),wdu,wdv,wnu,wnv,npnt,Tu,Tv,
-     *  nvis,npol,nchan,mosaic,idb,sdb,doamp,dophase,freq0,Rms,
+      call Wter(tscr,Natural,memr(UWts),wdu,wdv,wnu,wnv,npnt,Tu,Tv,bpa,
+     *  dorotbm,nvis,npol,nchan,mosaic,idb,sdb,doamp,dophase,freq0,Rms,
      *  ChanWt,lmn,umax,vmax,cellx,celly)
 c
       if(nUWts.gt.0)call MemFrep(UWts,nUWts,'r')
@@ -983,7 +1004,8 @@ c
       end
 c***********************************************************************
       subroutine WtIni(defWt,supx,supy,nx,ny,cellx,celly,
-     *  fwhmx,fwhmy,umax,vmax,Natural,wnu,wnv,wdu,wdv,tu,tv)
+     *     fwhmx,fwhmy,umax,vmax,Natural,wnu,wnv,wdu,wdv,
+     *     tu,tv)
 c
       logical defWt,Natural
       real supx,supy,cellx,celly,fwhmx,fwhmy,wdu,wdv,tu,tv,umax,vmax
@@ -998,11 +1020,13 @@ c    supx,supy  Sidelobe suppression region (radians).
 c    nx,ny      Output image size.
 c    cellx,celly Image cell size.
 c    fwhmx,fwhmy Image-domain taper.
+c    bpa         Beam rotation
+c    dorotbeam   Is beam rotation active?      
 c    umax,vmax   Maximum baselines in u and v.
 c  Output:
 c    wnu,wnv    Size of the weights grid.
 c    wdu,wdv    Weight grid cell size.
-c    tu,tv      Taper parameters.
+c    tu,tv,tpa  Taper parameters
 c    Natural    True if natural weighting is being used.
 c-----------------------------------------------------------------------
       include 'mirconst.h'
@@ -1130,12 +1154,12 @@ c
       end
 c***********************************************************************
       subroutine Wter(tscr,Natural,UWts,wdu,wdv,wnu,wnv,npnt,Tu,Tv,
-     *  nvis,npol,nchan,mosaic,idb,sdb,doamp,dophase,freq0,Rms2,
-     *  Slop,lmn,umax,vmax,cellx,celly)
+     *     bpa,dorotbm,nvis,npol,nchan,mosaic,idb,sdb,doamp,dophase,
+     *     freq0,Rms2,Slop,lmn,umax,vmax,cellx,celly)
 c
       integer tscr,wnu,wnv,nvis,npol,nchan,npnt
-      logical Natural,sdb,idb,mosaic,doamp,dophase
-      real Tu,Tv,wdu,wdv,UWts(wnv,wnu/2+1,npnt),cellx,celly
+      logical Natural,sdb,idb,mosaic,doamp,dophase,dorotbm
+      real Tu,Tv,bpa,wdu,wdv,UWts(wnv,wnu/2+1,npnt),cellx,celly
       real Rms2,freq0,umax,vmax,Slop(npol*nchan)
       double precision lmn(3)
 c
@@ -1145,6 +1169,8 @@ c  Input:
 c    tscr       Scratch file of the visibility data.
 c    Natural    True if natural weighting is to be used.
 c    Tu,Tv      Scale factors for determining taper.
+c    bpa        Position angle of beam taper
+c    dorotbm    Are we rotating the beam taper?      
 c    UWts       If its not natural weighting, this contains the
 c               uniform weight information.
 c    wnu,wnv    Weight array size.
@@ -1174,7 +1200,7 @@ c-----------------------------------------------------------------------
       parameter(maxrun=8*MAXCHAN+8)
 c
       double precision SumWt,RMS2d
-      real Wts(maxrun/(InData+2)),Vis(maxrun),logFreq0,Wt,t
+      real Wts(maxrun/(InData+2)),Vis(maxrun),logFreq0,Wt,t,u1,u2
       integer i,j,k,l,size,step,n,u,v,offcorr,nbeam,ncorr,ipnt
       logical doshift
       ptrdiff offset
@@ -1241,8 +1267,14 @@ c
         if(abs(Tu)+abs(Tv).gt.0)then
           k = 1
           do i=1,n
-            Wts(i) = Wts(i) * exp( Tu*Vis(k+InU)*Vis(k+InU) +
-     *                             Tv*Vis(k+InV)*Vis(k+InV))
+            if (dorotbm) then
+               u1 = Vis(k+InU)*sin(bpa)+Vis(k+InV)*cos(bpa)
+               u2 = -Vis(k+InU)*cos(bpa)+Vis(k+InV)*sin(bpa)
+              Wts(i) = Wts(i) * exp (Tu*u1*u1+Tv*u2*u2)
+            else
+              Wts(i) = Wts(i) * exp( Tu*Vis(k+InU)*Vis(k+InU) +
+     *                               Tv*Vis(k+InV)*Vis(k+InV))
+            endif  
             k = k + size
           enddo
         endif
