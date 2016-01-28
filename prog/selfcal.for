@@ -105,7 +105,7 @@ c       the linetype parameters used to construct the map.  If you wish
 c       to override this, or if the info is not in the header, or if you
 c       are using a point source model, this parameter can be useful.
 c
-c$Id: selfcal.for,v 1.18 2015/03/24 04:30:14 wie017 Exp $
+c$Id: selfcal.for,v 1.19 2016/01/28 22:07:15 wie017 Exp $
 c--
 c
 c  History:
@@ -169,6 +169,8 @@ c    mhw  12mar14 Initialize nchan in point source case
 c    mhw  16jul14 Fixed binned solution interpolation
 c    mhw  27jan15 Fix number of solutions written
 c    mhw  24mar15 Add spectral parameters to flux keyword 
+c    mhw  29jan16 Use double precision for time offsets to avoid
+c                 loss of precision for multi-config data
 c
 c  Bugs/Shortcomings:
 c   * Selfcal should check that the user is not mixing different
@@ -178,7 +180,7 @@ c     apply polarisation calibration, etc.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       integer   MAXMOD, MAXSELS, NHEAD
-      parameter (MAXMOD=1024, MAXSELS=1024, NHEAD=3)
+      parameter (MAXMOD=1024, MAXSELS=1024, NHEAD=4)
 
       logical   amp, doim, doline, mfs, noscale, phase, relax, selradec
       logical   mmfs
@@ -196,8 +198,8 @@ c     Externals.
       external  hdprsnt, header, versan
 c-----------------------------------------------------------------------
       version = versan('selfcal',
-     *                 '$Revision: 1.18 $',
-     *                 '$Date: 2015/03/24 04:30:14 $')
+     *                 '$Revision: 1.19 $',
+     *                 '$Date: 2016/01/28 22:07:15 $')
 c
 c  Get the input parameters.
 c
@@ -472,8 +474,9 @@ c  Output:
 c   out         The nhead values to save with the data. Three values are
 c               returned:
 c                 out(1) -- baseline number.
-c                 out(2) -- time (days) relative to time0.
-c                 out(3) -- estimated sigma**2.
+c                 out(2) -- time (whole days) relative to time0
+c                 out(3) -- time (fractional days)
+c                 out(4) -- estimated sigma**2.
 c   accept      This determines whether the data is accepted or
 c               discarded.  It is always accepted unless the baseline
 c               number looks bad.
@@ -516,10 +519,11 @@ c  the information that we need.
 c
       if (accept) then
         out(1) = preamble(5)
-        out(2) = preamble(4) - time0
+        out(2) = int(preamble(4) - time0)
+        out(3) = (preamble(4) - time0) - out(2)
         call uvinfo(tvis,'variance',rms)
         if (rms.le.0) rms=1
-        out(3) = rms
+        out(4) = rms
       else if (.not.okpol) then
         nbstok = nbstok + 1
       else
@@ -581,8 +585,8 @@ c       real    stpTime(maxSol), strTime(maxSol), sumMM(maxSol,n1),
 c               sumVV(nBl,maxSol,n1), weight(nBl,maxSol,n1)
 c       double precision rTime(maxSol)
 c       complex gains(nants,maxSol,n1), sumVM(nBl,maxSol,n1)
-      call MemAlloc(pStptim,maxSol, 'r')
-      call MemAlloc(pStrtim,maxSol, 'r')
+      call MemAlloc(pStptim,maxSol, 'd')
+      call MemAlloc(pStrtim,maxSol, 'd')
       call MemAlloc(pCount, maxSol*n1, 'i')
       call MemAlloc(prTime, maxSol, 'd')
       call MemAlloc(pSumMM, maxSol*n1, 'r')
@@ -603,8 +607,8 @@ c-----------------------------------------------------------------------
       integer n1
 c-----------------------------------------------------------------------
       n1 = nfbin+1
-      call MemFree(pStpTim,maxSol, 'r')
-      call MemFree(pStrTim,maxSol, 'r')
+      call MemFree(pStpTim,maxSol, 'd')
+      call MemFree(pStrTim,maxSol, 'd')
       call MemFree(pCount, maxSol*n1, 'i')
       call MemFree(prTime, maxSol, 'd')
       call MemFree(pSumMM, maxSol*n1, 'r')
@@ -698,8 +702,8 @@ c-----------------------------------------------------------------------
       call SelfAcc1(tscr,nchan0,nchan,start,nvis,nBl,maxSol,nSols,
      *  nfbin,nhash,Hash,Indx,interval,
      *  Memc(pSumVM),Memr(pSumVV),Memr(pSumMM),
-     *  Memr(pWeight),Memi(pCount),Memd(prTime),Memr(pstpTim),
-     *  Memr(pstrTim),sfreq,freq,wfreq)
+     *  Memr(pWeight),Memi(pCount),Memd(prTime),Memd(pstpTim),
+     *  Memd(pstrTim),sfreq,freq,wfreq)
 
       end
 
@@ -719,7 +723,7 @@ c***********************************************************************
       integer count(maxSol,0:nfbin)
       double precision rTime(maxSol),freq(0:nfbin),wfreq(0:nfbin)
       double precision sfreq(nchan)
-      real    StpTime(maxSol), StrTime(maxSol)
+      double precision    StpTime(maxSol), StrTime(maxSol)
 c-----------------------------------------------------------------------
 c  This reads through the scratch file which contains the visibility
 c  and the model.  It finds (via a hash table) the index of the slot
@@ -754,9 +758,9 @@ c    rTime      Sum(over t,f,b) t.
 c
 c  The Visibility Records:
 c    The scratch file consists of "nvis" records, each of size
-c    nhead+5*nchan The first nhead=3 values are
+c    nhead+5*nchan The first nhead=4 values are
 c      baseline number
-c      time
+c      time(days), time (fraction of day)
 c      estimated sigma**2
 c
 c  The Hash Table:
@@ -773,15 +777,15 @@ c-----------------------------------------------------------------------
       include 'maxdim.h'
 
       integer   NHEAD, MAXLEN
-      parameter (NHEAD = 3, MAXLEN = NHEAD + 5*MAXCHAN)
+      parameter (NHEAD = 4, MAXLEN = NHEAD + 5*MAXCHAN)
 
       integer   i, i1, i2, iBl, ihash, itime, j, k, length, chn, fbin
       integer   sCount(0:MAXFBIN)
       ptrdiff   off
-      real      mm, out(MAXLEN), sMM(0:MAXFBIN), sTime
+      real      mm, out(MAXLEN), sMM(0:MAXFBIN)
       real      sVV(0:MAXFBIN), vv, wgt
       complex   sVM(0:MAXFBIN), vm
-      double precision sF(MAXFBIN)
+      double precision sF(MAXFBIN),dtime, sTime
 c-----------------------------------------------------------------------
       if (nchan.gt.MAXCHAN) call bug('f','Too many channels')
       length = NHEAD + 5*nchan
@@ -790,7 +794,8 @@ c-----------------------------------------------------------------------
         off = j-1
         off = off * length
         call scrread(tscr,Out,off,length)
-        itime = nint(Out(2)/interval)
+        dtime = Out(2)*1d0+Out(3)
+        itime = nint(dtime/interval)
         ihash = 2*itime + 1
         i = mod(itime,nHash)
         if (i.le.0) i = i + nHash
@@ -814,8 +819,8 @@ c       Not in the hash table, add a new entry.
           Hash(i) = ihash
           Indx(i) = nSols
 
-          StpTime(nSols) = Out(2)
-          StrTime(nSols) = Out(2)
+          StpTime(nSols) = dtime
+          StrTime(nSols) = dtime
           rTime(nSols) = 0d0
           do fbin=0,nfbin
             count(nSols,fbin) = 0
@@ -833,8 +838,8 @@ c       Accumulate info about this visibility record.
         iBl = (i2-1)*(i2-2)/2 + i1
 
         i = Indx(i)
-        StpTime(i) = min(StpTime(i), out(2))
-        StrTime(i) = max(StrTime(i), out(2))
+        StpTime(i) = min(StpTime(i), dtime)
+        StrTime(i) = max(StrTime(i), dtime)
 
 c       N.B. using temporaries to accumulate statistics separately for
 c       each spectrum helps to maintain precision when there are a very
@@ -855,7 +860,7 @@ c       large number of correlations in the solution interval.
           chn = chn + 1
           if (out(k+4).gt.0.0) then
             sCount(0) = sCount(0) + 1
-            sTime  = sTime  + Out(2)
+            sTime  = sTime  + dtime
 
             mm = Out(k)**2   + Out(k+1)**2
             vv = Out(k+2)**2 + Out(k+3)**2
@@ -876,7 +881,7 @@ c       large number of correlations in the solution interval.
         enddo
 
 c       Accumulate statistics for this spectrum.
-        wgt = 0.5d0 / Out(3)
+        wgt = 0.5d0 / Out(4)
         rTime(i)     =  rTime(i)     + sTime
         do fbin=0,nfbin
           count(i,fbin)     =  count(i,fbin)     + sCount(fbin)
@@ -937,7 +942,7 @@ c     Determine all the gain solutions.
      *  noscale,minants,refant,Time0,interval,Indx,
      *  Memc(pSumVM),Memr(pSumVV),Memr(pSumMM),Memc(pGains),
      *  Memr(pWeight),Memi(pCount),memD(prTime),
-     *  Memr(pStpTim),Memr(pStrTim),freq)
+     *  Memd(pStpTim),Memd(pStrTim),freq)
 
       end
 
@@ -959,7 +964,7 @@ c***********************************************************************
       real    Weight(nBl,maxsol,0:nfbin)
       integer Count(maxsol,0:nfbin)
       double precision rTime(nSols),freq(0:nfbin)
-      real    StpTime(nSols),StrTime(nSols)
+      double precision StpTime(nSols),StrTime(nSols)
 c-----------------------------------------------------------------------
 c  Run through all the accumulated data and calculate the selfcal
 c  solutions.
@@ -995,7 +1000,7 @@ c     Externals.
       character itoaf*8
 c-----------------------------------------------------------------------
 c     Sort the self-cal solutions into order of increasing time.
-      call sortidxr(nSols,StpTime,TIndx)
+      call sortidxd(nSols,StpTime,TIndx)
 
 c     Merge together short, adjacent, solution intervals.
       call Merger(nSols,nBl,nfbin,TIndx,interval,StpTime,StrTime,
@@ -1161,7 +1166,7 @@ c***********************************************************************
 
       integer nSols, nBl, nfbin, tIndx(nSols)
       real    interval
-      real    StpTime(nSols), StrTime(nSols)
+      double precision    StpTime(nSols), StrTime(nSols)
       complex SumVM(nBl,nSols,0:nfbin)
       real    SumVV(nBl,nSols,0:nfbin),SumMM(nSols,0:nfbin)
       real    Weight(nBl,nSols,0:nfbin)
