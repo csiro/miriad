@@ -35,7 +35,7 @@ c       Extra processing options:
 c         positive   Constrain the deconvolved image to be positive
 c                    valued.
 c
-c$Id: mossdi.for,v 1.10 2014/05/06 14:58:01 wie017 Exp $
+c$Id: mossdi.for,v 1.11 2016/03/18 03:25:44 wie017 Exp $
 c--
 c  History:
 c    rjs 31oct94 - Original version.
@@ -72,8 +72,8 @@ c-----------------------------------------------------------------------
       external  itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('mossdi',
-     *                 '$Revision: 1.10 $',
-     *                 '$Date: 2014/05/06 14:58:01 $')
+     *                 '$Revision: 1.11 $',
+     *                 '$Date: 2016/03/18 03:25:44 $')
 c
 c  Get the input parameters.
 c
@@ -386,11 +386,11 @@ c***********************************************************************
 
       subroutine Swap(a,b)
 
-      integer a, b
+      ptrdiff a, b
 c-----------------------------------------------------------------------
-c  Swap two integers.
+c  Swap two long integers.
 c-----------------------------------------------------------------------
-      integer t
+      ptrdiff t
 c-----------------------------------------------------------------------
       t = a
       a = b

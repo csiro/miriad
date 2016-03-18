@@ -75,7 +75,7 @@ c                    This will give better stability if you are daring
 c                    enough to deconvolve more than the inner quarter of
 c                    the dirty image.
 c
-c$Id: maxen.for,v 1.6 2013/08/30 01:49:21 wie017 Exp $
+c$Id: maxen.for,v 1.7 2016/03/18 03:25:44 wie017 Exp $
 c--
 c  History:
 c    rjs   nov88 - Original version.
@@ -160,8 +160,8 @@ c-----------------------------------------------------------------------
       external  ismax, itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('maxen',
-     *                 '$Revision: 1.6 $',
-     *                 '$Date: 2013/08/30 01:49:21 $')
+     *                 '$Revision: 1.7 $',
+     *                 '$Date: 2016/03/18 03:25:44 $')
 c
 c  Get the input parameters.
 c
@@ -585,9 +585,9 @@ c***********************************************************************
 
       subroutine Swap(a,b)
 
-      integer a,b
+      ptrdiff a,b
 c-----------------------------------------------------------------------
-      integer t
+      ptrdiff t
 c-----------------------------------------------------------------------
       t = a
       a = b

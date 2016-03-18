@@ -59,7 +59,7 @@ c         verbose    Give lots of messages during the iterations.  The
 c                    default is to give a one line message at each
 c                    iteration.
 c
-c$Id: mostess.for,v 1.10 2014/05/21 04:34:59 wie017 Exp $
+c$Id: mostess.for,v 1.11 2016/03/18 03:25:44 wie017 Exp $
 c--
 c  History:
 c    rjs   7aug95  Adapted from MOSMEM.
@@ -96,8 +96,8 @@ c-----------------------------------------------------------------------
       external  ismax, itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('mostess',
-     *                 '$Revision: 1.10 $',
-     *                 '$Date: 2014/05/21 04:34:59 $')
+     *                 '$Revision: 1.11 $',
+     *                 '$Date: 2016/03/18 03:25:44 $')
 c
 c  Get the input parameters.
 c
@@ -460,9 +460,9 @@ c***********************************************************************
 
       subroutine Swap(a,b)
 
-      integer a,b
+      ptrdiff a,b
 c-----------------------------------------------------------------------
-      integer t
+      ptrdiff t
 c-----------------------------------------------------------------------
       t = a
       a = b

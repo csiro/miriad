@@ -135,7 +135,7 @@ c         verbose    Give lots of messages during the iterations.  The
 c                    default is to give a one line message at each
 c                    iteration.
 c
-c$Id: mosmem.for,v 1.6 2011/11/02 06:29:34 cal103 Exp $
+c$Id: mosmem.for,v 1.7 2016/03/18 03:25:44 wie017 Exp $
 c--
 c  History:
 c    rjs  23nov94  Adapted from MAXEN.
@@ -205,8 +205,8 @@ c-----------------------------------------------------------------------
       external  hdprsnt, itoaf, len1, versan
 c-----------------------------------------------------------------------
       version = versan('mosmem',
-     *                 '$Revision: 1.6 $',
-     *                 '$Date: 2011/11/02 06:29:34 $')
+     *                 '$Revision: 1.7 $',
+     *                 '$Date: 2016/03/18 03:25:44 $')
 c
 c  Get and check the input parameters.
 c
@@ -776,9 +776,9 @@ c***********************************************************************
 
       subroutine Swap(a,b)
 
-      integer a,b
+      ptrdiff a,b
 c-----------------------------------------------------------------------
-      integer t
+      ptrdiff t
 c-----------------------------------------------------------------------
       t = a
       a = b
