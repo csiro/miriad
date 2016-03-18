@@ -19,14 +19,15 @@ c       known form for the primary beam is used. See task "pbplot" to
 c       check LINMOS's primary beam models.
 c@ in
 c       The names of the input cubes - many may be given.  There is no
-c       default.  Inputs should generally be on the same grid system.
-c       If not, linear interpolation is performed to regrid using the
-c       first image as the template.  LINMOS's ability to do this is
-c       inferior to task REGRID.  The intensity units of all the inputs,
-c       and the pixel size and alignment of the third dimension are
-c       assumed to be the same. Mosaicing fields with different 
-c       resolution together will cause errors in the fluxdensities of
-c       sources.
+c       default.  Inputs should generally be on the same grid system,
+c       use invert with options=mosaic and the offset keyword to achieve
+c       this. If not, linear interpolation is performed to regrid using
+c       the first plane of the first image as the template. LINMOS's
+c       ability to do this is inferior to task REGRID.
+c       The intensity units of all the inputs, and the pixel size and
+c       alignment of the third dimension are assumed to be the same.
+c       Mosaicing fields with different resolution together will cause
+c       errors in the fluxdensities of sources.
 c@ out
 c       The name of the output cube.  No default.  The center and pixel
 c       size of the first input image is used as the grid system of the
@@ -55,7 +56,7 @@ c       of frequencies to divide the bandwidth into, it defaults to 10.
 c
 c@ cutoff
 c       The cutoff level to use for the primary beam, e.g., use 0.5 to
-c       restrict the contribution of each input cube to the pixels inside 
+c       restrict the contribution of each input cube to the pixels inside
 c       the half power beam width. Normally the built-in level for each
 c       beam model is used (generally <0.1). This can be useful
 c       e.g., to restrict polarization mosaics to use only the part of  
@@ -95,7 +96,7 @@ c                      when the fractional bandwidth is > 0.4 (this
 c                      is because higher orders are needed to model
 c                      the primary beam response with frequency).
 c
-c$Id: linmos.for,v 1.31 2015/04/30 03:49:22 wie017 Exp $
+c$Id: linmos.for,v 1.32 2016/03/18 02:55:49 wie017 Exp $
 c--
 c
 c  History:
@@ -150,6 +151,7 @@ c    mhw  14oct13 Add alpha option
 c    mhw  15nov13 Add cutoff keyword
 c    mhw  08apr14 Fix cube/mfs detection
 c    mhw  18nov14 Improve clipping of large mosaics
+c    mhw  18mar16 Handle wide band cubes better      
 c
 c  Bugs:
 c    * Blanked images are not handled when interpolation is necessary.
@@ -187,8 +189,8 @@ c-----------------------------------------------------------------------
       external  len1, versan
 c-----------------------------------------------------------------------
       version = versan ('linmos',
-     *                  '$Revision: 1.31 $',
-     *                  '$Date: 2015/04/30 03:49:22 $')
+     *                  '$Revision: 1.32 $',
+     *                  '$Date: 2016/03/18 02:55:49 $')
 
 c     Get and check inputs.
       call keyini
@@ -477,7 +479,7 @@ c-----------------------------------------------------------------------
       integer nf, jf
       real    In(MAXDIM), pBeam(MAXDIM), Sect(4), sigma, xinc, yinc, wgt
       real    b,fac
-      double precision x(3),xn(2),pra(2),pdec(2),f,fj,t
+      double precision x(3),xn(3),pra(2),pdec(2),f,fj,t
       character pbtype*16
 
       logical  hdprsnt
@@ -547,9 +549,13 @@ c     Ready to construct the primary beam object.
         f = 0
       endif
 
-c     Loop over all planes.
+c     Loop over all planes.  
       do k = 1, n3
-        x(3) = k
+         x(3) = k
+         if (n3.gt.2) then
+c          spectral cube case - use channel frequency
+           if (iax.ne.0) call coFreq(lIn,'ap',dble(k),f)
+         endif
         call xysetpl(lIn,1,k)
         if (interp) call IntpRIni
 
@@ -582,6 +588,7 @@ c       Get a plane from the scratch array.
 c
           if (f.gt.0) fac = log(fj/f)
           if (dootf) then
+            xn(3)=x(3)
             call pbInitcc(pbObj,pbtype,lOut,'aw/aw/ap',x,xn,fj,b)
           else
             call pbInitc(pbObj,pbtype,lOut,'aw/aw/ap',x,fj,b)
@@ -627,6 +634,8 @@ c             Accumulate data.
  10           continue
             enddo
           enddo
+c         Release the primary beam object.
+          call pbFin(pbObj)
         enddo
 c       Save the output.
         if (nodata) then
@@ -638,8 +647,6 @@ c       Save the output.
           call putSec(lWts,Wts,k,n1,n2,xlo,xhi,ylo,yhi)
         endif
 
-c       Release the primary beam object.
-        call pbFin(pbObj)
       enddo
       if (nodata) then
         nodata = .not.somedata
