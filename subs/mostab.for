@@ -29,7 +29,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: mostab.for,v 1.11 2014/05/21 04:33:13 wie017 Exp $
+c $Id: mostab.for,v 1.12 2016/03/18 02:56:35 wie017 Exp $
 c***********************************************************************
 
       subroutine MosCIni
@@ -1037,9 +1037,10 @@ c-----------------------------------------------------------------------
         xn(1) = radec2(1,i)
         xn(2) = radec2(2,i)
         if (otf .and. (xn(1).ne.0d0 .or. xn(2).ne.0d0)) then
-          call pbInitcc(pbObj(i),telescop(i),coObj,'aw/aw',x1,xn,0d0,0.)
+          call pbInitcc(pbObj(i),telescop(i),coObj,'aw/aw/aw',
+      *     x1,xn,0d0,0.)
         else
-          call pbInitc(pbObj(i),telescop(i),coObj,'ap/ap',x2,0d0,0.0)
+          call pbInitc(pbObj(i),telescop(i),coObj,'ap/ap/ap',x2,0d0,0.0)
         endif
       enddo
 

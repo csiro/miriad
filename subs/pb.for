@@ -86,7 +86,7 @@ c   09oct14   mhw    Make new ATCA 16cm fits the default, rename old
 c                    fits to ATCA.L and ATCA.S
 c   01dec14   mhw    Reduce repetitive printout & fix compiler warnings
 c
-c $Id: pb.for,v 1.19 2014/12/01 03:31:18 wie017 Exp $
+c $Id: pb.for,v 1.20 2016/03/18 02:56:35 wie017 Exp $
 c***********************************************************************
 c* pbList -- List known primary beam types.
 c& rjs
@@ -261,8 +261,11 @@ c               object.
 c  Output:
 c    pbObj      The primary beam object.
 c-----------------------------------------------------------------------
-      double precision x(1)
+      double precision x(3)
 c-----------------------------------------------------------------------
+      x(1)=0
+      x(2)=0
+      x(3)=0
       call pbInitc(pbObj,pbtype,coObj,'op',x,0d0,0.0)
 
       end
@@ -290,8 +293,11 @@ c    bw         Bandwidth
 c  Output:
 c    pbObj      The primary beam object.
 c-----------------------------------------------------------------------
-      double precision x(1)
+      double precision x(3)
 c-----------------------------------------------------------------------
+      x(1)=0
+      x(2)=0
+      x(3)=0
       call pbInitc(pbObj,pbtype,coObj,'op',x,0d0,bw)
 
       end
@@ -332,10 +338,13 @@ c-----------------------------------------------------------------------
       include 'mirconst.h'
       include 'pb.h'
 
-      double precision x2c(2)
+      double precision x2c(3)
 c-----------------------------------------------------------------------
       call pbInitc(pbObj,type,coObj,in,x1,f,bw)
-      call coCvt(coObj,in,x2,'ap/ap',x2c)
+c
+c     convert 'next' location to pixels 
+c
+      call coCvt(coObj,in,x2,'ap/ap/ap',x2c)
       xn(pbObj)=x2c(1)
       yn(pbObj)=x2c(2)
       conv(pbObj)=.true.
@@ -379,7 +388,7 @@ c-----------------------------------------------------------------------
 
       logical more,more2,ok
       integer l1,l2,iax,k,kd,k2,kd2,pbObj2
-      double precision dtemp,x2(2),antdiam,f,df
+      double precision dtemp,x2(3),antdiam,f,df
       double precision crpix,crval,cdelt1,cdelt2
       real error,t,alpha,z(1)
       character ctype*16,line*64
@@ -419,7 +428,7 @@ c
           f = 0
         endif
       endif
-      call coCvt(coObj,in,x1,'ap/ap',x2)
+      call coCvt(coObj,in,x1,'ap/ap/ap',x2)
       call coAxGet(coObj,1,ctype,crpix,crval,cdelt1)
       call coAxGet(coObj,2,ctype,crpix,crval,cdelt2)
 c
