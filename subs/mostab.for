@@ -29,7 +29,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: mostab.for,v 1.12 2016/03/18 02:56:35 wie017 Exp $
+c $Id: mostab.for,v 1.13 2016/03/30 00:31:50 wie017 Exp $
 c***********************************************************************
 
       subroutine MosCIni
@@ -1023,10 +1023,10 @@ c-----------------------------------------------------------------------
       include 'mostab.h'
 
       integer   i
-      double precision x1(3), x2(3), xn(2)
+      double precision x1(3), x2(3), xn(3),f
 c-----------------------------------------------------------------------
       call coCvt1(coObj,3,'ap',dble(chan),'aw',x1(3))
-
+      call coFreq(coObj,'ap',dble(chan),f)
       do i = 1, npnt
         x1(1) = radec(1,i)
         x1(2) = radec(2,i)
@@ -1036,11 +1036,12 @@ c-----------------------------------------------------------------------
 
         xn(1) = radec2(1,i)
         xn(2) = radec2(2,i)
+        xn(3) = x1(3)
         if (otf .and. (xn(1).ne.0d0 .or. xn(2).ne.0d0)) then
           call pbInitcc(pbObj(i),telescop(i),coObj,'aw/aw/aw',
-      *     x1,xn,0d0,0.)
+      *     x1,xn,f,0.)
         else
-          call pbInitc(pbObj(i),telescop(i),coObj,'ap/ap/ap',x2,0d0,0.0)
+          call pbInitc(pbObj(i),telescop(i),coObj,'ap/ap/ap',x2,f,0.0)
         endif
       enddo
 

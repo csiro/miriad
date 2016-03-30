@@ -62,7 +62,7 @@ c
 c  CARMA customizations:
 c    pkgw  2012may25  Extract some error messages from wcslib
 c
-c $Id: co.for,v 1.50 2015/12/27 06:25:16 ste616 Exp $
+c $Id: co.for,v 1.51 2016/03/30 00:31:50 wie017 Exp $
 c***********************************************************************
 
 c* coCtype -- Parse a world coordinate ctype.
@@ -2025,14 +2025,14 @@ c+
 
       integer   lu
       character in*(*)
-      double precision x1(*), freq
+      double precision x1, freq
 c  ---------------------------------------------------------------------
 c  Get the frequency corresponding to a particular coordinate.
 c
 c  Input:
 c    lu         Handle of the coordinate object.
-c    in         As with coCvt
-c    x1         As with coCvt
+c    in         Input coordinate type
+c    x1         Input coordinate
 c  Output:
 c    freq       The frequency.
 c-----------------------------------------------------------------------
@@ -2040,7 +2040,6 @@ c-----------------------------------------------------------------------
       include 'mirconst.h'
 
       integer   icrd, ispc, status
-      double precision x2(MAXNAX)
       character algo*8, stype*4
 
       external  coLoc
@@ -2064,14 +2063,45 @@ c       Switch it to frequency.
 c     Convert the user's coordinate to absolute world coordinates.
 c     Fill in the reference location in the output, just in case the
 c     user was silly enough not to give enough inputs.
-      x2(ispc) = crval(ispc,icrd)
-      call coCvt(lu, in, x1, 'aw/...', x2)
-      freq = x2(ispc)
+      freq = crval(ispc,icrd)
+      call coCvt1(lu, ispc, in, x1, 'aw', freq)
 
 c     Restore the original spectral type if necessary.
       if (stype.ne.'FREQ') then
         call coSpcSet(lu, stype, ' ', ispc, algo)
       endif
+
+      end
+      
+c***********************************************************************
+      
+c* coFScal -- Check for frequency scaling.
+c& rjs
+c: coordinates
+c+
+      subroutine coFScal(lu,fscal)
+
+      integer   lu
+      logical fscal
+c  ---------------------------------------------------------------------
+c  Check if the coordinates use frequency scaling (cubes).
+c
+c  Input:
+c    lu         Handle of the coordinate object.
+c  Output:
+c    fscal      Does the coordinate use frequency scaling?
+c-----------------------------------------------------------------------
+      include 'co.h'
+      include 'mirconst.h'
+
+      integer   icrd
+
+      external  coLoc
+      integer   coLoc
+c-----------------------------------------------------------------------
+      icrd = coLoc(lu,.false.)
+      fscal = frqscl(icrd)
+      return
 
       end
 

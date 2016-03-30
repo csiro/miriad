@@ -85,8 +85,9 @@ c   08apr14   mhw    Fix freq interpolation in OTF mode
 c   09oct14   mhw    Make new ATCA 16cm fits the default, rename old
 c                    fits to ATCA.L and ATCA.S
 c   01dec14   mhw    Reduce repetitive printout & fix compiler warnings
+c   22mar16   mhw    Deal with wide band cubes
 c
-c $Id: pb.for,v 1.20 2016/03/18 02:56:35 wie017 Exp $
+c $Id: pb.for,v 1.21 2016/03/30 00:31:50 wie017 Exp $
 c***********************************************************************
 c* pbList -- List known primary beam types.
 c& rjs
@@ -386,9 +387,9 @@ c-----------------------------------------------------------------------
       include 'mirconst.h'
       include 'pb.h'
 
-      logical more,more2,ok
+      logical more,more2,ok,fscale
       integer l1,l2,iax,k,kd,k2,kd2,pbObj2
-      double precision dtemp,x2(3),antdiam,f,df
+      double precision dtemp,x2(3),antdiam,f,df,fref
       double precision crpix,crval,cdelt1,cdelt2
       real error,t,alpha,z(1)
       character ctype*16,line*64
@@ -419,19 +420,27 @@ c
 c
 c  Get information about this coordinate system.
 c
-      f=frq
-      if (f.eq.0d0) then
-        call coFindAx(coObj,'frequency',iax)
-        if (iax.ne.0) then
-          call coFreq(coObj,'op',0d0,f)
-        else
-          f = 0
-        endif
+      
+      call coFindAx(coObj,'frequency',iax)
+      if (iax.ne.0) then
+        call coFreq(coObj,'op',0d0,fref)
+      else
+        fref = 0
       endif
       call coCvt(coObj,in,x1,'ap/ap/ap',x2)
       call coAxGet(coObj,1,ctype,crpix,crval,cdelt1)
       call coAxGet(coObj,2,ctype,crpix,crval,cdelt2)
 c
+c  Correct cdelts for frequency scaling if needed 
+c
+      call coFscal(coObj,fscale)
+      if (fscale.and.frq.gt.0.and.fref.gt.0) then
+        cdelt1 = cdelt1 * fref/frq
+        cdelt2 = cdelt2 * fref/frq
+      endif
+      f=frq
+      if (f.eq.0) f=fref
+
 c  Find a matching primary beam type. Also look for a near match.
 c
       ctype = type
