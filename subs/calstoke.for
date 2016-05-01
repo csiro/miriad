@@ -23,6 +23,7 @@ c		  to. Change to accommodate this/
 c    mhw  17jul12 Add new JVLA fits
 c    rjs  18sep15 Use fits from Perley/Butler ApJS 2013 paper. Fits from above
 c		  were apparently preliminary.
+c    mhw  27apr16 Update 1934-638 mm fit: Partridge et al (2016), ApJ 821,1)
 c************************************************************************
 c* CalStoke -- Flux characteristics of selected calibrators.
 c& nebk, rjs
@@ -55,7 +56,7 @@ c--
 c-----------------------------------------------------------------------
       integer nsrc, nnames
       integer loglog,loglin,linlin,linlog
-      parameter (nsrc = 15, nnames = 35)
+      parameter (nsrc = 16, nnames = 35)
       parameter (loglog=1,loglin=2,linlin=3,linlog=4)
 c
       character name*32
@@ -68,18 +69,19 @@ c
       save coeffs, names, srcnum, coeftype
 c
 c  All lists are in the order:
-c	OLD3C286,	  Ott et al, 1995 (total intensity)
+c	OLD3C286, Ott et al, 1995 (total intensity)
 c		  Perley/Killeen, 1991 (unpublished -- polarised component)
 c	3C48,	  VLA database
 c	3C147,	  VLA database
 c	3C138,	  Perley/Killeen, 1991 (unpublished)
-c	1934-638, Reynolds, 1994, ATNF Technical Memo 39.3040
+c	1934-638, Reynolds, 1994, ATNF Technical Memo 39.3040, cm 
 c	0823-500  John Reynolds (unpublished)
 c	0407-658  (unknown origin -- unreliable)
-c       OLD1934,  pre 1994 model
+c       OLD1934,  pre 1994 cm model
 c	3c161	  Ott et al, 1995
 c	3c218	  Ott et al, 1995
-c       1934-638, high freq model, Stevens, 2009 (unpublished)
+c       1934-638, Partridge et al, 2016
+c       OLD1934,  high freq model, Stevens, 2009 (unpublished)
 c       3c123     Perley and Butler 2013
 c       3c196     Perley and Butler 2013
 c       3c295     Perley and Butler 2013
@@ -97,18 +99,13 @@ c     +     1.099506E2,  -44.80922,   4.618715,    0.0,       0.0,
      +	  -23.839,	  19.569,    -4.8168,	   0.35836,   0.0,
      +	    1.250,	   0.726,    -0.2286,	   0.0,       0.0,
      +	    4.729,	  -1.025,     0.0130,	   0.0,       0.0,
+     *      5.887,        -1.3763,    0.0,         0.0,       0.0,
      +     -1.237160,      2.005317, -0.400622,    0.0,       0.0,
      +      1.8077,       -0.8018,    -0.1157,     0.0,       0.0,
      +	    1.2969,       -0.8690,    -0.1788,     0.0305,    0.0,
      +      1.4866,       -0.7871,    -0.3440,     0.0749,    0.0,
      +	    1.2515,       -0.4605,    -0.1715,     0.0336,    0.0/
 c
-c  Below are the parameters from the preliminary version of the Perleey/Butler fits for
-c  3c123, 3c196, 3c295 and 3c286.
-c    +      1.8036,       -0.7742,    -0.1508,     0.0142,    0.0, ! Preliminary revised 3c123
-c    +      1.2984,       -0.8785,    -0.1632,     0.0248,    0.0, ! Preliminary revised 3c196
-c    +      1.4680,       -0.7429,    -0.3701,     0.0792,    0.0, ! Preliminary revised 3c295
-c    +      1.2382,       -0.4188,    -0.2076,     0.0444,    0.0/ ! Preliminary revised 3c286
 c
 c  Q coefficients.
 c
@@ -117,6 +114,7 @@ c
      +		     0.0,	 0.0,	      0.0,	   0.0,0.0,
      +		     0.0,	 0.0,	      0.0,	   0.0,0.0,
      +		     0.7228561,  0.258980,   -0.09490732,  0.0,0.0,
+     +		     0.0,	 0.0,	      0.0,	   0.0,0.0,
      +		     0.0,	 0.0,	      0.0,	   0.0,0.0,
      +		     0.0,	 0.0,	      0.0,	   0.0,0.0,
      +		     0.0,	 0.0,	      0.0,	   0.0,0.0,
@@ -146,11 +144,13 @@ c
      +		     0.0,	 0.0,	      0.0,	   0.0,0.0,
      +		     0.0,	 0.0,	      0.0,	   0.0,0.0,
      +		     0.0,	 0.0,	      0.0,	   0.0,0.0,
+     +		     0.0,	 0.0,	      0.0,	   0.0,0.0,
      +		     6.118902,	-2.05799,     0.163173,    0.0,0.0/
 c
 c  V coefficients.
 c
       data ((coeffs(i,j,4),i=1,5),j=1,nsrc) /
+     +		    0.0, 0.0, 0.0, 0.0,0.0,
      +		    0.0, 0.0, 0.0, 0.0,0.0,
      +		    0.0, 0.0, 0.0, 0.0,0.0,
      +		    0.0, 0.0, 0.0, 0.0,0.0,
@@ -180,6 +180,7 @@ c
      +		  '3C161     ','0624-058  ',
      +		  '3C218     ','0915-119  ',
      +
+     +
      +            '3C123     ','0433+295  ','0437+296  ',
      +            '3C196     ','0809+483  ','0813+482  ',
      +            '3C295     ','1409+524  ','1411+522  ',
@@ -188,24 +189,24 @@ c
 c Source number in coef table
 c
       data srcnum /1, 2,2,2,2, 3,3,3, 4,4,4, 5,5,5, 6,6, 7,7, 8,
-     +		   9,9, 10,10, 12,12,12, 13,13,13, 14,14,14, 15,15,15/
+     +		   9,9, 10,10, 13,13,13, 14,14,14, 15,15,15, 16,16,16/
 c
 c  What sort of fit is the polynomial (logarithmic? linear?).
 c
       data coeftype /
      +	loglog,loglog,loglog,loglin,loglog,loglog,loglog,loglog,
-     +	loglog,loglog,loglog,loglog,loglog,loglog,loglog,
+     +	loglog,loglog,loglog,loglog,loglog,loglog,loglog,loglog,
      +	loglin,linlin,linlin,loglin,linlin,linlin,linlin,linlin,
-     +	linlin,linlin,linlin,linlin,linlin,linlin,linlin,
-     +	loglin,linlin,linlin,loglin,linlin,linlin,linlin,linlin,
-     +	linlin,linlin,linlin,linlin,linlin,linlin,linlin,
      +	linlin,linlin,linlin,linlin,linlin,linlin,linlin,linlin,
-     +	linlin,linlin,linlin,linlin,linlin,linlin,linlin/
+     +	loglin,linlin,linlin,loglin,linlin,linlin,linlin,linlin,
+     +	linlin,linlin,linlin,linlin,linlin,linlin,linlin,linlin,
+     +	linlin,linlin,linlin,linlin,linlin,linlin,linlin,linlin,
+     +	linlin,linlin,linlin,linlin,linlin,linlin,linlin,linlin/
 c
 c  What is the freq unit of the fit (MHz=0,GHz=1).
 c
       data coeftyp2 /
-     +	0,0,0,0,0,0,0,0,0,0,0,1,1,1,1/
+     +	0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1/
 c
 c Frequency range polynomial fits done over (0.0 means don't know)
 c
@@ -213,13 +214,14 @@ c
      +		   0.300,   50.000,
      +		   0.300,   50.000,
      +		   0.3000,  50.000,
-     +		   0.4080,  10.700,
+     +		   0.4080,  11.150,
      +		   1.380,    8.640,
      +		   0.408,    8.400,
      +		   0.4080,   8.400,
      +		   1.408,   10.550,
      +		   1.408,   10.550,
      +		  10.700,   50.000,
+     +            11.150,   99.000,
      +             1.000,   50.000,
      +             1.000,   50.000,
      +             1.000,   50.000,
@@ -248,8 +250,8 @@ c
 c
 c Horrible fudge to allow 2 polynomial approximations for 1934-638
 c
-	  if(isrc.eq.5.and.x.ge.frange(1,11))
-     +	    isrcd=11
+	  if(isrc.eq.5.and.x.ge.frange(1,12)) isrcd=12
+          if(isrc.eq.8.and.x.ge.frange(1,11)) isrcd=11
 c
 	  if (frange(1,isrcd).ne.0.0 .and. frange(2,isrcd).ne.0.0 .and.
      +	    (x.lt.frange(1,isrcd) .or. x.gt.frange(2,isrcd)))
