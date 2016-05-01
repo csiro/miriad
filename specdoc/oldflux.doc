@@ -11,6 +11,12 @@
 	flux scale will be used. In this way, new data can be calibrated
 	to have the old flux scale, and so can be combined/compared
 	directly with data calibrated before the revision.
+        
+        In May 2016 the mm flux scale for 1934-638, which had been in use
+        since 2009, was changed. The oldflux keyword can be used in a 
+        similar fashion as above to switch between the old and the new
+        flux model for frequencies above 11 GHz. The above discussion is
+        for frequencies below 11 GHz.
 
 
 
