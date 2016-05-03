@@ -18,8 +18,9 @@ c		   machine rounding biases.
 c    rjs  18oct00  Setting the seedon "vms-style" machines was not working.
 c    mc   12mar07  external for ran fixes gfortran problem
 c    pjt  20mar07  merged previous MIR4 fortran standards
+c    mhw  03may16  improve gaussian noise generator
 c
-c $Id: noise.for,v 1.3 2012/06/20 01:32:50 wie017 Exp $
+c $Id: noise.for,v 1.4 2016/05/03 01:26:25 wie017 Exp $
 c************************************************************************
 c
 c  Choose which random number style we are to use. We have three choices:
@@ -175,7 +176,7 @@ c
 	end
 #endif
 c************************************************************************
-c*Gaus -- Generate gaussianly distributed random variables.
+c*Gaus -- Generate gaussian distributed random variables.
 c&rjs
 c:random-variables,noise
 c+
@@ -185,13 +186,11 @@ c
 	integer n
 	real data(n)
 c
-c  Generate gaussian noise. This works on any machine, but the Gaussian
-c  noise it produces is system dependent and not extremely accurate.
+c  Generate gaussian noise using the Box-Mueller or polar method
 c
-c  Gaussian noise is produced by adding 12 variates uniformly distributed
-c  in [0,1], then subtracting 6. This will have zero
-c  mean, and a variance of 1, and by the Central Limit Theorem, will
-c  approximate gaussian noise.
+c  The Box-Muller method uses the technique of inverse transformation
+c  to turn two uniformly distributed randoms into two unit normal
+c  randoms
 c
 c  Inputs:
 c    n		Number of gaussian numbers to produce.
@@ -199,37 +198,36 @@ c
 c  Output:
 c    data	An array of gaussian noise.
 c--
-c  TODO:  what about the Box-Mueller (polar) method 
+c  Ref:  the Box-Mueller (polar) method 
 c         see Knuth, vol. 2, p. 104.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
-	integer i,j,l,ltot
+	integer i,k,nmax
+        real v1,v2,s,c
 	real buf(MAXDIM)
 c
-c  Initialise the output with a uniformly distributed variable.
+c  Fill buffer with uniform values, refill when needed
 c
-	call uniform(data,n)
-c
-c  Add another 11 uniformly distributed numbers. Use a strip-mine
-c  approach in case buf is too small.
-c
-	do j=2,12
-	  do l=1,n,MAXDIM
-	    ltot = min(n-l+1,MAXDIM)
-	    call uniform(buf,ltot)
-	    do i=1,ltot
-	      data(i+l-1) = data(i+l-1) + buf(i)
-	    enddo
-	  enddo
-	enddo
-c
-c  Subtract off the mean value. The result should be roughly gaussianly
-c  distributed with 0 mean and variance of 1.
-c
-	do i=1,n
-	  data(i) = data(i) - 6
-	enddo
-c
+	nmax=min(MAXDIM,n+1)
+        call uniform(buf,nmax)
+        k=1
+        do i=1,n,2
+          s=2
+          do while(s.ge.1.or.s.eq.0)
+            v1=2*buf(k)-1
+            v2=2*buf(k+1)-1
+            s=v1*v1+v2*v2
+            k=k+2
+            if (k+1.gt.nmax) then
+              call uniform(buf,nmax)
+              k=1
+            endif
+          enddo
+          c=sqrt(-2*log(s)/s)
+          data(i)=c*v1
+          if (i.lt.n) data(i+1)=c*v2
+        enddo
+
 	end
 c************************************************************************
 #ifdef inc_ran
