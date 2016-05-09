@@ -62,7 +62,7 @@ c@ maxwidth
 c        The maximum bandwidth (in GHz) for each output frequency band.
 c        Default is no subdivision of input bands. The maxwidth limit
 c        is only applied when splitting by frequency.
-c $Id: uvsplit.for,v 1.17 2015/10/29 01:32:07 sau078 Exp $
+c $Id: uvsplit.for,v 1.18 2016/05/09 03:06:18 sau078 Exp $
 c--
 c  History:
 c    rjs  13oct93 Original version.
@@ -85,6 +85,7 @@ c    mhw  14oct09 Separate out identical freqs on different IFs
 c    mhw  06jun11 Split by calcode
 c    mhw  23nov11 Split by ifchain, pass ifchain variable along
 c    mhw  31jul15 Split zooms that are less than 1 MHz apart
+c    rjs  09may16 Fix bug when using nowin,nofreq together.
 c  Bugs:
 c   the full xtsys and ytsys variables are passed to split files,
 c   but for the systemp variable only the appropriate data (if) is copied
@@ -108,8 +109,8 @@ c
         character versan*72
 c------------------------------------------------------------------------
         version = versan ('uvsplit',
-     *                    '$Revision: 1.17 $',
-     *                    '$Date: 2015/10/29 01:32:07 $')
+     *                    '$Revision: 1.18 $',
+     *                    '$Date: 2016/05/09 03:06:18 $')
 c
 c  Get the input parameters.
 c
@@ -771,7 +772,9 @@ c
 c  Do we already have this file.
 c
 	tindx = 0
-	if(.not.wins(tifno))return
+	if(tifno.gt.0)then
+	  if(.not.wins(tifno))return
+	endif
 	if(nfiles.gt.0)tindx = binsrcha(name,out,nfiles)
 	if(tindx.gt.0)tindx = indx(tindx)
 c
