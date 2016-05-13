@@ -1,0 +1,22 @@
+#!/bin/csh -f
+# Fix the dynamic library paths in the miriad executables and
+# dynamic libraries so they work without setting DYLD_* variables
+
+cd $MIR/darwin_x86_64
+
+foreach l (lib/*dylib)
+	# fix install names
+    set lib=`echo $l | sed "s#lib/##"`
+    set new="@loader_path/../$l"
+    install_name_tool -id $new $l
+    
+    # fix references in all libs and binaries
+    foreach i (lib/*dylib bin/*)
+        set old=`otool -L $i | grep -v ":"| grep $lib | sed "s/(.*//"`
+        if "$old" != "" then
+        	if "$old" != "$new" then	
+            	install_name_tool -change $old $new $i
+            endif
+    	endif
+    end
+end
