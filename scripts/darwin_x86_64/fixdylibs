@@ -8,7 +8,10 @@ foreach l (lib/*dylib)
 	# fix install names
     set lib=`echo $l | sed "s#lib/##"`
     set new="@loader_path/../$l"
-    install_name_tool -id $new $l
+    set old=`otool -L $l | grep -v ":"| grep $lib | sed "s/(.*//"`
+    if "$old" != "$new" then
+       install_name_tool -id $new $l
+    endif
     
     # fix references in all libs and binaries
     foreach i (lib/*dylib bin/*)
