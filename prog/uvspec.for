@@ -58,7 +58,9 @@ c	   'flagged'     Plot flagged data instead of unflagged data. The
 c	                 default is to plot only unflagged data.
 c	   'all'         Plot both flagged and unflagged data.
 c          'hdr'         Use high dynamic range scaling for amplitude plots:
-c                        log(1+amp). This works well for RFI affected data. 
+c                        log(1+amp). This works well for RFI affected data.
+c          'timelog'     In any log file, output the time of the spectrum before
+c                        each spectrum is written out.
 c@ axis
 c	This gives two strings, which determine the X and Y axes of each plot.
 c	The values can be abbreviated to uniqueness.
@@ -89,7 +91,7 @@ c@ log
 c	Log file into which the spectra are dumped in the order in which
 c	they are plotted.  Really only useful if your plot is quite simple.
 c
-c$Id: uvspec.for,v 1.14 2014/05/21 04:34:59 wie017 Exp $
+c$Id: uvspec.for,v 1.15 2016/07/13 04:20:47 ste616 Exp $
 c--
 c  History:
 c    rjs  18sep92 Derived from uvaver.
@@ -140,6 +142,7 @@ c
 	character xtitle*64,ytitle*64
 	logical ampsc,rms,nobase,avall,first,buffered,doflush,dodots
 	logical doshift,doflag,doall,dolag,dosdo,dohdr,domnoise
+	logical dotimelog
 	double precision interval,T0,T1,preamble(5),shift(2),lmn(3)
 	integer tIn,vupd
 	integer nxy(2),nchan,nread,nplot
@@ -160,7 +163,7 @@ c
 	call output(version)
 	call keyini
 	call GetOpt(uvflags,ampsc,rms,nobase,avall,dodots,
-     *    doflag,doall,dosdo,dohdr,domnoise)
+     *    doflag,doall,dosdo,dohdr,domnoise,dotimelog)
 	call GetAxis(xaxis,yaxis)
 	dolag = xaxis.eq.'lag'
 	call uvDatInp('vis',uvflags)
@@ -254,7 +257,8 @@ c  in the case of time averaging.
 c
 	    if(doflush)then
 	      call BufFlush(ampsc,rms,nobase,dodots,dohdr,domnoise,hann,
-     *	       hc,hw,first,device,x,nplot,xtitle,ytitle,nxy,yrange,logf)
+     *	       hc,hw,first,device,x,nplot,xtitle,ytitle,nxy,yrange,logf,
+     *         dotimelog)
 	      T0 = preamble(4)
 	      T1 = T0
 	      buffered = .false.
@@ -279,7 +283,8 @@ c  Flush out and plot anything remaining.
 c
 	  if(buffered)then
 	    call BufFlush(ampsc,rms,nobase,dodots,dohdr,domnoise,hann,
-     *	      hc,hw,first,device,x,nplot,xtitle,ytitle,nxy,yrange,logf)
+     *	      hc,hw,first,device,x,nplot,xtitle,ytitle,nxy,yrange,logf,
+     *        dotimelog)
 	    buffered = .false.
 	  endif
 	  call uvDatCls
@@ -440,11 +445,11 @@ c
 	end
 c************************************************************************
 	subroutine GetOpt(uvflags,ampsc,rms,nobase,avall,dodots,
-     *		doflag,doall,dosdo,dohdr,domnoise)
+     *		doflag,doall,dosdo,dohdr,domnoise,dotimelog)
 c
 	implicit none
         logical ampsc,rms,nobase,avall,dodots,doflag,doall,dosdo,dohdr
-        logical domnoise
+        logical domnoise,dotimelog
 	character uvflags*(*)
 c
 c  Determine the flags to pass to the uvdat routines.
@@ -460,13 +465,13 @@ c    doflag
 c    doall
 c------------------------------------------------------------------------
 	integer nopts
-	parameter(nopts=13)
+	parameter(nopts=14)
 	character opts(nopts)*9
 	logical present(nopts),docal,dopol,dopass
 	data opts/'nocal    ','nopol    ','ampscalar','nopass   ',
      *		  'nobase   ','avall    ','dots     ','rms      ',
      *            'flagged  ','all      ','sdo      ','hdr      ',
-     *            'mnoise   '/
+     *            'mnoise   ','timelog  '/
 c
 	call options('options',opts,present,nopts)
 	docal = .not.present(1)
@@ -484,6 +489,7 @@ c
         dosdo  =   present(11)
         dohdr  =   present(12)
         domnoise=   present(13)
+	dotimelog= present(14)
 	if(doflag.and.doall)call bug('f',
      *	  'The "flagged" and "all" options are mutually exclusive')
 c
@@ -508,10 +514,11 @@ c------------------------------------------------------------------------
 	end
 c************************************************************************
 	subroutine BufFlush(ampsc,rms,nobase,dodots,dohdr,domnoise,hann,
-     *	        hc,hw,first,device,x,n,xtitle,ytitle,nxy,yrange,logf)
+     *	        hc,hw,first,device,x,n,xtitle,ytitle,nxy,yrange,logf,
+     *          dotimelog)
 c
 	implicit none
-	logical ampsc,rms,nobase,first,dodots,dohdr,domnoise
+	logical ampsc,rms,nobase,first,dodots,dohdr,domnoise,dotimelog
 	character device*(*),xtitle*(*),ytitle*(*),logf*(*)
 	integer n,nxy(2),hann
 	real yrange(2),hc(*),hw(*)
@@ -633,7 +640,7 @@ c
 	    if(.not.nobase.and.npnts.gt.0)then
 	      call Plotit(npnts,xp,yp,xrange,yrange,dodots,plot,nplts,
      *		xtitle,ytitle,j,time/ntime,inttime/nplts,pol,npol,
-     *		dopoint,hann,hc,hw,logf,maxpnts,dohdr)
+     *		dopoint,hann,hc,hw,logf,maxpnts,dohdr,dotimelog)
 c
 	      npol = 0
 	      do i=PolMin,PolMax
@@ -652,7 +659,7 @@ c  Do the final plot.
 c
 	if(npnts.gt.0)call Plotit(npnts,xp,yp,xrange,yrange,dodots,
      *	  plot,nplts,xtitle,ytitle,0,time/ntime,inttime/nplts,
-     *	  pol,npol,dopoint,hann,hc,hw,logf,maxpnts,dohdr)
+     *	  pol,npol,dopoint,hann,hc,hw,logf,maxpnts,dohdr,dotimelog)
 c
 c  Reset the counters.
 c
@@ -1001,15 +1008,16 @@ c
 c************************************************************************
 	subroutine Plotit(npnts,xp,yp,xrange,yrange,dodots,
      *		  plot,nplts,xtitle,ytitle,bl,time,inttime,
-     *		  pol,npol,dopoint,hann,hc,hw,logf,maxpnts,dohdr)
+     *		  pol,npol,dopoint,hann,hc,hw,logf,maxpnts,dohdr,
+     *            dotimelog)
 c
 	implicit none
 	integer npnts,bl,nplts,plot(nplts+1),npol,pol(npol),hann,maxpnts
 	double precision time,xp(npnts)
         real x(maxpnts)
 	real inttime,hc(*),hw(*),xrange(2),yrange(2),yp(npnts)
-	logical dopoint,dodots,dohdr
-	character xtitle*(*),ytitle*(*),logf*(*)
+	logical dopoint,dodots,dohdr,dotimelog
+	character xtitle*(*),ytitle*(*),logf*(*),date*18
 c
 c  Draw a plot
 c------------------------------------------------------------------------
@@ -1041,6 +1049,16 @@ c
         delta1 = abs((xrange(2)-xrange(1))/max(xrange(1),xrange(2)))
         delta2 = delta1
         if (npnts.gt.0) delta2=delta1/npnts*nplts
+c
+c  Time of day.
+c
+	T0 = nint(time - 1.d0) + 0.5
+	sec = nint(24*3600*(time - T0))
+	hr = sec / 3600
+	sec = sec - 3600*hr
+	mins = sec / 60
+	sec = sec - 60*mins
+	call JulDay(time,'H',date)
 c
 c  Check for potential axis labeling and plot accuracy issues, use offset 
 c
@@ -1077,6 +1095,14 @@ c
 	    call pghline(plot(i+1)-plot(i),x(plot(i)),yp(plot(i)),2.0)
 	  endif
           if (logf.ne.' ') then
+	    if (dotimelog)then
+	       if ((plot(i+1)-plot(i)).gt.1)then
+c		  write(line,'(a,i2.2,a,i2.2,a,i2.2)') 'T=',hr,':',mins,
+c     *                  ':',sec
+		  write(line,'(a)') date
+		  call logwrit(line)
+	       end if
+	    end if
   	    do j = 1, plot(i+1)-plot(i)
 	      write(line,'(1pe13.6,2x,1pe13.6)') 
      *		xp(plot(i)+j-1),yp(plot(i)+j-1)
@@ -1104,15 +1130,6 @@ c
 	dowhile(tau(lt:lt).eq.' ')
 	  lt = lt + 1
 	enddo
-c
-c  Time of day.
-c
-	T0 = nint(time - 1.d0) + 0.5
-	sec = nint(24*3600*(time - T0))
-	hr = sec / 3600
-	sec = sec - 3600*hr
-	mins = sec / 60
-	sec = sec - 60*mins
 c
 	if(bl.eq.0)then
 	  write(title,'(a,i2.2,a,i2.2,a,i2.2)')
