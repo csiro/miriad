@@ -176,7 +176,7 @@ c       For concatenated spectra the width of a single zoom is used.
 c       Note that noise and artefacts go up quickly towards the band 
 c       edge so making this much smaller will not gain you much.
 c
-c$Id: atlod.for,v 1.51 2015/07/27 05:40:50 wie017 Exp $
+c$Id: atlod.for,v 1.52 2016/07/17 23:25:34 wie017 Exp $
 c--
 c
 c  Program Structure:
@@ -343,8 +343,9 @@ c    mhw  22oct13 Apply patches by vjm to fix some string overflows
 c    rjs  17jul14 Changes to correct antenna table
 c    mhw  25jul14 Deal with historical rfiflag files
 c    mhw  27jul15 Fix problem loading some CABB zoom data
+c    mhw  18jul16 Store project code
 c
-c $Id: atlod.for,v 1.51 2015/07/27 05:40:50 wie017 Exp $
+c $Id: atlod.for,v 1.52 2016/07/17 23:25:34 wie017 Exp $
 c-----------------------------------------------------------------------
 
         integer MAXFILES,MAXTIMES,MAXSIM
@@ -365,8 +366,8 @@ c
         character itoaf*8, rperr*32, versan*72
 c-----------------------------------------------------------------------
       version = versan ('atlod',
-     :                  '$Revision: 1.51 $',
-     :                  '$Date: 2015/07/27 05:40:50 $')
+     :                  '$Revision: 1.52 $',
+     :                  '$Date: 2016/07/17 23:25:34 $')
 c
 c  Get the input parameters.
 c
@@ -1547,9 +1548,10 @@ c
 c
         end
 c***********************************************************************
-        subroutine PokeMisc(telescop,observer,version,sctype)
+        subroutine PokeMisc(telescop,observer,version,sctype,project)
 c
-        character telescop*(*),observer*(*),version*(*),sctype*(*)
+        character telescop*(*),observer*(*),version*(*),sctype*(*),
+     *       project*(*)
 c
 c  Set various miscellaneous parameters.
 c-----------------------------------------------------------------------
@@ -1576,6 +1578,9 @@ c
 c
         call AsciiCpy(sctype,atemp,length)
         if(length.gt.0)call uvputvra(tno,'sctype',atemp(1:length))
+c
+        call AsciiCpy(project,atemp,length)
+        if(length.gt.0)call uvputvra(tno,'project',atemp(1:length))
 c
         end
 c***********************************************************************
@@ -2447,7 +2452,7 @@ c-----------------------------------------------------------------------
         double precision J01Jul04,J18Oct07
         parameter(J01Jul04=2453187.5d0,J18Oct07=2454390.5d0)
         include 'rpfits.inc'
-        integer scanno,i1,i2,baseln,i,id,j,xymode,prev,next
+        integer scanno,i1,i2,baseln,i,id,j,xymode,prev,next,k,l
         logical NewScan,NewSrc,NewFreq,NewTime,Accum,ok,badbit
         logical flags(MAXPOL),corrfud,kband,qband,wband,flipper,cabb
         integer jstat,flag,bin,ifno,srcno,simno,Ssrcno,Ssimno
@@ -2456,7 +2461,7 @@ c-----------------------------------------------------------------------
         real ut,utprev,utprevsc,u,v,w,weight(MAXCHAN*MAXPOL)
         complex vis(NDATA)
         double precision reftime,ra0,dec0,pntra,pntdec
-        character calcode*16,sctype*16,sname*16
+        character calcode*16,sctype*16,sname*16,project*16
 c
 c  The following has to agree with the first dimension of if_cstok in
 c  rpfits.inc.
@@ -2494,7 +2499,7 @@ c
         real refpnt(2,ANT_MAX)
 c
         logical antvalid(ANT_MAX)
-        integer mcount
+        integer mcount,len1
         double precision jday0,time,tprev
 c
 c  Open the RPFITS file.
@@ -2537,6 +2542,12 @@ c
         cabb = instrument(1:6).eq.'ATCABB'
         if (cabb) call liner('CABB data detected')
         dotsys = dotsys.or..not.cabb
+        k=index(in,'.')
+        l=len1(in)
+        if (k.gt.0.and.k.lt.l-3) then
+           project=in(k+1:)
+        endif
+
 c
 c  Initialise flagging information.
 c
@@ -2742,7 +2753,7 @@ c
                 time = ut / (3600.d0*24.d0) + jday0
                 call Poke1st(time,nifs(simno),nant,cabb)
                 if(NewScan)call PokeMisc(instrument,rp_observer,
-     *                                          version,sctype)
+     *                                   version,sctype,project)
                 if(an_found)call PokeAnt(nant,x,y,z)
                 if(NewScan.or.NewFreq)then
                   kband = .false.
