@@ -24,6 +24,7 @@ c    mhw  17jul12 Add new JVLA fits
 c    rjs  18sep15 Use fits from Perley/Butler ApJS 2013 paper. Fits from above
 c		  were apparently preliminary.
 c    mhw  27apr16 Update 1934-638 mm fit: Partridge et al (2016), ApJ 821,1)
+c    mhw  18jul16 Fix mm fit parameters (old and new were swapped)
 c************************************************************************
 c* CalStoke -- Flux characteristics of selected calibrators.
 c& nebk, rjs
@@ -80,8 +81,8 @@ c	0407-658  (unknown origin -- unreliable)
 c       OLD1934,  pre 1994 cm model
 c	3c161	  Ott et al, 1995
 c	3c218	  Ott et al, 1995
-c       1934-638, Partridge et al, 2016
 c       OLD1934,  high freq model, Stevens, 2009 (unpublished)
+c       1934-638, Partridge et al, 2016
 c       3c123     Perley and Butler 2013
 c       3c196     Perley and Butler 2013
 c       3c295     Perley and Butler 2013
@@ -99,8 +100,8 @@ c     +     1.099506E2,  -44.80922,   4.618715,    0.0,       0.0,
      +	  -23.839,	  19.569,    -4.8168,	   0.35836,   0.0,
      +	    1.250,	   0.726,    -0.2286,	   0.0,       0.0,
      +	    4.729,	  -1.025,     0.0130,	   0.0,       0.0,
-     *      5.887,        -1.3763,    0.0,         0.0,       0.0,
      +     -1.237160,      2.005317, -0.400622,    0.0,       0.0,
+     +      5.887,        -1.3763,    0.0,         0.0,       0.0,
      +      1.8077,       -0.8018,    -0.1157,     0.0,       0.0,
      +	    1.2969,       -0.8690,    -0.1788,     0.0305,    0.0,
      +      1.4866,       -0.7871,    -0.3440,     0.0749,    0.0,
