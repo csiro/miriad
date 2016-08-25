@@ -176,7 +176,7 @@ c       For concatenated spectra the width of a single zoom is used.
 c       Note that noise and artefacts go up quickly towards the band 
 c       edge so making this much smaller will not gain you much.
 c
-c$Id: atlod.for,v 1.52 2016/07/17 23:25:34 wie017 Exp $
+c$Id: atlod.for,v 1.53 2016/08/25 23:02:21 wie017 Exp $
 c--
 c
 c  Program Structure:
@@ -344,8 +344,9 @@ c    rjs  17jul14 Changes to correct antenna table
 c    mhw  25jul14 Deal with historical rfiflag files
 c    mhw  27jul15 Fix problem loading some CABB zoom data
 c    mhw  18jul16 Store project code
+c    mhw  26aug16 Fix nopol option
 c
-c $Id: atlod.for,v 1.52 2016/07/17 23:25:34 wie017 Exp $
+c $Id: atlod.for,v 1.53 2016/08/25 23:02:21 wie017 Exp $
 c-----------------------------------------------------------------------
 
         integer MAXFILES,MAXTIMES,MAXSIM
@@ -366,8 +367,8 @@ c
         character itoaf*8, rperr*32, versan*72
 c-----------------------------------------------------------------------
       version = versan ('atlod',
-     :                  '$Revision: 1.52 $',
-     :                  '$Date: 2016/07/17 23:25:34 $')
+     :                  '$Revision: 1.53 $',
+     :                  '$Date: 2016/08/25 23:02:21 $')
 c
 c  Get the input parameters.
 c
@@ -1239,11 +1240,11 @@ c
         end
 c***********************************************************************
         subroutine PokeData(u1,v1,w1,baseln,iif,bin,vis,nfreq1,nstoke1,
-     *          flag1,inttime1,docon,doxyflip,xymode)
+     *          flag1,inttime1,docon,doxyflip,xymode,nopol)
 c
         integer nfreq1,nstoke1,iif,baseln,bin,xymode
         real u1,v1,w1,inttime1
-        logical flag1(nstoke1),docon,doxyflip
+        logical flag1(nstoke1),docon,doxyflip,nopol
         complex vis(nfreq1*nstoke1)
 c
 c  Buffer up the data. Perform sampler correction and hanning smoothing
@@ -1367,15 +1368,19 @@ c
             data(pnt(iif,iXX,bl,bin)+i-1)=data(pnt(iif,iXX,bl,bin)+i-1)*
      *         sqrt(xsdo(iif,i1)*xsdo(iif,i2)/
      *              xcaljy(iif,i1)/xcaljy(iif,i2))/1.e6
-            data(pnt(iif,iXY,bl,bin)+i-1)=data(pnt(iif,iXY,bl,bin)+i-1)*
-     *         sqrt(xsdo(iif,i1)*ysdo(iif,i2)/
-     *              xcaljy(iif,i1)/ycaljy(iif,i2))/1.e6
-            data(pnt(iif,iYX,bl,bin)+i-1)=data(pnt(iif,iYX,bl,bin)+i-1)*
-     *         sqrt(ysdo(iif,i1)*xsdo(iif,i2)/
-     *              ycaljy(iif,i1)/xcaljy(iif,i2))/1.e6
             data(pnt(iif,iYY,bl,bin)+i-1)=data(pnt(iif,iYY,bl,bin)+i-1)*
-     *         sqrt(ysdo(iif,i1)*ysdo(iif,i2)/
+     *          sqrt(ysdo(iif,i1)*ysdo(iif,i2)/
      *              ycaljy(iif,i1)/ycaljy(iif,i2))/1.e6
+            if (.not.nopol) then
+              data(pnt(iif,iYX,bl,bin)+i-1)=
+     *          data(pnt(iif,iYX,bl,bin)+i-1)*
+     *          sqrt(ysdo(iif,i1)*xsdo(iif,i2)/
+     *               ycaljy(iif,i1)/xcaljy(iif,i2))/1.e6
+              data(pnt(iif,iXY,bl,bin)+i-1)=
+     *          data(pnt(iif,iXY,bl,bin)+i-1)*
+     *          sqrt(xsdo(iif,i1)*ysdo(iif,i2)/
+     *               xcaljy(iif,i1)/ycaljy(iif,i2))/1.e6
+            endif
           enddo
         endif
 c
@@ -1396,8 +1401,10 @@ c
             gtp=real(data(pnt(iif,iYY,bl,2)+i-1) +
      *               data(pnt(iif,iYY,bl,1)+i-1))/2
             data(pnt(iif,iYY,bl,1)+i-1)=cmplx(gtp,sdo)
-            data(pnt(iif,iYX,bl,1)+i-1)=data(pnt(iif,iXY,bl,2)+i-1)-
-     *       data(pnt(iif,iXY,bl,1)+i-1)
+            if (.not.nopol) then
+              data(pnt(iif,iYX,bl,1)+i-1)=data(pnt(iif,iXY,bl,2)+i-1)-
+     *          data(pnt(iif,iXY,bl,1)+i-1)
+            endif
           enddo
         endif
 c
@@ -2902,7 +2909,7 @@ c
 c
               call PokeData(u,v,w,baseln,Sif(ifno),bin,
      *          vis,if_nfreq(ifno),nstoke(ifno),flags,
-     *          tint,if_invert(ifno).lt.0,flipper,xymode)
+     *          tint,if_invert(ifno).lt.0,flipper,xymode,nopol)
 c
 c  Reinitialise things.
 c
