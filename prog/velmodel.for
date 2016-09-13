@@ -276,7 +276,7 @@ c
 c compute rms velocity along line of sight.
 c
       integer nstep
-      real xt,yt,vrot(1),vrad(2),vr(nstep),rstep,vel,radius(1)
+      real xt,yt,vrot(2),vrad(2),vr(nstep),rstep,vel,radius(1)
       real z0,zexp,sini
       logical dosamp
 c----------------------------------------------------------------------
