@@ -103,7 +103,7 @@ c       x and y pixel coordinate (in the output model; this goes from 1
 c       to N), the "I" component and the "I*alpha" component.  The
 c       default is to not create a log file.
 c
-c$Id: mfclean.for,v 1.11 2013/09/11 00:14:07 mci156 Exp $
+c$Id: mfclean.for,v 1.12 2016/09/13 23:27:01 wie017 Exp $
 c--
 c  History:
 c    rjs   Nov89 - Original version.
@@ -206,8 +206,8 @@ c-----------------------------------------------------------------------
       external  itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('mfclean',
-     *                 '$Revision: 1.11 $',
-     *                 '$Date: 2013/09/11 00:14:07 $')
+     *                 '$Revision: 1.12 $',
+     *                 '$Date: 2016/09/13 23:27:01 $')
 c
 c  Get the input parameters.
 c
@@ -531,7 +531,8 @@ c***********************************************************************
 
       subroutine GetPatch(FFT,lBeam,n1,n2,Patch,maxPatch,ic,jc,Tmp)
 
-      integer FFT,lBeam,n1,n2,ic,jc,maxPatch
+      ptrdiff FFT
+      integer lBeam,n1,n2,ic,jc,maxPatch
       real Patch(maxPatch,maxPatch),Tmp(n1,n2)
 c-----------------------------------------------------------------------
 c  Get the beam patch, and determine things about it.
@@ -630,7 +631,8 @@ c***********************************************************************
 
       subroutine GetMap(FFT,lMap,Run,nRun,xoff,yoff,Map,Tmp,nx,ny)
 
-      integer FFT,lMap,nRun,Run(3,nRun),nx,ny,xoff,yoff
+      ptrdiff FFT
+      integer lMap,nRun,Run(3,nRun),nx,ny,xoff,yoff
       real Map(*),Tmp(nx,ny)
 c-----------------------------------------------------------------------
 c  Correlate the map with the beam, and return just that part of the
@@ -1539,7 +1541,7 @@ c***********************************************************************
       integer nPoint,nx,ny,nRun,Run(3,nRun)
       real Est0(nPoint),Est1(nPoint),Res0(nPoint),Res1(nPoint)
       real Map0(nPoint),Map1(nPoint),Tmp(nPoint)
-      integer FFT00,FFT11,FFT01,FFT10
+      ptrdiff FFT00,FFT11,FFT01,FFT10
 c-----------------------------------------------------------------------
 c  Determine the residuals left.
 c
