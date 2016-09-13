@@ -60,8 +60,8 @@ c
 c  Get the input parameters.
 c
         version = versan('gpbreak',
-     *                   '$Revision: 1.0',
-     *                   '$Date: ')
+     *                   ' 1.0',
+     *                   ' ')
 	call keyini
 	call keya('vis',vis,' ')
 	call mkeyt('break',btimes,MAXTIME,numtime,'time')
@@ -154,8 +154,8 @@ c
 c
 c  Edit the gains.
 c
-	call GainEdt(nsols+numtime,nsols,nants*nfeeds,nfbin,memd(pTimes),
-     *	             memc(pGains),memc(pGains2),mask,btimes,numtime)
+	call GainEdt(nsols+numtime,nsols,nants*nfeeds,nfbin,
+     *	  memd(pTimes),memc(pGains),memc(pGains2),mask,btimes,numtime)
 c
 c  Write out the gains.
 c
