@@ -3,7 +3,8 @@
 	integer MAXSLOTS
 	parameter(MAXSLOTS=6)
 	integer size(MAXNAX,MAXSLOTS),lScr(MAXSLOTS),ndim(MAXSLOTS)
-	integer memsize(MAXSLOTS),blk(MAXSLOTS),buf(MAXSLOTS)
+	integer memsize(MAXSLOTS),blk(MAXSLOTS)
+	ptrdiff buf(MAXSLOTS)
 	integer p(MAXSLOTS)
 	logical inuse(MAXSLOTS),inmem(MAXSLOTS),flip(MAXNAX,MAXSLOTS)
 	logical pre(MAXSLOTS),major(MAXSLOTS),post(MAXSLOTS)

@@ -9,6 +9,7 @@ c    rjs  30mar92 Use memalloc/memfree routines.
 c    rjs  19dec92 Near total rewrite, to appease nebk!
 c    rjs  22feb93 Include maxnax.h
 c    rjs  18sep05 Corrected declaration of the work array.
+c    mhw  14sep16 Use ptrdiff to cope with larger cubes
 c
 c***********************************************************************
 c*TrnIni -- Initialise the transpose routines.
@@ -32,7 +33,8 @@ c    lu		Handle used internally.
 c--
 c-----------------------------------------------------------------------
 	include 'trnio.h'
-	integer i,totsize,blk1
+	integer i,blk1
+	ptrdiff totsize
 	logical first
 	save first
 	data first/.true./
@@ -58,7 +60,7 @@ c  Copy the dimensios to the output.
 c
 	inuse(lu) = .true.
 	if(naxis.gt.MAXNAX.or.naxis.lt.2)
-     *	  call bug('f','Bad number of dimensions, in TRNINI')	
+     *	  call bug('f','Bad number of dimensions, in TRNINI')
 c
 c  Decode the reorder argument, set array size parameters.
 c
@@ -91,7 +93,7 @@ c
 	  call ScrOpen(lScr(lu))
 	endif
 c
-	if(memsize(lu).gt.0)call memalloc(buf(lu),memsize(lu),'r')
+	if(memsize(lu).gt.0)call memallop(buf(lu),memsize(lu),'r')
 	p(lu) = 0
 	end
 c***********************************************************************
@@ -312,7 +314,7 @@ c-----------------------------------------------------------------------
 	include 'trnio.h'
 	inuse(lu) = .false.
 	if (lScr(lu).ge.0) call ScrClose(lScr(lu))
-	if (memsize(lu).ne.0) call MemFree(buf(lu),memsize(lu),'r')
+	if (memsize(lu).ne.0) call MemFrep(buf(lu),memsize(lu),'r')
 	end
 c***********************************************************************
 	subroutine trnflpx(Data,n1,n2)
