@@ -67,7 +67,7 @@ c@ log
 c  If specified, output is written to the file given by log= instead
 c  of to the terminal.
 c
-c$Id: imhist.for,v 1.4 2012/03/13 00:39:48 wie017 Exp $
+c$Id: imhist.for,v 1.5 2016/09/13 23:30:14 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -81,8 +81,8 @@ c-----------------------------------------------------------------------
       character versan*72
 c-----------------------------------------------------------------------
       version = versan('imhist',
-     *                 '$Revision: 1.4 $',
-     *                 '$Date: 2012/03/13 00:39:48 $')
+     *                 '$Revision: 1.5 $',
+     *                 '$Date: 2016/09/13 23:30:14 $')
 
       call output('IMHIST: ' // version)
       call inputs(tinp, cut, xrange, npixels, naxis, device)
@@ -887,7 +887,7 @@ c***********************************************************************
       double precision function calcrms(sum, sumsq, npoints, ok)
 
       double precision sum, sumsq
-      integer   npoints
+      ptrdiff   npoints
       logical   ok
 c-----------------------------------------------------------------------
       double precision rms
