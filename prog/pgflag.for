@@ -58,7 +58,8 @@ c                        file, in reverse (ie. good <-> bad)
 c       b                Blow away the dust: flag all visibilities
 c                        with less than 3 good neighbours.
 c       e                Extend the flagging to all sequences in
-c                        time or channel with less than 20% good data
+c                        time or channel with less than 20% good data.
+c                        Only apply this once per baseline.
 c       f                Flag the selected range of data on the
 c                        currently displayed baseline only.
 c       F                Flag the selected range of data on all
@@ -217,7 +218,7 @@ c     again. Once the right parameters are found you can abort with 'a'
 c     and run pgflag with command set to "<" or "<be" to flag the entire 
 c     dataset. You can use options=nodisp if you don't want to watch the
 c     flagging. If you do want to see what is happening, you'll want to 
-c     specify command='=<' or the like to scale the data for the display.
+c     specify command='.=<' or the like to scale the data for the display.
 c
 c@ vis
 c     Input visibility dataset to be flagged. No default.
@@ -285,11 +286,13 @@ c@ command
 c     Specify a series of commands for non-interactive flagging.
 c     E.g., '<be' will apply SumThreshold flagging followed
 c      by blowing away the dust and extending the flags for each baseline;
-c     '=vx=v' will autoscale the data, do a clip operation, then
+c     '.=vx=v' will autoscale the data, do a clip operation, then
 c      subtract the channel average, autoscale and clip again before
-c      moving on to the next baseline. There is no need to specify
-c      a 'q' in the command sequence, unless you want to quit before
-c      all baselines are processed. Default is no command.
+c     moving on to the next baseline. Note that '=' cannot be the first
+c     character of the command parameter or it will be skipped.
+c     There is no need to specify a 'q' in the command sequence,
+c     unless you want to quit before all baselines are processed.
+c     Default is no command.
 c@ options
 c     Task enrichment parameters. Several can be given, separated by
 c     commas. Minimum match is used. Possible values are:
@@ -315,7 +318,7 @@ c       nocal   Do not apply antenna gain calibration.
 c       nopass  Do not apply bandpass correction.
 c       nopol   Do not apply polarisation leakage correction.
 c
-c$Id: pgflag.for,v 1.29 2014/10/24 04:16:34 wie017 Exp $
+c$Id: pgflag.for,v 1.30 2016/10/05 23:06:50 wie017 Exp $
 c--
 c
 c  History:
@@ -463,8 +466,8 @@ c
       logical uvDatOpn
 
       version = versan ('pgflag',
-     :                  '$Revision: 1.29 $',
-     :                  '$Date: 2014/10/24 04:16:34 $')
+     :                  '$Revision: 1.30 $',
+     :                  '$Date: 2016/10/05 23:06:50 $')
 
 c
 c Get user inputs
@@ -710,8 +713,8 @@ c     Now plot the data.
            endif
            previous_bl = cbl
          endif
-c         write(status,'(A,I6,I6)') pressed(1:1),int(anint(curs_x)),
-c     *        int(anint(curs_y))
+c         write(status,'(A,I6,I6)') 'Command: '//pressed(1:1),
+c     *        int(anint(curs_x)),int(anint(curs_y))
 c         call output(status)
 c     Do what the user wants and nobody gets hurt.
          if ((pressed(1:1).eq.'n').or.(pressed(1:1).eq.'p')) then
@@ -1094,7 +1097,8 @@ c     fiddle the colour amplitude scale
             needplot=.true.
             plot_main=.true.
          elseif (pressed(1:1).eq.'.') then
-            call output('Resetting colour amplitude scaling.')
+            if (verbose) 
+     *         call output('Resetting colour amplitude scaling.')
             use_fiddle=.false.
             needplot=.true.
             plot_main=.true.
@@ -1104,7 +1108,7 @@ c     fiddle the colour amplitude scale
             colour_from_window=.false.
             scale_locked=.false.
          elseif (pressed(1:1).eq.'=') then
-            call output('Autoscaling colour amplitude.')
+            if (verbose) call output('Autoscaling colour amplitude.')
             needplot=.true.
             plot_main=.true.
             plot_points=.true.
