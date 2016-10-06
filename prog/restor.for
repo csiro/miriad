@@ -70,7 +70,7 @@ c                is used.
 c@ out
 c       The output restored image.  No default.
 c
-c$Id: restor.for,v 1.13 2015/10/29 01:31:49 sau078 Exp $
+c$Id: restor.for,v 1.14 2016/10/06 01:22:40 wie017 Exp $
 c--
 c
 c  History:
@@ -125,8 +125,8 @@ c-----------------------------------------------------------------------
       external  itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('restor',
-     *                 '$Revision: 1.13 $',
-     *                 '$Date: 2015/10/29 01:31:49 $')
+     *                 '$Revision: 1.14 $',
+     *                 '$Date: 2016/10/06 01:22:40 $')
 
 c     Get the input parameters.
       call keyini
@@ -759,7 +759,7 @@ c     A retry has been built in to cope with beams with high sidelobes
 c       Now perform the fit using a proper least squares routine.
         call nllsqu(3,nP*nP,x,dx,MAXITER,0.0,0.005/3,.true.,ifail,
      *    func,derive,f,fp,dx,dfdx,aa)
-        if (retry.eq.2.and.ifail.eq.3) then
+        if (retry.eq.2.and.ifail.gt.0) then
 	   thresh=0.33
 	else
 	   retry=1
