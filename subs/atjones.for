@@ -37,7 +37,7 @@ c  Output:
 c    Jo   The 2x2 Jones matrix which is real-valued for the ATCA.
 c    pb   The mean total intensity primary beam response at this point.
 c
-c $Id: atjones.for,v 1.3 2010/08/05 01:08:46 cal103 Exp $
+c $Id: atjones.for,v 1.4 2016/10/28 00:43:28 wie017 Exp $
 c-----------------------------------------------------------------------
       include 'mirconst.h'
 
@@ -156,4 +156,254 @@ c       X-band (3cm) response.
         call bug('f','Polarimetric response not known at this freq')
       endif
 
+      end
+
+      subroutine atJones2(rad,psi,freq,Jo,pb)
+
+      real rad, psi, pb
+      complex Jo(2,2)
+      double precision freq
+
+c  Compute the Jones matrix for the ATCA antennas for a particular
+c  frequency and position in the primary beam.  Also compute the primary
+c  beam response. This version works from a table of beam measurements.
+c
+c  In general, Jones matrices are complex-valued.  The coherence matrix
+c  is given by the product of J * transpose(conjugate(J)), i.e.
+c
+c    XX = J(1,1)*conjg(J(1,1)) + J(1,2)*conjg(J(1,2))
+c    YY = J(2,1)*conjg(J(2,1)) + J(2,2)*conjg(J(2,2))
+c    XY = J(1,1)*conjg(J(2,1)) + J(1,2)*conjg(J(2,2))
+c    YX = J(2,1)*conjg(J(1,1)) + J(2,2)*conjg(J(1,2))
+c       = conjg(XY)
+c
+      include 'mirconst.h'
+      complex J(4,16,14,100)
+      real P(14,100)
+      integer band,f0,df,nf,nr,nth
+      real dr,dth
+      common /jtable/ J,P,band,f0,df,nf,nr,nth,dr,dth
+c      
+      real r,th,f,rmu,tmu,fmu
+      integer ir,ith,ifr,i,l,m,typ,ir2,ith2,ifr2
+      logical ok
+      complex a(4,4,4),b(4,4)
+      integer xr(4),xt(4),xf(4),kr,kt,kf
+c
+      complex trilin,bicubicInterpolate,tricubicInterpolate     
+c
+      r=rad/dr*180/PI
+      th=psi*180/PI
+      if (th.lt.0) th=th+360
+      if (th.ge.360) th=th-360
+      th=th/dth
+      f=max(0.d0,(freq*1000-f0)/df)
+      typ=2
+c
+c     0'th order: return nearest value
+c      
+      if (typ.eq.0) then
+        ok=.true.
+        ith=int(th+0.5)+1
+        if (ith.gt.nth) ith=1
+        tmu=int(th)-th
+        ir=int(r+0.5)+1
+        ok=ok.and.(ir.le.nr)
+        ifr=int(f+0.5)+1
+        ok=ok.and.(ifr.ge.1.and.ifr.le.nf)
+        if (ok) then
+          Jo(1,1)=J(1,ith,ir,ifr)
+          Jo(1,2)=J(2,ith,ir,ifr)
+          Jo(2,1)=J(3,ith,ir,ifr)
+          Jo(2,2)=J(4,ith,ir,ifr)
+          pb=P(ir,ifr)
+        else
+          Jo(1,1)=0
+          Jo(1,2)=0
+          Jo(2,1)=0
+          Jo(2,2)=0 
+        endif
+      else if (typ.ge.1) then
+c     1st order: linear interpolation
+        ith=int(th)
+        tmu=th-ith
+        ith=ith+1
+        if (ith.gt.nth) ith=1
+        ith2=ith+1
+        if (ith2.gt.nth) ith2=1
+        ir=int(r)
+        rmu=r-ir
+        ir=min(nr,ir+1)
+        ir2=min(nr,ir+1)
+        ifr=int(f)
+        fmu=f-ifr
+        ifr=min(nf,ifr+1)
+        ifr2=min(nf,ifr+1)
+        do i=1,4
+          l=(i+1)/2
+          m=i
+          if (m.gt.2) m=m-2
+          if (typ.eq.1) then
+c         Use trilinear interpolation  
+            Jo(l,m)=trilin(J(i,ith,ir,ifr),J(i,ith,ir,ifr2),
+     *                     J(i,ith,ir2,ifr),J(i,ith,ir2,ifr2),
+     *                     J(i,ith2,ir,ifr),J(i,ith2,ir,ifr2),
+     *                     J(i,ith2,ir2,ifr),J(i,ith2,ir2,ifr2),
+     *                     tmu,rmu,fmu)
+          else if (typ.eq.2) then
+c         Use tricubic interpolation
+c         Boundary conditions: for r<0 reflect, for theta periodic,
+c         for others constant (for now, could use extrapolation) 
+            xt(1)=ith-1
+            if (xt(1).eq.0) xt(1)=nth
+            xt(2)=ith
+            xt(3)=ith2
+            xt(4)=ith2+1
+            if (xt(4).gt.nth) xt(4)=1
+            xr(1)=ir-1
+            if (xr(1).eq.0) xr(1)=2
+            xr(2)=ir
+            xr(3)=ir2
+            xr(4)=min(ir2+1,nr)
+            xf(1)=max(ifr-1,1)
+            xf(2)=ifr
+            xf(3)=ifr2
+            xf(4)=min(ifr2+1,nf)
+            do kf=1,4
+              do kr=1,4
+                do kt=1,4
+                  a(kt,kr,kf)= J(i,xt(kt),xr(kr),xf(kf))
+                enddo
+              enddo
+            enddo         
+            Jo(l,m)=tricubicInterpolate(a,fmu,rmu,tmu)
+          endif
+        enddo
+        if (typ.eq.1) then
+          pb = P(ir,ifr)*(1-rmu)*(1-fmu)+P(ir,ifr2)*(1-rmu)*fmu+
+     *       P(ir2,ifr)*rmu*(1-fmu)+P(ir2,ifr2)*rmu*fmu
+        else if (typ.eq.2) then
+          do kf=1,4
+            do kr=1,4
+              b(kr,kf)=P(xr(kr),xf(kf))
+            enddo
+          enddo
+          pb = bicubicInterpolate(b,fmu,rmu)
+        endif
+      endif
+      end
+      
+      subroutine atJLoad(freq)
+      double precision freq
+c      
+      integer f,ir,it,i,pol
+      character*80 fname,pname,mircat
+      character*160 stcat
+      real def,rval,ival
+c
+      complex J(4,16,14,100)
+      real P(14,100)
+      integer band,f0,df,nf,nr,nth
+      real dr,dth
+      common /jtable/ J,P,band,f0,df,nf,nr,nth,dr,dth
+      
+      def=0.0
+      if (freq.gt.1.d0.and.freq.lt.3.5d0) then
+        band=1
+      else
+        band=0
+      endif
+      if (band.eq.0) call bug('f','Unsupported frequency')
+      if (band.eq.1) then
+        nf=14
+        nr=14
+        nth=16
+        dr=0.05
+        dth=360.0/nth
+        f0=1268
+        df=128
+c        write(*,*) 'ATJLoad: using ',nf,' freqs, f0=',f0,', df=',df
+        call getenv('MIRCAT',mircat)
+        fname='/Jones1268.txt'
+        pname='/VoltBeam1268.txt'
+        do i=1,nf
+          f=f0+(i-1)*df
+          write(fname(7:10),'(I4)') f
+          call tinOpen(stcat(mircat,fname),'s')
+          do it=1,nth
+            J(1,it,1,i)=1
+            J(2,it,1,i)=0
+            J(3,it,1,i)=0
+            J(4,it,1,i)=1
+          enddo
+          do ir=2,nr
+            do it=1,nth
+              do pol=1,4
+                call tinGetr(rval,def)
+                call tinGetr(ival,def)
+                J(pol,it,ir,i)=complex(rval,ival)
+              enddo
+            enddo
+          enddo
+          call tinClose
+          write(pname(10:13),'(I4)') f
+          call tinOpen(stcat(mircat,pname),'s')
+          do ir=1,nr
+            call tinGetr(P(ir,i),def)
+          enddo
+          call tinClose
+        enddo
+      endif
+      end
+        
+      
+      complex function trilin(v000,v001,v010,v011,v100,v101,v110,v111,
+     *                        x,y,z)
+      complex v000,v001,v010,v011,v100,v101,v110,v111
+      real x,y,z 
+c     Do trilinear interpolation (after Paul Bourke)
+c     The v000 to v111 are the corners of the cube we are interpolating
+c     x,y,z are the position within the unit cube (0<=x,y,z<=1)   
+      trilin=v000*(1 - x)*(1 - y)*(1 - z) +
+     *       v100*     x *(1 - y)*(1 - z) + 
+     *       v010*(1 - x)*     y *(1 - z) + 
+     *       v001*(1 - x)*(1 - y)*     z  +
+     *       v101*     x *(1 - y)*     z  + 
+     *       v011*(1 - x)*     y *     z  + 
+     *       v110*     x *     y *(1 - z) + 
+     *       v111*     x *     y *     z
+      end
+      
+      complex function cubicInterpolate(p, x)
+      complex p(4)
+      real x
+      cubicInterpolate = p(2) + 0.5 * x*(p(3) - p(1) + 
+     *  x*(2.0*p(1) - 5.0*p(2) + 4.0*p(3) - p(4) + 
+     *  x*(3.0*(p(2) - p(3)) + p(4) - p(1))))
+      end
+
+
+      complex function bicubicInterpolate(p,x,y)
+      complex p(4,4)
+      real x,y
+      complex arr(4)
+      complex cubicInterpolate
+      arr(1) = cubicInterpolate(p(1,1), y)
+      arr(2) = cubicInterpolate(p(1,2), y)
+      arr(3) = cubicInterpolate(p(1,3), y)
+      arr(4) = cubicInterpolate(p(1,4), y)
+      bicubicInterpolate=cubicInterpolate(arr, x)
+      end
+
+
+      complex function tricubicInterpolate(p,x,y,z)
+      complex p(4,4,4)
+      real x,y,z
+      complex arr(4)
+      complex cubicInterpolate,bicubicInterpolate
+      arr(1) = bicubicInterpolate(p(1,1,1), y, z)
+      arr(2) = bicubicInterpolate(p(1,1,2), y, z)
+      arr(3) = bicubicInterpolate(p(1,1,3), y, z)
+      arr(4) = bicubicInterpolate(p(1,1,4), y, z)
+      tricubicInterpolate=cubicInterpolate(arr, x)
       end
