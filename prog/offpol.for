@@ -37,8 +37,11 @@ c         raw      Generate images of the XX,YY,XY and YX responses,
 c                  rather than the Stokes responses.
 c         subtract Subtract off the circularly symmetric portion of the
 c                  primary beam response from I, XX and YY responses.
+c         new16    Use the measured patterns for 16cm, these have some
+c                  obvious flaws but may give a better indication of the
+c                  current instrumental polaristion
 c
-c$Id: offpol.for,v 1.7 2013/08/30 01:49:21 wie017 Exp $
+c$Id: offpol.for,v 1.8 2016/10/28 00:42:38 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -56,13 +59,14 @@ c     Observatory latitude.
       double precision LAT
       parameter (LAT = -30d0*DD2R)
 
-      logical   doraw, dosub, flag(MAXDIM)
+      logical   doraw, dosub, donew16, flag(MAXDIM)
       integer   coObj, i, ic, iha, ipol, j, jc, lout, nha, nx, ny,
      *          pbObj, stokes(8), toff(4)
-      real      c2chi, chi, cutoff, Jones(2,2), maxrad, off(MAXDIM,4),
+      real      c2chi, chi, cutoff, maxrad, off(MAXDIM,4),jones(2,2),
      *          pb, pbfwhm, psi, q, rad, s2chi, u, x, xx, xy, y, yx, yy
       double precision cdelt1, cdelt2, crpix1, crpix2, crval1, crval2,
      *          dha, freq, ha, ha0, ha1
+      complex cJones(2,2)
       character stokId(8)*2, out*64, version*72
 
       external  len1, versan
@@ -73,8 +77,8 @@ c     Observatory latitude.
       data stokId /'i', 'q', 'u', 'v', 'xx', 'yy', 'xy', 'yx'/
 c-----------------------------------------------------------------------
       version = versan('offpol',
-     *                 '$Revision: 1.7 $',
-     *                 '$Date: 2013/08/30 01:49:21 $')
+     *                 '$Revision: 1.8 $',
+     *                 '$Date: 2016/10/28 00:42:38 $')
 
 c     Get the inputs.
       call keyini
@@ -101,9 +105,13 @@ c     Get the inputs.
 
       call keyd('freq',freq,1.384d0)
 
-      call GetOpt(doraw,dosub)
+      call GetOpt(doraw,dosub,donew16)
       call keyfin
-
+      if ((freq.lt.1.d0.or.freq.gt.3.1d0).and.donew16) then
+        call bug('w','Option donew16 ignored due to frequency')
+        donew16=.false.
+      endif
+      
       ic = nx/2 + 1
       jc = ny/2 + 1
       crpix1 = dble(ic)
@@ -139,6 +147,8 @@ c     Open an output map for each polarization.
      *    crval1, crval2, freq, stokes(i),
      *    out(1:lout) // '.' // stokId(i), version)
       enddo
+      
+      if (donew16) call atJLoad(freq)
 
 c     Loop over the map.
       do j = 1, ny
@@ -151,17 +161,19 @@ c     Loop over the map.
 
 c         Blank the corners.
           x = (i - ic)*cdelt1
-          flag(i) = sqrt(x*x + y*y).lt.pbfwhm
+          flag(i) = sqrt(x*x + y*y).lt.pbfwhm*2.0
         enddo
 
         do iha = 1, nha
           ha = dha*(iha-1) + ha0
           call parang(0d0,crval2,ha,LAT,chi)
-          chi = chi + CHIOFF
+          if (.not.donew16) chi = chi + CHIOFF 
+c          use CHIOFF for model wrt X feed axis
+c          new16 model is in az/el frame
 
           if (ROTATE) then
-            c2chi = cos(2.0*chi)
-            s2chi = sin(2.0*chi)
+            c2chi = cos(2.0*(chi+CHIOFF))
+            s2chi = sin(2.0*(chi+CHIOFF))
           else
             c2chi = 1.0
             s2chi = 0.0
@@ -176,22 +188,38 @@ c         Blank the corners.
               pb = 1.0
             else
 c             Compute the Jones matrix at this point.
-              x = (i - ic)*cdelt1
+c              x = (i - ic)*cdelt1 - for X feed axis model
+c             reflect for az/el model and reverse atan args
+              x = -(i - ic)*cdelt1
               rad = sqrt(x*x + y*y)
-              psi = atan2(x,y)
-              call atjones(rad,psi-chi,freq,Jones,pb)
+              psi = atan2(y,x)
+              if (donew16) then
+                call atjones2(rad,psi-chi,freq,cJones,pb)
 
-c             Coherence matrix.
-              xx = Jones(1,1)*Jones(1,1) + Jones(1,2)*Jones(1,2)
-              yy = Jones(2,1)*Jones(2,1) + Jones(2,2)*Jones(2,2)
-              xy = Jones(1,1)*Jones(2,1) + Jones(1,2)*Jones(2,2)
-              yx = xy
+c               Coherence matrix.
+                xx = (cJones(1,1)*conjg(cJones(1,1))+
+     *            cJones(1,2)*conjg(cJones(1,2)))*pb*pb
+                yy = (cJones(2,1)*conjg(cJones(2,1))+
+     *            cJones(2,2)*conjg(cJones(2,2)))*pb*pb
+                xy = (cJones(1,1)*conjg(cJones(2,1))+
+     *            cJones(1,2)*conjg(cJones(2,2)))*pb*pb
+                yx = (conjg(cJones(1,1))*cJones(2,1)+
+     *            conjg(cJones(1,2))*cJones(2,2))*pb*pb
+              else
+                call atjones(rad,psi-chi,freq,Jones,pb)
+
+c               Coherence matrix.
+                xx = Jones(1,1)*Jones(1,1) + Jones(1,2)*Jones(1,2)
+                yy = Jones(2,1)*Jones(2,1) + Jones(2,2)*Jones(2,2)
+                xy = Jones(1,1)*Jones(2,1) + Jones(1,2)*Jones(2,2)
+                yx = xy
+              endif
             endif
 
 c           Subtract the primary beam response?
             if (dosub) then
-              xx = xx - pb
-              yy = yy - pb
+              xx = xx - pb*pb
+              yy = yy - pb*pb
             endif
 
             if (doraw) then
@@ -212,7 +240,7 @@ c             Stokes-Q, and -U.
               off(i,3) = off(i,3) + q*s2chi + u*c2chi
 
 c             Stokes-V (zero, because xy and yx are real).
-c             off(i,4) = off(i,4) + 0.5*real((0.0,-1.0)*(xy-yx))
+              off(i,4) = off(i,4) + 0.5*real((0.0,-1.0)*(xy-yx))
             endif
           enddo
         enddo
@@ -235,21 +263,22 @@ c             off(i,4) = off(i,4) + 0.5*real((0.0,-1.0)*(xy-yx))
 
 c***********************************************************************
 
-      subroutine GetOpt(doraw,dosub)
+      subroutine GetOpt(doraw,dosub, donew16)
 
-      logical doraw, dosub
+      logical doraw, dosub, donew16
 c-----------------------------------------------------------------------
       integer    NOPTS
-      parameter (NOPTS=2)
+      parameter (NOPTS=3)
 
       character opts(NOPTS)*8
       logical   present(NOPTS)
 
-      data opts/'raw     ','subtract'/
+      data opts/'raw     ','subtract','new16   '/
 c-----------------------------------------------------------------------
       call options('options',opts,present,NOPTS)
       doraw = present(1)
       dosub = present(2)
+      donew16 = present(3)
 
       end
 
