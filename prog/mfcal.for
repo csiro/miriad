@@ -83,7 +83,7 @@ c                   fluxscale above 11 GHz.
 c                   See the help on "oldflux" for more information.
 c@ tol
 c	Solution convergence tolerance. Default is 0.001.
-c$Id: mfcal.for,v 1.17 2016/05/01 22:31:05 wie017 Exp $
+c$Id: mfcal.for,v 1.18 2017/03/06 03:50:09 wie017 Exp $
 c--
 c  History:
 c    rjs   8jul92 Original version.
@@ -133,6 +133,7 @@ c                 Also use mem.h for dynamic memory
 c    vjm  24oct12 Tidy up text explaining the interval options.
 c    mhw  02apr13 Avoid producing NaNs when there are zeroes in the data
 c    mhw  24apr14 Allow higher order flux models
+c    mhw  04mar17 Speed up hash table clearing for small spectra
 c
 c  Problems:
 c    * Should do simple spectral index fit.
@@ -146,8 +147,8 @@ c------------------------------------------------------------------------
 	parameter(MAXSOLN=1024,MAXPOL=2)
 c
 	character version*(*)
-	parameter(version='MfCal: $Revision: 1.17 $, '//
-     *             '$Date: 2016/05/01 22:31:05 $')
+	parameter(version='MfCal: $Revision: 1.18 $, '//
+     *             '$Date: 2017/03/06 03:50:09 $')
 c
 	integer tno
 	integer pWGains,pFreq,pSource,pPass,pGains,pTau
@@ -1415,6 +1416,7 @@ c
 	    present(i,p) = .false.
 	  enddo
 	enddo
+
 c
 c  Loop over everything.
 c
@@ -1461,7 +1463,17 @@ c
 	      tlast  = tfirst
 	      ninter = 0
 	      Count(nsoln) = 0
-	      call HashIni
+c
+c  See if we can speed up the clearing of the giant hash table
+c  when we have only changed a small number of values	      
+c
+	      if (nsoln.gt.1) then
+		if (Count(nsoln-1).lt.5000) then
+ 		  call HashIni2(Count(nsoln-1),nvis,VID)
+		else
+		  call HashIni
+		endif
+	      endif
 	    else if(preamble(3).lt.tfirst)then
 	      call bug('f','Data does not appear to be in time order')
  	    endif
@@ -1574,6 +1586,46 @@ c
 	if(first)nhash = prime(MAXHASH-1)
 	first = .false.
 c
+	end
+c************************************************************************
+	subroutine hashIni2(n,nslot,VID)
+c
+	implicit none
+	integer n,nslot
+        double precision VID(nslot),VisId
+c
+c  Reinitialize the last n slots used in the hash table.
+c
+c    Inputs:
+c    n          number of slots to initialize
+c    nslot      number of slots used sofar	
+c    VID	A positive 'integer' unique to a particular channel/polarisation/antenna pair
+c------------------------------------------------------------------------
+	include 'mfcal.h'
+c
+	integer idx,i
+        double precision d
+c
+c  Find this channel in the hash table.
+c
+	do i=0,n-1
+	  VisId=VID(nslot-i)
+	  d = mod(1.d0*VisId,1.d0*nHash) + 1
+	  idx = nint(d)
+	  do while(Hashval(idx).ne.0.and.Hashval(idx).ne.VisId)        
+	    idx = idx + 1
+	  enddo
+	  if(idx.eq.MAXHASH)then
+	    idx = 1
+	    do while(Hashval(idx).ne.0.and.Hashval(idx).ne.VisId)        
+	      idx = idx + 1
+	    enddo
+	    if(idx.eq.MAXHASH)
+     *        call bug('f','Hash table overflow, in hashIdx')
+	  endif
+	  hashval(idx) = 0
+	  hash(idx) = 0
+	enddo
 	end
 c************************************************************************
 	subroutine hashIdx(VisId,nslot,slot,new)
