@@ -382,6 +382,9 @@ c         fitted to have a smaller size than this has its FWHM and PA
 c         set to those of the synthesised beam, and is refit for the
 c         position and amplitude only.
 c
+c       "bright" If your sources are too bright for the default format
+c         using this option will shift the decimal point right one digit    
+c
 c       Some common combinations of options I have used (for examples):
 c       options=kva,fdri,norm,sig
 c       options=old,mark,ascii
@@ -410,8 +413,8 @@ c       f8.3 and f9.3 for peak and integrated flux densities
 c       respectively.  This means that if your source's peak flux
 c       is > 9999.999 mJy, (i.e. 10 Jy) or its integrated flux
 c       is > 99999.999 mJy (i.e., 100 Jy), then it will not be
-c       displayed properly. People detecting very bright sources - you
-c       have been warned!
+c       displayed properly. For people detecting very bright sources - 
+c       use options=bright to use f8.2 and f9.2 instead.
 c
 c       If 'options=fdrimg', 'sigmaimg', or 'normimg' are used with a
 c       subregion of the image (specified by the 'region' keyword), the
@@ -470,7 +473,7 @@ c       3) Check the rms of the background. If this is high then firstly
 c          the fit may not be good (as per 1), and secondly the source
 c          is in a noisy area and should be treated with caution anyway.
 c
-c$Id: sfind.for,v 1.18 2014/08/22 01:54:42 wie017 Exp $
+c$Id: sfind.for,v 1.19 2017/03/08 05:13:17 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -520,7 +523,7 @@ c-----------------------------------------------------------------------
      *  donylab(2), dopixel, gaps, doabut, doaxlab, doaylab,
      *  mark, doerase, dowedge, dofid, grid, nofit, asciiart,
      *  auto, negative, pbcor, oldsfind, fdrimg, sigmaimg, normimg,
-     *  kvannot, fdrpeak, allpix, psfsize, rmsimg
+     *  kvannot, fdrpeak, allpix, psfsize, rmsimg, bright
 
       data ipage, scale /0, 0.0, 0.0/
       data dmm /1e30, -1e30, -1.0/
@@ -529,8 +532,8 @@ c-----------------------------------------------------------------------
       character versan*72, version*72
 c-----------------------------------------------------------------------
       version = versan('sfind',
-     *                 '$Revision: 1.18 $',
-     *                 '$Date: 2014/08/22 01:54:42 $')
+     *                 '$Revision: 1.19 $',
+     *                 '$Date: 2017/03/08 05:13:17 $')
 c
 c Get user inputs
 c
@@ -539,7 +542,7 @@ c
      *   eqscale, nx, ny, cs, dopixel, mark, doerase, dowedge, dofid,
      *   grid, cut, rmsbox, alpha, xrms, nofit, asciiart, auto,
      *   negative, pbcor, oldsfind, sigmaimg, rmsimg, fdrimg, normimg,
-     *   kvannot, fdrpeak, allpix, psfsize)
+     *   kvannot, fdrpeak, allpix, psfsize, bright)
 c
 c Open log files
 c
@@ -742,7 +745,7 @@ c Interactive graphical source finding routine
 c
          call search_old (lin, win(1), win(2), memr(ipim), memi(ipnim),
      *     blc, ibin, jbin, krng, llog, mark, cut, rmsbox, xrms,
-     *     nofit, asciiart, auto, negative, pbcor, in, psfsize)
+     *     nofit, asciiart, auto, negative, pbcor, in, psfsize, bright)
 c
 c Increment sub-plot viewport locations and row counter
 c
@@ -785,12 +788,12 @@ c
         if (oldsfind) then
          call search_old (lin, win(1), win(2), memr(ipim), memi(ipnim),
      *     blc, ibin, jbin, krng, llog, mark, cut, rmsbox, xrms,
-     *     nofit, asciiart, auto, negative, pbcor, in, psfsize)
+     *     nofit, asciiart, auto, negative, pbcor, in, psfsize, bright)
         else
          call search(lin, win(1), win(2), memr(ipim), memi(ipnim),
      *     blc, ibin, jbin, krng, llog, rmsbox, alpha, xrms, auto,
      *     negative, pbcor, in, fdrimg, sigmaimg, rmsimg,
-     *     normimg, kvannot, fdrpeak, allpix, psfsize, size)
+     *     normimg, kvannot, fdrpeak, allpix, psfsize, size, bright)
         endif
        enddo
 c
@@ -819,7 +822,7 @@ c
 c
       subroutine search_old (lin, nx, ny, image, nimage, blc, ibin,
      *   jbin, krng, llog, mark, cut, rmsbox, xrms, nofit, asciiart,
-     *   auto, negative, pbcor, in, psfsize)
+     *   auto, negative, pbcor, in, psfsize, bright)
 
       integer   lin, nx, ny
       real      image(nx,ny)
@@ -828,7 +831,7 @@ c
       real      cut
       integer   rmsbox
       real      xrms
-      logical   nofit, asciiart, auto, negative, pbcor
+      logical   nofit, asciiart, auto, negative, pbcor, bright
       integer   nimage(nx,ny)
       character in*(*)
       logical   psfsize
@@ -869,6 +872,7 @@ c     negative  inverts image: positive pixels become negative and vice
 c               versa
 c     pbcor     true to correct fluxes by primary beam attenuation
 c     in        image name
+c     bright    bright sourcelist, shift output format
 c
 c-----------------------------------------------------------------------
       double precision wa(2), posns(2)
@@ -1067,27 +1071,50 @@ c Write output line to screen, but only if "auto" option not selected
 c
         if (nofit) then
           if (negative) then
-           write(line,40) -peak*1000.0, xpos, ypos,
-     *                   -sigma*1000.0, mult
+            if (bright) then
+              write(line,45) -peak*1000.0, xpos, ypos,
+     *             -sigma*1000.0, mult
+            else
+              write(line,40) -peak*1000.0, xpos, ypos,
+     *             -sigma*1000.0, mult
+            endif  
           else
-           write(line,40) peak*1000.0, xpos, ypos,
-     *                   sigma*1000.0, mult
+            if (bright) then
+              write(line,45) peak*1000.0, xpos, ypos,
+     *             sigma*1000.0, mult
+            else
+              write(line,40) peak*1000.0, xpos, ypos,
+     *             sigma*1000.0, mult
+            endif
           endif
 40        format(f8.3,2x,f7.2,2x,f7.2,2x,f7.3,2x,f5.1)
+45        format(f8.2,2x,f7.2,2x,f7.2,2x,f7.2,2x,f5.1)
         else
           if (negative) then
-           write(line,50) xposerr,yposerr,-pkfl,pkflerr,-intfl,
-     *        amaj,amin,posa,-sigma*1000.0,-rms*1000.0
+            if (bright) then
+              write(line,51) xposerr,yposerr,-pkfl,pkflerr,-intfl,
+     *             amaj,amin,posa,-sigma*1000.0,-rms*1000.0
+            else
+              write(line,50) xposerr,yposerr,-pkfl,pkflerr,-intfl,
+     *             amaj,amin,posa,-sigma*1000.0,-rms*1000.0
+            endif
           else
-           write(line,50) xposerr,yposerr,pkfl,pkflerr,intfl,
-     *        amaj,amin,posa,sigma*1000.0,rms*1000.0
+            if (bright) then
+              write(line,51) xposerr,yposerr,pkfl,pkflerr,intfl,
+     *             amaj,amin,posa,sigma*1000.0,rms*1000.0
+            else
+              write(line,50) xposerr,yposerr,pkfl,pkflerr,intfl,
+     *             amaj,amin,posa,sigma*1000.0,rms*1000.0
+            endif
           endif
 50        format(1x,f6.3,3x,f5.2,2x,f8.3,1x,f6.3,1x,f9.3,1x,
+     *           3(f5.1,1x),f6.3,2x,f6.3)
+ 51       format(1x,f6.3,3x,f5.2,2x,f8.2,1x,f6.2,1x,f9.2,1x,
      *           3(f5.1,1x),f6.3,2x,f6.3)
         endif
         line = radec(1)(1:radeclen(1))//' '//
      *         radec(2)(1:radeclen(2))//' '//line
-        if (.not.auto) call output(line)
+        if (.not.auto ) call output(line)
 c
 c increment number of sources detected
 c
@@ -2158,7 +2185,7 @@ c
      *                  dowedge, dofid, grid, nofit, asciiart, auto,
      *                  negative, pbcor, oldsfind, fdrimg, sigmaimg,
      *                  rmsimg, normimg, kvannot, fdrpeak, allpix,
-     *                  psfsize)
+     *                  psfsize,bright)
 c-----------------------------------------------------------------------
 c     Decode options array into named variables.
 c
@@ -2191,15 +2218,16 @@ c               just those above the fdr threshold.
 c     allpix    true if want to use all pixels, not just monotonically
 c               decreasing ones.
 c     psfsize   true to restrict minimum source size to that of the psf.
+c     bright    true for bright sourcelist: shift output flux format
 c-----------------------------------------------------------------------
 c
       logical do3val, do3pix, eqscale, mark, doerase, dofid,
      * dowedge, grid, nofit, asciiart, auto, negative, pbcor,
      * oldsfind, fdrimg, sigmaimg, rmsimg, normimg, kvannot,
-     * fdrpeak, allpix, psfsize
+     * fdrpeak, allpix, psfsize,bright
 cc
       integer maxopt
-      parameter (maxopt = 22)
+      parameter (maxopt = 23)
 c
       character opshuns(maxopt)*8
       logical present(maxopt)
@@ -2210,7 +2238,7 @@ c
      *              'pbcorr  ', 'oldsfind', 'fdrimg  ',
      *              'sigmaimg', 'normimg ', 'kvannot ',
      *              'fdrpeak ', 'allpix  ', 'psfsize ',
-     *              'rmsimg'/
+     *              'rmsimg  ', 'bright  '/
 c-----------------------------------------------------------------------
       call optcg('options', opshuns, present, maxopt)
 c
@@ -2236,6 +2264,7 @@ c
       allpix   =      present(20)
       psfsize  =      present(21)
       rmsimg   =      present(22)
+      bright   =      present(23)
 c make auto true for fdr-type analysis regardless of user input
       if (.not.oldsfind) auto = .true.
 c
@@ -2255,7 +2284,7 @@ c
      *   eqscale, nx, ny, cs, dopixel, mark, doerase, dowedge, dofid,
      *   grid, cut, rmsbox, alpha, xrms, nofit, asciiart, auto,
      *   negative, pbcor, oldsfind, sigmaimg, rmsimg, fdrimg, normimg,
-     *   kvannot, fdrpeak, allpix, psfsize)
+     *   kvannot, fdrpeak, allpix, psfsize, bright)
 c-----------------------------------------------------------------------
 c     Get the unfortunate user's long list of inputs
 c
@@ -2313,6 +2342,7 @@ c              just those above the fdr threshold.
 c   allpix     true if want to use all pixels, not just monotonically
 c              decreasing ones
 c   psfsize    true to restrict minimum source size to that of the psf
+c   bright     fix output format for bright source catalog      
 c-----------------------------------------------------------------------
 
       integer maxlev, nx, ny, nlevs, ibin(2), jbin(2), kbin(2), rmsbox
@@ -2321,7 +2351,7 @@ c-----------------------------------------------------------------------
       logical do3val, do3pix, eqscale, dopixel, mark, doerase,
      * dowedge, dofid, grid, nofit, asciiart, auto, negative, pbcor,
      * oldsfind, fdrimg, sigmaimg, rmsimg, normimg, kvannot, fdrpeak,
-     * allpix, psfsize
+     * allpix, psfsize, bright
 
       integer ntype, nlab, ntype2, nimtype
       parameter (ntype = 14, ntype2 = 3)
@@ -2382,7 +2412,7 @@ c
       call decopt(do3val, do3pix, eqscale, mark, doerase, dowedge,
      *             dofid, grid, nofit, asciiart, auto, negative,
      *             pbcor, oldsfind, fdrimg, sigmaimg, rmsimg, normimg,
-     *             kvannot, fdrpeak, allpix, psfsize)
+     *             kvannot, fdrpeak, allpix, psfsize,bright)
       if (.not.dopixel) then
         dofid = .false.
         dowedge = .false.
@@ -4002,7 +4032,7 @@ c     Done writing to lOut1, close it if it was open.
 
       subroutine fdrfit(nx,ny,image,nimage,bvol,bpap,bvolp,bmajp,bminp,
      *  pcut,image2,lin,krng,blc,bin,negative,pbcor,llog,kvannot,
-     *  fdrpeak,allpix,psfsize,meanimg,sgimg)
+     *  fdrpeak,allpix,psfsize,meanimg,sgimg,bright)
 c-----------------------------------------------------------------------
 c
 c  Input:
@@ -4027,6 +4057,7 @@ c    psfsize    true to restrict minimum source size to that of the psf
 c    nfdrpix    number of pixels detected by FDR
 c    meanimg    image of background mean values
 c    sgimg      image of background sigma values
+c    bright     bright sourcelist - shift output format
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -4041,6 +4072,7 @@ c-----------------------------------------------------------------------
       integer boxsize, dumcount
       integer nimage(nx,ny),bin(2),blc(2),imin,jmin,imax,jmax
       logical fitok,negative,pbcor,kvannot,fdrpeak,allpix,psfsize
+      logical bright
 
       integer iii,jjj,pp,off,sources,radeclen(2),iostat, usedpixels
       real image2(nx,ny),meanimg(nx,ny),sgimg(nx,ny)
@@ -4180,14 +4212,27 @@ c
 c Define output lines
 c
           if (negative) then
-           write(line,50) xposerr,yposerr,-pkfl,pkflerr,-intfl,
-     *        amaj,amin,posa,-sgimg(ii,jj)*1000.0,-rms*1000.0
+            if (bright) then 
+              write(line,55) xposerr,yposerr,-pkfl,pkflerr,-intfl,
+     *         amaj,amin,posa,-sgimg(ii,jj)*1000.0,-rms*1000.0
+            else
+              write(line,50) xposerr,yposerr,-pkfl,pkflerr,-intfl,
+     *         amaj,amin,posa,-sgimg(ii,jj)*1000.0,-rms*1000.0
+            endif
           else
-           write(line,50) xposerr,yposerr,pkfl,pkflerr,intfl,
-     *        amaj,amin,posa,sgimg(ii,jj)*1000.0,rms*1000.0
-          endif
+            if (bright) then 
+              write(line,55) xposerr,yposerr,pkfl,pkflerr,intfl,
+     *         amaj,amin,posa,sgimg(ii,jj)*1000.0,rms*1000.0
+            else
+              write(line,50) xposerr,yposerr,pkfl,pkflerr,intfl,
+     *         amaj,amin,posa,sgimg(ii,jj)*1000.0,rms*1000.0
+           endif
+         endif
+         
 50        format(1x,f6.3,3x,f5.2,2x,f8.3,1x,f6.3,1x,f9.3,1x,
      *           3(f5.1,1x),f6.3,2x,f6.3)
+55        format(1x,f6.3,3x,f5.2,2x,f8.2,1x,f6.2,1x,f9.2,1x,
+     *           3(f5.1,1x),f6.2,2x,f6.2)
           line = radec(1)(1:radeclen(1))//' '//
      *         radec(2)(1:radeclen(2))//' '//line
 c
