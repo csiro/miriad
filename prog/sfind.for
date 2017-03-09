@@ -473,7 +473,7 @@ c       3) Check the rms of the background. If this is high then firstly
 c          the fit may not be good (as per 1), and secondly the source
 c          is in a noisy area and should be treated with caution anyway.
 c
-c$Id: sfind.for,v 1.19 2017/03/08 05:13:17 wie017 Exp $
+c$Id: sfind.for,v 1.20 2017/03/09 01:37:11 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -532,8 +532,8 @@ c-----------------------------------------------------------------------
       character versan*72, version*72
 c-----------------------------------------------------------------------
       version = versan('sfind',
-     *                 '$Revision: 1.19 $',
-     *                 '$Date: 2017/03/08 05:13:17 $')
+     *                 '$Revision: 1.20 $',
+     *                 '$Date: 2017/03/09 01:37:11 $')
 c
 c Get user inputs
 c
@@ -744,7 +744,7 @@ c
 c Interactive graphical source finding routine
 c
          call search_old (lin, win(1), win(2), memr(ipim), memi(ipnim),
-     *     blc, ibin, jbin, krng, llog, mark, cut, rmsbox, xrms,
+     *     blc, ibin(1), jbin(1), krng, llog, mark, cut, rmsbox, xrms,
      *     nofit, asciiart, auto, negative, pbcor, in, psfsize, bright)
 c
 c Increment sub-plot viewport locations and row counter
@@ -787,11 +787,11 @@ c The source-detection subroutine.
 c
         if (oldsfind) then
          call search_old (lin, win(1), win(2), memr(ipim), memi(ipnim),
-     *     blc, ibin, jbin, krng, llog, mark, cut, rmsbox, xrms,
+     *     blc, ibin(1), jbin(1), krng, llog, mark, cut, rmsbox, xrms,
      *     nofit, asciiart, auto, negative, pbcor, in, psfsize, bright)
         else
          call search(lin, win(1), win(2), memr(ipim), memi(ipnim),
-     *     blc, ibin, jbin, krng, llog, rmsbox, alpha, xrms, auto,
+     *     blc, ibin(1), jbin(1), krng, llog, rmsbox, alpha, xrms, auto,
      *     negative, pbcor, in, fdrimg, sigmaimg, rmsimg,
      *     normimg, kvannot, fdrpeak, allpix, psfsize, size, bright)
         endif
@@ -1698,7 +1698,7 @@ c
       subroutine search(lin, nx, ny, image, nimage, blc, ibin, jbin,
      *   krng, llog, rmsbox, alpha, xrms, auto, negative, pbcor, in,
      *   fdrimg, sigmaimg, rmsimg, normimg, kvannot, fdrpeak, allpix,
-     *   psfsize, size)
+     *   psfsize, size, bright)
 c-----------------------------------------------------------------------
 c  This is the *new* master subroutine for the detecting of sources.
 c  It runs subroutine fdr, which makes the normalised image, sigma image
@@ -1737,6 +1737,7 @@ c               just those above the fdr threshold.
 c     allpix    true if want to use all FDR pixels, not just
 c               monotonically decreasing ones.
 c     psfsize   true to restrict minimum source size to that of psf
+c     bright    Use for bright source lists (>10Jy sources)
 c
 c-----------------------------------------------------------------------
       include 'maxdim.h'
@@ -1749,7 +1750,7 @@ c
       integer ipim,ip2im,ip3im,ip4im
       real image(nx,ny), alpha, xrms
       logical negative, pbcor, fdrimg, sigmaimg, rmsimg, normimg,
-     *        auto, kvannot, fdrpeak, allpix, psfsize
+     *        auto, kvannot, fdrpeak, allpix, psfsize, bright
       character in*(*)
 cc
       real bvol, bmaj, bmin, bpa, bvolp, bmajp, bminp, bpap
@@ -1843,7 +1844,7 @@ c selected by FDR to be above the background.
 c
       call fdrfit(nx,ny,image,nimage,bvol,bpap,bvolp,bmajp,bminp,pcut,
      *  memr(ip2im),lin,krng,blc,bin,negative,pbcor,llog,kvannot,
-     *  fdrpeak,allpix,psfsize,memr(ip3im),memr(ip4im))
+     *  fdrpeak,allpix,psfsize,memr(ip3im),memr(ip4im),bright)
 c free meanimg and sgimg memory
       call memfree(ip3im,nx*ny,'r')
       call memfree(ip4im,nx*ny,'r')
