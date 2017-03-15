@@ -1,5 +1,5 @@
 C=======================================================================
-C $Id: maxdim.h,v 1.9 2016/09/13 22:52:33 wie017 Exp $
+C $Id: maxdim.h,v 1.10 2017/03/15 23:36:18 wie017 Exp $
 C-----------------------------------------------------------------------
 C     Size of an INTEGER array used to implement a memory heap.  This
 C     array is the sole variable in blank COMMON in Miriad.  Trial-and-
@@ -16,12 +16,13 @@ C     The default value allocates 128MiB (for normal 4-byte INTEGERs).
 C     Maximum image axis length.  Array dimensions are typically a few
 C     times MAXDIM (never MAXDIM**2) so MAXDIM is associated with a much
 C     smaller allocation of static memory than MAXBUF.  Thus the default
-C     value of MAXDIM is quite generous.  Values of MAXDIM > 32767 cause
-C     segvs in mfclean.  Note that, depending on the algorithm, MAXBUF
-C     may also play an important role in determining the maximum image
-C     size that can be handled.
+C     value of MAXDIM is quite generous. 
+C     The current value of MAXDIM is the largest value that keeps the
+C     memory allocation to store a single image plane below the current
+C     limit of 8GB. Note that invert is limited to 32768, the highest
+C     power of 2 below the limit.
       INTEGER   MAXDIM
-      PARAMETER(MAXDIM = 32*1024)
+      PARAMETER(MAXDIM = 46340)
 
 C     Maximum number of antennas (ATA=64).
       INTEGER   MAXANT
