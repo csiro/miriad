@@ -15,7 +15,7 @@ foreach l (lib/*dylib)
     
     # fix references in all libs and binaries
     foreach i (lib/*dylib bin/*)
-        set old=`otool -L $i | grep -v ":"| grep $lib | sed "s/(.*//"`
+        set old=`otool -L $i |& grep -v ":"| grep $lib | sed "s/(.*//"`
         if "$old" != "" then
         	if "$old" != "$new" then	
             	install_name_tool -change $old $new $i
