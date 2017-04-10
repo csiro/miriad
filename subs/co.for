@@ -62,7 +62,7 @@ c
 c  CARMA customizations:
 c    pkgw  2012may25  Extract some error messages from wcslib
 c
-c $Id: co.for,v 1.51 2016/03/30 00:31:50 wie017 Exp $
+c $Id: co.for,v 1.52 2017/04/10 05:22:38 wie017 Exp $
 c***********************************************************************
 
 c* coCtype -- Parse a world coordinate ctype.
@@ -2369,7 +2369,7 @@ c+
 
       integer lu
       double precision x1(*)
-      character in(*),ing*(*),outg*(*)
+      character in*(*),ing*(*),outg*(*)
       real bmaj1,bmin1,bpa1,bmaj2,bmin2,bpa2
 c  ---------------------------------------------------------------------
 c  Convert the parameters that describe a gaussian between pixel and
