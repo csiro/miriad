@@ -59,7 +59,13 @@ c                    symmetric component).
 c         "correlate" Correlate rather than convolve with the beam.  The
 c                    difference between correlation and convolution are
 c                    only apparent for asymmetric beams.
-c@ scale
+c         "cube"     Like final, but calculate required convolution for
+c                    each plane separately. This option implies final.
+c                    Use this to get the same beamsize in arcsec in all
+c                    planes rather than the same beamsize in pixels.
+c                    Warning: analysis tasks are likely to get source 
+c                    size and total flux wrong for the resulting cube.
+c     @ scale
 c       The scale factor to multiply the output by.  The default is for
 c       CONVOL to determine the appropriate scale factor to make the
 c       output in JY/BEAM.
@@ -72,7 +78,7 @@ c@ sigma
 c       When doing devonvolution (options=divide), this gives a noise
 c       parameter. Default is 0.
 c
-c$Id: convol.for,v 1.10 2013/08/30 01:49:21 wie017 Exp $
+c$Id: convol.for,v 1.11 2017/04/10 05:36:06 wie017 Exp $
 c--
 c  History:
 c    rjs,mchw 18aug89 Converted from RESTORE.
@@ -100,6 +106,7 @@ c    bpw   12mar99 Increase size of map/beam/out to 512 to allow
 c                  directories.
 c    dpr   21jun01 Doc change only
 c    mhw   27oct11 Use ptrdiff type for memory allocations
+c    mhw   07apr17 Add cube option      
 c  Bugs:
 c-----------------------------------------------------------------------
       include 'maxdim.h'
@@ -111,25 +118,26 @@ c-----------------------------------------------------------------------
       parameter (MAXBOX  = 1024, MAXRUNS = 3*maxdim)
 
       logical   asym, corr, divide, dogaus, doscale, final, rect,
-     *          selfscal
+     *          selfscal,dofscale,cube
       integer   Box(MAXBOX), Runs(3,MAXRUNS), blc(3), ifail,
      *          iref, jref, k, l, lBeam, lMap, lOut, n1, n2, nPoint,
-     *          nRuns, naxis, nsize(MAXNAX), nx, ny, trc(3), xmax,
+     *          nRuns, naxis, nsize(MAXNAX), nx, ny, nz, trc(3), xmax,
      *          xmin, xoff, ymax, ymin, yoff
       ptrdiff   handle, pDat
       real      bmaj, bmaj1, bmin, bmin1, bpa, bpa1, crpix1, crpix2,
-     *          factor, sigma, temp
-      double precision cdelt1, cdelt2
+     *          factor, sigma, temp, bmaj0, bmin0, bpa0,
+     *          bmajmap,bminmap,bpamap,bmaj2,bmin2,bpa2,fscale
+      double precision cdelt1, cdelt2, x(3)
       character beam*512, bunit*32, flags*4, map*512, out*512, text*80,
-     *          version*72
+     *          version*72, bunit1*32
 
       logical   BoxRect,keyprsnt
-      character itoaf*8, versan*72
+      character itoaf*8, versan*72, cellscal*8
       external  boxrect, itoaf, keyprsnt, versan
 c-----------------------------------------------------------------------
       version = versan('convol',
-     *                 '$Revision: 1.10 $',
-     *                 '$Date: 2013/08/30 01:49:21 $')
+     *                 '$Revision: 1.11 $',
+     *                 '$Date: 2017/04/10 05:36:06 $')
 c
 c  Get the input parameters.
 c
@@ -144,7 +152,7 @@ c
       endif
       call keya('out',Out,' ')
       call BoxInput('region',map,box,MAXBOX)
-      call GetOpt(final,divide,asym,corr)
+      call GetOpt(final,divide,asym,corr,cube)
       selfscal = .not.(divide .or. keyprsnt('scale'))
       call keyr('scale',factor,1.0)
       call keyr('sigma',sigma,0.0)
@@ -173,11 +181,22 @@ c
       call xyopen(lMap,map,'old',3,nsize)
       nx = nsize(1)
       ny = nsize(2)
+      nz = nsize(3)
       call rdhdi(lMap,'naxis',naxis,MAXNAX)
       call rdhdd(lMap,'cdelt1',cdelt1,1d0)
       call rdhdd(lMap,'cdelt2',cdelt2,1d0)
       naxis = min(naxis,MAXNAX)
-
+      dofscale=.false.
+      if (cube) then
+        call rdhda(lMap,'cellscal',cellscal,'1/F')
+        if (nz.gt.1.and.cellscal.eq.'1/F') then
+          call coInit(lMap)
+          call rdhdr(lMap,'bmaj',bmajmap,0.)
+          call rdhdr(lMap,'bmin',bminmap,0.)
+          call rdhdr(lMap,'bpa',bpamap,0.)
+          dofscale=.true.
+        endif
+      endif
       call BoxSet(box,3,nsize,' ')
       call BoxInfo(box,3,blc,trc)
       call BoxMask(lMap,box,MAXBOX)
@@ -216,6 +235,7 @@ c
 c  If we are operating in "final" mode, determine the convolving
 c  beam.
 c
+      
       if (final) then
         call GauDPar1(lMap,bmaj1,bmin1,bpa1,
      *                                   bmaj,bmin,bpa,temp,ifail)
@@ -223,6 +243,9 @@ c
      *    'The input has the required final resolution')
         if (ifail.ne.0) call bug('f',
      *    'The convolving beam is undefined for the final resolution')
+        bmaj0 = bmaj1
+        bmin0 = bmin1
+        bpa0 = bpa1
         bmaj1 = bmaj
         bmin1 = bmin
         bpa1  = bpa
@@ -234,6 +257,8 @@ c
      *          ' arcsec, PA',f6.1,' deg.')
         call output(text)
       endif
+
+      
 c
 c  Determine the units,etc, of the output, along with any scale factors.
 c
@@ -310,6 +335,33 @@ c
 c
 c  Do the real work.
 c
+        if (dofscale) then
+          if (bmajmap*bminmap.gt.0.0) then
+            x(1) = 0d0
+            x(2) = 0d0
+            x(3) = 0d0
+            call coGauCvt(lMap,'op/op/op',x,'w',bmajmap,bminmap,bpamap,
+     *           'p',bmaj2,bmin2,bpa2)
+            x(3) = dble(k)
+            call coGauCvt(lMap,'op/op/ap',x,'p',bmaj2,bmin2,bpa2,
+     *           'w',bmaj1,bmin1,bpa1)
+            fscale=bmaj1/bmajmap
+          endif
+          call GauDfac(bmaj0,bmin0,bpa0,bmaj1,bmin1,bpa1,temp,
+     *         bmaj,bmin,bpa,ifail)
+          if (ifail.eq.1) call bug('f',
+     *      'The input has the required final resolution')
+          if (ifail.ne.0) call bug('f',
+     *      'The convolving beam is undefined for the final resolution')
+
+          call CnvlIniG(handle, n1, n2, iref, jref, bmaj, bmin, bpa,
+     *         cdelt1*fscale, cdelt2*fscale, sigma, flags)
+          if (selfscal) then
+            call GauPar(bunit,cdelt1*fscale,cdelt2*fscale,bmaj,bmin,bpa,
+     *         bunit,cdelt1*fscale,cdelt2*fscale,bmaj1,bmin1,
+     *         bpa1,bunit1,bmaj2,bmin2,bpa2,factor)
+          endif
+        endif
         call CnvlR(handle,memR(pDat),nx,ny,Runs,nRuns,memR(pDat),'c')
 c
 c  Apply a scale factor, if needed.
@@ -335,9 +387,9 @@ c
 
       end
 c***********************************************************************
-      subroutine GetOpt(final,divide,asym,corr)
+      subroutine GetOpt(final,divide,asym,corr,cube)
 
-      logical divide,asym,corr,final
+      logical divide,asym,corr,final,cube
 
 c  Get extra processing options.
 c
@@ -346,18 +398,21 @@ c    final      Set the final output beam according to the fwhm/pa
 c               parameters.
 c    divide     True if we are really deconvolving.
 c    asym       Is the beam asymmetric?
+c    cube       Take beam scaling with freq into account 
 c-----------------------------------------------------------------------
       integer nopts
-      parameter (nopts=4)
+      parameter (nopts=5)
       logical present(nopts)
       character opts(nopts)*10
-      data opts/'divide    ','asymmetric','correlate ','final     '/
+      data opts/'divide    ','asymmetric','correlate ','final     ',
+     *          'cube      '/
 c-----------------------------------------------------------------------
       call options('options',opts,present,nopts)
       divide = present(1)
       asym    = present(2)
       corr = present(3)
-      final = present(4)
+      final = present(4).or.present(5)
+      cube = present(5)
       end
 c***********************************************************************
       subroutine Scale(Data,n,factor)
