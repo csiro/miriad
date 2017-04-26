@@ -83,7 +83,7 @@ c                   fluxscale above 11 GHz.
 c                   See the help on "oldflux" for more information.
 c@ tol
 c	Solution convergence tolerance. Default is 0.001.
-c$Id: mfcal.for,v 1.18 2017/03/06 03:50:09 wie017 Exp $
+c$Id: mfcal.for,v 1.19 2017/04/26 05:03:47 wie017 Exp $
 c--
 c  History:
 c    rjs   8jul92 Original version.
@@ -147,8 +147,8 @@ c------------------------------------------------------------------------
 	parameter(MAXSOLN=1024,MAXPOL=2)
 c
 	character version*(*)
-	parameter(version='MfCal: $Revision: 1.18 $, '//
-     *             '$Date: 2017/03/06 03:50:09 $')
+	parameter(version='MfCal: $Revision: 1.19 $, '//
+     *             '$Date: 2017/04/26 05:03:47 $')
 c
 	integer tno
 	integer pWGains,pFreq,pSource,pPass,pGains,pTau
@@ -1470,9 +1470,9 @@ c
 	      if (nsoln.gt.1) then
 		if (Count(nsoln-1).lt.5000) then
  		  call HashIni2(Count(nsoln-1),nvis,VID)
-		else
-		  call HashIni
 		endif
+	      else
+		call HashIni
 	      endif
 	    else if(preamble(3).lt.tfirst)then
 	      call bug('f','Data does not appear to be in time order')
@@ -1580,6 +1580,8 @@ c
 c
 	do i=1,MAXHASH
 	  hash(i) = 0
+        enddo
+        do i=1,MAXHASH
           hashval(i) = 0
 	enddo
 c
