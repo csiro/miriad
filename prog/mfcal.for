@@ -83,7 +83,7 @@ c                   fluxscale above 11 GHz.
 c                   See the help on "oldflux" for more information.
 c@ tol
 c	Solution convergence tolerance. Default is 0.001.
-c$Id: mfcal.for,v 1.19 2017/04/26 05:03:47 wie017 Exp $
+c$Id: mfcal.for,v 1.20 2017/05/08 02:31:10 wie017 Exp $
 c--
 c  History:
 c    rjs   8jul92 Original version.
@@ -147,8 +147,8 @@ c------------------------------------------------------------------------
 	parameter(MAXSOLN=1024,MAXPOL=2)
 c
 	character version*(*)
-	parameter(version='MfCal: $Revision: 1.19 $, '//
-     *             '$Date: 2017/04/26 05:03:47 $')
+	parameter(version='MfCal: $Revision: 1.20 $, '//
+     *             '$Date: 2017/05/08 02:31:10 $')
 c
 	integer tno
 	integer pWGains,pFreq,pSource,pPass,pGains,pTau
@@ -1468,8 +1468,10 @@ c  See if we can speed up the clearing of the giant hash table
 c  when we have only changed a small number of values	      
 c
 	      if (nsoln.gt.1) then
-		if (Count(nsoln-1).lt.5000) then
+		if (Count(nsoln-1).lt.5000.and.Count(nsoln-1).gt.0) then
  		  call HashIni2(Count(nsoln-1),nvis,VID)
+                else
+	          call HashIni
 		endif
 	      else
 		call HashIni
