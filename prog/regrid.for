@@ -233,7 +233,7 @@ c       Interpolation tolerance.  Tolerate an error of the specified
 c       amount in converting pixel locations in the input to the output.
 c       Must be less that 0.5.  The default is 0.05.
 c
-c$Id: regrid.for,v 1.17 2013/08/30 01:49:21 wie017 Exp $
+c$Id: regrid.for,v 1.18 2017/05/11 00:08:56 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -257,7 +257,7 @@ c-----------------------------------------------------------------------
      *          nAxIn(MAXNAX), nAxOut(MAXNAX), nAxTem(MAXNAX), nblank,
      *          nBuf(3), ndesc, nIAxes, npv, nTAxes, nxy, off(3),
      *          offset, order(3), rBuf, valid, xv, xyzero, yv, zv
-      real      tol
+      real      tol, fblank
       double precision cdelt, crpix, crval, desc(4,MAXNAX), latpol,
      *          llrot, lonpol, phi0, pv(0:29), theta0
       character algo*3, ctype*16, in*64, keyw*8, line*64, out*64,
@@ -275,8 +275,8 @@ c     Projection codes.
      *  'pco', 'tsc', 'csc', 'qsc', 'hpx'/
 c-----------------------------------------------------------------------
       version = versan ('regrid',
-     *                  '$Revision: 1.17 $',
-     *                  '$Date: 2013/08/30 01:49:21 $')
+     *                  '$Revision: 1.18 $',
+     *                  '$Date: 2017/05/11 00:08:56 $')
 
 c     Get the input parameters.
       call keyini
@@ -594,12 +594,12 @@ c         Finally to the interpolation.
       enddo
 
 c     Warn about the number of blanked pixels.
-      nblank = (100*nblank)/(nAxOut(1)*nAxOut(2)*nAxOut(3))
-      write(line,'(a,i3,a)')
-     *  'Overall fraction of blanked pixels: ',nblank,'%'
-      if (nblank.ge.50) then
+      fblank = (100.0*nblank)/(nAxOut(1)*nAxOut(2)*nAxOut(3))
+      write(line,'(a,f5.1,a)')
+     *  'Overall fraction of blanked pixels: ',fblank,'%'
+      if (fblank.ge.50) then
         call bug('w',line)
-      else if (nblank.ne.0) then
+      else if (fblank.ge.0.05) then
         call output(line)
       endif
 
