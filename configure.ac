@@ -2,12 +2,12 @@
 # Process this file with autoconf-2.53 or later to produce a configure script.
 #-----------------------------------------------------------------------------
 # Author: Mark Calabretta, Australia Telescope National Facility
-# $Id: configure.ac,v 1.9 2010/07/07 02:19:22 cal103 Exp $
+# $Id: configure.ac,v 1.10 2017/05/12 02:09:04 wie017 Exp $
 #-----------------------------------------------------------------------------
 
 AC_INIT([Miriad], [ATNF2.0], [miriad@atnf.csiro.au], [miriad-ATNF2.0])
 AC_PREREQ([2.53])
-AC_REVISION([$Revision: 1.9 $])
+AC_REVISION([$Revision: 1.10 $])
 
 AC_CONFIG_SRCDIR([tools/miriad.c])
 AC_CONFIG_AUX_DIR([config])
@@ -265,7 +265,7 @@ AC_MSG_NOTICE([
 Looking for the full pathname of the RPFITS library...])
 
 for EXTDIR in $EXTDIRS ; do
-  AC_CHECK_FILES([$EXTDIR/librpfits.$SO $EXTDIR/librpfits.a],
+  AC_CHECK_FILE([$EXTDIR/librpfits.a],
                  [RPFITSLIB="$EXTDIR/librpfits.a" ; break])
 done
 
@@ -284,7 +284,7 @@ AC_MSG_NOTICE([
 Looking for the full pathname of the WCSLIB library...])
 
 for EXTDIR in $EXTDIRS ; do
-  AC_CHECK_FILES([$EXTDIR/libwcs.$SO $EXTDIR/libwcs.a],
+  AC_CHECK_FILE([$EXTDIR/libwcs.a],
                  [WCSLIB="$EXTDIR/libwcs.a" ; break])
 done
 
