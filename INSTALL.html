@@ -165,6 +165,9 @@ libraries</a>:
   The <a href="http://www.atnf.csiro.au/people/mcalabre/WCS/index.html"><code>
   WCSLIB</code> library</a> (version 4.12 or higher) is used by many tasks
   for computing image coordinates.  It is provided in binary installations.
+  Note that some linux distributions now include libwcs shared libraries but
+  not the static libwcs.a. The current Miriad build system requires the static
+  library and the build will fail without it.
 </li>
 
 <li>
@@ -240,6 +243,9 @@ code is straightforward, (<code>configure ; gmake</code>), or you may be able
 to find a
 <a href="http://www.atnf.csiro.au/~mcalabre/WCS/wcslib/software.html">
 pre-built package</a>.
+If you are building from source on a platform for which a binary Miriad 
+distribution is available, a quick way to resolve the above dependencies is
+to install the binary distribution before running configure.
 </p>
 
 <a name="customising"><h4>Customising array sizes</h4>
@@ -1554,5 +1560,5 @@ private version:
 <hr>
 
 <p>
-<small>$Id: INSTALL.html,v 1.29 2016/04/08 02:26:05 ste616 Exp $</small>
+<small>$Id: INSTALL.html,v 1.30 2017/05/12 01:46:54 wie017 Exp $</small>
 </p>
