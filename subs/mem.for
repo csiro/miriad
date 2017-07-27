@@ -16,7 +16,10 @@ c    rjs  24dec92 Doc changes only, for jm.
 c    rjs  28jun93 Improvement to membuf routine, to bring it better in
 c		  line with the 27jul92 changes.
 c    rjs  22jul09 Use new ptrdiff type.
+c    pjt  23may12 Added some DEBUG output and diffs between alloc() and allop()
 c    mhw  28aug13 Use ptrdiff type more widely
+c    pjt  12may14 merge two previous CARMA/ATNF versions
+c    pjt   6aug14 memallox/memfrex implemented.
 c************************************************************************
 c* MemBuf -- Return suggested memory buffer size.
 c& rjs
@@ -96,6 +99,9 @@ c
 	t = intsize*MAXBUF/align
 	Data(2) = align*t
 	First = .false.
+#ifdef DEBUG
+	call memInfo
+#endif
 	end
 c************************************************************************
 	subroutine memInfo
@@ -178,7 +184,7 @@ c			1000 reals    are available from rData(rpnt), and
 c			1000 doubles  are available from dData(dpnt).
 c
 c  Warning:   memalloc is deprecated, memallop() and memfrep() 
-c             should be used
+c             should be used, or if need be, the pair memallox()/memfrex()
 c
 c  Input:
 c    type	The data type. Possible values are:
@@ -194,7 +200,7 @@ c		This is a FORTRAN index of an array of the appropriate
 c		type. That is, for double precision values, it will
 c		be an index into a double precision array.
 c--
-c------------------------------------------------------------------------
+c------------------------------------------------------------------------
 	include 'maxdim.h'
 	ptrdiff p,q,pntd,sized
 	integer nc,elsize
@@ -216,6 +222,10 @@ c  Find a block of memory that is big enough.
 c
 	if(size.le.0)
      *	  call bug('f','Bad value for size, in MemAlloc')
+
+#ifdef DEBUG
+	write(*,*)  'MemAlloc : ',size,type
+#endif
 	q = 1
 	p = 0
 	nc = align
@@ -232,7 +242,7 @@ c  We do not have a chunk of memory big enough. Allocate it using mmalloc.
 c
 	if(q.eq.0)then
 	  call mmAlloc(q,Data,sized)
-	  if(q.eq.0)call bug('f','Unable to allocate memory')
+	  if(q.eq.0)call bug('f','MemAlloc: unable to allocate memory')
 	  pntd = (q-1)*intsize + 1
 c
 c  We have a big enough bit of memory.
@@ -298,6 +308,7 @@ c  Check.
 c
 	if(size.le.0)
      *	  call bug('f','Bad value for size, in MemFree')
+
 	elsize = mmSize(ichar(type))
 	pntd = (pnt-1)*elsize
 	qd = pntd/intsize + 1
@@ -406,7 +417,7 @@ c		This is a FORTRAN index of an array of the appropriate
 c		type. That is, for double precision values, it will
 c		be an index into a double precision array.
 c--
-c------------------------------------------------------------------------
+c------------------------------------------------------------------------
 	include 'maxdim.h'
 	ptrdiff p,q,pntd,sized
 	integer nc,elsize
@@ -428,11 +439,14 @@ c  Find a block of memory that is big enough.
 c
 	if(size.le.0)
      *	  call bug('f','Bad value for size, in MemAllop')
+#ifdef DEBUG
+	write(*,*)  'MemAllop : ',size,type
+#endif
 	q = 1
 	p = 0
 	nc = align
 	elsize = mmSize(ichar(type))
-        sized = size
+	sized = size
 	sized = ( (sized*elsize-1)/align + 1 ) * align
 c
 	dowhile(q.gt.0.and.Data(q+1).lt.sized+nc)
@@ -445,7 +459,7 @@ c  We do not have a chunk of memory big enough. Allocate it using mmalloc.
 c
 	if(q.eq.0)then
 	  call mmAlloc(q,Data,sized)
-	  if(q.eq.0)call bug('f','Unable to allocate memory')
+	  if(q.eq.0)call bug('f','MemAllop: Unable to allocate memory')
 	  pntd = (q-1)*intsize + 1
 c
 c  We have a big enough bit of memory.
@@ -510,7 +524,7 @@ c
 	elsize = mmSize(ichar(type))
 	pntd = (pnt-1)*elsize
 	qd = pntd/intsize + 1
-        sized = size
+	sized = size
 	sized = ( (sized*elsize-1)/align + 1 ) * align
 c
 c  Free memory which was obtained with mmalloc.
@@ -539,6 +553,217 @@ c
      *	    'Deallocating a deallocated part of memory, in MemFrep')
 	  if((p-1)*intsize+Data(p+1).gt.(qd-1)*intsize+1) call bug('f',
      *	    'Deallocating a deallocated part of memory, in MemFrep')
+c
+c  Insert this bit into the free list.
+c
+	  Data(qd) = q
+	  Data(qd+1) = sized
+	  Data(p) = qd
+c
+c  Can we concatentate this bit with the following bit?
+c
+	  if((qd-1)*intsize+sized.eq.(q-1)*intsize)then
+	    Data(qd) = Data(q)
+	    Data(qd+1) = Data(qd+1) + Data(q+1)
+	  endif
+c
+c  Can we concatenate this bit with the previous bit?
+c
+	  if((p-1)*intsize+Data(p+1).eq.(qd-1)*intsize)then
+	    Data(p) = Data(qd)
+	    Data(p+1) = Data(p+1) + Data(qd+1)
+	  endif
+c
+	endif
+c	    
+	end
+c************************************************************************
+c* MemAllox -- Allocate memory
+c& rjs
+c: utilities
+c+
+	subroutine MemAllox(pnt,size,type)
+c
+	implicit none
+	ptrdiff pnt, size
+	character type*1
+c
+c  The MemAllox routine reserves a portion of blank common for its
+c  caller. It returns a pointer to the index in blank common of the
+c  reserved portion. The caller should declare an array in blank common
+c  of size MAXBUF integer elements.
+c
+c  NOTE: If memallox is used by any routine, then ALL routines that
+c  use blank common MUST go through memallox/memfrex. Otherwise
+c  multiple routines may overwrite blank common.
+c
+c  Typical usage would be something like:
+c
+c	ptrdiff ipnt,rpnt,dpnt
+c	include 'maxdim.h'
+c	integer iData(MAXBUF)
+c	real rData(MAXBUF)
+c	double precision dData(MAXBUF/2)
+c	common iData
+c	equivalence(iData,rData,dData)
+c
+c	call MemAllox(ipnt,1000,'i')
+c	call MemAllox(rpnt,1000,'r')
+c	call MemAllox(dpnt,1000,'d')
+c
+c  After this sequence, 1000 integers are available from iData(ipnt),
+c			1000 reals    are available from rData(rpnt), and
+c			1000 doubles  are available from dData(dpnt).
+c
+c  Input:
+c    type	The data type. Possible values are:
+c		  'i'	Integer.
+c		  'r'	Real.
+c		  'l'	Logical.
+c		  'd'	Double precision.
+c		  'c'	Complex.
+c    size	The number of elements to allocate.
+c  Output:
+c    pnt	Pointer to location in blank common, where the memory is.
+c		This is a FORTRAN index of an array of the appropriate
+c		type. That is, for double precision values, it will
+c		be an index into a double precision array.
+c--
+c------------------------------------------------------------------------
+	include 'maxdim.h'
+	ptrdiff p,q,pntd,sized
+	integer nc,elsize
+	integer Data(MAXBUF)
+	common Data
+c
+	integer align,intsize
+	common/MemCom/align,intsize
+c
+c  Externals.
+c
+	integer mmSize
+c
+c  Initalise, if needed.
+c
+	call MemIni
+c
+c  Find a block of memory that is big enough.
+c
+	if(size.le.0)
+     *	  call bug('f','Bad value for size, in MemAllox')
+#ifdef DEBUG
+	write(*,*)  'MemAllox : ',size,type
+#endif
+	q = 1
+	p = 0
+	nc = align
+	elsize = mmSize(ichar(type))
+	sized = size
+	sized = ( (sized*elsize-1)/align + 1 ) * align
+c
+	dowhile(q.gt.0.and.Data(q+1).lt.sized+nc)
+	  nc = 0
+	  p = q
+	  q = Data(q)
+	enddo
+c
+c  We do not have a chunk of memory big enough. Allocate it using mmalloc.
+c
+	if(q.eq.0)then
+	  call mmAlloc(q,Data,sized)
+	  if(q.eq.0)call bug('f','MemAllox: unable to allocate memory')
+	  pntd = (q-1)*intsize + 1
+c
+c  We have a big enough bit of memory.
+c
+	else if(Data(q+1).ge.sized+2*intsize)then
+	  Data(q+1) = Data(q+1) - sized
+	  pntd = (q-1)*intsize + Data(q+1) + 1
+	else
+	  pntd = (q-1)*intsize + 1
+	  Data(p) = Data(q)
+	endif
+c
+ 	if(mod(pntd-1,elsize).ne.0)
+     *	  call bug('f','Alignment error in memAllox')
+c
+	pnt = (pntd-1) / elsize + 1
+c
+	end
+c************************************************************************
+c* MemFrex -- Free allocated memory.
+c& rjs
+c: utilities
+c+
+	subroutine MemFrex(pnt,size,type)
+c
+	implicit none
+	ptrdiff pnt, size
+	character type*1
+c
+c  This frees up a portion of blank common, previously allocated by
+c  MemAllox.
+c
+c  Inputs:
+c    pnt	Pointer to the memory in blank common.
+c    size	The number of elements to free.
+c    type	The data type. Possible values are:
+c		  'i'	Integer.
+c		  'r'	Real.
+c		  'l'	Logical.
+c		  'd'	Double precision.
+c		  'c'	Complex.
+c--
+c------------------------------------------------------------------------
+	include 'maxdim.h'
+	ptrdiff p,q,pntd,qd,sized
+	integer elsize
+	integer Data(MAXBUF)
+	common Data
+c
+	integer align,intsize
+	common/MemCom/align,intsize
+c
+c  Externals.
+c
+	integer mmSize
+c
+c  Check.
+c
+	if(size.le.0)
+     *	  call bug('f','Bad value for size, in MemFrex')
+	elsize = mmSize(ichar(type))
+	pntd = (pnt-1)*elsize
+	qd = pntd/intsize + 1
+	sized = size
+	sized = ( (sized*elsize-1)/align + 1 ) * align
+c
+c  Free memory which was obtained with mmalloc.
+c
+	if(qd.le.0.or.qd.gt.MAXBUF)then
+	  call mmfree(Data(qd))
+c
+c  Frr memory which was obtained from the common block.
+c  Search the free list for the place to add this bit.
+c
+	else
+	  if((qd-1)*intsize+sized-1.gt.intsize*MAXBUF)
+     *	    call bug('f','Bad value for pnt or size, in MemFrex')
+	  q = 1
+	  p = 0
+	  dowhile(q.lt.qd.and.q.gt.0)
+	    p = q
+	    q = Data(q)
+	  enddo
+c
+c  Various checks.
+c
+	  if(p.eq.0)call bug('f','Internal bug in MemFrex')
+	  if(q.gt.0.and.(qd-1)*intsize+sized.gt.(q-1)*intsize) 
+     *	    call bug('f',
+     *	    'Deallocating a deallocated part of memory, in MemFrex')
+	  if((p-1)*intsize+Data(p+1).gt.(qd-1)*intsize+1) call bug('f',
+     *	    'Deallocating a deallocated part of memory, in MemFrex')
 c
 c  Insert this bit into the free list.
 c

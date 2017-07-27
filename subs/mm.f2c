@@ -5,6 +5,12 @@
 /*  Strictly speaking this is machine specific, but it should work on   */
 /*  most machines with fairly standard C support.			*/
 /*                                                                      */
+/*  These routines are only called by the memallo{c,p,x} routines if    */
+/*  MAXBUF (blank common memory) has been exhausted, and true dynamic   */
+/*  memory offered by malloc(3) needs to be used. If this interface is  */
+/*  broken and you need to have a working miriad, try setting MAXBUF    */
+/*  really large to fit your problem                                    */
+/*                                                                      */
 /*  History:                                                            */
 /*    26mar92 rjs  Original version.                                    */
 /*    27jul92 rjs  Significant changes, to support 'd','c' and 'l' data */
@@ -16,7 +22,10 @@
 /*    13mar06 rjs  Coditional include of malloc.h, which appears not    */
 /*		   to be part of MacOS dialect.				*/
 /*    22jul09 rjs  Support ptrdiff data type.				*/
+/*    21mar12 pjt  Add some -DDEBUG output                              */
 /*    28aug13 mhw  Use ptrdiff for size.				*/
+/*    12may13 pjt  merged two previous CARMA/ATNF versions              */
+/*     8aug14 pjt  sanitized                                            */
 /*                                                                      */
 /************************************************************************/
 
@@ -106,6 +115,7 @@ c
   ptrdiff_t offset;
   fort_ptrdiff t;
   fort_integer *s;
+  static int counter = 1;
 
 #if defined(linux)
 /*  if(sizeof(void *) > sizeof(fort_ptrdiff))mallopt(M_MMAP_MAX,0); */
@@ -117,7 +127,15 @@ c
   if(s == (fort_integer *)NULL) return;
   offset = s - data.addr;
   t = (fort_ptrdiff)offset;
-  if(t != offset)bug_c('f',"Some odd form of rounding problem, in mmAlloc");
+#ifdef DEBUG
+  printf("MM_DEBUG: s=0x%lx  data=0x%lx count=%d\n",s,data.addr,counter++);
+  printf("MM_DEBUG: t=0x%lx  offset=0x%lx size=%ld\n",t,offset,size.val);
+  printf("          s=%ld data=%ld offset=%ld\n",s,data.addr,offset);
+  printf("          s=%d data=%d offset=%d\n",s,data.addr,offset);
+  printf("          sizeof(fort_ptrdiff)=%ld sizeof(ptrdiff_t)=%ld sizeof(fort_integer)=%ld\n",
+                    sizeof(fort_ptrdiff),    sizeof(ptrdiff_t),    sizeof(fort_integer));
+#endif
+  if(t != offset) bug_c('f',"Some odd form of rounding problem, in mmAlloc");
   *(ptr.addr) = t+1;
 }
 /************************************************************************/
@@ -138,5 +156,8 @@ fortran subroutine mmfree(integer data)
 /*--                                                                    */
 /*----------------------------------------------------------------------*/
 {
+#ifdef DEBUG
+  printf("MM_DEBUG: mmfree data=0x%lx\n",data.addr);
+#endif
   free((char *)(data.addr));
 }
