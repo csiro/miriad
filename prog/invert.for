@@ -230,7 +230,7 @@ c       replaced with 0, or to be estimated by linear interpolation of
 c       two adjacent good channels.  See the Users Guide for the merits
 c       and evils of the two approaches.  The default is 'zero'.
 c
-c$Id: invert.for,v 1.22 2016/01/20 03:03:49 wie017 Exp $
+c$Id: invert.for,v 1.23 2017/07/27 05:46:17 wie017 Exp $
 c--
 c  History
 c    rjs        89  Initial version
@@ -366,6 +366,7 @@ c    mhw   06mar12  Add fsystemp option
 c    mhw   03jun13  Add beam and res options to imsize and cellsize
 c    mhw   03mar14  Fix bug in theoretical rms for large datasets
 c    mhw   20jan15  Add position angle to taper specification
+c    pjt   10feb15  Handle large mosaics 
 c  Bugs:
 c-----------------------------------------------------------------------
       include 'mirconst.h'
@@ -375,11 +376,12 @@ c
       integer MAXPOL,MAXRUNS
       parameter(MAXPOL=4,MAXRUNS=4*MAXDIM)
 c
+
       real cellx,celly,fwhmx,fwhmy,freq0,slop,supx,supy,ppbx,ppby
       real umax,vmax,wdu,wdv,tu,tv,rms,robust,bpa,fw,cp,sp
       real ChanWt(MAXPOL*MAXCHAN)
       character maps(MAXPOL)*256,beam*256,uvflags*16,mode*16,vis*64
-      character line*64, version*72
+      character line*64, version*72,smnx*10,smny*10
       double precision ra0,dec0,offset(2),lmn(3),x(2)
       integer i,j,k,nmap,tscr,nvis,nchan,npol,npnt,coObj,pols(MAXPOL)
       integer nx,ny,bnx,bny,mnx,mny,wnu,wnv
@@ -388,8 +390,8 @@ c
       logical double,doamp,dophase,dosin,doncp,dobeam,dores,dorotbm
 c
       integer tno,tvis
-      integer nUWts,nMMap
-      ptrdiff UWts,Map,MMap
+      integer nMMap
+      ptrdiff UWts,Map,MMap,nUWts
 c
       integer nRuns,Runs(3,MAXRUNS)
 c
@@ -400,14 +402,15 @@ c
 c  Externals.
 c
       logical keyprsnt
-      integer nextpow2
+      integer nextpow2,len1
       character itoaf*10, polsc2p*3, versan*72
 c
       data slops/'zero        ','interpolate '/
 c-----------------------------------------------------------------------
       version = versan ('invert',
-     :                  '$Revision: 1.22 $',
-     :                  '$Date: 2016/01/20 03:03:49 $')
+
+     :                  '$Revision: 1.23 $',
+     :                  '$Date: 2017/07/27 05:46:17 $')
 c
 c  Get the input parameters. Convert all angular things into
 c  radians as soon as possible!!
@@ -613,8 +616,9 @@ c
         lmn(1) = 0
         lmn(2) = 0
         lmn(3) = 1
-        if(max(mnx,mny).gt.MAXDIM)
-     *    call bug('f','Mosaiced image is too big for me')
+        if(max(mnx,mny).gt.MAXDIM) then
+           call bug('f','Mosaiced image size is too big for MAXDIM')
+        endif
       else
         mnx = nx
         mny = ny
@@ -633,8 +637,9 @@ c
 c
       if(.not.Natural)then
         call output('Calculating the weights ...')
-        nUWts = (wnu/2+1) * wnv * npnt
-        call Memallop(UWts,nUWts,'r')
+        nUWts = (wnu/2+1) * wnv
+        nUWts = nUWts * npnt
+        call Memallox(UWts,nUWts,'r')
         call WtCalc(tscr,memr(UWts),wdu,wdv,wnu,wnv,npnt,
      *                                        nvis,npol*nchan)
         if(robust.gt.-4)
@@ -656,7 +661,7 @@ c
      *  dorotbm,nvis,npol,nchan,mosaic,idb,sdb,doamp,dophase,freq0,Rms,
      *  ChanWt,lmn,umax,vmax,cellx,celly)
 c
-      if(nUWts.gt.0)call MemFrep(UWts,nUWts,'r')
+      if(nUWts.gt.0)call MemFrex(UWts,nUWts,'r')
       if(mosaic)call mosGFin
 c
 c  Tell the user about the noise level in the output images.
@@ -704,10 +709,16 @@ c
 c  Create space for the mosaiced image, if needed.
 c
       if(mosaic)then
-        nMMap = mnx*mny
-        call MemAllop(MMap,nMMap,'r')
+         smnx = itoaf(mnx)
+         smny = itoaf(mny)
+         call output('Mosaic image size: '//
+     *       smnx(1:len1(smnx)) // ' x ' //
+     *       smny(1:len1(smny)) )
+
+         nMMap = mnx*mny
+         call MemAllop(MMap,nMMap,'r')
       else
-        nMMap = 0
+         nMMap = 0
       endif
 c
 c  Make the appropriate beams.

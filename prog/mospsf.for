@@ -29,7 +29,7 @@ c       function.  The default is the reference frequency of the beam-
 c       cube.  The point-spread function is reasonably independent of
 c       frequency for most spectral line observations.
 c
-c$Id: mospsf.for,v 1.6 2014/03/07 05:54:19 wie017 Exp $
+c$Id: mospsf.for,v 1.7 2017/07/27 05:46:46 wie017 Exp $
 c--
 c
 c  History:
@@ -37,6 +37,7 @@ c    rjs  25oct93 Adapted from LINMOS.
 c    nebk 22aug94 Adapt to GETFREQ error status change
 c    rjs  26oct94 Complete rewrite to cope with the new INVERT.
 c    rjs  24oct95 MOSPSF should not copy bmaj,bmin and bpa.
+c    pjt  16aug2014   Deal with larger buffers (use memallox/memfrex)
 c
 c  Bugs:
 c
@@ -49,18 +50,18 @@ c-----------------------------------------------------------------------
       include 'mem.h'
 
       logical  dofreq, doradec
-      integer  i, naxis, npnt, nsize(MAXNAX), nx, ny, pIn, pOut, tIn,
-     *         tOut
+      integer  i, naxis, npnt, nsize(MAXNAX), nx, ny, tIn, tOut
       double precision dec, freq, ra, x(3)
       character beam*64, coin*12, out*64, version*72
+      ptrdiff pIn,pOut,np1,np2
 
       logical   keyprsnt
       character versan*72
       external  keyprsnt, versan
 c-----------------------------------------------------------------------
       version = versan('mospsf',
-     *                 '$Revision: 1.6 $',
-     *                 '$Date: 2014/03/07 05:54:19 $')
+     *                 '$Revision: 1.7 $',
+     *                 '$Date: 2017/07/27 05:46:46 $')
 
 c     Get the input parameters.
       call keyini
@@ -99,8 +100,11 @@ c     Set the position at which to compute the PSF.
       endif
 
 c     Allocate memory and load the input PSF data.
-      call memAlloc(pIn,nx*ny*npnt,'r')
-      call memAlloc(pOut,nx*ny,'r')
+      np2 = nx
+      np2 = np2*ny
+      np1 = np2*npnt
+      call memAlloc(pIn,np1,'r')
+      call memAlloc(pOut,np2,'r')
 
 c     Read the input data.
       call GetDat(tIn,memr(pIn),nx,ny,npnt)
@@ -122,8 +126,8 @@ c     Write the output.
 
 c     All said and done. Close up.
       call xyclose(tOut)
-      call MemFree(pOut,nx*ny,'r')
-      call MemFree(pIn,nx*ny*npnt,'r')
+      call MemFrex(pOut,np2,'r')
+      call MemFrex(pIn,np1,'r')
       call xyclose(tIn)
 
       end
