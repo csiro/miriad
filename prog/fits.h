@@ -3,7 +3,7 @@ c  fits.h
 c-----------------------------------------------------------------------
 c  Include file for fits.for.
 c
-c  $Id: fits.h,v 1.6 2014/06/10 02:46:36 sau078 Exp $
+c  $Id: fits.h,v 1.7 2017/09/04 23:00:05 wie017 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
 
@@ -18,7 +18,7 @@ c-----------------------------------------------------------------------
 
       integer MAXCONFG, MAXFREQ, MAXIF, MAXSRC
       parameter (MAXCONFG=40,
-     *           MAXSRC=1000,
+     *           MAXSRC=10000,
      *           MAXFREQ=MAXWIN,
      *           MAXIF=MAXFREQ)
 
