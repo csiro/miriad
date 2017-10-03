@@ -1,0 +1,22 @@
+#!/bin/sh
+#-----------------------------------------------------------------------------
+# Usage: mirsysarch
+#-----------------------------------------------------------------------------
+# Some systems locate libraries in a subdirectory of /usr/lib,
+# named using the <cpu>-<vendor>-<os> triplet scheme.
+# gcc -dumpmachine is a good way to obtain this.
+#
+# $Id: mirsysarch,v 1.1 2017/10/03 03:15:40 wie017 Exp $
+#-----------------------------------------------------------------------------
+
+  MIRARCH="$1"
+  MIRSYSARCH=""
+
+  GCC=`which gcc 2>/dev/null`
+  if [ -x "$GCC" ]; then
+      MIRSYSARCH=`$GCC -dumpmachine`
+  fi
+
+  echo "$MIRSYSARCH"
+
+  exit 0
