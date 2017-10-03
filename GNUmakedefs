@@ -25,10 +25,12 @@
 # target names by running 'gmake help'
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakedefs,v 1.37 2011/06/22 01:48:51 cal103 Exp $
+# $Id: GNUmakedefs,v 1.38 2017/10/03 01:02:12 wie017 Exp $
 #-----------------------------------------------------------------------------
 # We rely only on the MIR environment variable.
 MIRROOT  := $(MIR)
+# Make sure there are no trailing slashes
+MIRROOT  := $(patsubst %/,%,$(MIRROOT))
 
 # MIRARCH will evaluate to something like linux, or sun4sol.
 MIRARCH  := $(shell $(MIRROOT)/scripts/mirarch)
