@@ -62,7 +62,7 @@ c
 c  CARMA customizations:
 c    pkgw  2012may25  Extract some error messages from wcslib
 c
-c $Id: co.for,v 1.52 2017/04/10 05:22:38 wie017 Exp $
+c $Id: co.for,v 1.53 2017/10/03 03:18:55 wie017 Exp $
 c***********************************************************************
 
 c* coCtype -- Parse a world coordinate ctype.
@@ -2130,7 +2130,9 @@ c    x2         Output, converted, coordinate.
 c-----------------------------------------------------------------------
       include 'co.h'
 
-      logical   valid, x1off, x1pix, x2off, x2pix
+      integer   m
+      parameter (m=1)
+      logical   valid, x1off(m), x1pix(m), x2off(m), x2pix(m)
       integer   icrd, ilat, ilng, n
       double precision dtemp, bscal, bzero
 
@@ -2143,17 +2145,17 @@ c-----------------------------------------------------------------------
       x2 = x1
       if (iax.gt.naxis(icrd)) return
 
-      call coCrack(1,in,x1pix,x1off,1,n)
-      if (n.ne.1) call bug('f','Invalid conversion in coCvt1')
-      call coCrack(1,out,x2pix,x2off,1,n)
-      if (n.ne.1) call bug('f','Invalid conversion in coCvt1')
+      call coCrack(m,in,x1pix,x1off,m,n)
+      if (n.ne.m) call bug('f','Invalid conversion in coCvt1')
+      call coCrack(m,out,x2pix,x2off,m,n)
+      if (n.ne.m) call bug('f','Invalid conversion in coCvt1')
 
       valid = .true.
 
       if (cotype(iax,icrd).eq.LINEAR) then
 c       Convert a linear axis.
         call coLinear(crval(iax,icrd),crpix(iax,icrd),cdelt(iax,icrd),
-     *        x1pix,x1off,x2pix,x2off,bscal,bzero)
+     *        x1pix(m),x1off(m),x2pix(m),x2off(m),bscal,bzero)
         x2 = bscal * x1 + bzero
 
       else if (cotype(iax,icrd).eq.LNGTYP) then
@@ -2164,8 +2166,8 @@ c       Convert a longitude axis.
      *    cosrot(icrd),sinrot(icrd),
      *    crpix(ilng,icrd),cdelt(ilng,icrd),
      *    crpix(ilat,icrd),cdelt(ilat,icrd),
-     *    x1pix,x1pix,x1off,.true.,
-     *    x2pix,x2pix,x2off,.true.,valid)
+     *    x1pix(m),x1pix(m),x1off(m),.true.,
+     *    x2pix(m),x2pix(m),x2off(m),.true.,valid)
 
       else if (cotype(iax,icrd).eq.LATTYP) then
 c       Convert a latitude axis.
@@ -2175,12 +2177,12 @@ c       Convert a latitude axis.
      *    cosrot(icrd),sinrot(icrd),
      *    crpix(ilng,icrd),cdelt(ilng,icrd),
      *    crpix(ilat,icrd),cdelt(ilat,icrd),
-     *    x1pix,x1pix,.true.,x1off,
-     *    x2pix,x2pix,.true.,x2off,valid)
+     *    x1pix(m),x1pix(m),.true.,x1off(m),
+     *    x2pix(m),x2pix(m),.true.,x2off(m),valid)
 
       else if (cotype(iax,icrd).eq.SPTYPE) then
 c       Convert a spectral axis.
-        call coSpc(icrd,x1pix,x1off,x2pix,x2off,x1,x2)
+        call coSpc(icrd,x1pix(m),x1off(m),x2pix(m),x2off(m),x1,x2)
       endif
 
       if (.not.valid) call bug('f',
