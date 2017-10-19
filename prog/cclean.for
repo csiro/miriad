@@ -4,10 +4,10 @@ c= c - Complex (Polarization) Clean
 c& rjs mchw
 c: deconvolution
 c+
-c       CCLEAN is a MIRIAD task that performs the complex Steer, Hogbom or
-c       Clark Clean algorithm, which takes a Stokes Q and U dirty map and
-c       beam, and produces two output maps that consist of the Stokes Q and
-c       Stokes U Clean components.
+c       CCLEAN is a MIRIAD task that performs the complex Steer, Hogbom
+c       or Clark Clean algorithm, which takes a Stokes Q and U
+c       dirty map and beam, and produces two output maps that consist 
+c       of the Stokes Q and U Clean components.
 c       These outputs can be input to RESTOR to produce a "clean" image.
 c       The model could be from a previous CCLEAN run, or from other
 c       deconvolution tasks.
@@ -15,8 +15,9 @@ c
 c       The main difference with the standard Clean is that the search
 c       for a peak is done in linearly polarized intensity.
 c       Full details of the algorithm are found in:
-c       Pratley & Johnston-Hollitt, “An improved method for polarimetric
-c       image restoration in interferometry", MNRAS, 2016. ArXiv: 1606.01482.
+c       Pratley & Johnston-Hollitt, "An improved method for 
+c       polarimetric image restoration in interferometry",
+c       MNRAS, 2016. ArXiv: 1606.01482.
 c	Please acknowledge this work in publications using the code.
 c
 c@ map
@@ -26,15 +27,15 @@ c@ beam
 c       The input of Stokes I, Q or U dirty beam. No default
 c@ model
 c       Initial models of the Stokes Q and U deconvolved images. This
-c       could be the output from a previous run of CCLEAN, or the output of
-c       other deconvolution tasks. It must have flux units of
+c       could be the output from a previous run of CCLEAN, or the output
+c       of other deconvolution tasks. It must have flux units of
 c       Jy/pixel. The default is no model (i.e. a zero map).
 c@ out
 c       The names of the Stokes Q and U output map. The units of the
 c       output will be Jy/pixel.  The files will contain the contribution
 c       of the input models.  They should have a different name to the
-c       input model (if any).  They can be input to RESTOR or CCLEAN (as a
-c       model,to do more cleaning)
+c       input model (if any).  They can be input to RESTOR or CCLEAN 
+c       (as a model,to do more cleaning)
 c@ gain
 c       The minor iteration loop gain. Default is 0.1.
 c@ options
@@ -44,20 +45,23 @@ c         asym      The beam is asymmetric.  By default CLEAN assumes
 c                   the beam has a 180 degree rotation symmetry, which
 c                   is the norm for beams in radio-astronomy.
 c         pad       Double the beam size by padding it with zeros. This
-c                   will give you better stability if you are daring enough
-c                   to CLEAN an area more than half the size
+c                   will give you better stability if you are daring 
+c                   enough to CLEAN an area more than half the size
 c                   (in each dimension) of the dirty beam.
 c@ cutoff
 c       CLEAN finishes either when the absolute maximum residual falls
 c       below CUTOFF, or when the criteria described below is
 c       satisfied. The default CUTOFF is 0. It is recommended that the
-c       cutoff is 3 times the rms noise of Stokes Q or U.
+c       cutoff is 3 times the rms noise of Stokes Q or U. 
+c       When two values are given, do a deep clean to the second cutoff
+c       limiting peak finding to the pixels that are already in the
+c       model.
 c@ niters
 c       The maximum number of minor iterations.  The default is 250,
 c       which is too small for all but the simplest of images.  CLEAN
 c       will stop when either the maximum number of iterations is
-c       performed, or the cutoff (see above) is reached. Optional second value
-c       will force MFCLEAN to report on the level reached and
+c       performed, or the cutoff (see above) is reached. Optional second 
+c       value will force CCLEAN to report on the level reached and
 c       (for mode=clark) start a new major iteration at least every
 c       niters(2) iterations. This can be useful to avoid overcleaning.
 c@ region
@@ -73,13 +77,14 @@ c@ clip
 c       This sets the relative clip level in Steer mode. Values are
 c       typically 0.75 to 0.9. The default is image dependent.
 c
-c$Id: cclean.for,v 1.1 2016/10/17 05:00:28 wie017 Exp $
+c$Id: cclean.for,v 1.2 2017/10/19 04:48:17 wie017 Exp $
 c--
 c  CCLEAN History:
 c    lp  02aug15 - Original version modified from clean.for, v1.13
-c    lp & mjh Jun 16 - updated task explanations and added paper reference
+c    lp & mjh Jun 16 - updated task explanations and added paper ref
 c    mhw 10jun16 - Some tidying up for inclusion in Miriad distribution
 c    mhw 13oct16 - Add Hogbom and Clark mode back in, renamed to CCLEAN
+c    mhw  07sep17 - Add optional round of deep cleaning, like wsclean
 c
 c  Important Constants:
 c    MaxDim     The max linear dimension of an input (or output) image.
@@ -97,14 +102,15 @@ c               reasonably concise for the programmer, and yet makes
 c               vectorisable code straightforward to write.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
+      include 'mem.h'
       integer MAXBEAM,MAXCMP1,MAXCMP2,MAXBOX,MAXRUN,MAXP
-      parameter (MAXCMP1 = 100000000, MAXCMP2 = 320000, MAXP = 8193,
+      parameter (MAXCMP1 = 100000000, MAXCMP2 = 64000, MAXP = 8193,
      *           MAXBEAM = MAXP*MAXP, MAXBOX = 3*MAXDIM,
      *           MAXRUN = 3*MAXDIM)
 
-      real Data(MaxBuf)
       integer Boxes(MAXBOX),Run(3,MAXRUN),MaxMap
-      ptrdiff pBem,pqMap,pqEst,pqRes,puMap,puEst,puRes
+      ptrdiff pBem,pqMap,pqEst,pqRes,puMap
+      ptrdiff puEst,puRes,pMask
       real qRCmp(MAXCMP2),uRCmp(MAXCMP2)
       real qCCmp(MAXCMP2),uCCmp(MAXCMP2)
       real Histo((MAXP-1)/2+1),BemPatch(MAXBEAM)
@@ -112,8 +118,8 @@ c-----------------------------------------------------------------------
 
 
       character Mode*8,Moded*8,Text*7,flags*8,version*72
-      real Cutoff,Gain,Phat,Speed,Clip,defClip,Limit
-      logical Pad,Asym,More,FFTIni,steermsg
+      real Cutoff,Gain,Phat,Speed,Clip,defClip,Limit,Cut(2)
+      logical Pad,Asym,More,FFTIni,steermsg,deep
       integer MaxNiter(2),oNiter,Niter,totNiter,minPatch,maxPatch
       integer totNiter1,totNiter2,curMaxNiter
       integer naxis,n1,n2,icentre,jcentre,nx,ny
@@ -123,24 +129,23 @@ c-----------------------------------------------------------------------
       character uModelNam*256,OutNam*256,uOutNam*256,line*72
       integer lMap,ulMap,lBeam,lModel,ulModel,lOut,ulOut
       integer nMap(3),nBeam(3),nModel(3),nOut(4)
-      real qEstASum,Flux,uEstASum,uFlux
-      real ResMin,ResMax,ResAMax,ResRms
+      real qEstASum,qFlux,uEstASum,uFlux
+      real qResMin,qResMax,qResAMax,qResRms
       real uResMin,uResMax,uResAMax,uResRms
       real maxPres
-      common Data
 
 c     Externals.
       character itoaf*8, versan*72
 c-----------------------------------------------------------------------
       version = versan ('cclean',
-     *                  '$Revision: 1.1 $',
-     *                  '$Date: 2016/10/17 05:00:28 $')
+     *                  '$Revision: 1.2 $',
+     *                  '$Date: 2017/10/19 04:48:17 $')
 c
 c  Get the input parameters.
 c
       call inputs(MapNam,uMapNam,BeamNam,ModelNam,uModelNam,
      *     OutNam,uOutNam,MaxNiter,
-     *     pad,asym,Cutoff,Boxes,MAXBOX,MinPatch,Gain
+     *     pad,asym,Cut,Boxes,MAXBOX,MinPatch,Gain
      *     ,PHat,Speed,Clip,mode)
 c
 c  Open the beam, get some characteristics about it, then read in the
@@ -209,6 +214,7 @@ c
       call MemAllop(puMap,MaxMap,'r')
       call MemAllop(puEst,MaxMap,'r')
       call MemAllop(puRes,MaxMap,'r')
+      call MemAllop(pMask,MaxMap,'l')
 c
 c  Open the model if there is one.  Note that currently the model
 c  must agree exactly in size with the output map (an unfortunate
@@ -251,12 +257,13 @@ c
         call xysetpl(lMap,1,k)
         call xysetpl(ulMap,1,k)
         call GetPlane(lMap,Run,nRun,xmin-1,ymin-1,nMap(1),nMap(2),
-     *                        Data(pqMap),MaxMap,nPoint)
+     *                        MemR(pqMap),MaxMap,nPoint)
         call GetPlane(ulMap,Run,nRun,xmin-1,ymin-1,nMap(1),nMap(2),
-     *                        Data(puMap),MaxMap,nPoint)
+     *                        MemR(puMap),MaxMap,nPoint)
 c
 c  Determine the CLEAN algorithm that is to be used.
 c
+        deep = .false.
         if (nPoint.gt.0) then
           moded = mode
           if ((mode.eq.'any' .or. mode.eq.'hogbom') .and.
@@ -288,40 +295,45 @@ c
           if (ModelNam.eq.' ') then
             qEstASum = 0
             uEstASum = 0
-            call NoModel(Data(pqMap),Data(pqEst),Data(pqRes),nPoint)
-            call NoModel(Data(puMap),Data(puEst),Data(puRes),nPoint)
+            call NoModel(MemR(pqMap),MemR(pqEst),MemR(pqRes),nPoint)
+            call NoModel(MemR(puMap),MemR(puEst),MemR(puRes),nPoint)
           else
             call output('Subtracting initial model ...')
             call AlignGet(lModel,Run,nRun,k,xmin+xoff-1,ymin+yoff-1,
      *        zoff,nModel(1),nModel(2),nModel(3),
-     *        Data(pqEst),MaxMap,nPoint)
-            call Diff(pBem,Data(pqEst),Data(pqMap),Data(pqRes),
+     *        MemR(pqEst),MaxMap,nPoint)
+            call Diff(pBem,MemR(pqEst),MemR(pqMap),MemR(pqRes),
      *        nPoint,nx,ny,Run,nRun)
-            call SumAbs(qEstASum,Data(pqEst),nPoint)
+            call SumAbs(qEstASum,MemR(pqEst),nPoint)
             call AlignGet(ulModel,Run,nRun,k,xmin+xoff-1,ymin+yoff-1,
      *        zoff,nModel(1),nModel(2),nModel(3),
-     *        Data(puEst),MaxMap,nPoint)
-            call Diff(pBem,Data(puEst),Data(puMap),Data(puRes),
+     *        MemR(puEst),MaxMap,nPoint)
+            call Diff(pBem,MemR(puEst),MemR(puMap),MemR(puRes),
      *        nPoint,nx,ny,Run,nRun)
-            call SumAbs(uEstASum,Data(puEst),nPoint)
+            call SumAbs(uEstASum,MemR(puEst),nPoint)
           endif
-          call Stats(Data(pqRes),nPoint,ResMin,ResMax,ResAMax,ResRms)
-          call Stats(Data(puRes),nPoint,uResMin,uResMax,uResAMax,
-     *         uResRms)
+          call Stats(MemR(pqRes),MemL(pMask),nPoint,deep,
+     *      qResMin,qResMax,qResAMax,qResRms)
+          call Stats(MemR(puRes),MemL(pMask),nPoint,deep,
+     *      uResMin,uResMax,uResAMax,uResRms)
           call output('Begin iterating')
         else
-          ResMin = 0
-          ResMax = 1
+          qResMin = 0
+          qResMax = 1
+          uResMin = 0
+          uResMax = 1
         endif
 c
 c  Perform the appropriate iteration until no more.
 c
-        call maxPol(Data(pqRes),Data(puRes),nPoint,maxPres)
+        call maxPol(MemR(pqRes),MemR(puRes),MemL(pMask),nPoint,deep,
+     *    maxPres)
         Niter = 0
         oNiter = 0
-        More = (nPoint.gt.0 .and. ResMin.ne.ResMax .and.
+        More = (nPoint.gt.0 .and. qResMin.ne.qResMax .and.
      *    uResMin.ne.uResMax)
         Limit = 0
+        Cutoff = Cut(1)
         do while (More)
           oNiter = Niter
           curMaxNiter = min(Niter+MaxNiter(2),MaxNiter(1))
@@ -335,26 +347,26 @@ c
           endif
           if (moded.eq.'hogbom') then
             call ComplexHogbom(MaxPatch,BemPatch,nx,ny
-     *            ,Data(pqRes),Data(puRes),Data(pqEst),Data(puEst),
+     *            ,MemR(pqRes),MemR(puRes),MemR(pqEst),MemR(puEst),
      *            ICmp,JCmp,nPoint,Run,nRun,qEstASum,uEstASum,
-     *            Cutoff,Gain,curMaxNiter,Niter)
+     *            Cutoff,Gain,deep,curMaxNiter,Niter)
             text = ' Hogbom'
           else if (moded.eq.'steer') then
-            call ComplexSteer(pBem,Data(pqRes),Data(puRes),Data(pqEst),
-     *        Data(puEst),Data(pqMap),Data(puMap),
-     *        nPoint,nx,ny,Clip*maxPres,Gain,Niter,Run,nRun)
+            call ComplexSteer(pBem,MemR(pqRes),MemR(puRes),MemR(pqEst),
+     *        MemR(puEst),MemR(pqMap),MemR(puMap),MemL(pMask),
+     *        nPoint,nx,ny,Clip*maxPres,Gain,deep,Niter,Run,nRun)
             text = ' Steer'
           else if (moded.eq.'clark') then
-            call ComplexClark(nx,ny,Data(pqRes),Data(puRes),
-     *         Data(pqEst),Data(puEst),nPoint,Run,nRun,Histo,
-     *         BemPatch,minPatch,maxPatch,Cutoff,CurMaxNiter,Gain,
-     *         Speed,ResAMax,qEstASum,uEstASum,Niter,Limit,qRCmp,uRCmp,
-     *         qCCmp,uCCmp,ICmp,JCmp,MAXCMP2)
+            call ComplexClark(nx,ny,MemR(pqRes),MemR(puRes),
+     *        MemR(pqEst),MemR(puEst),MemL(pMask),nPoint,Run,nRun,Histo,
+     *        BemPatch,minPatch,maxPatch,Cutoff,deep,CurMaxNiter,Gain,
+     *        Speed,maxPres,qEstASum,uEstASum,Niter,Limit,qRCmp,uRCmp,
+     *        qCCmp,uCCmp,ICmp,JCmp,MAXCMP2)
             if (Niter.gt.oNiter) then
-              call Diff(pBem,Data(pqEst),
-     *          Data(pqMap),Data(pqRes),nPoint,nx,ny,Run,nRun)
-              call Diff(pBem,Data(puEst),
-     *          Data(puMap),Data(puRes),nPoint,nx,ny,Run,nRun)
+              call Diff(pBem,MemR(pqEst),
+     *          MemR(pqMap),MemR(pqRes),nPoint,nx,ny,Run,nRun)
+              call Diff(pBem,MemR(puEst),
+     *          MemR(puMap),MemR(puRes),nPoint,nx,ny,Run,nRun)
             endif
             text = ' Clark'
           endif
@@ -363,16 +375,22 @@ c  Output some messages to assure the user that the computer has not
 c  crashed.
 c
 
-          call Stats(Data(pqRes),nPoint,ResMin,ResMax,ResAMax,ResRms)
-          call Stats(Data(puRes),nPoint,uResMin,uResMax,uResAMax
-     *         ,uResRms)
-          call maxPol(Data(pqRes),Data(puRes),nPoint,maxPres)
-          call SumFlux(Flux,Data(pqEst),nPoint)
-          call SumFlux(uFlux,Data(puEst),nPoint)
-          if ( Clip.le.0.98 .or. (MOD(Niter,100).eq.0 )) Then
+          if (deep) then
+            call fillMask(MemR(pqEst),MemR(puEst),MemL(pMask),nPoint)
+          endif
+          call Stats(MemR(pqRes),MemL(pMask),nPoint,deep,
+     *      qResMin,qResMax,qResAMax,qResRms)
+          call Stats(MemR(puRes),MemL(pMask),nPoint,deep,
+     *      uResMin,uResMax,uResAMax,uResRms)
+          call maxPol(MemR(pqRes),MemR(puRes),MemL(pMask),nPoint,deep,
+     *     maxPres)
+          call SumFlux(qFlux,MemR(pqEst),nPoint)
+          call SumFlux(uFlux,MemR(puEst),nPoint)
+c          if ( Clip.le.0.98 .or. (Niter-oNiter).gt.Niter/10 ) Then
+          if (.true.) then
             call output(Text//' Iterations: '//itoaf(Niter))
             write(line,'(a,1p3e12.3)')' q Residual min,max,rms: ',
-     *         ResMin,ResMax,ResRms
+     *         qResMin,qResMax,qResRms
             call output(line)
             write(line,'(a,1p3e12.3)')' u Residual min,max,rms: ',
      *         uResMin,uResMax,uResRms
@@ -384,7 +402,7 @@ c
               write(line,'(a,1p3e12.3)')' P Residual: ',maxPres
             endif
             call output(line)
-            write(line,'(a,1pe12.3)')' Total CLEANed qflux: ',Flux
+            write(line,'(a,1pe12.3)')' Total CLEANed qflux: ',qFlux
             call output(line)
             write(line,'(a,1pe12.3)')' Total CLEANed uflux: ',uFlux
             call output(line)
@@ -394,11 +412,29 @@ c  Check for convergence.
 c
           more = .not.((Niter.eq.oNiter)
      *           .or. (maxPres.le.Cutoff) .or. (Niter.ge.MaxNiter(1)))
-        enddo
+c
+c  Check if we want to go into the deep cleaning phase
+c     
+         if (.not.more.and..not.deep) then
+           if (Cut(2).gt.0.and.Cut(2).lt.Cut(1).and.
+     *     .not.(Niter.ge.MaxNiter(1))) then
+              deep=.true.
+              Cutoff=Cut(2)
+              more=MaxPres.gt.Cutoff
+              if (more) then
+                call output(' Starting deep cleaning phase')
+                call fillMask(MemR(pqEst),MemR(puEst),MemL(pMask),
+     *            nPoint)
+                call maxPol(MemR(pqRes),MemR(puRes),MemL(pMask),
+     *            nPoint,deep,maxPres)
+              endif
+           endif
+         endif
+       enddo
 c
 c  Give a message about what terminated the iterations.
 c
-        if ((ResMin.eq.ResMax) .or. (uResMin.eq.uResMax)) then
+        if ((qResMin.eq.qResMax) .or. (uResMin.eq.uResMax)) then
           call bug('w','All pixels for this plane are identical')
           call bug('w','No cleaning performed')
           nPoint = 0
@@ -418,9 +454,9 @@ c
         call xysetpl(lOut,1,k-blc(3)+1)
         call xysetpl(ulOut,1,k-blc(3)+1)
         call PutPlane(lOut,Run,nRun,xmin-blc(1),ymin-blc(2),
-     *                        nOut(1),nOut(2),Data(pqEst),nPoint)
+     *                        nOut(1),nOut(2),MemR(pqEst),nPoint)
         call PutPlane(ulOut,Run,nRun,xmin-blc(1),ymin-blc(2),
-     *                        nOut(1),nOut(2),Data(puEst),nPoint)
+     *                        nOut(1),nOut(2),MemR(puEst),nPoint)
       enddo
 c
 c  Construct a header for the output file, and give some history
@@ -446,11 +482,12 @@ c
       end
 
 c***********************************************************************
-      subroutine Stats(Data,n,Dmin,Dmax,DAmax,Drms)
+      subroutine Stats(Data,mask,n,deep,Dmin,Dmax,DAmax,Drms)
 
       integer n
       real Data(n)
       real Dmin,Dmax,DAmax,Drms
+      logical deep,mask(n)
 c-----------------------------------------------------------------------
 c  Calculate every conceivably wanted statistic.
 c
@@ -464,7 +501,7 @@ c    Dmax       Data maxima.
 c    DAmax      Data absolute maxima.
 c    Drms       Rms value of the data.
 c-----------------------------------------------------------------------
-      integer i
+      integer i,k
 
 c     Externals.
       integer ismax,ismin
@@ -472,28 +509,45 @@ c-----------------------------------------------------------------------
 c
 c  Calculate the minima and maxima.
 c
-      i = ismax(n,Data,1)
-      Dmax = Data(i)
-      i = ismin(n,Data,1)
-      Dmin = Data(i)
-      DAmax = max(abs(Dmax),abs(Dmin))
+      if (deep) then
+        k=0
+        Drms=0
+        Dmax=-1e10
+        Dmin=1e10
+        do i=1,n
+          if (mask(i)) then
+            Dmax = max(Dmax,Data(i))
+            Dmin = min(Dmin,Data(i))
+            Drms = Drms + Data(i)*Data(i)
+            k=k+1
+          endif
+        enddo
+        if (k.gt.0) Drms=sqrt(Drms/k)
+      else
+        i = ismax(n,Data,1)
+        Dmax = Data(i)
+        i = ismin(n,Data,1)
+        Dmin = Data(i)
+        DAmax = max(abs(Dmax),abs(Dmin))
 c
 c  Calculate the sums.
 c
-      Drms = 0
-      do i = 1, n
-        Drms = Drms + Data(i)*Data(i)
-      enddo
-      Drms = sqrt(Drms/n)
-
+        Drms = 0
+        do i = 1, n
+          Drms = Drms + Data(i)*Data(i)
+        enddo
+        Drms = sqrt(Drms/n)
+      endif
+      
       end
 
 c***********************************************************************
-      subroutine maxPol(qData,uData,n,Dmax)
+      subroutine maxPol(qData,uData,mask,n,deep,Dmax)
 
       integer n
       real qData(n),uData(n)
       real Dmax
+      logical deep,mask(n)
 c-----------------------------------------------------------------------
 c  Calculate maximum polarized Flux.
 c
@@ -512,15 +566,49 @@ c  Calculate the maxima.
 c
 
       Dmax = 0
-      do i = 1, n
-         temp = qData(i)*qData(i)+uData(i)*uData(i)
-         if (temp.gt.Dmax) then
-            Dmax = temp
-         endif
-      enddo
+      if (deep) then
+        do i = 1, n
+          if (mask(i)) then
+            temp = qData(i)*qData(i)+uData(i)*uData(i)
+            if (temp.gt.Dmax) then
+              Dmax = temp
+            endif
+          endif
+        enddo
+      else
+        do i = 1, n
+           temp = qData(i)*qData(i)+uData(i)*uData(i)
+           if (temp.gt.Dmax) then
+              Dmax = temp
+           endif
+        enddo
+      endif
       Dmax = sqrt(Dmax)
       end
 
+c***********************************************************************
+      subroutine fillMask(qData,uData,Mask,n)
+
+      integer n
+      real qData(n),uData(n)
+      logical Mask(n)
+c-----------------------------------------------------------------------
+c  Fill the deep cleaning mask
+c
+c  Input:
+c    n          Number of points.
+c    Data       Input data arrays
+c
+c  Output:
+c    Mask       Pixels to consider for cleaning
+c-----------------------------------------------------------------------
+      integer i
+c-----------------------------------------------------------------------
+      do i = 1, n
+        Mask(i)= (qData(i).ne.0.or.uData(i).ne.0) 
+      enddo
+      end
+      
 c***********************************************************************
 
       subroutine GetPatch(lBeam,Patch,maxPatch,PHat,ic,jc)
@@ -567,7 +655,7 @@ c***********************************************************************
 
       integer Niter(2), minpatch, maxbox
       integer box(maxbox)
-      real cutoff,gain,phat,speed,clip
+      real cutoff(2),gain,phat,speed,clip
       logical pad,asym
       character qmap*(*),umap*(*),beam*(*),qestimate*(*),uestimate*(*)
       character qout*(*),uout*(*),mode*(*)
@@ -583,9 +671,9 @@ c      Estimate    Name of the input estimate of the deconvolved image.
 c                  Default is a estimate which is zero.
 c      Out         Name of the output deconvolved map. No default.
 c      Gain        Clean loop gain.  Default 0.5 (a bit high).
-c      Cutoff)     The iterations stop when either the absolute max
+c      Cutoff      The iterations stop when either the absolute max
 c                  residual remaining is less than Cutoff, of Niter
-c      Niter)     minor iterations have been performed (whichever comes
+c      Niter       minor iterations have been performed (whichever comes
 c                  first).  The default Cutoff is 0 (i.e. iterate
 c                  forever), and the default number of minor iterations
 c                  is 250.  This is the total number of iterations to
@@ -618,8 +706,12 @@ c-----------------------------------------------------------------------
       call keyi('niters', Niter(1), 250)
       call keyi('niters', Niter(2),1000)
       if (Niter(1).le.0) call bug('f', 'NITERS must be positive')
-      call keyr('cutoff', cutoff,0.0)
-
+      call keyr('cutoff', cutoff(1),0.0)
+      call keyr('cutoff', cutoff(2),0.0)
+      if (cutoff(2).gt.cutoff(1)) then
+        call bug('w','Second cutoff should be less than first')
+        cutoff(2)=0
+      endif
       call BoxInput('region',qmap,box,maxbox)
 
       call keyi('minpatch', minpatch, 511)
@@ -702,22 +794,22 @@ c     Update keywords that have changed.
 
 c     Write crap to the history file, to attempt (ha!) to appease Neil.
       call hisopen(lOut,'append')
-      line = 'CLEAN: Miriad ' // version
+      line = 'CCLEAN: Miriad ' // version
       call hiswrite(lOut,line)
-      call hisinput(lOut,'CLEAN')
+      call hisinput(lOut,'CCLEAN')
 
       call mitoaf(blc,3,txtblc,lblc)
       call mitoaf(trc,3,txttrc,ltrc)
-      line = 'CLEAN: Bounding region is Blc = (' // txtblc(1:lblc) //
+      line = 'CCLEAN: Bounding region is Blc = (' // txtblc(1:lblc) //
      *       '), Trc = (' // txttrc(1:ltrc) // ')'
       call hiswrite(lOut,line)
 
       if (mode.eq.'steer' .or. mode.eq.'any') then
-        write(line,'(''CLEAN: Steer Clip Level = '',f6.3)') Clip
+        write(line,'(''CCLEAN: Steer Clip Level = '',f6.3)') Clip
         call hiswrite(lOut,line)
       endif
-      call hiswrite(lOut,'CLEAN: Minpatch = ' // itoaf(minpatch))
-      call hiswrite(lOut,'CLEAN: Total Iterations = ' // itoaf(niters))
+      call hiswrite(lOut,'CCLEAN: Minpatch = ' // itoaf(minpatch))
+      call hiswrite(lOut,'CCLEAN: Total Iterations = ' // itoaf(niters))
       call hisclose(lOut)
 
       end
@@ -907,14 +999,15 @@ c-----------------------------------------------------------------------
 c***********************************************************************
 
       subroutine ComplexSteer(pBem,qResidual,uResidual,qEstimate,
-     *     uEstimate,qTemp,uTemp,nPoint,nx,ny,
-     *     Limit,Gain,Niter,Run,nrun)
+     *     uEstimate,qTemp,uTemp,mask,nPoint,nx,ny,
+     *     Limit,Gain,deep,Niter,Run,nrun)
 
       integer Niter,nrun,Run(3,nrun),nPoint,nx,ny
       ptrdiff pBem
       real Gain,Limit
       real qResidual(nPoint),qTemp(nPoint),qEstimate(nPoint)
       real uResidual(nPoint),uTemp(nPoint),uEstimate(nPoint)
+      logical deep,mask(nPoint)
 c-----------------------------------------------------------------------
 c  Perform an iteration of the Complex Steer "Clean".
 c
@@ -923,10 +1016,14 @@ c    Run        The Run specifying the area of interest.
 c    nrun       The number of runs. A null run follows run number nrun.
 c    limit      The limit to cut at.
 c    clip       Steer clip level.
+c    deep       Are we in deep cleaning mode?
 c
 c  Input/Output:
 c    Niter      Number of Niter iterations.
 c
+c Note: this routine could probably be improved: 
+c - it is slow and uses too many major iterations (compared to clark)
+c - the residuals oscillate
 c-----------------------------------------------------------------------
       real MinOptGain
       parameter (MinOptGain = 0.02)
@@ -936,18 +1033,34 @@ c-----------------------------------------------------------------------
 c
 c  Form the new Steer estimate.
 c
-      do i = 1, nPoint
-         if ((qResidual(i)*qResidual(i)
-         *   +uResidual(i)*uResidual(i)).ge.
-         *      Limit*Limit) then
-          qTemp(i) = qResidual(i)
-          uTemp(i) = uResidual(i)
-          Niter = Niter + 1
-        else
-          qTemp(i) = 0.0
-          uTemp(i) = 0.0
-        endif
-      enddo
+      if (deep) then
+        do i = 1, nPoint
+          mask(i) = mask(i).and.
+     *      (qResidual(i)*qResidual(i)+
+     *       uResidual(i)*uResidual(i)).ge.Limit*Limit
+          if (mask(i)) then
+            qTemp(i) = qResidual(i)
+            uTemp(i) = uResidual(i)
+            Niter = Niter + 1
+          else
+            qTemp(i) = 0.0
+            uTemp(i) = 0.0
+          endif
+        enddo
+      else
+        do i = 1, nPoint
+          mask(i) = (qResidual(i)*qResidual(i)
+     *         +uResidual(i)*uResidual(i)).ge.Limit*Limit
+          if (mask(i)) then
+            qTemp(i) = qResidual(i)
+            uTemp(i) = uResidual(i)
+            Niter = Niter + 1
+          else
+            qTemp(i) = 0.0
+            uTemp(i) = 0.0
+          endif
+        enddo
+      endif
 c
 c  Convolve it with the dirty beam.
 c
@@ -964,28 +1077,19 @@ c
       zr = 0
       zi = 0
       do i = 1, nPoint
-        Call ComplexMultiply(qResidual(i),uResidual(i),qTemp(i),
+        if (mask(i)) then
+          Call ComplexMultiply(qResidual(i),uResidual(i),qTemp(i),
      *     -uTemp(i),zr,zi)
-        qSumRE = qSumRE + zr
-        uSumRE = uSumRE + zi
-        SumEE = SumEE + qTemp(i)*qTemp(i) + uTemp(i)*uTemp(i)
+          qSumRE = qSumRE + zr
+          uSumRE = uSumRE + zi
+          SumEE = SumEE + qTemp(i)*qTemp(i) + uTemp(i)*uTemp(i)
+        endif
       enddo
-c
-c       SumRE can be negative, so it is better to take the
-c       absolute value of it when determining the optimum
-c       gain (gmx - 07mar04)
-c
-c       abs(SumRE)/SumEE may be close to zero, in which case
-c       a semi-infinite loop can be the result. We apply a
-c       lower limit to abs(SumRE)/SumEE. A good value for it
-c       is empirically determined to be 0.02 (MinOptGain),
-c       which may however not be the best choice in all cases.
-c       In case of problems, you can try a lower value for the
-c       task option Gain before changing MinOptGain (gmx - 07mar04).
 c
 c       Choosing to scale the complex damping by magnitude rather than
 c       individual components. This will keep the method consistent under
 c       choice of Q and U axes.
+c
       mag = (qSumRE*qSumRE + uSumRE*uSumRE)/(SumEE*SumEE)
       qg = Gain*max(MinOptGain,mag)*(qSumRE/SumEE)/mag
       ug = Gain*max(MinOptGain,mag)*(uSumRE/SumEE)/mag
@@ -994,9 +1098,7 @@ c  Now go through and update the estimate, using this gain. Also
 c  determine the new residuals.
 c
       do i = 1, nPoint
-         if ((qResidual(i)*qResidual(i)
-     *        +uResidual(i)*uResidual(i)).ge.
-     *        Limit*Limit) then
+         if (mask(i)) then
             Call ComplexMultiply(qg, ug, qResidual(i), uResidual(i),
      *         zr, zi)
             qEstimate(i) = qEstimate(i) + zr
@@ -1005,17 +1107,18 @@ c
          Call ComplexMultiply(qg, ug, qTemp(i), uTemp(i), zr, zi)
          qResidual(i) = qResidual(i) - zr
          uResidual(i) = uResidual(i) - zi
-      enddo
-
+        enddo
       end
 
 c***********************************************************************
-      subroutine GetLimit(qResidual,uResidual,nPoint,ResAMax,maxCmp,
+      subroutine GetLimit(qResidual,uResidual,Mask,
+     *        nPoint,deep,ResAMax,maxCmp,
      *        Histo,MaxPatch,nPatch,Limit)
 
       integer nPoint,maxPatch,nPatch,maxCmp
       real qResidual(nPoint),uResidual(nPoint)
       real ResAMax,Histo(maxPatch/2+1),Limit
+      logical deep,Mask(nPoint)
 c-----------------------------------------------------------------------
 c  Determine the limiting threshold and the patch size. The algorithm
 c  used to determine the Limit and patch size are probably very
@@ -1054,10 +1157,21 @@ c
 c
 c  Now get the histogram while taking account of the boxes.
 c
-      do i = 1, nPoint
-        m = max(int(a * sqrt(qResidual(i)**2+uResidual(i)**2) + b),1)
-        ResHis(m) = ResHis(m) + 1
-      enddo
+      if (deep) then
+        do i = 1, nPoint
+          if (Mask(i)) then
+            m = max(int(a * sqrt(qResidual(i)*qResidual(i)+
+     *                           uResidual(i)*uResidual(i)) + b),1)
+            ResHis(m) = ResHis(m) + 1
+          endif
+        enddo
+      else
+        do i = 1, nPoint
+          m = max(int(a * sqrt(qResidual(i)*qResidual(i)+
+     *                         uResidual(i)*uResidual(i)) + b),1)
+          ResHis(m) = ResHis(m) + 1
+        enddo
+      endif
 c
 c  Now work out where to set the limit.
 c
@@ -1103,7 +1217,7 @@ c-----------------------------------------------------------------------
       end
 c***********************************************************************
       subroutine ComplexHogbom(n,Patch,nx,ny,qRCmp,uRCmp,qCCmp,uCCmp,
-     *     ICmp,JCmp,nCmp,Run,nRun,qEstASum,uEstASum,Cutoff,Gain,
+     *     ICmp,JCmp,nCmp,Run,nRun,qEstASum,uEstASum,Cutoff,Gain,deep,
      *     MaxNiter,Niter)
 
       integer nx,ny,nCmp,nRun,n
@@ -1112,6 +1226,7 @@ c***********************************************************************
       real uRCmp(nCmp),uCCmp(nCmp)
       real Cutoff,Gain,qEstASum,uEstASum
       integer MaxNiter,Niter
+      logical deep
 c-----------------------------------------------------------------------
 c  Perform a Hogbom Clean.
 c
@@ -1123,6 +1238,7 @@ c    nCmp       Number of pixels.
 c    maxNiter   Maximum number of iterations to be performed.
 c    Gain       Loop gain.
 c    Cutoff     Stop when the residuals fall below the cutoff.
+c    deep       Are we in deep cleaning mode
 c    Run(3,nRun) This specifices the runs of the input image that are to
 c               be processed.
 c
@@ -1185,13 +1301,13 @@ c  Ready to perform the subtraction step. Lets go.
 c
       call ComplexSubComp(nx,ny,Ymap,Patch,n,n/2,Gain,MaxNiter,
      *     0.0,0.0,Cutoff,qEstASum,uEstASum,Icmp,Jcmp,qRcmp,
-     *     uRcmp,qCcmp,uCcmp,Ncmp,Niter)
+     *     uRcmp,qCcmp,uCcmp,Ncmp,Niter,deep)
       end
 c***********************************************************************
 
       subroutine ComplexClark(nx,ny,qResidual,uResidual,
-     *        qEstimate,uEstimate,nPoint,Run,nRun,
-     *        Histo,Patch,minPatch,maxPatch,Cutoff,
+     *        qEstimate,uEstimate,Mask,nPoint,Run,nRun,
+     *        Histo,Patch,minPatch,maxPatch,Cutoff,deep,
      *        MaxNiter,Gain,Speed,ResAMax,qEstASum,uEstASum,Niter,
      *        Limit,qRCmp,uRCmp,qCCmp,uCCmp,ICmp,JCmp,maxCmp)
 
@@ -1203,6 +1319,7 @@ c***********************************************************************
       real Histo(maxPatch/2+1),Patch(maxPatch,maxPatch)
       integer maxCmp,ICmp(maxCmp),JCmp(maxCmp)
       real qCCmp(maxCmp),uCCmp(maxCmp),qRCmp(maxCmp),uRCmp(maxCmp)
+      logical deep,Mask(nPoint)
 c-----------------------------------------------------------------------
 c  Perform the component gathering step of a major Clark Clean
 c  iteration.  Determine the limiting residual, and store the components
@@ -1228,6 +1345,7 @@ c    Run        The Run, defining the area to be cleaned.
 c    nrun       The number of runs.
 c    ResAMax    Absolute maximum of the residuals.
 c    EstASum    Absolute sum of the estimates.
+c    deep       Are we in deep cleaning mode?
 c
 c  Input/Output:
 c    Niter      The actual number of minor iterations performed.
@@ -1251,11 +1369,11 @@ c
 c  Find the limiting residual that we can fit into the residual list,
 c  then go and fill the residual and component list.
 c
-      call GetLimit(qResidual,uResidual,nPoint,ResAMax,maxCmp,
+      call GetLimit(qResidual,uResidual,Mask,nPoint,deep,ResAMax,maxCmp,
      *              Histo,MaxPatch,nPatch,Limit)
       Limit = max(Limit, 0.5 * Cutoff)
       call GetComp(qResidual,uResidual,qEstimate,uEstimate,
-     *        nPoint,ny,Ymap,Limit,
+     *        nPoint,ny,Ymap,Limit,deep,
      *        Icmp,Jcmp,qRcmp,uRCmp,qCCmp,uCCmp,maxCmp,nCmp,Run,nRun)
 c
 c  Determine the patch size to use, perform the minor iterations, then
@@ -1264,7 +1382,7 @@ c
       nPatch = max(MinPatch/2,nPatch)
       call ComplexSubComp(nx,ny,Ymap,Patch,MaxPatch,nPatch,Gain,
      *      MaxNiter,1.0,Speed,Limit,qEstASum,uEstASum,
-     *      ICmp,JCmp,qRCmp,uRCmp,qCCmp,uCCmp,nCmp,Niter)
+     *      ICmp,JCmp,qRCmp,uRCmp,qCCmp,uCCmp,nCmp,Niter,deep)
 
       call NewEst(qCCmp,uCCmp,ICmp,JCmp,nCmp,qEstimate,uEstimate,
      *            nPoint,Run,nRun)
@@ -1275,12 +1393,13 @@ c***********************************************************************
 
       subroutine ComplexSubComp(nx,ny,Ymap,Patch,n,PWidth,Gain,
      *    MaxNiter,g,Speed,Limit,qEstASum,uEstASum,
-     *    Icmp,Jcmp,qRcmp,uRcmp,qCcmp,uCcmp,Ncmp,Niter)
+     *    Icmp,Jcmp,qRcmp,uRcmp,qCcmp,uCcmp,Ncmp,Niter,deep)
 
       integer nx,ny,n,Ncmp,Niter,MaxNiter,PWidth
       real Speed,Limit,Gain,g,qEstASum,uEstASum
       integer Icmp(Ncmp),Jcmp(Ncmp),Ymap(ny+1)
       real Patch(n,n),qRcmp(Ncmp),qCcmp(Ncmp),uRcmp(Ncmp),uCcmp(Ncmp)
+      logical deep
 c-----------------------------------------------------------------------
 c  Perform minor iterations. This quits performing minor iterations when
 c
@@ -1331,7 +1450,8 @@ c-----------------------------------------------------------------------
 c
 c  Initialise.
 c
-      call ComplexGetPk(Ncmp,qRcmp,uRcmp,Gain,Pk,qWts,uWts)
+      call ComplexGetPk(Ncmp,qRcmp,uRcmp,qCcmp,uCcmp,
+     *  Gain,Pk,qWts,uWts,deep)
       qResMax = qRcmp(Pk)
       uResMax = uRcmp(Pk)
       TermRes = Limit
@@ -1340,8 +1460,9 @@ c
 c
 c  Loop until no more. Start with some house keeping.
 c
-      more = (qResMax**2+uResMax**2).gt.TermRes**2 .and.
-     *       Niter.lt.MaxNiter .and. .not.ZeroCmp
+      more = sqrt(qResMax**2+uResMax**2).gt.TermRes .and.
+     *         Niter.lt.MaxNiter .and. .not.zeroCmp
+
       do while (more)
 c
 c  Add the peaks to be subtracted into the components list, and
@@ -1402,22 +1523,26 @@ c  Ready for the next loop.
 c
         Niter = Niter + 1
         TermRes = TermRes + alpha * sqrt(qWts**2+uWts**2) /
-     *   (sqrt(qEstASum**2+uEstASum**2) *
-     *    sqrt(qResMax**2+uResMax**2)**Speed)
-        call ComplexGetPk(Ncmp,qRcmp,uRcmp,Gain,Pk,qWts,uWts)
+     *      (sqrt(qEstASum**2+uEstASum**2) *
+     *       sqrt(qResMax**2+uResMax**2)**Speed)
+        call ComplexGetPk(Ncmp,qRcmp,uRcmp,qCcmp,uCCmp,Gain,Pk,
+     *    qWts,uWts,deep)
         qResMax = qRcmp(Pk)
         uResMax = uRcmp(Pk)
         zeroCmp = qWts.eq.0.and.uWts.eq.0
         more = sqrt(qResMax**2+uResMax**2).gt.TermRes .and.
-     *         Niter.lt.MaxNiter .and. .not.zeroCmp
+     *           Niter.lt.MaxNiter .and. .not.zeroCmp
       enddo
       end
 
 c***********************************************************************
-      subroutine ComplexGetPk(Ncmp,qRcmp,uRcmp,Gain,Pk,qWts,uWts)
+      subroutine ComplexGetPk(Ncmp,qRcmp,uRcmp,qCcmp,uCcmp,Gain,Pk,
+     *  qWts,uWts,deep)
 
       integer Ncmp,Pk
-      real qRcmp(Ncmp),uRcmp(Ncmp),Gain,qWts,uWts
+      real qRcmp(Ncmp),uRcmp(Ncmp),qCcmp(Ncmp),uCcmp(Ncmp)
+      real Gain,qWts,uWts
+      logical deep
 c-----------------------------------------------------------------------
 c  Determine the position and value of the next delta.
 c
@@ -1438,13 +1563,25 @@ c-----------------------------------------------------------------------
       Pk = 1
       qWts = 0
       uWts = 0
-      do i = 1, Ncmp
-         temp = qRcmp(i)*qRcmp(i) + uRcmp(i)*uRcmp(i)
-         if (temp.gt.maxv) then
-            maxv = temp
-            Pk = i
-         endif
-      enddo
+      if (deep) then
+        do i = 1, Ncmp
+          if (qCcmp(i).ne.0.or.uCcmp(i).ne.0) then
+            temp = qRcmp(i)*qRcmp(i) + uRcmp(i)*uRcmp(i)
+            if (temp.gt.maxv) then
+              maxv = temp
+              Pk = i
+            endif
+          endif
+        enddo
+      else
+        do i = 1, Ncmp
+           temp = qRcmp(i)*qRcmp(i) + uRcmp(i)*uRcmp(i)
+           if (temp.gt.maxv) then
+              maxv = temp
+              Pk = i
+           endif
+        enddo
+      endif
       qWts = Gain * qRcmp(Pk)
       uWts = Gain * uRcmp(Pk)
 
@@ -1453,7 +1590,7 @@ c-----------------------------------------------------------------------
 c***********************************************************************
 
       subroutine GetComp(qResidual,uResidual,qEstimate,uEstimate,
-     *                   nPoint,ny,Ymap,Limit,Icmp,Jcmp,
+     *                   nPoint,ny,Ymap,Limit,deep,Icmp,Jcmp,
      *                   qRCmp,uRCmp,qCCmp,uCCmp,maxCmp,nCmp,Run,nRun)
 
       integer nPoint,ny,maxCmp,nCmp,nRun,Run(3,nrun)
@@ -1461,6 +1598,7 @@ c***********************************************************************
       real qEstimate(nPoint),uEstimate(nPoint)
       real qRCmp(maxCmp),uRCmp(maxCmp),qCCmp(maxCmp),uCCmp(maxCmp)
       integer Ymap(ny+1),Icmp(maxCmp),Jcmp(maxCmp)
+      logical deep
 c-----------------------------------------------------------------------
 c  Get the residuals that are greater than a certain cutoff.
 c
@@ -1471,7 +1609,7 @@ c    Limit      Threshold above which components are to be taken.
 c    Run        Runs specifications.
 c    nrun       Number of runs.
 c    q/uResidual Contains all the residuals.
-c    w/uEstimate Contains all the estimated pixel fluxes.
+c    q/uEstimate Contains all the estimated pixel fluxes.
 c
 c  Outputs:
 c    Ncmp       Number of residual peaks returned.
@@ -1504,9 +1642,19 @@ c
         x0 = Run(2,k) - 1
         n0 = Run(3,k) - x0
 
-        do i = 1, n0
-          Temp(i) = sqrt(qResidual(l+i)**2+uResidual(l+i)**2)
-        enddo
+        if (deep) then
+          do i = 1, n0
+            if (qEstimate(l+i).ne.0.or.uEstimate(l+i).ne.0) then
+              Temp(i) = sqrt(qResidual(l+i)**2+uResidual(l+i)**2)
+            else
+              Temp(i) = 0
+            endif
+          enddo
+        else
+          do i = 1, n0
+            Temp(i) = sqrt(qResidual(l+i)**2+uResidual(l+i)**2)
+          enddo
+        endif
         call whenfgt(n0, Temp, 1, Limit, Indx,Ncmpd)
         if (Ncmp+Ncmpd.gt.maxCmp)
      *        call bug('f','Internal bug in GetComp')
