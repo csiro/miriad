@@ -61,7 +61,7 @@ c       value is given, the flux and spectral components use the same
 c       gain.  The default is 0.1.
 c@ cutoff
 c       MFCLEAN finishes when the absolute maximum residual falls below
-c       CUTOFF. Default is 0. When two values are given, do a deep 
+c       CUTOFF. Default is 0. When two values are given, do a deep
 c       clean to the second cutoff limiting peak finding to
 c       the pixels that are already in the model.
 c@ niters
@@ -69,16 +69,16 @@ c       The maximum number of minor iterations.  MFCLEAN finishes when
 c       abs(NITERS) minor iterations have been performed.  Clean may
 c       finish before this point, however, if NITERS is negative and the
 c       absolute maximum residual becomes negative valued, or if the
-c       cutoff level (as described above) is reached. Optional second 
-c       value will force MFCLEAN to report on the level reached and 
-c       (for mode=clark) start a new major iteration at least every 
+c       cutoff level (as described above) is reached. Optional second
+c       value will force MFCLEAN to report on the level reached and
+c       (for mode=clark) start a new major iteration at least every
 c       niters(2) iterations. This can be useful to avoid overcleaning.
 c@ region
 c       This specifies the region to be Cleaned.  See the User's Manual
 c       for instructions on how to specify this.  The default is
 c       generally inadequate, and a smaller region should be explicitly
 c       specified. An easy way to do this is using the percentage option
-c       of region. When the beam is the same size as the image use 
+c       of region. When the beam is the same size as the image use
 c       region=perc(33), for a 'double' size beam use region=perc(66).
 c@ minpatch
 c       The minimum patch size when performing minor iterations.
@@ -105,7 +105,7 @@ c       x and y pixel coordinate (in the output model; this goes from 1
 c       to N), the "I" component and the "I*alpha" component.  The
 c       default is to not create a log file.
 c
-c$Id: mfclean.for,v 1.13 2017/10/05 21:03:03 wie017 Exp $
+c$Id: mfclean.for,v 1.14 2017/10/19 04:45:13 wie017 Exp $
 c--
 c  History:
 c    rjs   Nov89 - Original version.
@@ -209,8 +209,8 @@ c-----------------------------------------------------------------------
       external  itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('mfclean',
-     *                 '$Revision: 1.13 $',
-     *                 '$Date: 2017/10/05 21:03:03 $')
+     *                 '$Revision: 1.14 $',
+     *                 '$Date: 2017/10/19 04:45:13 $')
 c
 c  Get the input parameters.
 c
@@ -406,6 +406,7 @@ c
 c
 c  Get statistics about the residuals.
 c
+      deep = .false.
       call output('Starting to iterate ...')
       call Stats(dat(Res0),nPoint,ResMin,ResMax,ResAMax,ResRms,
      *  deep,dat(Est0))
@@ -416,7 +417,6 @@ c
       negFound = .false.
       More = nPoint.gt.0
       Limit = 0
-      deep = .false.
       Cutoff=Cut(1)
       do while (More)
         curMaxNiter = min(Niter+MaxNiter(2), MaxNiter(1))
@@ -450,11 +450,11 @@ c
 c  Check for convergence.
 c
         more = .not.((negFound .and. negStop)
-     *                .or. ResAMax.le.Cutoff 
+     *                .or. ResAMax.le.Cutoff
      *                .or. Niter.ge.MaxNiter(1))
 c
 c  Check if we want to go into the deep cleaning phase
-c     
+c
         if (.not.more.and..not.deep) then
           if (Cut(2).gt.0.and.Cut(2).lt.Cut(1).and.
      *    .not.((negFound.and.negStop).or.Niter.ge.MaxNiter(1))) then
@@ -776,7 +776,7 @@ c
         enddo
         if (k.gt.0) Drms=sqrt(Drms/k)
       endif
-      
+
       DAmax = max(abs(Dmax),abs(Dmin))
       end
 
@@ -1345,10 +1345,10 @@ c
       do i = 1, n
         Tmp(i) = R0(i)*R0(i)*P11 + R1(i)*R1(i)*P00 - 2*R0(i)*R1(i)*P01
       enddo
-      
+
 c
 c  In deep cleaning phase, only consider pixels we've seen before
-c      
+c
       if (deep) then
         do i = 1, n
           if (C0(i).eq.0) Tmp(i)=0
@@ -1370,7 +1370,7 @@ c
           if (C0(i).ne.0) ResMax = max(ResMax,abs(R0(i)))
         enddo
       endif
-      
+
       delta  = 1.0/(P00*P11 - P01*P01)
       Wt0 = (P11*R0(pk) - P01*R1(pk))*delta
       Wt1 = (P00*R1(pk) - P01*R0(pk))*delta
@@ -1445,7 +1445,7 @@ c
           m = max(int(a * abs(Res0(i)) + b),1)
           ResHis(m) = ResHis(m) + 1
         enddo
-      else 
+      else
         do i = 1, nPoint
           if (Est0(i).ne.0) then
             m = max(int(a * abs(Res0(i)) + b),1)
@@ -1532,7 +1532,7 @@ c
         y0 = Run(1,k)
         x0 = Run(2,k) - 1
         n0 = Run(3,k) - x0
-        
+
         if (deep) then
           do i = 1, n0
             if (Est0(l+i).ne.0) then
