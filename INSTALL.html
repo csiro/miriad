@@ -350,10 +350,18 @@ Note that if you don't have an account at the ATNF that would allow you to run
   <a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad-sun4sol.tar.bz2">
   <code>miriad-sun4sol.tar.bz2</code></a>).
   </p>
+ 
+  <p>
+  If you are running an older version of linux you may get error messages like:
+  "uvplt: /lib64/libc.so.6: version `GLIBC_2.14' not found (required by uvplt)".
+  This indicates your kernel version is older than what is needed. Until you
+  upgrade you can use a snapshot of Miriad from September 2017: 
+  <a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad-linux64.3.tar.bz2">
+  <code>miriad-linux64.3.tar.bz2</code></a>, or build from source.
 
   <p>
-  <font color="#ff0000"><b>Note:</b> all recent Macs should be able to execute
-  the x86_64 instruction set</font>.  If the <code>arch</code> command reports
+  <b>Note:</b> all recent Macs should be able to execute
+  the x86_64 instruction set.  If the <code>arch</code> command reports
   <code>i386</code> then ignore that and instead check that the
   <code>MACHTYPE</code> environment variable is set to <code>x86_64</code>.
   </p>
@@ -1560,5 +1568,5 @@ private version:
 <hr>
 
 <p>
-<small>$Id: INSTALL.html,v 1.30 2017/05/12 01:46:54 wie017 Exp $</small>
+<small>$Id: INSTALL.html,v 1.31 2017/11/28 23:49:40 mirmgr Exp $</small>
 </p>
