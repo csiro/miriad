@@ -46,7 +46,7 @@ c       Options.  Minimum match is active.
 c         relax  ignore axis descriptor mismatches
 c                (e.g. pixel increments etc).  Use with care.
 c
-c$Id: velimage.for,v 1.6 2013/08/30 01:49:21 wie017 Exp $
+c$Id: velimage.for,v 1.7 2017/12/11 22:26:28 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -72,8 +72,8 @@ c-----------------------------------------------------------------------
       external  itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('velimage',
-     *                 '$Revision: 1.6 $',
-     *                 '$Date: 2013/08/30 01:49:21 $')
+     *                 '$Revision: 1.7 $',
+     *                 '$Date: 2017/12/11 22:26:28 $')
 
 c     Get the input parameters.
       call keyini
@@ -84,6 +84,7 @@ c     Get the input parameters.
       call keyr('step', step, 0.0)
       call keya('out',outNam,' ')
       call getopt(relax)
+      call BoxInput('region',inName,boxes,MAXBOXES)
       call keyfin
 
 c     Check the inputs.
@@ -125,7 +126,7 @@ c     Open the input maps and check conformance.
           if (crpixi.ne.crpix(iax))
      *      call bug(wflag, 'crpix differs between input maps.')
 
-          discr = 1d-2 * cdelt(iax)
+          discr = abs(1d-2 * cdelt(iax))
           call rdhdd(lIn(iMap), 'cdelt'//cax, cdelti, 1d0)
           if (abs(cdelti-cdelt(iax)).gt.discr)
      *      call bug(wflag, 'cdelt differs between input maps.')
@@ -154,7 +155,7 @@ c     Open the output image and write its header.
       call wrhdd(lOut, 'cdelt3', dble(step))
       call wrhdd(lOut, 'crval3', dble(start))
       call wrhda(lOut, 'ctype3', 'VRAD')
-      call wrhda(lOut, 'bunit',  'KM/S')
+c      call wrhda(lOut, 'bunit',  'KM/S')
 
 c     Generate the output image.
       do k = 1, nchan
