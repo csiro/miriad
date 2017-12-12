@@ -136,6 +136,7 @@ c		 'c'	Apply gain/phase and delay corrections.
 c		 'e'	Apply polarisation leakage corrections.
 c		 'f'	Apply bandpass corrections.
 c		 '3'    Return w in the preamble (as preamble(3)).
+c                'g'    Do RM/angle processing - sets stokes to Q, U
 c--
 c------------------------------------------------------------------------
 	include 'uvdat.h'
@@ -163,6 +164,7 @@ c
 	dosels   = index(flags,'d').gt.0
 	doleak	 = index(flags,'e').gt.0
 	dow	 = index(flags,'3').gt.0
+        dorm     = index(flags,'g').gt.0
 	if(dow)then
 	  npream = 5
 	  idxT = 4
@@ -223,9 +225,16 @@ c
 	  doref = ref.ne.' '
 	endif
 c
-c  Get the Stokes/polarisation parameters, if required.
+
+c Get the Stokes/polarisations, if required.
+c Forcing these to be Q and U for RM synthesisc
 c
 	if(dostokes)call uvPolInp(maxPol,nPol,Pols)
+        if(dorm) then
+          nPol = 2
+	  Pols(1) = 2
+	  Pols(2) = 3
+        endif
 c
 c  Get the selection parameters, and determine whether polarization
 c  selection was used.

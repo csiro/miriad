@@ -54,6 +54,7 @@ c    idxT			Index of "time" in the preamble.
 c    idxBL			Index of "baseline" in the preamble.
 c    dofbcal                    Frequency binned cal file is present
 c    dofbleak                   Frequency binned leakage file is present
+c    dorm                       Rotation measure processing
 c
 	integer maxsels,maxNam,maxIn
 	parameter(maxsels=2048,maxNam=20000,maxIn=400)
@@ -61,7 +62,7 @@ c
 	real plmaj,plmin,plangle
 	logical doplanet,dowave,doref,dodata,docal,dosels,doleak,dopass
 	logical PlInit,WillCal,WillLeak,auto,cross,calmsg(maxIn),dow
-	logical dogsv, dofbcal, dofbleak
+	logical dogsv, dofbcal, dofbleak, dorm
 	integer k1(maxIn),k2(maxIn),nchan,npream,idxT,idxBL
 	character line*32,ref*32,InBuf*(maxNam)
 	integer nIn,pnt,tno
@@ -125,7 +126,7 @@ c
 	common/UVDatCoD/doplanet,dowave,doref,dodata,dosels,dow,
      *	 dogsv,plinit,k1,k2,nchan,nIn,pnt,tno,npream,idxT,idxBL,
      *	 auto,cross,docal,WillCal,doleak,WillLeak,dopass,dofbcal,
-     *   dofbleak,calmsg
+     *   dofbleak,dorm,calmsg
 c
 	common/UVDatCoB/line,ref,InBuf
 c
