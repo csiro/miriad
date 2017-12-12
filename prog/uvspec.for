@@ -20,7 +20,9 @@ c	The default is all channels (or all wide channels if there are no
 c	spectral channels).
 c@ stokes
 c	The Stokes/polarization types to be plotted. The default is to
-c	plot those polarizations present in the input files.
+c	plot those polarizations present in the input files. Note that 
+c	stokes=q,u is adopted when the X axis is RM or the Y axis is polang,
+c	regardless of Stokes input given.
 c@ interval
 c	Time averaging interval, in minutes. The default is 0 (i.e. no
 c	averaging).
@@ -41,16 +43,18 @@ c	                 applies the gains file in copying the data.
 c	   'nopass'      Do not apply bandpass corrections. By default,
 c	                 UVSPEC corrects for the bandpass shape if the
 c	                 required information is available.
-c	   'nopol'       Do not apply polarizatiopn corrections. By default
+c	   'nopol'       Do not apply polarization corrections. By default
 c	                 UVSPEC corrects for polarization corss-talk.
 c	   'ampscalar'   When plotting amplitude, this causes it to perform
 c	                 scalar averaging. By default it does vector averaging.
 c	   'rms'         When plotting amplitude, this causes it to plot
 c		         the rms amplitude. By default it does vector averaging.
+c                        Ignored for xaxis=rm
 c          'mnoise'      When plotting noise, plot the error in the mean.           
 c          'sdo'         Plot the difference between bin 2 and bin 1 (these
 c                        contain the CABB noise cal source on and off 
 c                        autocorrelations, giving the Synchr. Detected Ouput)
+c                        Ignored for xaxis=rm
 c	   'nobase'      Plot all the baselines on one plot.
 c	   'avall'       Average all the baselines together before plotting.
 c	   'dots'        Plot phases with dots instead of filled circles.
@@ -59,6 +63,7 @@ c	                 default is to plot only unflagged data.
 c	   'all'         Plot both flagged and unflagged data.
 c          'hdr'         Use high dynamic range scaling for amplitude plots:
 c                        log(1+amp). This works well for RFI affected data.
+c                        Ignored for xaxis=rm
 c          'timelog'     In any log file, output the time of the spectrum before
 c                        each spectrum is written out.
 c@ axis
@@ -71,14 +76,24 @@ c	   dfrequency    X-axis is the Doppler-corrected frequency, in GHz.
 c	   velocity      X-axis is velocity in radio convention, in km/sec.
 c	   felocity	 X-axis is velocity in optical convention, in km/sec.
 c	   lag           X-axis is lag number.
+c	   rm            X-axis is Faraday depth, in rad/m^2. When this
+c		 	 is selected, the RMTF is plotted as a dashed line,
+c                        and +/-1 sigma are plotted as dot-dashed lines
+c	   lambda2       X-axis is (wavelength)^2, in m^2.
 c	Possible values for the Y axis are:
 c	   amplitude     Plot amplitude.
 c	   phase         Plot phase.
 c	   real          Plot real part of the data.
 c	   imaginary     Plot imaginary part of the data.
 c          noise         Plot the standard deviation of the data
+c          polang        Plot the polarisation angle of Q and U for the data
 c          
-c	The default is axis=channel,amplitude.
+c	The default is axis=channel,amplitude. 
+c	If axis=rm is selected, the value input for the Y axis is ignored and 
+c	axis=rm,real is adopted.
+c@ xrange
+c	The min and max range along the x axis of the plot. The default 
+c	is to autoscale. 
 c@ yrange
 c	The min and max range along the y axis of the plots. The default
 c	is to autoscale.
@@ -91,7 +106,7 @@ c@ log
 c	Log file into which the spectra are dumped in the order in which
 c	they are plotted.  Really only useful if your plot is quite simple.
 c
-c$Id: uvspec.for,v 1.15 2016/07/13 04:20:47 ste616 Exp $
+c$Id: uvspec.for,v 1.16 2017/12/12 01:33:10 wie017 Exp $
 c--
 c  History:
 c    rjs  18sep92 Derived from uvaver.
@@ -129,6 +144,7 @@ c    mhw  07sep12 Add hdr option, useful for plotting rfi
 c    mhw  18nov13 Add noise, mnoise
 c    mhw  03dec13 Add units to Y axis
 c    mhw  06feb14 Fix bug in last change
+c    bmg  27jun17 Added axis=rm
 c  Bugs:
 c------------------------------------------------------------------------
 	include 'mirconst.h'
@@ -136,37 +152,55 @@ c------------------------------------------------------------------------
         integer maxco
         parameter (maxco=15)
 c
-	character version*(*)
-	parameter(version='UvSpec: version 1.0 21-Apr-10')
+	character version*72
 	character uvflags*8,device*64,xaxis*12,yaxis*12,logf*64
 	character xtitle*64,ytitle*64
 	logical ampsc,rms,nobase,avall,first,buffered,doflush,dodots
-	logical doshift,doflag,doall,dolag,dosdo,dohdr,domnoise
-	logical dotimelog
+	logical doshift,doflag,doall,dolag,dosdo,dohdr,domnoise,dorm
+	logical dotimelog,dolam,doang
 	double precision interval,T0,T1,preamble(5),shift(2),lmn(3)
 	integer tIn,vupd
 	integer nxy(2),nchan,nread,nplot
-	real yrange(2),inttime
+	real xrange(2),yrange(2),inttime
 	double precision x(2*MAXCHAN-2)
 	complex data(MAXCHAN)
 	logical flags(MAXCHAN)
-	integer hann,ibin
+	integer hann,ibin,ncount,nncount
 	real hc(maxco),hw(maxco)
+	real sig2,rms2,sig
 c
 c  Externals.
 c
 	integer nextpow2
 	logical uvDatOpn,uvVarUpd
+        character versan*72
+
+
+        version = versan('uvspec',
+     *                   '$Revision: 1.16 $',
+     *                   '$Date: 2017/12/12 01:33:10 $')
 c
 c  Get the input parameters.
 c
-	call output(version)
 	call keyini
 	call GetOpt(uvflags,ampsc,rms,nobase,avall,dodots,
      *    doflag,doall,dosdo,dohdr,domnoise,dotimelog)
 	call GetAxis(xaxis,yaxis)
 	dolag = xaxis.eq.'lag'
+	dorm = xaxis.eq.'rm'
+	dolam = xaxis.eq.'lambda2'
+	doang = yaxis.eq.'polang'
+	ncount = 0
+	nncount = 0
+	rms2 = 0.
+
+C	Force Stokes choices to be Q and U for Faraday depth
+C	or for polarisation angle
+	if (dorm.or.doang) then
+          uvflags(2:2)='g'
+	endif
 	call uvDatInp('vis',uvflags)
+
 	call keyd('interval',interval,0.d0)
         call keyi('hann',hann,1)
 	call keya('device',device,' ')
@@ -174,8 +208,10 @@ c
 	call keyi('nxy',nxy(2),0)
 	call keyd('offset',shift(1),0.d0)
 	call keyd('offset',shift(2),0.d0)
+	call keyr('xrange',xrange(1),0.)
+	call keyr('xrange',xrange(2),xrange(1)-1.)
 	call keyr('yrange',yrange(1),0.)
-	call keyr('yrange',yrange(2),yrange(1)-1)
+	call keyr('yrange',yrange(2),yrange(1)-1.)
         call keya('log',logf,' ')
 	call keyfin
 c
@@ -202,6 +238,8 @@ c
 c  Various initialisation.
 c
 	ytitle = yaxis
+	if (ytitle(1:6).eq.'polang') 
+     +     ytitle = 'polarisation angle'
         if (dosdo) ytitle = yaxis//' SDO'
 	call ucase(ytitle(1:1))
 	interval = interval/(24.*60.)
@@ -226,7 +264,10 @@ c
 c
 c  Loop over the data.
 c
-	  call uvDatRd(preamble,data,flags,maxchan,nread)
+	 call uvDatRd(preamble,data,flags,maxchan,nread)
+         call uvDatGtr('variance',sig2) 
+	 rms2 = rms2 + sig2
+         nncount = nncount + 1
 	  nplot = nread
 	  if(dolag)nplot = nextpow2(2*(nread-1))
 	  if(doshift)then
@@ -256,9 +297,13 @@ c  Pull the chain and flush out and plot the accumulated data
 c  in the case of time averaging.
 c
 	    if(doflush)then
+	      sig = sqrt(rms2/real(nncount))/sqrt(real(ncount)/2.)
 	      call BufFlush(ampsc,rms,nobase,dodots,dohdr,domnoise,hann,
-     *	       hc,hw,first,device,x,nplot,xtitle,ytitle,nxy,yrange,logf,
-     *         dotimelog)
+     *	       hc,hw,first,device,x,nplot,xtitle,ytitle,nxy,xrange,
+     *         yrange,sig,rms2,ncount,nncount,logf,dotimelog)
+	      rms2 = 0.
+	      ncount = 0
+	      nncount = 0
 	      T0 = preamble(4)
 	      T1 = T0
 	      buffered = .false.
@@ -266,25 +311,33 @@ c
 c
 c  Accumulate more data, if we are time averaging.
 c
-	    if(.not.buffered)call GetXAxis(tIn,xaxis,xtitle,x,nplot)
+	    if(.not.buffered)call GetXAxis(tIn,xaxis,xtitle,x,
+     +          nplot,xrange)
 	    if(avall)preamble(5) = 257
 	    call uvrdvrr(tIn,'inttime',inttime,0.)
 	    call BufAcc(doflag,doall,preamble,inttime,data,flags,
-     *        nread,ibin)
+     *        nread,ibin,ncount)
 	    buffered = .true.
 	    nchan = nread
 c
 c  Keep on going. Read in another record.
 c
 	    call uvDatRd(preamble,data,flags,maxchan,nread)
+         call uvDatGtr('variance',sig2) 
+	 rms2 = rms2 + sig2
+         nncount = nncount + 1
 	  enddo
 c
 c  Flush out and plot anything remaining.
 c
 	  if(buffered)then
+	    sig = sqrt(rms2/real(nncount))/sqrt(real(ncount)/2.)
 	    call BufFlush(ampsc,rms,nobase,dodots,dohdr,domnoise,hann,
-     *	      hc,hw,first,device,x,nplot,xtitle,ytitle,nxy,yrange,logf,
-     *        dotimelog)
+     *	      hc,hw,first,device,x,nplot,xtitle,ytitle,nxy,xrange,
+     *        yrange,sig,rms2,ncount,nncount,logf,dotimelog)
+	    rms2 = 0.
+	    ncount = 0
+	    nncount = 0
 	    buffered = .false.
 	  endif
 	  call uvDatCls
@@ -293,6 +346,7 @@ c
 	if(first)call bug('f','Nothing to plot')
 	if(logf.ne.' ') call LogClose
 	call pgend
+
 	end
 c************************************************************************
 	subroutine ShiftIt(tIn,uvw,data,nchan,lmn)
@@ -329,7 +383,7 @@ c
 c	
 	end
 c************************************************************************
-	subroutine GetXAxis(tIn,xaxis,xtitle,x,nchan)
+	subroutine GetXAxis(tIn,xaxis,xtitle,x,nchan,xrange)
 c
 	implicit none
 	integer tIn,nchan
@@ -345,18 +399,26 @@ c    nchan
 c  Output:
 c    x
 c------------------------------------------------------------------------
+	include 'mirconst.h'
+	include 'maxdim.h'
 	integer VELO
 	parameter(VELO=3)
 c
-	integer i,i0
+	integer i,i0, nrm
+	real rmstep, rmmax, lam2ave, lam2(10*MAXCHAN), rm(10*MAXCHAN)
+	real rmtffwhm
 	double precision data(6),start,step
 	character vel*32
+	real xrange(2)
+	double precision freq(10*MAXCHAN)
+	common /faraday/freq,rmmax,nrm,rmstep,lam2ave,lam2,rm,rmtffwhm
+
 c
 c  Externals.
 c
 	integer len1
 c
-	if(xaxis.eq.'channel')then
+	if(xaxis.eq.'channel') then
 	  call uvinfo(tIn,'line',data)
 	  start = data(3)
 	  if(nint(data(1)).ne.VELO)start = start + 0.5*(data(4)-1)
@@ -391,6 +453,50 @@ c
 	    i0 = i0 + 1
 	  enddo
 	  xtitle = 'Lag Number'
+
+        else if(xaxis.eq.'rm')then
+
+	  call uvinfo(tIn,'line',data)
+	  start = data(3)
+	  if(nint(data(1)).ne.VELO)start = start + 0.5*(data(4)-1)
+	  step = data(5)
+	  do i=1,nchan
+	    x(i) = start + (i-1)*step
+	  enddo
+
+          xtitle = 'Faraday Depth (rad m\u-2\d)'
+	  call uvinfo(tIn,'sfreq',freq)
+
+c 	  Convert from frequency to wavelength
+	  lam2ave = 0.
+  	  do i = 1, nchan
+               lam2(i) = (DCMKS/(real(freq(i))*1e9))**2
+               lam2ave = lam2ave + lam2(i)/nchan
+  	  enddo
+
+	  if (xrange(2).le.xrange(1)) then
+             rmmax = sqrt(3.)/abs((lam2(1))-(lam2(2)))
+	  else
+	     rmmax = max(abs(xrange(1)),abs(xrange(2)))
+	  endif
+	  rmtffwhm = 2.*sqrt(3.)/abs((lam2(nchan))-(lam2(1)))
+          rmstep = rmtffwhm/25.
+          nrm = int(2.*rmmax/rmstep+1)
+          do i=1,nrm 
+             rm(i) = -1.*rmmax + (real(i)-1.)*rmstep
+          enddo
+
+        else if(xaxis.eq.'lambda2' )then
+
+
+          xtitle = 'Wavelength squared (m\u-2\d)'
+          call uvinfo(tIn,'sfreq',freq)
+c         Convert from frequency to wavelength
+          do i = 1, nchan
+               x(i) = (DCMKS/(real(freq(i))*1e9))**2
+          enddo
+
+
 	else
 	  call bug('f','Unrecognised xaxis')
 	endif
@@ -429,19 +535,31 @@ c    xaxis
 c    yaxis
 c------------------------------------------------------------------------
 	integer NX,NY
-	parameter(NX=6,NY=5)
+	parameter(NX=8,NY=6)
 c
 	integer n
 	character xaxes(NX)*10,yaxes(NY)*9
 	data xaxes/'channel   ','frequency ','velocity  ','felocity  ',
-     *		   'lag       ','dfrequency'/
+     *		   'lag       ','dfrequency','rm        ','lambda2   '/
 	data yaxes/'amplitude','phase    ','real     ','imaginary',
-     *             'noise    '/
+     *             'noise    ','polang   '/
 c
 	call keymatch('axis',NX,xaxes,1,xaxis,n)
 	if(n.eq.0)xaxis = xaxes(1)
-	call keymatch('axis',NY,yaxes,1,yaxis,n)
-	if(n.eq.0)yaxis = yaxes(1)
+
+C	If plotting RM, yaxis is always real
+	if (xaxis.eq.xaxes(7)) then
+	   call keymatch('axis',NY,yaxes,1,yaxis,n)
+     	   if (yaxis.ne.yaxes(3)) then
+              call bug('w','Y axis defaulting to real component for '//
+     +          'X axis = RM')
+	      yaxis = yaxes(3)
+	   endif
+        else
+	   call keymatch('axis',NY,yaxes,1,yaxis,n)
+	   if(n.eq.0)yaxis = yaxes(1)
+	endif
+
 	end
 c************************************************************************
 	subroutine GetOpt(uvflags,ampsc,rms,nobase,avall,dodots,
@@ -509,19 +627,20 @@ c  common block.
 c
 c------------------------------------------------------------------------
 	include 'uvspec.h'
+
 	free = 1
 	mbase = 0
 	end
 c************************************************************************
 	subroutine BufFlush(ampsc,rms,nobase,dodots,dohdr,domnoise,hann,
-     *	        hc,hw,first,device,x,n,xtitle,ytitle,nxy,yrange,logf,
-     *          dotimelog)
+     *	        hc,hw,first,device,x,n,xtitle,ytitle,nxy,xrange,yrange,
+     *          sig,rms2,ncount,nncount,logf,dotimelog)
 c
 	implicit none
 	logical ampsc,rms,nobase,first,dodots,dohdr,domnoise,dotimelog
 	character device*(*),xtitle*(*),ytitle*(*),logf*(*)
 	integer n,nxy(2),hann
-	real yrange(2),hc(*),hw(*)
+	real xrange(2),yrange(2),hc(*),hw(*)
 	double precision x(n)
 c
 c  Plot the averaged data. On the first time through, also initialise the
@@ -534,33 +653,39 @@ c------------------------------------------------------------------------
 	integer MAXPLT,maxpnts
 	parameter(maxpnts=1000000,MAXPLT=1024)
         double precision xp(maxpnts)
-	real xrange(2),inttime,yp(maxpnts)
+	real inttime,yp(maxpnts)
 	integer plot(MAXPLT+1)
 	double precision time
 	integer i,j,ngood,ng,ntime,npnts,nplts,nprev,p
-	logical doamp,doampsc,dorms,dophase,doreal,doimag,dopoint,dolag
+	logical doamp,doampsc,dorms,dophase,doreal,doimag,dopoint,
+     +     dolag,dorm,dolam,doang
 	logical dosdo,donoise,Hit(PolMin:PolMax)
 	integer npol,pol(MAXPOL)
         character stcat*80
+	real sig, rms2
+	integer ncount, nncount
         
 c
 c  Determine the conversion of the data.
 c
+	dorm = xtitle(1:7).eq.'Faraday'
+	dolam= xtitle(1:10).eq.'Wavelength'
 	doamp = index(ytitle,'Amp').gt.0
-        dohdr = dohdr.and.doamp
-        if (dohdr) ytitle = 'Amplitude+1'
+        dohdr = (dohdr.and.doamp).and..not.dorm
+        if (dohdr.and..not.dorm) ytitle = 'Amplitude+1'
 	dolag = xtitle.eq.'Lag Number'
 	doampsc = doamp.and.ampsc
-	dorms   = doamp.and.rms
+	dorms   = (doamp.and.rms).and..not.dorm
 	if(doampsc)doamp = .false.
 	if(dorms)  doamp = .false.
 	dophase = ytitle(1:5).eq.'Phase'
 	dopoint = dophase
-	doreal  = ytitle(1:4).eq.'Real'
+	doreal  = (ytitle(1:4).eq.'Real').or.(dorm)
 	doimag  = ytitle(1:9).eq.'Imaginary'
         dosdo   = index(ytitle,'SDO').gt.0
         donoise = ytitle(1:5).eq.'Noise'
-        if(domnoise) ytitle = 'Noise in mean'
+	doang = ytitle(1:12).eq.'Polarisation'
+        if(domnoise.and.donoise) ytitle = 'Noise in mean'
 c
 c  Determine the number of good baselines.
 c
@@ -570,8 +695,9 @@ c
 	enddo
 	if(ngood.le.0)return
         if (first) then
-          if (.not.dophase) ytitle=stcat(ytitle,' (Jy)')
-          if (dophase) ytitle=stcat(ytitle,' (deg)')
+ 	  if (dorm) ytitle = 'Flux'
+          if (.not.dophase.and..not.doang) ytitle=stcat(ytitle,' (Jy)')
+          if (dophase.or.doang) ytitle=stcat(ytitle,' (deg)')
         endif
 c
 c  Initialise the plot device, if this is the first time through.
@@ -580,10 +706,11 @@ c
 	if(nobase) ng = 1
 	if(first)call PltIni(device,ng,nxy)
 	first = .false.
-c
-c  Autoscale the X axis.
-c
-	call SetAxisD(x,n,xrange)
+ 
+c  Autoscale the X axis if needed
+	if (xrange(2).le.xrange(1).and..not.dorm) 
+     +       call SetAxisD(x,n,xrange)
+
 c
 c  Now loop through the good baselines, plotting them.
 c
@@ -598,6 +725,7 @@ c
 	enddo
 c
 	do j=1,mbase
+
 	  if(cnt(j).gt.0)then
 	    inttime = inttime + preamble(6,j)
 	    time = time + preamble(4,j)
@@ -623,7 +751,7 @@ c
 		  call VisExt(x,buf(p),buf2(1,p),bufr(p),count(p),
      *		    nchan(i,j),
      *		    doamp,doampsc,dorms,dophase,doreal,doimag,dohdr,
-     *		    donoise,domnoise,xp,yp,maxpnts,npnts)
+     *		    donoise,domnoise,dorm,doang,xp,yp,maxpnts,npnts)
 		endif
 	      endif
 c
@@ -638,9 +766,12 @@ c
 	      endif
 	    enddo
 	    if(.not.nobase.and.npnts.gt.0)then
+	      sig = sqrt(rms2/real(nncount))/sqrt(real(ncount)/2.)
+	      sig = sig*sqrt(real(ng))
 	      call Plotit(npnts,xp,yp,xrange,yrange,dodots,plot,nplts,
      *		xtitle,ytitle,j,time/ntime,inttime/nplts,pol,npol,
-     *		dopoint,hann,hc,hw,logf,maxpnts,dohdr,dotimelog)
+     *		dopoint,hann,hc,hw,logf,maxpnts,dohdr,dotimelog,dorm,
+     *	        doang,sig)
 c
 	      npol = 0
 	      do i=PolMin,PolMax
@@ -657,9 +788,14 @@ c
 c
 c  Do the final plot.
 c
-	if(npnts.gt.0)call Plotit(npnts,xp,yp,xrange,yrange,dodots,
+	if(npnts.gt.0) then 
+	   sig = sqrt(rms2/real(nncount))/sqrt(real(ncount)/2.)
+	   sig = sig*sqrt(real(ng))
+	   call Plotit(npnts,xp,yp,xrange,yrange,dodots,
      *	  plot,nplts,xtitle,ytitle,0,time/ntime,inttime/nplts,
-     *	  pol,npol,dopoint,hann,hc,hw,logf,maxpnts,dohdr,dotimelog)
+     *	 pol,npol,dopoint,hann,hc,hw,logf,maxpnts,dohdr,dotimelog,dorm,
+     *   doang,sig)
+	endif
 c
 c  Reset the counters.
 c
@@ -670,12 +806,13 @@ c
 c************************************************************************
 	subroutine VisExt(x,buf,buf2,bufr,count,nchan,
      *		    doamp,doampsc,dorms,dophase,doreal,doimag,
-     *		    dohdr,donoise,domnoise,xp,yp,maxpnts,npnts)
+     *		    dohdr,donoise,domnoise,dorm,doang,
+     *              xp,yp,maxpnts,npnts)
 c
 	implicit none
 	integer nchan,npnts,maxpnts,count(nchan)
 	logical doamp,doampsc,dorms,dophase,doreal,doimag,dohdr
-        logical donoise,domnoise
+        logical donoise,domnoise,dorm,doang
 	real bufr(nchan),buf2(2,nchan),yp(maxpnts)
 	double precision x(nchan),xp(maxpnts)
 	complex buf(nchan)
@@ -692,7 +829,7 @@ c
 	do k=1,nchan
 	  if(count(k).gt.0)then
 	    if(doamp)then
-	      temp = abs(buf(k)) / count(k)
+              temp = abs(buf(k)) / count(k)
               if (dohdr) temp = log10(1+temp)
 	    else if(doampsc)then
 	      temp = bufr(k) / count(k)
@@ -707,7 +844,7 @@ c
 	      else
 		temp=180/pi*atan2(aimag(ctemp),real(ctemp))
 	      endif
-	    else if(doreal)then
+	    else if(doreal.or.dorm.or.doang)then
 	      temp = real(buf(k)) / count(k)
 	    else if(doimag)then
 	      temp = aimag(buf(k)) / count(k)
@@ -771,10 +908,10 @@ c
 	end
 c************************************************************************
 	subroutine BufAcc(doflag,doall,preambl,inttime,data,flags,nread,
-     *     ibin)
+     *     ibin,ncount)
 c
 	implicit none
-	integer nread,ibin
+	integer nread,ibin,ncount
 	double precision preambl(5)
 	real inttime
 	complex data(nread)
@@ -791,6 +928,7 @@ c    preambl	Preamble. Destroyed on output.
 c    data	The correlation data to be averaged. Destroyed on output.
 c    flags	The data flags.
 c    nread	The number of channels.
+c    ncount	Number of good data points
 c------------------------------------------------------------------------
 	include 'uvspec.h'
 	integer i,i1,i2,p,bl,pol
@@ -876,6 +1014,7 @@ c
 	      buf2(1,i+p) = re*re
               buf2(2,i+p) = im*im
 	      count(i+p) = 1
+	      ncount = ncount + 1
 	    else
 	      buf(i+p) = (0.0,0.0)
               bufr(i+p) = 0.0
@@ -902,6 +1041,7 @@ c
 	      buf2(1,i+p) = buf2(1,i+p) + re*re
               buf2(2,i+p) = buf2(2,i+p) + im*im
 	      count(i+p) = count(i+p) + 1
+	      ncount = ncount + 1
 	    endif
 	  enddo
 	endif
@@ -1009,15 +1149,39 @@ c************************************************************************
 	subroutine Plotit(npnts,xp,yp,xrange,yrange,dodots,
      *		  plot,nplts,xtitle,ytitle,bl,time,inttime,
      *		  pol,npol,dopoint,hann,hc,hw,logf,maxpnts,dohdr,
-     *            dotimelog)
+     *            dotimelog,dorm,doang,sig)
 c
+	include 'mirconst.h'
+	include 'maxdim.h'
+
 	implicit none
 	integer npnts,bl,nplts,plot(nplts+1),npol,pol(npol),hann,maxpnts
 	double precision time,xp(npnts)
         real x(maxpnts)
 	real inttime,hc(*),hw(*),xrange(2),yrange(2),yp(npnts)
-	logical dopoint,dodots,dohdr,dotimelog
+	logical dopoint,dodots,dohdr,dotimelog,dorm,doang
 	character xtitle*(*),ytitle*(*),logf*(*),date*18
+	real lam2ave,rmmax,rmstep,rmtffwhm
+	integer nchan, nrm
+	real lam2(10*MAXCHAN), qq(10*MAXCHAN), uu(10*MAXCHAN)
+	real polr, poli, rm(10*MAXCHAN), fdmax
+	real rmpeak, polpeak, rpeak, ipeak
+	complex fd(10*MAXCHAN)
+	real fdamp(10*MAXCHAN), fdr(10*MAXCHAN), fdi(10*MAXCHAN)
+	complex rmtfc(10*MAXCHAN)
+	real rmtfamp(10*MAXCHAN), rmtfr(10*MAXCHAN), rmtfi(10*MAXCHAN)
+	real sig
+
+C	Polynomial fit to peak, for npt points around peak
+	integer ierr, maxnum, npt
+        parameter (npt=7)
+        real xx(npt), yy(npt), ww(npt)
+        real poly(3),rnorm, phi(6), phix(80)
+	character*12 rmstr, ampstr, rstr, istr, angstr, lamstr, sigstr,
+     *               fwhmstr, errstr
+
+
+	
 c
 c  Draw a plot
 c------------------------------------------------------------------------
@@ -1032,6 +1196,8 @@ c------------------------------------------------------------------------
 	real xranged(2),yranged(2),xoff,delta1,delta2
 	real xlen,ylen,xloc,size
 	integer k1,k2
+	double precision freq(10*MAXCHAN)
+	common /faraday/freq,rmmax,nrm,rmstep,lam2ave,lam2,rm,rmtffwhm
 c
 c  Externals.
 c
@@ -1074,17 +1240,136 @@ c
         do i=1,npnts
           x(i)=xp(i)-xoff
         enddo
+
+C	Compute polarisation angle
+	if (doang) then
+	  do j = 1,plot(2)-plot(1)
+            yp(plot(1)+j-1) = atan2(yp(plot(2)+j-1),yp(plot(1)+j-1))
+     +        * 0.5/pi*180.
+	  enddo
+	  nplts = 1
+	endif
+
+C 	Perform RM synthesis if needed
+  	if (dorm) then
+
+          nplts = 1
+          nchan = plot(2)-plot(1)
+          do j = 1, nchan
+            qq(j) = yp(plot(1)+j-1)
+            uu(j) = yp(plot(2)+j-1)
+          enddo
+
+          if (xrange(2).le.xrange(1)) then
+            xranged(2) = rmmax*1.1
+            xranged(1) = -1.*xranged(2)
+          endif
+          fdmax = -1e10
+          do j=1,nrm 
+            fd(j) = (0.,0.)
+            do i = 1,nchan
+              polr = qq(i)*cos(2.*rm(j)*(lam2(i)-real(lam2ave)))
+     +            + uu(i)*sin(2.*rm(j)*(lam2(i)-real(lam2ave)))
+             poli = uu(i)*cos(2.*rm(j)*(lam2(i)-real(lam2ave)))
+     +            - qq(i)*sin(2.*rm(j)*(lam2(i)-real(lam2ave)))
+             fd(j) = fd(j) + complex(polr,poli)/nchan
+            enddo
+            fdamp(j) = abs(fd(j))
+            fdr(j) = real(fd(j))
+            fdi(j) = imag(fd(j))
+            if (fdamp(j).gt.fdmax) then
+              fdmax = fdamp(j)
+              rmpeak = rm(j)
+              maxnum = j
+            endif
+          enddo
+
+C       Do npt-point quadratic fit to peak
+          do i = 1,npt
+             xx(i) = rm(maxnum-npt/2-1+i)
+             yy(i) = fdamp(maxnum-npt/2-1+i)
+             ww(i) = 1.0
+          enddo
+             
+          call wpfit(2,npt,xx,yy,ww,poly,rnorm,phi,phix,ierr)
+          if (ierr.ne.0) then
+            call bug('f','RM synthesis: polynomial fit failed')
+          endif
+          rmpeak = -poly(2)/2./poly(3)
+          polpeak = poly(1) + poly(2)*rmpeak +
+     +      poly(3)*rmpeak*rmpeak
+
+C	Determine real and imag at peak
+	  rpeak = 0.
+	  ipeak = 0.
+	  do i = 1,nchan
+            rpeak = rpeak 
+     +       + qq(i)*cos(2.*rmpeak*(lam2(i)-real(lam2ave)))/nchan
+     +       + uu(i)*sin(2.*rmpeak*(lam2(i)-real(lam2ave)))/nchan
+	    ipeak = ipeak
+     +       + uu(i)*cos(2.*rmpeak*(lam2(i)-real(lam2ave)))/nchan
+     +       - qq(i)*sin(2.*rmpeak*(lam2(i)-real(lam2ave)))/nchan
+	  enddo
+
+C	Construct RMTF
+          do j=1,nrm 
+	    rmtfc(j) = (0.,0.)
+	    do i = 1,nchan
+               polr = cos(2.*(rm(j)-rmpeak)*(lam2(i)-real(lam2ave)))
+               poli = -1.*qq(i)*sin(2.*(rm(j)-rmpeak)*
+     +            (lam2(i)-real(lam2ave)))
+	       rmtfc(j) = rmtfc(j) + complex(polr,poli)/nchan*polpeak
+	    enddo
+            rmtfamp(j) = abs(rmtfc(j))
+	    rmtfr(j) = real(rmtfc(j))
+	    rmtfi(j) = imag(rmtfc(j))
+	  enddo
+
+	  write (fwhmstr, '(f12.3)') rmtffwhm
+	  write (rmstr, '(f12.3)') rmpeak
+	  write (errstr, '(f12.3)') rmtffwhm/2.355/(polpeak/sig)
+	  write (ampstr, '(f12.3)') polpeak*1000.
+	  write (rstr, '(f12.3)') rpeak*1000.
+	  write (istr, '(f12.3)') ipeak*1000.
+	  write (angstr, '(f12.3)') atan2(ipeak,rpeak)/2./pi*180.
+	  write (lamstr, '(f12.3)') sqrt(lam2ave)
+	  write (sigstr, '(f12.3)') sig*1000.
+	  call output ('')
+	  call output('RMTF FWHM         = '//fwhmstr(1:12)//' rad/m/m')
+	  call output('Peak RM           = '//rmstr(1:12)//' +/- '
+     +                //errstr(1:12)//' rad/m/m')
+	  call output('Pol at peak RM    = '//ampstr(1:12)//' mJy')
+	  call output('Real component    = '//rstr(1:12)//' mJy')
+	  call output('Imag component    = '//istr(1:12)//' mJy')
+	  call output('Theoretical noise = '//sigstr(1:12)//' mJy')
+	  call output('Pol angle         = '//angstr(1:12)//' degrees'//
+     +                ' at '//lamstr(1:12)//' metres')
+	  call output ('')
+	
+	endif
+
 	if(yrange(2).le.yrange(1))then
-	  call SetAxisR(yp,npnts,yranged)
+          if(dorm) then
+	    call SetAxisR(fdamp,nrm,yranged)
+              yranged(1) = -1.1*yranged(2)
+              yranged(2) = 1.1*yranged(2)
+	  else if (doang) then
+	    call SetAxisR(yp,npnts/2,yranged)
+	  else
+	    call SetAxisR(yp,npnts,yranged)
+	  endif
+
 	  call pgswin(xranged(1),xranged(2),yranged(1),yranged(2))
 	else
 	  call pgswin(xranged(1),xranged(2),yrange(1),yrange(2))
 	endif
+
 	if (dohdr) then
           call pgbox('BCNST',0.,0.,'BCNSTL',0.,0.)
         else
           call pgbox('BCNST',0.,0.,'BCNST',0.,0.)
         endif
+	
 	do i=1,nplts
 	  call pgsci(mod(i-1,NCOL)+1)
 	  if(dopoint)then
@@ -1092,7 +1377,28 @@ c
 	  else
 	    if (hann.gt.1) call hannsm(hann,hc,plot(i+1)-plot(i),
      *                  yp(plot(i)),hw)
-	    call pghline(plot(i+1)-plot(i),x(plot(i)),yp(plot(i)),2.0)
+	    if (dorm) then
+	      call pgsci(1)
+   	      call pgline(nrm,rm,fdamp)
+	      call pgsls(2)
+   	      call pgline(nrm,rm,rmtfamp)
+	      call pgsls(1)
+	      call pgsci(2)
+  	      call pgline(nrm,rm,fdr)
+	      call pgsci(3)
+   	      call pgline(nrm,rm,fdi)
+
+C	      Draw 1-sigma sensitivity lines
+	      call pgsci(1)
+	      call pgsls(3)
+	      call pgmove(-1.*rmmax,sig)
+	      call pgdraw(rmmax,sig)
+	      call pgmove(-1.*rmmax,-1.*sig)
+	      call pgdraw(rmmax,-1.*sig)
+	      call pgsls(1)
+	    else
+            call pghline(plot(i+1)-plot(i),x(plot(i)),yp(plot(i)),2.0)
+	    endif
 	  endif
           if (logf.ne.' ') then
 	    if (dotimelog)then
@@ -1101,20 +1407,42 @@ c		  write(line,'(a,i2.2,a,i2.2,a,i2.2)') 'T=',hr,':',mins,
 c     *                  ':',sec
 		  write(line,'(a)') date
 		  call logwrit(line)
-	       end if
-	    end if
-  	    do j = 1, plot(i+1)-plot(i)
-	      write(line,'(1pe13.6,2x,1pe13.6)') 
-     *		xp(plot(i)+j-1),yp(plot(i)+j-1)
- 	      call logwrit(line)
-            end do
-	  end if
+	       endif
+	    endif
+	    if (dorm) then
+  	         do j = 1, nrm
+	            write(line,'(1pe13.6,2x,1pe13.6,2x,
+     *                2x,1pe13.6,2x,1pe13.6)') 
+     *		       rm(j), fdamp(j), fdr(j), fdi(j)
+ 	         call logwrit(line)
+	         enddo
+	    else
+  	         do j = 1, plot(i+1)-plot(i)
+	            write(line,'(1pe13.6,2x,1pe13.6)') 
+     *		       xp(plot(i)+j-1),yp(plot(i)+j-1)
+ 	         call logwrit(line)
+	         enddo
+	    endif
+       
+	  
+	  endif
 	enddo
+
 	call pgsci(1)
 c
 c  The polarisation label.
 c
 	pollab = ' '
+ 	if (dorm) then
+ 	  pollab = 'Amp, Re, Im,'
+	  lp = 12
+
+         else if (doang) then
+ 	  pollab = 'Polarisation angle,'
+	  lp = 19
+
+	else
+
 	lp = 0
 	do i=1,npol
 	  pollab(lp+1:lp+2) = PolsC2P(pol(i))
@@ -1122,6 +1450,9 @@ c
 	  pollab(lp+1:lp+1) = ','
 	  lp = lp + 1
 	enddo
+
+ 	endif
+
 c
 c  The integration time label.
 c
@@ -1178,6 +1509,41 @@ c
 	  xloc = 0
 	endif
 c
+	if (dorm) then
+
+          call pgsci(1)
+	  call pgmtxt('T',2.0,xloc,0.,title(1:5))
+	  call pglen(5,title(1:5),xlen,ylen)
+	  xloc = xloc + xlen
+          call pgsci(2)
+	  call pgmtxt('T',2.0,xloc,0.,title(6:7))
+	  call pglen(5,title(6:7),xlen,ylen)
+	  xloc = xloc + xlen
+	  call pgsci(1)
+	  call pgmtxt('T',2.0,xloc,0.,title(8:9))
+	  call pglen(5,title(8:9),xlen,ylen)
+	  xloc = xloc + xlen
+          call pgsci(3)
+	  call pgmtxt('T',2.0,xloc,0.,title(10:11))
+	  call pglen(5,title(10:11),xlen,ylen)
+	  xloc = xloc + xlen
+	  call pgsci(1)
+	  call pgmtxt('T',2.0,xloc,0.,title(12:13))
+	  call pglen(5,title(12:13),xlen,ylen)
+	  xloc = xloc + xlen
+	  k1 = 14
+
+	else if (doang) then
+	  k1 = 1
+	  k2 = k1 + len1(polsc2p(pol(1))) - 1
+	  if(1.ne.npol)k2 = k2 + 1
+	  call pgsci(1)
+	  call pgmtxt('T',2.0,xloc,0.,title(k1:k2))
+	  call pglen(5,title(k1:k2),xlen,ylen)
+	  xloc = xloc + xlen
+	  k1 = k2 + 1
+
+	else
 	k1 = 1
 	do i=1,npol
 	  k2 = k1 + len1(polsc2p(pol(i))) - 1
@@ -1188,6 +1554,9 @@ c
 	  xloc = xloc + xlen
 	  k1 = k2 + 1
 	enddo
+
+	endif
+
 	call pgsci(1)
 	k2 = l
 	call pgmtxt('T',2.0,xloc,0.,title(k1:k2))
