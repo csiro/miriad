@@ -68,6 +68,9 @@ c       The smoothing width for hanning or boxcar smoothing of the
 c       bandpass. Width will be increased to next odd number if even.
 c       Default and minimum value is 3. Maximum is 33 for hanning, 
 c       and 257 for boxcar smoothing.
+c       An optional second width parameter can be used to specify blocks
+c       of channels to smooth, with no smoothing across block boundaries.
+c       Default 0, is no blocks.      
 c
 c       Example:
 c         gpedit vis=cyga gain=14.4,90 select=ant(1,2) feeds=X
@@ -88,6 +91,7 @@ c    mhw   01mar11 Added options=invert
 c    mhw   08sep11 Handle freq binned gains
 c    mhw   19mar15 Gain argument now takes binned gains too
 c    mhw   06oct15 Add bandpass extension, smoothing
+c    mhw   26feb18 Add 'askap' smoothing 
 c-----------------------------------------------------------------------
         include 'maxdim.h'
         include 'mem.h'
@@ -101,7 +105,7 @@ c
         logical dogain,doleak,dup,doinv,doext,dohan,dobox,doband
         integer iostat,tVis,itLeak,nants,nfeeds,nsols,ntau,i
         integer numfeed,feeds(MAXFEED),nleaks,nfbin,ngains,maxgains
-        integer numamph,n,width
+        integer numamph,n,width,blocksize
         complex gain(0:MAXFBIN),Leaks(2,MAXANT)
         real sels(MAXSELS),amph(MAXFBIN+1),phi
         logical mask(2*MAXANT)
@@ -118,8 +122,8 @@ c
 c  Get the input parameters.
 c
         version = versan('gpedit',
-     *                   '$Revision: 1.12 $',
-     *                   '$Date: 2015/10/20 21:16:30 $')
+     *                   '$Revision: 1.13 $',
+     *                   '$Date: 2018/02/25 22:59:59 $')
         call keyini
         call keya('vis',vis,' ')
         if(vis.eq.' ')call bug('f','No input vis data-set given')
@@ -135,6 +139,7 @@ c
         call keyi('width',width,3)
         width=min(257,(max(3,width)/2)*2+1)
         if (dohan) width=min(33,width)
+        call keyi('width',blocksize,0)
         call keyfin
 c
 c  Open the input file. Use the hio routines, as all we want to get
@@ -276,7 +281,8 @@ c
 c         We need some access to uv variables
           call hclose(tVis)
           call uvopen(tVis,vis,'old')
-          call PassEdit(tVis,doext,amph(1).gt.0,dohan,dobox,width)
+          call PassEdit(tVis,doext,amph(1).gt.0,dohan,dobox,width,
+     *      blocksize)
           call uvclose(tVis)
           call hopen(tVis,vis,'old',iostat)
           if(iostat.ne.0)call EditBug(iostat,'Error opening '//vis)
@@ -294,10 +300,11 @@ c
         call hclose(tVis)
         end
 c************************************************************************
-        subroutine PassEdit(tVis,doext,dolin,dohan,dobox,width)
+        subroutine PassEdit(tVis,doext,dolin,dohan,dobox,width,
+     *    blocksize)
 c
         implicit none
-        integer tVis,width
+        integer tVis,width,blocksize
         logical doext,dolin,dohan,dobox
 c
 c  Extend the bandpass to cover the full spectrum
@@ -407,7 +414,7 @@ c     Figure out how much to extend the bandpass by
         if (doext) call PassExt(memC(pGains0),memC(pGains1),nchan0,
      *      ngains,n,nlow,nhigh,dolin)
         if (dohan.or.dobox) call PassSm(memC(pGains0),memC(pGains1),
-     *      nchan0,ngains,n,dohan,dobox,width)
+     *      nchan0,ngains,n,dohan,dobox,width,blocksize)
 
         call haccess(tVis,item,'bandpass','append',iostat)
         if (iostat.ne.0) call bug('f','Error writing bandpass table')
@@ -500,10 +507,10 @@ c------------------------------------------------------------------------
 
 c************************************************************************
           subroutine PassSm(Gains0,Gains1,nchan0,ngains,ntimes,
-       *     dohan,dobox,width)
+       *     dohan,dobox,width,blocksize)
 c
           implicit none
-          integer ngains,nchan0,ntimes,width
+          integer ngains,nchan0,ntimes,width,blocksize
           complex Gains0(nchan0,ngains,ntimes)
           complex Gains1(nchan0,ngains,ntimes)
           logical dohan,dobox
@@ -511,28 +518,52 @@ c
 c  Smooth bandpass gains with hanning or boxcar averaging
 c------------------------------------------------------------------------
           include 'maxdim.h'
-          integer itime,ig,ich
+          integer itime,ig,ich,k
           integer MAXWIDTH
           PARAMETER (MAXWIDTH=257)
           real work(MAXWIDTH),coeffs(MAXWIDTH),re(MAXCHAN),im(MAXCHAN)
 
           if (width.gt.MAXWIDTH)
-      *      call bug('f','Smoothing window width too large')
+     *       call bug('f','Smoothing window width too large')
+          if (blocksize.gt.0) then
+            if(width.gt.blocksize)
+     *        call bug('f','Smoothing window larger than block size')
+            if ((nchan0/blocksize)*blocksize.ne.nchan0)
+     *        call bug('f','# Channels not a multiple of block size')
+          endif
           if (dohan) call hcoeffs(width,coeffs)
           if (dobox) call bcoeffs(width,coeffs)
           do itime=1,ntimes
             do ig=1,ngains
-              do ich=1,nchan0
-                re(ich)=real(Gains0(ich,ig,itime))
-                im(ich)=imag(Gains0(ich,ig,itime))
-              enddo
-              if (dohan) call hannsm(width,coeffs,nchan0,re,work)
-              if (dohan) call hannsm(width,coeffs,nchan0,im,work)
-              if (dobox) call boxcarsm(width,coeffs,nchan0,re,work)
-              if (dobox) call boxcarsm(width,coeffs,nchan0,im,work)
-              do ich=1,nchan0
-                Gains1(ich,ig,itime)=Complex(re(ich),im(ich))
-              enddo
+              if (blocksize.gt.1) then
+                do ich=0,nchan0-1,blocksize
+                  do k=1,blocksize
+                    re(k)=real(Gains0(ich+k,ig,itime))
+                    im(k)=imag(Gains0(ich+k,ig,itime))
+                  enddo
+                  if (dohan) call hannsm(width,coeffs,blocksize,re,work)
+                  if (dohan) call hannsm(width,coeffs,blocksize,im,work)
+                  if (dobox)
+     *              call boxcarsm(width,coeffs,blocksize,re,work)
+                  if (dobox)
+     *              call boxcarsm(width,coeffs,blocksize,im,work)
+                  do k=1,blocksize
+                    Gains1(ich+k,ig,itime)=Complex(re(k),im(k))
+                  enddo
+                enddo
+              else
+                do ich=1,nchan0
+                  re(ich)=real(Gains0(ich,ig,itime))
+                  im(ich)=imag(Gains0(ich,ig,itime))
+                enddo
+                if (dohan) call hannsm(width,coeffs,nchan0,re,work)
+                if (dohan) call hannsm(width,coeffs,nchan0,im,work)
+                if (dobox) call boxcarsm(width,coeffs,nchan0,re,work)
+                if (dobox) call boxcarsm(width,coeffs,nchan0,im,work)
+                do ich=1,nchan0
+                  Gains1(ich,ig,itime)=Complex(re(ich),im(ich))
+                enddo
+              endif
             enddo
           enddo
         end
