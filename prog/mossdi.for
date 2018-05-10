@@ -24,6 +24,9 @@ c       The maximum number of iterations. The default is 100.
 c@ cutoff
 c       Iterating stops if the absolute maximum residual falls below t
 c       his level.  The default is 0.
+c       When two values are given, do a deep clean to the second cutoff
+c       limiting peak finding to the pixels that are already in the
+c       model.
 c@ clip
 c       This sets the relative clip level.  Values are typically 0.75 to
 c       0.9.  The default is 0.9.
@@ -35,7 +38,7 @@ c       Extra processing options:
 c         positive   Constrain the deconvolved image to be positive
 c                    valued.
 c
-c$Id: mossdi.for,v 1.11 2016/03/18 03:25:44 wie017 Exp $
+c$Id: mossdi.for,v 1.12 2018/05/10 02:17:12 wie017 Exp $
 c--
 c  History:
 c    rjs 31oct94 - Original version.
@@ -48,7 +51,8 @@ c    rjs 28nov97 - Increase max number of boxes.
 c    rjs 29jan99 - Correct user message only.
 c    gmx 07mar04 - Changed optimum gain determination to handle
 c                   negative components
-c    mhw  27oct11  Use ptrdiff type for memory allocations
+c    mhw  27oct11 - Use ptrdiff type for memory allocations
+c    mhw  09may18 - Add deep clean option like in wsclean
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -57,14 +61,14 @@ c-----------------------------------------------------------------------
       integer  MAXRUN, MAXBOXES
       parameter (MAXRUN=5*maxdim, MAXBOXES=(1024)*8+4)
 
-      logical   dopos, more
+      logical   dopos, more, deep
       integer   blc(3), Boxes(MAXBOXES), i, imax, imin, jmax, jmin, k,
      *          kmax, kmin, lBeam, lMap, lModel, lOut, maxniter, nAlloc,
      *          naxis, nbeam(3), ncomp, niter, nMap(3), nModel(3),
      *          nout(MAXNAX), nPoint, nRun,  Run(3,MAXRUN), trc(3),
      *          xmax, xmin, ymax, ymin
-      ptrdiff   pEst, pRes, pStep, pStepR, pWt
-      real      clip, cutoff, dmax, dmin, drms, flux, gain
+      ptrdiff   pEst, pRes, pStep, pStepR, pWt, pMask
+      real      clip, cutoff, dmax, dmin, drms, flux, gain, cut(3)
       character BeamNam*64, line*64, MapNam*64, ModelNam*64, OutNam*64,
      *          version*72
 
@@ -72,8 +76,8 @@ c-----------------------------------------------------------------------
       external  itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('mossdi',
-     *                 '$Revision: 1.11 $',
-     *                 '$Date: 2016/03/18 03:25:44 $')
+     *                 '$Revision: 1.12 $',
+     *                 '$Date: 2018/05/10 02:17:12 $')
 c
 c  Get the input parameters.
 c
@@ -86,7 +90,8 @@ c
      *  call bug('f','A file name was missing from the parameters')
       call keyi('niters',maxniter,100)
       if (maxniter.lt.0) call bug('f','NITERS has bad value')
-      call keyr('cutoff',cutoff,0.0)
+      call keyr('cutoff',cut(1),0.0)
+      call keyr('cutoff',cut(2),0.0)
       call keyr('gain',gain,0.1)
       if (gain.le.0 .or. gain.gt.1) call bug('f','Invalid gain value')
       call keyr('clip',clip,0.9)
@@ -163,6 +168,7 @@ c
               call memFrep(pEst,  nAlloc,'r')
               call memFrep(pRes,  nAlloc,'r')
               call memFrep(pWt,   nAlloc,'r')
+              call memFrep(pMask, nAlloc,'l')
             endif
             nAlloc = nPoint
             call memAllop(pStep, nAlloc,'r')
@@ -170,6 +176,8 @@ c
             call memAllop(pEst,  nAlloc,'r')
             call memAllop(pRes,  nAlloc,'r')
             call memAllop(pWt,   nAlloc,'r')
+            call memAllop(pMask, nAlloc,'l')
+
           endif
 c
 c  Get the Map.
@@ -196,12 +204,14 @@ c
 c
 c  Do the real work.
 c
+          deep = .false.
           niter = 0
           more = .true.
+          cutoff = Cut(1)
           do while (more)
             call Steer(memr(pEst),memr(pRes),memr(pStep),memr(pStepR),
-     *        memr(pWt),nPoint,Run,nRun,
-     *        gain,clip,dopos,dmin,dmax,drms,flux,ncomp)
+     *        memr(pWt),meml(pMask),nPoint,Run,nRun,
+     *        gain,clip,dopos,deep,dmin,dmax,drms,flux,ncomp)
             niter = niter + ncomp
             line = 'Steer Iterations: '//itoaf(niter)
             call output(line)
@@ -212,6 +222,22 @@ c
             call output(line)
             more = niter.lt.maxniter .and.
      *           max(abs(dmax),abs(dmin)).gt.cutoff
+c
+c  Check if we should enter deep cleaning
+c
+            if (.not.more.and..not.deep) then
+                if (Cut(2).gt.0.and.Cut(2).lt.Cut(1).and.
+     *              niter.lt.maxniter) then
+                    deep=.true.
+                    cutoff=cut(2)
+                    more=max(abs(dmax),abs(dmin)).gt.cutoff
+                    if (more) then
+                        call output(' Starting deep cleaning phase')
+                        call fillMask(memr(pEst),meml(pMask),nPoint)
+                    endif
+                endif
+            endif
+
           enddo
         endif
 c
@@ -249,14 +275,14 @@ c
 
 c***********************************************************************
 
-      subroutine Steer(Est,Res,Step,StepR,Wt,nPoint,Run,nRun,
-     *  gain,clip,dopos,dmin,dmax,drms,flux,ncomp)
+      subroutine Steer(Est,Res,Step,StepR,Wt,Mask,nPoint,Run,nRun,
+     *  gain,clip,dopos,deep,dmin,dmax,drms,flux,ncomp)
 
       integer nPoint,nRun,Run(3,nRun),ncomp
       real gain,clip,dmin,dmax,drms,flux
       real Est(nPoint),Res(nPoint),Step(nPoint),StepR(nPoint)
       real Wt(nPoint)
-      logical dopos
+      logical Mask(nPoint),dopos,deep
 c-----------------------------------------------------------------------
 c  Perform a Steer iteration.
 c
@@ -267,6 +293,8 @@ c    gain       CLEAN loop gain.
 c    clip       Steer clip level.
 c    Wt         The array of 1/Sigma**2 -- which is used as a weight
 c               when determining the maximum residual.
+c    Mask       The mask for deep cleaning
+c    deep       Do deep clean using mask if true
 c  Input/Output:
 c    Est        The current deconvolved image estimate.
 c    Res        The current residuals.
@@ -279,7 +307,7 @@ c    ncomp      Number of components subtracted off this time.
 c-----------------------------------------------------------------------
       real MinOptGain
       parameter (MinOptGain=0.02)
-      integer i
+      integer i, nMasked
       real g,thresh
       logical ok
       double precision SS,RS,RR
@@ -290,12 +318,15 @@ c
       thresh = 0
       if (dopos) then
         do i = 1, nPoint
-          if (Est(i).gt.(-gain*Res(i)))
+          if (Est(i).gt.(-gain*Res(i)).and.
+     *      (.not.deep.or.Mask(i)))
      *      thresh = max(thresh,Res(i)*Res(i)*Wt(i))
         enddo
       else
+
         do i = 1, nPoint
-          thresh = max(thresh,Res(i)*Res(i)*Wt(i))
+          if (.not.deep.or.Mask(i))
+     *      thresh = max(thresh,Res(i)*Res(i)*Wt(i))
         enddo
       endif
       thresh = clip * clip * thresh
@@ -305,6 +336,7 @@ c
       ncomp = 0
       do i = 1, nPoint
         ok = Res(i)*Res(i)*Wt(i).gt.thresh
+        if (deep .and. ok) ok = ok .and. Mask(i)
         if (dopos .and. ok) ok = Est(i).gt.(-gain*Res(i))
         if (ok) then
           Step(i) = Res(i)
@@ -314,7 +346,7 @@ c
         endif
       enddo
 
-      if (ncomp.eq.0) call bug('f','Could not find components')
+      if (ncomp.eq.0) call bug('w','Could not find components')
 c
 c  Convolve this step.
 c
@@ -326,8 +358,10 @@ c
       SS = 0
       RS = 0
       do i = 1, nPoint
-        SS = SS + Wt(i) * StepR(i) * StepR(i)
-        RS = RS + Wt(i) * Res(i)   * StepR(i)
+        if (.not.deep.or.Mask(i)) then
+          SS = SS + Wt(i) * StepR(i) * StepR(i)
+          RS = RS + Wt(i) * Res(i)   * StepR(i)
+        endif
       enddo
 c
 c       RS (and SS?) can be negative, so it is better to take the
@@ -348,18 +382,23 @@ c  Subtract off a fraction of this, and work out the new statistics.
 c
       dmin = Res(1) - g*StepR(1)
       dmax = dmin
+      drms = 0
       RR = 0
       flux = 0
+      nMasked = 0
       do i = 1, nPoint
         Res(i) = Res(i) - g * StepR(i)
-        dmin = min(dmin,Res(i))
-        dmax = max(dmax,Res(i))
-        RR = RR + Res(i)*Res(i)
+        if (.not.deep.or.Mask(i)) then
+          dmin = min(dmin,Res(i))
+          dmax = max(dmax,Res(i))
+          RR = RR + Res(i)*Res(i)
+          nMasked = nMasked + 1
+        endif
         Est(i) = Est(i) + g * Step(i)
         flux = flux + Est(i)
       enddo
 
-      drms = sqrt(RR/nPoint)
+      if (nMasked.gt.0) drms = sqrt(RR/nMasked)
 
       end
 
@@ -412,6 +451,28 @@ c-----------------------------------------------------------------------
         Out(i) = 0
       enddo
 
+      end
+c***********************************************************************
+      subroutine fillMask(Data,Mask,n)
+
+      integer n
+      real Data(n)
+      logical Mask(n)
+c-----------------------------------------------------------------------
+c  Fill the deep cleaning mask
+c
+c  Input:
+c    n          Number of points.
+c    Data       Input data arrays
+c
+c  Output:
+c    Mask       Pixels to consider for cleaning
+c-----------------------------------------------------------------------
+      integer i
+c-----------------------------------------------------------------------
+      do i = 1, n
+        Mask(i)= (Data(i).ne.0.)
+      enddo
       end
 
 c***********************************************************************
