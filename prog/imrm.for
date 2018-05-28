@@ -178,7 +178,7 @@ c                    same Y-axis scale, that embraces all sub-plots.
 c                    This option forces each sub-plot to be scaled
 c                    independently.
 c
-c$Id: imrm.for,v 1.9 2011/10/06 07:18:56 cal103 Exp $
+c$Id: imrm.for,v 1.10 2018/05/28 05:48:19 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -213,8 +213,8 @@ c-----------------------------------------------------------------------
       data padummy /-100000.0/
 c-----------------------------------------------------------------------
       version = versan ('imrm',
-     *                  '$Revision: 1.9 $',
-     *                  '$Date: 2011/10/06 07:18:56 $')
+     *                  '$Revision: 1.10 $',
+     *                  '$Date: 2018/05/28 05:48:19 $')
 
 c     Get the inputs.
       call keyini
@@ -711,7 +711,7 @@ c     Compare descriptors.
 
       do iax = 1, naxis(1)
         if (axLen(2,iax).ne.axLen(1,iax)) then
-          write(text, 10) iax, inName(:l2), ' & ', name1(:l1)
+          write(text, 10) iax, inName(:l2), name1(:l1)
 10        format('Axis ',i1,' differs in length for ',a,' & ',a)
           call bug(bflag, text)
         endif
