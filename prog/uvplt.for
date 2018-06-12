@@ -239,7 +239,7 @@ c       The output logfile name. The default is the terminal.
 c@ comment
 c       A one line comment which is written into the logfile.
 c
-c$Id: uvplt.for,v 1.18 2014/05/21 04:34:59 wie017 Exp $
+c$Id: uvplt.for,v 1.19 2018/06/12 04:53:25 wie017 Exp $
 c--
 c
 c  History:
@@ -366,13 +366,13 @@ c
       data false, bwarn /.false., .false., .false., .false./
       data none, allfull /.true., .false./
       data ivis, title /0, ' '/
-      data plfidx, ifile, ofile /0, 0, 0/
+      data plfidx, ifile, ofile /0, 0, 1/
       data npts, plpts, basmsk /ifac1*0, ifac1*0, ifac2*0/
       data polmsk /13*0/
 c-----------------------------------------------------------------------
       version = versan ('uvplt',
-     *                  '$Revision: 1.18 $',
-     *                  '$Date: 2014/05/21 04:34:59 $')
+     *                  '$Revision: 1.19 $',
+     *                  '$Date: 2018/06/12 04:53:25 $')
 c
 c  Get the parameters given by the user and check them for blunders
 c
@@ -477,11 +477,14 @@ c
 c
 c Averaging over; work out averaged quantities and dump to plot buffer
 c If we cross a file boundary, and are distinguishing between files,
-c label point as if from previous file; this is fairly arbitrary
+c label point as if from previous file; this is fairly arbitrary.
+c Give user stats for previous file if we started on a new one
 c
               jfile = plfidx
-              if ((dosymb .or. docol) .and. ifile.ne.ofile .and.
-     *            ifile.ne.1) jfile = jfile - 1
+              if ((dosymb .or. docol) .and. ifile.ne.ofile) then
+                jfile = jfile - 1
+                ofile=ifile
+              endif
               call avdump(dorms, dovec, dobase, dodoub, doavall,
      *           nbases, npols, pl1dim, pl2dim, pl3dim, pl4dim,
      *           maxpnts, maxbase, maxpol, maxfile, buffer(ip),
@@ -489,6 +492,12 @@ c
      *           yaxis, yrtest, ymin, ymax, nsum, xsumr, xsumsqr, xsumi,
      *           xsumsqi, ysumr, ysumsqr, ysumi, ysumsqi, xave, yave,
      *           xsig, ysig, plpts, inc, jfile)
+              if (pl4dim.gt.1.and.jfile.lt.plfidx) then
+                call telluse(ivis, jfile, dobase, maxbase, maxpol,
+     *            pl2dim, pl3dim, pl4dim, npts(1,1,jfile), a1a2, none)
+                  allfull = .false.
+              endif
+
 c
 c Reinitialize accumulators for next averaging period
 c
@@ -659,24 +668,25 @@ c
 c Flush accumulators to plot buffers for last file; do it here
 c so can get correct numbers for TELLUSE
 c
-      if (doave .and. ifile.eq.nfiles .and. .not.allfull)
-     *  call avdump(dorms, dovec, dobase, dodoub, doavall, nbases,
+        if (doave .and. ifile.eq.nfiles .and. .not.allfull) then
+        
+          call avdump(dorms, dovec, dobase, dodoub, doavall, nbases,
      *     npols, pl1dim, pl2dim, pl3dim, pl4dim, maxpnts, maxbase,
      *     maxpol, maxfile, buffer(ip), npts, xo, yo, elo, eho,
      *     xaxis, xrtest, xmin, xmax, yaxis, yrtest, ymin, ymax,
      *     nsum, xsumr, xsumsqr, xsumi, xsumsqi, ysumr, ysumsqr, ysumi,
      *     ysumsqi, xave, yave, xsig, ysig, plpts, inc, plfidx)
+        endif
 c
 c Tell user some numbers for each file if putting different files into
 c separate locations in plot buffer
 c
-        if (pl4dim.gt.1) then
+        if (pl4dim.gt.1.and.(.not.doave.or.ifile.eq.nfiles)) then
           call telluse(ivis, plfidx, dobase, maxbase, maxpol,
      *      pl2dim, pl3dim, pl4dim, npts(1,1,plfidx), a1a2, none)
           allfull = .false.
         endif
 
-        ofile = ifile
       enddo
 c
 c Tell user number of points plotted if all files with same symbol
