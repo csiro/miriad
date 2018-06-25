@@ -106,7 +106,7 @@ c@ log
 c	Log file into which the spectra are dumped in the order in which
 c	they are plotted.  Really only useful if your plot is quite simple.
 c
-c$Id: uvspec.for,v 1.16 2017/12/12 01:33:10 wie017 Exp $
+c$Id: uvspec.for,v 1.17 2018/06/25 21:08:49 wie017 Exp $
 c--
 c  History:
 c    rjs  18sep92 Derived from uvaver.
@@ -145,6 +145,7 @@ c    mhw  18nov13 Add noise, mnoise
 c    mhw  03dec13 Add units to Y axis
 c    mhw  06feb14 Fix bug in last change
 c    bmg  27jun17 Added axis=rm
+c    mhw  25jun18 Add warning when time averaging velocity plot
 c  Bugs:
 c------------------------------------------------------------------------
 	include 'mirconst.h'
@@ -177,8 +178,8 @@ c
 
 
         version = versan('uvspec',
-     *                   '$Revision: 1.16 $',
-     *                   '$Date: 2017/12/12 01:33:10 $')
+     *                   '$Revision: 1.17 $',
+     *                   '$Date: 2018/06/25 21:08:49 $')
 c
 c  Get the input parameters.
 c
@@ -312,7 +313,7 @@ c
 c  Accumulate more data, if we are time averaging.
 c
 	    if(.not.buffered)call GetXAxis(tIn,xaxis,xtitle,x,
-     +          nplot,xrange)
+     +          nplot,xrange,interval.gt.0)
 	    if(avall)preamble(5) = 257
 	    call uvrdvrr(tIn,'inttime',inttime,0.)
 	    call BufAcc(doflag,doall,preamble,inttime,data,flags,
@@ -383,11 +384,12 @@ c
 c	
 	end
 c************************************************************************
-	subroutine GetXAxis(tIn,xaxis,xtitle,x,nchan,xrange)
+	subroutine GetXAxis(tIn,xaxis,xtitle,x,nchan,xrange,aver)
 c
 	implicit none
 	integer tIn,nchan
 	character xaxis*(*),xtitle*(*)
+        logical aver
 	double precision x(nchan)
 c
 c  Determine the X axis coordinates for each channel.
@@ -411,6 +413,8 @@ c
 	character vel*32
 	real xrange(2)
 	double precision freq(10*MAXCHAN)
+        logical warned/.false./
+        logical veltype
 	common /faraday/freq,rmmax,nrm,rmstep,lam2ave,lam2,rm,rmtffwhm
 
 c
@@ -418,6 +422,7 @@ c  Externals.
 c
 	integer len1
 c
+        veltype=.false.
 	if(xaxis.eq.'channel') then
 	  call uvinfo(tIn,'line',data)
 	  start = data(3)
@@ -436,16 +441,19 @@ c
 	  call VelSys(tIn,vel,'radio')
 	  xtitle = 'Velocity('//vel(1:len1(vel))//') (km/s)'
 	  call uvinfo(tIn,'velocity',x)
+          veltype=.true.
 	else if(xaxis.eq.'felocity')then
 	  call VelSys(tIn,vel,'optical')
 	  xtitle = 'Velocity('//vel(1:len1(vel))//') (km/s)'
 	  call uvinfo(tIn,'felocity',x)
+          veltype=.true.
 	else if(xaxis.eq.'frequency')then
 	  xtitle = 'Frequency (GHz)'
 	  call uvinfo(tIn,'sfreq',x)
 	else if(xaxis.eq.'dfrequency')then
 	  xtitle = 'Doppler-Corrected Frequency (GHz)'
 	  call uvinfo(tIn,'frequency',x)
+          veltype=.true.
 	else if(xaxis.eq.'lag')then
 	  i0 = -nchan/2
 	  do i=1,nchan
@@ -500,6 +508,14 @@ c         Convert from frequency to wavelength
 	else
 	  call bug('f','Unrecognised xaxis')
 	endif
+        if (.not.warned.and.veltype.and.aver) then
+	  call uvinfo(tIn,'line',data)
+	  if(nint(data(1)).ne.VELO) then
+            call bug('w','Warning plotted velocities may be inaccurate')
+            call bug('w','Use line=velocity when averaging')
+            warned=.true.
+          endif
+        endif
 	end
 c************************************************************************
 	subroutine VelSys(tIn,vel,type)
