@@ -62,7 +62,8 @@ c@ table
 c    Name of the table that lists time (fractional days since time0) in
 c    column 1, and the values of the array in columns 2 through LENGTH+1.
 c    Values are simply inserted as soon as the time has passed, no
-c    interpolation is performed.
+c    interpolation is performed (unless options=inter and the variable is
+c    real or double precision)
 c    CAVEAT: do not use array variables with tables, and type=ascii cannot
 c    be used either.
 c    No default.
@@ -73,19 +74,23 @@ c    of which the ISO standard "ccyy-mm-dd[Thh[:mm[:ss.s]]]" is to
 c    be preferred.
 c    Default: not used, in which case the offset is 0, in which case
 c    fractional days are really Julian Days.
+c@ options
+c    There is a single option
+c      inter - interpolate real and double precision values linearly
 c@ out
 c    Name of the output dataset. No default.
-c$Id: uvputhd.for,v 1.5 2018/07/06 00:40:24 wie017 Exp $
+c$Id: uvputhd.for,v 1.6 2018/07/06 06:18:42 wie017 Exp $
 c-----------------------------------------------------------------------
         include 'uvputhd.h'
         character version*72
         character varval(MAXVAL)*30,hdvar*10,time0*32
-        character outfile*80,infile*80,tabfile*80
+        character outfile*80,infile*80,tabfile*80,options*80
         character except(20)*10,newtype*1,line*256,ctype*1
         integer nread,inset,outset,nexcept,nwread,newlong,nval
         double precision preamble(4), jd0, jd1
         complex data(MAXCHAN),wdata(MAXCHAN)
         logical flags(MAXCHAN),wflags(MAXCHAN),there,first,updated
+        logical inter
         integer len1,ncols,i,l
         logical keyprsnt
 c
@@ -94,8 +99,8 @@ c
         character*72 versan
 c-----------------------------------------------------------------------
         version = versan ('uvputhd',
-     :                    '$Revision: 1.5 $',
-     :                    '$Date: 2018/07/06 00:40:24 $')
+     :                    '$Revision: 1.6 $',
+     :                    '$Date: 2018/07/06 06:18:42 $')
         call keyini
         call keyf('vis',infile,' ')
         call keya('hdvar',hdvar,' ')
@@ -104,6 +109,7 @@ c-----------------------------------------------------------------------
         call mkeya('varval',varval,MAXVAL,nval)
         call keyf('table',tabfile,' ')
         call keya('time0',time0,' ')
+        call keya('options',options,' ')
         call keya('out',outfile,' ')
         if (keyprsnt('nvals')) call bug('i',
      *       'keyword "nvals" has been deprecated in UVPUTHD')
@@ -123,6 +129,7 @@ c-----------------------------------------------------------------------
            call dayjul(time0,jd0)
         endif
         write(*,*) 'DEBUG: TIME0=',time0,' JD0 = ',jd0
+        inter = index(options,'i').eq.1
 c-----------------------------------------------------------------------
 
 c
@@ -235,7 +242,7 @@ c
                   jd1 = preamble(3)
 c                 WRITE(*,*) 'New time: ',jd1,' = ',jd1-jd0
                   CALL itable(jd1)
-                  CALL varins(inset,outset,there)
+                  CALL varins(inset,outset,there,inter,jd1)
                endif
             endif
 c
@@ -423,17 +430,19 @@ c           write(*,*) 'Updating not there ',vtype,nvals
         return
         end
 c***********************************************************************
-        SUBROUTINE varins(inset,outset,there)
+        SUBROUTINE varins(inset,outset,there,inter,t)
         INTEGER inset,outset
-        LOGICAL there
+        LOGICAL there, inter
+        DOUBLE PRECISION t
 c
 c   Change the user selected header variable to the new value if
 c   it was updated in data record being read, this time from the
 c   table where the index had been stored previously
 c
-        INTEGER nvals,i,idxtab
+        INTEGER nvals,i,idxtab,idxtab2,tidx2
         CHARACTER vtype*1,vname*10
         LOGICAL update
+        DOUBLE PRECISION f,t1,t2
 c
         include 'uvputhd.h'
 c
@@ -443,10 +452,23 @@ c
 c       write(*,*) 'varins: ',tidx,dvarnew(tidx*nvals)
         DO i=1,nvals
            idxtab=(tidx-1)*nvals+i
-           if(vtype .eq. 'i') ivarnew(i) = dvarnew(idxtab)
-           if(vtype .eq. 'r') rvarnew(i) = dvarnew(idxtab)
-           if(vtype .eq. 'd') dvarnew(i) = dvarnew(idxtab)
-           if(vtype .eq. 'a') call bug('f','No ascii from tables')
+           if (inter.and.(vtype.eq.'r'.or.vtype.eq.'d')) then
+               tidx2=min(tidx+1,nttable)
+               idxtab2=(tidx2-1)*nvals+i
+               t1=atime(tidx)
+               t2=atime(tidx2)
+               f=0
+               if(t2.gt.t1) f=(t-t1)/(t2-t1)
+               if(vtype .eq. 'r')
+     *             rvarnew(i) = (1-f)*dvarnew(idxtab)+f*dvarnew(idxtab2)
+               if(vtype .eq. 'd')
+     *             dvarnew(i) = (1-f)*dvarnew(idxtab)+f*dvarnew(idxtab2)
+           else
+              if(vtype .eq. 'i') ivarnew(i) = dvarnew(idxtab)
+              if(vtype .eq. 'r') rvarnew(i) = dvarnew(idxtab)
+              if(vtype .eq. 'd') dvarnew(i) = dvarnew(idxtab)
+              if(vtype .eq. 'a') call bug('f','No ascii from tables')
+           endif
         ENDDO
 
         IF(there) THEN
@@ -563,7 +585,7 @@ c              WRITE(*,*) 'INPUT: ',dtime,(dvar(i),i=1,ncols)
               ENDIF
            ENDIF
         ENDDO
-        WRITE(*,*) 'DEBUG: Read ',nttable,' lines ',ncols,' cols'
+c        WRITE(*,*) 'DEBUG: Read ',nttable,' lines ',ncols,' cols'
         CALL txtclose(tno)
         tidx=0
         RETURN
