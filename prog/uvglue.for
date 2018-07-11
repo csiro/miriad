@@ -38,7 +38,7 @@ c
       character in*80, out*80, name*90, line*80
       double precision preamble(5)
       integer nchani, nchano, lin, lins, lout, nread, irec, ichan,
-     +  ioff, npol, pol, nfiles, j, k, ifile
+     +  ioff, npol, pol, nfiles, j, k, ifile, lastrec
       ptrdiff offset
       logical gflags(maxchan), first
       complex data(maxchan)
@@ -76,6 +76,7 @@ c
 c Loop over number of input files
 c
       irec = 0
+      lastrec = 0
       do ifile= 1, nfiles
         name = in(1:len1(in))//'_'//itoaf(ifile)
         call uvopen (lin, name, 'old')
@@ -128,12 +129,17 @@ c
         end do
 
         call uvclose (lin)
-        write (line, 100) irec
-100     format ('Read ', i8, ' records from this file')
-c        call output (line)
+        if (ifile.gt.1) then
+          if (irec.ne.lastrec) then
+            write (line, 100) irec, ifile, lastrec
+100         format ('Number of records changed: ',i8,' in file ',i3, 
+     *      ' vs ',i8,' in previous file')
+            call bug ('f',line)
+          endif
+        endif
+        lastrec=irec
         irec = 0
       end do
-      call output (' ')
       call output (' ')
 c
 c OK the scratch file is written.  Now pass through the channel
