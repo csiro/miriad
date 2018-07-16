@@ -3,10 +3,9 @@
 # with astropy generated values for either barycenter or lsrk
 # Because the calculation is a bit slow, you can set the update interval to
 # something larger than the integration time (linear interpolation)
-# Note that this assumes ATCA observations - see EarthLocation below, adjust as # needed.
-# Requires a recent version of astropy, e.g., 2.0.7 or 3.0.3
+# Note that this assumes ATCA observations.
 # Usage: veldop.py mirfile [bary|lsr] [update-interval(s)]
-# Default: lsr, 60
+# Default: lsr, 60s
 
 import sys
 from subprocess import call
@@ -15,7 +14,7 @@ from astropy import units as u
 from astropy.coordinates import SkyCoord, EarthLocation
 import numpy as np
 #import matplotlib.pyplot as plt
-atca = EarthLocation('149d33m00.5s','30d18m46.385s',236.87*u.m)
+atca = EarthLocation('149d33m00.5s','-30d18m46.385s',236.87*u.m)
 
 if (len(sys.argv)<2):
     print("Usage: ",sys.argv[0],' mirfile [bary|lsr] [update-interval(s)]')
@@ -25,7 +24,7 @@ lsr = len(sys.argv)<3 or sys.argv[2]=='lsr'
 dt = 60.0
 if len(sys.argv)>3: dt = float(sys.argv[3])
 interpolate = dt>10
-dt/=3600
+dt/=3600.0
 # get values we need into a text file
 call(['varplt','vis='+vis,'options=dtime','yaxis=ra','log=ra.log'])
 call(['varplt','vis='+vis,'options=dtime','yaxis=dec','log=dec.log'])
@@ -66,7 +65,7 @@ with open('newvel.log','w') as f:
     for i in range(0,n):
         #source change, new time interval, make sure we get the first
         # and last point on each source to avoid interpolation errors
-        if (ra[i]!=lastra or dec[i]!=lastdec or t[i]-lasttime>dt or
+        if (ra[i]!=lastra or dec[i]!=lastdec or t[i]-lasttime>=dt or
               i==(n-1) or ra[i+1]!=lastra or dec[i+1]!=lastdec):
             sc = SkyCoord(ra[i]*15,dec[i],frame='icrs',unit='deg')
             time=Time(mjd0+t[i]/24,format='mjd',scale='utc')
