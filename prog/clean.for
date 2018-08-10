@@ -54,6 +54,9 @@ c@ cutoff
 c       CLEAN finishes either when the absolute maximum residual falls
 c       below CUTOFF, or when the criteria described below is
 c       satisfied. The default CUTOFF is 0.
+c       When two values are given, do a deep clean to the second cutoff
+c       limiting peak finding to the pixels that are already in the
+c       model.
 c@ niters
 c       The maximum number of minor iterations.  The default is 250,
 c       which is too small for all but the simplest of images.  CLEAN
@@ -61,7 +64,10 @@ c       will stop when either the maximum number of iterations is
 c       performed, or the cutoff (see above) is reached, or if
 c       options=negstop was given and a negative component was found,
 c       or if options=positive was given, and no more positive
-c       components could be found.
+c       components could be found. An optional second
+c       value will force CLEAN to report on the level reached and
+c       (for mode=clark) start a new major iteration at least every
+c       niters(2) iterations. This can be useful to avoid overcleaning.
 c@ region
 c       This specifies the region to be Cleaned.  See the help on
 c       "region" for more information.  The default is the largest
@@ -96,7 +102,7 @@ c@ clip
 c       This sets the relative clip level in Steer mode. Values are
 c       typically 0.75 to 0.9. The default is image dependent.
 c
-c$Id: clean.for,v 1.14 2015/10/29 01:31:02 sau078 Exp $
+c$Id: clean.for,v 1.15 2018/08/10 05:57:11 wie017 Exp $
 c--
 c
 c  History:
@@ -152,6 +158,7 @@ c   dpr  06mar01 - Doc change only.
 c   gmx  07mar04 - Changed optimum gain determination to handle
 c                   negative components
 c   mhw  27oct11 - Use ptrdiff type for memory allocations
+c   mhw  08aug18 - Add deep clean, second niter parameter
 c
 c  Important Constants:
 c    MaxDim     The max linear dimension of an input (or output) image.
@@ -182,10 +189,11 @@ c-----------------------------------------------------------------------
       integer ICmp(MAXCMP1),JCmp(MAXCMP1)
 
       character Mode*8,Moded*8,Text*7,flags*8,version*72
-      real Cutoff,Gain,Phat,Speed,Clip,defClip,Limit
+      real Cutoff,Gain,Phat,Speed,Clip,defClip,Limit,Cut(2)
       logical NegStop,Positive,Pad,Asym,NegFound,More,FFTIni,steermsg
-      integer MaxNiter,oNiter,Niter,totNiter,minPatch,maxPatch
-      integer naxis,n1,n2,icentre,jcentre,nx,ny
+      logical  deep
+      integer MaxNiter(2),oNiter,Niter,totNiter,minPatch,maxPatch
+      integer naxis,n1,n2,icentre,jcentre,nx,ny,curMaxNiter
       integer blc(3),trc(3),xmin,xmax,ymin,ymax
       integer k,nRun,nPoint,xoff,yoff,zoff
       character MapNam*256,BeamNam*256,ModelNam*256,OutNam*256,line*72
@@ -200,13 +208,13 @@ c     Externals.
       character itoaf*8, versan*72
 c-----------------------------------------------------------------------
       version = versan ('clean',
-     *                  '$Revision: 1.14 $',
-     *                  '$Date: 2015/10/29 01:31:02 $')
+     *                  '$Revision: 1.15 $',
+     *                  '$Date: 2018/08/10 05:57:11 $')
 c
 c  Get the input parameters.
 c
       call inputs(MapNam,BeamNam,ModelNam,OutNam,MaxNiter,NegStop,
-     *  positive,pad,asym,Cutoff,Boxes,MAXBOX,MinPatch,Gain,PHat,
+     *  positive,pad,asym,Cut,Boxes,MAXBOX,MinPatch,Gain,PHat,
      *  Speed,Clip,mode)
 c
 c  Open the beam, get some characteristics about it, then read in the
@@ -345,7 +353,8 @@ c
      *        nPoint,nx,ny,Run,nRun)
             call SumAbs(EstASum,Data(pEst),nPoint)
           endif
-          call Stats(Data(pRes),nPoint,ResMin,ResMax,ResAMax,ResRms)
+          call Stats(Data(pRes),nPoint,ResMin,ResMax,ResAMax,ResRms,
+     *      deep, Data(pEst))
           call output('Begin iterating')
         else
           ResMin = 0
@@ -354,13 +363,16 @@ c
 c
 c  Perform the appropriate iteration until no more.
 c
+        deep = .false.
         Niter = 0
         oNiter = 0
         negFound = .false.
         More = nPoint.gt.0 .and. ResMin.ne.ResMax
         Limit = 0
+        Cutoff = Cut(1)
         do while (More)
           oNiter = Niter
+          curMaxNiter = min(Niter+MaxNiter(2), MaxNiter(1))
 c
 c  Give some information about steer mode clip level.
 c
@@ -376,17 +388,18 @@ c
           if (moded.eq.'hogbom') then
             call Hogbom(MaxPatch,BemPatch,nx,ny,Data(pRes),Data(pEst),
      *        ICmp,JCmp,nPoint,Run,nRun,EstASum,
-     *        Cutoff,Gain,negStop,positive,negFound,MaxNiter,Niter)
+     *        Cutoff,Gain,negStop,positive,negFound,deep,
+     *        curMaxNiter,Niter)
             text = ' Hogbom'
           else if (moded.eq.'steer') then
             call Steer(pBem,Data(pRes),Data(pEst),Data(pMap),
-     *        nPoint,nx,ny,Clip*ResAMax,Gain,Niter,Run,nRun)
+     *        nPoint,nx,ny,Clip*ResAMax,Gain,deep,Niter,Run,nRun)
             text = ' Steer'
           else
             call Clark(nx,ny,Data(pRes),Data(pEst),nPoint,Run,nRun,
      *        Histo,BemPatch,minPatch,maxPatch,Cutoff,negStop,
-     *        positive,MaxNiter,Gain,Speed,ResAMax,EstASum,Niter,
-     *        Limit,negFound,RCmp,CCmp,ICmp,JCmp,MAXCMP2)
+     *        positive,curMaxNiter,Gain,Speed,ResAMax,EstASum,Niter,
+     *        Limit,deep,negFound,RCmp,CCmp,ICmp,JCmp,MAXCMP2)
             if (Niter.gt.oNiter) call Diff(pBem,Data(pEst),
      *        Data(pMap),Data(pRes),nPoint,nx,ny,Run,nRun)
             text = ' Clark'
@@ -398,7 +411,8 @@ c  Output some messages to assure the user that the computer has not
 c  crashed.
 c
           call output(Text//' Iterations: '//itoaf(Niter))
-          call Stats(Data(pRes),nPoint,ResMin,ResMax,ResAMax,ResRms)
+          call Stats(Data(pRes),nPoint,ResMin,ResMax,ResAMax,ResRms,
+     *      deep,Data(pEst))
           write(line,'(a,1p3e12.3)')' Residual min,max,rms: ',
      *                              ResMin,ResMax,ResRms
           call output(line)
@@ -415,8 +429,21 @@ c
 c  Check for convergence.
 c
           more = .not.((negFound .and. negStop) .or. (Niter.eq.oNiter)
-     *                .or. (ResAMax.le.Cutoff) .or. (Niter.ge.MaxNiter))
-        enddo
+     *           .or. (ResAMax.le.Cutoff) .or. (Niter.ge.MaxNiter(1)))
+c
+c  Check if we want to go into the deep cleaning phase
+c
+         if (.not.more.and..not.deep) then
+           if (Cut(2).gt.0.and.Cut(2).lt.Cut(1).and.
+     *         .not.((negFound.and.negStop).or.
+     *         (Niter.ge.MaxNiter(1)))) then
+              deep=.true.
+              Cutoff=Cut(2)
+              more=ResAMax.gt.Cutoff
+              if (more) call output(' Starting deep cleaning phase')
+           endif
+         endif
+       enddo
 c
 c  Give a message about what terminated the iterations.
 c
@@ -428,7 +455,7 @@ c
           call output('No region selected in this plane')
         else if (ResAMax.le.Cutoff) then
           call output(' Stopping -- Clean cutoff limit reached')
-        else if (Niter.ge.MaxNiter) then
+        else if (Niter.ge.MaxNiter(1)) then
           call output(' Stopping -- Maximum iterations performed')
         else if (NegStop .and. NegFound) then
           call output(' Stopping -- Negative components encountered')
@@ -463,17 +490,20 @@ c
 
 c***********************************************************************
 
-      subroutine Stats(Data,n,Dmin,Dmax,DAmax,Drms)
+      subroutine Stats(Data,n,Dmin,Dmax,DAmax,Drms,deep,Est)
 
       integer n
-      real Data(n)
+      real Data(n),Est(n)
       real Dmin,Dmax,DAmax,Drms
+      logical deep
 c-----------------------------------------------------------------------
 c  Calculate every conceivably wanted statistic.
 c
 c  Input:
 c    n          Number of points.
 c    Data       Input data array.
+c    deep       True if in deep cleaning mode
+c    Est        Current estimate of sky model
 c
 c  Output:
 c    Dmin       Data minima.
@@ -481,7 +511,7 @@ c    Dmax       Data maxima.
 c    DAmax      Data absolute maxima.
 c    Drms       Rms value of the data.
 c-----------------------------------------------------------------------
-      integer i
+      integer i,k
 
 c     Externals.
       integer ismax,ismin
@@ -489,20 +519,35 @@ c-----------------------------------------------------------------------
 c
 c  Calculate the minima and maxima.
 c
-      i = ismax(n,Data,1)
-      Dmax = Data(i)
-      i = ismin(n,Data,1)
-      Dmin = Data(i)
-      DAmax = max(abs(Dmax),abs(Dmin))
+      if (.not.deep) then
+        i = ismax(n,Data,1)
+        Dmax = Data(i)
+        i = ismin(n,Data,1)
+        Dmin = Data(i)
 c
 c  Calculate the sums.
 c
-      Drms = 0
-      do i = 1, n
-        Drms = Drms + Data(i)*Data(i)
-      enddo
-      Drms = sqrt(Drms/n)
-
+        Drms = 0
+        do i = 1, n
+          Drms = Drms + Data(i)*Data(i)
+        enddo
+        Drms = sqrt(Drms/n)
+      else
+        k=0
+        Drms=0
+        Dmax=-1e10
+        Dmin=1e10
+        do i = 1, n
+          if (Est(i).ne.0) then
+            Dmax = max(Dmax, Data(i))
+            Dmin = min(Dmin, Data(i))
+            Drms = Drms + Data(i)*Data(i)
+            k=k+1
+          endif
+        enddo
+        if (k.gt.0) Drms=sqrt(Drms/k)
+      endif
+      DAmax = max(abs(Dmax),abs(Dmin))
       end
 
 c***********************************************************************
@@ -548,9 +593,9 @@ c***********************************************************************
       subroutine inputs(map,beam,estimate,out,Niter,negStop,positive,
      *  pad,asym,cutoff,box,maxbox,minpatch,gain,phat,speed,clip,mode)
 
-      integer Niter, minpatch, maxbox
+      integer Niter(2), minpatch, maxbox
       integer box(maxbox)
-      real cutoff,gain,phat,speed,clip
+      real cutoff(2),gain,phat,speed,clip
       logical negStop,positive,pad,asym
       character map*(*),beam*(*),estimate*(*),out*(*),mode*(*)
 c-----------------------------------------------------------------------
@@ -565,9 +610,9 @@ c      Estimate    Name of the input estimate of the deconvolved image.
 c                  Default is a estimate which is zero.
 c      Out         Name of the output deconvolved map. No default.
 c      Gain        Clean loop gain.  Default 0.5 (a bit high).
-c      Cutoff)     The iterations stop when either the absolute max
-c                  residual remaining is less than Cutoff, of Niter
-c      Niter)     minor iterations have been performed (whichever comes
+c      Cutoff      The iterations stop when either the absolute max
+c                  residual remaining is less than Cutoff, or Niter
+c      Niter       minor iterations have been performed (whichever comes
 c                  first).  The default Cutoff is 0 (i.e. iterate
 c                  forever), and the default number of minor iterations
 c                  is 250.  This is the total number of iterations to
@@ -594,9 +639,15 @@ c-----------------------------------------------------------------------
       if (map.eq.' ' .or. beam.eq.' ' .or. out.eq.' ')
      *  call bug('f', 'A file name was missing from the parameters')
       call GetOpt(negstop,positive,pad,asym)
-      call keyi('niters', Niter, 250)
-      if (Niter.le.0) call bug('f', 'NITERS must be positive')
-      call keyr('cutoff', cutoff,0.0)
+      call keyi('niters', Niter(1), 250)
+      call keyi('niters', Niter(2), 1000)
+      if (Niter(1).le.0) call bug('f', 'NITERS must be positive')
+      call keyr('cutoff', cutoff(1),0.0)
+      call keyr('cutoff', cutoff(2),0.0)
+      if (cutoff(2).gt.cutoff(1)) then
+        call bug('w','Second cutoff should be less than first')
+        cutoff(2)=0
+      endif
 
       call BoxInput('region',map,box,maxbox)
 
@@ -884,12 +935,13 @@ c-----------------------------------------------------------------------
 c***********************************************************************
 
       subroutine Steer(pBem,Residual,Estimate,Temp,nPoint,nx,ny,
-     *        Limit,Gain,Niter,Run,nrun)
+     *        Limit,Gain,deep,Niter,Run,nrun)
 
       integer Niter,nrun,Run(3,nrun),nPoint,nx,ny
       ptrdiff pBem
       real Gain,Limit
       real Residual(nPoint),Temp(nPoint),Estimate(nPoint)
+      logical deep
 c-----------------------------------------------------------------------
 c  Perform an iteration of the Steer "Clean".
 c
@@ -898,6 +950,7 @@ c    Run        The Run specifying the area of interest.
 c    nrun       The number of runs. A null run follows run number nrun.
 c    limit      The limit to cut at.
 c    clip       Steer clip level.
+c    deep       True if in deep cleaning mode
 c
 c  Input/Output:
 c    Niter      Number of Niter iterations.
@@ -911,15 +964,25 @@ c-----------------------------------------------------------------------
 c
 c  Form the new Steer estimate.
 c
-      do i = 1, nPoint
-        if (abs(Residual(i)).gt.Limit) then
-          Temp(i) = Residual(i)
-          Niter = Niter + 1
-        else
-          Temp(i) = 0.0
-        endif
-      enddo
-c
+      if (deep) then
+        do i = 1, nPoint
+          if (Estimate(i).ne.0.and.abs(Residual(i)).gt.Limit) then
+            Temp(i) = Residual(i)
+            Niter = Niter + 1
+          else
+            Temp(i) = 0.0
+          endif
+        enddo
+      else
+        do i = 1, nPoint
+          if (abs(Residual(i)).gt.Limit) then
+            Temp(i) = Residual(i)
+            Niter = Niter + 1
+          else
+            Temp(i) = 0.0
+          endif
+        enddo
+      endif
 c  Convolve it with the dirty beam.
 c
       call CnvlR(pBem,Temp,nx,ny,Run,nRun,Temp,'c')
@@ -953,7 +1016,8 @@ c  Now go through and update the estimate, using this gain. Also
 c  determine the new residuals.
 c
       do i = 1, nPoint
-        if (abs(Residual(i)).gt.Limit)
+        if ((.not.deep.or.Estimate(i).ne.0).and.
+     *        abs(Residual(i)).gt.Limit)
      *        Estimate(i) = Estimate(i) + g * Residual(i)
         Residual(i) = Residual(i) - g * Temp(i)
       enddo
@@ -964,13 +1028,13 @@ c***********************************************************************
 
       subroutine Hogbom(n,Patch,nx,ny,RCmp,CCmp,ICmp,JCmp,nCmp,
      *  Run,nRun,EstASum,Cutoff,Gain,negStop,positive,negFound,
-     *  MaxNiter,Niter)
+     *  deep, MaxNiter,Niter)
 
       integer nx,ny,nCmp,nRun,n
       integer ICmp(nCmp),JCmp(nCmp),Run(3,nRun)
       real RCmp(nCmp),CCmp(nCmp),Patch(n,n)
       real Cutoff,Gain,EstASum
-      logical negStop,negFound,positive
+      logical negStop,negFound,positive, deep
       integer MaxNiter,Niter
 c-----------------------------------------------------------------------
 c  Perform a Hogbom Clean.
@@ -987,6 +1051,7 @@ c    Gain       Loop gain.
 c    Cutoff     Stop when the residuals fall below the cutoff.
 c    Run(3,nRun) This specifices the runs of the input image that are to
 c               be processed.
+c    deep       True if in deep cleaning mode
 c
 c  Input/Output:
 c    RCmp       Residuals.
@@ -1048,7 +1113,7 @@ c  Ready to perform the subtraction step. Lets go.
 c
       call SubComp(nx,ny,Ymap,Patch,n,n/2,Gain,MaxNiter,NegStop,
      *  positive,0.0,0.0,Cutoff,EstASum,Icmp,Jcmp,Rcmp,Ccmp,Ncmp,Niter,
-     *  negFound)
+     *  deep,negFound)
       end
 
 c***********************************************************************
@@ -1056,12 +1121,12 @@ c***********************************************************************
       subroutine Clark(nx,ny,Residual,Estimate,nPoint,Run,nRun,
      *        Histo,Patch,minPatch,maxPatch,Cutoff,negStop,positive,
      *        MaxNiter,Gain,Speed,ResAMax,EstASum,Niter,Limit,
-     *        negFound,RCmp,CCmp,ICmp,JCmp,maxCmp)
+     *        deep,negFound,RCmp,CCmp,ICmp,JCmp,maxCmp)
 
       integer nx,ny,minPatch,maxPatch,maxNiter,Niter,nRun,nPoint
       integer Run(3,nrun)
       real Residual(nPoint),Estimate(nPoint)
-      logical negStop,positive,negFound
+      logical negStop,positive,negFound,deep
       real Cutoff,Gain,Speed,Limit,ResAMax,EstASum
       real Histo(maxPatch/2+1),Patch(maxPatch,maxPatch)
       integer maxCmp,ICmp(maxCmp),JCmp(maxCmp)
@@ -1091,6 +1156,7 @@ c    Run        The Run, defining the area to be cleaned.
 c    nrun       The number of runs.
 c    ResAMax    Absolute maximum of the residuals.
 c    EstASum    Absolute sum of the estimates.
+c    deep       True if in deep cleaning mode
 c
 c  Input/Output:
 c    Niter      The actual number of minor iterations performed.
@@ -1117,10 +1183,10 @@ c
 c  Find the limiting residual that we can fit into the residual list,
 c  then go and fill the residual and component list.
 c
-      call GetLimit(Residual,nPoint,ResAMax,maxCmp,Histo,MaxPatch,
-     *                        nPatch,Limit)
+      call GetLimit(Residual,deep,Estimate,nPoint,ResAMax,maxCmp,
+     *              Histo,MaxPatch,nPatch,Limit)
       Limit = max(Limit, 0.5 * Cutoff)
-      call GetComp(Residual,Estimate,nPoint,ny,Ymap,Limit,
+      call GetComp(Residual,Estimate,nPoint,ny,Ymap,Limit,deep,
      *        Icmp,Jcmp,Rcmp,CCmp,maxCmp,nCmp,Run,nRun)
 c
 c  Determine the patch size to use, perform the minor iterations, then
@@ -1129,7 +1195,7 @@ c
       nPatch = max(MinPatch/2,nPatch)
       call SubComp(nx,ny,Ymap,Patch,MaxPatch,nPatch,Gain,MaxNiter,
      *      negStop,positive,1.0,Speed,Limit,EstASum,
-     *      ICmp,JCmp,RCmp,CCmp,nCmp,Niter,negFound)
+     *      ICmp,JCmp,RCmp,CCmp,nCmp,Niter,deep,negFound)
 
       call NewEst(CCmp,ICmp,JCmp,nCmp,Estimate,nPoint,Run,nRun)
       end
@@ -1138,13 +1204,13 @@ c***********************************************************************
 
       subroutine SubComp(nx,ny,Ymap,Patch,n,PWidth,Gain,MaxNiter,
      *        NegStop,positive,g,Speed,Limit,EstASum,Icmp,Jcmp,Rcmp,
-     *        Ccmp,Ncmp,Niter,negFound)
+     *        Ccmp,Ncmp,Niter,deep,negFound)
 
       integer nx,ny,n,Ncmp,Niter,MaxNiter,PWidth
       real Limit,Gain,g,Speed,EstASum
       integer Icmp(Ncmp),Jcmp(Ncmp),Ymap(ny+1)
       real Patch(n,n),Rcmp(Ncmp),Ccmp(Ncmp)
-      logical negStop, positive, negFound
+      logical negStop, positive, negFound, deep
 c-----------------------------------------------------------------------
 c  Perform minor iterations. This quits performing minor iterations when
 c
@@ -1175,7 +1241,8 @@ c    Ymap       When cleaning the table of residuals, we need to
 c               determine where residuals corresponding to a given range
 c               of j exist.  Ymap(j) gives the index of the table entry
 c               before that contains, or would have contained, line j
-c               residuals.
+c               residuals
+c     deep      True if in deep cleaning phase
 c
 c  Input/Outputs:
 c    Rcmp       Flux at each residual peak.
@@ -1198,7 +1265,7 @@ c-----------------------------------------------------------------------
 c
 c  Initialise.
 c
-      call GetPk(Ncmp,Rcmp,Ccmp,Gain,positive,Pk,Wts)
+      call GetPk(Ncmp,Rcmp,Ccmp,Gain,positive,Pk,Wts,deep)
       ResMax = Rcmp(Pk)
       negFound = negFound .or. ResMax.lt.0
       TermRes = Limit
@@ -1263,7 +1330,7 @@ c
         Niter = Niter + 1
         TermRes = TermRes +
      *   alpha * abs(Wts) / (EstASum * abs(ResMax)**Speed)
-        call GetPk(Ncmp,Rcmp,Ccmp,Gain,positive,Pk,Wts)
+        call GetPk(Ncmp,Rcmp,Ccmp,Gain,positive,Pk,Wts,deep)
         ResMax = Rcmp(Pk)
         negFound = negFound .or. ResMax.lt.0
         zeroCmp = Wts.eq.0
@@ -1274,11 +1341,11 @@ c
 
 c***********************************************************************
 
-      subroutine GetPk(Ncmp,Rcmp,Ccmp,Gain,positive,Pk,Wts)
+      subroutine GetPk(Ncmp,Rcmp,Ccmp,Gain,positive,Pk,Wts,deep)
 
       integer Ncmp,Pk
       real Rcmp(Ncmp),Ccmp(Ncmp),Gain,Wts
-      logical positive
+      logical positive,deep
 c-----------------------------------------------------------------------
 c  Determine the position and value of the next delta.
 c
@@ -1288,6 +1355,7 @@ c    Rcmp       The residuals.
 c    Ccmp       The current components.
 c    Gain       The loop gain.
 c    positive   True if the components must always be positive.
+c    deep       true if in deep cleaning phase
 c  Output:
 c    Pk         The index of the delta.
 c    Wts        Value of the delta.
@@ -1302,15 +1370,31 @@ c-----------------------------------------------------------------------
         Pk = 1
         maxv = 0
         do i = 1, Ncmp
-          temp = abs(max(Gain*Rcmp(i),-Ccmp(i)))
-          if (temp.gt.maxv) then
-            maxv = temp
-            Pk = i
+          if (.not.deep.or.Ccmp(i).ne.0) then
+            temp = abs(max(Gain*Rcmp(i),-Ccmp(i)))
+            if (temp.gt.maxv) then
+              maxv = temp
+              Pk = i
+            endif
           endif
         enddo
         Wts = max(Gain*Rcmp(Pk),-Ccmp(Pk))
       else
-        Pk = isamax(Ncmp,Rcmp,1)
+        if (.not.deep) then
+            Pk = isamax(Ncmp,Rcmp,1)
+        else
+          Pk = 1
+          maxv = 0
+          do i = 1, Ncmp
+            if (Ccmp(i).ne.0) then
+              temp = abs(Rcmp(i))
+              if (temp.gt.maxv) then
+                maxv = temp
+                Pk = i
+              endif
+            endif
+          enddo
+        endif
         Wts = Gain * Rcmp(Pk)
       endif
 
@@ -1318,11 +1402,13 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine GetLimit(Residual,nPoint,ResAMax,maxCmp,
+      subroutine GetLimit(Residual,deep,Estimate,nPoint,ResAMax,maxCmp,
      *        Histo,MaxPatch,nPatch,Limit)
 
       integer nPoint,maxPatch,nPatch,maxCmp
-      real Residual(nPoint),ResAMax,Histo(maxPatch/2+1),Limit
+      real Residual(nPoint),Estimate(nPoint)
+      real ResAMax,Histo(maxPatch/2+1),Limit
+      logical deep
 c-----------------------------------------------------------------------
 c  Determine the limiting threshold and the patch size. The algorithm
 c  used to determine the Limit and patch size are probably very
@@ -1332,6 +1418,7 @@ c
 c  Inputs:
 c    Residual   The input residuals.
 c    nPoint     Number of residuals.
+c    Estimate   The current Estimate
 c    ResAMax    The absolute maximum residual.
 c    maxCmp     The maximum number of peak residuals that can be stored.
 c    Histo      Histogram of the beam patch.
@@ -1361,10 +1448,19 @@ c
 c
 c  Now get the histogram while taking account of the boxes.
 c
-      do i = 1, nPoint
-        m = max(int(a * abs(Residual(i)) + b),1)
-        ResHis(m) = ResHis(m) + 1
-      enddo
+      if (.not.deep) then
+        do i = 1, nPoint
+          m = max(int(a * abs(Residual(i)) + b),1)
+          ResHis(m) = ResHis(m) + 1
+        enddo
+      else
+        do i = 1, nPoint
+          if (Estimate(i).ne.0) then
+            m = max(int(a * abs(Residual(i)) + b),1)
+            ResHis(m) = ResHis(m) + 1
+          endif
+        enddo
+      endif
 c
 c  Now work out where to set the limit.
 c
@@ -1394,12 +1490,13 @@ c
 c***********************************************************************
 
       subroutine GetComp(Residual,Estimate,nPoint,ny,Ymap,Limit,
-     *                   Icmp,Jcmp,RCmp,CCmp,maxCmp,nCmp,Run,nRun)
+     *                   deep,Icmp,Jcmp,RCmp,CCmp,maxCmp,nCmp,Run,nRun)
 
       integer nPoint,ny,maxCmp,nCmp,nRun,Run(3,nrun)
       real Limit,Residual(nPoint),Estimate(nPoint)
       real RCmp(maxCmp),CCmp(maxCmp)
       integer Ymap(ny+1),Icmp(maxCmp),Jcmp(maxCmp)
+      logical deep
 c-----------------------------------------------------------------------
 c  Get the residuals that are greater than a certain cutoff.
 c
@@ -1411,6 +1508,7 @@ c    Run        Runs specifications.
 c    nrun       Number of runs.
 c    Residual   Contains all the residuals.
 c    Estimate   Contains all the estimated pixel fluxes.
+c    deep       True if in deep cleaning mode
 c
 c  Outputs:
 c    Ncmp       Number of residual peaks returned.
@@ -1443,9 +1541,19 @@ c
         x0 = Run(2,k) - 1
         n0 = Run(3,k) - x0
 
-        do i = 1, n0
-          Temp(i) = abs(Residual(l+i))
-        enddo
+        if (deep) then
+          do i = 1, n0
+            if (Estimate(l+i).ne.0) then
+              Temp(i) = abs(Residual(l+i))
+            else
+              Temp(i) = 0
+            endif
+          enddo
+        else
+           do i = 1, n0
+            Temp(i) = abs(Residual(l+i))
+           enddo
+        endif
         call whenfgt(n0, Temp, 1, Limit, Indx,Ncmpd)
         if (Ncmp+Ncmpd.gt.maxCmp)
      *        call bug('f','Internal bug in GetComp')
