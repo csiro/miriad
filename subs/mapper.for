@@ -928,7 +928,7 @@ c------------------------------------------------------------------------
 	integer MAXRUN
 	parameter(MAXRUN=1024)
 	real Vis(MAXRUN),theta
-	integer VispBuf,l,ltot,l0,i0,j0,i,j
+	integer VispBuf,l,ltot,l0,i0,j0,i,j,nvis1
         ptrdiff off, k, ktot
 	double precision dtemp
 c
@@ -975,7 +975,10 @@ c
 c  Either take the median of the sum.
 c
 	    if(mode.eq.'median')then
-	      call median(Wrk,nvis,Map(i,j))
+            if (nvis.gt.2**31-1) call bug('f',
+     *        'Too many visibilities for median imaging ')
+          nvis1 = nvis
+	      call median(Wrk,nvis1,Map(i,j))
 	    else
 	      dtemp = 0
 	      do k=1,nvis
