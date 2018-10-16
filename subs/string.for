@@ -2,7 +2,7 @@ c***********************************************************************
 c  History
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: string.for,v 1.7 2010/12/17 01:34:18 cal103 Exp $
+c $Id: string.for,v 1.8 2018/10/16 03:41:55 wie017 Exp $
 c***********************************************************************
 
 c* stcat - Concatenate two strings avoiding blank padding.
@@ -427,7 +427,7 @@ c
 c  Input:
 c    n          The integer to convert.
 c  Output:
-c    itoaf      The formated integer, left justified.
+c    itoaf      The formatted integer, left justified.
 c-----------------------------------------------------------------------
       integer nono,lstring
       parameter (nono=30,lstring=12)
@@ -448,6 +448,47 @@ c-----------------------------------------------------------------------
           i = i + 1
         enddo
         itoaf = string(i:lstring)
+      endif
+
+      end
+
+c***********************************************************************
+
+c* I8toaf -- Convert an integer*8 into a string.
+c& rjs
+c: strings
+c+
+      character*(*) function i8toaf(n)
+
+      ptrdiff n
+c  ---------------------------------------------------------------------
+c  Convert an integer into its ascii representation. It is returned
+c  left justified.
+c
+c  Input:
+c    n          The integer to convert.
+c  Output:
+c    itoaf      The formatted integer, left justified.
+c-----------------------------------------------------------------------
+      integer nono,lstring
+      parameter (nono=30,lstring=19)
+      character string*(lstring)
+      integer i
+      character numbers(nono)*2
+      save numbers
+      data numbers/'1 ','2 ','3 ','4 ','5 ','6 ','7 ','8 ','9 ',
+     *        '10','11','12','13','14','15','16','17','18','19',
+     *        '20','21','22','23','24','25','26','27','28','29','30'/
+c-----------------------------------------------------------------------
+      if (n.gt.0 .and. n.le.nono) then
+        i8toaf = numbers(n)
+      else
+        write(string,'(i19)') n
+        i = 1
+        do while (string(i:i).eq.' ')
+          i = i + 1
+        enddo
+        i8toaf = string(i:lstring)
       endif
 
       end
