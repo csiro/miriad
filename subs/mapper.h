@@ -15,17 +15,17 @@ c
 c
 	real scale(MAXPNT)
 	real cgf(MAXCGF),xcorr(MAXDIM),ycorr(MAXDIM),umax,vmax
-	integer tscr,nvis
+	integer tscr
 	integer width,ncgf,offcorr,chan1,chan2,npnt,totchan
 	integer nchan(MAXT),nx(MAXT),ny(MAXT),nt
-	integer n1,n2,nu,nv,u0,v0,nxc,nyc
+	integer n1,n2,nu,nv,u0,v0,nxc,nyc,pad
 	logical ginit
-        ptrdiff pBuff,nBuff8,nextra8
+        ptrdiff pBuff,nBuff8,nextra8,nvis
 	character mode*8
 	common/mapcom/pBuff,scale,cgf,xcorr,ycorr,umax,vmax,
-     *	  tscr,nvis,width,ncgf,offcorr,chan1,chan2,npnt,totchan,
+     *	  tscr,width,ncgf,offcorr,chan1,chan2,npnt,totchan,
      *	    nchan,nx,ny,nt,n1,n2,nu,nv,u0,v0,nxc,nyc,ginit,
-     *      nBuff8,nextra8
+     *      pad,nvis,nBuff8,nextra8
 	common/mapcomc/mode
 c
 	integer num

@@ -21,6 +21,7 @@ c    rjs  07jan97 Fiddle memory conservation alogirthm yet again.
 c    rjs  03apr09 Change use of scratch file to help large file access.
 c    pjt   6feb15 Changes to deal with large (64bit) memory is needed
 c                 lessons learned:  integer*8 support not like integer*4
+c    mhw  16oct18 Deal with nvis>=2**31
 c************************************************************************
 	subroutine MapFin
 c
@@ -38,7 +39,8 @@ c************************************************************************
 c
 	implicit none
 	character mode1*(*)
-	integer tscr1,npnt1,offcorr1,totchan1,nvis1
+	integer tscr1,npnt1,offcorr1,totchan1
+        ptrdiff nvis1
 	real umax1,vmax1
 c
 c  Set the basic mapping parameters.
@@ -386,7 +388,7 @@ c    nplanes -- Number of planes we can fit in a reasonable amount of
 c		memory.
 c    npass   -- Number of i/o passes needed to grid all these images.
 c
-c  Check for integer overflow 
+c  Check for integer overflow
 c
 	plsize8 = 2*nu*nv
 	plsize8 = plsize8 * npnt
@@ -440,7 +442,8 @@ c************************************************************************
 c
 	implicit none
 	integer tvis,ncgf,width,nu,nv,u0,v0,n1,n2
-	integer nstart,ncount,npnt,nvis,VisSize
+	integer nstart,ncount,npnt,VisSize
+        ptrdiff nvis
 	real cgf(ncgf)
 	complex Grd(nu,nv,npnt,ncount)
 c
@@ -467,8 +470,8 @@ c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer maxrun,maxwidth
 	parameter(maxrun=8*MAXCHAN+20,maxwidth=8)
-	integer i,j,k,ktot,ltot,VispBuf,pnt
-        ptrdiff off
+	integer i,j,ltot,VispBuf,pnt
+        ptrdiff off, k, ktot
 	integer poff(maxwidth**2),qoff(maxwidth**2),goff(maxwidth**2)
 	real Visibs(maxrun)
 c
@@ -595,7 +598,7 @@ c#ivdep
 c#maxloop 64
 	        do i=1,width*width
 	          Weight = cgf(p0+poff(i)) * cgf(q0+qoff(i))
-	          Grd(g0+  goff(i),pnt,chan) = 
+	          Grd(g0+  goff(i),pnt,chan) =
      *		  Grd(g0+  goff(i),pnt,chan) + Weight * Dat
 	        enddo
 #else
@@ -868,7 +871,8 @@ c************************************************************************
 	subroutine MapSlowS(tscr,nvis,offcorr,VisSize,Sum)
 c
 	implicit none
-	integer tscr,nvis,offcorr,VisSize
+	integer tscr,offcorr,VisSize
+        ptrdiff nvis
 	real Sum
 c
 c  Determine the sum of the visibilities.
@@ -878,8 +882,8 @@ c------------------------------------------------------------------------
 	parameter(MAXRUN=1024)
 	real Vis(MAXRUN)
 	double precision temp
-	integer k,ktot,l,ltot,l0,VispBuf
-        ptrdiff off
+	integer l,ltot,l0,VispBuf
+        ptrdiff off, k, ktot
 c
 c  Determine the number of visibilities we can fit into a buffer.
 c
@@ -905,13 +909,14 @@ c
 c
 	Sum = temp
 c
-	end	
+	end
 c************************************************************************
 	subroutine MapSlow(tscr,mode,nvis,offcorr,VisSize,
      *				Dat,Wrk,Map,nx,ny,scale)
 c
 	implicit none
-	integer tscr,nvis,offcorr,VisSize,nx,ny
+	integer tscr,offcorr,VisSize,nx,ny
+        ptrdiff nvis
 	real Dat(4,nvis),Wrk(nvis),Map(nx,ny),scale
 	character mode*(*)
 c
@@ -923,8 +928,8 @@ c------------------------------------------------------------------------
 	integer MAXRUN
 	parameter(MAXRUN=1024)
 	real Vis(MAXRUN),theta
-	integer VispBuf,k,ktot,l,ltot,l0,i0,j0,i,j
-        ptrdiff off
+	integer VispBuf,l,ltot,l0,i0,j0,i,j
+        ptrdiff off, k, ktot
 	double precision dtemp
 c
 c  Determine the number of visibilities that we can fit in per

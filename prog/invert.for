@@ -230,7 +230,7 @@ c       replaced with 0, or to be estimated by linear interpolation of
 c       two adjacent good channels.  See the Users Guide for the merits
 c       and evils of the two approaches.  The default is 'zero'.
 c
-c$Id: invert.for,v 1.23 2017/07/27 05:46:17 wie017 Exp $
+c$Id: invert.for,v 1.24 2018/10/16 03:41:17 wie017 Exp $
 c--
 c  History
 c    rjs        89  Initial version
@@ -367,6 +367,7 @@ c    mhw   03jun13  Add beam and res options to imsize and cellsize
 c    mhw   03mar14  Fix bug in theoretical rms for large datasets
 c    mhw   20jan15  Add position angle to taper specification
 c    pjt   10feb15  Handle large mosaics 
+c    mhw   16oct18  Handle >2**31 visibilities
 c  Bugs:
 c-----------------------------------------------------------------------
       include 'mirconst.h'
@@ -383,9 +384,10 @@ c
       character maps(MAXPOL)*256,beam*256,uvflags*16,mode*16,vis*64
       character line*64, version*72,smnx*10,smny*10
       double precision ra0,dec0,offset(2),lmn(3),x(2)
-      integer i,j,k,nmap,tscr,nvis,nchan,npol,npnt,coObj,pols(MAXPOL)
+      integer i,j,k,nmap,tscr,nchan,npol,npnt,coObj,pols(MAXPOL)
       integer nx,ny,bnx,bny,mnx,mny,wnu,wnv
       integer nbeam,nsave,ndiscard,offcorr,nout
+      ptrdiff nvis
       logical defWt,Natural,doset,systemp(2),mfs,doimag,mosaic,sdb,idb
       logical double,doamp,dophase,dosin,doncp,dobeam,dores,dorotbm
 c
@@ -409,8 +411,8 @@ c
 c-----------------------------------------------------------------------
       version = versan ('invert',
 
-     :                  '$Revision: 1.23 $',
-     :                  '$Date: 2017/07/27 05:46:17 $')
+     :                  '$Revision: 1.24 $',
+     :                  '$Date: 2018/10/16 03:41:17 $')
 c
 c  Get the input parameters. Convert all angular things into
 c  radians as soon as possible!!
@@ -935,7 +937,8 @@ c
 c***********************************************************************
       subroutine WtCalc(tvis,Wts,wdu,wdv,wnu,wnv,npnt,nvis,nchan)
 c
-      integer tvis,wnu,wnv,nvis,nchan,npnt
+      integer tvis,wnu,wnv,nchan,npnt
+      ptrdiff nvis
       real Wts(wnv,wnu/2+1,npnt),wdu,wdv
 c
 c  Calculate the weight to be applied to each visibility.
@@ -958,9 +961,9 @@ c-----------------------------------------------------------------------
       parameter(InFreq=5,InData=8)
       integer Maxrun
       parameter(Maxrun=8*MAXCHAN+20)
-      integer i,id,j,VispBuf, VisSize,u,v,k,ktot,l,ltot,ipnt
+      integer i,id,j,VispBuf, VisSize,u,v,l,ltot,ipnt
       real Visibs(Maxrun)
-      ptrdiff offset
+      ptrdiff offset, k, ktot
 c
 c  Determine the number of visibilities perr buffer.
 c
@@ -1168,7 +1171,8 @@ c***********************************************************************
      *     bpa,dorotbm,nvis,npol,nchan,mosaic,idb,sdb,doamp,dophase,
      *     freq0,Rms2,Slop,lmn,umax,vmax,cellx,celly)
 c
-      integer tscr,wnu,wnv,nvis,npol,nchan,npnt
+      integer tscr,wnu,wnv,npol,nchan,npnt
+      ptrdiff nvis
       logical Natural,sdb,idb,mosaic,doamp,dophase,dorotbm
       real Tu,Tv,bpa,wdu,wdv,UWts(wnv,wnu/2+1,npnt),cellx,celly
       real Rms2,freq0,umax,vmax,Slop(npol*nchan)
@@ -1212,9 +1216,9 @@ c-----------------------------------------------------------------------
 c
       double precision SumWt,RMS2d
       real Wts(maxrun/(InData+2)),Vis(maxrun),logFreq0,Wt,t,u1,u2
-      integer i,j,k,l,size,step,n,u,v,offcorr,nbeam,ncorr,ipnt
+      integer i,j,k,size,step,n,u,v,offcorr,nbeam,ncorr,ipnt
       logical doshift
-      ptrdiff offset
+      ptrdiff offset,l
 c
 c  Miscellaneous initialisation.
 c
@@ -1506,7 +1510,8 @@ c***********************************************************************
      *        slopmode,vis,nvis,nchan,umax,vmax,ChanWt,mchan,freq0)
 c
       logical doimag,systemp(2),mosaic,mfs
-      integer npol,tscr,nvis,nchan,mchan
+      integer npol,tscr,nchan,mchan
+      ptrdiff nvis
       real umax,vmax,freq0,slop,ChanWt(npol*mchan)
       character vis*(*),slopmode*(*)
 c
@@ -1535,8 +1540,8 @@ c-----------------------------------------------------------------------
       include 'maxdim.h'
       integer MAXPOL,MAXLEN
       parameter(MAXPOL=4,MAXLEN=4+MAXPOL*MAXCHAN)
-      integer tno,pnt,nzero,nread,i,j,nbad,nrec,ncorr,VisSize
-      ptrdiff offset
+      integer tno,pnt,nzero,nread,i,j,nrec,ncorr,VisSize
+      ptrdiff offset, nbad
       complex data(MAXCHAN,MAXPOL),out(MAXLEN),ctemp
       logical flags(MAXCHAN,MAXPOL),more
       real uumax,vvmax,rms2,Wt,SumWt,rms2f(MAXCHAN),Wtf(MAXCHAN)
@@ -1546,6 +1551,7 @@ c
 c  Externals.
 c
       character itoaf*10
+      character i8toaf*19
       integer len1
 c
 c  Get the first record.
@@ -1670,9 +1676,9 @@ c
 c
 c  Say how many records were rejected.
 c
-      call output('Visibilities accepted: '//itoaf(nvis))
+      call output('Visibilities accepted: '//i8toaf(nvis))
       if(nbad.gt.0)
-     *  call bug('w','Visibilities rejected: '//itoaf(nbad))
+     *  call bug('w','Visibilities rejected: '//i8toaf(nbad))
       if(nvis.eq.0)call bug('f','No visibilities to map')
 c
 c  Fiddle slop gain factor. Get MFS mean frequency.
@@ -1702,7 +1708,8 @@ c***********************************************************************
      *        npol,mchan,nchan,nvis,nbad,out,MAXLEN,nrec,ncorr,
      *        uumax,vvmax,umax,vmax,SumWt,freq0)
 c
-      integer tno,nchan,npol,mchan,nvis,nbad,MAXLEN,nrec,ncorr
+      integer tno,nchan,npol,mchan,MAXLEN,nrec,ncorr
+      ptrdiff nvis, nbad
       double precision uvw(3)
       real rms2,rms2f(nchan),uumax,vvmax,umax,vmax,Wt,Wtf(nchan)
       double precision freq0,SumWt
@@ -1814,7 +1821,8 @@ c***********************************************************************
      *        npol,MAXCHAN,nchan,nvis,nbad,out,MAXLEN,nrec,ncorr,
      *        uumax,vvmax,umax,vmax,SumWt,ChanWt,slop,slopmode)
 c
-      integer tno,nchan,npol,MAXCHAN,nvis,nbad,MAXLEN,nrec,ncorr
+      integer tno,nchan,npol,MAXCHAN,MAXLEN,nrec,ncorr
+      ptrdiff nvis, nbad
       double precision uvw(3)
       real rms2,umax,vmax,uumax,vvmax,ChanWt(npol*nchan),slop,Wt,SumWt
       complex data(MAXCHAN,npol),out(MAXLEN)
