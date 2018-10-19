@@ -975,7 +975,7 @@ c
 c  Either take the median of the sum.
 c
 	    if(mode.eq.'median')then
-            if (nvis.gt.2**31-1) call bug('f',
+            if (nvis.gt.2e9) call bug('f',
      *        'Too many visibilities for median imaging ')
           nvis1 = nvis
 	      call median(Wrk,nvis1,Map(i,j))
