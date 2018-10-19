@@ -255,8 +255,9 @@
 *  mhw  25jan11 increase MAXVHANDS to 1024
 *  mhw  06mar12 add spectrum version of variance - variancef
 *  mhw  08aug12 merge in some CARMA mods
+*  mhw  10oct18 add fix to velocity suggested by M Voronkov
 *
-* $Id: uvio.c,v 1.8 2012/08/10 03:38:21 wie017 Exp $
+* $Id: uvio.c,v 1.9 2018/10/19 05:09:40 wie017 Exp $
 *===========================================================================*/
 #define VERSION_ID "08-Aug-2012 mhw"
 
@@ -4261,7 +4262,8 @@ private void uvread_velocity(UV *uv,LINE_INFO *line,float *data,
     if(*wins++){
       v = (CKMS * (1.0 - (*sfreq * dopfct) / *restfreq) - line->fstart) /
             line->fstep;
-      idv = -CKMS * *sdf / (*restfreq * line->fstep);
+      /* scale the freq increment with the doppler factor too */
+      idv = -CKMS * (*sdf * dopfct) / (*restfreq * line->fstep);
       idv2 = 0.5 * idv;
       if(idv2 < 0) idv2 = - idv2;
       dv2 = idv2 + odv2;
