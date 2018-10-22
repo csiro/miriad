@@ -21,7 +21,7 @@ c    rjs  07jan97 Fiddle memory conservation alogirthm yet again.
 c    rjs  03apr09 Change use of scratch file to help large file access.
 c    pjt   6feb15 Changes to deal with large (64bit) memory is needed
 c                 lessons learned:  integer*8 support not like integer*4
-c    mhw  16oct18 Deal with nvis>=2**31
+c    mhw  22oct18 Deal with nvis>=2**31 and imsize>65536
 c************************************************************************
 	subroutine MapFin
 c
@@ -169,8 +169,8 @@ c
 c
 c  Now do the Fourier transform and grid correction of this plane.
 c
-	  plsize8 = 2*nu*nv
-	  plsize8 = plsize8 * npnt
+	  plsize8 = 2
+	  plsize8 = plsize8 * nu * nv * npnt
 	  ioff = plsize8*(ichan-chan1) + nextra8
 	  ooff = 0
 	  do i=1,npnt
@@ -390,19 +390,21 @@ c    npass   -- Number of i/o passes needed to grid all these images.
 c
 c  Check for integer overflow
 c
-	plsize8 = 2*nu*nv
-	plsize8 = plsize8 * npnt
+	plsize8 = 2
+	plsize8 = plsize8 * nu * nv * npnt
 
 c  BAD: the factors inside max() can overflow, thus nextra<0 is not sufficient
 c  npnt*nxc*nyc - 2*nu*(npnt*nv + (nv/2+nyc/2))
 c       nxc*nyc - 2*nu*nyc -2*(u0+nu*(nv/2-(nyc/2+1)))
 
-	n8a = nxc*nyc
-	n8a = n8a * npnt
-	n8b = ((npnt-1)*nv+(v0+nyc/2-1))
-	n8b = n8b * 2 * nu
-	n8c = nxc*nyc
-	n8d = 2*nu*nyc
+	n8a = 1
+	n8a = n8a * nxc * nyc * npnt
+	n8b = 2
+	n8b = n8b * ((npnt-1)*nv+(v0+nyc/2-1)) * nu
+	n8c = nxc
+	n8c = n8c * nyc
+	n8d = 2
+	n8d = n8d * nu * nyc
 	n8e = 2*((u0-1)+nu*(v0-(nyc/2+1)))
 c	nextra = max(0, npnt*nxc*nyc - 2*nu*((npnt-1)*nv+(v0+nyc/2-1)),
 c     *		        nxc*nyc-2*nu*nyc-2*((u0-1)+nu*(v0-(nyc/2+1))) )
@@ -420,9 +422,7 @@ c
 c  Is the current buffer big enough? If not, make it big enough.
 c  nBuff8 keeps a record how much we've used so far (0 @ first time here)
 c
-	n8 = nplanes
-	n8 = n8*plsize8
-	n8 = n8 + nextra8
+	n8 = nplanes * plsize8 + nextra8
 	if(n8.gt.nBuff8)then
 	  if(nBuff8.gt.0)call memFrex(pBuff,nBuff8,'r')
 c	  nBuff = nplanes * plsize + nextra
@@ -717,7 +717,8 @@ c
 	integer i,j,nud,ioff
 	ptrdiff i8, offi, offo
 c
-	offi = 2*( (u0-1) + nu*(v0-(ny/2 + 1)) ) + inoff
+	offi = (v0-(ny/2+1))
+	offi = 2*( (u0-1) + nu * offi ) + inoff
 	offo = outoff
 
 c
