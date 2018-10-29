@@ -8,6 +8,7 @@ c                   it would compile.   Efficiency ???
 c    rjs   8apr91 - Removed use of blank common. Put checks for image
 c		    size exceeding maxdim.
 c    rjs  18sep91 - Cosmetic changes to appease bounds checkers.
+c    mhw  25oct18 - Support very large images (64k)
 c************************************************************************
 c* GetPlane -- Read portion of a plane, specified by runs format.
 c& mjs
@@ -16,7 +17,8 @@ c+
 	subroutine GetPlane(lu,Run,nRun,xoff,yoff,nx,ny,Out,MaxOut,nOut)
 c
 	implicit none
-	integer lu,nRun,Run(3,nRun+1),MaxOut,nOut,xoff,yoff,nx,ny
+	integer lu,nRun,Run(3,nRun+1),xoff,yoff,nx,ny
+	ptrdiff MaxOut,nOut
 	real Out(MaxOut)
 c
 c  Read in the section of a plane that we are interested in.
@@ -68,7 +70,8 @@ c+
 	subroutine PutPlane(lu,Run,nRun,xoff,yoff,nx,ny,In,nIn)
 c
 	implicit none
-	integer lu,nRun,Run(3,nRun+1),nIn,xoff,yoff,nx,ny
+	integer lu,nRun,Run(3,nRun+1),xoff,yoff,nx,ny
+        ptrdiff nIn
 	real In(nIn)
 c
 c  Write out a subportion of a Miriad image plane. The subportion to
@@ -85,7 +88,8 @@ c    nIn	The total number of pixels in the "In" array.
 c--
 c------------------------------------------------------------------------
 	include 'maxdim.h'
-	integer i,j,k,filled,id
+	integer i,j,k,filled
+        ptrdiff id
 	logical Zeroed
 	real Data(maxdim)
 c
