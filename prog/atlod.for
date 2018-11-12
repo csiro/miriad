@@ -176,7 +176,7 @@ c       For concatenated spectra the width of a single zoom is used.
 c       Note that noise and artefacts go up quickly towards the band 
 c       edge so making this much smaller will not gain you much.
 c
-c$Id: atlod.for,v 1.53 2016/08/25 23:02:21 wie017 Exp $
+c$Id: atlod.for,v 1.54 2018/11/12 23:09:35 wie017 Exp $
 c--
 c
 c  Program Structure:
@@ -345,8 +345,9 @@ c    mhw  25jul14 Deal with historical rfiflag files
 c    mhw  27jul15 Fix problem loading some CABB zoom data
 c    mhw  18jul16 Store project code
 c    mhw  26aug16 Fix nopol option
+c    mhw  13nov18 Avoid loss of precision in frequency variables
 c
-c $Id: atlod.for,v 1.53 2016/08/25 23:02:21 wie017 Exp $
+c $Id: atlod.for,v 1.54 2018/11/12 23:09:35 wie017 Exp $
 c-----------------------------------------------------------------------
 
         integer MAXFILES,MAXTIMES,MAXSIM
@@ -367,8 +368,8 @@ c
         character itoaf*8, rperr*32, versan*72
 c-----------------------------------------------------------------------
       version = versan ('atlod',
-     :                  '$Revision: 1.53 $',
-     :                  '$Date: 2016/08/25 23:02:21 $')
+     :                  '$Revision: 1.54 $',
+     :                  '$Date: 2018/11/12 23:09:35 $')
 c
 c  Get the input parameters.
 c
@@ -970,13 +971,13 @@ c
 c
         nfreq(iif) = nfreq1
         if(nfreq(iif).gt.1)then
-          sdf(iif) = 1e-9*bw / (nfreq(iif) - 1)
+          sdf(iif) = 1d-9*bw / (nfreq(iif) - 1)
         else
-          sdf(iif) = 1e-9*abs(bw)
+          sdf(iif) = 1d-9*abs(bw)
         endif
         if(abs(sdf(iif)).eq.0)
      *    call bug('w','Channel width in RPFITS file is 0')
-        sfreq(iif) = 1e-9*freq - (ref-1)*sdf(iif)
+        sfreq(iif) = 1d-9*freq - (ref-1)*sdf(iif)
         edge(iif) = 0
         bchan(iif) = 0
 c
@@ -1008,7 +1009,7 @@ c
         endif
 c
         nstoke(iif) = nstok
-        restfreq(iif) = 1e-9 * rfreq
+        restfreq(iif) = 1d-9 * rfreq
         ifchain(iif) = ifc
 c
         do p=1,nstoke(iif)
