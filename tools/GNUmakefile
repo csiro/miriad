@@ -2,7 +2,7 @@
 # GNUmakefile for compiling Miriad tools.
 #
 # Original: 2006/08/25, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.8 2018/09/28 01:38:15 wie017 Exp $
+# $Id: GNUmakefile,v 1.9 2018/11/23 04:52:41 wie017 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
@@ -40,8 +40,9 @@ ifeq "$(MAKEMODE)" "system"
   bin : $(MIREXES:%=$(MIRBIND)/%) ;
 
   ifneq "$(READLINELIB)" ""
-    $(MIRBIND)/miriad : $(CODEDIR)/miriad.c
-	   $(CC) -DREADLINE $(CCOPT) -o $@ $< $(READLINELIB)
+    READLINESTATICLIB = $(filter %.a, $(READLINELIB))
+    $(MIRBIND)/miriad : $(CODEDIR)/miriad.c $(READLINESTATICLIB)
+	   $(CC) -DREADLINE $(CCOPT) -o $@ $< $(READLINELIB) $(READLINEINC)
 	-@ chmod 775 $@
   endif
 
