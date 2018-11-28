@@ -257,7 +257,7 @@
 *  mhw  08aug12 merge in some CARMA mods
 *  mhw  10oct18 add fix to velocity suggested by M Voronkov
 *
-* $Id: uvio.c,v 1.9 2018/10/19 05:09:40 wie017 Exp $
+* $Id: uvio.c,v 1.10 2018/11/28 01:17:08 wie017 Exp $
 *===========================================================================*/
 #define VERSION_ID "08-Aug-2012 mhw"
 
@@ -4182,7 +4182,8 @@ private void uvread_velocity(UV *uv,LINE_INFO *line,float *data,
     flags	Flags indicating whether the data is good or not.
 ------------------------------------------------------------------------*/
 {
-  float idv,idv2,odv2,dv2,scale,wt,v,vobs,temp;
+  double idv,idv2,odv2,dv2,v,temp;
+  float scale, wt;
   double beta, dopfct, *restfreq, *sfreq, *sdf;
   int nspect,first,last,fout,lout,i,j,n;
   int *nschan,*flagin,*flagin1,*flagout,*wins,doint2;
@@ -4282,8 +4283,8 @@ private void uvread_velocity(UV *uv,LINE_INFO *line,float *data,
       flagin = flagin1 + fout;
       for(i=fout; i <= lout; i++){
         if(*flagin == FORT_TRUE){
-          first = max(0,      ceil (v-dv2));
-          last  = min(nsize-1,floor(v+dv2));
+          first = max(0,      (int)ceil (v-dv2));
+          last  = min(nsize-1,(int)floor(v+dv2));
 	  if(doint2){
             for(j=first; j<=last; j++){
 	      wt = ( min(v + idv2, j + odv2) - max(v - idv2, j - odv2) ) / idv2;
