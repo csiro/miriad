@@ -102,7 +102,7 @@ c                 plane.  Normally (i.e. without this option), MATHS
 c                 insists that the inputs must be identical in size.
 c         unmask  Treat all pixels as if they were valid.
 c
-c$Id: maths.for,v 1.5 2011/03/30 05:34:52 cal103 Exp $
+c$Id: maths.for,v 1.6 2018/11/29 03:41:27 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -129,8 +129,8 @@ c-----------------------------------------------------------------------
       character versan*72
 c-----------------------------------------------------------------------
       version = versan('maths',
-     *                 '$Revision: 1.5 $',
-     *                 '$Date: 2011/03/30 05:34:52 $')
+     *                 '$Revision: 1.6 $',
+     *                 '$Date: 2018/11/29 03:41:27 $')
 
 c     Get input parameters.
       call keyini
@@ -286,7 +286,7 @@ c       The boxes specification (if doRuns) is in boxes,
             endif
 
             call putPlane(lOut,runs,nRuns,
-     *         1-blc(1),1-blc(2),nOut(1),nOut(2),RBuf(idx),npixels)
+     *         1-blc(1),1-blc(2),nOut(1),nOut(2),RBuf(idx),1_8*npixels)
           endif
         enddo
       enddo
@@ -603,6 +603,7 @@ c-----------------------------------------------------------------------
 
       integer   i, j, k, npixel
       real      cdelt, crval, temp
+      ptrdiff   n8
 c-----------------------------------------------------------------------
       if (dType.ne.VECTOR) call bug('f',
      *  'VACTION called with non-vector type')
@@ -642,7 +643,8 @@ c     Fill in data if it corresponds to a value of x, y or z.
       else
 c       Otherwise read it from a file.
         call getPlane(lIn(idx),runs,nRuns,0,0,nsize(1),nsize(2),
-     *    rData,n,npixel)
+     *    rData,n*1_8,n8)
+        npixel = n8
         if (n.ne.npixel) call bug('f','Something is screwy in VACTION')
       endif
 
