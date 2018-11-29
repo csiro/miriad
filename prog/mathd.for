@@ -15,7 +15,7 @@ c@ item
 c	Name of the output item, in the data set. No default.
 c@ exp
 c	The expression to compute. This is an expression in FORTRAN-like
-c	syntax (like MATHS), 
+c	syntax (like MATHS),
 c--
 c  History:
 c    pjt          Original version.
@@ -33,7 +33,8 @@ c
 	integer iostat
 	character in*64,item*12,exp*80,descr*64,dtype*16
 	real ExprBuf(RBufLen)
-	integer ExpBuf(BufLen),pnt,i,n,type
+	ptrdiff pnt
+	integer ExpBuf(BufLen),i,n,type
 c
 c  Externals.
 c
@@ -67,7 +68,7 @@ c
 	  if(dtype.eq.'integer'.or.dtype.eq.'real'.or.
      *	    dtype.eq.'double')then
 	    call bug('w','Overwriting item '//item)
-	    typo = dtype
+	    typo = dtype(1:1)
 	  else
 	    call bug('f','Cannot overwrite item '//item)
 	  endif
@@ -81,7 +82,8 @@ c
 	if(type.eq.ERROR)call bug('f','Error parsing the expression')
 	if(nItems.eq.0)Size = 1
 	if(Size.gt.MAXLEN)call bug('f','Items are too big to handle')
-	call ariExec(VACTION,Size,ExpBuf,BufLen,ExpRBuf,RBufLen,pnt)
+	call ariExec(VACTION,Size+0_8,ExpBuf,BufLen,ExpRBuf,
+     *    RBufLen+0_8,pnt)
 	if(typo.eq.' ')typo = 'r'
 c
 c  Close up all the input items.
@@ -187,7 +189,7 @@ c------------------------------------------------------------------------
 	integer i
 c
 	do i=1,n
-	  out(i) = in(i)
+	  out(i) = int(in(i))
 	enddo
 	end
 c************************************************************************
@@ -203,7 +205,7 @@ c------------------------------------------------------------------------
 	integer i
 c
 	do i=1,n
-	  out(i) = in(i)
+	  out(i) = real(in(i))
 	enddo
 	end
 c************************************************************************
@@ -255,7 +257,7 @@ c
 	  line = 'Non-existent or non-numeric item '//item
 	  call bug('w',line)
 	else if(n.eq.1)then
-	  if(typo.eq.' ')typo = dtype
+	  if(typo.eq.' ')typo = dtype(1:1)
 	  type = CONSTANT
 	  call rdhdr(tIn,item,value,0.)
 c
@@ -266,13 +268,13 @@ c
 	else if(nItems.gt.0.and.n.ne.size)then
 	  call bug('w','Inconsistent number of elements in the items')
 	else
-	  if(typo.eq.' ')typo = dtype
+	  if(typo.eq.' ')typo = dtype(1:1)
 	  type = VECTOR
 	  Size = n
 	  nItems = nItems + 1
 	  call haccess(tIn,Items(nItems),item,'read',iostat)
 	  if(iostat.ne.0) call bug('f','This cannot happen, in PACTION')
-	  types(nItems) = dtype
+	  types(nItems) = dtype(1:1)
 	  Indx = nItems
 	endif
 	end

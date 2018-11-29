@@ -1,4 +1,4 @@
-      program mfspin
+        program mfspin
 
 c= mfspin - Compute spectral index from a MFCLEAN model.
 c& rjs
@@ -66,7 +66,7 @@ c       the linearly polarized intensity spectral index image, and the
 c       second will receive an estimate of the rotation measure (units
 c       of rad/m**2).
 c
-c$Id: mfspin.for,v 1.10 2013/10/22 03:34:26 wie017 Exp $
+c$Id: mfspin.for,v 1.11 2018/11/29 23:30:11 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -83,10 +83,11 @@ c-----------------------------------------------------------------------
 
       logical   doQU, NeedFwhm,pbcorr,twoclip
       integer    lBeam,
-     *          lMod1, lMod2, mBeam, mModel, nBeam, nModel, nPd, npix,
+     *          lMod1, lMod2, mBeam, mModel, nBeam, nModel, nPd,
      *          nruns, nsize(3), pol1, pol2, Runs(3,MAXRUNS), xBeam,
      *          yBeam
       ptrdiff   Alpha1, Alpha2, Flux1, Flux2, Gaus, handle
+      ptrdiff   npix
       real      cdelt1, cdelt2, clip(2), crpix1, crpix2, dat(MAXBUF),
      *          fwhm1, fwhm2, pa, Patch(NP*NP)
       double precision nu0
@@ -101,8 +102,8 @@ c-----------------------------------------------------------------------
       common dat
 c-----------------------------------------------------------------------
       version = versan('mfspin',
-     *                 '$Revision: 1.10 $',
-     *                 '$Date: 2013/10/22 03:34:26 $')
+     *                 '$Revision: 1.11 $',
+     *                 '$Date: 2018/11/29 23:30:11 $')
 c
 c  Get the input parameters.
 c
@@ -230,20 +231,20 @@ c
 c
 c  Get the Fourier transform of the gaussian.
 c
-        call MemAllop(Gaus,mBeam*nBeam,'r')
+        call MemAllox(Gaus,1_8*mBeam*nBeam,'r')
         call GetBeam(mBeam,nBeam,xBeam,yBeam,dat(Gaus),
      *    cdelt1,cdelt2,fwhm1,fwhm2,pa)
         call CnvlIniA(handle,dat(Gaus),mBeam,nBeam,xBeam,yBeam,0.0,'s')
-        call MemFrep(Gaus,mBeam*nBeam,'r')
+        call MemFrex(Gaus,1_8*mBeam*nBeam,'r')
       endif
 c
 c  Allocate all the memory we could possible want.
 c
-      call MemAllop(Flux1,mModel*nModel,'r')
-      call MemAllop(Alpha1,mModel*nModel,'r')
+      call MemAllox(Flux1,1_8*mModel*nModel,'r')
+      call MemAllox(Alpha1,1_8*mModel*nModel,'r')
       if (doQU) then
-        call MemAllop(Flux2,mModel*nModel,'r')
-        call MemAllop(Alpha2,mModel*nModel,'r')
+        call MemAllox(Flux2,1_8*mModel*nModel,'r')
+        call MemAllox(Alpha2,1_8*mModel*nModel,'r')
       else
         Flux2 = Flux1
       endif
@@ -450,7 +451,7 @@ c***********************************************************************
 
       subroutine CorrRM(npix,rdat,nu0)
 
-      integer npix
+      ptrdiff npix
       real    rdat(npix)
       double precision nu0
 c-----------------------------------------------------------------------
@@ -464,7 +465,7 @@ c    rdat       Rotation measure.
 c-----------------------------------------------------------------------
       include 'mirconst.h'
 
-      integer i
+      ptrdiff i
       real    factor
 c-----------------------------------------------------------------------
       factor = -nu0*nu0*1d18 / (4d0*DCMKS*DCMKS)
@@ -479,7 +480,8 @@ c***********************************************************************
 
       subroutine CorrSI(tin,npix,Data,Runs,nRuns,type)
 
-      integer nRuns,npix,Runs(3,nRuns),tin
+      integer nRuns,Runs(3,nRuns),tin
+      ptrdiff npix
       real Data(npix)
       character type*(*)
 c-----------------------------------------------------------------------
@@ -496,7 +498,8 @@ c               'SINGLE'.
 c  Input/Output:
 c    Data       The spectral index, before and after correction.
 c-----------------------------------------------------------------------
-      integer i,j,k,pbObj,pix
+      integer i,j,k,pbObj
+      ptrdiff pix
       real pbfac,pbdif
       double precision freq,pra(2),pdec(2),x(3)
 
@@ -540,10 +543,10 @@ c***********************************************************************
 
       subroutine Divide1(npix,Num,Denom)
 
-      integer npix
+      ptrdiff npix
       real Num(*),Denom(*)
 c-----------------------------------------------------------------------
-      integer i
+      ptrdiff i
 c-----------------------------------------------------------------------
       do i = 1, npix
         Num(i) = Num(i) / Denom(i)
@@ -555,13 +558,13 @@ c***********************************************************************
 
       subroutine Divide2(npix,NumR,NumI,DenomR,DenomI)
 
-      integer npix
+      ptrdiff npix
       real NumR(npix),NumI(npix),DenomR(npix),DenomI(npix)
 c-----------------------------------------------------------------------
 c  This divides the complex number, (NumR,NumI) by the complex
 c  number (DenomR,DenomI).
 c-----------------------------------------------------------------------
-      integer i
+      ptrdiff i
       real tempR,tempI,temp
 c-----------------------------------------------------------------------
       do i = 1, npix
@@ -577,8 +580,9 @@ c***********************************************************************
 
       subroutine Compact(Data,nx,ny,Runs,nRuns,npix)
 
-      integer nx,ny,nRuns,Runs(3,nRuns),npix
-      real Data(nx*ny)
+      integer nx,ny,nRuns,Runs(3,nRuns)
+      ptrdiff npix
+      real Data(1_8*nx*ny)
 c-----------------------------------------------------------------------
 c  Compress out the unneeded data.
 c  Input:
@@ -590,7 +594,8 @@ c               good data.
 c  Output:
 c    npix       Total number of good pixels.
 c-----------------------------------------------------------------------
-      integer i,j,k
+      integer i,k
+      ptrdiff j
 c-----------------------------------------------------------------------
       npix = 0
       do k = 1, nRuns
@@ -691,7 +696,8 @@ c***********************************************************************
       subroutine WriteOut(Out,Data,npix,nx,ny,Runs,nRuns,
      *  lMod,version,fwhm1,fwhm2,pa,pbcorr,pbtype,si,doconv)
 
-      integer lMod,nx,ny,nRuns,npix
+      integer lMod,nx,ny,nRuns
+      ptrdiff npix
       integer Runs(3,nRuns+1)
       real Data(npix)
       character version*(*),out*(*),pbtype*(*)

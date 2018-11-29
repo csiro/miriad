@@ -75,7 +75,7 @@ c                    This will give better stability if you are daring
 c                    enough to deconvolve more than the inner quarter of
 c                    the dirty image.
 c
-c$Id: maxen.for,v 1.7 2016/03/18 03:25:44 wie017 Exp $
+c$Id: maxen.for,v 1.8 2018/11/29 23:30:11 wie017 Exp $
 c--
 c  History:
 c    rjs   nov88 - Original version.
@@ -138,11 +138,12 @@ c-----------------------------------------------------------------------
       logical   asym, converge, doflux, pad, positive
       integer   blc(3), boxes(MAXBOXES), i, icentre, imax, imin,
      *          jcentre, jmax, jmin, k, kmax, kmin, lBeam, lDef, lMap,
-     *          lModel, lOut, maxMap, maxniter, measure, message, n1,
+     *          lModel, lOut, maxniter, measure, message, n1,
      *          n2, nBeam(2), nDef(3), nMap(3), nModel(3), nOut(MAXNAX),
-     *          nPoint, nRun, naxis, niter, nx, ny, run(3,MAXRUN),
+     *          nRun, naxis, niter, nx, ny, run(3,MAXRUN),
      *          trc(3), xdoff, xmax, xmin, xmoff, ydoff, ymax, ymin,
      *          ymoff, zdoff, zmoff
+      ptrdiff   maxMap, nPoint, maxIndex
       real      Alpha, Beta, ClipLev, De, Df, Flux, Grad11, GradEE,
      *          GradEF, GradEH, GradEJ, GradFF, GradFH, GradFJ, GradHH,
      *          GradJJ, Immax, Immin, J0, J1, OStLen1, OStLen2, Q, Qest,
@@ -155,13 +156,13 @@ c-----------------------------------------------------------------------
       real Data(MaxBuf)
       common Data
 
-      integer   ismax
+      ptrdiff   ismax8
       character itoaf*4, versan*72
-      external  ismax, itoaf, versan
+      external  ismax8, itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('maxen',
-     *                 '$Revision: 1.7 $',
-     *                 '$Date: 2016/03/18 03:25:44 $')
+     *                 '$Revision: 1.8 $',
+     *                 '$Date: 2018/11/29 23:30:11 $')
 c
 c  Get the input parameters.
 c
@@ -259,13 +260,13 @@ c
 c
 c  Allocate arrays to hold everything.
 c
-      MaxMap = nOut(1)*nOut(2)
-      call MemAllop(pMap,MaxMap,'r')
-      call MemAllop(pEst,MaxMap,'r')
-      call MemAllop(pDef,MaxMap,'r')
-      call MemAllop(pRes,MaxMap,'r')
-      call MemAllop(pNewEst,MaxMap,'r')
-      call MemAllop(pNewRes,MaxMap,'r')
+      MaxMap = (1_8*nOut(1))*nOut(2)
+      call MemAllox(pMap,MaxMap,'r')
+      call MemAllox(pEst,MaxMap,'r')
+      call MemAllox(pDef,MaxMap,'r')
+      call MemAllox(pRes,MaxMap,'r')
+      call MemAllox(pNewEst,MaxMap,'r')
+      call MemAllox(pNewRes,MaxMap,'r')
 c
 c  Open the model if needed, and check that is is the same size as the
 c  output.
@@ -322,8 +323,8 @@ c
           call AlignGet(lDef,Run,nRun,k,xmin+xdoff-1,ymin+ydoff+1,
      *        zdoff,nDef(1),nDef(2),nDef(3),
      *        Data(pDef),MaxMap,nPoint)
-          Imax = Ismax(npoint,Data(pDef),1)
-          ClipLev = 0.01 * abs(Data(pDef+Imax-1))
+          maxIndex = Ismax8(npoint,Data(pDef),1)
+          ClipLev = 0.01 * abs(Data(pDef+maxIndex-1))
           call ClipIt(0.1*ClipLev,Data(pDef),nPoint)
         endif
 c
@@ -598,11 +599,11 @@ c***********************************************************************
 
       subroutine Copy(n,From,To)
 
-      integer n
+      ptrdiff n
       real From(n),To(n)
 c
 c-----------------------------------------------------------------------
-      integer i
+      ptrdiff i
 c-----------------------------------------------------------------------
       do i = 1, n
         To(i) = From(i)
@@ -614,7 +615,7 @@ c***********************************************************************
 
       subroutine Assign(def,Default,nPoint)
 
-      integer nPoint
+      ptrdiff nPoint
       real def,Default(nPoint)
 
 c  Set up the default image.
@@ -625,7 +626,7 @@ c    nPoint
 c  Output:
 c    Default    The default image.
 c-----------------------------------------------------------------------
-      integer i
+      ptrdiff i
 c-----------------------------------------------------------------------
       do i = 1, nPoint
         Default(i) = def
@@ -637,7 +638,7 @@ c***********************************************************************
 
       subroutine ClipIt(clip,Default,nPoint)
 
-      integer nPoint
+      ptrdiff nPoint
       real clip,Default(nPoint)
 
 c  Set up the minimum of the default image.
@@ -648,7 +649,7 @@ c    nPoint
 c  Input/Output:
 c    Default    The default image.
 c-----------------------------------------------------------------------
-      integer i
+      ptrdiff i
 c-----------------------------------------------------------------------
       do i = 1, nPoint
         Default(i) = max(clip,Default(i))
@@ -714,14 +715,14 @@ c***********************************************************************
 
       subroutine IntStep(nPoint,Old,New,FracNew)
 
-      integer nPoint
+      ptrdiff nPoint
       real FracNew
       real Old(nPoint),New(nPoint)
 
 c  Update the current image by interpolating between two previous ones.
 c-----------------------------------------------------------------------
       real FracOld
-      integer i
+      ptrdiff i
 c-----------------------------------------------------------------------
       FracOld = 1.0 - FracNew
       do i = 1, nPoint
@@ -735,7 +736,8 @@ c***********************************************************************
       subroutine ChekStep(nPoint,OldEst,Est,Res,
      *                measure,Default,Alpha,Beta,Q,J0)
 
-      integer nPoint,Measure
+      ptrdiff nPoint
+      integer Measure
       real OldEst(nPoint),Est(nPoint),Res(nPoint)
       real Default(nPoint),Alpha,Beta,Q,J0
 
@@ -758,7 +760,8 @@ c
 c-----------------------------------------------------------------------
       integer run
       parameter (run=1024)
-      integer n,l,ltot
+      ptrdiff n
+      integer l,ltot
       real GradJ,Step
       real dH(run),d2H(run)
 c-----------------------------------------------------------------------
@@ -858,7 +861,8 @@ c***********************************************************************
       subroutine CalStep(nPoint,Estimate,Residual,Step,
      *        measure,Default,Alpha,Beta,Q,J0)
 
-      integer nPoint,measure
+      ptrdiff nPoint
+      integer measure
       real Default(nPoint),Alpha,Beta,Q,J0
       real Estimate(nPoint),Residual(nPoint),Step(nPoint)
 
@@ -878,7 +882,8 @@ c
 c-----------------------------------------------------------------------
       integer run
       parameter (run=1024)
-      integer n,l,ltot
+      ptrdiff n
+      integer l,ltot
       real Temp, Diag, GradJ, Stepd
       real dH(run),d2H(run)
 c-----------------------------------------------------------------------
@@ -905,14 +910,14 @@ c***********************************************************************
 
       subroutine TakeStep(nPoint,Est,NewEst,StLen,Clip,StLim)
 
-      integer nPoint
+      ptrdiff nPoint
       real Est(nPoint),NewEst(nPoint)
       real StLen,Clip,StLim
 
 c  Take the final step!
 c
 c-----------------------------------------------------------------------
-      integer i
+      ptrdiff i
       real Stepd
 c-----------------------------------------------------------------------
       if (Clip.gt.0) then
@@ -933,7 +938,7 @@ c***********************************************************************
      *  GradEE,GradEF,GradEH,GradEJ,GradFF,GradFH,GradFJ,
      *  GradHH,GradJJ,Grad11,Immax,Immin,Flux,Rms)
 
-      integer nPoint
+      ptrdiff nPoint
       real Res(nPoint),Est(nPoint)
       integer Measure
       real Default(nPoint),Alpha,Beta,Q
@@ -957,12 +962,13 @@ c    GradHH,GradJJ,Grad11,Immax,Immin,Flux,Rms
 c-----------------------------------------------------------------------
       integer Run
       parameter (Run=1024)
-      integer n,l,ltot,Imax,Imin
+      ptrdiff n
+      integer l,ltot,Imax,Imin
       real Diag,GradE,GradH
       real dH(Run),d2H(Run)
 
 c     Externals to find min and max indices.
-      integer Ismin,Ismax
+      integer Ismin8,Ismax8
 c-----------------------------------------------------------------------
       n = 0
 
@@ -996,8 +1002,8 @@ c
 c  Find the min and max values. Call the library routines to do this,
 c  so that we use efficient code!
 c
-      Imax = Ismax(nPoint,Est,1)
-      Imin = Ismin(nPoint,Est,1)
+      Imax = Ismax8(nPoint,Est,1)
+      Imin = Ismin8(nPoint,Est,1)
       Immax = Est(Imax)
       Immin = Est(Imin)
 c
@@ -1075,12 +1081,12 @@ c***********************************************************************
       subroutine Diff(pBem,Estimate,Map,Residual,nPoint,nx,ny,
      *  Run,nRun)
 
-      integer nPoint,nx,ny,nRun,Run(3,nRun)
-      ptrdiff pBem
+      integer nx,ny,nRun,Run(3,nRun)
+      ptrdiff pBem,nPoin t
       real Estimate(nPoint),Map(nPoint),Residual(nPoint)
 c
 c-----------------------------------------------------------------------
-      integer i
+      ptrdiff i
 c-----------------------------------------------------------------------
       call CnvlR(pBem,Estimate,nx,ny,Run,nRun,Residual,'c')
 
@@ -1178,11 +1184,11 @@ c***********************************************************************
 
       subroutine Zeroit(n,array)
 
-      integer n
+      ptrdiff n
       real array(n)
 c
 c-----------------------------------------------------------------------
-      integer i
+      ptrdiff i
 c-----------------------------------------------------------------------
       do i = 1, n
         array(i) = 0

@@ -70,7 +70,7 @@ c                is used.
 c@ out
 c       The output restored image.  No default.
 c
-c$Id: restor.for,v 1.14 2016/10/06 01:22:40 wie017 Exp $
+c$Id: restor.for,v 1.15 2018/11/29 23:30:11 wie017 Exp $
 c--
 c
 c  History:
@@ -125,8 +125,8 @@ c-----------------------------------------------------------------------
       external  itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('restor',
-     *                 '$Revision: 1.14 $',
-     *                 '$Date: 2016/10/06 01:22:40 $')
+     *                 '$Revision: 1.15 $',
+     *                 '$Date: 2018/11/29 23:30:11 $')
 
 c     Get the input parameters.
       call keyini
@@ -257,7 +257,7 @@ c     Open the output, and create its header.
       if (doMap) call hdcopy(lMap,lOut,'mostable')
 
 c     Loop over the third dimension of the map.
-      call memAllop(pOut,cnvLen(1)*cnvLen(2),'r')
+      call memAllox(pOut,1_8*cnvLen(1)*cnvLen(2),'r')
       do i = 1, mapLen(3)
         doMap1 = doMap.and..not.(mfs.and.i.gt.1)
         if (mod(i,10).eq.0 .or. (i.eq.1 .and. mapLen(3).ge.10))
@@ -281,7 +281,7 @@ c     Loop over the third dimension of the map.
       enddo
 
 c     All said and done.  Close up the files, and leave.
-      call memFrep(pOut,cnvLen(1)*cnvLen(2),'r')
+      call memFrex(pOut,1_8*cnvLen(1)*cnvLen(2),'r')
       call restFin
       call xyclose(lModel)
       call xyclose(lOut)

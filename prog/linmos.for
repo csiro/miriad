@@ -96,7 +96,7 @@ c                      when the fractional bandwidth is > 0.4 (this
 c                      is because higher orders are needed to model
 c                      the primary beam response with frequency).
 c
-c$Id: linmos.for,v 1.32 2016/03/18 02:55:49 wie017 Exp $
+c$Id: linmos.for,v 1.33 2018/11/29 23:30:11 wie017 Exp $
 c--
 c
 c  History:
@@ -189,8 +189,8 @@ c-----------------------------------------------------------------------
       external  len1, versan
 c-----------------------------------------------------------------------
       version = versan ('linmos',
-     *                  '$Revision: 1.32 $',
-     *                  '$Date: 2016/03/18 02:55:49 $')
+     *                  '$Revision: 1.33 $',
+     *                  '$Date: 2018/11/29 23:30:11 $')
 
 c     Get and check inputs.
       call keyini
@@ -345,8 +345,8 @@ c     Correct blctrc for the extent of the image.
       enddo
 
 c     Allocate memory.
-      call MemAllop(pOut,nOut(1)*nOut(2),'r')
-      call MemAllop(pWts,nOut(1)*nOut(2),'r')
+      call MemAllox(pOut,1_8*nOut(1)*nOut(2),'r')
+      call MemAllox(pWts,1_8*nOut(1)*nOut(2),'r')
 
 c     Process each of the files.
       call scrOpen(lScr)
@@ -379,8 +379,8 @@ c     change in the weights, and writing out the final data.
      *              nOut(1),nOut(2),nOut(3),dosen)
 
 c     Free memory.
-      call MemFrep(pOut,nOut(1)*nOut(2),'r')
-      call MemFrep(pWts,nOut(1)*nOut(2),'r')
+      call MemFrex(pOut,1_8*nOut(1)*nOut(2),'r')
+      call MemFrex(pWts,1_8*nOut(1)*nOut(2),'r')
 
 c     Close down.
       call scrClose(lScr)

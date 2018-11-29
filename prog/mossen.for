@@ -24,7 +24,7 @@ c       edge of mosaiced regions, Miriad does not normally totally
 c       correct for the primary beam beyond a certain point. The default
 c       is that no gain image is formed.
 c
-c$Id: mossen.for,v 1.4 2010/11/22 05:33:56 cal103 Exp $
+c$Id: mossen.for,v 1.5 2018/11/29 23:30:11 wie017 Exp $
 c--
 c  History:
 c    rjs   6nov94 Original version.
@@ -41,11 +41,12 @@ c-----------------------------------------------------------------------
       parameter (version='MosSen: version 1.0 30-Sep-99')
       parameter (MAXBOXES=1024,MAXRUNS=3*MAXDIM)
 
-      integer tIn,tSen,tGain,pSen,pGain,i,k,nBuff
+      integer tIn,tSen,tGain,i,k
+      ptrdiff pSen,pGain,nBuff,npix1,npix2
       integer xmin,xmax,ymin,ymax
       logical dosen,dogain
       character in*64,sen*64,gain*64
-      integer boxes(MAXBOXES),npix1,npix2,nin(3),nout(MAXNAX)
+      integer boxes(MAXBOXES),nin(3),nout(MAXNAX)
       integer Runs1(3,MAXRUNS),Runs2(3,MAXRUNS),nRuns1,nRuns2
       integer naxis,blc(MAXNAX),trc(MAXNAX)
       integer npnt
@@ -107,12 +108,12 @@ c     Create the output images.
 c       Allocate memory if needed.
         if (npix1.gt.nBuff) then
           if (nBuff.gt.0) then
-            call memFree(pSen,nBuff,'r')
-            call memFree(pGain,nBuff,'r')
+            call memFrex(pSen,nBuff,'r')
+            call memFrex(pGain,nBuff,'r')
           endif
           nBuff = npix1
-          call memAlloc(pSen,nBuff,'r')
-          call memAlloc(pGain,nBuff,'r')
+          call memAllox(pSen,nBuff,'r')
+          call memAllox(pGain,nBuff,'r')
         endif
 
 c       Do the real work now.
@@ -145,8 +146,8 @@ c  Close up shop.
 c
       if (dogain) call xyclose(tGain)
       if (dosen) call xyclose(tSen)
-      call memFree(pSen,nBuff,'r')
-      call memFree(pGain,nBuff,'r')
+      call memFrex(pSen,nBuff,'r')
+      call memFrex(pGain,nBuff,'r')
       call xyclose(tIn)
       end
 
@@ -154,7 +155,8 @@ c***********************************************************************
 
       subroutine Count(Runs,nRuns,npix)
 
-      integer nRuns,Runs(3,nRuns+1),npix
+      integer nRuns,Runs(3,nRuns+1)
+      ptrdiff npix
 c-----------------------------------------------------------------------
 c  Count the number of pixels of interest in this plane.
 c-----------------------------------------------------------------------
@@ -172,13 +174,15 @@ c***********************************************************************
       subroutine Compress(Sen,Gain,npix1,npix2,
      *    Runs1,nRuns1,Runs2,nRuns2,MAXRUNS)
 
-      integer npix1,npix2,nRuns1,nRuns2,MAXRUNS
+      ptrdiff npix1,npix2
+      integer nRuns1,nRuns2,MAXRUNS
       integer Runs1(3,nRuns1),Runs2(3,MAXRUNS)
       real Sen(npix1),Gain(npix1)
 c-----------------------------------------------------------------------
 c  Eliminate pixels that have a gain of zero.
 c-----------------------------------------------------------------------
-      integer i,ipt,opt,iRuns,ngood
+      integer i,iRuns,ngood
+      ptrdiff opt,ipt
 c-----------------------------------------------------------------------
       ipt = 0
       opt = 0

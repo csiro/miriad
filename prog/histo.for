@@ -40,36 +40,41 @@ c    14may99 rjs   Increase MAXRUNS.
 c    15feb01 pjt   look within range to find min/max/mean/dispersion
 c    21oct03 pjt   check for JY/BEAM in the first 7 chars only
 c    02jan05 rjs   Changes to accomodate large files.
+c    25oct18 mhw   Handle 64k images
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'maxnax.h'
 	integer NBINDEF,NBINMAX,MAXBOXES,MAXRUNS
-	character version*(*)
 	parameter(NBINDEF=16,NBINMAX=40,MAXBOXES=2048)
 	parameter(MAXRUNS=40*MAXDIM)
-	parameter(VERSION = 'version 02-Jan-05' )
 c
 	character file*128,asterisk*30,line*80,coord*64,bunit*32,
      +   object*32
 	integer nsize(MAXNAX),plane(MAXNAX),maxv(MAXNAX),minv(MAXNAX)
 	integer blc(MAXNAX),trc(MAXNAX)
-	integer i,j,k,under,over,bin(NBINMAX),maxbin
-	integer naxis,indx,lun,npoints,length,nbin
+	integer i,j,k,under,over
+	integer naxis,indx,lun,length,nbin
 	integer boxes(MAXBOXES),runs(3,MAXRUNS),nruns
 	real dat(MAXDIM),rmax,rmin,blo,bhi,x,xinc,r
 	real bscale,bmaj,bmin,barea,cdelt1,cdelt2
+	ptrdiff npoints,bin(NBINMAX),maxbin
         double precision sum,sum2,av,rms
 	logical first, done, newmin, newmax, norange
+	character version*72
+        
 c
 c  Externals.
 c
 	logical keyprsnt
-	character itoaf*10
+        character versan*72
+	character i8toaf*10
 	integer len1
 c
 c  Open the input file, and make sure that I can handle it.
 c
-	call output( 'Histo: '//version )
+        version = versan('histo',
+     *                   '$Revision: 1.2 $',
+     *                   '$Date: 2018/11/29 23:30:11 $')
 	call keyini
 	call keya('in',file,' ')
 	if(file.eq.' ')call bug('f','Input file must be given')
@@ -220,7 +225,7 @@ c
  101	format('Mean', 1pe14.6,' Rms',1pe15.5,' Sum ', 1pe13.5)
 	k = len(line)
 	j = min(len1(line),k-1)
-	line(j+1:k) = ' ('//itoaf(npoints)
+	line(j+1:k) = ' ('//i8toaf(npoints)
 	j = min(len1(line),k-1)
 	line(j+1:k) = ' points)'
 	call output(line)
@@ -236,7 +241,7 @@ c
 	call output(line)
 c
 	write(line,104)
- 104	format('  Bin    Value            Number')
+ 104	format('  Bin    Value             Number')
 	call output(' ')
 	call output(line)
 c
@@ -257,16 +262,16 @@ c
 c  Format histogram.
 c
 	asterisk = '******************************'
-	write(line,'(7x,a,3x,i10)')'Underflow',under
+	write(line,'(7x,a,3x,i11)')'Underflow',under
 	call output(line)
 	do i=1,nbin
 	  j = nint( r * bin(i) )+1
 	  write(line,200)i,x,bin(i),asterisk(1:j)
-  200	  format(i5,1x,1pe13.6,i10,1x,a)
+  200	  format(i5,1x,1pe13.6,i11,1x,a)
 	  call output(line)
 	  x = x + xinc
 	enddo
-	write(line,'(7x,a,4x,i10)')'Overflow',over
+	write(line,'(7x,a,4x,i11)')'Overflow',over
 	call output(line)
 c
 c  Thats all folks. Close up and go home.

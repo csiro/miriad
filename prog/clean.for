@@ -102,7 +102,7 @@ c@ clip
 c       This sets the relative clip level in Steer mode. Values are
 c       typically 0.75 to 0.9. The default is image dependent.
 c
-c$Id: clean.for,v 1.15 2018/08/10 05:57:11 wie017 Exp $
+c$Id: clean.for,v 1.16 2018/11/29 23:30:11 wie017 Exp $
 c--
 c
 c  History:
@@ -182,8 +182,8 @@ c-----------------------------------------------------------------------
      *           MAXRUN = 3*MAXDIM)
 
       real Data(MaxBuf)
-      integer Boxes(MAXBOX),Run(3,MAXRUN),MaxMap
-      ptrdiff pBem,pMap,pEst,pRes
+      integer Boxes(MAXBOX),Run(3,MAXRUN)
+      ptrdiff pBem,pMap,pEst,pRes,nPoint,MaxMap
       real RCmp(MAXCMP2),CCmp(MAXCMP2)
       real Histo(MAXP/2+1),BemPatch(MAXBEAM)
       integer ICmp(MAXCMP1),JCmp(MAXCMP1)
@@ -195,7 +195,7 @@ c-----------------------------------------------------------------------
       integer MaxNiter(2),oNiter,Niter,totNiter,minPatch,maxPatch
       integer naxis,n1,n2,icentre,jcentre,nx,ny,curMaxNiter
       integer blc(3),trc(3),xmin,xmax,ymin,ymax
-      integer k,nRun,nPoint,xoff,yoff,zoff
+      integer k,nRun,xoff,yoff,zoff,nCmp
       character MapNam*256,BeamNam*256,ModelNam*256,OutNam*256,line*72
       integer lMap,lBeam,lModel,lOut
       integer nMap(3),nBeam(3),nModel(3),nOut(4)
@@ -208,8 +208,8 @@ c     Externals.
       character itoaf*8, versan*72
 c-----------------------------------------------------------------------
       version = versan ('clean',
-     *                  '$Revision: 1.15 $',
-     *                  '$Date: 2018/08/10 05:57:11 $')
+     *                  '$Revision: 1.16 $',
+     *                  '$Date: 2018/11/29 23:30:11 $')
 c
 c  Get the input parameters.
 c
@@ -273,9 +273,9 @@ c
 c  Allocate space for the Map,Estimate and Residuals.
 c
       MaxMap = nOut(1)*nOut(2)
-      call MemAllop(pMap,MaxMap,'r')
-      call MemAllop(pEst,MaxMap,'r')
-      call MemAllop(pRes,MaxMap,'r')
+      call MemAllox(pMap,MaxMap,'r')
+      call MemAllox(pEst,MaxMap,'r')
+      call MemAllox(pRes,MaxMap,'r')
 c
 c  Open the model if there is one.  Note that currently the model
 c  must agree exactly in size with the output map (an unfortunate
@@ -386,8 +386,9 @@ c
             steermsg = .false.
           endif
           if (moded.eq.'hogbom') then
+            nCmp = nPoint
             call Hogbom(MaxPatch,BemPatch,nx,ny,Data(pRes),Data(pEst),
-     *        ICmp,JCmp,nPoint,Run,nRun,EstASum,
+     *        ICmp,JCmp,nCmp,Run,nRun,EstASum,
      *        Cutoff,Gain,negStop,positive,negFound,deep,
      *        curMaxNiter,Niter)
             text = ' Hogbom'
@@ -492,7 +493,7 @@ c***********************************************************************
 
       subroutine Stats(Data,n,Dmin,Dmax,DAmax,Drms,deep,Est)
 
-      integer n
+      ptrdiff n
       real Data(n),Est(n)
       real Dmin,Dmax,DAmax,Drms
       logical deep
@@ -511,18 +512,18 @@ c    Dmax       Data maxima.
 c    DAmax      Data absolute maxima.
 c    Drms       Rms value of the data.
 c-----------------------------------------------------------------------
-      integer i,k
+      ptrdiff i,k
 
 c     Externals.
-      integer ismax,ismin
+      ptrdiff ismax8,ismin8
 c-----------------------------------------------------------------------
 c
 c  Calculate the minima and maxima.
 c
       if (.not.deep) then
-        i = ismax(n,Data,1)
+        i = ismax8(n,Data,1)
         Dmax = Data(i)
-        i = ismin(n,Data,1)
+        i = ismin8(n,Data,1)
         Dmin = Data(i)
 c
 c  Calculate the sums.
@@ -863,7 +864,7 @@ c***********************************************************************
 
       subroutine SumFlux(Flux,Estimate,nPoint)
 
-      integer nPoint
+      ptrdiff nPoint
       real Estimate(nPoint),Flux
 c-----------------------------------------------------------------------
 c  Find the sum of the estimate.
@@ -874,7 +875,7 @@ c    Estimate
 c  Output:
 c    Flux
 c-----------------------------------------------------------------------
-      integer i
+      ptrdiff i
 c-----------------------------------------------------------------------
       Flux = 0
       do i = 1, nPoint
@@ -887,7 +888,7 @@ c***********************************************************************
 
       subroutine SumAbs(EstASum,Estimate,nPoint)
 
-      integer nPoint
+      ptrdiff nPoint
       real Estimate(nPoint),EstASum
 c-----------------------------------------------------------------------
 c  Find the sum of the absolute value of the estimate.
@@ -898,7 +899,7 @@ c    Estimate
 c  Output:
 c    EstASum
 c-----------------------------------------------------------------------
-      integer i
+      ptrdiff i
 c-----------------------------------------------------------------------
       EstASum = 0
       do i = 1, nPoint
@@ -910,7 +911,7 @@ c***********************************************************************
 
       subroutine NoModel(Map,Estimate,Residual,nPoint)
 
-      integer nPoint
+      ptrdiff nPoint
       real Map(nPoint),Estimate(nPoint),Residual(nPoint)
 c-----------------------------------------------------------------------
 c  This initialises the estimate and the residuals, for the case where
@@ -923,7 +924,7 @@ c  Output:
 c    Residual   The residuals, which are the same as the dirty map.
 c    Estimate   The estimate, which are initially zero.
 c-----------------------------------------------------------------------
-      integer i
+      ptrdiff i
 c-----------------------------------------------------------------------
       do i = 1, nPoint
         Estimate(i) = 0.0
@@ -937,8 +938,8 @@ c***********************************************************************
       subroutine Steer(pBem,Residual,Estimate,Temp,nPoint,nx,ny,
      *        Limit,Gain,deep,Niter,Run,nrun)
 
-      integer Niter,nrun,Run(3,nrun),nPoint,nx,ny
-      ptrdiff pBem
+      integer Niter,nrun,Run(3,nrun),nx,ny
+      ptrdiff pBem, nPoint
       real Gain,Limit
       real Residual(nPoint),Temp(nPoint),Estimate(nPoint)
       logical deep
@@ -958,7 +959,7 @@ c
 c-----------------------------------------------------------------------
       real MinOptGain
       parameter (MinOptGain = 0.02)
-      integer i
+      ptrdiff i
       real SumRE,SumEE,g
 c-----------------------------------------------------------------------
 c
@@ -1123,7 +1124,8 @@ c***********************************************************************
      *        MaxNiter,Gain,Speed,ResAMax,EstASum,Niter,Limit,
      *        deep,negFound,RCmp,CCmp,ICmp,JCmp,maxCmp)
 
-      integer nx,ny,minPatch,maxPatch,maxNiter,Niter,nRun,nPoint
+      integer nx,ny,minPatch,maxPatch,maxNiter,Niter,nRun
+      ptrdiff nPoint
       integer Run(3,nrun)
       real Residual(nPoint),Estimate(nPoint)
       logical negStop,positive,negFound,deep
@@ -1405,7 +1407,8 @@ c***********************************************************************
       subroutine GetLimit(Residual,deep,Estimate,nPoint,ResAMax,maxCmp,
      *        Histo,MaxPatch,nPatch,Limit)
 
-      integer nPoint,maxPatch,nPatch,maxCmp
+      ptrdiff nPoint
+      integer maxPatch,nPatch,maxCmp
       real Residual(nPoint),Estimate(nPoint)
       real ResAMax,Histo(maxPatch/2+1),Limit
       logical deep
@@ -1430,7 +1433,8 @@ c    nPatch     Half width of beam patch.
 c-----------------------------------------------------------------------
       integer HistSize
       parameter (HistSize = 512)
-      integer i,m,Acc
+      ptrdiff i
+      integer m,Acc
       real ResAMin,a,b,x
       integer ResHis(HistSize)
 c-----------------------------------------------------------------------
@@ -1492,7 +1496,8 @@ c***********************************************************************
       subroutine GetComp(Residual,Estimate,nPoint,ny,Ymap,Limit,
      *                   deep,Icmp,Jcmp,RCmp,CCmp,maxCmp,nCmp,Run,nRun)
 
-      integer nPoint,ny,maxCmp,nCmp,nRun,Run(3,nrun)
+      ptrdiff nPoint
+      integer ny,maxCmp,nCmp,nRun,Run(3,nrun)
       real Limit,Residual(nPoint),Estimate(nPoint)
       real RCmp(maxCmp),CCmp(maxCmp)
       integer Ymap(ny+1),Icmp(maxCmp),Jcmp(maxCmp)
@@ -1520,7 +1525,8 @@ c    CCmp       Array of the estimated fluxes.
 c
 c-----------------------------------------------------------------------
       include 'maxdim.h'
-      integer i,j,k,l,Ncmpd,x0,y0,n0,itemp
+      ptrdiff l
+      integer i,j,k,Ncmpd,x0,y0,n0,itemp
       real Temp(MAXDIM)
       integer Indx(MAXDIM)
 c-----------------------------------------------------------------------
@@ -1591,7 +1597,8 @@ c***********************************************************************
 
       subroutine NewEst(CCmp,ICmp,JCmp,nCmp,Estimate,nPoint,Run,nRun)
 
-      integer nCmp,nPoint,nRun
+      ptrdiff nPoint
+      integer nCmp,nRun
       integer ICmp(nCmp),JCmp(nCmp),Run(3,nRun)
       real CCmp(nCmp),Estimate(nPoint)
 c-----------------------------------------------------------------------
@@ -1612,7 +1619,8 @@ c  Input/Output:
 c    Estimate   All the components.
 c
 c-----------------------------------------------------------------------
-      integer i,j,k,l
+      integer k,l
+      ptrdiff i,j
 c-----------------------------------------------------------------------
 c     Vectorise this if you can!
       j = 1
@@ -1632,11 +1640,11 @@ c***********************************************************************
       subroutine Diff(pBem,Estimate,Map,Residual,nPoint,nx,ny,
      *  Run,nRun)
 
-      integer nPoint,nx,ny,nRun,Run(3,nRun)
-      ptrdiff pBem
+      integer nx,ny,nRun,Run(3,nRun)
+      ptrdiff pBem,nPoint
       real Estimate(nPoint),Map(nPoint),Residual(nPoint)
 c-----------------------------------------------------------------------
-      integer i
+      ptrdiff i
 c-----------------------------------------------------------------------
       call CnvlR(pBem,Estimate,nx,ny,Run,nRun,Residual,'c')
 

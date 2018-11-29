@@ -6,14 +6,14 @@ c: deconvolution
 c+
 c       MOSCSDI is a MIRIAD task that performs a Complex Steer CLEAN on
 c       mosaiced Q and U images or cubes. This follows the CSDI MIRIAD task,
-c       but adapted for a mosaic, see the help for this task for more 
+c       but adapted for a mosaic, see the help for this task for more
 c       information.
 c
-c       Full details of the algorithm are found in: 
-c       Pratley & Johnston-Hollitt, "An improved method for polarimetric 
-c	image restoration in interferometry", MNRAS, 2016. ArXiv: 1606.01482. 
+c       Full details of the algorithm are found in:
+c       Pratley & Johnston-Hollitt, "An improved method for polarimetric
+c	image restoration in interferometry", MNRAS, 2016. ArXiv: 1606.01482.
 c	Please acknowledge this work in publications using the code.
-c     
+c
 c@ map
 c       The input Q and U dirty map, which should have units of Jy/beam
 c       No default.
@@ -30,7 +30,7 @@ c       CLEAN loop gain. The default is 0.1.
 c@ niters
 c       The maximum number of iterations. The default is 100.
 c@ cutoff
-c       Iterating stops if the absolute maximum residual falls below 
+c       Iterating stops if the absolute maximum residual falls below
 c       this level.  The default is 0. It is recommended that the
 c       cutoff is 3 times the rms noise of Stokes Q or U.
 c@ clip
@@ -40,7 +40,7 @@ c@ region
 c       The standard region of interest keyword.  See the help on
 c       "region" for more information. The default is the entire image.
 c
-c$Id: moscsdi.for,v 1.1 2016/06/12 04:11:06 wie017 Exp $
+c$Id: moscsdi.for,v 1.2 2018/11/29 23:30:11 wie017 Exp $
 c--
 c  History:
 c    rjs 31oct94 - Original version.
@@ -56,7 +56,7 @@ c                   negative components
 c    mhw 27oct11 - Use ptrdiff type for memory allocations
 c    lp  02aug15 - Modified into complex steer clean
 c    lp & mjh 8Jun16 - updated commentary and added paper reference.
-c    mhw 10jun16 - Some tydying up for inclusion in Miriad distribution       
+c    mhw 10jun16 - Some tydying up for inclusion in Miriad distribution
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -67,11 +67,11 @@ c-----------------------------------------------------------------------
 
       logical   more
       integer   blc(3), Boxes(MAXBOXES), i, imax, imin, jmax, jmin, k,
-     *          kmax, kmin, lBeam, lMap, lModel, lOut, maxniter, nAlloc,
+     *          kmax, kmin, lBeam, lMap, lModel, lOut, maxniter,
      *          naxis, nbeam(3), ncomp, niter, nMap(3), nModel(3),
-     *          nout(MAXNAX), nPoint, nRun,  Run(3,MAXRUN), trc(3),
+     *          nout(MAXNAX), nRun,  Run(3,MAXRUN), trc(3),
      *          xmax, xmin, ymax, ymin, ulMap, ulModel, ulOut
-      ptrdiff   pEst, pRes, pStep, pStepR, pWt
+      ptrdiff   pEst, pRes, pStep, pStepR, pWt, nPoint, nAlloc
       ptrdiff   upEst, upRes, upStep, upStepR, upWt
       real      clip, cutoff, dmax, dmin, drms, flux, gain
       real      udmax, udmin, udrms, uflux, maxP
@@ -82,8 +82,8 @@ c-----------------------------------------------------------------------
       external  itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('moscsdi',
-     *                 '$Revision: 1.1 $',
-     *                 '$Date: 2016/06/12 04:11:06 $')
+     *                 '$Revision: 1.2 $',
+     *                 '$Date: 2018/11/29 23:30:11 $')
 c
 c  Get the input parameters.
 c
@@ -147,7 +147,7 @@ c
         if (ModelNam.ne.' ') then
           call xyopen(lModel,ModelNam,'old',3,nModel)
           if (nModel(1).ne.nOut(1) .or. nModel(2).ne.nOut(2)
-        *    .or. nModel(3).ne.nOut(3)) 
+        *    .or. nModel(3).ne.nOut(3))
         *     call bug('f','q Model size is bad')
         endif
         if (uModelNam.ne.' ') then
@@ -186,28 +186,28 @@ c
         if (nPoint.gt.0) then
           if (nPoint.gt.nAlloc) then
             if (nAlloc.gt.0) then
-              call memFrep(pStep, nAlloc,'r')
-              call memFrep(pStepR,nAlloc,'r')
-              call memFrep(pEst,  nAlloc,'r')
-              call memFrep(pRes,  nAlloc,'r')
-              call memFrep(pWt,   nAlloc,'r')
-              call memFrep(upStep, nAlloc,'r')
-              call memFrep(upStepR,nAlloc,'r')
-              call memFrep(upEst,  nAlloc,'r')
-              call memFrep(upRes,  nAlloc,'r')
-              call memFrep(upWt,   nAlloc,'r')
+              call memFrex(pStep, nAlloc,'r')
+              call memFrex(pStepR,nAlloc,'r')
+              call memFrex(pEst,  nAlloc,'r')
+              call memFrex(pRes,  nAlloc,'r')
+              call memFrex(pWt,   nAlloc,'r')
+              call memFrex(upStep, nAlloc,'r')
+              call memFrex(upStepR,nAlloc,'r')
+              call memFrex(upEst,  nAlloc,'r')
+              call memFrex(upRes,  nAlloc,'r')
+              call memFrex(upWt,   nAlloc,'r')
             endif
             nAlloc = nPoint
-            call memAllop(pStep, nAlloc,'r')
-            call memAllop(pStepR,nAlloc,'r')
-            call memAllop(pEst,  nAlloc,'r')
-            call memAllop(pRes,  nAlloc,'r')
-            call memAllop(pWt,   nAlloc,'r')
-            call memAllop(upStep, nAlloc,'r')
-            call memAllop(upStepR,nAlloc,'r')
-            call memAllop(upEst,  nAlloc,'r')
-            call memAllop(upRes,  nAlloc,'r')
-            call memAllop(upWt,   nAlloc,'r')
+            call memAllox(pStep, nAlloc,'r')
+            call memAllox(pStepR,nAlloc,'r')
+            call memAllox(pEst,  nAlloc,'r')
+            call memAllox(pRes,  nAlloc,'r')
+            call memAllox(pWt,   nAlloc,'r')
+            call memAllox(upStep, nAlloc,'r')
+            call memAllox(upStepR,nAlloc,'r')
+            call memAllox(upEst,  nAlloc,'r')
+            call memAllox(upRes,  nAlloc,'r')
+            call memAllox(upWt,   nAlloc,'r')
           endif
 c
 c  Get the Map.
@@ -219,7 +219,7 @@ c
           call GetPlane(lMap,Run,nRun,0,0,nMap(1),nMap(2),
      *                        memr(pRes),nAlloc,nPoint)
           call GetPlane(ulMap,Run,nRun,0,0,nMap(1),nMap(2),
-     *                        memr(upRes),nAlloc,nPoint)          
+     *                        memr(upRes),nAlloc,nPoint)
           call mcSigma2(memr(pWt),nPoint,.false.)
           call mcSigma2(memr(upWt),nPoint,.false.)
 c
@@ -257,9 +257,6 @@ c
           maxP = 0
           more = .true.
           do while (more)
-c            ComplexSteer(qEst,uEst,qRes,uRes,qStep,uStep,qStepR,
-c     *  uStepR,qWt,uWt,nPoint,Run,nRun,gain,clip,
-c     *  ,qdmin,udmin,qdmax,udmax,qdrms,udrms,qflux,uflux,ncomp)
             call ComplexSteer(memr(pEst),memr(upEst),memr(pRes),
      *      memr(upRes),memr(pStep),memr(upStep),memr(pStepR),
      *      memr(upStepR),memr(pWt),memr(upWt),nPoint,Run,nRun,
@@ -303,16 +300,16 @@ c
 c  Free up memory.
 c
       if (nAlloc.gt.0) then
-        call memFrep(pStep, nAlloc,'r')
-        call memFrep(pStepR,nAlloc,'r')
-        call memFrep(pEst,  nAlloc,'r')
-        call memFrep(pRes,  nAlloc,'r')
-        call memFrep(pWt,   nAlloc,'r')
-        call memFrep(upStep, nAlloc,'r')
-        call memFrep(upStepR,nAlloc,'r')
-        call memFrep(upEst,  nAlloc,'r')
-        call memFrep(upRes,  nAlloc,'r')
-        call memFrep(upWt,   nAlloc,'r')
+        call memFrex(pStep, nAlloc,'r')
+        call memFrex(pStepR,nAlloc,'r')
+        call memFrex(pEst,  nAlloc,'r')
+        call memFrex(pRes,  nAlloc,'r')
+        call memFrex(pWt,   nAlloc,'r')
+        call memFrex(upStep, nAlloc,'r')
+        call memFrex(upStepR,nAlloc,'r')
+        call memFrex(upEst,  nAlloc,'r')
+        call memFrex(upRes,  nAlloc,'r')
+        call memFrex(upWt,   nAlloc,'r')
       endif
 c
 c  Close up the files. Ready to go home.
@@ -334,7 +331,8 @@ c***********************************************************************
       subroutine ComplexSteer(qEst,uEst,qRes,uRes,qStep,uStep,qStepR,
      *      uStepR,qWt,uWt,nPoint,Run,nRun,gain,clip,
      *      qdmin,udmin,qdmax,udmax,qdrms,udrms,qflux,uflux,ncomp)
-      integer nPoint,nRun,Run(3,nRun),ncomp
+      ptrdiff nPoint
+      integer nRun,Run(3,nRun),ncomp
       real gain,clip,qdmin,qdmax,qdrms,qflux
       real udmin,udmax,udrms,uflux
       real qEst(nPoint),qRes(nPoint),qStep(nPoint),qStepR(nPoint)
@@ -362,7 +360,7 @@ c    ncomp      Number of components subtracted off this time.
 c-----------------------------------------------------------------------
       real MinOptGain
       parameter (MinOptGain=0.02)
-      integer i
+      ptrdiff i
       real qg,ug,thresh,zr,zi
       double precision SS,qRS,qRR
       double precision uRS,uRR, mag
@@ -467,7 +465,7 @@ c
 c***********************************************************************
       subroutine maxPol(qData,uData,n,Dmax)
 
-      integer n
+      ptrdiff n
       real qData(n),uData(n)
       real Dmax
 c-----------------------------------------------------------------------
@@ -480,7 +478,7 @@ c
 c  Output:
 c    Dmax       Data maxima.
 c-----------------------------------------------------------------------
-      integer i
+      ptrdiff i
       real temp
 c-----------------------------------------------------------------------
 c
@@ -516,12 +514,13 @@ c***********************************************************************
 
       subroutine Diff(Est,Map,Res,nPoint,Run,nRun)
 
-      integer nPoint,nRun,Run(3,nRun)
+      ptrdiff nPoint
+      integer nRun,Run(3,nRun)
       real Est(nPoint),Map(nPoint),Res(nPoint)
 c-----------------------------------------------------------------------
 c  Determine the residuals for this model.
 c-----------------------------------------------------------------------
-      integer i
+      ptrdiff i
 c-----------------------------------------------------------------------
       call mcCnvlR(Est,Run,nRun,Res)
 
@@ -550,12 +549,12 @@ c***********************************************************************
 
       subroutine Zero(n,Out)
 
-      integer n
+      ptrdiff n
       real Out(n)
 c-----------------------------------------------------------------------
 c  Zero an array.
 c-----------------------------------------------------------------------
-      integer i
+      ptrdiff i
 c-----------------------------------------------------------------------
       do i = 1, n
         Out(i) = 0

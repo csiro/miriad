@@ -102,7 +102,7 @@ c         verbose    Give lots of messages during the iterations.  The
 c                    default is to give a one line message at each
 c                    iteration.
 c
-c$Id: pmosmem.for,v 1.7 2016/03/18 03:25:44 wie017 Exp $
+c$Id: pmosmem.for,v 1.8 2018/11/29 23:30:11 wie017 Exp $
 c--
 c  History:
 c    rjs  23nov94  Adapted from MAXEN.
@@ -137,14 +137,14 @@ c-----------------------------------------------------------------------
       logical   converge, doflux, verbose
       integer   blc(3), Boxes(maxBoxes), i, iax, icentre, imax,
      *          imin, jcentre, jmax, jmin, k, kmax, kmin, lBeam(2),
-     *          lDef, lMap(MaxPol+1), lOut(MaxPol), maxniter, maxPoint,
+     *          lDef, lMap(MaxPol+1), lOut(MaxPol), maxniter,
      *          n1, n2, naxis, nBeam(3), nbm, nDef(3), nfret, niter,
-     *          nMap(3), nMapb(3), nOut(MAXNAX), nplan, nPoint, npol,
+     *          nMap(3), nMapb(3), nOut(MAXNAX), nplan, npol,
      *          nRun, nt,  Run(3,MaxRun), trc(3), xdoff, xmax, xmin,
      *          xmoff, ydoff, ymax, ymin, ymoff, zdoff, zmoff
       ptrdiff   Cnvl, pDef, pEst(MaxPol), pMap(MaxPol+1),
      *          pNewEst(MaxPol), pNewRes(MaxPol+1), pRes(MaxPol+1),
-     *          pWta, pWtb
+     *          pWta, pWtb, nPoint, maxPoint
       real      Alpha, Beta, De, Df, Dg, fac, ffacDef, ffacSD, Flux,
      *          fluxlist(maxdim), Gamma, Grad11, GradEE, GradEF, GradEG,
      *          GradEH, GradEJ, GradFF, GradFG, GradFH, GradFJ, GradGG,
@@ -163,8 +163,8 @@ c-----------------------------------------------------------------------
       external  hdprsnt, itoaf, len1, versan
 c-----------------------------------------------------------------------
       version = versan('pmosmem',
-     *                 '$Revision: 1.7 $',
-     *                 '$Date: 2016/03/18 03:25:44 $')
+     *                 '$Revision: 1.8 $',
+     *                 '$Date: 2018/11/29 23:30:11 $')
 c
 c  Get and check the input parameters.
 c
@@ -371,21 +371,21 @@ c  Allocate arrays to hold everything.
 c
         if (nPoint.gt.maxPoint) then
           if (maxPoint.gt.0) then
-            call memFrep(pEst,maxPoint*npol,'r')
-            call memFrep(pNewEst,maxPoint*npol,'r')
-            call memFrep(pMap,maxPoint*nplan,'r')
-            call memFrep(pRes,maxPoint*nplan,'r')
-            call memFrep(pNewRes,maxPoint*nplan,'r')
-            call memFrep(pDef,maxPoint,'r')
-            call memFrep(pWta,maxPoint,'r')
-            if (npol.ne.nplan) call memFrep(pWtb,maxPoint,'r')
+            call memFrex(pEst,maxPoint*npol,'r')
+            call memFrex(pNewEst,maxPoint*npol,'r')
+            call memFrex(pMap,maxPoint*nplan,'r')
+            call memFrex(pRes,maxPoint*nplan,'r')
+            call memFrex(pNewRes,maxPoint*nplan,'r')
+            call memFrex(pDef,maxPoint,'r')
+            call memFrex(pWta,maxPoint,'r')
+            if (npol.ne.nplan) call memFrex(pWtb,maxPoint,'r')
           endif
           maxPoint = nPoint
-          call memAllop(pEst,maxPoint*npol,'r')
-          call memAllop(pNewEst,maxPoint*npol,'r')
-          call memAllop(pMap,maxPoint*nplan,'r')
-          call memAllop(pRes,maxPoint*nplan,'r')
-          call memAllop(pNewRes,maxPoint*nplan,'r')
+          call memAllox(pEst,maxPoint*npol,'r')
+          call memAllox(pNewEst,maxPoint*npol,'r')
+          call memAllox(pMap,maxPoint*nplan,'r')
+          call memAllox(pRes,maxPoint*nplan,'r')
+          call memAllox(pNewRes,maxPoint*nplan,'r')
           do i = 2, npol
             pEst(i) = pEst(i-1) + maxPoint
             pNewEst(i) = pNewEst(i-1) + maxPoint
@@ -395,10 +395,10 @@ c
             pRes(i) = pRes(i-1) + maxPoint
             pNewRes(i) = pNewRes(i-1) + maxPoint
           enddo
-          call memAllop(pDef,maxPoint,'r')
-          call memAllop(pWta,maxPoint,'r')
+          call memAllox(pDef,maxPoint,'r')
+          call memAllox(pWta,maxPoint,'r')
           if (npol.ne.nplan) then
-            call memAllop(pWtb,maxPoint,'r')
+            call memAllox(pWtb,maxPoint,'r')
           else
             pWtb = pWta
           endif
@@ -681,14 +681,14 @@ c
 c  Release memory.
 c
       if (maxPoint.le.0) call bug('f','No data deconvolved')
-      call memFrep(pEst,maxPoint*npol,'r')
-      call memFrep(pNewEst,maxPoint*npol,'r')
-      call memFrep(pMap,maxPoint*nplan,'r')
-      call memFrep(pRes,maxPoint*nplan,'r')
-      call memFrep(pNewRes,maxPoint*nplan,'r')
-      call memFrep(pDef,maxPoint,'r')
-      call memFrep(pWta,maxPoint,'r')
-      if (npol.ne.nplan) call memFrep(pWtb,maxPoint,'r')
+      call memFrex(pEst,maxPoint*npol,'r')
+      call memFrex(pNewEst,maxPoint*npol,'r')
+      call memFrex(pMap,maxPoint*nplan,'r')
+      call memFrex(pRes,maxPoint*nplan,'r')
+      call memFrex(pNewRes,maxPoint*nplan,'r')
+      call memFrex(pDef,maxPoint,'r')
+      call memFrex(pWta,maxPoint,'r')
+      if (npol.ne.nplan) call memFrex(pWtb,maxPoint,'r')
 c
 c  Thats all folks.
 c
@@ -698,10 +698,10 @@ c***********************************************************************
 
       subroutine SPntFid(Wta,nPoint,rms)
 
-      integer nPoint
+      ptrdiff nPoint
       real Wta(nPoint),rms
 c-----------------------------------------------------------------------
-      integer i
+      ptrdiff i
 c-----------------------------------------------------------------------
       do i = 1, nPoint
         Wta(i) = 1.0/(rms*rms)
@@ -751,10 +751,10 @@ c***********************************************************************
 
       subroutine Copy(n,From,To)
 
-      integer n
+      ptrdiff n
       real From(n),To(n)
 c-----------------------------------------------------------------------
-      integer i
+      ptrdiff i
 c-----------------------------------------------------------------------
       do i = 1, n
         To(i) = From(i)
@@ -801,12 +801,12 @@ c***********************************************************************
 
       subroutine DefGain(Gain,Def,nPoint)
 
-      integer nPoint
+      ptrdiff nPoint
       real Gain(nPoint),Def(nPoint)
 c-----------------------------------------------------------------------
 c  Apply the gains to the default image.
 c-----------------------------------------------------------------------
-      integer i
+      ptrdiff i
 c-----------------------------------------------------------------------
       do i = 1, nPoint
         Def(i) = Gain(i) * Def(i)
@@ -818,7 +818,7 @@ c***********************************************************************
 
       subroutine DefFudge(npoint,Def,TFlux)
 
-      integer npoint
+      ptrdiff npoint
       real Def(npoint),TFlux
 c-----------------------------------------------------------------------
 c  Clip the default so that its well defined, and scales it so that it
@@ -826,7 +826,7 @@ c  has the correct integrated flux.
 c-----------------------------------------------------------------------
       real alpha,temp
       double precision sum
-      integer i
+      ptrdiff i
 c-----------------------------------------------------------------------
       sum = 0d0
       temp = 1e-4 * TFlux/nPoint
@@ -847,7 +847,7 @@ c***********************************************************************
 
       subroutine ClipIt(Def,Est,nPoint)
 
-      integer nPoint
+      ptrdiff nPoint
       real Def(nPoint),Est(nPoint)
 c-----------------------------------------------------------------------
 c  Set up the minimum of the default image.
@@ -859,7 +859,7 @@ c    Def        The default image.
 c  Input/Output:
 c    Est        The estimate image, whixh is being clipped.
 c-----------------------------------------------------------------------
-      integer i
+      ptrdiff i
 c-----------------------------------------------------------------------
       do i = 1, nPoint
         Est(i) = max(Est(i),0.1*Def(i))
@@ -921,12 +921,12 @@ c***********************************************************************
 
       subroutine GetFxSD(Gain,Model,nPoint,flux)
 
-      integer nPoint
+      ptrdiff nPoint
       real Gain(nPoint),Model(nPoint),flux
 c-----------------------------------------------------------------------
 c  Determine the flux of an image.
 c-----------------------------------------------------------------------
-      integer i
+      ptrdiff i
 c-----------------------------------------------------------------------
       flux = 0.0
       do i = 1, nPoint
@@ -939,12 +939,12 @@ c***********************************************************************
 
       subroutine GetFxDef(Model,nPoint,flux)
 
-      integer nPoint
+      ptrdiff nPoint
       real Model(nPoint),flux
 c-----------------------------------------------------------------------
 c  Determine the flux of an image.
 c-----------------------------------------------------------------------
-      integer i
+      ptrdiff i
 c-----------------------------------------------------------------------
       flux = 0
       do i = 1, nPoint
@@ -957,12 +957,12 @@ c***********************************************************************
 
       subroutine GetRms(Wt,nPoint,Rms)
 
-      integer nPoint
+      ptrdiff nPoint
       real Wt(nPoint),Rms
 c-----------------------------------------------------------------------
 c  Determine the RMS value.
 c-----------------------------------------------------------------------
-      integer i,Count
+      ptrdiff i,Count
 c-----------------------------------------------------------------------
       Rms = 0.0
       Count = 0
@@ -982,14 +982,16 @@ c***********************************************************************
 
       subroutine PIntStep(nPoint,npol,Old,New,FracNew)
 
-      integer nPoint,npol
+      ptrdiff nPoint
+      integer npol
       real FracNew
       real Old(nPoint,npol),New(nPoint,npol)
 c-----------------------------------------------------------------------
 c  Update the current image by interpolating between two previous ones.
 c-----------------------------------------------------------------------
       real FracOld,mold,mnew,iold,inew,fac
-      integer i,j
+      ptrdiff i
+      integer j
 c-----------------------------------------------------------------------
       FracOld = 1.0 - FracNew
       do i = 1, nPoint
@@ -1023,14 +1025,14 @@ c***********************************************************************
 
       subroutine IntStep(nPoint,Old,New,FracNew)
 
-      integer nPoint
+      ptrdiff nPoint
       real FracNew
       real Old(nPoint),New(nPoint)
 c-----------------------------------------------------------------------
 c  Update the current image by interpolating between two previous ones.
 c-----------------------------------------------------------------------
       real FracOld
-      integer i
+      ptrdiff i
 c-----------------------------------------------------------------------
       FracOld = 1.0 - FracNew
       do i = 1, nPoint
@@ -1044,7 +1046,8 @@ c***********************************************************************
       subroutine CalStep(nPoint,npol,nplan,Res,Wta,Wtb,TRms2,
      *  Est,Step,Def,Alpha,Beta,Gamma,Qa,Qb,J0)
 
-      integer nPoint,npol,nplan
+      ptrdiff nPoint
+      integer npol,nplan
       real Alpha,Beta,Gamma,Qa,Qb,J0,TRms2
       real Def(nPoint),Est(nPoint,npol),Step(nPoint,npol)
       real Res(nPoint,nplan),Wta(nPoint),Wtb(nPoint)
@@ -1066,7 +1069,8 @@ c    Step       The step to take towards a better estimate.
 c    Length     A measure of the length of the step.
 c
 c-----------------------------------------------------------------------
-      integer i,j
+      ptrdiff i
+      integer j
       real Diag, GradJ, Stepd,m,mlog,mexp,x
       real dH,dH2
 c-----------------------------------------------------------------------
@@ -1116,13 +1120,15 @@ c***********************************************************************
 
       subroutine TakeStep(nPoint,npol,Est,NewEst,StLen,StLim)
 
-      integer nPoint,npol
+      ptrdiff nPoint
+      integer npol
       real Est(nPoint,npol),NewEst(nPoint,npol)
       real StLen,StLim
 c-----------------------------------------------------------------------
 c  Take the final step!
 c-----------------------------------------------------------------------
-      integer i,j
+      ptrdiff i
+      integer j
       real Stepd,mold,mnew,iold,inew,fac
 c-----------------------------------------------------------------------
       do i = 1, nPoint
@@ -1155,7 +1161,8 @@ c***********************************************************************
       subroutine ChekStep(nPoint,npol,nplan,OldEst,Est,Def,Res,
      *        Wta,Wtb,TRms2,Alpha,Beta,Gamma,Qa,Qb,J0)
 
-      integer nPoint,npol,nplan
+      ptrdiff nPoint
+      integer npol,nplan
       real OldEst(nPoint,npol),Est(nPoint,npol),Def(nPoint)
       real Res(nPoint,nplan),Wta(nPoint),Wtb(nPoint)
       real Alpha,Beta,Gamma,Qa,Qb,J0,TRms2
@@ -1176,7 +1183,8 @@ c
 c  Output:
 c    J0         Some useful (??) statistic.
 c-----------------------------------------------------------------------
-      integer i,j
+      ptrdiff i
+      integer j
       real GradJ,Step,dH,mlog,m,x
 c-----------------------------------------------------------------------
       J0 = 0.0
@@ -1222,7 +1230,8 @@ c***********************************************************************
      *                             GradHH,GradJJ,
      *  Grad11,Immax,Immin,Flux,Rmsa,Rmsb,Rmsc)
 
-      integer nPoint,npol,nplan
+      ptrdiff nPoint
+      integer npol,nplan
       real Res(nPoint,nplan),Wta(nPoint),Wtb(nPoint)
       real Est(nPoint,npol),Def(nPoint)
       real Alpha,Beta,Gamma,Qa,Qb,TRms2
@@ -1249,7 +1258,8 @@ c  Outputs:
 c    GradEE,GradEF,GradEH,GradEJ,GradFF,GradFH,GradFJ
 c    GradHH,GradJJ,NomGrd,Immax,Immin,Flux,Rms
 c-----------------------------------------------------------------------
-      integer i,j
+      ptrdiff i
+      integer j
       real Diag,dH,dH2,dE,dF,dG,temp,m,mexp,mlog,x
 c-----------------------------------------------------------------------
       GradEE = 0.0
@@ -1347,10 +1357,10 @@ c***********************************************************************
 
       subroutine Zero(Est,nPoint)
 
-      integer nPoint
+      ptrdiff nPoint
       real Est(nPoint)
 c-----------------------------------------------------------------------
-      integer i
+      ptrdiff i
 c-----------------------------------------------------------------------
       do i = 1, nPoint
         Est(i) = 0.0
@@ -1362,10 +1372,10 @@ c***********************************************************************
 
       subroutine Negate(In,Out,nPoint)
 
-      integer nPoint
+      ptrdiff nPoint
       real In(nPoint),Out(nPoint)
 c-----------------------------------------------------------------------
-      integer i
+      ptrdiff i
 c-----------------------------------------------------------------------
       do i = 1, nPoint
         Out(i) = -In(i)
@@ -1377,10 +1387,11 @@ c***********************************************************************
 
       subroutine Diff(Est,Map,Res,nPoint,Run,nRun)
 
-      integer nPoint,nRun,Run(3,nRun)
+      ptrdiff nPoint
+      integer nRun,Run(3,nRun)
       real Est(nPoint),Map(nPoint),Res(nPoint)
 c-----------------------------------------------------------------------
-      integer i
+      ptrdiff i
 c-----------------------------------------------------------------------
       call mcCnvlR(Est,Run,nRun,Res)
 
@@ -1591,10 +1602,10 @@ c
       else if (na.le.2*n1 .and. nb.le.2*n2) then
         call CnvlIniF(Cnvl,lBeam,n1,n2,ic,jc,0.0,'e')
       else
-        call memAllop(pData,na*nb,'r')
+        call memAllox(pData,1_8*na*nb,'r')
         call SDConLod(lBeam,n1,n2,memr(pData),na,nb)
         call CnvlIniA(Cnvl,memr(pData),na,nb,ic,jc,0.0,' ')
-        call memFrep(pData,na*nb,'r')
+        call memFrex(pData,1_8*na*nb,'r')
       endif
 
       end
@@ -1630,15 +1641,15 @@ c***********************************************************************
       subroutine SDConDif(cnvl,Est,Map,fac,Res,Wt,nPoint,Run,nRun,
      *                                        nx,ny)
 
-      ptrdiff cnvl
-      integer nPoint,nRun,Run(3,nRun),nx,ny
+      ptrdiff cnvl, nPoint
+      integer nRun,Run(3,nRun),nx,ny
       real Est(nPoint),Map(nPoint),Res(nPoint),Wt(nPoint),fac
 
 c-----------------------------------------------------------------------
 c  Determine the convolution of the estimate with the single dish beam.
 c
 c-----------------------------------------------------------------------
-      integer i
+      ptrdiff i
 c-----------------------------------------------------------------------
       do i = 1, nPoint
         Res(i) = Est(i) * Wt(i)
@@ -1656,10 +1667,10 @@ c***********************************************************************
 
       subroutine SDConWt(Gain,Wt,nPoint)
 
-      integer nPoint
+      ptrdiff nPoint
       real Gain(nPoint),Wt(nPoint)
 c-----------------------------------------------------------------------
-      integer i
+      ptrdiff i
 c-----------------------------------------------------------------------
       do i = 1, nPoint
         if (Gain(i).gt.0.0) then
@@ -1675,12 +1686,12 @@ c***********************************************************************
 
       subroutine NewFac(nPoint,Res,Map,fac,TRms2)
 
-      integer nPoint
+      ptrdiff nPoint
       real TRms2,fac,Res(nPoint),Map(nPoint)
 c-----------------------------------------------------------------------
       real dirty,nFac
       double precision SumMM,SumDM
-      integer i
+      ptrdiff i
 c-----------------------------------------------------------------------
       SumMM = 0d0
       SumDM = 0d0

@@ -78,7 +78,7 @@ c@ sigma
 c       When doing devonvolution (options=divide), this gives a noise
 c       parameter. Default is 0.
 c
-c$Id: convol.for,v 1.11 2017/04/10 05:36:06 wie017 Exp $
+c$Id: convol.for,v 1.12 2018/11/29 23:30:11 wie017 Exp $
 c--
 c  History:
 c    rjs,mchw 18aug89 Converted from RESTORE.
@@ -120,10 +120,10 @@ c-----------------------------------------------------------------------
       logical   asym, corr, divide, dogaus, doscale, final, rect,
      *          selfscal,dofscale,cube
       integer   Box(MAXBOX), Runs(3,MAXRUNS), blc(3), ifail,
-     *          iref, jref, k, l, lBeam, lMap, lOut, n1, n2, nPoint,
+     *          iref, jref, k, l, lBeam, lMap, lOut, n1, n2,
      *          nRuns, naxis, nsize(MAXNAX), nx, ny, nz, trc(3), xmax,
      *          xmin, xoff, ymax, ymin, yoff
-      ptrdiff   handle, pDat
+      ptrdiff   handle, pDat, nPoint
       real      bmaj, bmaj1, bmin, bmin1, bpa, bpa1, crpix1, crpix2,
      *          factor, sigma, temp, bmaj0, bmin0, bpa0,
      *          bmajmap,bminmap,bpamap,bmaj2,bmin2,bpa2,fscale
@@ -136,8 +136,8 @@ c-----------------------------------------------------------------------
       external  boxrect, itoaf, keyprsnt, versan
 c-----------------------------------------------------------------------
       version = versan('convol',
-     *                 '$Revision: 1.11 $',
-     *                 '$Date: 2017/04/10 05:36:06 $')
+     *                 '$Revision: 1.12 $',
+     *                 '$Date: 2018/11/29 23:30:11 $')
 c
 c  Get the input parameters.
 c
@@ -312,7 +312,7 @@ c
       call xyopen(lOut,Out,'new',naxis,nsize)
       call header(lMap,lOut,min(naxis,3),blc,
      *  bunit,bmaj,bmin,bpa,version)
-      call MemAllop(pDat,nsize(1)*nsize(2),'r')
+      call MemAllox(pDat,1_8*nsize(1)*nsize(2),'r')
 c
 c  Loop over the third dimension.
 c
@@ -331,7 +331,7 @@ c
 
         call xysetpl(lMap,1,k)
         call GetPlane(lMap,Runs,nRuns,xmin-1,ymin-1,nx,ny,
-     *                        memR(pDat),nsize(1)*nsize(2),nPoint)
+     *                memR(pDat),1_8*nsize(1)*nsize(2),nPoint)
 c
 c  Do the real work.
 c
@@ -379,6 +379,8 @@ c
         if (.not.rect)
      *    call PutRuns(lOut,Runs,nRuns,xoff,yoff,nsize(1),nsize(2))
       enddo
+      
+      call memFrex(pDat,1_8*nsize(1)*nsize(2),'r')
 c
 c  All said and done. Close up the files, and leave.
 c
@@ -417,7 +419,7 @@ c-----------------------------------------------------------------------
 c***********************************************************************
       subroutine Scale(Data,n,factor)
 
-      integer n
+      ptrdiff n
       real Data(n),factor
 
 c  Multiply by a scale factor.
@@ -428,7 +430,7 @@ c    factor     Scale factor.
 c  In/Out:
 c    Data       The data to scale.
 c-----------------------------------------------------------------------
-      integer i
+      ptrdiff i
 c-----------------------------------------------------------------------
       do i = 1, n
         Data(i) = factor * Data(i)

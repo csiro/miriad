@@ -105,7 +105,7 @@ c       x and y pixel coordinate (in the output model; this goes from 1
 c       to N), the "I" component and the "I*alpha" component.  The
 c       default is to not create a log file.
 c
-c$Id: mfclean.for,v 1.14 2017/10/19 04:45:13 wie017 Exp $
+c$Id: mfclean.for,v 1.15 2018/11/29 23:30:11 wie017 Exp $
 c--
 c  History:
 c    rjs   Nov89 - Original version.
@@ -180,7 +180,8 @@ c-----------------------------------------------------------------------
       parameter (maxCmp1=10000000,maxCmp2=320000,maxP=8193)
       parameter (maxBeam=maxP*maxP,maxBox=3*MAXDIM,maxRun=3*maxDim)
 
-      integer Boxes(maxBox),Run(3,maxRun),nPoint,nRun
+      integer Boxes(maxBox),Run(3,maxRun),nRun
+      ptrdiff nPoint
       ptrdiff Map0,Map1,Res0,Res1,Est0,Est1,Tmp
       ptrdiff FFT0,FFT1,FFT01,FFT10,FFT00,FFT11
       real Rcmp0(maxCmp2),Rcmp1(maxCmp2),Ccmp0(maxCmp2),Ccmp1(maxCmp2)
@@ -193,7 +194,7 @@ c-----------------------------------------------------------------------
       real Cutoff,Gain0,Gain1,Speed,Limit,Scale,cut(2)
       logical NegStop,NegFound,More,dolog,deep
       integer maxNiter(2),Niter,totNiter,minPatch,maxPatch,curMaxNiter
-      integer naxis,n1,n2,n1d,n2d,ic,jc,nx,ny,ntmp
+      integer naxis,n1,n2,n1d,n2d,ic,jc,nx,ny,ntmp,nCmp
       integer xmin,xmax,ymin,ymax,xoff,yoff,zoff
       character MapNam*64,BeamNam*64,ModelNam*64,OutNam*64,line*72
       character logf*64, version*72
@@ -209,8 +210,8 @@ c-----------------------------------------------------------------------
       external  itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('mfclean',
-     *                 '$Revision: 1.14 $',
-     *                 '$Date: 2017/10/19 04:45:13 $')
+     *                 '$Revision: 1.15 $',
+     *                 '$Date: 2018/11/29 23:30:11 $')
 c
 c  Get the input parameters.
 c
@@ -305,7 +306,7 @@ c
 c  Get the FFT of the beam.
 c
       call output('FFTing the beams ...')
-      call MemAllop(Tmp,n1*n2,'r')
+      call MemAllox(Tmp,1_8*n1*n2,'r')
       call xysetpl(lBeam,1,1)
       call GetBeam(FFT0,lBeam,dat(Tmp),n1,n2,n1d,n2d,ic,jc)
       call xysetpl(lBeam,1,2)
@@ -314,8 +315,8 @@ c
 c  Get the convolution of the map and the two beams.
 c
       call output('Calculating the map*beam ...')
-      call MemAllop(Map0,nPoint,'r')
-      call MemAllop(Map1,nPoint,'r')
+      call MemAllox(Map0,nPoint,'r')
+      call MemAllox(Map1,nPoint,'r')
       call GetMap(FFT0,lMap,Run,nRun,xmin-1,ymin-1,dat(Map0),
      *                                dat(Tmp),nMap(1),nMap(2))
       call GetMap(FFT1,lMap,Run,nRun,xmin-1,ymin-1,dat(Map1),
@@ -363,10 +364,10 @@ c  Free up the unneeded beams, and then allocate some more memory.
 c
       call CnvlFin(FFT1)
       call CnvlFin(FFT0)
-      call MemAllop(Res0,nPoint,'r')
-      call MemAllop(Res1,nPoint,'r')
-      call MemAllop(Est0,nPoint,'r')
-      call MemAllop(Est1,nPoint,'r')
+      call MemAllox(Res0,nPoint,'r')
+      call MemAllox(Res1,nPoint,'r')
+      call MemAllox(Est0,nPoint,'r')
+      call MemAllox(Est1,nPoint,'r')
 c
 c  Initialise the estimate, and determine the residuals if the the user
 c  gave an estimate. Determine statistics about the estimate and the
@@ -421,9 +422,10 @@ c
       do while (More)
         curMaxNiter = min(Niter+MaxNiter(2), MaxNiter(1))
         if (mode.eq.'hogbom') then
+          nCmp=nPoint
           call Hogbom(maxPatch,Patch00,Patch11,Patch01,Patch10,nx,ny,
      *      dat(Res0),dat(Res1),dat(Est0),dat(Est1),Icmp,Jcmp,
-     *      dat(Tmp),nPoint,Run,nRun,EstASum,Cutoff,Gain0,Gain1,
+     *      dat(Tmp),nCmp,Run,nRun,EstASum,Cutoff,Gain0,Gain1,
      *      negStop,deep,negFound,curMaxNiter,Niter,dolog)
             text = ' Hogbom'
         else
@@ -697,7 +699,8 @@ c***********************************************************************
 
       subroutine CntRuns(Run,nRun,MaxMap)
 
-      integer nRun,Run(3,nRun),MaxMap
+      integer nRun,Run(3,nRun)
+      ptrdiff MaxMap
 c-----------------------------------------------------------------------
 c  Count the number of pixels in the region of interest.
 c
@@ -720,7 +723,7 @@ c***********************************************************************
 
       subroutine Stats(Data,n,Dmin,Dmax,DAmax,Drms,deep,Est)
 
-      integer n
+      ptrdiff n
       real Data(n),Est(n)
       real Dmin,Dmax,DAmax,Drms
       logical deep
@@ -740,7 +743,7 @@ c    DAmax      Data absolute maxima.
 c    Drms       Rms value of the data.
 c
 c-----------------------------------------------------------------------
-      integer i,k
+      ptrdiff i,k
 
 c     Externals.
       integer ismax,ismin
@@ -906,7 +909,7 @@ c***********************************************************************
 
       subroutine SumAbs(EstASum,Est0,nPoint)
 
-      integer nPoint
+      ptrdiff nPoint
       real Est0(nPoint),EstASum
 c-----------------------------------------------------------------------
 c  Find the sum of the absolute value of the estimate.
@@ -917,7 +920,7 @@ c    Est0
 c  Output:
 c    EstASum
 c-----------------------------------------------------------------------
-      integer i
+      ptrdiff i
 c-----------------------------------------------------------------------
       EstASum = 0
       do i = 1, nPoint
@@ -929,7 +932,7 @@ c***********************************************************************
 
       subroutine NoModel(Map0,Map1,Est0,Est1,Res0,Res1,nPoint)
 
-      integer nPoint
+      ptrdiff nPoint
       real Map0(nPoint),Map1(nPoint),Est0(nPoint),Est1(nPoint)
       real Res0(nPoint),Res1(nPoint)
 c-----------------------------------------------------------------------
@@ -946,7 +949,7 @@ c    Res1       The beam1 residuals.
 c    Est0       The estimate, initially zero.
 c    Est1       The spectral estimate, initially zero.
 c-----------------------------------------------------------------------
-      integer i
+      ptrdiff i
 c-----------------------------------------------------------------------
       do i = 1, nPoint
         Est0(i) = 0.0
@@ -1060,7 +1063,8 @@ c***********************************************************************
      *  Gain0,Gain1,Speed,ResAMax,EstASum,Niter,dolog,Limit,deep,
      *  negFound,Rcmp0,Rcmp1,Ccmp0,Ccmp1,Icmp,Jcmp,Tmp,maxCmp)
 
-      integer nx,ny,minPatch,maxPatch,maxNiter,Niter,nRun,nPoint
+      integer nx,ny,minPatch,maxPatch,maxNiter,Niter,nRun
+      ptrdiff nPoint
       integer Run(3,nrun)
       real Res0(nPoint),Res1(nPoint),Est0(nPoint),Est1(nPoint)
       logical negStop,negFound,dolog,deep
@@ -1398,8 +1402,10 @@ c***********************************************************************
       subroutine GetLimit(Res0,deep,Est0,nPoint,ResAMax,maxCmp,
      *        Histo,MaxPatch,nPatch,Limit)
 
-      integer nPoint,maxPatch,nPatch,maxCmp
-      real Res0(nPoint),Est0(0),ResAMax,Histo(maxPatch/2+1),Limit
+      ptrdiff nPoint
+      integer maxPatch,nPatch,maxCmp
+      real Res0(nPoint),Est0(nPoint)
+      real ResAMax,Histo(maxPatch/2+1),Limit
       logical deep
 c-----------------------------------------------------------------------
 c  Determine the limiting threshold and the patch size. The algorithm
@@ -1424,7 +1430,8 @@ c
 c-----------------------------------------------------------------------
       integer HistSize
       parameter (HistSize=512)
-      integer i,m,Acc
+      ptrdiff i
+      integer m,Acc
       real ResAMin,a,b,x
       integer ResHis(HistSize)
 c-----------------------------------------------------------------------
@@ -1485,7 +1492,8 @@ c***********************************************************************
      *                   deep,Icmp,Jcmp,Rcmp0,Rcmp1,Ccmp0,Ccmp1,
      *                   maxCmp,nCmp,Run,nRun)
 
-      integer nPoint,ny,maxCmp,nCmp,nRun,Run(3,nrun)
+      ptrdiff nPoint
+      integer ny,maxCmp,nCmp,nRun,Run(3,nrun)
       real Limit
       real Res0(nPoint), Res1(nPoint), Est0(nPoint), Est1(nPoint)
       real Rcmp0(maxCmp),Rcmp1(maxCmp),Ccmp0(maxCmp),Ccmp1(maxCmp)
@@ -1512,7 +1520,8 @@ c    Rcmp0,Rcmp1 Array of the residual peaks.
 c
 c-----------------------------------------------------------------------
       include 'maxdim.h'
-      integer i,j,k,l,Ncmpd,x0,y0,n0,itemp
+      ptrdiff l
+      integer i,j,k,Ncmpd,x0,y0,n0,itemp
       real Temp(maxdim)
       integer Indx(maxdim)
 c-----------------------------------------------------------------------
@@ -1586,7 +1595,8 @@ c***********************************************************************
       subroutine NewEst(Ccmp0,Ccmp1,Icmp,Jcmp,Ncmp,Est0,Est1,
      *  nPoint,Run,nRun)
 
-      integer nCmp,nPoint,nRun
+      ptrdiff nPoint
+      integer nCmp,nRun
       integer ICmp(nCmp),JCmp(nCmp),Run(3,nRun)
       real CCmp0(nCmp),CCmp1(nCmp),Est0(nPoint),Est1(nPoint)
 c-----------------------------------------------------------------------
@@ -1608,7 +1618,8 @@ c  Input/Output:
 c    Est0       All the components.
 c    Est1
 c-----------------------------------------------------------------------
-      integer i,j,k,l
+      ptrdiff i
+      integer j,k,l
 c-----------------------------------------------------------------------
 c
 c  Vectorise this if you can!
@@ -1631,7 +1642,8 @@ c***********************************************************************
       subroutine Diff(Est0,Est1,Map0,Map1,Res0,Res1,Tmp,
      *  nPoint,nx,ny,Run,nRun,FFT00,FFT11,FFT01,FFT10)
 
-      integer nPoint,nx,ny,nRun,Run(3,nRun)
+      ptrdiff nPoint
+      integer nx,ny,nRun,Run(3,nRun)
       real Est0(nPoint),Est1(nPoint),Res0(nPoint),Res1(nPoint)
       real Map0(nPoint),Map1(nPoint),Tmp(nPoint)
       ptrdiff FFT00,FFT11,FFT01,FFT10
@@ -1651,7 +1663,7 @@ c    Res0,Res1  Residuals.
 c  Scratch:
 c    Tmp
 c-----------------------------------------------------------------------
-      integer i
+      ptrdiff i
 c-----------------------------------------------------------------------
 
       call CnvlR(FFT00,Est0,nx,ny,Run,nRun,Tmp,'c')

@@ -59,7 +59,7 @@ c         verbose    Give lots of messages during the iterations.  The
 c                    default is to give a one line message at each
 c                    iteration.
 c
-c$Id: mostess.for,v 1.11 2016/03/18 03:25:44 wie017 Exp $
+c$Id: mostess.for,v 1.12 2018/11/29 23:30:11 wie017 Exp $
 c--
 c  History:
 c    rjs   7aug95  Adapted from MOSMEM.
@@ -82,7 +82,7 @@ c-----------------------------------------------------------------------
      *          x0(MAXPNT), y0(MAXPNT)
       ptrdiff   pDChi, pDef, pEst, pMap, pNewDChi
       ptrdiff   pNewEst, pNewRes, pRes
-      ptrdiff   pTmp, pWt, Cnvl(MAXPNT)
+      ptrdiff   pTmp, pWt, Cnvl(MAXPNT), i8
       real      Alpha, Beta, ClipLev, De, Df, Flux, Grad11, GradEE,
      *          GradEF, GradEH, GradEJ, GradFF, GradFH, GradFJ, GradHH,
      *          GradJJ, Immax, Immin, J0, J1, OStLen1, OStLen2, Q, Qest,
@@ -91,13 +91,13 @@ c-----------------------------------------------------------------------
       character BeamNam(MAXPNT)*64, DefNam*64, entropy*16, line*80,
      *          MapNam(MAXPNT)*64, ModNam*64, OutNam*64, version*72
 
-      integer   ismax
+      ptrdiff   ismax8
       character itoaf*4, versan*72
-      external  ismax, itoaf, versan
+      external  ismax8, itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('mostess',
-     *                 '$Revision: 1.11 $',
-     *                 '$Date: 2016/03/18 03:25:44 $')
+     *                 '$Revision: 1.12 $',
+     *                 '$Date: 2018/11/29 23:30:11 $')
 c
 c  Get the input parameters.
 c
@@ -193,15 +193,15 @@ c
 c
 c  Loop.
 c
-      call memAllop(pWt,mnx*mny,'r')
-      call memAllop(pEst,mnx*mny,'r')
-      call memAllop(pDef,mnx*mny,'r')
-      call memAllop(pRes,npnt*nx*ny,'r')
-      call memAllop(pNewEst,mnx*mny,'r')
-      call memAllop(pNewRes,npnt*nx*ny,'r')
-      call memAllop(pDChi,mnx*mny,'r')
-      call memAllop(pNewDChi,mnx*mny,'r')
-      call memAllop(pTmp,nx*ny,'r')
+      call memAllox(pWt,1_8*mnx*mny,'r')
+      call memAllox(pEst,1_8*mnx*mny,'r')
+      call memAllox(pDef,1_8*mnx*mny,'r')
+      call memAllox(pRes,1_8*npnt*nx*ny,'r')
+      call memAllox(pNewEst,1_8*mnx*mny,'r')
+      call memAllox(pNewRes,1_8*npnt*nx*ny,'r')
+      call memAllox(pDChi,1_8*mnx*mny,'r')
+      call memAllox(pNewDChi,1_8*mnx*mny,'r')
+      call memAllox(pTmp,1_8*nx*ny,'r')
 c
 c  Get the sum A**2/sigma**2
 c
@@ -218,23 +218,23 @@ c
         endif
 
         if (DefNam.eq.' ') then
-          ClipLev = 0.01 * TFlux/(mnx*mny)
-          call Assign(TFlux/(mnx*mny),memr(pDef),mnx*mny)
+          ClipLev = 0.01 * TFlux/mnx/mny
+          call Assign(TFlux/mnx/mny,memr(pDef),1_8*mnx*mny)
         else
           call PlLoad(lDef,memr(pDef),mnx,mny)
-          i = Ismax(mnx*mny,memr(pDef),1)
-          ClipLev = 0.01 * abs(memr(pDef+i-1))
-          if (positive) call ClipIt(0.1*ClipLev,memr(pDef),mnx*mny)
+          i8 = Ismax8(1_8*mnx*mny,memr(pDef),1)
+          ClipLev = 0.01 * abs(memr(pDef+i8-1))
+          if (positive) call ClipIt(0.1*ClipLev,memr(pDef),1_8*mnx*mny)
         endif
 c
 c  Get the Estimate and Residual. Also get information about the
 c  current situation.
 c
         if (ModNam.eq.' ') then
-          call Copy(mnx*mny,memr(pDef),memr(pEst))
+          call Copy(1_8*mnx*mny,memr(pDef),memr(pEst))
         else
           call PlLoad(lMod,memr(pEst),mnx,mny)
-          if (positive) call ClipIt(ClipLev,memr(pEst),mnx*mny)
+          if (positive) call ClipIt(ClipLev,memr(pEst),1_8*mnx*mny)
         endif
 
         call Diff(memr(pEst),memr(pMap),memr(pRes),memr(pDChi),
@@ -242,11 +242,11 @@ c
 c
 c  Get all the information.
 c
-        call GetInfo(mnx*mny,
+        call GetInfo(1_8*mnx*mny,
      *      memr(pEst),memr(pDChi),measure,memr(pDef),memr(pWt),
      *      Alpha,Beta,Q,GradEE,GradEF,GradEH,GradEJ,GradFF,GradFH,
      *      GradFJ,GradHH,GradJJ,Grad11,Immax,Immin,Flux)
-        call GetRms(npnt,nx*ny,memr(pRes),sigma,rms)
+        call GetRms(npnt,1_8*nx*ny,memr(pRes),sigma,rms)
 c-----------------------------------------------------------------------
 c  Now start to iterate at long last.
 c
@@ -260,14 +260,14 @@ c
 c
 c  Update Alpha and Beta.
 c
-        De = npnt*nx*ny*(Rms*Rms - RmsFac*RmsFac)
+        De = npnt*real(nx)*ny*(Rms*Rms - RmsFac*RmsFac)
         Df = Flux - TFlux
         call NewAlpB(Alpha,Beta,De,Df,doflux,GradEE,GradEF,
      *        GradEJ,GradFF,GradFJ,GradJJ,Grad11,GradEH,GradFH)
 c
 c  Calculate the next step to take.
 c
-        call CalStep(mnx*mny,
+        call CalStep(1_8*mnx*mny,
      *      memr(pEst),memr(pDChi),memr(pNewEst),memr(pWt),memr(pDef),
      *      measure,Alpha,Beta,Q,J0)
 c
@@ -286,7 +286,7 @@ c
 c
 c  Take the plunge.
 c
-        call TakeStep(mnx*mny,memr(pEst),memr(pNewEst),
+        call TakeStep(1_8*mnx*mny,memr(pEst),memr(pNewEst),
      *                                StLen1,ClipLev,StLim)
 c
 c  Convolve the estimate with the beam and subtract the map.
@@ -297,8 +297,8 @@ c
 c
 c  Work out what was really the best step length.
 c
-        call ChekStep(mnx*mny,memr(pEst),memr(pNewEst),memr(pNewDChi),
-     *        memr(pDef),measure,Alpha,Beta,Q,J1)
+        call ChekStep(1_8*mnx*mny,memr(pEst),memr(pNewEst),
+     *        memr(pNewDChi),memr(pDef),measure,Alpha,Beta,Q,J1)
         if (J0-J1.ne.0) then
           StLen2 = J0/(J0-J1)
         else
@@ -314,9 +314,9 @@ c  is if the second step length is not near 1. In practise it will
 c  be near 1 on the first few iterations.
 c
         if (abs(StLen2-1.0).gt.0.05) then
-          call IntStep(mnx*mny,memr(pEst),memr(pNewEst),StLen2)
-          call IntStep(mnx*mny,memr(pDChi),memr(pNewDChi),StLen2)
-          call IntStep(npnt*nx*ny,memr(pRes),memr(pNewRes),StLen2)
+          call IntStep(1_8*mnx*mny,memr(pEst),memr(pNewEst),StLen2)
+          call IntStep(1_8*mnx*mny,memr(pDChi),memr(pNewDChi),StLen2)
+          call IntStep(1_8*npnt*nx*ny,memr(pRes),memr(pNewRes),StLen2)
         else
           StLen2 = 1
           call Swap(pEst,pNewEst)
@@ -331,11 +331,11 @@ c
 c
 c  Get all the information.
 c
-          call GetInfo(mnx*mny,
+          call GetInfo(1_8*mnx*mny,
      *      memr(pEst),memr(pDChi),measure,memr(pDef),memr(pWt),
      *      Alpha,Beta,Q,GradEE,GradEF,GradEH,GradEJ,GradFF,GradFH,
      *      GradFJ,GradHH,GradJJ,Grad11,Immax,Immin,Flux)
-          call GetRms(npnt,nx*ny,memr(pRes),sigma,rms)
+          call GetRms(npnt,1_8*nx*ny,memr(pRes),sigma,rms)
 c
 c  Reawaken the user with more crap to let him/her ponder over
 c  what could possibly be going wrong. Give him/her as much as
@@ -406,16 +406,16 @@ c
 c
 c  Release any allocated memory.
 c
-      call memFrep(pMap,npnt*nx*ny,'r')
-      call memFrep(pWt,mnx*mny,'r')
-      call memFrep(pEst,mnx*mny,'r')
-      call memFrep(pDef,mnx*mny,'r')
-      call memFrep(pRes,npnt*nx*ny,'r')
-      call memFrep(pNewEst,mnx*mny,'r')
-      call memFrep(pNewRes,npnt*nx*ny,'r')
-      call memFrep(pDChi,mnx*mny,'r')
-      call memFrep(pNewDChi,mnx*mny,'r')
-      call memFrep(pTmp,nx*ny,'r')
+      call memFrex(pMap,1_8*npnt*nx*ny,'r')
+      call memFrex(pWt,1_8*mnx*mny,'r')
+      call memFrex(pEst,1_8*mnx*mny,'r')
+      call memFrex(pDef,1_8*mnx*mny,'r')
+      call memFrex(pRes,1_8*npnt*nx*ny,'r')
+      call memFrex(pNewEst,1_8*mnx*mny,'r')
+      call memFrex(pNewRes,1_8*npnt*nx*ny,'r')
+      call memFrex(pDChi,1_8*mnx*mny,'r')
+      call memFrex(pNewDChi,1_8*mnx*mny,'r')
+      call memFrex(pTmp,1_8*nx*ny,'r')
 c
 c  Thats all folks.
 c
@@ -473,10 +473,10 @@ c***********************************************************************
 
       subroutine Copy(n,From,To)
 
-      integer n
+      ptrdiff n
       real From(n),To(n)
 c-----------------------------------------------------------------------
-      integer i
+      ptrdiff i
 c-----------------------------------------------------------------------
       do i = 1, n
         To(i) = From(i)
@@ -487,7 +487,7 @@ c***********************************************************************
 
       subroutine Assign(def,Default,nPoint)
 
-      integer nPoint
+      ptrdiff nPoint
       real def,Default(nPoint)
 c-----------------------------------------------------------------------
 c  Set up the default image.
@@ -498,7 +498,7 @@ c    nPoint
 c  Output:
 c    Default    The default image.
 c-----------------------------------------------------------------------
-      integer i
+      ptrdiff i
 c-----------------------------------------------------------------------
       do i = 1, nPoint
         Default(i) = def
@@ -510,7 +510,7 @@ c***********************************************************************
 
       subroutine ClipIt(clip,Default,nPoint)
 
-      integer nPoint
+      ptrdiff nPoint
       real clip,Default(nPoint)
 c-----------------------------------------------------------------------
 c  Set up the minimum of the default image.
@@ -521,7 +521,7 @@ c    nPoint
 c  Input/Output:
 c    Default    The default image.
 c-----------------------------------------------------------------------
-      integer i
+      ptrdiff i
 c-----------------------------------------------------------------------
       do i = 1, nPoint
         Default(i) = max(clip,Default(i))
@@ -587,14 +587,14 @@ c***********************************************************************
 
       subroutine IntStep(nPoint,Old,New,FracNew)
 
-      integer nPoint
+      ptrdiff nPoint
       real FracNew
       real Old(nPoint),New(nPoint)
 c-----------------------------------------------------------------------
 c  Update the current image by interpolating between two previous ones.
 c-----------------------------------------------------------------------
       real FracOld
-      integer i
+      ptrdiff i
 c-----------------------------------------------------------------------
       FracOld = 1.0 - FracNew
       do i = 1, nPoint
@@ -608,7 +608,8 @@ c***********************************************************************
       subroutine CalStep(nPoint,Est,DChi,Step,Wt,Def,
      *        measure,Alpha,Beta,Q,J0)
 
-      integer nPoint,measure
+      ptrdiff nPoint
+      integer measure
       real Alpha,Beta,Q,J0
       real Def(nPoint),Est(nPoint),DChi(nPoint)
       real Step(nPoint),Wt(nPoint)
@@ -630,7 +631,8 @@ c
 c-----------------------------------------------------------------------
       integer run
       parameter (run=1024)
-      integer n,l,ltot
+      ptrdiff n
+      integer l,ltot
       real Diag, GradJ, Stepd
       real dH(run),d2H(run)
 c-----------------------------------------------------------------------
@@ -655,14 +657,14 @@ c***********************************************************************
 
       subroutine TakeStep(nPoint,Est,NewEst,StLen,Clip,StLim)
 
-      integer nPoint
+      ptrdiff nPoint
       real Est(nPoint),NewEst(nPoint)
       real StLen,Clip,StLim
 c-----------------------------------------------------------------------
 c  Take the final step!
 c
 c-----------------------------------------------------------------------
-      integer i
+      ptrdiff i
       real Stepd
 c-----------------------------------------------------------------------
       if (Clip.gt.0) then
@@ -682,7 +684,8 @@ c***********************************************************************
       subroutine ChekStep(nPoint,OldEst,Est,DChi,Def,
      *                measure,Alpha,Beta,Q,J0)
 
-      integer nPoint,Measure
+      ptrdiff nPoint
+      integer Measure
       real OldEst(nPoint),Est(nPoint),DChi(nPoint),Def(nPoint)
       real Alpha,Beta,Q,J0
 c-----------------------------------------------------------------------
@@ -705,7 +708,8 @@ c
 c-----------------------------------------------------------------------
       integer run
       parameter (run=1024)
-      integer n,l,ltot
+      ptrdiff n
+      integer l,ltot
       real GradJ,Step
       real dH(run),d2H(run)
 c-----------------------------------------------------------------------
@@ -730,7 +734,7 @@ c***********************************************************************
      *  GradEE,GradEF,GradEH,GradEJ,GradFF,GradFH,GradFJ,
      *  GradHH,GradJJ,Grad11,Immax,Immin,Flux)
 
-      integer nPoint
+      ptrdiff nPoint
       real DChi(nPoint),Est(nPoint),Wt(nPoint),Def(nPoint)
       integer Measure
       real Alpha,Beta,Q
@@ -755,7 +759,8 @@ c    GradHH,GradJJ,NomGrd,Immax,Immin,Flux
 c-----------------------------------------------------------------------
       integer Run
       parameter (Run=1024)
-      integer n,l,ltot
+      ptrdiff n
+      integer l,ltot
       real Diag,GradE,GradH
       real dH(Run),d2H(Run)
 c-----------------------------------------------------------------------
@@ -1103,7 +1108,7 @@ c
       call xyopen(lMap,MapNam(1),'old',2,nsize)
       nx = nsize(1)
       ny = nsize(2)
-      call memAllop(pMap,nx*ny*npnt,'r')
+      call memAllox(pMap,1_8*nx*ny*npnt,'r')
 c
 c  Process the first image.
 c
@@ -1118,7 +1123,7 @@ c
         call xyopen(lMap,MapNam(i),'old',2,nsize)
         if (nsize(1).ne.nx .or. nsize(2).ne.ny)
      *    call bug('f','Inconsistency in map sizes')
-        call ImProc(lMap,memr(pMap+(i-1)*nx*ny),nx,ny,
+        call ImProc(lMap,memr(pMap+(i-1_8)*nx*ny),nx,ny,
      *                pbObj(i),rms(i),x0(i),y0(i))
         xmin = min(xmin,x0(i))
         xmax = max(xmax,x0(i) + nx - 1)
@@ -1208,7 +1213,8 @@ c***********************************************************************
 
       subroutine GetRms(npnt,npix,Res,sigma,Rms)
 
-      integer npnt,npix
+      integer npnt
+      ptrdiff npix
       real Res(npix,npnt),sigma(npnt),Rms
 c-----------------------------------------------------------------------
 c  Input:
@@ -1219,7 +1225,8 @@ c    sigma
 c  Output:
 c    rms
 c-----------------------------------------------------------------------
-      integer i,pnt
+      integer pnt
+      ptrdiff i
       real fac
 c-----------------------------------------------------------------------
       Rms = 0

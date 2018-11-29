@@ -38,7 +38,8 @@ c------------------------------------------------------------------------
 c
 	integer dim,scalar
 	parameter(dim=128,scalar=2)
-	integer buf(dim),index,type,rin
+	integer type,rin,buf(dim)
+	ptrdiff index
 	real rbuf(dim)
 	character in*256,out*256,line*128,dec*40,oct*40,hex*40
 	character format*32,form*32,strval*32,def*32,unit*8
@@ -138,12 +139,12 @@ c
 c
 c  Perform a real expression.
 c
-	
+
 	else
 	  type = 0
 	  call ariComp(out(1:lout),paction,type,Buf,dim,RBuf,dim)
 	  if(type.eq.scalar)then
-	    call ariExec(vaction,1,Buf,dim,RBuf,dim,Index)
+	    call ariExec(vaction,1_8,Buf,dim,RBuf,dim+0_8,Index)
 	    if(doint)then
 	      if(form.eq.' ')then
 	        line = itoaf(nint(RBuf(Index)))

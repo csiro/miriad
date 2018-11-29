@@ -38,7 +38,7 @@ c       Extra processing options:
 c         positive   Constrain the deconvolved image to be positive
 c                    valued.
 c
-c$Id: mossdi.for,v 1.12 2018/05/10 02:17:12 wie017 Exp $
+c$Id: mossdi.for,v 1.13 2018/11/29 23:30:11 wie017 Exp $
 c--
 c  History:
 c    rjs 31oct94 - Original version.
@@ -63,10 +63,11 @@ c-----------------------------------------------------------------------
 
       logical   dopos, more, deep
       integer   blc(3), Boxes(MAXBOXES), i, imax, imin, jmax, jmin, k,
-     *          kmax, kmin, lBeam, lMap, lModel, lOut, maxniter, nAlloc,
+     *          kmax, kmin, lBeam, lMap, lModel, lOut, maxniter,
      *          naxis, nbeam(3), ncomp, niter, nMap(3), nModel(3),
-     *          nout(MAXNAX), nPoint, nRun,  Run(3,MAXRUN), trc(3),
+     *          nout(MAXNAX), nRun,  Run(3,MAXRUN), trc(3),
      *          xmax, xmin, ymax, ymin
+      ptrdiff   nPoint, nAlloc
       ptrdiff   pEst, pRes, pStep, pStepR, pWt, pMask
       real      clip, cutoff, dmax, dmin, drms, flux, gain, cut(3)
       character BeamNam*64, line*64, MapNam*64, ModelNam*64, OutNam*64,
@@ -76,8 +77,8 @@ c-----------------------------------------------------------------------
       external  itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('mossdi',
-     *                 '$Revision: 1.12 $',
-     *                 '$Date: 2018/05/10 02:17:12 $')
+     *                 '$Revision: 1.13 $',
+     *                 '$Date: 2018/11/29 23:30:11 $')
 c
 c  Get the input parameters.
 c
@@ -163,20 +164,20 @@ c
         if (nPoint.gt.0) then
           if (nPoint.gt.nAlloc) then
             if (nAlloc.gt.0) then
-              call memFrep(pStep, nAlloc,'r')
-              call memFrep(pStepR,nAlloc,'r')
-              call memFrep(pEst,  nAlloc,'r')
-              call memFrep(pRes,  nAlloc,'r')
-              call memFrep(pWt,   nAlloc,'r')
-              call memFrep(pMask, nAlloc,'l')
+              call memFrex(pStep, nAlloc,'r')
+              call memFrex(pStepR,nAlloc,'r')
+              call memFrex(pEst,  nAlloc,'r')
+              call memFrex(pRes,  nAlloc,'r')
+              call memFrex(pWt,   nAlloc,'r')
+              call memFrex(pMask, nAlloc,'l')
             endif
             nAlloc = nPoint
-            call memAllop(pStep, nAlloc,'r')
-            call memAllop(pStepR,nAlloc,'r')
-            call memAllop(pEst,  nAlloc,'r')
-            call memAllop(pRes,  nAlloc,'r')
-            call memAllop(pWt,   nAlloc,'r')
-            call memAllop(pMask, nAlloc,'l')
+            call memAllox(pStep, nAlloc,'r')
+            call memAllox(pStepR,nAlloc,'r')
+            call memAllox(pEst,  nAlloc,'r')
+            call memAllox(pRes,  nAlloc,'r')
+            call memAllox(pWt,   nAlloc,'r')
+            call memAllox(pMask, nAlloc,'l')
 
           endif
 c
@@ -255,11 +256,11 @@ c
 c  Free up memory.
 c
       if (nAlloc.gt.0) then
-        call memFrep(pStep, nAlloc,'r')
-        call memFrep(pStepR,nAlloc,'r')
-        call memFrep(pEst,  nAlloc,'r')
-        call memFrep(pRes,  nAlloc,'r')
-        call memFrep(pWt,   nAlloc,'r')
+        call memFrex(pStep, nAlloc,'r')
+        call memFrex(pStepR,nAlloc,'r')
+        call memFrex(pEst,  nAlloc,'r')
+        call memFrex(pRes,  nAlloc,'r')
+        call memFrex(pWt,   nAlloc,'r')
       endif
 c
 c  Close up the files. Ready to go home.
@@ -278,7 +279,8 @@ c***********************************************************************
       subroutine Steer(Est,Res,Step,StepR,Wt,Mask,nPoint,Run,nRun,
      *  gain,clip,dopos,deep,dmin,dmax,drms,flux,ncomp)
 
-      integer nPoint,nRun,Run(3,nRun),ncomp
+      ptrdiff nPoint
+      integer nRun,Run(3,nRun),ncomp
       real gain,clip,dmin,dmax,drms,flux
       real Est(nPoint),Res(nPoint),Step(nPoint),StepR(nPoint)
       real Wt(nPoint)
@@ -307,7 +309,7 @@ c    ncomp      Number of components subtracted off this time.
 c-----------------------------------------------------------------------
       real MinOptGain
       parameter (MinOptGain=0.02)
-      integer i, nMasked
+      ptrdiff i, nMasked
       real g,thresh
       logical ok
       double precision SS,RS,RR
@@ -406,12 +408,13 @@ c***********************************************************************
 
       subroutine Diff(Est,Map,Res,nPoint,Run,nRun)
 
-      integer nPoint,nRun,Run(3,nRun)
+      ptrdiff nPoint
+      integer nRun,Run(3,nRun)
       real Est(nPoint),Map(nPoint),Res(nPoint)
 c-----------------------------------------------------------------------
 c  Determine the residuals for this model.
 c-----------------------------------------------------------------------
-      integer i
+      ptrdiff i
 c-----------------------------------------------------------------------
       call mcCnvlR(Est,Run,nRun,Res)
 
@@ -440,12 +443,12 @@ c***********************************************************************
 
       subroutine Zero(n,Out)
 
-      integer n
+      ptrdiff n
       real Out(n)
 c-----------------------------------------------------------------------
 c  Zero an array.
 c-----------------------------------------------------------------------
-      integer i
+      ptrdiff i
 c-----------------------------------------------------------------------
       do i = 1, n
         Out(i) = 0
@@ -455,7 +458,7 @@ c-----------------------------------------------------------------------
 c***********************************************************************
       subroutine fillMask(Data,Mask,n)
 
-      integer n
+      ptrdiff n
       real Data(n)
       logical Mask(n)
 c-----------------------------------------------------------------------
@@ -468,7 +471,7 @@ c
 c  Output:
 c    Mask       Pixels to consider for cleaning
 c-----------------------------------------------------------------------
-      integer i
+      ptrdiff i
 c-----------------------------------------------------------------------
       do i = 1, n
         Mask(i)= (Data(i).ne.0.)

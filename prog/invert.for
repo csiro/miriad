@@ -230,7 +230,7 @@ c       replaced with 0, or to be estimated by linear interpolation of
 c       two adjacent good channels.  See the Users Guide for the merits
 c       and evils of the two approaches.  The default is 'zero'.
 c
-c$Id: invert.for,v 1.24 2018/10/16 03:41:17 wie017 Exp $
+c$Id: invert.for,v 1.25 2018/11/29 23:30:11 wie017 Exp $
 c--
 c  History
 c    rjs        89  Initial version
@@ -392,8 +392,7 @@ c
       logical double,doamp,dophase,dosin,doncp,dobeam,dores,dorotbm
 c
       integer tno,tvis
-      integer nMMap
-      ptrdiff UWts,Map,MMap,nUWts
+      ptrdiff UWts,Map,MMap,nUWts, nMMap
 c
       integer nRuns,Runs(3,MAXRUNS)
 c
@@ -411,8 +410,8 @@ c
 c-----------------------------------------------------------------------
       version = versan ('invert',
 
-     :                  '$Revision: 1.24 $',
-     :                  '$Date: 2018/10/16 03:41:17 $')
+     :                  '$Revision: 1.25 $',
+     :                  '$Date: 2018/11/29 23:30:11 $')
 c
 c  Get the input parameters. Convert all angular things into
 c  radians as soon as possible!!
@@ -717,8 +716,8 @@ c
      *       smnx(1:len1(smnx)) // ' x ' //
      *       smny(1:len1(smny)) )
 
-         nMMap = mnx*mny
-         call MemAllop(MMap,nMMap,'r')
+         nMMap = 1_8*mnx*mny
+         call MemAllox(MMap,nMMap,'r')
       else
          nMMap = 0
       endif
@@ -775,7 +774,7 @@ c
 c
 c  All said and done. Tidy up and exit.
 c
-      if(nMMap.gt.0)call MemFrep(MMap,nMMap,'r')
+      if(nMMap.gt.0)call MemFrex(MMap,nMMap,'r')
       call MapFin
       call uvclose(tvis)
       call scrclose(tscr)

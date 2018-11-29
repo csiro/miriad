@@ -615,7 +615,7 @@ c       ocircle hms dms red_circle no 09 02 14.0 -46 24 36.0 828.0 0 0
 c       color 4
 c       ocircle hms dms blue_circle no 09 01 01.593  -46 38 55.498  439.09 0 0
 c
-c$Id: cgdisp.for,v 1.27 2015/07/09 23:25:48 wie017 Exp $
+c$Id: cgdisp.for,v 1.28 2018/11/29 23:30:11 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -637,7 +637,7 @@ c     Plotting parameters.
       real    WEDWID, TFDISP
       parameter (NXDEF = 4, NYDEF = 4, WEDWID = 0.05, TFDISP = 0.5)
 
-      ptrdiff ipim, ipnim, ipim2, ipnim2, ipimm
+      ptrdiff ipim, ipnim, ipim2, ipnim2, ipimm, npixels
       integer csize(maxnax,MAXCON), gsize(maxnax), vsize(maxnax,2),
      *  msize(maxnax), bsize(maxnax), lc(MAXCON), lg, lv(2), lm, lb,
      *  lhead, concol(MAXCON), veccol, boxcol, bemcol, ovrcol, labcol
@@ -690,8 +690,8 @@ c     Plotting parameters.
       data getvsc /.true./
 c-----------------------------------------------------------------------
       version = versan ('cgdisp',
-     *                  '$Revision: 1.27 $',
-     *                  '$Date: 2015/07/09 23:25:48 $')
+     *                  '$Revision: 1.28 $',
+     *                  '$Date: 2018/11/29 23:30:11 $')
 
 c     Get user inputs.
       call inputs(maxchan, MAXLEV, MAXCON, MAXTYP, ltypes, ncon, cin,
@@ -716,14 +716,15 @@ c     axis descriptors.
      *   bnaxis, lhead, ibin, jbin, kbin, blc, trc, win,
      *   ngrps, grpbeg, ngrp)
 
-c     Try to allocate memory for images.
-      call memallop(ipim,  win(1)*win(2), 'r')
-      call memallop(ipnim, win(1)*win(2), 'i')
+c     Try to allocate memory for images. Make sure we don't get integer4 overflow
+      npixels = (1_8 * win(1)) * win(2) 
+      call memallox(ipim,  npixels, 'r')
+      call memallox(ipnim, npixels, 'i')
       if (vin(1).ne.' ' .and. vin(2).ne.' ') then
-        call memallop(ipim2,  win(1)*win(2), 'r')
-        call memallop(ipnim2, win(1)*win(2), 'i')
+        call memallox(ipim2,  npixels, 'r')
+        call memallox(ipnim2, npixels, 'i')
       endif
-      if (mskin.ne.' ') call memallop(ipimm,  win(1)*win(2), 'l')
+      if (mskin.ne.' ') call memallox(ipimm,  npixels, 'l')
 
 c     Compute contour levels for each contour image.
       if (ncon.gt.0) then
@@ -1082,13 +1083,13 @@ c       Page plot device.
 c     Close down.
       call pgend
 
-      call memfrep(ipim,  win(1)*win(2), 'r')
-      call memfrep(ipnim, win(1)*win(2), 'i')
+      call memfrex(ipim,  npixels, 'r')
+      call memfrex(ipnim, npixels, 'i')
       if (vin(1).ne.' '  .and. vin(2).ne.' ') then
-        call memfrep(ipim2,  win(1)*win(2), 'r')
-        call memfrep(ipnim2, win(1)*win(2), 'i')
+        call memfrex(ipim2,  npixels, 'r')
+        call memfrex(ipnim2, npixels, 'i')
       endif
-      if (mskin.ne.' ') call memfrep(ipimm, win(1)*win(2), 'i')
+      if (mskin.ne.' ') call memfrep(ipimm, npixels, 'i')
 
       do i = 1, ncon
         call coFin(lc(i))

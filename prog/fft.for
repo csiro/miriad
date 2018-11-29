@@ -38,7 +38,7 @@ c       Output amplitude image.  Default is not to write it.
 c@ phase
 c       Output phase image.  Default is not to write it.
 c
-c$Id: fft.for,v 1.5 2012/04/11 06:34:50 cal103 Exp $
+c$Id: fft.for,v 1.6 2018/11/29 23:30:11 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -48,7 +48,7 @@ c-----------------------------------------------------------------------
       include 'mem.h'
 
       logical   doflag
-      integer   cData, Center1, Center2, Data, Sgn, dims(MAXNAX), i,
+      integer   Center1, Center2, Sgn, dims(MAXNAX), i,
      *          lMag, lPhase, liIn, liOut, lrIn, lrOut, n1, n2, naxis,
      *          nin(MAXNAX), nout(MAXNAX)
       real      temp
@@ -58,11 +58,12 @@ c-----------------------------------------------------------------------
       external  hdprsnt, Inc3More, nextpow2, versan
       logical   hdprsnt, Inc3More
       integer   nextpow2
+      ptrdiff   Data, cData, npix
       character versan*72
 c-----------------------------------------------------------------------
       version = versan('fft',
-     *                 '$Revision: 1.5 $',
-     *                 '$Date: 2012/04/11 06:34:50 $')
+     *                 '$Revision: 1.6 $',
+     *                 '$Date: 2018/11/29 23:30:11 $')
 
 c     Get the input parameters.
       call keyini
@@ -158,8 +159,9 @@ c     Open the output files.
       endif
 
 c     Allocate memory.
-      if (liIn.eq.0) call MemAlloc(Data,n1*n2,'r')
-      call MemAlloc(cData,n1*n2,'c')
+      npix = 1_8 * n1 * n2
+      if (liIn.eq.0) call MemAllox(Data,npix,'r')
+      call MemAllox(cData,npix,'c')
 
 c     Loop FFTing each plane and writing it out.
       call IncIni(naxis,nin,dims)
@@ -175,13 +177,13 @@ c     Loop FFTing each plane and writing it out.
 
         if (liIn.eq.0) then
           call GetPlR(memR(Data),nin(1),nin(2),n1,n2,lrIn,doflag)
-          if (Sgn.eq.1) call Scale(memR(Data),n1*n2,1.0/real(n1*n2))
+          if (Sgn.eq.1) call Scale(memR(Data),npix,1.0/real(npix))
           call FFTRC2(memR(Data),memC(cData),n1,n2,Sgn,
      *                                        Center1,Center2)
         else
           call GetPlC(memC(cData),nin(1),nin(2),
      *                                n1,n2,lrIn,liIn,doflag)
-          if (Sgn.eq.1) call Scale(memC(cData),2*n1*n2,1.0/real(n1*n2))
+          if (Sgn.eq.1) call Scale(memC(cData),2*npix,1.0/real(npix))
           call FFTCC2(MemC(cData),n1,n2,Sgn,Center1,Center2)
         endif
 
@@ -189,8 +191,8 @@ c     Loop FFTing each plane and writing it out.
       enddo
 
 c     Finish up.
-      if (liIn.eq.0) call MemFree(Data,n1*n2,'r')
-      call MemFree(cData,n1*n2,'c')
+      if (liIn.eq.0) call MemFrex(Data,npix,'r')
+      call MemFrex(cData,npix,'c')
 
       call xyclose(lrIn)
       if (liIn.ne.0) call xyclose(liIn)
@@ -205,7 +207,7 @@ c***********************************************************************
 
       subroutine Scale(rData,n,factor)
 
-      integer n
+      ptrdiff n
       real    rData(n), factor
 c-----------------------------------------------------------------------
 c  Scale the image by a factor.
@@ -216,7 +218,7 @@ c    factor     The scale factor.
 c  Input/Output:
 c    rData      The data to be scaled.
 c-----------------------------------------------------------------------
-      integer i
+      ptrdiff i
 c-----------------------------------------------------------------------
       do i = 1, n
         rData(i) = factor * rData(i)
