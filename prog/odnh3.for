@@ -45,7 +45,7 @@ c       No default.
 c@ out
 c       Name of the output image.  No default.
 c
-c$Id: odnh3.for,v 1.5 2013/08/30 01:49:21 wie017 Exp $
+c$Id: odnh3.for,v 1.6 2018/11/29 23:35:24 wie017 Exp $
 c--
 c  The optical depth of the NH3(1,1) line is calculated from hyperfine
 c  ratios using a lookup table to invert the equation:
@@ -95,10 +95,11 @@ c-----------------------------------------------------------------------
       parameter (LOWI=1, HIGHI=180)
 
       logical   doMask, doRuns
-      integer   boxes(MAXBOX), counter, high, i, idx, j, lout, low,
+      integer   boxes(MAXBOX), counter, high, i, j, lout, low,
      *          maskbuf(BUFLEN), n, nBuf, nMRB, nout(2), npixels, run,
      *          runmax, runmin, scratch(3,MAXRUNS), size1(2), size2(2),
      *          size3(2), type, xblc, xtrc, yblc, ytrc, ZRow
+      ptrdiff   idx
       real      buf1(512), buf2(512), buf3(512), exptau, f, frac,
      *          logterm1, logterm2, maskrbuf(BUFLEN), R(500),
      *          rbuf(RBUFLEN), Robs, tau(500), tauobs, tempobs, tout
@@ -111,8 +112,8 @@ c-----------------------------------------------------------------------
       external  boxrect, fill, paction, vaction, versan
 c-----------------------------------------------------------------------
       version = versan('odnh3',
-     *                 '$Revision: 1.5 $',
-     *                 '$Date: 2013/08/30 01:49:21 $')
+     *                 '$Revision: 1.6 $',
+     *                 '$Date: 2018/11/29 23:35:24 $')
 c
 c  Get the input parameters.
 c
@@ -257,8 +258,8 @@ c
           npixels = Fill(Runs,nRuns)
           if (npixels.gt.0) then
             if (nMRB.gt.0) call MoveData(MaskRBuf,nMRB,RBuf)
-            call ariExec(vaction,npixels,MaskBuf,BUFLEN,RBuf,RBUFLEN,
-     *                                                idx)
+            call ariExec(vaction,npixels+0_8,MaskBuf,BUFLEN,RBuf,
+     *        RBUFLEN+0_8,idx)
             call CompRuns(RBuf(idx),
      *                    Runs,maxRuns,nRuns,Scratch,MaxRuns)
           endif
@@ -640,7 +641,8 @@ c***********************************************************************
 
       subroutine vaction(idx,Type,Data,N)
 
-      integer idx,Type,N
+      integer idx,Type
+      ptrdiff N
       real Data(*)
 c-----------------------------------------------------------------------
 c  This routine is called by ariExec each time it wants a row of a
@@ -655,7 +657,8 @@ c    Data       The row of data.
 c
 c-----------------------------------------------------------------------
       include 'maths.h'
-      integer i,j,k,npixel,ZRow
+      integer i,j,ZRow
+      ptrdiff npixel, k
       real cdelt,crval,temp
 c-----------------------------------------------------------------------
 c
