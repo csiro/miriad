@@ -93,16 +93,19 @@ c       default is 0,1.
 c@ options
 c       Extra processing options.  Several can be given, separated by
 c       commas.  Minimum match is used.
-c         grow    Allow inputs to "grow" extra axes, if needed,
-c                 through replication.  For example, if the expression
-c                 subtracts a single-plane image from a cube,
-c                 options=grow allows the operation to proceed by first
-c                 growing the image into a cube through replication the
-c                 plane.  Normally (i.e. without this option), MATHS
-c                 insists that the inputs must be identical in size.
-c         unmask  Treat all pixels as if they were valid.
+c         grow     Allow inputs to "grow" extra axes, if needed,
+c                  through replication.  For example, if the expression
+c                  subtracts a single-plane image from a cube,
+c                  options=grow allows the operation to proceed by first
+c                  growing the image into a cube through replication the
+c                  plane.  Normally (i.e. without this option), MATHS
+c                  insists that the inputs must be identical in size.
+c         unmask   Treat all pixels as if they were valid.
+c         limitmem Limit the amount of memory used. This may give
+c                  a buffer overflow error for complicated expressions.
+c                  Use for simple expressions with very large images.
 c
-c$Id: maths.for,v 1.6 2018/11/29 03:41:27 wie017 Exp $
+c$Id: maths.for,v 1.7 2018/11/29 23:34:06 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -114,11 +117,13 @@ c-----------------------------------------------------------------------
       integer BUFLEN, MAXBOX
       parameter (BUFLEN=256, MAXBOX=2048)
 
-      logical   doExp, doMask, doRuns, unmask
-      integer   boxes(MAXBOX), expbuf(BUFLEN), i, idx, k, l, lout,
-     *          maskbuf(BUFLEN), nBuf, nERB, nMRB, nout(MAXNAX),
-     *          npixels, pnt, rbuflen, scratch(3,MAXRUNS), type, xblc,
+      logical   doExp, doMask, doRuns, unmask, limitmem
+      integer   boxes(MAXBOX), i, k, l, lout,
+     *          nBuf, nERB, nMRB, nout(MAXNAX),
+     *          scratch(3,MAXRUNS), type, xblc,
      *          xtrc, yblc, ytrc
+      ptrdiff   pnt, rbuflen, idx, npixels
+      integer   expbuf(BUFLEN),maskbuf(BUFLEN)
       real      exprbuf(BUFLEN), maskrbuf(BUFLEN), RBUF(MAXBUF)
       character expr*256, mask*256, outNam*64, template*64, version*72
 
@@ -129,12 +134,12 @@ c-----------------------------------------------------------------------
       character versan*72
 c-----------------------------------------------------------------------
       version = versan('maths',
-     *                 '$Revision: 1.6 $',
-     *                 '$Date: 2018/11/29 03:41:27 $')
+     *                 '$Revision: 1.7 $',
+     *                 '$Date: 2018/11/29 23:34:06 $')
 
 c     Get input parameters.
       call keyini
-      call getopt(grow,unmask)
+      call getopt(grow,unmask,limitmem)
       call keya('exp',Expr,' ')
       call keya('mask',Mask,' ')
       call keya('out',outNam,' ')
@@ -162,7 +167,8 @@ c     Parse the expression and mask.
       Zused = .false.
       nfiles = 0
       if (doExp) then
-        call ariComp(expr,PACTION,type,ExpBuf,BUFLEN,ExpRBuf,BUFLEN)
+        call ariComp(expr,PACTION,type,ExpBuf,BUFLEN,ExpRBuf,
+     *    BUFLEN)
         if (type.eq.error) call bug('f',
      *       'Error parsing the expression: ' // expr)
         if (type.ne.vector) call bug('f',
@@ -171,7 +177,8 @@ c     Parse the expression and mask.
       endif
 
       if (doMask) then
-        call ariComp(Mask,PACTION,type,MaskBuf,BUFLEN,MaskRBuf,BUFLEN)
+        call ariComp(Mask,PACTION,type,MaskBuf,BUFLEN,MaskRBuf,
+     *    BUFLEN)
         if (type.eq.error) call bug('f',
      *        'Error parsing the mask expression: ' // mask)
         if (type.ne.vector) call bug('f',
@@ -233,8 +240,14 @@ c     Handle naxis > 4.
       enddo
 
 c     Allocate memory.
-      rbuflen = 6*nOut(1)*nOut(2)
-      call memalloc(pnt,rbuflen,'r')
+c     For large images this can be excessive, so limit this if requested
+c
+      if (limitmem) then
+        rbuflen = 2_8*nOut(1)*nOut(2) + 1024
+      else
+        rbuflen = 6_8*nOut(1)*nOut(2)
+      endif
+      call memallox(pnt,rbuflen,'r')
       idx = pnt
 
 c     Open the output and create the header.
@@ -286,13 +299,13 @@ c       The boxes specification (if doRuns) is in boxes,
             endif
 
             call putPlane(lOut,runs,nRuns,
-     *         1-blc(1),1-blc(2),nOut(1),nOut(2),RBuf(idx),1_8*npixels)
+     *         1-blc(1),1-blc(2),nOut(1),nOut(2),RBuf(idx),npixels)
           endif
         enddo
       enddo
 
 c     Free allocated memory.
-      call memfree(pnt,rbuflen,'r')
+      call memfrex(pnt,rbuflen,'r')
 
 c     Close files.
       do i = 1, nfiles
@@ -483,7 +496,8 @@ c***********************************************************************
       subroutine PACTION(symbol, dType, idx, value)
 
       character symbol*(*)
-      integer   dType, idx
+      integer   dType
+      integer   idx
       real      value
 c-----------------------------------------------------------------------
 c The parser's action routine.  Open the file and make sure it's the
@@ -583,7 +597,8 @@ c***********************************************************************
 
       subroutine VACTION(idx, dType, rData, n)
 
-      integer   idx, dType, n
+      integer   idx, dType
+      ptrdiff   n
       real      rData(*)
 c-----------------------------------------------------------------------
 c  This routine is called by ariExec each time it wants a row of a
@@ -601,9 +616,9 @@ c-----------------------------------------------------------------------
       integer    VECTOR
       parameter (VECTOR=3)
 
-      integer   i, j, k, npixel
+      integer   i, j
+      ptrdiff   npixel, k
       real      cdelt, crval, temp
-      ptrdiff   n8
 c-----------------------------------------------------------------------
       if (dType.ne.VECTOR) call bug('f',
      *  'VACTION called with non-vector type')
@@ -643,8 +658,7 @@ c     Fill in data if it corresponds to a value of x, y or z.
       else
 c       Otherwise read it from a file.
         call getPlane(lIn(idx),runs,nRuns,0,0,nsize(1),nsize(2),
-     *    rData,n*1_8,n8)
-        npixel = n8
+     *    rData,n,npixel)
         if (n.ne.npixel) call bug('f','Something is screwy in VACTION')
       endif
 
@@ -652,20 +666,21 @@ c       Otherwise read it from a file.
 
 c***********************************************************************
 
-      subroutine getopt(grow,unmask)
+      subroutine getopt(grow,unmask,limitmem)
 
-      logical grow,unmask
+      logical grow,unmask,limitmem
 c
 c-----------------------------------------------------------------------
       integer NOPTS
-      parameter (NOPTS=2)
+      parameter (NOPTS=3)
       character opts(NOPTS)*8
       logical present(NOPTS)
-      data opts/'grow    ','unmask  '/
+      data opts/'grow    ','unmask  ','limitmem'/
 c-----------------------------------------------------------------------
       call options('options',opts,present,NOPTS)
 
       grow = present(1)
       unmask = present(2)
+      limitmem = present(3)
 
       end
