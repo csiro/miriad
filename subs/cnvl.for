@@ -22,7 +22,7 @@ c                 for a start.
 c    rjs  31oct94 Added CnvlExt, plus some comments.
 c    mhw  27oct11  Use ptrdiff type for memory allocations
 c
-c $Id: cnvl.for,v 1.5 2012/06/13 00:44:40 wie017 Exp $
+c $Id: cnvl.for,v 1.6 2018/11/29 22:50:56 wie017 Exp $
 
 c***********************************************************************
 c* CnvlIniF -- Ready a beam, from a file, for a convolution operation.
@@ -65,8 +65,8 @@ c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mem.h'
 c
-      integer n1d,n2d,space,xr,yr
-      ptrdiff Trans,CDat1,CDat2
+      integer n1d,n2d,xr,yr
+      ptrdiff space,Trans,CDat1,CDat2
 c
 c  Initalise.
 c
@@ -81,7 +81,7 @@ c
 c
 c  All said and done. Release allocated memory, and return.
 c
-      call MemFrep(Trans,space,'r')
+      call MemFrex(Trans,space,'r')
       end
 
 c***********************************************************************
@@ -123,8 +123,8 @@ c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mem.h'
 c
-      integer n1d,n2d,space,xr,yr
-      ptrdiff Trans,CDat1,CDat2
+      integer n1d,n2d,xr,yr
+      ptrdiff space,Trans,CDat1,CDat2
 c
 c  Initalise.
 c
@@ -139,7 +139,7 @@ c
 c
 c  All said and done. Release allocated memory, and return.
 c
-      call MemFrep(Trans,space,'r')
+      call MemFrex(Trans,space,'r')
       end
 
 c***********************************************************************
@@ -148,12 +148,14 @@ c& mrc
 c: convolution,FFT
 c+
       subroutine CnvlIniG (handle, n1, n2, ref1, ref2,
-     *                 bmaj, bmin, bpa, cdelt1, cdelt2)
+     *                 bmaj, bmin, bpa, cdelt1, cdelt2,param,flags)
 c
       ptrdiff handle
       integer n1, n2, ref1, ref2
       real    bmaj, bmin, bpa
       double precision cdelt1, cdelt2
+      character flags*(*)
+      real param
 c
 c  This routine constructs the Fourier transform of a Gaussian beam
 c  pattern intended for use in convolution operations.  It computes the
@@ -171,6 +173,17 @@ c    bmaj,bmin  Gaussian major and minor FWHM (radian).
 c    bpa        Gaussian position angle (deg).
 c    cdelt1     Map cell spacing (radian).
 c    cdelt2     Map cell spacing (radian).
+c    param      A real parameter value. Its use is determined by the
+c               "flags" argument.
+c    flags      Extra processing flags, each character indicating
+c               another processing option.  Possible values are:
+c                 's'   Assume beam is symmetric.
+c                 'p'   Param is the value of a Prussian hat to add to
+c                       the beam.
+c                 'd'   Perform deconvolution (rather than convolution).
+c                       Param is the nominal error in the beam.
+c                 'e'   Double the size of the beam (through zero
+c                       padding) to avoid various edge effects.
 c  Output:
 c    handle     Handle to the transformed Gaussian.
 c--
@@ -179,16 +192,19 @@ c-----------------------------------------------------------------------
       include 'mem.h'
       include 'mirconst.h'
 
-      ptrdiff Trans, CDat1, CDat2, k
-      integer i, i1, i2, n1d, n2d, space, xr, yr
+      ptrdiff Trans, CDat1, CDat2, k, space
+      integer i, i1, i2, n1d, n2d, xr, yr
       real    amaj, amin, c2, fdelt1, fdelt2, fmaj, fmin,
      *        r, s, s2, scl, sxx, syy, sxy, t
+      logical deconv
+
+      deconv = index(flags,'d').ne.0
 
 c-----------------------------------------------------------------------
 c     Initalize.
       call CnvlIn0(handle,n1,n2,n1d,n2d,space,
      *    Trans,CDat1,CDat2,'s',ref1,ref2,xr,yr)
-      call MemFrep (Trans, space, 'r')
+      call MemFrex (Trans, space, 'r')
 
 c     Parameters of the convolving Gaussian.
       amaj = 4.0*log(2.0) / (bmaj*bmaj)
@@ -198,7 +214,6 @@ c     Parameters of the Fourier-transform of the convolving Gaussian.
       fmaj = pi*pi / amaj
       fmin = pi*pi / amin
       scl  = pi / sqrt(amaj*amin)
-
       c2  = cos(2.0*bpa*D2R)
       s2  = sin(2.0*bpa*D2R)
       sxx = 0.5 * (fmaj*(1.0 - c2) + fmin*(1.0 + c2))
@@ -211,7 +226,12 @@ c     Apply pixel spacing in the Fourier domain.
       sxx = sxx * (fdelt1*fdelt1)
       syy = syy * (fdelt2*fdelt2)
       sxy = sxy * (fdelt1*fdelt2)
-      scl = scl * abs(fdelt1*fdelt2)
+      if(deconv)then
+        scl = scl / abs(cdelt1*cdelt2)
+        scl = 1. / (scl*n1d*n2d)
+      else
+        scl = scl * abs(fdelt1*fdelt2)
+      endif      
 
 c     Generate the Fourier transform of the convolving Gaussian noting
 c     that the array is transposed.
@@ -227,7 +247,11 @@ c     that the array is transposed.
           if (t.gt.20.0) then
             memR(k) = 0.0
           else
-            memR(k) = scl * exp(-t)
+            if(deconv) then
+              memR(k) = scl / (exp(-t) + param)
+            else
+              memR(k) = scl * exp(-t)
+            endif
           endif
 
           k = k + 1
@@ -258,7 +282,8 @@ c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mem.h'
 c
-      integer n1,n2,space
+      integer n1,n2
+      ptrdiff space
       logical sym
 c
 c  Determine whats what.
@@ -269,10 +294,10 @@ c
 c
 c  Allocate the memory.
 c
-      space = (n1+2)*n2
+      space = (n1+2_8)*n2
       if(sym) space = space/2
       space = space + 6
-      call MemAllop(out,space,'r')
+      call MemAllox(out,space,'r')
 c
 c  Now copy it across.
 c
@@ -310,7 +335,8 @@ c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mem.h'
 c
-      integer n1,n2,n
+      integer n1,n2
+      ptrdiff n
       logical sym1,sym2,corr
 c
       n1 = nint(memR(Handle1+2))
@@ -322,7 +348,7 @@ c
       sym2 = nint(memR(Handle2+4)).ne.0
       corr = index(flags,'x').ne.0
 c
-      n = (n1/2+1)*n2
+      n = (n1/2+1_8)*n2
       if(sym2)then
         if(sym1)then
           call CnvlMRR(memR(Handle1+6),memR(Handle2+6),n)
@@ -343,7 +369,7 @@ c
 c  Scale the output beam to the correct value.
 c
       if(.not.sym1)n = n + n
-      call CnvlScal(real(n1*n2),memR(Handle1+6),n)
+      call CnvlScal(real(n1)*n2,memR(Handle1+6),n)
 c
       end
 
@@ -351,8 +377,8 @@ c***********************************************************************
       subroutine CnvlIn0(handle,n1,n2,n1d,n2d,space,
      *        Trans,CDat1,CDat2,flags,ic,jc,xr,yr)
 c
-      ptrdiff handle,Trans,CDat1,CDat2
-      integer space,ic,jc,xr,yr,n1,n2,n1d,n2d
+      ptrdiff handle,Trans,CDat1,CDat2,space
+      integer ic,jc,xr,yr,n1,n2,n1d,n2d
       character flags*(*)
 c
 c  Initialise ready for getting the transform of the beam.
@@ -389,10 +415,10 @@ c
 c
 c  Allocate and initialise space for the FFT of the beam.
 c
-      space = (n1d+2)*n2d
+      space = (n1d+2_8)*n2d
       if(sym) space = space/2
       space = space + 6
-      call MemAllop(handle,space,'r')
+      call MemAllox(handle,space,'r')
       memR(handle)   = n1
       memR(handle+1) = n2
       memR(handle+2) = n1d
@@ -402,9 +428,9 @@ c
 c
 c  Allocate space to transform the beam.
 c
-      space = (n1d+2)*n2 + 4*max(n1d,n2d)
-      call MemAllop(Trans,space,'r')
-      CDat1 = Trans + (n1d+2)*n2
+      space = (n1d+2_8)*n2 + 4*max(n1d,n2d)
+      call MemAllox(Trans,space,'r')
+      CDat1 = Trans + (n1d+2_8)*n2
       CDat2 = CDat1 + 2*max(n1d,n2d)
 c
 c  Determine the shift to apply to the beam.
@@ -428,13 +454,14 @@ c
 c  Perform the second pass of the beam FFT.
 c
 c-----------------------------------------------------------------------
-      integer i,j,n,j1,j2,k
+      integer i,j,n,j1,j2
+      ptrdiff k
       real param2,temp,factor
       logical sym,phat,deconv
 c
 c  Various constants.
 c
-      temp = 1/real(n1d*n2d)
+      temp = 1/real(1_8*n1d*n2d)
       param2 = param*param
       sym    = index(flags,'s').ne.0
       phat   = index(flags,'p').ne.0.and.param.ne.0
@@ -467,7 +494,7 @@ c
         enddo
         call fftcc(CDat1,CDat2,-1,n2d)
 c
-c  If its deconvolution, then work out the Weiner filter.
+c  If its deconvolution, then work out the Wiener filter.
 c
         if(deconv)then
           do j=1,n2d
@@ -507,7 +534,7 @@ c
       ptrdiff handle 
       integer nx,ny
       character flags*(*)
-      real in(nx*ny),out(*)
+      real in(1_8*nx*ny),out(*)
 c
 c  This convolves, or correlates, an image by a beam pattern.  The input
 c  image is passed in as an array. The beam pattern is passed in as a
@@ -542,8 +569,8 @@ c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mem.h'
 c
-      integer n1,n2,n1a,n2a,n1d,n2d,xr,yr,space
-      ptrdiff Trans,CDat1,CDat2
+      integer n1,n2,n1a,n2a,n1d,n2d,xr,yr
+      ptrdiff Trans,CDat1,CDat2,space
       logical sym,compr,corr
 c
 c  Initialise.
@@ -574,7 +601,7 @@ c
 c
 c  Bring home the bacon.
 c
-      call MemFrep(Trans,space,'r')
+      call MemFrex(Trans,space,'r')
       end
 
 c***********************************************************************
@@ -622,8 +649,8 @@ c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mem.h'
 c
-      integer n1,n2,n1a,n2a,n1d,n2d,xr,yr,space
-      ptrdiff Trans,CDat1,CDat2
+      integer n1,n2,n1a,n2a,n1d,n2d,xr,yr
+      ptrdiff Trans,CDat1,CDat2,space
       logical sym,compr,corr
 c
 c  Initialise.
@@ -654,7 +681,7 @@ c
 c
 c  Bring home the bacon.
 c
-      call MemFrep(Trans,space,'r')
+      call MemFrex(Trans,space,'r')
       end
 
 c***********************************************************************
@@ -706,8 +733,8 @@ c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mem.h'
 c
-      integer n1,n2,n1a,n2a,n1d,n2d,xr,yr,space
-      ptrdiff Trans,CDat1,CDat2
+      integer n1,n2,n1a,n2a,n1d,n2d,xr,yr
+      ptrdiff Trans,CDat1,CDat2,space
       logical sym,compr,corr
 c
 c  Initialise.
@@ -735,7 +762,7 @@ c
 c
 c  Bring home the bacon.
 c
-      call MemFrep(Trans,space,'r')
+      call MemFrex(Trans,space,'r')
       end
 
 c***********************************************************************
@@ -776,8 +803,8 @@ c***********************************************************************
       subroutine Cnvl0(handle,nx,ny,n1,n2,n1a,n2a,n1d,n2d,space,
      *  Trans,CDat1,CDat2,flags,sym,compr,corr,xr,yr)
 c
-      integer nx,ny,n1,n2,n1a,n2a,n1d,n2d,xr,yr,space
-      ptrdiff handle,Trans,CDat1,CDat2
+      integer nx,ny,n1,n2,n1a,n2a,n1d,n2d,xr,yr
+      ptrdiff handle,Trans,CDat1,CDat2,space
       character flags*(*)
       logical sym,compr,corr
 c
@@ -835,16 +862,16 @@ c
 c  Allocate work space.
 c
       if(compr)then
-        space = (n1d+2)*ny + 4*max(n1d,n2d)
+        space = (n1d+2_8)*ny + 4*max(n1d,n2d)
       else
-        space = (n1d+2)*n2 + 4*max(n1d,n2d)
+        space = (n1d+2_8)*n2 + 4*max(n1d,n2d)
       endif
 c
-      call MemAllop(Trans,space,'r')
+      call MemAllox(Trans,space,'r')
       if(compr)then
-        CDat1 = Trans + (n1d+2)*ny
+        CDat1 = Trans + (n1d+2_8)*ny
       else
-        CDat1 = Trans + (n1d+2)*n2
+        CDat1 = Trans + (n1d+2_8)*n2
       endif
       CDat2 = CDat1 + 2*max(n1d,n2d)
       end
@@ -948,7 +975,8 @@ c  Do the first pass of the transform of an image, the image being in
 c  memory in "runs" format.
 c
 c-----------------------------------------------------------------------
-      integer i,j,i1,i2,k,n,nd,nzero,pnt
+      integer i,j,i1,i2,k,n,nd,nzero
+      ptrdiff pnt
 c
 c  Do the first pass of reading the image, shifting it and transforming
 c  it.
@@ -1033,10 +1061,13 @@ c
       complex Trans(n1/2+1,n2a),CDat1(n2d),CDat2(n2d)
       logical sym,corr
       real Beam(*)
+      character*(6) itoaf
+      external itoaf
 c
 c  Perform the second and third FFTs, returning the result in Trans.
 c-----------------------------------------------------------------------
-      integer i,j,k,j1,j2,n,n0
+      integer i,j,j1,j2,n,n0
+      ptrdiff k
 c
 c  Zero out some locations that are never otherwise assigned to.
 c
@@ -1073,13 +1104,13 @@ c
 c  Multiply by the beam.
 c
         if(sym)then
-          call CnvlMCR(CDat2,Beam(k),n2d)
+          call CnvlMCR(CDat2,Beam(k),n2d*1_8)
           k = k + n2d
         else if(corr)then
-          call CnvlMCCc(CDat2,Beam(k),n2d)
+          call CnvlMCCc(CDat2,Beam(k),n2d*1_8)
           k = k + n2d + n2d
         else
-          call CnvlMCC(CDat2,Beam(k),n2d)
+          call CnvlMCC(CDat2,Beam(k),n2d*1_8)
           k = k + n2d + n2d
         endif
 c
@@ -1132,7 +1163,8 @@ c  The final Fourier transform of the rows to get the convolved image,
 c  storing the convolved image in "runs" form.
 c
 c-----------------------------------------------------------------------
-      integer i,j,k,j0,pnt
+      integer i,j,k,j0
+      ptrdiff pnt
 c
       pnt = 1
       j0 = 0
@@ -1172,28 +1204,29 @@ c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mem.h'
 c
-      integer n1d,n2d,space
+      integer n1d,n2d
+      ptrdiff space
       logical sym
 c
       n1d = nint(memR(handle+2))
       n2d = nint(memR(handle+3))
       sym = nint(memR(handle+4)).gt.0
 c
-      space = (n1d+2)*n2d
+      space = (n1d+2_8)*n2d
       if(sym) space = space/2
       space = space + 6
-      call MemFrep(handle,space,'r')
+      call MemFrex(handle,space,'r')
       end
 
 c***********************************************************************
       subroutine CnvlCpy(in,out,n)
 c
-      integer n
+      ptrdiff n
       real in(n),out(n)
 c
 c  Copy a real valued array to a real valued array.
 c-----------------------------------------------------------------------
-      integer i
+      ptrdiff i
 c
       do i=1,n
         out(i) = in(i)
@@ -1204,12 +1237,12 @@ c
 c***********************************************************************
       subroutine CnvlScal(factor,in,n)
 c
-      integer n
+      ptrdiff n
       real factor,in(n)
 c
 c  Scale the input array.
 c-----------------------------------------------------------------------
-      integer i
+      ptrdiff i
 c
       do i=1,n
         in(i) = factor * in(i)
@@ -1251,13 +1284,13 @@ c-----------------------------------------------------------------------
 c***********************************************************************
       subroutine CnvlMCR(in,beam,n)
 c
-      integer n
+      ptrdiff n
       complex in(n)
       real beam(n)
 c
-c  Move a complex valued array to a real valued array.
+c  Multiply a complex valued array to a real valued array.
 c-----------------------------------------------------------------------
-      integer i
+      ptrdiff i
       do i=1,n
         in(i) = in(i) * beam(i)
       enddo
@@ -1266,12 +1299,12 @@ c-----------------------------------------------------------------------
 c***********************************************************************
       subroutine CnvlMRR(in,beam,n)
 c
-      integer n
+      ptrdiff n
       real in(n), beam(n)
 c
 c  Multiply a real valued array to a real valued array.
 c-----------------------------------------------------------------------
-      integer i
+      ptrdiff i
       do i=1,n
         in(i) = in(i) * beam(i)
       enddo
@@ -1280,12 +1313,12 @@ c-----------------------------------------------------------------------
 c***********************************************************************
       subroutine CnvlMCC(in,beam,n)
 c
-      integer n
+      ptrdiff n
       complex in(n), beam(n)
 c
 c  Multiply a complex valued array to a complex valued array.
 c-----------------------------------------------------------------------
-      integer i
+      ptrdiff i
       do i=1,n
         in(i) = in(i) * beam(i)
       enddo
@@ -1294,13 +1327,13 @@ c-----------------------------------------------------------------------
 c***********************************************************************
       subroutine CnvlMCCc(in,beam,n)
 c
-      integer n
+      ptrdiff n
       complex in(n)
       complex beam(n)
 c
 c  Multiply a complex valued array to a complex valued array.
 c-----------------------------------------------------------------------
-      integer i
+      ptrdiff i
       do i=1,n
         in(i) = in(i) * conjg(beam(i))
       enddo
