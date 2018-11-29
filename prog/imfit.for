@@ -101,7 +101,7 @@ c         residual The output data-set is the residual image.
 c                  If an output is being created, the default is to make
 c                  this the fitted model.
 c
-c$Id: imfit.for,v 1.13 2015/08/07 00:18:50 wie017 Exp $
+c$Id: imfit.for,v 1.14 2018/11/29 02:59:28 wie017 Exp $
 c--
 c  History:
 c    mchw 22apr94 new task.
@@ -143,7 +143,8 @@ c-----------------------------------------------------------------------
       logical dores,inten,defsrc,doOut,dofit
       integer ifail1,ifail2,lIn,lOut
       integer Boxes(MAXBOX)
-      integer blc(3),trc(3),nin(3),nout(MAXNAX),naxis,k,m,nvar,iax
+      integer blc(3),trc(3),nin(3),nout(MAXNAX),naxis,k,nvar,iax
+      ptrdiff m
       double precision dpol
 
 c     Externals.
@@ -152,8 +153,8 @@ c     Externals.
       external FUNCTION
 c-----------------------------------------------------------------------
       version = versan ('imfit',
-     *                '$Revision: 1.13 $',
-     *                '$Date: 2015/08/07 00:18:50 $')
+     *                '$Revision: 1.14 $',
+     *                '$Date: 2018/11/29 02:59:28 $')
 
 c     Get the input parameters.
       call keyini
@@ -545,7 +546,8 @@ c     Write history.
 c***********************************************************************
       subroutine LoadDat(lIn,Boxes,k,n1,n2,clip,inten,m)
 
-      integer lIn,Boxes(*),m,k,n1,n2
+      integer lIn,Boxes(*),k,n1,n2
+      ptrdiff m
       real clip
       logical inten
 
@@ -568,7 +570,7 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
       call BoxRuns(1,k,' ',boxes,Runs,MAXRUNS,nRuns,
      *                                xmin,xmax,ymin,ymax)
-      call GetPlane(lIn,Runs,nRuns,0,0,n1,n2,Data,MAXDATA,m)
+      call GetPlane(lIn,Runs,nRuns,0,0,n1,n2,Data,MAXDATA*1_8,m)
       if (m.eq.0) return
 c
 c  We have the data. Clip, if required, and fill out the x,y coordinate.
