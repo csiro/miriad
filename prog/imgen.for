@@ -15,6 +15,20 @@ c       The name of the output image.  The output image has the same
 c       characteristics as the input image, if present.  If no input
 c       image is given, the `imsize', `cell' and `radec' keywords give
 c       the characteristics of the output.  No default.
+c@ source
+c       The name of a text file containing the source components, one
+c       component per line for object = source.  The source components
+c       are elliptical Gaussian components.  Each line consists of
+c       six values:
+c         flux,dra,ddec,bmaj,bmin,bpa
+c       where
+c         flux:          Total flux in Jy.
+c         dra,ddec:      Position offset from the phase center in
+c                        arcsec.
+c         bmaj,bmin,bpa: The full width to half maximum of the major and
+c                        minor axes, and the position angle of the major
+c                        axis measured from north to the east.  The
+c                        default half width is 0."0001.
 c@ factor
 c       Factor to multiply the input image by. This is meaningless if no
 c       input image is given.  The default is 1.
@@ -34,6 +48,8 @@ c          jet        Jet model with power law brightness.
 c          shell      2D projection of an optically-thin spherical shell
 c          comet      2D projection of a parent molecule in comet.
 c          cluster    standard isothermal 2D projection for cluster gas.
+c          source     Use "source" file of elliptical Gaussians, but
+c                     must be the first object type specified.
 c@ spar
 c       Parameters which give the characteristics of the object. The
 c       parameters are given as a sequence of values, with one to six
@@ -54,6 +70,7 @@ c          jet                    amp,x,y,bmaj,bmin,pa
 c          shell                  amp,x,y,bmaj
 c          comet                  amp,x,y,scalelength
 c          cluster                amp,x,y,core radius
+c          source                 spar is completely ignored
 c
 c       Here "offset" is the offset level, "rms" is the rms value of the
 c       noise, "amp" is the normally peak value of the object (but see
@@ -91,13 +108,13 @@ c       Extra processing options. Several can be given, separated by
 c       commas. Minimum match is used. Possible values are:
 c         totflux  Interpret the "amp" values in the spar keyword as
 c                  total integrated flux densities (Normally the "amp"
-c                  parameters are interpretted as peak values).
+c                  parameters are interpreted as peak values).
 c@ seed
 c       Integer used to initialise the random number generator.  The
 c       same value of SEED produces the same noise, different values
 c       produce different noise.
 c
-c$Id: imgen.for,v 1.6 2011/10/24 06:35:38 cal103 Exp $
+c$Id: imgen.for,v 1.7 2018/11/29 23:32:11 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -107,7 +124,7 @@ c-----------------------------------------------------------------------
       include 'maxnax.h'
 
       integer    MAXOBJS, NOBJECTS
-      parameter (MAXOBJS = 3000, NOBJECTS = 11)
+      parameter (MAXOBJS = 3000000, NOBJECTS = 12)
 
       logical   totflux
       integer   i, j, k, lIn, lOut, n1, n2, n3, naxis, nobjs,
@@ -121,6 +138,9 @@ c-----------------------------------------------------------------------
      *          x1(3), x2(3)
       character in*80, out*80, objects(NOBJECTS)*8, objs(MAXOBJS)*8,
      *          version*72
+      real flux,dra,ddec,wmaj,wmin,wpa
+      character sfile*64,stcat*80,itoaf*8,line*132, msg*80
+      integer tinNext
 
       external  keyprsnt, versan
       logical   keyprsnt
@@ -128,11 +148,11 @@ c-----------------------------------------------------------------------
 
       data objects/'level   ', 'noise   ', 'point   ', 'gaussian',
      *             'disk    ', 'j1x     ', 'shell   ', 'comet   ',
-     *             'cluster ', 'gauss3  ', 'jet     '/
+     *             'cluster ', 'gauss3  ', 'jet     ', 'source  '/
 c-----------------------------------------------------------------------
       version = versan('imgen',
-     *                 '$Revision: 1.6 $',
-     *                 '$Date: 2011/10/24 06:35:38 $')
+     *                 '$Revision: 1.7 $',
+     *                 '$Date: 2018/11/29 23:32:11 $')
 c
 c  Get the parameters from the user.
 c
@@ -146,52 +166,88 @@ c
         nobjs = 1
       endif
       if (keyprsnt('object')) call bug('f','Too many object for me!')
+      call GetOpt(totflux)
+      msg = ' '
+
 c
 c  Get the source parameters.
 c
-      do i = 1, nobjs
-        call keyr('spar',amp(i),1.0)
-        if (objs(i).ne.'level' .and. objs(i).ne.'noise') then
-          call keyr('spar',x(i),0.0)
-          call keyr('spar',y(i),0.0)
-          x(i) = x(i)*AS2R
-          y(i) = y(i)*AS2R
-        else
-          x(i) = 0
-          y(i) = 0
-        endif
-        if (objs(i).eq.'gauss3') call keyr('spar',z(i),0.0)
-        if (objs(i)(1:5).eq.'gauss' .or. objs(i).eq.'disk' .or.
-     *     objs(i).eq.'j1x' .or. objs(i).eq.'jet') then
-          call keyr('spar',fwhm1(i), 5.0)
-          call keyr('spar',fwhm2(i), 5.0)
-          call keyr('spar',posang(i),0.0)
-          if (objs(i).ne.'jet') then
-            fwhm1(i) = fwhm1(i)*AS2R
-            fwhm2(i) = fwhm2(i)*AS2R
-            if (min(fwhm1(i),fwhm2(i)).le.0)
-     *      call bug('f','BMAJ and BMIN parameters must be positive')
+      if(objs(1).eq.'source')then
+        call keya('source',sfile,' ')
+        if(sfile.eq.' ')call 
+     *       bug('f','Option source: A source table must be given')
+        totflux = .TRUE.
+        nobjs = 0
+        call tinOpen(sfile,' ')
+        dowhile(tinNext().gt.0)
+          call tinGetr(flux,0.0)
+          call tinGetr(dra,0.0)
+          call tinGetr(ddec,0.0)
+          call tinGetr(wmaj,0.0)
+          call tinGetr(wmin,0.0)
+          if (wmaj .eq. 0.) wmaj = 0.0001
+          if (wmin .eq. 0.) wmin = 0.0001
+          call tinGetr(wpa,0.0)
+          nobjs = nobjs + 1
+          if(nobjs.gt.MAXOBJS)
+     *        call bug('f','Max number of source components read')
+          amp(nobjs) = flux
+          x(nobjs) = dra  * pi/180/3600
+          y(nobjs) = ddec * pi/180/3600
+          fwhm1(nobjs) = wmaj * pi/180/3600
+          fwhm2(nobjs) = wmin * pi/180/3600
+          posang(nobjs)  =  wpa * pi/180
+          objs(nobjs) = 'gaussian'
+        enddo
+        call tinClose
+        line = stcat(itoaf(nobjs),' sources read from model')
+        call output(line)
+        msg = 'IMGEN: '//line
+      else        
+        do i = 1, nobjs
+          call keyr('spar',amp(i),1.0)
+          if (objs(i).ne.'level'.and. objs(i).ne.'noise') then
+            call keyr('spar',x(i),0.0)
+            call keyr('spar',y(i),0.0)
+            x(i) = x(i)*AS2R
+            y(i) = y(i)*AS2R
+          else
+            x(i) = 0
+            y(i) = 0
           endif
-          posang(i) = posang(i) * pi/180.0
-          if (objs(i).eq.'gauss3') call keyr('spar',fwhm3(i),5.0)
-        else if (objs(i).eq.'shell' .or. objs(i).eq.'comet') then
-          call keyr('spar',fwhm1(i),5.0)
-          fwhm1(i) = fwhm1(i)*AS2R
-          if (fwhm1(i).le.0)
-     *      call bug('f','BMAJ and BMIN parameters must be positive')
-          fwhm2(i) = fwhm1(i)
-          posang(i) = 0.0
-        else if (objs(i).eq.'cluster') then
-          call keyr('spar',fwhm1(i),50.0)
-          fwhm1(i) = fwhm1(i)*AS2R
-          fwhm2(i) = fwhm1(i)
-          posang(i) = 0.0
-        else
-          fwhm1(i)  = 0.0
-          fwhm2(i)  = 0.0
-          posang(i) = 0.0
-        endif
-      enddo
+          if (objs(i).eq.'gauss3') call keyr('spar',z(i),0.0)
+          if (objs(i)(1:5).eq.'gauss' .or. objs(i).eq.'disk' .or.
+     *     objs(i).eq.'j1x' .or. objs(i).eq.'jet') then
+            call keyr('spar',fwhm1(i), 5.0)
+            call keyr('spar',fwhm2(i), 5.0)
+            call keyr('spar',posang(i),0.0)
+            if (objs(i).ne.'jet') then
+              fwhm1(i) = fwhm1(i)*AS2R
+              fwhm2(i) = fwhm2(i)*AS2R
+              if (min(fwhm1(i),fwhm2(i)).le.0)
+     *     call bug('f','BMAJ and BMIN parameters must be positive')
+            endif
+            posang(i) = posang(i) * pi/180.0
+            if (objs(i).eq.'gauss3') call keyr('spar',fwhm3(i),5.0)
+          else if (objs(i).eq.'shell' .or. objs(i).eq.'comet') then
+            call keyr('spar',fwhm1(i),5.0)
+            fwhm1(i) = fwhm1(i)*AS2R
+            if (fwhm1(i).le.0)
+     *     call bug('f','BMAJ and BMIN parameters must be positive')
+            fwhm2(i) = fwhm1(i)
+            posang(i) = 0.0
+          else if (objs(i).eq.'cluster') then
+            call keyr('spar',fwhm1(i),50.0)
+            fwhm1(i) = fwhm1(i)*AS2R
+            fwhm2(i) = fwhm1(i)
+            posang(i) = 0.0
+          else
+            fwhm1(i)  = 0.0
+            fwhm2(i)  = 0.0
+            posang(i) = 0.0
+          endif
+        enddo
+      endif
 c
 c  Get parameters used to construct the output image (if needed).
 c
@@ -207,7 +263,6 @@ c
       crpix1 = dble(n1/2 + 1)
       crpix2 = dble(n2/2 + 1)
 
-      call GetOpt(totflux)
 
       call keyi('seed',seed,0)
 
@@ -274,7 +329,7 @@ c  Now open the output, and add a header to it.
 c
       call xyopen(lOut,Out,'new',naxis,nsize)
       call header(lIn,lOut,crpix1,crpix2,crval1,crval2,cdelt1,cdelt2,
-     *  bmaj,bmin,bpa,version)
+     *  bmaj,bmin,bpa,version,msg)
 c
 c  Convert to units that we want, namely x and y in grid coordinates
 c  and fwhm in pixels.
@@ -295,8 +350,8 @@ c       Convert offsets and Gaussian parameters to pixel coordinates.
           x1(2) = y(i)
           call coCvt(lOut,'ow/ow/ow',x1,'ap/ap/ap',x2)
 
-          xd(i) = x2(1)
-          yd(i) = x2(2)
+          xd(i) = real(x2(1))
+          yd(i) = real(x2(2))
           if (objs(i).ne.'jet') then
             if (fwhm1(i)*fwhm2(i).gt.0.0 .and. objs(i).ne.'jet') then
               call coGauCvt(lOut,'ow/ow/ow',x1,
@@ -317,7 +372,7 @@ c  Convert the flux units.
 c
         if (totflux) then
           if (abs(bmaj*bmin).gt.0) then
-            fac = 0.25*PI/log(2.0)*abs(bmaj*bmin/(cdelt1*cdelt2))
+            fac = 0.25*PI/log(2.0)*abs(bmaj*bmin/real(cdelt1*cdelt2))
           else
             fac = 1
           endif
@@ -400,12 +455,12 @@ c-----------------------------------------------------------------------
 c***********************************************************************
 
       subroutine header(lIn,lOut,crpix1,crpix2,crval1,crval2,
-     *  cdelt1,cdelt2,bmaj,bmin,bpa,version)
+     *  cdelt1,cdelt2,bmaj,bmin,bpa,version,msg)
 
       integer lIn,lOut
       double precision crpix1,crpix2,cdelt1,cdelt2,crval1,crval2
       real bmaj,bmin,bpa
-      character version*(*)
+      character version*(*),msg*(*)
 c-----------------------------------------------------------------------
 c  Make a header for the output image.
 c-----------------------------------------------------------------------
@@ -441,6 +496,7 @@ c     Update the history.
       line = 'IMGEN: Miriad '//version
       call hiswrite(lOut,line)
       call hisinput(lOut,'IMGEN')
+      if (msg.ne.' ') call hiswrite(lOut,msg)
       call hisclose(lOut)
 
       end
@@ -471,7 +527,7 @@ c-----------------------------------------------------------------------
       real      j1xbyx
 c-----------------------------------------------------------------------
 c  Add the new contribution.First the gaussian. Work out the region
-c  where the exponential greater than exp(-25), and don't bother
+c  where the exponential is less than exp(-9), and don't bother
 c  processing those regions.
 c
 c  Note: pi/4/log(2) == 1.1331.
@@ -486,7 +542,7 @@ c
         cospa = cos(posang)
         sinpa = sin(posang)
         scale = 2.0 * sqrt(log2)
-        limit = 5/scale * max(fwhm1,fwhm2)
+        limit = 3./scale * max(fwhm1,fwhm2)
         ymin = nint(y-limit)
         ymax = nint(y+limit)
         xmin = max(nint(x-limit),1)
@@ -498,7 +554,7 @@ c
             yp =  yy*cospa + xx*sinpa
             xp = -yy*sinpa + xx*cospa
             t = (xp*xp)/(fwhm2*fwhm2) + (yp*yp)/(fwhm1*fwhm1)
-            if (t.lt.25) data(i) = data(i) + a*exp(-t)
+            if (t.lt.9.) data(i) = data(i) + a*exp(-t)
           enddo
         endif
 
