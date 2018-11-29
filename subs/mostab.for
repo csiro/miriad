@@ -29,7 +29,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: mostab.for,v 1.13 2016/03/30 00:31:50 wie017 Exp $
+c $Id: mostab.for,v 1.14 2018/11/29 22:50:56 wie017 Exp $
 c***********************************************************************
 
       subroutine MosCIni
@@ -1069,12 +1069,12 @@ c-----------------------------------------------------------------------
       if (npnt.eq.1) then
         call Mosaic1(In,Out,nx,ny,mnx,mny,Runs,MAXRUNS,nRuns)
       else
-        call MemAllop(pWts,mnx*mny,'r')
+        call MemAllox(pWts,1_8*mnx*mny,'r')
         if (nx2.gt.(nx-1)/2 .or. ny2.gt.(ny-1)/2)
      *    call bug('f','Inconsistency in Mosaicer')
         call Mosaic2(In,Out,memr(pWts),nx,ny,npnt,mnx,mny,Rms2)
         call mosRuns(memr(pWts),mnx,mny,Runs,MAXRUNS,nRuns)
-        call memFrep(pWts,mnx*mny,'r')
+        call memFrex(pWts,1_8*mnx*mny,'r')
       endif
 
       end
@@ -1380,10 +1380,10 @@ c     Determine the location of the reference position in pixel coords.
 
       call MosMini(coObj, real(xref(3)))
 
-      call MemAllop(pWts, NX*NY, 'r')
+      call MemAllox(pWts, 1_8*NX*NY, 'r')
       call MosPnt1(NX, NY, NPNT1, nint(xref(1)), nint(xref(2)), beams,
      *             memr(pWts), psf)
-      call MemFrep(pWts, NX*NY, 'r')
+      call MemFrex(pWts, 1_8*NX*NY, 'r')
 
       call MosMFin
 

@@ -64,7 +64,7 @@ c    rjs  18sep05 Type mismatch error.
 c    mhw  17jan12 Use ptrdiff for scr routines to handle larger files
 c    mhw  24mar15 Add spectral parameters for flux model
 c
-c $Id: model.for,v 1.9 2015/03/24 04:30:36 wie017 Exp $
+c $Id: model.for,v 1.10 2018/11/29 22:50:56 wie017 Exp $
 c***********************************************************************
 c*ModelIni -- Ready the uv data file for processing by the Model routine
 c&rjs
@@ -349,7 +349,7 @@ c
       v0 = nyd/2 + 1
       umax = 0.5*(nxd-1-width)
       vmax = 0.5*(nyd-1-width)
-      call MemAllop(pnt,nu*nv*nz+1,'c')
+      call MemAllox(pnt,1_8*nu*nv*nz+1,'c')
 
       nvis = 0
 
@@ -470,7 +470,7 @@ c
 
       if (nread.ne.0) call bug('w',
      *  'Stopped reading vis data when number of channels changed')
-      call MemFrep(pnt,nu*nv*nz+1,'c')
+      call MemFrex(pnt,1_8*nu*nv*nz+1,'c')
       end
 
 c***********************************************************************

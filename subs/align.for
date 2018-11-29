@@ -82,7 +82,7 @@ c************************************************************************
 c
 	implicit none
 	integer lModel,ioff,joff,koff,nRuns,Runs(3,nRuns),k,n1,n2,n3
-	integer nData,MaxData
+	ptrdiff nData,MaxData
 	real Data(MaxData)
 c
 c  Get the portion of a image that overlaps with the selected region.
@@ -93,7 +93,8 @@ c    Data	The image data.
 c    nData	Number of pixels.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
-	integer i,i1,i2,j,jsave,ipnt,iRuns
+	ptrdiff i,ipnt
+	integer i1,i2,j,jsave,iRuns
 	real Buf(MAXDIM)
 c
 	call BoxCount(Runs,nRuns,nData)

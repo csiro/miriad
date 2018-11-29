@@ -37,7 +37,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: cgsubs.for,v 1.10 2012/03/02 00:46:56 cal103 Exp $
+c $Id: cgsubs.for,v 1.11 2018/11/29 22:50:56 wie017 Exp $
 c***********************************************************************
 
 c* angconCG -- Convert radians to and from seconds of time/arc
@@ -1324,8 +1324,9 @@ c                false means bad (flagged pixel).  Will be bad if any
 c                pixel in spectral range is bad for each spatial pixel
 c-----------------------------------------------------------------------
       include 'maxdim.h'
-      integer i, j, k, ii, jj, pi, po, kst, kav, kend, io, jo,
-     *  nii, nji, nio, njo, no
+      integer i, j, k, ii, jj, pi, kst, kav, kend, io, jo,
+     *  nii, nji, nio, njo
+      ptrdiff i8, po, no
       logical good(maxdim)
 c-----------------------------------------------------------------------
 c
@@ -1346,10 +1347,10 @@ c
 c
 c Initialize
 c
-      no = nio * njo
+      no = 1_8 * nio * njo
       if (init) then
-        do i = 1, no
-          bimage(i) = .true.
+        do i8 = 1, no
+          bimage(i8) = .true.
         enddo
         blanks = .false.
       endif
@@ -1389,7 +1390,7 @@ c
 c Input row and output image pointers
 c
                 pi = ii + blc(1) - 1
-                po = (jo-1)*nio + io
+                po = (jo-1_8)*nio + io
 c
 c If any pixel in the binned region is bad, set the binned pixel to bad
 c
@@ -1449,8 +1450,9 @@ c-----------------------------------------------------------------------
       include 'maxdim.h'
       real row(maxdim)
       logical good(maxdim), mask, hdprsnt
-      integer i, j, k, ii, jj, pi, po, kst, kav, kend, io, jo,
-     *  nii, nji, nio, njo, no
+      integer i, j, k, ii, jj, pi, kst, kav, kend, io, jo,
+     *  nii, nji, nio, njo
+      ptrdiff  i8, po, no
 c-----------------------------------------------------------------------
 c
 c Does image have a mask
@@ -1474,11 +1476,11 @@ c
 c
 c Initialize
 c
-      no = nio * njo
+      no = 1_8 * nio * njo
       if (init) then
-        do i = 1, no
-          image(i) = 0.0
-          nimage(i) = 0
+        do i8 = 1, no
+          image(i8) = 0.0
+          nimage(i8) = 0
         enddo
         blanks = .false.
       endif
@@ -1518,7 +1520,7 @@ c
 c Input row and output image pointers
 c
                 pi = i + blc(1) - 1
-                po = (jo-1)*nio + io
+                po = (jo-1_8)*nio + io
 
                 if (good(pi)) then
                   nimage(po) = nimage(po) + 1
@@ -1536,7 +1538,7 @@ c
 c Input row and output image pointers
 c
                   pi = ii + blc(1) - 1
-                  po = (jo-1)*nio + io
+                  po = (jo-1_8)*nio + io
 
                   if (good(pi)) then
                     nimage(po) = nimage(po) + 1
@@ -1553,15 +1555,15 @@ c
 c
 c Normalize and blank
 c
-      do i = 1, no
-        if (nimage(i).ne.0) then
-          if (norm) image(i) = image(i) / real(nimage(i))
-          dmm(1) = min(dmm(1),image(i))
-          dmm(2) = max(dmm(2),image(i))
-          dmm(3) = max(dmm(3),abs(image(i)))
+      do i8 = 1, no
+        if (nimage(i8).ne.0) then
+          if (norm) image(i8) = image(i8) / real(nimage(i8))
+          dmm(1) = min(dmm(1),image(i8))
+          dmm(2) = max(dmm(2),image(i8))
+          dmm(3) = max(dmm(3),abs(image(i8)))
         else
           blanks = .true.
-          image(i) = blank
+          image(i8) = blank
         endif
       enddo
 
@@ -2059,8 +2061,8 @@ c     Report what happened.
         call bug('f', aline)
       else if (new) then
         write(aline, 100) axis, lo, hi, blc, trc, bin(2)
-100     format('Adjusted axis ', i1, ' window from ', i4, ',', i4,
-     *          ' to ', i4, ',', i4, ' to fit bin width ',i4)
+100     format('Adjusted axis ', i1, ' window from ', i5, ',', i5,
+     *          ' to ', i5, ',', i5, ' to fit bin width ',i4)
         call output(aline)
       endif
 

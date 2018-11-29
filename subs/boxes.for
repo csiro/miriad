@@ -70,7 +70,7 @@ c  CARMA Customizations:
 c
 c  2011-Jul-13  pkgw  Add box(m) shorthand for box(-m,-m,m,m)
 c
-c $Id: boxes.for,v 1.10 2013/08/21 05:21:24 wie017 Exp $
+c $Id: boxes.for,v 1.11 2018/11/29 22:50:56 wie017 Exp $
 c--
 c***********************************************************************
 
@@ -1165,7 +1165,8 @@ c: region-of-interest
 c+
       subroutine BoxCount(Runs,nRuns,nPoint)
 
-      integer nRuns,Runs(3,nRuns+1),nPoint
+      integer nRuns,Runs(3,nRuns+1)
+      ptrdiff nPoint
 c  ---------------------------------------------------------------------
 c  Count the number of pixels in the region-of-interest in a given
 c  plane.

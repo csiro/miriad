@@ -96,8 +96,9 @@ c
 	  n1d = n1d + n1d
 	  n2d = n2d + n2d
 	endif
-	nWrk = n1d*n2d
-	call memAllop(pWrk1,2*nWrk,'r')
+	nWrk = n1d
+        nWrk = nWrk * n2d
+	call memAllox(pWrk1,2*nWrk,'r')
 	pWrk2 = pWrk1 + nWrk
 c
 c  Initialise a few other things.
@@ -144,10 +145,10 @@ c
 c
 c  Allocate weight arrays if needed.
 c
-	if(nWts.lt.nox*noy)then
-	  if(nWts.gt.0)call memFrep(pWts1,2*nWts,'r')
-	  nWts = nox*noy
-	  call memAllop(pWts1,2*nWts,'r')
+	if(nWts.lt.1_8*nox*noy)then
+	  if(nWts.gt.0)call memFrex(pWts1,2*nWts,'r')
+	  nWts = 1_8*nox*noy
+	  call memAllox(pWts1,2*nWts,'r')
 	  pWts2 = pWts1 + nWts
 	endif
 c
@@ -193,10 +194,10 @@ c
 	  if(xmin.le.xmax.and.ymin.le.ymax.and.
      *	     xlo.le.nix.and.xhi.ge.1.and.
      *	     ylo.le.niy.and.yhi.ge.1)then
-	    if(nWrk.lt.mnx*mny)then
-	      if(nWrk.gt.0)call memFrep(pWrk1,2*nWrk,'r')
-	      nWrk = mnx*mny
-	      call memAllop(pWrk1,2*nWrk,'r')
+	    if(nWrk.lt.1_8*mnx*mny)then
+	      if(nWrk.gt.0)call memFrex(pWrk1,2*nWrk,'r')
+	      nWrk = 1_8*mnx*mny
+	      call memAllox(pWrk1,2*nWrk,'r')
 	      pWrk2 = pWrk1 + nWrk
 	    endif
 c
@@ -213,7 +214,7 @@ c
 c
 c  Apply the final weights.
 c
-	call mcWt(Out,memr(pWts2),nox*noy)
+	call mcWt(Out,memr(pWts2),1_8*nox*noy)
 c
 	end
 c************************************************************************
@@ -287,7 +288,8 @@ c************************************************************************
 	subroutine mcPlaneR(coObj,k,Runs,nRuns,nPoint)
 c
 	implicit none
-	integer coObj,k,nRuns,Runs(3,nRuns),nPoint
+	integer coObj,k,nRuns,Runs(3,nRuns)
+        ptrdiff nPoint
 c
 c  Initialise the mosaic convolution routines for a particular plane.
 c------------------------------------------------------------------------
@@ -308,9 +310,9 @@ c
 c  Do we have enough buffer space?
 c
 	if(nWts.lt.npix)then
-	  if(nWts.gt.0)call memFrep(pWts1,2*nWts,'r')
+	  if(nWts.gt.0)call memFrex(pWts1,2*nWts,'r')
 	  nWts = npix
-	  call memAllop(pWts1,2*nWts,'r')
+	  call memAllox(pWts1,2*nWts,'r')
 	  pWts2 = pWts1 + npix
 	endif
 c
@@ -323,7 +325,7 @@ c************************************************************************
 	subroutine mcGain(Gain,nPoint)
 c
 	implicit none
-	integer nPoint
+	ptrdiff nPoint
 	real Gain(nPoint)
 c
 c  Return the gain at each point in the region-of-interest.
@@ -338,11 +340,11 @@ c************************************************************************
 	subroutine mcGn(Gain,Wt1,nPoint)
 c
 	implicit none
-	integer nPoint
+	ptrdiff nPoint
 	real Gain(nPoint),Wt1(nPoint)
 c
 c------------------------------------------------------------------------
-	integer i
+	ptrdiff i
 c
 	do i=1,nPoint
 	  if(Wt1(i).eq.0)then
@@ -357,7 +359,7 @@ c************************************************************************
 	subroutine mcSigma2(Sigma2,nPoint,noinvert)
 c
 	implicit none
-	integer nPoint
+	ptrdiff nPoint
 	real Sigma2(nPoint)
 	logical noinvert
 c
@@ -373,13 +375,13 @@ c************************************************************************
 	subroutine mcSig(Sigma2,Wt1,Wt2,nPoint,noinvert)
 c
 	implicit none
-	integer nPoint
+	ptrdiff nPoint
 	real Sigma2(nPoint),Wt1(nPoint),Wt2(nPoint)
 	logical noinvert
 c
 c  Return the variance in each point of an image.
 c------------------------------------------------------------------------
-	integer i
+	ptrdiff i
 c
 	if(noinvert)then
 	  do i=1,nPoint
@@ -423,7 +425,8 @@ c------------------------------------------------------------------------
 	include 'mem.h'
 	include 'mc.h'
 c
-	integer i,k,xlo,ylo,xhi,yhi,xmin,ymin,xmax,ymax,pbObj
+	ptrdiff i
+        integer k,xlo,ylo,xhi,yhi,xmin,ymin,xmax,ymax,pbObj
 	real Wts3
 c
 c  Externals.
@@ -460,8 +463,8 @@ c************************************************************************
      *	  n,Out,Runs,nRuns,Pb,Resid,nscr)
 c
 	implicit none
-        ptrdiff cnvl
-	integer pbObj,n,nRuns,Runs(3,nRuns),nscr,k
+        ptrdiff cnvl,n,nscr
+	integer pbObj,nRuns,Runs(3,nRuns),k
 	integer xlo,ylo,xhi,yhi,xmin,ymin,xmax,ymax
 	real In(n),Out(n),Wt1(n),Wt3,Pb(nscr),Resid(nscr)
 c
@@ -492,9 +495,10 @@ c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer MAXRUNS
 	parameter(MAXRUNS=3*MAXDIM)
-	integer Runs2(3,MAXRUNS),indx(MAXRUNS),nRuns2
+	integer Runs2(3,MAXRUNS),nRuns2
 	integer xa,xb,ix,iy,ncomp
-	integer xoff,yoff,npix,nin,nout,mnx,mny,iRuns,x1,x2,y1,y2
+	integer xoff,yoff,mnx,mny,iRuns,x1,x2,y1,y2
+        ptrdiff nin,nout,npix,indx(MAXRUNS)
 	real wrk(MAXDIM)
 c
 c  Externals.
@@ -600,12 +604,12 @@ c************************************************************************
 	subroutine mcWt(Out,Wts,n)
 c
 	implicit none
-	integer n
+	ptrdiff n
 	real Out(n),Wts(n)
 c
 c  Apply the final weights.
 c------------------------------------------------------------------------
-	integer i
+	ptrdiff i
 c
 	do i=1,n
 	  Out(i) = Wts(i) * Out(i)
@@ -690,10 +694,10 @@ c  If we have a gaussian, do it first.
 c
 	call xysetpl(tno,1,k)
 	if(doGaus)then
-	  call memAllop(pGaus,n1*n2,'r')
+	  call memAllox(pGaus,1_8*n1*n2,'r')
 	  call mcGaus(tno,memr(pGaus),n1,n2,ic,jc,bmaj,bmin,bpa)
 	  call cnvlIniA(cnvl1,memr(pGaus),n1,n2,ic,jc,0.,flags)
-	  call memFrep(pGaus,n1*n2,'r')
+	  call memFrex(pGaus,1_8*n1*n2,'r')
 	else
 	  call cnvlIniF(cnvl1,tno,n1,n2,ic,jc,0.,flags)
 	endif
@@ -747,6 +751,6 @@ c
 	  cnvl(k) = 0
 	enddo
 c
-	if(nWrk.gt.0)call memFrep(pWrk1,2*nWrk,'r')
-	if(nWts.gt.0)call memFrep(pWts1,2*nWts,'r')
+	if(nWrk.gt.0)call memFrex(pWrk1,2*nWrk,'r')
+	if(nWts.gt.0)call memFrex(pWts1,2*nWts,'r')
 	end
