@@ -71,6 +71,7 @@ c    rjs  01jan06 Added definition of ref pointing solution.
 c    rjs  08jan07 Added knowledge of chi2.
 c    rjs  06jun11 Support for some new variables written by CABB.
 c    vjm  29mar12 Support longer names of vis files, consistent with var*.for
+c    mhw  03dec18 Keep variables in double precision except for plotting
 c
 c  Bugs:
 c    ?? Perfect?
@@ -78,12 +79,13 @@ c------------------------------------------------------------------------
 	character version*(*)
 	integer MAXPNTS
 	parameter(MAXPNTS=1000000)
-	parameter(version='VarPlt: version 1.1 08-Jan-07')
+	parameter(version='VarPlt: version 1.2 03-Dec-18')
 	logical doplot,dolog,dotime,dounwrap
         character vis*132,logfile*132
 	character device*64,xaxis*16,yaxis*16
 	character xtype*1,ytype*1,xunit*16,yunit*16,calday*24
-	real xrange(2),yrange(2),xvals(MAXPNTS),yvals(MAXPNTS)
+	double precision xrange(2),yrange(2)
+	double precision xvals(MAXPNTS),yvals(MAXPNTS)
 	double precision xscale,xoff,yscale,yoff
 	double precision xtime1,xtime2,ytime1,ytime2
 	integer nx,ny,tIn,xdim1,xdim2,ydim1,ydim2,n0,n1,maxpnt,npnts
@@ -118,15 +120,15 @@ c
 	  call keyt('xrange',xtime1,'time',0.d0)
 	  call keyt('xrange',xtime2,'time',0.d0)
 	else
-	  call keyr('xrange',xrange(1),0.)
-	  call keyr('xrange',xrange(2),xrange(1)-1.)
+	  call keyd('xrange',xrange(1),0.d0)
+	  call keyd('xrange',xrange(2),xrange(1)-1.d0)
 	endif
 	if(yaxis.eq.'time')then
 	  call keyt('yrange',ytime1,'time',0.d0)
 	  call keyt('yrange',ytime2,'time',0.d0)
 	else
-	  call keyr('yrange',yrange(1),0.)
-	  call keyr('yrange',yrange(2),yrange(1)-1.)
+	  call keyd('yrange',yrange(1),0.d0)
+	  call keyd('yrange',yrange(2),yrange(1)-1.d0)
 	endif
 	call keyfin
 c
@@ -224,8 +226,8 @@ c
 	    call LogWrite('# Base time is '//calday,more)
 	  endif
 	  call Logit(npnts,dotime,
-     *	    xvals,xdim1,xdim2,xaxis,xunit,
-     *	    yvals,ydim1,ydim2,yaxis,yunit)
+     *	    xvals,xdim1,xdim2,xaxis,xunit,xtype,
+     *	    yvals,ydim1,ydim2,yaxis,yunit,ytype)
 	  call LogClose
 	endif
 c
@@ -237,7 +239,7 @@ c************************************************************************
 c
 	implicit none
 	double precision time1,time2,scale,off
-	real range(2)
+	double precision range(2)
 c
 c  Fiddle for times.
 c------------------------------------------------------------------------
@@ -292,10 +294,10 @@ c************************************************************************
 c
 	implicit none
 	integer n1,n2,n3
-	real vals(n1*n2*n3)
+	double precision vals(n1*n2*n3)
 c------------------------------------------------------------------------
 	integer i,j,k,k0,k1
-	real sum
+	double precision sum
 c
 	k0 = 1
 	k1 = 1
@@ -318,7 +320,7 @@ c************************************************************************
 c
 	implicit none
 	integer npnts,ydim1,ydim2
-	real yvals(*)
+	double precision yvals(*)
 c------------------------------------------------------------------------
 	integer y1,y2,yoff,ky
 	logical yext
@@ -360,9 +362,9 @@ c
 c------------------------------------------------------------------------
       LOGICAL dowrap
       INTEGER n
-      REAL phs(n)
+      double precision phs(n)
 c
-      REAL theta0
+      double precision theta0
       INTEGER i
 c------------------------------------------------------------------------
       IF (.not.dowrap) RETURN
@@ -375,14 +377,16 @@ c
       END
 c************************************************************************
 	subroutine Logit(npnts,dotime,
-     *	    xvals,xdim1,xdim2,xaxis,xunit,
-     *	    yvals,ydim1,ydim2,yaxis,yunit)
+     *	    xvals,xdim1,xdim2,xaxis,xunit,xtype,
+     *	    yvals,ydim1,ydim2,yaxis,yunit,ytype)
 c
 	implicit none
 	integer npnts,xdim1,xdim2,ydim1,ydim2
 	character xaxis*(*),yaxis*(*),xunit*(*),yunit*(*)
+	character xtype*1,ytype*1
 	logical dotime
-	real xvals(xdim1*xdim2*npnts),yvals(ydim1*ydim2*npnts)
+	double precision xvals(xdim1*xdim2*npnts)
+	double precision yvals(ydim1*ydim2*npnts)
 c------------------------------------------------------------------------
 	character line*80,label*32
 	integer xstep,ystep,xpnt,ypnt,j,length
@@ -418,24 +422,25 @@ c
 	ypnt = 1
 	do j=1,npnts
 	  length = 0
-	  call doLine(Line,length,xvals(xpnt),xstep,dotime,.true.)
-	  call doLine(Line,length,yvals(ypnt),ystep,.false.,.false.)
+	  call doLine(Line,length,xvals(xpnt),xstep,xtype,dotime,.true.)
+	  call doLine(Line,length,yvals(ypnt),ystep,
+     *                ytype,.false.,.false.)
 	  if(Length.gt.0)call LogWrite(line(1:length),more)
 	  xpnt = xpnt + xstep
 	  ypnt = ypnt + ystep
 	enddo
 	end
 c************************************************************************
-	subroutine doLine(Line,length,vals,nvals,dotime,first)
+	subroutine doLine(Line,length,vals,nvals,vtype,dotime,first)
 c
 	implicit none
-	character Line*(*)
+	character Line*(*),vtype*1
 	integer length,nvals
-	real vals(nvals)
+	double precision vals(nvals)
 	logical dotime,first
 c------------------------------------------------------------------------
-	integer ctime,cnum
-	parameter(ctime=12,cnum=15)
+	integer ctime,cnum, cdnum
+	parameter(ctime=12,cnum=15,cdnum=22)
 	integer isec,imin,ihr,iday,i
 	logical dospace,more
 c
@@ -464,8 +469,13 @@ c
      *		iday,' ',ihr,':',imin,':',isec
 	    length = length + ctime
 	  else
-	    write(line(length+1:length+cnum),'(1pg15.8)')vals(i)
-	    length = length + cnum
+	    if (vtype.eq.'d') then
+	      write(line(length+1:length+cdnum),'(1pg22.15)') vals(i)
+	      length = length + cdnum 
+	    else
+	      write(line(length+1:length+cnum),'(1pg15.8)')vals(i)
+	      length = length + cnum
+	    endif
 	  endif
 	enddo
 	end
@@ -476,14 +486,16 @@ c************************************************************************
 c
 	implicit none
 	integer npnts,xdim1,xdim2,ydim1,ydim2
-	real xrange(2),yrange(2)
+	double precision xrange(2),yrange(2)
 	character xaxis*(*),yaxis*(*),xunit*(*),yunit*(*),vis*(*)
 	logical dotime,overlay,equal
-	real xvals(*),yvals(*)
+	double precision xvals(*),yvals(*)
 c------------------------------------------------------------------------
+	integer MAXPNTS
+	parameter(MAXPNTS=1000000)
 	integer x1,x2,y1,y2,xoff,yoff,kx,ky
 	logical xext,yext,xr,yr
-	real xlo,xhi,ylo,yhi
+	real xrvals(MAXPNTS),yrvals(MAXPNTS),xlo,xhi,ylo,yhi
 c
 c  Determine if we have to extract the data. Also determine offsets
 c  of were we have to extract it to.
@@ -532,7 +544,9 @@ c
 	        if(.not.overlay)call PGSet(dotime,equal,vis,
      *		  xaxis,xunit,xlo,xhi,x1,xdim1,x2,xdim2,
      *		  yaxis,yunit,ylo,yhi,y1,ydim1,y2,ydim2)
-		call pgpt(npnts,xvals(xoff),yvals(yoff),1)
+		call Cvtdr(xvals(xoff),xrvals,npnts,1.d0,0.d0)
+		call Cvtdr(yvals(yoff),yrvals,npnts,1.d0,0.d0)
+                call pgpt(npnts,xrvals,yrvals,1)
 	      enddo
 	    enddo
 	  enddo
@@ -543,7 +557,7 @@ c************************************************************************
 c
 	implicit none
 	integer n1,n2
-	real in(n1,n2),out(n2)
+	double precision in(n1,n2),out(n2)
 c------------------------------------------------------------------------
 	integer i
 	do i=1,n2
@@ -556,7 +570,7 @@ c  inverse of extract  (:-)
 c  stuff 'out' back into 'in'
 	implicit none
 	integer n1,n2
-	real in(n1,n2),out(n2)
+	double precision in(n1,n2),out(n2)
 c------------------------------------------------------------------------
 	integer i
 	do i=1,n2
@@ -645,7 +659,8 @@ c
 	implicit none
 	integer npnts
 	logical dor,oneplot
-	real range(2),vals(npnts),loval,hival
+	double precision range(2),vals(npnts)
+	real loval,hival
 c
 c  Determine, if we can, what scale factor to use.
 c
@@ -666,17 +681,23 @@ c**********************************************************************
 c
 	implicit none
 	integer npnts
-	real vals(npnts),loval,hival
+	double precision vals(npnts)
+	real loval,hival
 c
 c------------------------------------------------------------------------
 	real delta,absmax
+        integer i
 c
 c  Externals.
 c
 	integer ismax,ismin
 c
-	loval = vals(ismin(npnts,vals,1))
-	hival = vals(ismax(npnts,vals,1))
+	loval = vals(1)
+	hival = vals(1)
+        do i=2,npnts
+          if (vals(i).lt.loval) loval = vals(i)
+          if (vals(i).gt.hival) hival = vals(i)
+        enddo
 	delta = 0.05*(hival-loval)
 	absmax = max(abs(hival),abs(loval))
 	if(delta.le.1e-4*absmax) delta = 0.01*absmax
@@ -692,7 +713,7 @@ c
 	implicit none
 	integer tIn,maxpnt,npnts,xdim,ydim
 	character xtype*1,ytype*1,xaxis*(*),yaxis*(*)
-	real xvals(xdim*maxpnt),yvals(ydim*maxpnt)
+	double precision xvals(xdim*maxpnt),yvals(ydim*maxpnt)
 	double precision xscale,xoff,yscale,yoff
 c
 c------------------------------------------------------------------------
@@ -779,7 +800,7 @@ c
 	integer xirun(k*xdim),yirun(k*ydim)
 	real xrrun(k*xdim),yrrun(k*ydim)
 	double precision xdrun(k*xdim),ydrun(k*ydim)
-	real xvals(*),yvals(*)
+	double precision xvals(*),yvals(*)
 	double precision xscale,xoff,yscale,yoff
 c
 c------------------------------------------------------------------------
@@ -787,56 +808,50 @@ c------------------------------------------------------------------------
 	xpnt = npnts*xdim+1
 	ypnt = npnts*ydim+1
 	if(xtype.eq.'i')then
-	  call Cvtir(xirun,xvals(xpnt),k*xdim,xscale,xoff)
+	  call Cvtid(xirun,xvals(xpnt),k*xdim,xscale,xoff)
 	else if(xtype.eq.'r')then
-	  call Cvtrr(xrrun,xvals(xpnt),k*xdim,xscale,xoff)
+	  call Cvtrd(xrrun,xvals(xpnt),k*xdim,xscale,xoff)
 	else if(xtype.eq.'d')then
-	  call Cvtdr(xdrun,xvals(xpnt),k*xdim,xscale,xoff)
+	  call Cvtdd(xdrun,xvals(xpnt),k*xdim,xscale,xoff)
 	endif
 	if(ytype.eq.'i')then
-	  call Cvtir(yirun,yvals(ypnt),k*ydim,yscale,yoff)
+	  call Cvtid(yirun,yvals(ypnt),k*ydim,yscale,yoff)
 	else if(ytype.eq.'r')then
-	  call Cvtrr(yrrun,yvals(ypnt),k*ydim,yscale,yoff)
+	  call Cvtrd(yrrun,yvals(ypnt),k*ydim,yscale,yoff)
 	else if(ytype.eq.'d')then
-	  call Cvtdr(ydrun,yvals(ypnt),k*ydim,yscale,yoff)
+	  call Cvtdd(ydrun,yvals(ypnt),k*ydim,yscale,yoff)
 	endif
 	npnts = npnts + k
 	end
 c************************************************************************
-	subroutine Cvtir(in,out,n,scale,offset)
+	subroutine Cvtid(in,out,n,scale,offset)
 c
 	integer n
 	integer in(n)
-	real out(n)
+	double precision out(n)
 	double precision scale,offset
 c------------------------------------------------------------------------
 	integer i
-	real rscal
 	integer ioff
 c
 	ioff = nint(offset)
-	rscal = scale
 c
 	do i=1,n
-	  out(i) = rscal*(in(i) - ioff)
+	  out(i) = scale*(in(i) - ioff)
 	enddo
 	end
 c************************************************************************
-	subroutine Cvtrr(in,out,n,scale,offset)
+	subroutine Cvtrd(in,out,n,scale,offset)
 c
 	integer n
 	real in(n)
-	real out(n)
+	double precision out(n)
 	double precision scale,offset
 c------------------------------------------------------------------------
 	integer i
-	real rscal,roff
-c
-	roff = offset
-	rscal = scale
 c
 	do i=1,n
-	  out(i) = rscal*(in(i) - roff)
+	  out(i) = scale*(in(i) - offset)
 	enddo
 	end
 c************************************************************************
@@ -845,6 +860,19 @@ c
 	integer n
 	double precision in(n)
 	real out(n)
+	double precision scale,offset
+c------------------------------------------------------------------------
+	integer i
+c
+	do i=1,n
+	  out(i) = scale*(in(i) - offset)
+	enddo
+	end
+c************************************************************************
+	subroutine Cvtdd(in,out,n,scale,offset)
+c
+	integer n
+	double precision in(n), out(n)
 	double precision scale,offset
 c------------------------------------------------------------------------
 	integer i
