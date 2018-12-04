@@ -80,7 +80,8 @@ c
 c
           if(first)then
             call uvopen(lout,out,'new')
-            call uvset(lout,'preamble','uvw/time/baseline',0,0.,0.,0.)
+            call uvset(lout,'preamble','uvw/time/baseline',
+     *                 0,0.d0,0.d0,0.d0)
             call hdcopy(lin,lout,'history')
             call hisopen(lout,'append')
             call hiswrite(lout,'PLGEOM: Miriad '//version)

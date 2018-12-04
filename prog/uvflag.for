@@ -176,8 +176,8 @@ c again until the list is exhausted.
       data	       usech / MAXCHAN * .true. /
 
       version = versan('uvflag',
-     *                 '$Revision: 1.8 $',
-     *                 '$Date: 2014/09/30 14:23:39 $')
+     *                 '$Revision: 1.9 $',
+     *                 '$Date: 2018/12/04 04:02:11 $')
 
       call keyini
       call keyf( 'vis', vis, ' ' )
@@ -428,7 +428,7 @@ c tformat is transfered to report.
       do while( nchan.ne.0 )
 	 if( type .eq. 'both' )
      *	 then
-	    call uvset(  unit, 'data', 'channel', 0, 1.,1.,1. )
+	    call uvset(  unit, 'data', 'channel', 0, 1.d0,1.d0,1.d0)
 	    call uvread( unit, preamble, data, oldflags, mxchan, nchan )
 	    if( have(unit,'nchan') .and. nchan.ne.0 )then
 	      call work(   unit, preamble, 'channel',
@@ -449,8 +449,8 @@ c tformat is transfered to report.
 
 	 else
 
-	    call uvset( unit, 'data', type, line(1), real(line(2)),
-     *				      real(line(3)), real(line(4)) )
+	    call uvset( unit, 'data', type, line(1), dble(line(2)),
+     *				      dble(line(3)), dble(line(4)) )
 	    call uvread( unit, preamble, data, oldflags, mxchan, nchan )
 	    if(  nchan.ne.0.  .and.
      *		 ( (type.eq.'channel' .and. have(unit,'nchan')) .or.
@@ -546,8 +546,8 @@ c Reset selection criteria.
       call uvselect( unit, 'clear', 0.d0,0.d0,.true. )
 c Apply selection criteria.
       call selapply( unit, sels, .TRUE. )
-      call uvset( unit, 'selection', 'amplitude',  0, 0.,0.,0. )
-      call uvset( unit, 'coord',     'wavelength', 0, 0.,0.,0. )
+      call uvset( unit, 'selection', 'amplitude',  0, 0.d0,0.d0,0.d0 )
+      call uvset( unit, 'coord',     'wavelength', 0, 0.d0,0.d0,0.d0 )
 
 c Reset record count.
       call reccount(-1)

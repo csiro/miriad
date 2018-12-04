@@ -62,7 +62,7 @@ c@ maxwidth
 c        The maximum bandwidth (in GHz) for each output frequency band.
 c        Default is no subdivision of input bands. The maxwidth limit
 c        is only applied when splitting by frequency.
-c $Id: uvsplit.for,v 1.18 2016/05/09 03:06:18 sau078 Exp $
+c $Id: uvsplit.for,v 1.19 2018/12/04 04:02:11 wie017 Exp $
 c--
 c  History:
 c    rjs  13oct93 Original version.
@@ -109,8 +109,8 @@ c
         character versan*72
 c------------------------------------------------------------------------
         version = versan ('uvsplit',
-     *                    '$Revision: 1.18 $',
-     *                    '$Date: 2016/05/09 03:06:18 $')
+     *                    '$Revision: 1.19 $',
+     *                    '$Date: 2018/12/04 04:02:11 $')
 c
 c  Get the input parameters.
 c
@@ -159,8 +159,9 @@ c
 c  Open the input, and determine some things about it.
 c
 	  call uvopen(tVis,vis,'old')
-	  call uvset(tVis,'preamble','uvw/time/baseline',0,0.,0.,0.)
-	  call uvset(tVis,'selection','window',0,0.,0.,0.)
+	  call uvset(tVis,'preamble','uvw/time/baseline',
+     *               0,0.d0,0.d0,0.d0)
+	  call uvset(tVis,'selection','window',0,0.d0,0.d0,0.d0)
 	  call SelApply(tVis,sels,.true.)
 	  if(first)then
 	    call uvprobvr(tVis,'corr',dtype,length,updated)
@@ -886,14 +887,14 @@ c
 	line = 'Creating '//name
 	call output(line)
 	call uvopen(lOut,name,'new')
-	call uvset(lOut,'preamble','uvw/time/baseline',0,0.,0.,0.)
+	call uvset(lOut,'preamble','uvw/time/baseline',0,0.d0,0.d0,0.d0)
 	if(dowide)then
-	  call uvset(lOut,'data','wide',0,0.,0.,0.)
+	  call uvset(lOut,'data','wide',0,0.d0,0.d0,0.d0)
 	else
 	  if(docomp)then
-	    call uvset(lOut,'corr','j',0,0.,0.,0.)
+	    call uvset(lOut,'corr','j',0,0.d0,0.d0,0.d0)
 	  else
-	    call uvset(lOut,'corr','r',0,0.,0.,0.)
+	    call uvset(lOut,'corr','r',0,0.d0,0.d0,0.d0)
 	  endif
 	endif
 c

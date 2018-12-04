@@ -383,8 +383,8 @@ c-----------------------------------------------------------------------
       integer MW
       parameter(MW=4)
       character version*(*)
-      parameter(version = 'Uvgen: $Revision: 1.9 $, '//
-     *  '$Date: 2014/05/21 04:34:59 $')
+      parameter(version = 'Uvgen: $Revision: 1.10 $, '//
+     *  '$Date: 2018/12/04 04:02:11 $')
       integer ALTAZ,EQUATOR,XYEW
       parameter(ALTAZ=0,EQUATOR=1,XYEW=3)
       integer PolRR,PolLL,PolRL,PolLR,PolXX,PolYY,PolXY,PolYX
@@ -634,7 +634,7 @@ c  Open the output dataset.
 c
       call uvopen(unit,outfile,'new')
       call hisopen(unit,'write')
-      call uvset(unit,'preamble','uvw/time/baseline',0,0.,0.,0.)
+      call uvset(unit,'preamble','uvw/time/baseline',0,0.d0,0.d0,0.d0)
 
       call hiswrite(unit,'UVGEN: Miriad '//version)
       call hisinput(unit,'UVGEN')
@@ -788,7 +788,7 @@ c  If its a wide-only dataset, tell uvset as much.
 c
       if(numchan.eq.0)then
         if(nwide.eq.0)call bug('f','No channels to be generated')
-        call uvset(unit,'data','wide',0,1.,1.,1.)
+        call uvset(unit,'data','wide',0,1.d0,1.d0,1.d0)
       endif
 c
 c  Fill data header record.

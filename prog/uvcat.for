@@ -175,7 +175,7 @@ c
 	  if(new)then
 	    call SetUp(lIn,nochan,nowide,dochan,dowide,dopol,vhand)
 	    if(dowide.and..not.dochan)
-     *	      call uvset(lOut,'data','wide',0,1.,1.,1.)
+     *	      call uvset(lOut,'data','wide',0,1.d0,1.d0,1.d0)
 	    npol = 0
 	    donenpol = .false.
 	    new = .false.
@@ -190,7 +190,7 @@ c
 	  endif
 	  if(.not.init.and.dochan)then
 	    call uvprobvr(lIn,'corr',type,length,updated)
-	    call uvset(lOut,'corr',type,0,0.,0.,0.)
+	    call uvset(lOut,'corr',type,0,0.d0,0.d0,0.d0)
 	    init = .true.
 	  endif
 c
@@ -331,7 +331,7 @@ c
 c
 	if(dowide)then
 	  call VarWInit(lIn)
-	  if(.not.dochan)call uvset(lIn,'data','wide',0,1.,1.,1.)
+	  if(.not.dochan)call uvset(lIn,'data','wide',0,1.d0,1.d0,1.d0)
 	endif
 c
 	call uvprobvr(lIn,'npol',type,length,updated)
@@ -339,7 +339,7 @@ c
 c
 c  Disable window-based selection, as that is done manually.
 c
-	call uvset(lIn,'selection','window',0,0.,0.,0.)
+	call uvset(lIn,'selection','window',0,0.d0,0.d0,0.d0)
 c
 	end
 c************************************************************************

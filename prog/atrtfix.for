@@ -62,12 +62,12 @@ c
 c  Open the input and output, and do various housekeeping.
 c
         call uvopen(lVis,vis,'old')
-        call uvset(lVis,'preamble','uvw/time/baseline',0,0.,0.,0.)
+        call uvset(lVis,'preamble','uvw/time/baseline',0,0.d0,0.d0,0.d0)
         call varInit(lVis,'channel')
 c
         call uvopen(lOut,out,'new') 
         call varOnit(lVis,lOut,'channel')
-        call uvset(lOut,'preamble','uvw/time/baseline',0,0.,0.,0.)
+        call uvset(lOut,'preamble','uvw/time/baseline',0,0.d0,0.d0,0.d0)
 c
         call hdcopy(lVis,lOut,'history')
         call hisopen(lOut,'append')  

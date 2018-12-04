@@ -23,7 +23,7 @@ c@ select
 c       Visibility data selection - only 'uvrange' selection is
 c       supported.  See the help on "select" for more information.
 c
-c$Id: im2uv.for,v 1.4 2011/10/06 07:18:56 cal103 Exp $
+c$Id: im2uv.for,v 1.5 2018/12/04 04:02:11 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -47,8 +47,8 @@ c-----------------------------------------------------------------------
       character versan*72
 c-----------------------------------------------------------------------
       version = versan('im2uv',
-     *                 '$Revision: 1.4 $',
-     *                 '$Date: 2011/10/06 07:18:56 $')
+     *                 '$Revision: 1.5 $',
+     *                 '$Date: 2018/12/04 04:02:11 $')
 
 c     Get the input parameters.
       call keyini
@@ -270,8 +270,8 @@ c-----------------------------------------------------------------------
      *          telescop*32
 c-----------------------------------------------------------------------
 c     Set up the output dataset.
-      call uvset(tOut,'data','wide',0,1.0,1.0,1.0)
-      call uvset(tOut,'preamble','uvw/time/baseline',0,0.0,0.0,0.0)
+      call uvset(tOut,'data','wide',0,1.d0,1.d0,1.d0)
+      call uvset(tOut,'preamble','uvw/time/baseline',0,0.d0,0.d0,0.d0)
       call uvputvri(tOut,'nants',2,1)
       call uvputvrr(tOut,'inttime',10.0,1)
 

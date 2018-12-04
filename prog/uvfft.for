@@ -49,7 +49,7 @@ c------------------------------------------------------------------------
 	integer MAXSELS,MAXSIZE,MAXIN
 	parameter(MAXSELS=1024,MAXSIZE=1024,MAXIN=33)
 	real sels(maxsels)
-	real start,step,width
+	double precision start,step,width
 	character linetype*20,vis*50,logf*50,date*18,line*200,device*20
 	character options*20
 	complex data(maxchan),in(MAXSIZE,MAXIN),out(MAXSIZE,MAXIN)
@@ -70,9 +70,9 @@ c
 	call keyi('line',numchan,2)
 	if(numchan.gt.MAXIN)
      *		call bug('f','Maximum number of channels exceeded')
-	call keyr('line',start,1.)
-	call keyr('line',width,1.)
-	call keyr('line',step,width)
+	call keyd('line',start,1.)
+	call keyd('line',width,1.)
+	call keyd('line',step,width)
 	call keyi('size',size,128)
 	call keyi('delay',delay,0)
  	call keya('log',logf,' ')
@@ -99,7 +99,7 @@ c
 	call SelApply(unit,sels,.true.)
 	  if(linetype.ne.' ')
      *	    call uvset(unit,'data',linetype,numchan,start,width,step)
-	  call uvset(unit,'coord','wavelength',0,0.,0.,0.)
+	  call uvset(unit,'coord','wavelength',0,0.d0,0.d0,0.d0)
 c
 c  Read through the file, storing the selected data.
 c

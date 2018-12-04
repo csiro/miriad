@@ -156,7 +156,7 @@ c
 c  Get ready to copy the data.
 c
 	call uvopen(lVis,vis,'old')
-	call uvset(lVis,'preamble','uvw/time/baseline',0,0.,0.,0.)
+	call uvset(lVis,'preamble','uvw/time/baseline',0,0.d0,0.d0,0.d0)
 	call uvprobvr(lVis,'xyphase',dtype,length,updated)
 	dovar = dtype.eq.'r'
 	if(.not.dovar.and.txt.eq.' ')then
@@ -166,9 +166,9 @@ c
 	endif
 	call uvprobvr(lVis,'corr',dtype,length,updated)
 	call uvopen(lOut,out,'new')
-	call uvset(lOut,'preamble','uvw/time/baseline',0,0.,0.,0.)
+	call uvset(lOut,'preamble','uvw/time/baseline',0,0.d0,0.d0,0.d0)
 	if(dtype.eq.' ')call bug('f','Did not find corr data in input')
-	call uvset(lOut,'corr',dtype,0,0.,0.,0.)
+	call uvset(lOut,'corr',dtype,0,0.d0,0.d0,0.d0)
 	call InitCpy(lVis,vCopy)
 	call InitFreq(lVis,vFreq)
 c

@@ -195,7 +195,8 @@ c Special processing the first time around.
 c
 	  if(first)then
 	    call uvopen(tOut,out,'new')
-	    call uvset(tOut,'preamble','uvw/time/baseline',0,0.,0.,0.)
+	    call uvset(tOut,'preamble','uvw/time/baseline',
+     *                 0,0.d0,0.d0,0.d0)
 	    call hdcopy(tIn,tOut,'history')
 	    call hisopen(tOut,'append')
 	    call hiswrite(tOut,'PSRFIX: Miriad '//version)

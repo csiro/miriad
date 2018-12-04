@@ -31,7 +31,7 @@ c
 c@ log
 c	The list output file name. The default is the terminal.
 c
-c$Id: uvclip.for,v 1.5 2013/08/30 01:49:21 wie017 Exp $
+c$Id: uvclip.for,v 1.6 2018/12/04 04:02:11 wie017 Exp $
 c--
 c
 c  History:
@@ -116,8 +116,8 @@ c     initialise some variables
      -            '  ', 'I ', 'Q ', 'U ', 'V ' /
 c-----------------------------------------------------------------------
       version = versan ('uvclip',
-     :                  '$Revision: 1.5 $',
-     :                  '$Date: 2013/08/30 01:49:21 $')
+     :                  '$Revision: 1.6 $',
+     :                  '$Date: 2018/12/04 04:02:11 $')
 
 c     +++ read inputs
 
@@ -141,8 +141,8 @@ c     open the data file and apply selection criteria
 
       call uvopen(tno,file,'old')
 
-      call uvset(tno,'coord','wavelength',0,0.0,0.0,0.0)
-      call uvset(tno,'planet',' ',0,0.0,0.0,0.0)
+      call uvset(tno,'coord','wavelength',0,0.d0,0.d0,0.d0)
+      call uvset(tno,'planet',' ',0,0.d0,0.d0,0.d0)
 
       call selapply(tno,sels,.true.)
 

@@ -67,7 +67,7 @@ c  Get ready to copy the data.
 c
 	call uvopen(lVis,vis,'old')
 	call SelApply(lVis,sels,.true.)
-	call uvset(lVis,'preamble','uvw/time/baseline',0,0.,0.,0.)
+	call uvset(lVis,'preamble','uvw/time/baseline',0,0.d0,0.d0,0.d0)
 	call varInit(lVis,'channel')
 	call uvvarIni(lVis,vant)
 	call uvvarSet(vant,'antpos')
@@ -76,7 +76,7 @@ c  Open the output, and make its history.
 c
 	call uvopen(lOut,out,'new')
 	call varOnit(lVis,lOut,'channel')
-	call uvset(lOut,'preamble','uvw/time/baseline',0,0.,0.,0.)
+	call uvset(lOut,'preamble','uvw/time/baseline',0,0.d0,0.d0,0.d0)
 c
 	call hdcopy(lVis,lOut,'history')
 	call hisopen(lOut,'append')

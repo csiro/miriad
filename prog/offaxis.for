@@ -47,7 +47,7 @@ c                   The default is to apply these if they are available.
 c         nopass    Do not apply bandpass calibration. The default is to
 c                   apply these calibrations if they are available.
 c
-c$Id: offaxis.for,v 1.5 2013/08/30 01:49:21 wie017 Exp $
+c$Id: offaxis.for,v 1.6 2018/12/04 04:02:11 wie017 Exp $
 c--
 c  History:
 c    rjs  02may96 Original version.
@@ -80,8 +80,8 @@ c     Externals.
       character itoaf*8, versan*72
 c-----------------------------------------------------------------------
       version = versan('offaxis',
-     :                 '$Revision: 1.5 $',
-     :                 '$Date: 2013/08/30 01:49:21 $')
+     :                 '$Revision: 1.6 $',
+     :                 '$Date: 2018/12/04 04:02:11 $')
 c
 c  Get and check the inputs.
 c
@@ -151,7 +151,8 @@ c
         if(first)then
           first = .false.
           call uvopen(tOut,out,'new')
-          call uvset(tOut,'preamble','uvw/time/baseline',0,0.,0.,0.)
+          call uvset(tOut,'preamble','uvw/time/baseline',
+     *               0,0.d0,0.d0,0.d0)
           call hdcopy(tVis,tOut,'history')
           call hisOpen(tOut,'append')
           call hisWrite(tOut,'OFFAXIS: Miriad '//version)

@@ -175,7 +175,7 @@ c
 c< select
 c     NOTE: The default is to use all visibilities.
 c
-c$Id: tvclip.for,v 1.10 2013/08/30 01:49:21 wie017 Exp $
+c$Id: tvclip.for,v 1.11 2018/12/04 04:02:11 wie017 Exp $
 c--
 c
 c  History:
@@ -280,7 +280,7 @@ c
       integer Lin, nchan, MostChan, channel
       integer maxxpix, maxypix, levels, msglen
       integer jx0, jy0, nout, ncmd
-      real start, width, step
+      double precision start, width, step
       real pmin, pmax
       real amp
       real taver(2)
@@ -308,8 +308,8 @@ c-----------------------------------------------------------------------
 c  Announce program.
 c
       version = versan ('tvclip',
-     :                  '$Revision: 1.10 $',
-     :                  '$Date: 2013/08/30 01:49:21 $')
+     :                  '$Revision: 1.11 $',
+     :                  '$Date: 2018/12/04 04:02:11 $')
 c-----------------------------------------------------------------------
 c  Use the key routines to get the user input parameters.
 c
@@ -328,9 +328,9 @@ c - figure out 'channel' or 'wide' data
       call keymatch('line',2,Lines,1,Line,nout)
       if(nout.eq.0) Line = 'channel'
       call Keyi('line', nchan, 0)
-      call Keyr('line', start, 1.0)
-      call Keyr('line', width, 1.0)
-      call Keyr('line', step, 1.0)
+      call Keyd('line', start, 1.0)
+      call Keyd('line', width, 1.0)
+      call Keyd('line', step, 1.0)
       call SelInput('select', Sels, MAXSELS)
       call keymatch('mode', NMODE, Modes, 1, apri, nout)
       if(nout.eq.0) apri = 'amplitude'

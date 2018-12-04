@@ -83,13 +83,14 @@ c
 c  Process the files.
 c
 	call uvopen(tIn,vis,'old')
-	call uvset(tIn,'preamble','uvw/time/baseline/pol',0,0.,0.,0.)
+	call uvset(tIn,'preamble','uvw/time/baseline/pol',
+     *              0,0.d0,0.d0,0.d0)
 	call defline(tIn,ltype)
 	call varInit(tIn,ltype)
 c
 	call uvopen(tOut,out,'new')
 	call varOnit(tIn,tOut,ltype)
-	call uvset(tOut,'preamble','uvw/time/baseline',0,0.,0.,0.)
+	call uvset(tOut,'preamble','uvw/time/baseline',0,0.d0,0.d0,0.d0)
 	if(dopolar)then
 	  call uvputvri(tOut,'npol',1,1)
 	  call wrhdi(tOut,'npol',1)

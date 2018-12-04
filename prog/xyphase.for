@@ -113,7 +113,7 @@ c
 c  Open and initialise the input file.
 c
 	call uvopen(tIn,in,'old')
-	call uvset(tIn,'data','channel',0,1.,1.,1.)
+	call uvset(tIn,'data','channel',0,1.d0,1.d0,1.d0)
 	call SelApply(tIn,sels,.true.)
 c
 c  Get the appropriate visibility data records and the XY phase records.

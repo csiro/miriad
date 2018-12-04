@@ -176,7 +176,7 @@ c       For concatenated spectra the width of a single zoom is used.
 c       Note that noise and artefacts go up quickly towards the band 
 c       edge so making this much smaller will not gain you much.
 c
-c$Id: atlod.for,v 1.54 2018/11/12 23:09:35 wie017 Exp $
+c$Id: atlod.for,v 1.55 2018/12/04 04:02:11 wie017 Exp $
 c--
 c
 c  Program Structure:
@@ -347,7 +347,7 @@ c    mhw  18jul16 Store project code
 c    mhw  26aug16 Fix nopol option
 c    mhw  13nov18 Avoid loss of precision in frequency variables
 c
-c $Id: atlod.for,v 1.54 2018/11/12 23:09:35 wie017 Exp $
+c $Id: atlod.for,v 1.55 2018/12/04 04:02:11 wie017 Exp $
 c-----------------------------------------------------------------------
 
         integer MAXFILES,MAXTIMES,MAXSIM
@@ -368,8 +368,8 @@ c
         character itoaf*8, rperr*32, versan*72
 c-----------------------------------------------------------------------
       version = versan ('atlod',
-     :                  '$Revision: 1.54 $',
-     :                  '$Date: 2018/11/12 23:09:35 $')
+     :                  '$Revision: 1.55 $',
+     :                  '$Date: 2018/12/04 04:02:11 $')
 c
 c  Get the input parameters.
 c
@@ -410,8 +410,8 @@ c
 c  Open the output and initialise it.
 c
         call uvopen(tno,out,'new')
-        if(.not.docomp)call uvset(tno,'corr','r',0,0.,0.,0.)
-        call uvset(tno,'preamble','uvw/time/baseline',0,0.,0.,0.)
+        if(.not.docomp)call uvset(tno,'corr','r',0,0.d0,0.d0,0.d0)
+        call uvset(tno,'preamble','uvw/time/baseline',0,0.d0,0.d0,0.d0)
         call Fixed(tno,dobary)
 c
 c  Do some history processing.

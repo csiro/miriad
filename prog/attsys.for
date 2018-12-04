@@ -52,7 +52,7 @@ c         nocal     Do not apply the gains file.
 c         nopass    Do not apply bandpass corrections.
 c         nopol     Do not apply polarization corrections. 
 c
-c $Id: attsys.for,v 1.9 2013/08/30 01:49:21 wie017 Exp $
+c $Id: attsys.for,v 1.10 2018/12/04 04:02:11 wie017 Exp $
 c--
 c  History:
 c    17jul00 rjs  Original version.
@@ -82,8 +82,8 @@ c
         character versan*72
 c
 	version = versan('attsys',
-     *                   '$Revision: 1.9 $',
-     *                   '$Date: 2013/08/30 01:49:21 $')
+     *                   '$Revision: 1.10 $',
+     *                   '$Date: 2018/12/04 04:02:11 $')
 	call keyini
 	call GetOpt(uvflags,doapply,auto,redo,inv,scale)
 	call uvDatInp('vis',uvflags)
@@ -115,7 +115,7 @@ c
 c
 	call uvopen(lOut,out,'new')
 	call varOnit(lVis,lOut,'channel')
-	call uvset(lOut,'preamble','uvw/time/baseline',0,0.,0.,0.)
+	call uvset(lOut,'preamble','uvw/time/baseline',0,0.d0,0.d0,0.d0)
 c
 c  Make the output history.
 c

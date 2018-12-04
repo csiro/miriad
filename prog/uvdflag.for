@@ -26,7 +26,7 @@ c	          about what would be flagged.
 c         invert  Invert the selection - flag correlations outside the
 c                 specified uvrange
 c
-c$Id: uvdflag.for,v 1.1 2014/02/20 21:39:29 wie017 Exp $
+c$Id: uvdflag.for,v 1.2 2018/12/04 04:02:11 wie017 Exp $
 c--
 c  History:
 c     mhw  18feb2014 Adapted from uvzflag.
@@ -53,8 +53,8 @@ c
 c Get inputs
 c
 	version = versan('uvzflag',
-     *                    '$Revision: 1.1 $',
-     *			  '$Date: 2014/02/20 21:39:29 $')
+     *                    '$Revision: 1.2 $',
+     *			  '$Date: 2018/12/04 04:02:11 $')
 	call keyini
 	call mkeyf('vis',in,MAXFILES,nfiles)
 	if(nfiles.eq.0)call bug('f','An input dataset must be given')
@@ -70,7 +70,8 @@ c Open files
 c
 	do ifile=1,nfiles
 	  call uvopen(lVis,in(ifile),'old')
-	  call uvset(lVis,'preamble','uvw/time/baseline',0,0.,0.,0.)
+	  call uvset(lVis,'preamble','uvw/time/baseline',
+     *               0,0.d0,0.d0,0.d0)
 	  call selApply(lVis,sels,.true.)
 c
 	  ntot  = 0

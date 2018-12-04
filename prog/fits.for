@@ -135,7 +135,7 @@ c         velocity=lsr
 c       indicates that fits is to determine the observatory velocity
 c       wrt the LSR frame using an appropriate model.
 c
-c$Id: fits.for,v 1.32 2014/09/15 04:39:01 sau078 Exp $
+c$Id: fits.for,v 1.33 2018/12/04 04:02:11 wie017 Exp $
 c--
 c
 c  Bugs:
@@ -173,8 +173,8 @@ c-----------------------------------------------------------------------
       character versan*72
 c-----------------------------------------------------------------------
       version = versan('fits',
-     *                 '$Revision: 1.32 $',
-     *                 '$Date: 2014/09/15 04:39:01 $')
+     *                 '$Revision: 1.33 $',
+     *                 '$Date: 2018/12/04 04:02:11 $')
 c
 c  Get the input parameters.
 c
@@ -451,16 +451,16 @@ c
       call hisOpen(tno,'append')
       call histIn(lu,tno,version)
       if (.not.compress .and. abs(bitpix).gt.16)
-     *  call uvset(tno,'corr','r',0,0.0,0.0,0.0)
+     *  call uvset(tno,'corr','r',0,0.d0,0.d0,0.d0)
 c
 c  Determine if its a multisource file, and set the random parameters to
 c  handle accordingly.
 c
       call Indices(lu,uvU,uvV,uvW,UvT,uvBl,uvSrcId,uvFreqid,uvData)
       if (uvW.eq.0) then
-        call uvset(tno,'preamble','uv/time/baseline',0,0.0,0.0,0.0)
+        call uvset(tno,'preamble','uv/time/baseline',0,0.d0,0.d0,0.d0)
       else
-        call uvset(tno,'preamble','uvw/time/baseline',0,0.0,0.0,0.0)
+        call uvset(tno,'preamble','uvw/time/baseline',0,0.d0,0.d0,0.d0)
       endif
 c
 c  Load antenna, source and frequency information.  Set frequency

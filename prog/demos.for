@@ -48,7 +48,7 @@ c         detaper    This indicates that the input image is not fully
 c                    primary beam corrected. Such images are formed by
 c                    LINMOS with options=taper or by MOSMEM.
 c
-c$Id: demos.for,v 1.8 2014/05/21 04:34:59 wie017 Exp $
+c$Id: demos.for,v 1.9 2018/12/04 04:02:11 wie017 Exp $
 c--
 c  History:
 c    rjs  25apr90 Original version.
@@ -95,8 +95,8 @@ c-----------------------------------------------------------------------
       external  itoaf, len1, versan
 c-----------------------------------------------------------------------
       version = versan('demos',
-     *                 '$Revision: 1.8 $',
-     *                 '$Date: 2014/05/21 04:34:59 $')
+     *                 '$Revision: 1.9 $',
+     *                 '$Date: 2018/12/04 04:02:11 $')
 c
 c  Get the input parameters.
 c
@@ -187,9 +187,9 @@ c  Just read the first channel, to avoid unecessary work.
 c
         call uvprobvr(tvis,'corr',type,length,update)
         if (type.ne.' ') then
-          call uvset(tvis,'data','channel',1,1.0,1.0,1.0)
+          call uvset(tvis,'data','channel',1,1.d0,1.d0,1.d0)
         else
-          call uvset(tvis,'data','wide',   1,1.0,1.0,1.0)
+          call uvset(tvis,'data','wide',   1,1.d0,1.d0,1.d0)
         endif
 
         npnt = 0

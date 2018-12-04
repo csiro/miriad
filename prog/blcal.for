@@ -125,7 +125,7 @@ c
 	call uvDatGta('ltype',line)
 	call varInit(lVis,line)
 	call uvopen(lOut,out,'new')
-	call uvset(lOut,'preamble','uvw/time/baseline',0,0.,0.,0.)
+	call uvset(lOut,'preamble','uvw/time/baseline',0,0.d0,0.d0,0.d0)
 	call varOnit(lVis,lOut,line)
 c
 	call uvDatRd(preamble,data,flags,MAXCHAN,nchan)

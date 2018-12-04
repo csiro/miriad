@@ -53,7 +53,7 @@ c                data. Option freq implies nobin. It can be combined
 c                with nopol, but not with nofreq.
 c         noapply Do not apply the flagging, just report the statistics
 c                about what would be flagged.
-c$Id: uvaflag.for,v 1.5 2012/04/17 02:08:46 wie017 Exp $
+c$Id: uvaflag.for,v 1.6 2018/12/04 04:02:11 wie017 Exp $
 c--
 c  History:
 c     nebk 25may89 Original program
@@ -73,8 +73,8 @@ c------------------------------------------------------------------------
         include 'mem.h'
         integer MAXSELS,MAXFILES,MAXPOL
         character version*(*)
-        parameter(version='Uvaflag: $Revision: 1.5 $, '//
-     *             '$Date: 2012/04/17 02:08:46 $')
+        parameter(version='Uvaflag: $Revision: 1.6 $, '//
+     *             '$Date: 2018/12/04 04:02:11 $')
         parameter(MAXSELS=512,MAXFILES=64,MAXPOL=4)
 c
         complex data(maxchan)
@@ -113,9 +113,11 @@ c Open files
 c
         do k=1,nfiles
           call uvopen(lVis,in2,'old')
-          call uvset(lVis,'preamble','time/baseline/pol/bin',0,0.,0.,0.)
+          call uvset(lVis,'preamble','time/baseline/pol/bin',
+     *               0,0.d0,0.d0,0.d0)
           call uvopen(lTmp,in1(k),'old')
-          call uvset(lTmp,'preamble','time/baseline/pol/bin',0,0.,0.,0.)
+          call uvset(lTmp,'preamble','time/baseline/pol/bin',
+     *               0,0.d0,0.d0,0.d0)
           call selApply(lTmp,sels,.true.)
           if(nopol.and.selProbe(sels,'polarization?',0.d0))call bug('f',
      *      'Polarisation selection cannot be used with options=nopol')

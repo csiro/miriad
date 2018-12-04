@@ -149,12 +149,12 @@ c
       call output ('Copy scratch file to output')
       name = in(1:len1(in))//'_1'
       call uvopen (lin, name, 'old')
-      call uvset(lin,'preamble','uvw/time/baseline',0,0.,0.,0.)
+      call uvset(lin,'preamble','uvw/time/baseline',0,0.d0,0.d0,0.d0)
       call VarInit (lin, 'channel')
 c
 c Set up output file (its already open)
 c
-      call uvset(lout,'preamble','uvw/time/baseline',0,0.,0.,0.)
+      call uvset(lout,'preamble','uvw/time/baseline',0,0.d0,0.d0,0.d0)
       call hdcopy(lin,lout,'history')
       call hisopen(lout,'append')
       call hiswrite(lout,'UVGLUE: Miriad '//version)

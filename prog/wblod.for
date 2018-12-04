@@ -287,8 +287,8 @@ c
 c  Open the output and initialise it.
 c
 	call uvopen(tno,out,'new')
-	if(.not.docomp)call uvset(tno,'corr','r',0,0.,0.,0.)
-	call uvset(tno,'preamble','uvw/time/baseline',0,0.,0.,0.)
+	if(.not.docomp)call uvset(tno,'corr','r',0,0.d0,0.d0,0.d0)
+	call uvset(tno,'preamble','uvw/time/baseline',0,0.d0,0.d0,0.d0)
 	call Fixed(tno,dobary)
 c LSS
 c  Ensure there is a valid RA,DEC to start with

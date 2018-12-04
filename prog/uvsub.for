@@ -52,7 +52,7 @@ c       Lines beginning with "#" are ignored.
 c@ out
 c       The name of the output visibility data set (no default).
 c
-c$Id: uvsub.for,v 1.6 2013/08/30 01:49:21 wie017 Exp $
+c$Id: uvsub.for,v 1.7 2018/12/04 04:02:11 wie017 Exp $
 c--
 c  History:
 c    05jan94 nebk  Original version.
@@ -69,7 +69,7 @@ c-----------------------------------------------------------------------
       logical first, flags(MAXCHAN)
       integer ichan, ichan1, ichan2, imod, lout, lvis, nchan, nmod,
      :        npol, ntemp, pol
-      real    start, step, width
+      double precision    start, step, width
       double precision arg, delv, model(4,MAXMOD), preamble(4),
      :        sfreq(MAXCHAN), vel(MAXCHAN), uv(2), x(2)
       complex data(MAXCHAN)
@@ -79,8 +79,8 @@ c-----------------------------------------------------------------------
       data ltypes /'channel ','velocity'/
 c-----------------------------------------------------------------------
       version = versan ('uvsub',
-     :                  '$Revision: 1.6 $',
-     :                  '$Date: 2013/08/30 01:49:21 $')
+     :                  '$Revision: 1.7 $',
+     :                  '$Date: 2018/12/04 04:02:11 $')
 
 c     Get the inputs
       call keyini
@@ -90,13 +90,13 @@ c     Get the inputs
       if (ntemp.eq.0) ltype = ltypes(1)
       call keyi ('line', nchan, 0)
       if (ltype.eq.'channel') then
-        call keyr ('line', start, 1.0)
-        call keyr ('line', width, 1.0)
+        call keyd ('line', start, 1.0)
+        call keyd ('line', width, 1.0)
       else
-        call keyr ('line', start, 0.0)
-        call keyr ('line', width, 0.0)
+        call keyd ('line', start, 0.0)
+        call keyd ('line', width, 0.0)
       end if
-      call keyr ('line', step, width)
+      call keyd ('line', step, width)
 
       call keya ('model', modl, ' ')
       call keya ('out', out, ' ')

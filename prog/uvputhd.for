@@ -79,7 +79,7 @@ c    There is a single option
 c      inter - interpolate real and double precision values linearly
 c@ out
 c    Name of the output dataset. No default.
-c$Id: uvputhd.for,v 1.6 2018/07/06 06:18:42 wie017 Exp $
+c$Id: uvputhd.for,v 1.7 2018/12/04 04:02:11 wie017 Exp $
 c-----------------------------------------------------------------------
         include 'uvputhd.h'
         character version*72
@@ -99,8 +99,8 @@ c
         character*72 versan
 c-----------------------------------------------------------------------
         version = versan ('uvputhd',
-     :                    '$Revision: 1.6 $',
-     :                    '$Date: 2018/07/06 06:18:42 $')
+     :                    '$Revision: 1.7 $',
+     :                    '$Date: 2018/12/04 04:02:11 $')
         call keyini
         call keyf('vis',infile,' ')
         call keya('hdvar',hdvar,' ')
@@ -211,7 +211,9 @@ c
 c  Open the output and copy history
 c
         call uvopen(outset,outfile,'new')
-        if (ctype.ne.' ') call uvset(outset,'corr',ctype,0,0.,0.,0.)
+        if (ctype.ne.' ') then
+           call uvset(outset,'corr',ctype,0,0.d0,0.d0,0.d0)
+        endif
         call hdcopy(inset,outset,'history')
         write(line,'('' Writing data out to file: '',a)') outfile
         call output(line)

@@ -565,7 +565,7 @@ c
         srcfound = allsrc
         changed = .FALSE.
         call UvOpen(Lin, Vis(j), 'old')
-	call UvSet(Lin,'preamble','uvw/time/baseline',0,0.0,0.0,0.0)
+	call UvSet(Lin,'preamble','uvw/time/baseline',0,0.d0,0.d0,0.d0)
         call UvTrack(Lin, 'antpos', 'u')
         call TrackIt(Lin, except, Nexcept)
         call UvNext(Lin)
@@ -626,10 +626,10 @@ c
             call UvOpen(Lout, Outfile, 'new')
             mesg = PROG // 'Writing visibilities to: '// Outfile
             call Output(mesg)
-	    call UvSet(
-     *		     Lout,'preamble','uvw/time/baseline',0,0.0,0.0,0.0)
+	    call UvSet(Lout,'preamble','uvw/time/baseline',
+     *                 0,0.d0,0.d0,0.d0)
             if (docorr)
-     *        call uvset(Lout, 'corr', corrtype, 0, 0.0, 0.0, 0.0)
+     *        call uvset(Lout, 'corr', corrtype, 0, 0.d0, 0.d0, 0.d0)
 c
 c  Copy all calibration tables.
 c
@@ -657,8 +657,8 @@ c  If there are wide band channels but no narrowband channels, set up
 c  uvread and uvwrite to speak wide band channels
 c
             if(dowide .and. (.not. docorr)) then
-              call uvset(Lin, 'data','wide',0, 1.0, 1.0, 1.0)
-              call uvset(Lout,'data','wide',0, 1.0, 1.0, 1.0)
+              call uvset(Lin, 'data','wide',0, 1.d0, 1.d0, 1.d0)
+              call uvset(Lout,'data','wide',0, 1.d0, 1.d0, 1.d0)
             endif
 c
 c  See if the delay tracking or pointing center RA and DEC are present.

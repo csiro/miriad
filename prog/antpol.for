@@ -35,7 +35,7 @@ c------------------------------------------------------------------------
 	parameter(maxsels=1024)
 c
 	real sels(maxsels)
-	real start,step,width
+	double precision start,step,width
 	character linetype*20,vis*80,out*80,line*80
 	complex data(MAXCHAN)
 	complex RR(MAXCHAN),LL(MAXCHAN),RL(MAXCHAN),LR(MAXCHAN)
@@ -53,9 +53,9 @@ c
 	call SelInput('select',sels,maxsels)
 	call keya('line',linetype,'channel')
 	call keyi('line',numchan,1)
-	call keyr('line',start,1.)
-	call keyr('line',width,1.)
-	call keyr('line',step,width)
+	call keyd('line',start,1.)
+	call keyd('line',width,1.)
+	call keyd('line',step,width)
  	call keya('log',out,' ')
 	call keyfin
 c
@@ -69,7 +69,7 @@ c
 	call uvopen(tvis,vis,'old')
 	call SelApply(tvis,sels,.true.)
       	call uvset(tvis,'data',linetype,numchan,start,width,step)
-	call uvset(tvis,'coord','wavelength',0,0.,0.,0.)
+	call uvset(tvis,'coord','wavelength',0,0.d0,0.d0,0.d0)
 c
 c  Title line
 c

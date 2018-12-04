@@ -22,7 +22,7 @@ c
 c       full    Instructs UVACFLAG to tell you about every record
 c               it flags.  The default is a summary at the end.
 c
-c$Id: uvacflag.for,v 1.7 2013/08/30 01:49:21 wie017 Exp $
+c$Id: uvacflag.for,v 1.8 2018/12/04 04:02:11 wie017 Exp $
 c--
 c
 c     mhw  19nov07 Original version, adapted uvpflag into uvacflag
@@ -53,8 +53,8 @@ c
 c
 c-----------------------------------------------------------------------
       version = versan ('uvacflag',
-     :                  '$Revision: 1.7 $',
-     :                  '$Date: 2013/08/30 01:49:21 $')
+     :                  '$Revision: 1.8 $',
+     :                  '$Date: 2018/12/04 04:02:11 $')
 
       ntot=0
       ngood=0
@@ -82,7 +82,7 @@ c After each time slot, figure out the corresponding autocorr flag
 c offsets for each cross-correlation record. On a second pass through
 c the data flag the cross-correlations using the info collected.
 c
-      call uvset(lin, 'preamble', 'time/baseline/pol',0,0.0,0.0,0.0)
+      call uvset(lin, 'preamble', 'time/baseline/pol',0,0.d0,0.d0,0.d0)
       call uvread (lin, pream, data, flags, maxchan, nchan)
       call countit(flags,nchan,ntot,ngood)
       irec = 1

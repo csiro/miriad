@@ -43,7 +43,7 @@ c       The number of channels to average together to derive a point for
 c       the tsys spectrum. Defaults to 1.
 c@ out
 c       The name of the output uv data set. No default.
-c$Id: atrecal.for,v 1.4 2013/08/30 01:49:21 wie017 Exp $
+c$Id: atrecal.for,v 1.5 2018/12/04 04:02:11 wie017 Exp $
 c--
 c  Recalibrate CABB data
 c  CABB data has auto correlations with noise cal OFF in bin 1 and ON in
@@ -93,8 +93,8 @@ c
 c  Get the input parameters.
 c
         version=versan('atrecal',
-     :                 '$Revision: 1.4 $',
-     :                 '$Date: 2013/08/30 01:49:21 $')   
+     :                 '$Revision: 1.5 $',
+     :                 '$Date: 2018/12/04 04:02:11 $')   
         call keyini
         call GetOpt(uvflags,relax,spect)
         call uvDatInp('vis',uvflags)
@@ -135,7 +135,8 @@ c Special processing the first time around.
 c
           if(first)then
             call uvopen(tOut,out,'new')
-            call uvset(tOut,'preamble','uvw/time/baseline',0,0.,0.,0.)
+            call uvset(tOut,'preamble','uvw/time/baseline',
+     *                 0,0.d0,0.d0,0.d0)
             call hdcopy(tIn,tOut,'history')
             call hisopen(tOut,'append')
             call hiswrite(tOut,'atrecal: Miriad '//version)

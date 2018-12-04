@@ -52,12 +52,12 @@ c  Get ready to copy the data.
 c
 	call metInit(daz)
 	call uvopen(lVis,vis,'old')
-	call uvset(lVis,'preamble','uvw/time/baseline',0,0.,0.,0.)
+	call uvset(lVis,'preamble','uvw/time/baseline',0,0.d0,0.d0,0.d0)
 	call varInit(lVis,'channel')
 c
 	call uvopen(lOut,out,'new')
 	call varOnit(lVis,lOut,'channel')
-	call uvset(lOut,'preamble','uvw/time/baseline',0,0.,0.,0.)
+	call uvset(lOut,'preamble','uvw/time/baseline',0,0.d0,0.d0,0.d0)
 c
 c  Make the output history.
 c

@@ -86,10 +86,10 @@ c
 	call keyfin
 c
 	call uvopen(tIn,vis,'old')
-	call uvset(tIn,'preamble','uvw/time/baseline',0,0.,0.,0.)
+	call uvset(tIn,'preamble','uvw/time/baseline',0,0.d0,0.d0,0.d0)
 	call varInit(tIn,'channel')
 	call uvopen(tOut,out,'new')
-	call uvset(tOut,'preamble','uvw/time/baseline',0,0.,0.,0.)
+	call uvset(tOut,'preamble','uvw/time/baseline',0,0.d0,0.d0,0.d0)
 	call varOnit(tIn,tOut,'channel')
 c
 	nvis = 0

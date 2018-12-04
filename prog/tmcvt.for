@@ -146,7 +146,8 @@ c
 	  if(doinit)then
 	    doinit = .false.
 	    call uvopen(lOut,out,'new')
-	    call uvset(lOut,'preamble','uvw/time/baseline',0,0.,0.,0.)
+	    call uvset(lOut,'preamble','uvw/time/baseline',
+     *                 0,0.d0,0.d0,0.d0)
 	    call hdcopy(lIn,lOut,'history')
 	    call hisopen(lOut,'append')
 	    line = 'TMCVT: Miriad '//version

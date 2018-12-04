@@ -47,7 +47,7 @@ c       Interpolation tolerance, in minutes.  This gives the maximum gap
 c       between two integrations to interpolate across.  The default is
 c       2 minutes.
 c
-c$Id: uvdiff.for,v 1.8 2013/08/30 01:49:21 wie017 Exp $
+c$Id: uvdiff.for,v 1.9 2018/12/04 04:02:11 wie017 Exp $
 c--
 c  History:
 c    04-jun-96 rjs  Preliminary version.
@@ -83,8 +83,8 @@ c     Externals.
      *           '-difference ','-one        ','-two        '/
 c-----------------------------------------------------------------------
       version = versan ('uvdiff',
-     :                  '$Revision: 1.8 $',
-     :                  '$Date: 2013/08/30 01:49:21 $')
+     :                  '$Revision: 1.9 $',
+     :                  '$Date: 2018/12/04 04:02:11 $')
 
 c     Get the input parameters.
       call keyini
@@ -121,14 +121,15 @@ c     Open the inputs and outputs.
       endif
 
       call uvset(tIn,'preamble','uvw/time/baseline/pol/ra/lst',
-     *           0,0.,0.,0.)
+     *           0,0.d0,0.d0,0.d0)
       call SelApply(tIn,sels,.true.)
 
       call BInit(vis2)
       call getltype(tIn,ltype)
       call varInit(tIn,ltype)
       call uvopen(tOut,out,'new')
-      call uvset(tOut,'preamble','uvw/time/baseline',0,0.,0.,0.)
+      call uvset(tOut,'preamble','uvw/time/baseline',
+     *           0,0.d0,0.d0,0.d0)
       call hdcopy(tIn,tOut,'history')
       call hisopen(tOut,'append')
       call hiswrite(tOut,'UVDIFF: Miriad '//version)
@@ -347,7 +348,7 @@ c     Open the second dataset.
      *    call bug('w','No bandpass calibration applied')
       endif
 
-      call uvset(tno,'preamble','baseline/pol/ra/lst',0,0.,0.,0.)
+      call uvset(tno,'preamble','baseline/pol/ra/lst',0,0.d0,0.d0,0.d0)
 
       npols = 0
       do i = POLMIN, POLMAX

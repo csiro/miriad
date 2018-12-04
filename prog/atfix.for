@@ -165,8 +165,8 @@ c
         character*72 versan
 c
 	version = versan('atfix',
-     :                   '$Revision: 1.6 $',
-     :                   '$Date: 2013/09/09 03:03:04 $')
+     :                   '$Revision: 1.7 $',
+     :                   '$Date: 2018/12/04 04:02:11 $')
 	call keyini
 	call keya('vis',vis,' ')
 	call selInput('select',sels,MAXSELS)
@@ -232,7 +232,8 @@ c  Get ready to copy the data.
 c
 	call uvopen(lVis,vis,'old')
 	call SelApply(lVis,sels,.true.)
-	call uvset(lVis,'preamble','uvw/time/baseline/pol',0,0.,0.,0.)
+	call uvset(lVis,'preamble','uvw/time/baseline/pol',
+     *             0,0.d0,0.d0,0.d0)
 	call varInit(lVis,'channel')
 c
 	call uvvarIni(lVis,vnif)
@@ -268,7 +269,7 @@ c  Open the output, and make its history.
 c
 	call uvopen(lOut,out,'new')
 	call varOnit(lVis,lOut,'channel')
-	call uvset(lOut,'preamble','uvw/time/baseline',0,0.,0.,0.)
+	call uvset(lOut,'preamble','uvw/time/baseline',0,0.d0,0.d0,0.d0)
 c
 	call hdcopy(lVis,lOut,'history')
 	call hisopen(lOut,'append')
