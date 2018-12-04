@@ -58,7 +58,8 @@ c    dorm                       Rotation measure processing
 c
 	integer maxsels,maxNam,maxIn
 	parameter(maxsels=2048,maxNam=20000,maxIn=400)
-	real sels(maxsels),lstart,lwidth,lstep,lflag,rstart,rwidth,rstep
+	real sels(maxsels)
+        double precision lstart,lwidth,lstep,lflag,rstart,rwidth,rstep
 	real plmaj,plmin,plangle
 	logical doplanet,dowave,doref,dodata,docal,dosels,doleak,dopass
 	logical PlInit,WillCal,WillLeak,auto,cross,calmsg(maxIn),dow

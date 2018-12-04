@@ -64,7 +64,7 @@ c    rjs  18sep05 Type mismatch error.
 c    mhw  17jan12 Use ptrdiff for scr routines to handle larger files
 c    mhw  24mar15 Add spectral parameters for flux model
 c
-c $Id: model.for,v 1.10 2018/11/29 22:50:56 wie017 Exp $
+c $Id: model.for,v 1.11 2018/12/04 04:07:54 wie017 Exp $
 c***********************************************************************
 c*ModelIni -- Ready the uv data file for processing by the Model routine
 c&rjs
@@ -114,7 +114,8 @@ c
         call rdhdr(tmod,'lstart',lstart,1.0)
         call rdhdr(tmod,'lwidth',lwidth,1.0)
         call rdhdr(tmod,'lstep',lstep,1.0)
-        call uvset(tvis,'data',ltype,nchan,lstart,lwidth,lstep)
+        call uvset(tvis,'data',ltype,nchan,dble(lstart),dble(lwidth),
+     *    dble(lstep))
       endif
 
       call uvselect(tvis,'clear',0d0,0d0,.true.)
@@ -238,12 +239,13 @@ c
       if (doim) call coInit(tmod)
 
       call ScrOpen(tscr)
-      call uvset(tvis,'coord','wavelength',0,0.0,0.0,0.0)
-      call uvset(tvis,'preamble','uvw/time/baseline/pol',0,0.0,0.0,0.0)
+      call uvset(tvis,'coord','wavelength',0,0.d0,0.d0,0.d0)
+      call uvset(tvis,'preamble','uvw/time/baseline/pol',0,0.d0,0.d0,
+     *           0.d0)
       if (douv) then
-        call uvset(tmod,'coord','wavelength',0,0.0,0.0,0.0)
-        call uvset(tmod,'preamble','uvw/time/baseline/pol',0,0.0,0.0,
-     *             0.0)
+        call uvset(tmod,'coord','wavelength',0,0.d0,0.d0,0.d0)
+        call uvset(tmod,'preamble','uvw/time/baseline/pol',0,0.d0,0.d0,
+     *             0.d0)
       endif
 
       mfs = index(flags,'m').ne.0

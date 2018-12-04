@@ -206,10 +206,10 @@ fortran subroutine uvwflgwr(integer tno,logical flags)
 }
 /************************************************************************/
 fortran subroutine uvset(integer tno,character object,character type,
-	integer n,real p1,real p2,real p3)
+	integer n,double p1,double p2,double p3)
 {
   uvset_c(tno.val,object.zterm,type.zterm,n.val,
-		(double)p1.val,(double)p2.val,(double)p3.val);
+		p1.val,p2.val,p3.val);
 }
 /************************************************************************/
 fortran subroutine uvselect(integer tno,character object,

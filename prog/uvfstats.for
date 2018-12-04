@@ -47,7 +47,8 @@ c------------------------------------------------------------------------
 	parameter(version='Uvfstats: version 1.0 05-Dec-96')
 	parameter(MAXSELS=256,MAXPARM=MAXCHAN,POLMIN=-8,MAXIN=64)
 c
-	real lstart,lwidth,lstep,sels(MAXSELS)
+	double precision lstart,lwidth,lstep
+        real sels(MAXSELS)
 	integer tno,nchan,npnt,nout
 	integer pol,i1,i2,i,j,offset,nIn
 	double precision preamble(4),ngood(MAXPARM),nbad(MAXPARM),nval

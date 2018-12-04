@@ -16,7 +16,7 @@ c
         implicit none
         character line*(*)
         integer nchan
-        real lstart,lwidth,lstep,lflag
+        double precision lstart,lwidth,lstep,lflag
 c
 c  Get the linetype from the user interface.
 c
@@ -40,15 +40,15 @@ c
      *    'Invalid number of chans in line parameter')
 c
         if(line.eq.'felocity'.or.line.eq.'velocity')then
-          call keyr('line',lstart,0.)
-          call keyr('line',lwidth,0.)
-          call keyr('line',lstep,lwidth)
+          call keyd('line',lstart,0.)
+          call keyd('line',lwidth,0.)
+          call keyd('line',lstep,lwidth)
           lflag = 1.0
         else
-          call keyr('line',lstart,1.0)
-          call keyr('line',lwidth,1.0)
-          call keyr('line',lstep,lwidth)
-          call keyr('line',lflag,1.0)
+          call keyd('line',lstart,1.0)
+          call keyd('line',lwidth,1.0)
+          call keyd('line',lstep,lwidth)
+          call keyd('line',lflag,1.0)
         endif
 c
         end
@@ -62,7 +62,7 @@ c
 	implicit none
 	character line*(*)
 	integer nchan
-	real lstart,lwidth,lstep
+	double precision lstart,lwidth,lstep
 c
 c  Get the linetype from the user interface.
 c
@@ -86,13 +86,13 @@ c
      *	  'Invalid number of chans in line parameter')
 c
 	if(line.eq.'felocity'.or.line.eq.'velocity')then
-	  call keyr('line',lstart,0.)
-	  call keyr('line',lwidth,0.)
-	  call keyr('line',lstep,lwidth)
+	  call keyd('line',lstart,0.)
+	  call keyd('line',lwidth,0.)
+	  call keyd('line',lstep,lwidth)
 	else
-	  call keyr('line',lstart,1.)
-	  call keyr('line',lwidth,1.)
-	  call keyr('line',lstep,lwidth)
+	  call keyd('line',lstart,1.)
+	  call keyd('line',lwidth,1.)
+	  call keyd('line',lstep,lwidth)
 	endif
 c
 	end
@@ -105,7 +105,7 @@ c+
 c
 	implicit none
 	character line*(*)
-	real lstart,lwidth
+	double precision lstart,lwidth
 c
 c  Get the reference linetype from the user interface.
 c
@@ -125,11 +125,11 @@ c
 	if(nout.eq.0)line = ' '
 c
 	if(line.eq.'felocity'.or.line.eq.'velocity')then
-	  call keyr('ref',lstart,0.)
-	  call keyr('ref',lwidth,0.)
+	  call keyd('ref',lstart,0.)
+	  call keyd('ref',lwidth,0.)
 	else
-	  call keyr('ref',lstart,1.)
-	  call keyr('ref',lwidth,1.)
+	  call keyd('ref',lstart,1.)
+	  call keyd('ref',lwidth,1.)
 	endif
 c
 	end

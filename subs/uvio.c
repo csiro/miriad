@@ -257,7 +257,7 @@
 *  mhw  08aug12 merge in some CARMA mods
 *  mhw  10oct18 add fix to velocity suggested by M Voronkov
 *
-* $Id: uvio.c,v 1.10 2018/11/28 01:17:08 wie017 Exp $
+* $Id: uvio.c,v 1.11 2018/12/04 04:07:54 wie017 Exp $
 *===========================================================================*/
 #define VERSION_ID "08-Aug-2012 mhw"
 
@@ -462,7 +462,8 @@ typedef struct {
 typedef struct {
 	int linetype;
 	int start,width,step,n;
-	float fstart,fwidth,fstep,*wts;
+	double fstart,fwidth,fstep;
+        float *wts;
 		} LINE_INFO;
 
 typedef struct {
@@ -2537,7 +2538,7 @@ void uvset_c(int tno,Const char *object,Const char *type,
 	integer tno
 	character object*(*),type*(*)
 	integer n
-	real p1,p2,p3
+	double precision p1,p2,p3
 
   Set up the way uvread behaves. This determines whether uvread returns
   correlation channels, wide-band channels or velocity channels. This also
@@ -2549,7 +2550,7 @@ void uvset_c(int tno,Const char *object,Const char *type,
     object	Name of the object that we are setting the type of.
     type	The type of data that the user wants returned.
     n		Some integer parameter.
-    p1,p2,p3	Some real parameters.					*/
+    p1,p2,p3	Some double precision parameters.					*/
 /*--									*/
 /*----------------------------------------------------------------------*/
 {

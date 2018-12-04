@@ -327,7 +327,7 @@ c
 	  call uvopen(tno,InBuf(k1(pnt):k2(pnt)),'old')
 	  if(dosels)call SelApply(tno,sels,.true.)
 	  if(dow)call uvset(tno,'preamble','uvw/time/baseline',
-     *							0,0.,0.,0.)
+     *				0,0.d0,0.d0,0.d0)
 c
 c  Linetype, etc, setup.
 c
@@ -342,12 +342,12 @@ c
 c
 	  if(dodata)then
  	    call uvset(tno,'data',line,nchan,lstart,lwidth,lstep)
-	    call uvset(tno,'gflag',' ',nint(lflag),0.0,0.0,0.0)
+	    call uvset(tno,'gflag',' ',nint(lflag),0.d0,0.d0,0.d0)
 	  endif
 	  if(doref)
      *	    call uvset(tno,'reference',ref,1,rstart,rwidth,rwidth)
 	  if(dowave)
-     *	    call uvset(tno,'coord','wavelength',0,0.,0.,0.)
+     *	    call uvset(tno,'coord','wavelength',0,0.d0,0.d0,0.d0)
 c
 c  Check that its auto or cross correlation data.
 c
@@ -377,7 +377,8 @@ c
      *				InBuf(k1(pnt):k2(pnt))
 	      call bug('w',umsg)
 	    else if(present)then
-	      call uvset(tno,'planet',' ',0,plmaj,plmin,plangle)
+	      call uvset(tno,'planet',' ',0,dble(plmaj),
+     *                   dble(plmin),dble(plangle))
 	    else
 	      doplanet = .false.
 	    endif

@@ -6,7 +6,7 @@ c
       subroutine linetype( unit, line, type )
 
       integer       unit
-      real          line(4)
+      double precision  line(4)
       character*(*) type
 c
 c Returns the values of the linetype keyword in an array and also
@@ -24,20 +24,20 @@ c    line        condensed form for: nchan,start,width,step.
 c--
  
       integer       nchan
-      real          start, width, step
+      double precision  start, width, step
 
       call keya  ( 'line', type, 'channel' )
 
       call keyi  ( 'line', nchan, 0 )
       line(1) = real(nchan)
 
-      call keyr  ( 'line', start, 1. )
+      call keyd  ( 'line', start, 1. )
       if( start.le.0. ) call bug('f','Channel numbers <0 do not exist' )
 
-      call keyr  ( 'line', width, 1. )
+      call keyd  ( 'line', width, 1. )
       if( width.le.0. ) call bug('f','Channel width must be >0')
 
-      call keyr  ( 'line', step, width )
+      call keyd  ( 'line', step, width )
       if( step.le.0. ) call bug('f','Step between channels must be >0')
 
       call uvset ( unit, 'data', type, nchan, start, width, step )

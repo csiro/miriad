@@ -96,7 +96,7 @@ c       only as many channels as there are planes in the model cube.
 c       The various uv variables that describe the windows are adjusted
 c       accordingly.  No default. 
 c
-c$Id: uvmodel.for,v 1.8 2015/03/24 04:56:24 wie017 Exp $
+c$Id: uvmodel.for,v 1.9 2018/12/04 04:06:01 wie017 Exp $
 c--
 c
 c  History:
@@ -152,9 +152,10 @@ c-----------------------------------------------------------------------
       integer   i, length, nchan, npol, nread, nsize(3), nvis, pol,
      *          pols(-8:4), tMod, tOut, tScr, tVis
       ptrdiff   off
-      real      buffer(NBUF), clip, flux(6), lstart, lstep, lwidth,
+      real      buffer(NBUF), clip, flux(6),
      *          offset(2), sels(MAXSELS), sigma
-      double precision preamble(5)
+      double precision preamble(5), lstart, lstep, lwidth
+      real      p1,p2,p3
       complex   uvdata(MAXCHAN)
       character flag1*8, flag2*8, ltype*32, modl*64, oper*8, out*64,
      *          poltype*4, type*1, version*72, vis*64
@@ -167,8 +168,8 @@ c-----------------------------------------------------------------------
       character versan*72
 c-----------------------------------------------------------------------
       version = versan('uvmodel',
-     *                 '$Revision: 1.8 $',
-     *                 '$Date: 2015/03/24 04:56:24 $')
+     *                 '$Revision: 1.9 $',
+     *                 '$Date: 2018/12/04 04:06:01 $')
 
 c     Get the input parameters.
       call keyini
@@ -255,10 +256,17 @@ c     Do the model calculation for point source or model image.
       else
         call xyopen(tMod,Modl,'old',3,nsize)
         if (Defline) then
+c         Convert double to real and back again       
+          p1 = lstart
+          p2 = lwidth
+          p3 = lstep
           call rdhda(tMod,'ltype',ltype,ltype)
-          call rdhdr(tMod,'lstart',lstart,lstart)
-          call rdhdr(tMod,'lwidth',lwidth,lwidth)
-          call rdhdr(tMod,'lstep',lstep,lstep)
+          call rdhdr(tMod,'lstart',p1,p1)
+          call rdhdr(tMod,'lwidth',p2,p2)
+          call rdhdr(tMod,'lstep',p3,p3)
+          lstart = p1
+          lwidth = p2
+          lstep  = p3
           if (.not.mfs)nchan = nsize(3)
         endif
         call uvset(tVis,'data',ltype,nchan,lstart,lwidth,lstep)

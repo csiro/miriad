@@ -216,9 +216,9 @@ c------------------------------------------------------------------------
 c
 	if(linetype.ne.'wide')then
 	  call uvprobvr(tIn,'corr',type,length,updated)
-	  call uvset(tOut,'corr',type,0,0.,0.,0.)
+	  call uvset(tOut,'corr',type,0,0.d0,0.d0,0.d0)
 	else
-	  call uvset(tOut,'data','wide',0,1.,1.,1.)
+	  call uvset(tOut,'data','wide',0,1.d0,1.d0,1.d0)
 	endif
 	end
 c************************************************************************

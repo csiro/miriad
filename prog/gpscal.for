@@ -141,7 +141,8 @@ c
 	character flag1*8,flag2*8
 	integer tvis,tmod,tscr(4),nfiles
 	integer nModel,minants,refant,nants,nsize(3),nchan,nvis,i
-	real sels(MAXSELS),clip,interval,offset(2),lstart,lwidth,lstep
+	real sels(MAXSELS),clip,interval,offset(2)
+        double precision lstart,lwidth,lstep
 	real flux(4),flx(6),alpha(3)
 	double precision Saved(16),Time0,reffreq
 	logical phase,amp,doline,mfs,doxy,xyvary,doref,noscale,doclip
