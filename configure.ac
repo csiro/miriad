@@ -2,12 +2,12 @@
 # Process this file with autoconf-2.53 or later to produce a configure script.
 #-----------------------------------------------------------------------------
 # Author: Mark Calabretta, Australia Telescope National Facility
-# $Id: configure.ac,v 1.10 2017/05/12 02:09:04 wie017 Exp $
+# $Id: configure.ac,v 1.11 2018/12/04 04:58:16 wie017 Exp $
 #-----------------------------------------------------------------------------
 
 AC_INIT([Miriad], [ATNF2.0], [miriad@atnf.csiro.au], [miriad-ATNF2.0])
 AC_PREREQ([2.53])
-AC_REVISION([$Revision: 1.10 $])
+AC_REVISION([$Revision: 1.11 $])
 
 AC_CONFIG_SRCDIR([tools/miriad.c])
 AC_CONFIG_AUX_DIR([config])
@@ -26,7 +26,7 @@ AC_MSG_NOTICE([
 
 Looking for the Fortran compiler...])
 
-AC_PROG_F77([g77 f77 gfortran ifort xlf frt pgf77 fl32 af77 fort77 f90 xlf90 \
+AC_PROG_F77([gfortran ifort xlf frt fl32 f90 xlf90 \
              pgf90 epcf90 f95 fort xlf95 lf95 g95])
 
 if test "x$F77" = x ; then
