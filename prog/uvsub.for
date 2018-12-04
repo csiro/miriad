@@ -52,7 +52,7 @@ c       Lines beginning with "#" are ignored.
 c@ out
 c       The name of the output visibility data set (no default).
 c
-c$Id: uvsub.for,v 1.7 2018/12/04 04:02:11 wie017 Exp $
+c$Id: uvsub.for,v 1.8 2018/12/04 06:36:14 wie017 Exp $
 c--
 c  History:
 c    05jan94 nebk  Original version.
@@ -79,8 +79,8 @@ c-----------------------------------------------------------------------
       data ltypes /'channel ','velocity'/
 c-----------------------------------------------------------------------
       version = versan ('uvsub',
-     :                  '$Revision: 1.7 $',
-     :                  '$Date: 2018/12/04 04:02:11 $')
+     :                  '$Revision: 1.8 $',
+     :                  '$Date: 2018/12/04 06:36:14 $')
 
 c     Get the inputs
       call keyini
@@ -90,11 +90,11 @@ c     Get the inputs
       if (ntemp.eq.0) ltype = ltypes(1)
       call keyi ('line', nchan, 0)
       if (ltype.eq.'channel') then
-        call keyd ('line', start, 1.0)
-        call keyd ('line', width, 1.0)
+        call keyd ('line', start, 1.d0)
+        call keyd ('line', width, 1.d0)
       else
-        call keyd ('line', start, 0.0)
-        call keyd ('line', width, 0.0)
+        call keyd ('line', start, 0.d0)
+        call keyd ('line', width, 0.d0)
       end if
       call keyd ('line', step, width)
 

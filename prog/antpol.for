@@ -53,8 +53,8 @@ c
 	call SelInput('select',sels,maxsels)
 	call keya('line',linetype,'channel')
 	call keyi('line',numchan,1)
-	call keyd('line',start,1.)
-	call keyd('line',width,1.)
+	call keyd('line',start,1.d0)
+	call keyd('line',width,1.d0)
 	call keyd('line',step,width)
  	call keya('log',out,' ')
 	call keyfin
