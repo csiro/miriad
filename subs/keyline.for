@@ -40,15 +40,15 @@ c
      *    'Invalid number of chans in line parameter')
 c
         if(line.eq.'felocity'.or.line.eq.'velocity')then
-          call keyd('line',lstart,0.)
-          call keyd('line',lwidth,0.)
+          call keyd('line',lstart,0.d0)
+          call keyd('line',lwidth,0.d0)
           call keyd('line',lstep,lwidth)
-          lflag = 1.0
+          lflag = 1.d0
         else
-          call keyd('line',lstart,1.0)
-          call keyd('line',lwidth,1.0)
+          call keyd('line',lstart,1.d0)
+          call keyd('line',lwidth,1.d0)
           call keyd('line',lstep,lwidth)
-          call keyd('line',lflag,1.0)
+          call keyd('line',lflag,1.d0)
         endif
 c
         end
@@ -86,12 +86,12 @@ c
      *	  'Invalid number of chans in line parameter')
 c
 	if(line.eq.'felocity'.or.line.eq.'velocity')then
-	  call keyd('line',lstart,0.)
-	  call keyd('line',lwidth,0.)
+	  call keyd('line',lstart,0.d0)
+	  call keyd('line',lwidth,0.d0)
 	  call keyd('line',lstep,lwidth)
 	else
-	  call keyd('line',lstart,1.)
-	  call keyd('line',lwidth,1.)
+	  call keyd('line',lstart,1.d0)
+	  call keyd('line',lwidth,1.d0)
 	  call keyd('line',lstep,lwidth)
 	endif
 c
@@ -125,11 +125,11 @@ c
 	if(nout.eq.0)line = ' '
 c
 	if(line.eq.'felocity'.or.line.eq.'velocity')then
-	  call keyd('ref',lstart,0.)
-	  call keyd('ref',lwidth,0.)
+	  call keyd('ref',lstart,0.d0)
+	  call keyd('ref',lwidth,0.d0)
 	else
-	  call keyd('ref',lstart,1.)
-	  call keyd('ref',lwidth,1.)
+	  call keyd('ref',lstart,1.d0)
+	  call keyd('ref',lwidth,1.d0)
 	endif
 c
 	end

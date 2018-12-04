@@ -31,10 +31,10 @@ c--
       call keyi  ( 'line', nchan, 0 )
       line(1) = real(nchan)
 
-      call keyd  ( 'line', start, 1. )
+      call keyd  ( 'line', start, 1.d0 )
       if( start.le.0. ) call bug('f','Channel numbers <0 do not exist' )
 
-      call keyd  ( 'line', width, 1. )
+      call keyd  ( 'line', width, 1.d0 )
       if( width.le.0. ) call bug('f','Channel width must be >0')
 
       call keyd  ( 'line', step, width )
