@@ -176,8 +176,8 @@ c again until the list is exhausted.
       data	       usech / MAXCHAN * .true. /
 
       version = versan('uvflag',
-     *                 '$Revision: 1.9 $',
-     *                 '$Date: 2018/12/04 04:02:11 $')
+     *                 '$Revision: 1.10 $',
+     *                 '$Date: 2018/12/04 05:01:39 $')
 
       call keyini
       call keyf( 'vis', vis, ' ' )
@@ -220,7 +220,7 @@ c tformat indicates the time format: 'H' or 'D'.
 
       integer	       unit
       integer	       nchan
-      real	       start, width, step
+      double precision start, width, step
       integer	       chwin(32)
       character*128    logfile
       character*6      flagopts(2)
@@ -255,9 +255,9 @@ c meaningless flagging.
       if( type.ne.'both' )
      *then
 	 call keyi( 'line', nchan, 0 )
-	 call keyr( 'line', start, 1. )
-	 call keyr( 'line', width, 1. )
-	 call keyr( 'line', step, width )
+	 call keyd( 'line', start, 1. )
+	 call keyd( 'line', width, 1. )
+	 call keyd( 'line', step, width )
 	 call assertl( start.gt.0., 'Channel numbers <0 do not exist'  )
 	 call assertl( width.eq.1., 'Width must be 1 for UVFLAG' )
 	 call assertl( step .gt.0., 'Step between channels must be >0' )
