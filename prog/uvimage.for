@@ -97,7 +97,7 @@ c
        double precision sfreq(MAXCHAN),df
        integer lIn,nchan,nread,nvis,nchannel,vmode,nbl,omode
        integer nspect
-       real start,width,step
+       double precision start,width,step
        character*128 vis,out,linetype,line
        character*10 view
        integer antsel(MAXANT),ant1,ant2,nant,ntime
