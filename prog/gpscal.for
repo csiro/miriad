@@ -171,7 +171,7 @@ c
 	call keyr('flux',flux(PolQ),0.0)
 	call keyr('flux',flux(PolU),0.0)
 	call keyr('flux',flux(PolV),0.0)
-	call keyd('spec',reffreq,0.0)
+	call keyd('spec',reffreq,0.d0)
 	call keyr('spec',alpha(1),0.0)
 	call keyr('spec',alpha(2),0.0)
 	call keyr('spec',alpha(3),0.0)
