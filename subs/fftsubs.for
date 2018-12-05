@@ -50,7 +50,7 @@ c               corresponding to the "folding frequency" term.
 c               This array could alternately be dimensioned as N+2 real
 c               elements.
 c
-c$Id: fftsubs.for,v 1.3 2010/05/04 07:34:42 cal103 Exp $
+c$Id: fftsubs.for,v 1.4 2018/12/05 23:28:15 wie017 Exp $
 c--
 c-----------------------------------------------------------------------
       real pi
@@ -691,3 +691,182 @@ c#endif
 
       end
 c#endif
+
+
+c***********************************************************************
+
+      subroutine FFTRC2(In,Out,n1,n2,sgn,Ic,Jc)
+
+      integer n1,n2,Sgn,Ic,Jc
+      real    In(n1,n2)
+      complex Out(n1,n2)
+c-----------------------------------------------------------------------
+c  Perform a Fourier transform of a real image.  There is no scaling.
+c  The "phase-centre" of the transform is (ic,jc), and the centre of
+c  the output is (n1/2+1,n2/2+1).
+c
+c  Inputs:
+c    n1,n2      Size of the input image.
+c    ic,jc      "Phase-centre" of the input image.
+c    Sgn        Sign of the transform, either +1 or -1.
+c    In         The input real image.
+c
+c  Output:
+c    Out        The output complex image.
+c-----------------------------------------------------------------------
+      include 'maxdim.h'
+
+      integer   i, j
+      real      rdat(MAXDIM)
+      complex   cdat(MAXDIM), cdat2(MAXDIM)
+c-----------------------------------------------------------------------
+c     First pass -- transform in the x direction.  During this pass,
+c     shift the image in x so that the centre is at pixel (1,?).  Also
+c     multiply by (-1)**(i-1), so that the centre of the output is at
+c     pixel n1/2.
+      do j = 1, n2
+        do i = ic, n1
+          rdat(i-ic+1) =  In(i,j)
+        enddo
+
+        do i = 1, ic-1
+          rdat(i-ic+n1+1) = In(i,j)
+        enddo
+
+        do i = 1,n1,2
+          rdat(i+1) = -rdat(i+1)
+        enddo
+
+        call fftrc(rdat,out(1,j),sgn,n1)
+      enddo
+
+c     Second pass -- transform in the y direction.  During this pass,
+c     shift the image in y so that the centre is at pixel (1,1).  Also
+c     multiply c  by (-1)**(j-1), so that the centre of the output is
+c     at pixel n2/2.
+      do i = 1, n1/2+1
+        do j = jc, n2
+          cdat(j-jc+1) =  Out(i,j)
+        enddo
+
+        do j = 1, jc-1
+          cdat(j-jc+n2+1) = Out(i,j)
+        enddo
+
+        do j = 1,n2,2
+          cdat(j+1) = -cdat(j+1)
+        enddo
+
+        call fftcc(cdat,cdat2,sgn,n2)
+
+        do j = 1, n2
+          Out(i,j) = cdat2(j)
+        enddo
+      enddo
+
+c     Third pseudo-pass: Make the output full size, by using complex
+c     conjugate symmetry to fill in unused spaces.
+c#ivdep
+      do i = n1/2+2, n1
+        Out(i,1) = conjg(Out(n1+2-i,1))
+      enddo
+
+      do j = 2, n2
+c#ivdep
+        do i = n1/2+2, n1
+          Out(i,j) = conjg(Out(n1+2-i,n2+2-j))
+        enddo
+      enddo
+
+      end
+
+c***********************************************************************
+
+      subroutine FFTCC2(In,n1,n2,sgn,Ic,Jc)
+
+      integer n1,n2,Sgn,Ic,Jc
+      complex In(n1,n2)
+c-----------------------------------------------------------------------
+c  Perform a Fourier transform of a complex image.  There is no scaling.
+c  The "phase-centre" of the transform is (ic,jc), and the centre of the
+c  output is (n1/2+1,n2/2+1).
+c
+c  Inputs:
+c    n1,n2      Size of the input image.
+c    ic,jc      "Phase-centre" of the input image.
+c    Sgn        Sign of the transform, either +1 or -1.
+c
+c  Input/Output:
+c    In         The image to be transformed.
+c-----------------------------------------------------------------------
+      include 'maxdim.h'
+
+      integer   i, j
+      complex   cdat(MAXDIM), cdat2(MAXDIM)
+c-----------------------------------------------------------------------
+c     First pass -- transform in the x direction.  During this pass,
+c     shift the image in x so that the centre is at pixel (1,?).  Also
+c     multiply by (-1)**(i-1), so that the centre of the output is at
+c     pixel n1/2.
+      do j = 1, n2
+        do i = ic, n1
+          cdat(i-ic+1) =  In(i,j)
+        enddo
+
+        do i = 1, ic-1
+          cdat(i-ic+n1+1) = In(i,j)
+        enddo
+
+        do i = 1,n1,2
+          cdat(i+1) = -cdat(i+1)
+        enddo
+
+        call fftcc(cdat,in(1,j),sgn,n1)
+      enddo
+
+c     Second pass -- transform in the y direction.  During this pass,
+c     shift the image in y so that the centre is at pixel (1,1).  Also
+c     multiply by (-1)**(j-1), so that the centre of the output is at
+c     pixel n2/2.
+      do i = 1, n1
+        do j = jc, n2
+          cdat(j-jc+1) =  In(i,j)
+        enddo
+
+        do j = 1, jc-1
+          cdat(j-jc+n2+1) = In(i,j)
+        enddo
+
+        do j = 1,n2,2
+          cdat(j+1) = -cdat(j+1)
+        enddo
+
+        call fftcc(cdat,cdat2,sgn,n2)
+
+        do j = 1, n2
+          In(i,j) = Cdat2(j)
+        enddo
+      enddo
+
+      end
+
+c***********************************************************************
+      subroutine Scale(Data,n,factor)
+
+      ptrdiff n
+      real Data(n),factor
+
+c  Multiply by a scale factor.
+c
+c  Input:
+c    n          Number of points.
+c    factor     Scale factor.
+c  In/Out:
+c    Data       The data to scale.
+c-----------------------------------------------------------------------
+      ptrdiff i
+c-----------------------------------------------------------------------
+      do i = 1, n
+        Data(i) = factor * Data(i)
+      enddo
+      end
