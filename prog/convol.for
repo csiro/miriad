@@ -78,7 +78,7 @@ c@ sigma
 c       When doing devonvolution (options=divide), this gives a noise
 c       parameter. Default is 0.
 c
-c$Id: convol.for,v 1.12 2018/11/29 23:30:11 wie017 Exp $
+c$Id: convol.for,v 1.13 2018/12/05 23:26:16 wie017 Exp $
 c--
 c  History:
 c    rjs,mchw 18aug89 Converted from RESTORE.
@@ -136,8 +136,8 @@ c-----------------------------------------------------------------------
       external  boxrect, itoaf, keyprsnt, versan
 c-----------------------------------------------------------------------
       version = versan('convol',
-     *                 '$Revision: 1.12 $',
-     *                 '$Date: 2018/11/29 23:30:11 $')
+     *                 '$Revision: 1.13 $',
+     *                 '$Date: 2018/12/05 23:26:16 $')
 c
 c  Get the input parameters.
 c
@@ -415,26 +415,6 @@ c-----------------------------------------------------------------------
       corr = present(3)
       final = present(4).or.present(5)
       cube = present(5)
-      end
-c***********************************************************************
-      subroutine Scale(Data,n,factor)
-
-      ptrdiff n
-      real Data(n),factor
-
-c  Multiply by a scale factor.
-c
-c  Input:
-c    n          Number of points.
-c    factor     Scale factor.
-c  In/Out:
-c    Data       The data to scale.
-c-----------------------------------------------------------------------
-      ptrdiff i
-c-----------------------------------------------------------------------
-      do i = 1, n
-        Data(i) = factor * Data(i)
-      enddo
       end
 c***********************************************************************
       subroutine Header(lMap, lOut, naxis, blc, bunit, bmaj, bmin, bpa,
