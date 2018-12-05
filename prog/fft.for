@@ -38,7 +38,7 @@ c       Output amplitude image.  Default is not to write it.
 c@ phase
 c       Output phase image.  Default is not to write it.
 c
-c$Id: fft.for,v 1.7 2018/12/05 23:27:23 wie017 Exp $
+c$Id: fft.for,v 1.8 2018/12/05 23:36:20 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -62,8 +62,8 @@ c-----------------------------------------------------------------------
       character versan*72
 c-----------------------------------------------------------------------
       version = versan('fft',
-     *                 '$Revision: 1.7 $',
-     *                 '$Date: 2018/12/05 23:27:23 $')
+     *                 '$Revision: 1.8 $',
+     *                 '$Date: 2018/12/05 23:36:20 $')
 
 c     Get the input parameters.
       call keyini
@@ -200,29 +200,6 @@ c     Finish up.
       if (liOut.ne.0) call xyclose(liOut)
       if (lMag.ne.0) call xyclose(lMag)
       if (lPhase.ne.0) call xyclose(lPhase)
-
-      end
-
-c***********************************************************************
-
-      subroutine Scale(rData,n,factor)
-
-      ptrdiff n
-      real    rData(n), factor
-c-----------------------------------------------------------------------
-c  Scale the image by a factor.
-c
-c  Input:
-c    n          Number of pixels to scale.
-c    factor     The scale factor.
-c  Input/Output:
-c    rData      The data to be scaled.
-c-----------------------------------------------------------------------
-      ptrdiff i
-c-----------------------------------------------------------------------
-      do i = 1, n
-        rData(i) = factor * rData(i)
-      enddo
 
       end
 
