@@ -318,7 +318,7 @@ c       nocal   Do not apply antenna gain calibration.
 c       nopass  Do not apply bandpass correction.
 c       nopol   Do not apply polarisation leakage correction.
 c
-c$Id: pgflag.for,v 1.30 2016/10/05 23:06:50 wie017 Exp $
+c$Id: pgflag.for,v 1.31 2018/12/06 04:52:42 wie017 Exp $
 c--
 c
 c  History:
@@ -466,8 +466,8 @@ c
       logical uvDatOpn
 
       version = versan ('pgflag',
-     :                  '$Revision: 1.30 $',
-     :                  '$Date: 2016/10/05 23:06:50 $')
+     :                  '$Revision: 1.31 $',
+     :                  '$Date: 2018/12/06 04:52:42 $')
 
 c
 c Get user inputs
@@ -2216,7 +2216,7 @@ c
           buf(count) = abs(array(i,j,2))
         endif
       enddo
-      if (count.gt.0) call median(buf,count,mad)
+      if (count.gt.0) call qmedian(buf,count,mad)
 c
 c  Apply the flagging operation to the iflag array, and recompute the
 c  wedge values.
@@ -4533,7 +4533,7 @@ c
             buf(count) = abs(array(i,j,2))
           endif
         enddo
-        if (count.gt.0) call median(buf,count,mad)
+        if (count.gt.0) call qmedian(buf,count,mad)
 
 	first = .true.
 	do j=1,Ny
