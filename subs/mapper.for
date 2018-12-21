@@ -119,13 +119,13 @@ c  plane of interest.
 c
 	if(mode.eq.'fft')then
 	  if(ichan.lt.chan1.or.ichan.gt.chan2)call MapGrid(ichan)
-	  plsize8 = 2*nu*nv
+	  plsize8 = 2_8*nu*nv
 	  plsize8 = plsize8 * npnt
 	  pMap = pBuff + plsize8*(ichan-chan1) + nextra8
 	  do i=1,npnt
-	    p8 = 2*nu*nv
+	    p8 = 2_8*nu*nv
 	    p8 = p8 * (i-1)
-	    call MapVSum(memr(pMap+p8),nu*nv,Sum)
+	    call MapVSum(memr(pMap+p8),1_8*nu*nv,Sum)
 	    if(Sum.eq.0)call bug('f','No data found for pointing')
 	    Scale(i) = 0.5/Sum
 	  enddo
@@ -169,16 +169,15 @@ c
 c
 c  Now do the Fourier transform and grid correction of this plane.
 c
-	  plsize8 = 2
-	  plsize8 = plsize8 * nu * nv * npnt
+	  plsize8 = 2_8 * nu * nv * npnt
 	  ioff = plsize8*(ichan-chan1) + nextra8
 	  ooff = 0
 	  do i=1,npnt
 	    call MapFFT1(memr(pBuff+ioff),nu,nv,u0,v0,n2)
 	    call MapFFT2(memr(pBuff),ioff,ooff,nu,nv,nxc,nyc,n1,u0,v0,
      *	      scale(i),xCorr(n1/2-nxc/2+1),yCorr(n2/2-nyc/2+1))
-	    ioff = ioff + 2*nu*nv
-	    ooff = ooff + nxc*nyc
+	    ioff = ioff + 2_8*nu*nv
+	    ooff = ooff + 1_8*nxc*nyc
 	  enddo
 c
 c  Do the DFT and Median processing modes (pretty slow ...).
@@ -241,14 +240,14 @@ c************************************************************************
 	subroutine MapVSum(Dat,n,Sum)
 c
 	implicit none
-	integer n
+	ptrdiff n
 	complex Dat(n)
 	real Sum
 c
 c  Determine the sum of the complex data, and set this as the pointing
 c  scale factor.
 c------------------------------------------------------------------------
-	integer i
+	ptrdiff i
 	double precision temp
 c
 	temp = 0
@@ -405,7 +404,7 @@ c       nxc*nyc - 2*nu*nyc -2*(u0+nu*(nv/2-(nyc/2+1)))
 	n8c = n8c * nyc
 	n8d = 2
 	n8d = n8d * nu * nyc
-	n8e = 2*((u0-1)+nu*(v0-(nyc/2+1)))
+	n8e = 2*((u0-1)+nu*(v0-(nyc/2+1_8)))
 c	nextra = max(0, npnt*nxc*nyc - 2*nu*((npnt-1)*nv+(v0+nyc/2-1)),
 c     *		        nxc*nyc-2*nu*nyc-2*((u0-1)+nu*(v0-(nyc/2+1))) )
 	n8a = n8a - n8b
@@ -523,7 +522,7 @@ c
 	implicit none
 	integer nVis,size,offset,ncount,npnt
 	integer nu,nv,u0,v0,n1,n2
-	complex Grd(nv*nu,npnt,ncount)
+	complex Grd(1_8*nv*nu,npnt,ncount)
 	real Vis(size,nvis)
 	integer ncgf,width
 	integer poff(width*width),qoff(width*width),goff(width*width)
@@ -536,7 +535,8 @@ c------------------------------------------------------------------------
 	include 'mirconst.h'
 	integer InU,InV,InPnt
 	parameter(InU=1,InV=2,InPnt=4)
-	integer i,j,k,l,uu,vv,p0,q0,g0,gg,pp,qq,Step,chan,pnt
+	integer i,j,k,l,uu,vv,p0,q0,pp,qq,Step,chan,pnt
+        ptrdiff g0,gg
 	complex Dat,Dat1
 	real Weight,u,v,hwd,du,dv
 	logical ok
@@ -584,7 +584,7 @@ c  grid it.
 c
 	  ok = uu.ge.0.and.uu+width.le.nu.and.vv.ge.0.and.vv+width.le.nv
 	  if(ok)then
-	    g0 = uu + vv*nu
+	    g0 = uu + 1_8*vv*nu
 c
 	    p0 = ncgf/2 - nint( Step * du )
 	    q0 = ncgf/2 - nint( Step * dv )
