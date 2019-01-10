@@ -1,7 +1,7 @@
 #!/usr/local/bin/perl
 #
 # $Source: /var/tmp/RrsvEF/cvsroot/miriad-dist/RCS/scripts/web/mirman.pl,v $
-# $Id: mirman.pl,v 1.16 2019/01/10 03:26:23 mci156 Exp $
+# $Id: mirman.pl,v 1.17 2019/01/10 23:18:37 mci156 Exp $
 #
 # Depends on 'rman' (PolyglotMan - formerly RosettaMan)
 #
@@ -64,12 +64,24 @@ EOF
   } else {
 
     # Try to look up a manual page
+    my $testresult;
+    $testresult = `/usr/bin/man $topic 2>&1`;
+    if ($testresult =~ /[Nn]o  *manual \S+  *for /) {
+        $page = '<html>'
+              . '<head><TITLE>Web-Based Miriad Topic/UNIX Man Command</TITLE></head>'
+              . '<body BGCOLOR=white>'
+              . '<H1 align="center">Web-Based Miriad Topic/UNIX Man Command</H1>'
+              . 'No manual page for "' . $topic . '".'
+              . '</body>'
+              . '</html>';
+    } else {
+        $line = '/usr/bin/man ' . $topic . '|/usr/bin/rman -f html -r "mirman.pl?topic=%s"';
+        $page = `$line`;
+        $page =~ s{(http://[\w/\+\?\&;%.~=-]*[\w/])}{&deamp1($1)}eg;
+        $page =~ s{(ftp://[\w/\.-]*\w)}{<A HREF="\1">\1</A>}g;
+    }
 
     print "Content-type: text/html\n\n";
-    $line = '/usr/bin/man ' . $topic . '|/usr/bin/rman -f html -r "mirman.pl?topic=%s"';
-    $page = `$line`;
-    $page =~ s{(http://[\w/\+\?\&;%.~=-]*[\w/])}{&deamp1($1)}eg;
-    $page =~ s{(ftp://[\w/\.-]*\w)}{<A HREF="\1">\1</A>}g;
     print $page;
   }
 
