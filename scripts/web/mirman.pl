@@ -1,7 +1,7 @@
 #!/usr/local/bin/perl
 #
 # $Source: /var/tmp/RrsvEF/cvsroot/miriad-dist/RCS/scripts/web/mirman.pl,v $
-# $Id: mirman.pl,v 1.14 2019/01/10 03:11:16 mci156 Exp $
+# $Id: mirman.pl,v 1.15 2019/01/10 03:23:08 mci156 Exp $
 #
 # Depends on 'rman' (PolyglotMan - formerly RosettaMan)
 #
@@ -36,11 +36,12 @@ if ( param('topic') ) {
 
   # Determine the request's scheme so we can redirect using the same.
   $u = url(-base => 1);
-  $scheme = url( $u );
+  $scheme = URI->new( $u )->scheme;
   $scheme = 'http' if ($scheme =~ /^$/);
 
   # Explictly reconstruct the base url to avoid XSS
-  $dest = $scheme . ':' . $site;
+  $dest = $scheme . '://' . $site;
+
   if ( -f "$miriad_dir/$topic.html") {
     $dest .= "$miriad_uri/$topic.html";
   } elsif (-f "$miriad_dir/doc/$topic.html"){
