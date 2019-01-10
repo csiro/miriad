@@ -1,7 +1,7 @@
 #!/usr/local/bin/perl
 #
 # $Source: /var/tmp/RrsvEF/cvsroot/miriad-dist/RCS/scripts/web/mirman.pl,v $
-# $Id: mirman.pl,v 1.11 2019/01/10 02:40:54 mci156 Exp $
+# $Id: mirman.pl,v 1.12 2019/01/10 02:48:41 mci156 Exp $
 #
 # Depends on 'rman' (PolyglotMan - formerly RosettaMan)
 #
@@ -20,6 +20,8 @@ $TOP='/var/www/vhosts/www.atnf.csiro.au';
 $miriad_uri = "/computing/software/miriad";
 $miriad_dir = "$TOP/htdocs/$miriad_uri";
 
+die("No miriad dir $miriad_dir\n") if ( ! -d $miriad_dir );
+
 my ($q, %inputs, $topic, $dest, $line, $page);
 
 $q = new CGI;
@@ -31,6 +33,9 @@ if ( param('topic') ) {
 
   if( -f "$miriad_dir/$topic.html"){
     $dest = "http://www.atnf.csiro.au/computing/software/miriad/$topic.html";
+  } elsif (-f "$miriad_dir/doc/$topic.html"){
+    $dest = "http://www.atnf.csiro.au/computing/software/miriad/doc/$topic.html";
+
     print <<"EOF";
 Content-type: text/html
 
