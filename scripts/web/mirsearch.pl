@@ -1,13 +1,19 @@
 #!/usr/local/bin/perl -- -*- perl -*-
 #
 # $Source: /var/tmp/RrsvEF/cvsroot/miriad-dist/RCS/scripts/web/mirsearch.pl,v $
-# $Id: mirsearch.pl,v 1.3 2019/01/10 01:54:31 mci156 Exp $
+# $Id: mirsearch.pl,v 1.4 2019/01/10 22:58:15 mci156 Exp $
 #
 # miriadsearch.pl    David Mar  13-Mar-1996
 # modified from: sitesearch.pl    David Mar  29-Sep-1995
 # modified for new server         Henrietta May 12 Mar 1998
 # Processes information from form
 # and produces a list of matching documents.
+
+use strict;
+
+my ($TOP, $miriad_uri, $miriad_dir);
+my ($Matches, $Search);
+
 
 $TOP='/var/www/vhosts/www.atnf.csiro.au';
 push(@INC, "$TOP/cgi-bin");
@@ -17,22 +23,23 @@ $miriad_dir = "$TOP/htdocs/$miriad_uri";
 
 sub ReadParse
 {
+  my (@in, %out);
   if (@_) {
-    local (*in) = @_;
+    (@in) = @_;
   }
 
-  local ($i, $loc, $key, $val);
+  my ($i, $loc, $key, $val, $instr);
 
   # Read in text
   if ($ENV{'REQUEST_METHOD'} eq "GET") {
-    $in = $ENV{'QUERY_STRING'};
+    $instr = $ENV{'QUERY_STRING'};
   } elsif ($ENV{'REQUEST_METHOD'} eq "POST") {
     for ($i = 0; $i < $ENV{'CONTENT_LENGTH'}; $i++) {
-      $in .= getc;
+      $instr .= getc;
     }
   } 
 
-  @in = split(/&/,$in);
+  @in = split(/&/,$instr);
 
   foreach $i (0 .. $#in) {
     # Convert plus's to spaces
@@ -45,17 +52,17 @@ sub ReadParse
     $loc = index($in[$i],"=");
     $key = substr($in[$i],0,$loc);
     $val = substr($in[$i],$loc+1);
-    $in{$key} .= '\0' if (defined($in{$key})); # \0 is the multiple separator
-    $in{$key} .= $val;
+    $out{$key} .= '\0' if (defined($out{$key})); # \0 is the multiple separator
+    $out{$key} .= $val;
   }
 
-  return 1; # just for fun
+  return %out; # just for fun
 }
 
 sub searchfile
 {
-	local($dir, $file) = @_;
-        local ($filespec);
+	my($dir, $file) = @_;
+        my ($filespec, $Title, $TitleGo, $Matches);
 
 #	print "$dir/$file\n";          # DEBUG
 
@@ -86,13 +93,13 @@ sub searchfile
 
 sub searchdir
 {
-	local($dir, $nlink) = @_;
-	local($dev, $ino, $mode, $subcount);
+	my($dir, $nlink) = @_;
+	my($dev, $ino, $mode, $subcount, $DIR, @filenames, $name, $subcount);
 	($dev, $ino, $mode, $nlink) = stat('.') unless $nlink;
 
 	# Get files in current directory.
 	opendir(DIR, '.') || die;
-	local(@filenames) = readdir(DIR);
+	my(@filenames) = readdir(DIR);
 	closedir(DIR);
 
 	if ($nlink == 2)            # This dir has no subdirectories.
@@ -127,7 +134,8 @@ sub searchdir
 	}
 }
 
-&ReadParse;			# get input;
+my %in;
+%in = ReadParse();			# get input;
 
 print << "EOF";
 Content-type: text/html
