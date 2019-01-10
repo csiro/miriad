@@ -1,13 +1,17 @@
 #!/usr/local/bin/perl
 #
 # $Source: /var/tmp/RrsvEF/cvsroot/miriad-dist/RCS/scripts/web/mirman.pl,v $
-# $Id: mirman.pl,v 1.8 2019/01/10 02:33:58 mci156 Exp $
+# $Id: mirman.pl,v 1.9 2019/01/10 02:38:46 mci156 Exp $
 #
 # Depends on 'rman' (PolyglotMan - formerly RosettaMan)
 #
 # Set up the environment.
 
 use strict;
+use CGI qw/:standard :form/;
+
+$CGI::POST_MAX        = 1024 * 10; #max 10kb post size
+$CGI::DISABLE_UPLOADS = 1;         #no uploads
 
 my ($TOP,$miriad_uri,$miriad_dir);
 
@@ -18,11 +22,13 @@ $miriad_dir = "$TOP/htdocs/$miriad_uri";
 
 my ($q, %inputs, $topic, $dest, $line, $page);
 
-%inputs = &getcgivars;
-$topic = $inputs{"topic"};
-#$topic = "man";
+$q = new CGI;
 
-if($topic ne ""){
+if ( param('topic') ) {
+
+  $topic = param('topic');
+  $topic =~ s/[^a-zA-Z0-9]//g;     #defang input
+
   if( -f "$miriad_dir/$topic.html"){
 
 #    print "Content-type: text/html\n\n";
