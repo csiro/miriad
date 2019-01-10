@@ -1,14 +1,20 @@
 #!/usr/local/bin/perl
 #
 # $Source: /var/tmp/RrsvEF/cvsroot/miriad-dist/RCS/scripts/web/mirman.pl,v $
-# $Id: mirman.pl,v 1.6 2019/01/10 02:31:08 mci156 Exp $
+# $Id: mirman.pl,v 1.7 2019/01/10 02:32:54 mci156 Exp $
 #
 # Set up the environment.
+
+use strict;
+
+my ($TOP,$miriad_uri,$miriad_dir);
 
 $ENV{"MANPATH"} = "/nfs/atapplic/miriad/man:/usr/local/man:/usr/local/site/man:/usr/share/man:/usr/man:/usr/local/karma/man";
 $TOP='/var/www/vhosts/www.atnf.csiro.au';
 $miriad_uri = "/computing/software/miriad";
 $miriad_dir = "$TOP/htdocs/$miriad_uri";
+
+my ($q, %inputs, $topic, $dest, $line, $page);
 
 %inputs = &getcgivars;
 $topic = $inputs{"topic"};
@@ -60,7 +66,7 @@ EOF
 }
 #------------------------------------------------------------------------
 sub deamp1{
-  local ($a,$b,$c);
+  my ($a,$b,$c);
   ($a) = @_;
   if($a =~ m{^(.+)(&\w+)$}){
     $a = $1;
@@ -80,8 +86,8 @@ sub deamp1{
 #   the input has any \0 characters, very unlikely but conceivably possible).
 # This is a simple version, that assumes a request method of GET.
 sub getcgivars {
-    local(%in) ;
-    local($name, $value) ;
+    my(%in) ;
+    my($name, $value) ;
 
     # Resolve and unencode name/value pairs into %in
     foreach (split('&', $ENV{'QUERY_STRING'})) {
