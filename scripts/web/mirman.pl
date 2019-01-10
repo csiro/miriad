@@ -1,11 +1,11 @@
 #!/usr/local/bin/perl
 #
 # $Source
-# $Id: mirman.pl,v 1.3 2019/01/10 01:50:11 mci156 Exp $
+# $Id: mirman.pl,v 1.4 2019/01/10 01:58:50 mci156 Exp $
 #
 # Set up the environment.
 
-$ENV{"MANPATH"} = "/u/rsault/man:/applic/miriad/man:/usr/openwin/man:/usr/openwin/share/man:/usr/local/X11/man:/usr/local/texmf/man:/usr/local/man:/usr/local/gnu/man:/usr/local/site/man:/opt/SUNWspro/man:/usr/share/man:/usr/man:/usr/local/karma/man";
+$ENV{"MANPATH"} = "/nfs/atapplic/miriad/man:/usr/local/man:/usr/local/site/man:/usr/share/man:/usr/man:/usr/local/karma/man";
 $TOP='/export/www/vhosts/atnf/htdocs';
 $miriad_dir = "/computing/software/miriad";
 
