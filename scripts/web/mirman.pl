@@ -1,7 +1,7 @@
 #!/usr/local/bin/perl
 #
 # $Source: /var/tmp/RrsvEF/cvsroot/miriad-dist/RCS/scripts/web/mirman.pl,v $
-# $Id: mirman.pl,v 1.9 2019/01/10 02:38:46 mci156 Exp $
+# $Id: mirman.pl,v 1.10 2019/01/10 02:39:31 mci156 Exp $
 #
 # Depends on 'rman' (PolyglotMan - formerly RosettaMan)
 #
@@ -87,27 +87,3 @@ sub deamp1{
   $a =~ s{&amp;}{&}g;
   return "<A HREF=\"$a\">$b</A>$c";
 }
-#------------------------------------------------------------------------
-# Read all CGI vars into an associative array.
-# If multiple input fields have the same name, they are concatenated into
-#   one array element and delimited with the \0 character (which fails if
-#   the input has any \0 characters, very unlikely but conceivably possible).
-# This is a simple version, that assumes a request method of GET.
-sub getcgivars {
-    my(%in) ;
-    my($name, $value) ;
-
-    # Resolve and unencode name/value pairs into %in
-    foreach (split('&', $ENV{'QUERY_STRING'})) {
-        s/\+/ /g ;
-        ($name, $value)= split('=', $_, 2) ;
-        $name=~ s/%(..)/chr(hex($1))/ge ;
-        $value=~ s/%(..)/chr(hex($1))/ge ;
-        $in{$name} .= "\0" if defined($in{$name}) ;
-        $in{$name} .= $value ;
-    }
-
-    return %in ;
-
-}
-
