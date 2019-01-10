@@ -1,7 +1,7 @@
 #!/usr/local/bin/perl
 #
 # $Source
-# $Id: mirman.pl,v 1.2 2019/01/10 01:48:50 mci156 Exp $
+# $Id: mirman.pl,v 1.3 2019/01/10 01:50:11 mci156 Exp $
 #
 # Set up the environment.
 
@@ -15,6 +15,12 @@ $topic = $inputs{"topic"};
 
 if($topic ne ""){
   if( -f "$TOP/$miriad_dir/$topic.html"){
+
+#    print "Content-type: text/html\n\n";
+#    open IN,"$TOP/$miriad_dir/$topic.html";
+#    while(<IN>){print $_;}
+#    close IN;
+
     $dest = "http://www.atnf.csiro.au/computing/software/miriad/$topic.html";
     print <<"EOF";
 Content-type: text/html
@@ -23,10 +29,10 @@ Content-type: text/html
 <TITLE>Redirect to Miriad $topic file</TITLE>
 <META HTTP-EQUIV="REFRESH" CONTENT="0;URL=$dest">
 </HEAD><BODY>
-This page is being redirected to 
-<A HREF=$dest>$dest</A>.
 </BODY></HTML>
 EOF
+#This page is being redirected to 
+#<A HREF=$dest>$dest</A>.
   }else{
     print "Content-type: text/html\n\n";
     $line = '/usr/bin/man ' . $topic . '|/usr/local/bin/rman -f html -r "mirman.pl?topic=%s"';
