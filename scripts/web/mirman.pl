@@ -1,7 +1,9 @@
 #!/usr/local/bin/perl
 #
 # $Source: /var/tmp/RrsvEF/cvsroot/miriad-dist/RCS/scripts/web/mirman.pl,v $
-# $Id: mirman.pl,v 1.7 2019/01/10 02:32:54 mci156 Exp $
+# $Id: mirman.pl,v 1.8 2019/01/10 02:33:58 mci156 Exp $
+#
+# Depends on 'rman' (PolyglotMan - formerly RosettaMan)
 #
 # Set up the environment.
 
@@ -42,7 +44,7 @@ EOF
 #<A HREF=$dest>$dest</A>.
   }else{
     print "Content-type: text/html\n\n";
-    $line = '/usr/bin/man ' . $topic . '|/usr/local/bin/rman -f html -r "mirman.pl?topic=%s"';
+    $line = '/usr/bin/man ' . $topic . '|/usr/bin/rman -f html -r "mirman.pl?topic=%s"';
     $page = `$line`;
     $page =~ s{(http://[\w/\+\?\&;%.~=-]*[\w/])}{&deamp1($1)}eg;
     $page =~ s{(ftp://[\w/\.-]*\w)}{<A HREF="\1">\1</A>}g;
