@@ -1,7 +1,7 @@
 #!/usr/local/bin/perl
 #
 # $Source: /var/tmp/RrsvEF/cvsroot/miriad-dist/RCS/scripts/web/mirman.pl,v $
-# $Id: mirman.pl,v 1.13 2019/01/10 03:09:27 mci156 Exp $
+# $Id: mirman.pl,v 1.14 2019/01/10 03:11:16 mci156 Exp $
 #
 # Depends on 'rman' (PolyglotMan - formerly RosettaMan)
 #
@@ -41,7 +41,7 @@ if ( param('topic') ) {
 
   # Explictly reconstruct the base url to avoid XSS
   $dest = $scheme . ':' . $site;
-  if( -f "$miriad_dir/$topic.html"){
+  if ( -f "$miriad_dir/$topic.html") {
     $dest .= "$miriad_uri/$topic.html";
   } elsif (-f "$miriad_dir/doc/$topic.html"){
     $dest .= "$miriad_uri/doc/$topic.html";
@@ -55,9 +55,8 @@ Content-type: text/html
 </HEAD><BODY>
 </BODY></HTML>
 EOF
-#This page is being redirected to 
-#<A HREF=$dest>$dest</A>.
-  }else{
+
+  } else {
     print "Content-type: text/html\n\n";
     $line = '/usr/bin/man ' . $topic . '|/usr/bin/rman -f html -r "mirman.pl?topic=%s"';
     $page = `$line`;
@@ -65,7 +64,9 @@ EOF
     $page =~ s{(ftp://[\w/\.-]*\w)}{<A HREF="\1">\1</A>}g;
     print $page;
   }
-}else{
+
+} else {
+
   print <<"EOF";
 Content-type: text/html
 
@@ -80,6 +81,7 @@ Content-type: text/html
 </FORM>
 </BODY></HTML>
 EOF
+
 }
 #------------------------------------------------------------------------
 sub deamp1{
