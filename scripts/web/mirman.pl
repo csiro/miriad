@@ -1,7 +1,7 @@
 #!/usr/local/bin/perl
 #
 # $Source: /var/tmp/RrsvEF/cvsroot/miriad-dist/RCS/scripts/web/mirman.pl,v $
-# $Id: mirman.pl,v 1.15 2019/01/10 03:23:08 mci156 Exp $
+# $Id: mirman.pl,v 1.16 2019/01/10 03:26:23 mci156 Exp $
 #
 # Depends on 'rman' (PolyglotMan - formerly RosettaMan)
 #
@@ -39,13 +39,17 @@ if ( param('topic') ) {
   $scheme = URI->new( $u )->scheme;
   $scheme = 'http' if ($scheme =~ /^$/);
 
-  # Explictly reconstruct the base url to avoid XSS
-  $dest = $scheme . '://' . $site;
+  $dest = '';
 
   if ( -f "$miriad_dir/$topic.html") {
     $dest .= "$miriad_uri/$topic.html";
   } elsif (-f "$miriad_dir/doc/$topic.html"){
     $dest .= "$miriad_uri/doc/$topic.html";
+  }
+
+  if ($dest =~ /\S/) {
+    # Explictly reconstruct the base url to avoid XSS
+    $dest = $scheme . '://' . $site . $dest;
 
     print <<"EOF";
 Content-type: text/html
@@ -58,6 +62,9 @@ Content-type: text/html
 EOF
 
   } else {
+
+    # Try to look up a manual page
+
     print "Content-type: text/html\n\n";
     $line = '/usr/bin/man ' . $topic . '|/usr/bin/rman -f html -r "mirman.pl?topic=%s"';
     $page = `$line`;
