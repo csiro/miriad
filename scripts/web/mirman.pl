@@ -1,7 +1,7 @@
 #!/usr/local/bin/perl
 #
-# $Source
-# $Id: mirman.pl,v 1.5 2019/01/10 02:04:50 mci156 Exp $
+# $Source: /var/tmp/RrsvEF/cvsroot/miriad-dist/RCS/scripts/web/mirman.pl,v $
+# $Id: mirman.pl,v 1.6 2019/01/10 02:31:08 mci156 Exp $
 #
 # Set up the environment.
 
