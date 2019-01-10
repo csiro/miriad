@@ -1,7 +1,7 @@
 #!/usr/local/bin/perl
 #
 # $Source: /var/tmp/RrsvEF/cvsroot/miriad-dist/RCS/scripts/web/mirman.pl,v $
-# $Id: mirman.pl,v 1.12 2019/01/10 02:48:41 mci156 Exp $
+# $Id: mirman.pl,v 1.13 2019/01/10 03:09:27 mci156 Exp $
 #
 # Depends on 'rman' (PolyglotMan - formerly RosettaMan)
 #
@@ -9,20 +9,23 @@
 
 use strict;
 use CGI qw/:standard :form/;
+use URI;
 
 $CGI::POST_MAX        = 1024 * 10; #max 10kb post size
 $CGI::DISABLE_UPLOADS = 1;         #no uploads
 
-my ($TOP,$miriad_uri,$miriad_dir);
+my ($site,$TOP,$miriad_uri,$miriad_dir);
 
 $ENV{"MANPATH"} = "/nfs/atapplic/miriad/man:/usr/local/man:/usr/local/site/man:/usr/share/man:/usr/man:/usr/local/karma/man";
-$TOP='/var/www/vhosts/www.atnf.csiro.au';
+
+$site = 'www.atnf.csiro.au';
+$TOP="/var/www/vhosts/$site";
 $miriad_uri = "/computing/software/miriad";
 $miriad_dir = "$TOP/htdocs/$miriad_uri";
 
 die("No miriad dir $miriad_dir\n") if ( ! -d $miriad_dir );
 
-my ($q, %inputs, $topic, $dest, $line, $page);
+my ($q, %inputs, $topic, $dest, $line, $page, $u, $scheme);
 
 $q = new CGI;
 
@@ -31,10 +34,17 @@ if ( param('topic') ) {
   $topic = param('topic');
   $topic =~ s/[^a-zA-Z0-9]//g;     #defang input
 
+  # Determine the request's scheme so we can redirect using the same.
+  $u = url(-base => 1);
+  $scheme = url( $u );
+  $scheme = 'http' if ($scheme =~ /^$/);
+
+  # Explictly reconstruct the base url to avoid XSS
+  $dest = $scheme . ':' . $site;
   if( -f "$miriad_dir/$topic.html"){
-    $dest = "http://www.atnf.csiro.au/computing/software/miriad/$topic.html";
+    $dest .= "$miriad_uri/$topic.html";
   } elsif (-f "$miriad_dir/doc/$topic.html"){
-    $dest = "http://www.atnf.csiro.au/computing/software/miriad/doc/$topic.html";
+    $dest .= "$miriad_uri/doc/$topic.html";
 
     print <<"EOF";
 Content-type: text/html
