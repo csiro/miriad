@@ -1,20 +1,21 @@
 #!/usr/local/bin/perl
 #
 # $Source
-# $Id: mirman.pl,v 1.4 2019/01/10 01:58:50 mci156 Exp $
+# $Id: mirman.pl,v 1.5 2019/01/10 02:04:50 mci156 Exp $
 #
 # Set up the environment.
 
 $ENV{"MANPATH"} = "/nfs/atapplic/miriad/man:/usr/local/man:/usr/local/site/man:/usr/share/man:/usr/man:/usr/local/karma/man";
-$TOP='/export/www/vhosts/atnf/htdocs';
-$miriad_dir = "/computing/software/miriad";
+$TOP='/var/www/vhosts/www.atnf.csiro.au';
+$miriad_uri = "/computing/software/miriad";
+$miriad_dir = "$TOP/htdocs/$miriad_uri";
 
 %inputs = &getcgivars;
 $topic = $inputs{"topic"};
 #$topic = "man";
 
 if($topic ne ""){
-  if( -f "$TOP/$miriad_dir/$topic.html"){
+  if( -f "$miriad_dir/$topic.html"){
 
 #    print "Content-type: text/html\n\n";
 #    open IN,"$TOP/$miriad_dir/$topic.html";
