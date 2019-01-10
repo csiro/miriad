@@ -1,7 +1,7 @@
 #!/usr/local/bin/perl
 #
 # $Source: /var/tmp/RrsvEF/cvsroot/miriad-dist/RCS/scripts/web/mirman.pl,v $
-# $Id: mirman.pl,v 1.10 2019/01/10 02:39:31 mci156 Exp $
+# $Id: mirman.pl,v 1.11 2019/01/10 02:40:54 mci156 Exp $
 #
 # Depends on 'rman' (PolyglotMan - formerly RosettaMan)
 #
@@ -30,12 +30,6 @@ if ( param('topic') ) {
   $topic =~ s/[^a-zA-Z0-9]//g;     #defang input
 
   if( -f "$miriad_dir/$topic.html"){
-
-#    print "Content-type: text/html\n\n";
-#    open IN,"$TOP/$miriad_dir/$topic.html";
-#    while(<IN>){print $_;}
-#    close IN;
-
     $dest = "http://www.atnf.csiro.au/computing/software/miriad/$topic.html";
     print <<"EOF";
 Content-type: text/html
