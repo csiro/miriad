@@ -6,10 +6,11 @@
 # Processes information from form
 # and produces a list of matching documents.
 
-$TOP='/export/www/vhosts/atnf/htdocs';
+$TOP='/var/www/vhosts/www.atnf.csiro.au';
 push(@INC, "$TOP/cgi-bin");
 require "www-lib.pl";
-$miriad_dir = "/computing/software/miriad";
+$miriad_uri = "/computing/software/miriad";
+$miriad_dir = "$TOP/htdocs/$miriad_uri";
 
 sub ReadParse
 {
@@ -70,10 +71,10 @@ sub searchfile
 		last if ($_ =~ />Home</);         # Don't search footer links!
 		next if ($_ !~ /$Search/io);
 		$Title =~ s#</*TITLE>|</*title>##g;
-                $filespec = "$miriad_dir/$dir/$file";
-                $filespec = "$miriad_dir/$file" if ($dir = '.');
+                $filespec = "$miriad_uri/$dir/$file";
+                $filespec = "$miriad_uri/$file" if ($dir = '.');
 		print "<LI><A HREF=\"$filespec\">$Title</A>\n";
-#		print "<LI><A HREF=\"$miriad_dir/$dir/$file\">$Title</A>\n";
+#		print "<LI><A HREF=\"$miriad_uri/$dir/$file\">$Title</A>\n";
 		$Matches++;
 		last;
 	}
@@ -177,7 +178,7 @@ if ($Search =~ /^\s*$/)         # Search string is white space or blank.
 else                            # Search string contains something.
 {
 	print "<UL>\n";
-	chdir("$TOP/$miriad_dir");
+	chdir("$miriad_dir");
 	&searchdir('.');
 	print "</UL>\n";
 
