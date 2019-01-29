@@ -105,7 +105,7 @@ c       x and y pixel coordinate (in the output model; this goes from 1
 c       to N), the "I" component and the "I*alpha" component.  The
 c       default is to not create a log file.
 c
-c$Id: mfclean.for,v 1.15 2018/11/29 23:30:11 wie017 Exp $
+c$Id: mfclean.for,v 1.16 2019/01/29 23:03:22 wie017 Exp $
 c--
 c  History:
 c    rjs   Nov89 - Original version.
@@ -181,7 +181,7 @@ c-----------------------------------------------------------------------
       parameter (maxBeam=maxP*maxP,maxBox=3*MAXDIM,maxRun=3*maxDim)
 
       integer Boxes(maxBox),Run(3,maxRun),nRun
-      ptrdiff nPoint
+      ptrdiff nPoint, ntmp
       ptrdiff Map0,Map1,Res0,Res1,Est0,Est1,Tmp
       ptrdiff FFT0,FFT1,FFT01,FFT10,FFT00,FFT11
       real Rcmp0(maxCmp2),Rcmp1(maxCmp2),Ccmp0(maxCmp2),Ccmp1(maxCmp2)
@@ -194,7 +194,7 @@ c-----------------------------------------------------------------------
       real Cutoff,Gain0,Gain1,Speed,Limit,Scale,cut(2)
       logical NegStop,NegFound,More,dolog,deep
       integer maxNiter(2),Niter,totNiter,minPatch,maxPatch,curMaxNiter
-      integer naxis,n1,n2,n1d,n2d,ic,jc,nx,ny,ntmp,nCmp
+      integer naxis,n1,n2,n1d,n2d,ic,jc,nx,ny,nCmp
       integer xmin,xmax,ymin,ymax,xoff,yoff,zoff
       character MapNam*64,BeamNam*64,ModelNam*64,OutNam*64,line*72
       character logf*64, version*72
@@ -210,8 +210,8 @@ c-----------------------------------------------------------------------
       external  itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('mfclean',
-     *                 '$Revision: 1.15 $',
-     *                 '$Date: 2018/11/29 23:30:11 $')
+     *                 '$Revision: 1.16 $',
+     *                 '$Date: 2019/01/29 23:03:22 $')
 c
 c  Get the input parameters.
 c
