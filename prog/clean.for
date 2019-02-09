@@ -102,7 +102,7 @@ c@ clip
 c       This sets the relative clip level in Steer mode. Values are
 c       typically 0.75 to 0.9. The default is image dependent.
 c
-c$Id: clean.for,v 1.16 2018/11/29 23:30:11 wie017 Exp $
+c$Id: clean.for,v 1.17 2019/02/09 06:59:27 wie017 Exp $
 c--
 c
 c  History:
@@ -191,7 +191,7 @@ c-----------------------------------------------------------------------
       character Mode*8,Moded*8,Text*7,flags*8,version*72
       real Cutoff,Gain,Phat,Speed,Clip,defClip,Limit,Cut(2)
       logical NegStop,Positive,Pad,Asym,NegFound,More,FFTIni,steermsg
-      logical  deep
+      logical deep
       integer MaxNiter(2),oNiter,Niter,totNiter,minPatch,maxPatch
       integer naxis,n1,n2,icentre,jcentre,nx,ny,curMaxNiter
       integer blc(3),trc(3),xmin,xmax,ymin,ymax
@@ -208,14 +208,15 @@ c     Externals.
       character itoaf*8, versan*72
 c-----------------------------------------------------------------------
       version = versan ('clean',
-     *                  '$Revision: 1.16 $',
-     *                  '$Date: 2018/11/29 23:30:11 $')
+     *                  '$Revision: 1.17 $',
+     *                  '$Date: 2019/02/09 06:59:27 $')
 c
 c  Get the input parameters.
 c
       call inputs(MapNam,BeamNam,ModelNam,OutNam,MaxNiter,NegStop,
      *  positive,pad,asym,Cut,Boxes,MAXBOX,MinPatch,Gain,PHat,
      *  Speed,Clip,mode)
+      deep = .false.
 c
 c  Open the beam, get some characteristics about it, then read in the
 c  beam patch. The beam patch is not required if we are performing Steer
