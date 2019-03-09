@@ -26,16 +26,16 @@ c       not to make a beam.
 c@ imsize
 c       The size of the output dataset.  The default is to image out to
 c       primary beam half power points. Add 'beam' as the third value
-c       to specify the image size in primary beam FWHMs (e.g., 
+c       to specify the image size in primary beam FWHMs (e.g.,
 c       imsize=2,2,beam).
-c     . For options=mosaic, an image of this size is made for each 
+c     . For options=mosaic, an image of this size is made for each
 c       pointing before a linear mosaic operation is performed.
 c@ cell
 c       Image cell size, in arcsec.  If two values are given, they give
 c       the RA and DEC cell sizes.  If only one value is given, the
-c       cells are made square.  The default is about one third of the 
+c       cells are made square.  The default is about one third of the
 c       resolution of the resultant images. Add 'res' as the third value,
-c       to specify the the cellsize in terms of the number of pixels per 
+c       to specify the the cellsize in terms of the number of pixels per
 c       resolution element (e.g., cell=5,5,res)
 c@ offset
 c       When not mosaicing, this gives the sky position to shift to the
@@ -92,15 +92,23 @@ c       of no sidelobe suppression.  Natural weighting corresponds to
 c       SUP=0.  Values between these extremes give a tradeoff between
 c       signal to noise and sidelobe suppression, and roughly correspond
 c       to AIPS "super-uniform" weighting. [A better way to move between
-c       these extremes is to leave sup unset and vary the robust 
+c       these extremes is to leave sup unset and vary the robust
 c       parameter from -2 to 2.]
+c
+c       For options='radial' the sup parameter specifies the maximum
+c       and minimum weights smoothing kernel diameter, followed by the
+c       power law exponent (uvdist**alpha) specifying how the kernel size
+c       increases with uv-distance. Defaults to 32,0,0.5 for
+c       options='radial'. This is a form of super uniform weighting that
+c       works for very large images when uniform and natural weighting
+c       give similar results.
 c@ robust
 c       Brigg's visibility weighting robustness parameter.  This
 c       parameter can be used to down-weight excessive weight being
 c       given to visibilities in relatively sparsely filled regions of
-c       the $u-v$ plane when using uniform weighting.  Most useful 
-c       settings are in the range [-2,2], with values less than -2 
-c       corresponding to very little down-weighting, and values greater 
+c       the $u-v$ plane when using uniform weighting.  Most useful
+c       settings are in the range [-2,2], with values less than -2
+c       corresponding to very little down-weighting, and values greater
 c       than +2 reducing the weighting to natural weighting.
 c
 c       Sidelobe levels and beam-shape degrade with increasing values of
@@ -152,7 +160,7 @@ c         fsystemp  Like systemp, but use frequency dependent Tsys.
 c                   You need to run atrecal before invert to create the
 c                   systempf variable containing the Tsys spectrum.
 c                   Atrecal requires autocorrelations to be present.
-c                   This option only works in combination with the 
+c                   This option only works in combination with the
 c                   mfs option.
 c         mfs       Perform multi-frequency synthesis.  The causes all
 c                   the channel data to be used in forming a single map.
@@ -169,7 +177,7 @@ c                   dirty beam is created, this is saved as an extra
 c                   plane in the beam dataset.
 c         mosaic    Process multiple pointings, and generate a linear
 c                   mosaic of these pointings. For single pointings
-c                   to be combined with linmos you can use this to 
+c                   to be combined with linmos you can use this to
 c                   specify a common reference position with the
 c                   offset parameter. Observations using OTF mosaicing
 c                   always need to specify this to ensure the moving
@@ -193,8 +201,22 @@ c                     puthd in=<map>/ctype1 value=RA---SIN
 c                     puthd in=<map>/ctype2 value=DEC--SIN
 c                   and likewise for the beam
 c         ncp       Force invert to use the NCP projection even when
-c                   significant non E-W baselines are present. 
+c                   significant non E-W baselines are present.
 c                   Use with care..
+c         radial    Apply radial smoothing of weights with a kernel
+c                   diameter that increases as (d_pix)**alpha, with
+c                   a maximum value of dmax pixels and minimum of dmin.
+c                   The values dmax, dmin and alpha are specified using
+c                   the sup parameter. If sup is unset, then dmax = 32 and
+c                   dmin = 0 pixels. Large values of dmax combined with
+c                   alpha values > 0.5 will blow up weight calculation
+c                   costs dramatically for large images.
+c                   Alpha is constrained to be between 0.1 and 1.0.
+c                   If alpha is unset or out of range, then it defaults
+c                   to 0.5. The most useful range is 0.3 to 0.7.
+c         taper     Taper the radial smoothing kernel, has no effect
+c                   if option radial is not specified. This changes
+c                   the smoothing kernel from a 'top-hat' to a paraboloid.
 c@ mode
 c       This determines the algorithm to be used in imaging.
 c       Possible values are:
@@ -230,7 +252,7 @@ c       replaced with 0, or to be estimated by linear interpolation of
 c       two adjacent good channels.  See the Users Guide for the merits
 c       and evils of the two approaches.  The default is 'zero'.
 c
-c$Id: invert.for,v 1.25 2018/11/29 23:30:11 wie017 Exp $
+c$Id: invert.for,v 1.26 2019/03/09 03:42:48 wie017 Exp $
 c--
 c  History
 c    rjs        89  Initial version
@@ -366,8 +388,9 @@ c    mhw   06mar12  Add fsystemp option
 c    mhw   03jun13  Add beam and res options to imsize and cellsize
 c    mhw   03mar14  Fix bug in theoretical rms for large datasets
 c    mhw   20jan15  Add position angle to taper specification
-c    pjt   10feb15  Handle large mosaics 
+c    pjt   10feb15  Handle large mosaics
 c    mhw   16oct18  Handle >2**31 visibilities
+c    rb&mhw 8mar19  Add option radial & taper
 c  Bugs:
 c-----------------------------------------------------------------------
       include 'mirconst.h'
@@ -380,6 +403,7 @@ c
 
       real cellx,celly,fwhmx,fwhmy,freq0,slop,supx,supy,ppbx,ppby
       real umax,vmax,wdu,wdv,tu,tv,rms,robust,bpa,fw,cp,sp
+      real dmax,dmin,alpha
       real ChanWt(MAXPOL*MAXCHAN)
       character maps(MAXPOL)*256,beam*256,uvflags*16,mode*16,vis*64
       character line*64, version*72,smnx*10,smny*10
@@ -390,9 +414,10 @@ c
       ptrdiff nvis
       logical defWt,Natural,doset,systemp(2),mfs,doimag,mosaic,sdb,idb
       logical double,doamp,dophase,dosin,doncp,dobeam,dores,dorotbm
+      logical dorad,dotaper
 c
       integer tno,tvis
-      ptrdiff UWts,Map,MMap,nUWts, nMMap
+      ptrdiff UWts,Map,MMap,nUWts,nMMap,sUWts
 c
       integer nRuns,Runs(3,MAXRUNS)
 c
@@ -410,8 +435,8 @@ c
 c-----------------------------------------------------------------------
       version = versan ('invert',
 
-     :                  '$Revision: 1.25 $',
-     :                  '$Date: 2018/11/29 23:30:11 $')
+     :                  '$Revision: 1.26 $',
+     :                  '$Date: 2019/03/09 03:42:48 $')
 c
 c  Get the input parameters. Convert all angular things into
 c  radians as soon as possible!!
@@ -422,7 +447,7 @@ c
       if(nmap.eq.0)call bug('f','An output must be given')
 
       call GetOpt(uvflags,double,systemp,mfs,sdb,mosaic,doimag,
-     *        doamp,dophase,dosin,doncp,mode)
+     *        doamp,dophase,dosin,doncp,dorad,dotaper,mode)
       idb = beam.ne.' '.and.doimag
       sdb = beam.ne.' '.and.sdb
       call uvDatInp('vis',uvflags)
@@ -464,7 +489,7 @@ c
             if (fwhmx.lt.fwhmy) call bug('f',
      *        'Error in fwhm - major axis is smaller than minor axis')
          endif
-      endif   
+      endif
       fwhmx = fwhmx * pi/180/3600
       fwhmy = fwhmy * pi/180/3600
 c
@@ -475,21 +500,44 @@ c
       if(max(nx,ny).gt.MAXDIM)call bug('f','Output image too big')
 c
       defWt = .not.keyprsnt('sup')
-      call keyr('sup',supx,0.)
-      call keyr('sup',supy,supx)
-      supx = supx * pi/180/3600
-      supy = supy * pi/180/3600
+      if(.not.dorad) then
+        call keyr('sup',supx,0.)
+        call keyr('sup',supy,supx)
+        supx = supx * pi/180/3600
+        supy = supy * pi/180/3600
+      else
+        call keyr('sup',dmax,32.0)
+        call keyr('sup',dmin,0.0)
+        call keyr('sup',alpha,0.5)
+      endif
       if(min(supx,supy).lt.0)call bug('f','Invalid sup parameter')
       call keyr('robust',robust,-10.0)
-      if(robust.gt.4.and.max(supx,supy).gt.0)then
+      if(dorad)then
+        if(dmax.lt.1.0)then
+          call bug('w','Option Radial: Adjusting sup(1) '//
+     *     '(max kernel diameter) to 32 pixels')
+          dmax = 32.
+        endif
+        if(dmin.lt.0.0. or. dmin.gt.dmax)then
+          call bug('w','Option Radial: Adjusting sup(2) '//
+     *      '(min kernel diameter) to 0 pixels')
+          dmin = 0.
+        endif
+         if(alpha.lt.0.1.or.alpha.gt.1.0)then
+           call bug('w','Option Radial: Adjusting sup(3) '//
+     *       '(power law exponent) to 0.5')
+           alpha = 0.5
+        endif
+      endif
+      if(.not.dorad.and.robust.gt.4.and.max(supx,supy).gt.0)then
         call bug('i','Robust value resulting in natural weights')
         supx = 0
         supy = 0
         defWt = .false.
       endif
-      if (robust.eq.-10.and.(supx.gt.0.or.defWt)) then
+      if (.not.dorad.and.robust.eq.-10.and.(supx.gt.0.or.defWt)) then
         call bug('i',
-     *  'Using uniform weighting with robust unset is not recommended') 
+     *  'Using uniform weighting with robust unset is not recommended')
         if (mfs) call bug('i',' especially not for mfs data')
       endif
       call keyr('slop',slop,0.)
@@ -634,20 +682,27 @@ c  Determine some things for the weighting process, and then go
 c  and determine the weights (if its not natural weighting).
 c
       call WtIni(defWt,supx,supy,bnx,bny,cellx,celly,
-     *  fwhmx,fwhmy,umax,vmax,Natural,wnu,wnv,wdu,wdv,tu,tv)
+     *  fwhmx,fwhmy,umax,vmax,Natural,wnu,wnv,wdu,wdv,tu,tv,dorad)
 c
       if(.not.Natural)then
         call output('Calculating the weights ...')
         nUWts = (wnu/2+1) * wnv
         nUWts = nUWts * npnt
         call Memallox(UWts,nUWts,'r')
-        call WtCalc(tscr,memr(UWts),wdu,wdv,wnu,wnv,npnt,
+        if(dorad) then
+          call Memallox(sUWts,nUWts,'r')
+          call WtCalcR(tscr,memr(UWts),memr(sUWts),wdu,wdv,wnu,wnv,npnt,
+     *         nvis,npol*nchan,dmax,dmin,alpha,dotaper)
+          call MemFrex(sUWts,nUWts,'r')
+        else
+          call WtCalc(tscr,memr(UWts),wdu,wdv,wnu,wnv,npnt,
      *                                        nvis,npol*nchan)
+        endif
         if(robust.gt.-4)
-     *    call WtRobust(robust,memr(UWts),wnu,wnv,npnt)
+     *     call WtRobust(robust,memr(UWts),wnu,wnv,npnt)
       else
-         UWts = 1
-         nUWts = 0
+        UWts = 1
+        nUWts = 0
       endif
 c
 c  Apply the weights, shifts and geometric corrections, and then free
@@ -1016,11 +1071,163 @@ c
 c
       end
 c***********************************************************************
+      subroutine WtCalcR(tvis,Wts,sWts,wdu,wdv,wnu,wnv,npnt,nvis,nchan,
+     *     dmax,dmin,alpha,dotaper)
+c
+      integer tvis,wnu,wnv,nchan,npnt
+      ptrdiff nvis
+      real Wts(wnv,wnu/2+1,npnt),wdu,wdv,dmax,dmin,alpha
+      real sWts(wnv,wnu/2+1,npnt)
+      logical dotaper
+c
+c  Calculate the weight to be applied to each visibility.
+c
+c  Input:
+c    tvis       Handle of the visibility scratch file.
+c    wnu,wnv    Full size of the weights array.
+c    wdu,wdv    Cell increments (wavelengths).
+c    nvis       Number of visibilities.
+c    nchan      Number of channels.
+c    npnt       Number of pointings.
+c    dmax       max kernel diameter
+c    dmin       min kernel diameter
+c    alpha      power law exponent (uvdist**alpha)
+c    dotaper    taper the kernel weighting
+c
+c  Output:
+c    Wts        Array containing the visibility weights.
+c
+c-----------------------------------------------------------------------
+      include 'maxdim.h'
+      include 'mirconst.h'
+      integer InU,InV,InW,InWt,InPnt,InRms2,InFreq,InData
+      parameter(InU=0,InV=1,InW=2,InPnt=3,InWt=6,InRms2=4)
+      parameter(InFreq=5,InData=8)
+      integer Maxrun
+      parameter(Maxrun=8*MAXCHAN+20)
+      integer i,j,VispBuf, VisSize,u,v,l,ltot,ipnt
+      integer du,dv,dri,duc,dvc,drimax,drimin
+      real Visibs(Maxrun)
+      real rsum,ur,vr,rr,rdri2,rdu2,rdv2,rrmax,rrmin
+      real WtsSum, sWtsSum, wt
+      ptrdiff offset, k, ktot
+c
+c  Determine the number of visibilities perr buffer.
+c
+      VisSize = InData + 2*nchan
+      VispBuf = maxrun/VisSize
+      if(VispBuf.lt.1)call bug('f','Too many channels for me!')
+c
+c  Zero out the array.
+c
+      do ipnt=1,npnt
+        do j=1,wnu/2+1
+          do i=1,wnv
+            Wts(i,j,ipnt) = 0.
+            sWts(i,j,ipnt) = 0.
+          enddo
+        enddo
+      enddo
+
+c dmax used for maximum convolving function size in pixels
+c dmin used for minimum convolving function size in pixels
+c
+      rrmax = dmax/2.
+      drimax = nint(rrmax)
+      rrmin = dmin/2.
+      drimin = nint(rrmin)
+
+c
+c  Accumulate the weight function.
+c
+      WtsSum = 0.
+      sWtsSum = 0.
+      call scrrecsz(tVis,VisSize)
+      k = 0
+      ktot = nvis
+      dowhile(k.lt.ktot)
+        ltot = min(VispBuf,ktot-k)
+        offset = k
+        call scrread(tvis,Visibs,offset,ltot)
+        do l=1,ltot*VisSize,VisSize
+          if(Visibs(l+InU).lt.0)then
+            u = nint(-Visibs(l+InU)/wdu) + 1
+            v = nint(-Visibs(l+InV)/wdv) + wnv/2 + 1
+          else
+            u = nint(Visibs(l+InU)/wdu) + 1
+            v = nint(Visibs(l+InV)/wdv) + wnv/2 + 1
+          endif
+          ipnt = nint(Visibs(l+InPnt))
+          Wts(v,u,ipnt) = Wts(v,u,ipnt) + Visibs(l+InWt)
+          WtsSum = WtsSum + Visibs(l+InWt)
+        enddo
+        k = k + ltot
+      enddo
+
+      do ipnt=1,npnt
+        do u=1,wnu/2+1
+          do v=1,wnv
+            if (Wts(v,u,ipnt).gt.0.) then
+              ur = real(u - 1)
+              vr = real(v - wnv/2 -1)
+              rr = rrmin+((ur**2+vr**2)**(alpha/2.))/2.
+              dri = nint(rr)
+              dri = min(nint(rr),drimax)
+              rdri2 = (real(dri))**2
+              rsum = pi*(real(dri)*2.+1.)**2/4.0
+              do du = (u-dri),min(wnu/2+1,u+dri)
+                rdu2 = (real(du-u))**2
+                do dv = max(1,v-dri),min(wnv,v+dri)
+                  rdv2 = (real(dv-v))**2
+                  if ((rdv2+rdu2).le.rdri2) then
+c radial weighting function around each uv point
+c if the weight goes to zero at rmax, the psf is smoother
+                    if (dotaper) then
+                      wt = 1-(rdu2+rdv2)/rdri2
+                    else
+                      wt =1.0
+                    endif
+                    if(du.lt.1)then
+                      duc = -(du-1) + 1
+                      dvc = -(dv-wnv/2-1) + wnv/2 + 1
+                    else
+                      duc = du
+                      dvc = dv
+                    endif
+                    sWts(dvc,duc,ipnt) = sWts(dvc,duc,ipnt) +
+     *                 wt * Wts(v,u,ipnt) / rsum
+                    sWtsSum = sWtsSum + wt * Wts(v,u,ipnt) / rsum
+                    if (du.eq.1) then
+                        dvc = -(dv-wnv/2-1) + wnv/2 + 1
+                        sWts(dvc,duc,ipnt) = sWts(dvc,duc,ipnt) +
+     *                     wt * Wts(v,u,ipnt) / rsum
+                        sWtsSum = sWtsSum + wt * Wts(v,u,ipnt) / rsum
+                    endif
+                  endif
+                enddo
+              enddo
+            endif
+          enddo
+        enddo
+      enddo
+c
+c  Replace with smoothed density
+c
+      do ipnt=1,npnt
+        do u=1,wnu/2+1
+          do v=1,wnv
+            Wts(v,u,ipnt) = sWts(v,u,ipnt)
+          enddo
+        enddo
+       enddo
+c
+      end
+c***********************************************************************
       subroutine WtIni(defWt,supx,supy,nx,ny,cellx,celly,
      *     fwhmx,fwhmy,umax,vmax,Natural,wnu,wnv,wdu,wdv,
-     *     tu,tv)
+     *     tu,tv,dorad)
 c
-      logical defWt,Natural
+      logical defWt,Natural,dorad
       real supx,supy,cellx,celly,fwhmx,fwhmy,wdu,wdv,tu,tv,umax,vmax
       integer nx,ny,wnu,wnv
 c
@@ -1034,8 +1241,9 @@ c    nx,ny      Output image size.
 c    cellx,celly Image cell size.
 c    fwhmx,fwhmy Image-domain taper.
 c    bpa         Beam rotation
-c    dorotbeam   Is beam rotation active?      
+c    dorotbeam   Is beam rotation active?
 c    umax,vmax   Maximum baselines in u and v.
+c    dorad      True if radial weighting option in use
 c  Output:
 c    wnu,wnv    Size of the weights grid.
 c    wdu,wdv    Weight grid cell size.
@@ -1053,8 +1261,9 @@ c
 c
       nxd = nextpow2(nx)
       nyd = nextpow2(ny)
-      call Sizes(defWt,supx,nxd,cellx,fwhmx,umax,wnu,wdu,tu)
-      call Sizes(defWt,supy,nyd,celly,fwhmy,vmax,wnv,wdv,tv)
+      call Sizes(defWt,dorad,supx,nxd,cellx,fwhmx,umax,wnu,wdu,tu)
+      call Sizes(defWt,dorad,supy,nyd,celly,fwhmy,vmax,wnv,wdv,tv)
+
 c
       Natural = wnu.le.2.and.wnv.le.2
       Uni     = abs(1-nxd*abs(cellx*wdu)).lt.0.01.and.
@@ -1069,8 +1278,10 @@ c
      *        ' arcsec')
       if(Natural)then
         call output(' ... this corresponds to natural weighting')
-      else if(Uni)then
+      else if(.not.dorad.and.Uni)then
         call output(' ... this corresponds to uniform weighting')
+      else if(Uni.and.dorad)then
+        call output(' ... this corresponds to uni/radial weighting')
       else
         call output(' ... this corresponds to a super-uniform '//
      *                                        'weighting')
@@ -1078,11 +1289,11 @@ c
 c
       end
 c***********************************************************************
-      subroutine Sizes(defWt,sup,gn,cell,fwhm,uvmax,wn,wd,T)
+      subroutine Sizes(defWt,dorad,sup,gn,cell,fwhm,uvmax,wn,wd,T)
 c
       real cell,sup,wd,fwhm,T,uvmax
       integer gn,wn
-      logical defWt
+      logical defWt,dorad
 c
 c  Determine various cell and size parameters, which are independent of
 c  whether we are dealing with the x or y axis.
@@ -1112,7 +1323,10 @@ c
       T = - Fwhm**2 * (pi**2 / (4.*log(2.)))
       gd = 1/abs(Cell * gn)
 c
-      if(Sup.gt.0)then
+      if (dorad) then
+        wd = gd
+        wn = gn
+      else if (Sup.gt.0) then
         wd = 1/sup
         wn = 2*nint( uvmax / wd ) + 1
       else if(defWt)then
@@ -1184,7 +1398,7 @@ c    tscr       Scratch file of the visibility data.
 c    Natural    True if natural weighting is to be used.
 c    Tu,Tv      Scale factors for determining taper.
 c    bpa        Position angle of beam taper
-c    dorotbm    Are we rotating the beam taper?      
+c    dorotbm    Are we rotating the beam taper?
 c    UWts       If its not natural weighting, this contains the
 c               uniform weight information.
 c    wnu,wnv    Weight array size.
@@ -1270,7 +1484,9 @@ c
               v = nint(-Vis(k+InV)/wdv) + wnv/2 + 1
             endif
             ipnt = nint(Vis(k+InPnt))
-            Wts(i) = Vis(k+InWt) / UWts(v,u,ipnt)
+            if(UWts(v,u,ipnt).gt.0.)then
+               Wts(i) = Vis(k+InWt) / UWts(v,u,ipnt)
+            endif
             Vis(k+InWt) = 1
             k = k + size
           enddo
@@ -1288,7 +1504,7 @@ c
             else
               Wts(i) = Wts(i) * exp( Tu*Vis(k+InU)*Vis(k+InU) +
      *                               Tv*Vis(k+InV)*Vis(k+InV))
-            endif  
+            endif
             k = k + size
           enddo
         endif
@@ -1443,17 +1659,17 @@ c
       end
 c***********************************************************************
       subroutine GetOpt(uvflags,double,systemp,mfs,sdb,mosaic,doimag,
-     *        doamp,dophase,dosin,doncp,mode)
+     *        doamp,dophase,dosin,doncp,dorad,dotaper,mode)
 c
       character uvflags*(*),mode*(*)
       logical systemp(2),mfs,sdb,doimag,mosaic,double,doamp,dophase,
-     * dosin,doncp
+     * dosin,doncp,dorad,dotaper
 c
 c  Get extra processing options.
 c
 c-----------------------------------------------------------------------
       integer NOPTS, NMODES
-      parameter (NOPTS=14, NMODES=3)
+      parameter (NOPTS=16, NMODES=3)
 
       integer nmode
       logical present(NOPTS)
@@ -1462,7 +1678,7 @@ c-----------------------------------------------------------------------
       data opts/'nocal    ','nopol    ','nopass   ','double   ',
      *          'systemp  ','mfs      ','sdb      ','mosaic   ',
      *          'imaginary','amplitude','phase    ','sin      ',
-     *          'ncp      ','fsystemp '/
+     *          'ncp      ','fsystemp ','radial   ','taper    '/
       data modes/'fft     ','dft     ','median  '/
 c-----------------------------------------------------------------------
       call options('options',opts,present,NOPTS)
@@ -1485,6 +1701,8 @@ c     Extra processing options.
       dosin   = present(12)
       doncp   = present(13)
       systemp(2) = present(14).and.mfs
+      dorad   = present(15)
+      dotaper = present(16).and.dorad
 
 c     Check options.
       if(sdb.and..not.mfs)call bug('f',
@@ -1728,7 +1946,7 @@ c    Wt         Basic weight.
 c    Wtf        Weight spectrum
 c    rms2       Noise variance.
 c    rms2f      Noise variance spectrum
-c    systempf   Use variance and weight spectrum 
+c    systempf   Use variance and weight spectrum
 c    uumax,vvmax u,v limits.
 c    ncorr      Number of correlations in each output record.
 c  Input/Output:
