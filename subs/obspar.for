@@ -41,7 +41,7 @@ c                 allow greater flexability. Rather than having data hard
 c                 coded into the program.
 c    rjs  08jan07 Eliminate spurious message. Tidy up to use tin routines.
 c
-c $Id: obspar.for,v 1.7 2007/01/12 15:25:42 rsault Exp $
+c $Id: obspar.for,v 1.8 2019/03/18 22:00:22 wie017 Exp $
 c************************************************************************
 c* ObsPrint -- Print list of known observatories.
 c: utility
@@ -136,14 +136,14 @@ c
 c
         double precision value
         character input*24,param*24,observ*24,cvalue*24
-        character obsfile*80
+        character obsfile*1024
         integer sgn,deg,mins
         real    sec
 c
 c  Externals.
 c
 	double precision obsdms
-	character stcat*80
+	character stcat*1024
 	integer tinNext
 c
 	logical first
