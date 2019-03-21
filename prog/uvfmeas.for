@@ -103,7 +103,7 @@ c@ feval
 c       A frequency (in GHz) at which to evaluate the fit, and output
 c       the flux density in Jy.
 c
-c$Id: uvfmeas.for,v 1.21 2014/09/22 01:33:27 ste616 Exp $
+c$Id: uvfmeas.for,v 1.22 2019/03/21 02:50:33 wie017 Exp $
 c--
 c  History:
 c    jbs  05jan12 Derived from uvspec.
@@ -116,7 +116,7 @@ c------------------------------------------------------------------------
         parameter (maxco=15,MAXPOL=4,PolMin=-9,PolMax=4,MAXPLT=1024)
 	parameter (MAXPNTS=10000000)
 c
-	character version*80
+	character version*72
 	character uvflags*8,device*64,xaxis*12,yaxis*12,logf*64
 	character xtitle*64,ytitle*64,cpoly*64,source*32,osource*32
 	character line*132,PolCode*2,oline*132
@@ -155,15 +155,14 @@ c
         integer len1
 	logical uvDatOpn
 	character PolsC2P*2
-	character versan*80
+	character versan*72
 c-----------------------------------------------------------------------
 	version = versan ('uvfmeas',
-     :                    '$Revision: 1.21 $',
-     :                    '$Date: 2014/09/22 01:33:27 $')
+     :                    '$Revision: 1.22 $',
+     :                    '$Date: 2019/03/21 02:50:33 $')
 c
 c  Get the input parameters.
 c
-	call output(version)
 	call keyini
 	call GetOpt(uvflags,nobase,avall,dolog,dovec,douv,dopfit,
      *              domachine,domfflux,domalpha,doreshist,dolines)
