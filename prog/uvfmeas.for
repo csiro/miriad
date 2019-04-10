@@ -103,7 +103,7 @@ c@ feval
 c       A frequency (in GHz) at which to evaluate the fit, and output
 c       the flux density in Jy.
 c
-c$Id: uvfmeas.for,v 1.22 2019/03/21 02:50:33 wie017 Exp $
+c$Id: uvfmeas.for,v 1.23 2019/04/10 03:31:53 ste616 Exp $
 c--
 c  History:
 c    jbs  05jan12 Derived from uvspec.
@@ -158,8 +158,8 @@ c
 	character versan*72
 c-----------------------------------------------------------------------
 	version = versan ('uvfmeas',
-     :                    '$Revision: 1.22 $',
-     :                    '$Date: 2019/03/21 02:50:33 $')
+     :                    '$Revision: 1.23 $',
+     :                    '$Date: 2019/04/10 03:31:53 $')
 c
 c  Get the input parameters.
 c
@@ -1503,7 +1503,7 @@ c  sigma clip
 	do i = 1, nchan
 	   if (weight(i).gt.0.0) then
 	      if (abs(spec(i)-fit(i)).gt.clip*serr)
-     *           weight(i)=0.0
+     *           weight(i)=weight(i)/2.
 	   endif
 	enddo
 
