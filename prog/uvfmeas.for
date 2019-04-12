@@ -103,11 +103,12 @@ c@ feval
 c       A frequency (in GHz) at which to evaluate the fit, and output
 c       the flux density in Jy.
 c
-c$Id: uvfmeas.for,v 1.23 2019/04/10 03:31:53 ste616 Exp $
+c$Id: uvfmeas.for,v 1.24 2019/04/12 05:21:33 ste616 Exp $
 c--
 c  History:
 c    jbs  05jan12 Derived from uvspec.
 c    jbs  09may12 First released source.
+c    jbs  12apr19 Altered fit clipping algorithm.
 c  Bugs:
 c------------------------------------------------------------------------
 	include 'mirconst.h'
@@ -158,8 +159,8 @@ c
 	character versan*72
 c-----------------------------------------------------------------------
 	version = versan ('uvfmeas',
-     :                    '$Revision: 1.23 $',
-     :                    '$Date: 2019/04/10 03:31:53 $')
+     :                    '$Revision: 1.24 $',
+     :                    '$Date: 2019/04/12 05:21:33 $')
 c
 c  Get the input parameters.
 c
@@ -1369,10 +1370,10 @@ c-----------------------------------------------------------------------
 c	character line*80
 c-----------------------------------------------------------------------
 c  Number of clipping iterations
-	niter=10
+	niter=3
 	
 c  Clip level (sigma)
-	clip=3.0
+	clip=5.0
 
 c  Initialise the fit parameters.
         do i=1,11
@@ -1503,7 +1504,7 @@ c  sigma clip
 	do i = 1, nchan
 	   if (weight(i).gt.0.0) then
 	      if (abs(spec(i)-fit(i)).gt.clip*serr)
-     *           weight(i)=weight(i)/2.
+     *           weight(i)=weight(i)*0.9
 	   endif
 	enddo
 
