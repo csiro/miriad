@@ -103,13 +103,14 @@ c@ feval
 c       A frequency (in GHz) at which to evaluate the fit, and output
 c       the flux density in Jy.
 c
-c$Id: uvfmeas.for,v 1.24 2019/04/12 05:21:33 ste616 Exp $
+c$Id: uvfmeas.for,v 1.25 2019/05/07 04:06:41 ste616 Exp $
 c--
 c  History:
 c    jbs  05jan12 Derived from uvspec.
 c    jbs  09may12 First released source.
 c    jbs  12apr19 Altered fit clipping algorithm.
-c  Bugs:
+c    jbs  07may19 Added a check for inf rms values.
+c       Bugs:
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'maxdim.h'
@@ -159,8 +160,8 @@ c
 	character versan*72
 c-----------------------------------------------------------------------
 	version = versan ('uvfmeas',
-     :                    '$Revision: 1.24 $',
-     :                    '$Date: 2019/04/12 05:21:33 $')
+     :                    '$Revision: 1.25 $',
+     :                    '$Date: 2019/05/07 04:06:41 $')
 c
 c  Get the input parameters.
 c
@@ -308,7 +309,11 @@ c
 c
 c  Get the rms noise.
 c
-	    call uvDatGtr('variance',sig2)	    
+	    call uvDatGtr('variance',sig2)
+	    if (sig2.gt.1e6) then
+c  Check for and correct nonsense RMS values.
+	       sig2 = 1.
+	    endif
 c
 c  Accumulate the data for the flux measurement.
 c
