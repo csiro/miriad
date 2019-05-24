@@ -217,6 +217,11 @@ c                   to 0.5. The most useful range is 0.3 to 0.7.
 c         taper     Taper the radial smoothing kernel, has no effect
 c                   if option radial is not specified. This changes
 c                   the smoothing kernel from a 'top-hat' to a paraboloid.
+c         radfft    Like radial, this option smooths the weights but it
+c                   uses an fft of the weights to speed things up for large
+c                   kernels. The use of an fft means the kernel size
+c                   is the same for all pixels and set by the sup parameter
+c                   in arcseconds.
 c@ mode
 c       This determines the algorithm to be used in imaging.
 c       Possible values are:
@@ -252,7 +257,7 @@ c       replaced with 0, or to be estimated by linear interpolation of
 c       two adjacent good channels.  See the Users Guide for the merits
 c       and evils of the two approaches.  The default is 'zero'.
 c
-c$Id: invert.for,v 1.26 2019/03/09 03:42:48 wie017 Exp $
+c$Id: invert.for,v 1.27 2019/05/24 05:47:26 wie017 Exp $
 c--
 c  History
 c    rjs        89  Initial version
@@ -391,6 +396,7 @@ c    mhw   20jan15  Add position angle to taper specification
 c    pjt   10feb15  Handle large mosaics
 c    mhw   16oct18  Handle >2**31 visibilities
 c    rb&mhw 8mar19  Add option radial & taper
+c    rb&mhw 22may19 Add option radfft
 c  Bugs:
 c-----------------------------------------------------------------------
       include 'mirconst.h'
@@ -409,12 +415,12 @@ c
       character line*64, version*72,smnx*10,smny*10
       double precision ra0,dec0,offset(2),lmn(3),x(2)
       integer i,j,k,nmap,tscr,nchan,npol,npnt,coObj,pols(MAXPOL)
-      integer nx,ny,bnx,bny,mnx,mny,wnu,wnv
+      integer nx,ny,bnx,bny,mnx,mny,wnu,wnv,wmidu
       integer nbeam,nsave,ndiscard,offcorr,nout
       ptrdiff nvis
       logical defWt,Natural,doset,systemp(2),mfs,doimag,mosaic,sdb,idb
       logical double,doamp,dophase,dosin,doncp,dobeam,dores,dorotbm
-      logical dorad,dotaper
+      logical dorad,doradfft,dotaper
 c
       integer tno,tvis
       ptrdiff UWts,Map,MMap,nUWts,nMMap,sUWts
@@ -435,8 +441,8 @@ c
 c-----------------------------------------------------------------------
       version = versan ('invert',
 
-     :                  '$Revision: 1.26 $',
-     :                  '$Date: 2019/03/09 03:42:48 $')
+     :                  '$Revision: 1.27 $',
+     :                  '$Date: 2019/05/24 05:47:26 $')
 c
 c  Get the input parameters. Convert all angular things into
 c  radians as soon as possible!!
@@ -447,7 +453,7 @@ c
       if(nmap.eq.0)call bug('f','An output must be given')
 
       call GetOpt(uvflags,double,systemp,mfs,sdb,mosaic,doimag,
-     *        doamp,dophase,dosin,doncp,dorad,dotaper,mode)
+     *        doamp,dophase,dosin,doncp,dorad,doradfft,dotaper,mode)
       idb = beam.ne.' '.and.doimag
       sdb = beam.ne.' '.and.sdb
       call uvDatInp('vis',uvflags)
@@ -529,13 +535,15 @@ c
            alpha = 0.5
         endif
       endif
-      if(.not.dorad.and.robust.gt.4.and.max(supx,supy).gt.0)then
+      if(.not.(dorad.or.doradfft)
+     * .and.robust.gt.4.and.max(supx,supy).gt.0)then
         call bug('i','Robust value resulting in natural weights')
         supx = 0
         supy = 0
         defWt = .false.
       endif
-      if (.not.dorad.and.robust.eq.-10.and.(supx.gt.0.or.defWt)) then
+      if (.not.(dorad.or.doradfft)
+     * .and.robust.eq.-10.and.(supx.gt.0.or.defWt)) then
         call bug('i',
      *  'Using uniform weighting with robust unset is not recommended')
         if (mfs) call bug('i',' especially not for mfs data')
@@ -609,6 +617,21 @@ c
           celly = cellx
         endif
       endif
+      if (doradfft.and.(fwhmx.lt.cellx.or.fwhmy.lt.celly)) then
+        call bug('w','Option Radfft: Adjusting FWHM to >=2.4x cellsize')
+        fwhmx = max(2.4 * cellx, fwhmx)
+        fwhmy = max(2.4 * celly, fwhmy)
+        bpa = 0.
+        dorotbm = .false.
+      endif
+      if(doradfft)then
+        if(supx.lt.fwhmx.or.supy.lt.fwhmy)then
+          call bug('w','Option Radfft: Adjusting SUP to be >=10xFWHM')
+          supx = max(10.*fwhmx,supx)
+          supy = max(10.*fwhmy,supy)
+        endif
+      endif
+
       cellx = -cellx
 c
 c  Give the "Hd" routines the header information, and create an initial
@@ -682,18 +705,32 @@ c  Determine some things for the weighting process, and then go
 c  and determine the weights (if its not natural weighting).
 c
       call WtIni(defWt,supx,supy,bnx,bny,cellx,celly,
-     *  fwhmx,fwhmy,umax,vmax,Natural,wnu,wnv,wdu,wdv,tu,tv,dorad)
+     *  fwhmx,fwhmy,umax,vmax,Natural,wnu,wnv,wdu,wdv,tu,tv,
+     *  dorad.or.doradfft)
 c
+      wmidu = 1
       if(.not.Natural)then
         call output('Calculating the weights ...')
-        nUWts = (wnu/2+1) * wnv
-        nUWts = nUWts * npnt
+c
+c       Use full size wt grid for radfft, half+1 otherwise
+c
+        if (doradfft) then
+            wmidu = wnu/2 + 1
+        else
+            wnu = wnu/2 + 1
+        endif
+        nUWts = 1_8 * wnu * wnv * npnt
         call Memallox(UWts,nUWts,'r')
         if(dorad) then
           call Memallox(sUWts,nUWts,'r')
-          call WtCalcR(tscr,memr(UWts),memr(sUWts),wdu,wdv,wnu,wnv,npnt,
-     *         nvis,npol*nchan,dmax,dmin,alpha,dotaper)
+          call WtCalcR(tscr,memr(UWts),memr(sUWts),wdu,
+     *      wdv,wnu,wnv,npnt,nvis,npol*nchan,dmax,dmin,alpha,dotaper)
           call MemFrex(sUWts,nUWts,'r')
+        elseif (doradfft) then
+          call Memalloc(sUWts,nUwts,'c')
+          call WtCalcRF(tscr,memr(UWts),memc(sUWts),wdu,
+     *      wdv,wnu,wnv,npnt,nvis,npol*nchan,cellx,celly,supx,supy)
+          call MemFrex(sUwts,nUwts,'c')
         else
           call WtCalc(tscr,memr(UWts),wdu,wdv,wnu,wnv,npnt,
      *                                        nvis,npol*nchan)
@@ -713,9 +750,9 @@ c
       else
         call output('Applying the weights ...')
       endif
-      call Wter(tscr,Natural,memr(UWts),wdu,wdv,wnu,wnv,npnt,Tu,Tv,bpa,
-     *  dorotbm,nvis,npol,nchan,mosaic,idb,sdb,doamp,dophase,freq0,Rms,
-     *  ChanWt,lmn,umax,vmax,cellx,celly)
+      call Wter(tscr,Natural,memr(UWts),wdu,wdv,wnu,wnv,wmidu,npnt,
+     *  Tu,Tv,bpa,dorotbm,nvis,npol,nchan,mosaic,idb,sdb,doamp,dophase,
+     *  freq0,Rms,ChanWt,lmn,umax,vmax,cellx,celly)
 c
       if(nUWts.gt.0)call MemFrex(UWts,nUWts,'r')
       if(mosaic)call mosGFin
@@ -993,7 +1030,7 @@ c***********************************************************************
 c
       integer tvis,wnu,wnv,nchan,npnt
       ptrdiff nvis
-      real Wts(wnv,wnu/2+1,npnt),wdu,wdv
+      real Wts(wnv,wnu,npnt),wdu,wdv
 c
 c  Calculate the weight to be applied to each visibility.
 c
@@ -1028,7 +1065,7 @@ c
 c  Zero out the array.
 c
       do ipnt=1,npnt
-        do j=1,wnu/2+1
+        do j=1,wnu
           do i=1,wnv
             Wts(i,j,ipnt) = 0.
           enddo
@@ -1076,8 +1113,8 @@ c***********************************************************************
 c
       integer tvis,wnu,wnv,nchan,npnt
       ptrdiff nvis
-      real Wts(wnv,wnu/2+1,npnt),wdu,wdv,dmax,dmin,alpha
-      real sWts(wnv,wnu/2+1,npnt)
+      real Wts(wnv,wnu,npnt),wdu,wdv,dmax,dmin,alpha
+      real sWts(wnv,wnu,npnt)
       logical dotaper
 c
 c  Calculate the weight to be applied to each visibility.
@@ -1121,7 +1158,7 @@ c
 c  Zero out the array.
 c
       do ipnt=1,npnt
-        do j=1,wnu/2+1
+        do j=1,wnu
           do i=1,wnv
             Wts(i,j,ipnt) = 0.
             sWts(i,j,ipnt) = 0.
@@ -1165,7 +1202,7 @@ c
       enddo
 
       do ipnt=1,npnt
-        do u=1,wnu/2+1
+        do u=1,wnu
           do v=1,wnv
             if (Wts(v,u,ipnt).gt.0.) then
               ur = real(u - 1)
@@ -1175,7 +1212,7 @@ c
               dri = min(nint(rr),drimax)
               rdri2 = (real(dri))**2
               rsum = pi*(real(dri)*2.+1.)**2/4.0
-              do du = (u-dri),min(wnu/2+1,u+dri)
+              do du = (u-dri),min(wnu,u+dri)
                 rdu2 = (real(du-u))**2
                 do dv = max(1,v-dri),min(wnv,v+dri)
                   rdv2 = (real(dv-v))**2
@@ -1214,7 +1251,7 @@ c
 c  Replace with smoothed density
 c
       do ipnt=1,npnt
-        do u=1,wnu/2+1
+        do u=1,wnu
           do v=1,wnv
             Wts(v,u,ipnt) = sWts(v,u,ipnt)
           enddo
@@ -1222,6 +1259,125 @@ c
        enddo
 c
       end
+c
+c***********************************************************************
+      subroutine WtCalcRF(tvis,Wts,cWts,wdu,wdv,wnu,wnv,npnt,nvis,nchan,
+     *     cellx,celly,supx,supy)
+c
+      integer tvis,wnu,wnv,nchan,npnt
+      real Wts(wnv,wnu,npnt),wdu,wdv,supx,supy,cellx,celly
+      complex cWts(wnv,wnu,npnt)
+c
+c  Calculate the weight to be applied to each visibility.
+c  Accumulate weights, smooth and output this local density.
+c
+c  Input:
+c    tvis       Handle of the visibility scratch file.
+c    wnu,wnv    Full size of the weights array.
+c    wdu,wdv    Cell increments (wavelengths).
+c    nvis       Number of visibilities.
+c    nchan      Number of channels.
+c    npnt       Number of pointings.
+c    cellx,y    cellsize
+c    supx,y     smoothing kernel size
+c
+c  Output:
+c    Wts        Array containing the visibility weights.
+c
+c-----------------------------------------------------------------------
+      include 'maxdim.h'
+      include 'mirconst.h'
+      integer InU,InV,InW,InWt,InPnt,InRms2,InFreq,InData
+      parameter(InU=0,InV=1,InW=2,InPnt=3,InWt=6,InRms2=4)
+      parameter(InFreq=5,InData=8)
+      integer Maxrun
+      parameter(Maxrun=8*MAXCHAN+20)
+      integer VispBuf, VisSize,u,v,k,ktot,l,ltot,ipnt
+      integer Sgn,Center1,Center2
+      real Visibs(Maxrun)
+      real ur,vr,dx,dy,tx,ty,nm,t
+      ptrdiff offset,nvis
+c
+c  Determine the number of visibilities per buffer.
+c
+      VisSize = InData + 2*nchan
+      VispBuf = maxrun/VisSize
+      if(VispBuf.lt.1)call bug('f','Too many channels for me!')
+c
+c  Zero out the (u,v) Wts array.
+c
+      do ipnt=1,npnt
+        do u=1,wnu
+          do v=1,wnv
+            Wts(v,u,ipnt) = 0.
+          enddo
+        enddo
+      enddo
+c
+c  Accumulate the (v,u) weight function.
+c
+      call scrrecsz(tVis,VisSize)
+      k = 0
+      ktot = nvis
+      dowhile(k.lt.ktot)
+        ltot = min(VispBuf,ktot-k)
+        offset = k
+        call scrread(tvis,Visibs,offset,ltot)
+        do l=1,ltot*VisSize,VisSize
+          ipnt = nint(Visibs(l+InPnt))
+          ur = -Visibs(l+InU)/wdu
+          vr = -Visibs(l+InV)/wdv
+          u = nint(ur) + wnu/2 + 1
+          v = nint(vr) + wnv/2 + 1
+          Wts(v,u,ipnt) = Wts(v,u,ipnt) + Visibs(l+InWt)/2.
+          ur = Visibs(l+InU)/wdu
+          vr = Visibs(l+InV)/wdv
+          u = nint(ur) + wnu/2 + 1
+          v = nint(vr) + wnv/2 + 1
+          Wts(v,u,ipnt) = Wts(v,u,ipnt) + Visibs(l+InWt)/2.
+        enddo
+        k = k + ltot
+      enddo
+
+      dx = 1./(wdu*wnu)
+      dy = 1./(wdv*wnv)
+      tx = - (4.*log(2.))/supx**2
+      ty = - (4.*log(2.))/supy**2
+      nm = (4.*log(2.)*cellx*celly)/(pi*supx*supy)
+      do ipnt=1,npnt
+        Sgn = -1
+        Center1 = wnv/2 + 1
+        Center2 = wnu/2 + 1
+        call FFTRC2(Wts(1,1,ipnt),cWts(1,1,ipnt),wnv,wnu,Sgn,
+     *                                        Center1,Center2)
+        do u=1,wnu
+          ur = real(u-wnu/2-1)*dx
+          do v=1,wnv
+            vr = real(v-wnv/2-1)*dy
+            t = tx*ur*ur+ty*vr*vr
+            if (t.gt.-20) then
+              Wts(u,v,ipnt) = abs(cWts(u,v,ipnt))*nm*exp(t)
+            else
+              Wts(u,v,ipnt) = 0
+            endif
+          enddo
+        enddo
+
+        Sgn = 1
+        Center1 = wnv/2 + 1
+        Center2 = wnu/2 + 1
+        call Scale(Wts(1,1,ipnt),1_8*wnv*wnu,1.0/real(1_8*wnv*wnu))
+        call FFTRC2(Wts(1,1,ipnt),cWts(1,1,ipnt),wnv,wnu,Sgn,
+     *                                        Center1,Center2)
+        do u=1,wnu
+          do v=1,wnv
+            Wts(u,v,ipnt) = abs(cWts(u,v,ipnt))
+          enddo
+        enddo
+      enddo
+
+      end
+
 c***********************************************************************
       subroutine WtIni(defWt,supx,supy,nx,ny,cellx,celly,
      *     fwhmx,fwhmy,umax,vmax,Natural,wnu,wnv,wdu,wdv,
@@ -1345,7 +1501,7 @@ c***********************************************************************
       subroutine WtRobust(robust,UWts,wnu,wnv,npnt)
 c
       integer wnv,wnu,npnt
-      real robust,UWts(wnv,wnu/2+1,npnt)
+      real robust,UWts(wnv,wnu,npnt)
 c
 c  Use Brigg's scheme to make the weights robust.
 c-----------------------------------------------------------------------
@@ -1357,7 +1513,7 @@ c
       SumW = 0
       SumW2 = 0
       do k=1,npnt
-        do j=1,wnu/2+1
+        do j=1,wnu
           do i=1,wnv
             t = UWts(i,j,k)
             SumW = SumW + t
@@ -1371,7 +1527,7 @@ c
       S2 = 12.5 * 10.0**(-2*robust)/Wav
 c
       do k=1,npnt
-        do j=1,wnu/2+1
+        do j=1,wnu
           do i=1,wnv
             UWts(i,j,k) = 1 + UWts(i,j,k)*S2
           enddo
@@ -1380,14 +1536,14 @@ c
 c
       end
 c***********************************************************************
-      subroutine Wter(tscr,Natural,UWts,wdu,wdv,wnu,wnv,npnt,Tu,Tv,
-     *     bpa,dorotbm,nvis,npol,nchan,mosaic,idb,sdb,doamp,dophase,
+      subroutine Wter(tscr,Natural,UWts,wdu,wdv,wnu,wnv,wmidu,npnt,Tu,
+     *     Tv,bpa,dorotbm,nvis,npol,nchan,mosaic,idb,sdb,doamp,dophase,
      *     freq0,Rms2,Slop,lmn,umax,vmax,cellx,celly)
 c
-      integer tscr,wnu,wnv,npol,nchan,npnt
+      integer tscr,wnu,wnv,wmidu,npol,nchan,npnt
       ptrdiff nvis
       logical Natural,sdb,idb,mosaic,doamp,dophase,dorotbm
-      real Tu,Tv,bpa,wdu,wdv,UWts(wnv,wnu/2+1,npnt),cellx,celly
+      real Tu,Tv,bpa,wdu,wdv,UWts(wnv,wnu,npnt),cellx,celly
       real Rms2,freq0,umax,vmax,Slop(npol*nchan)
       double precision lmn(3)
 c
@@ -1402,6 +1558,7 @@ c    dorotbm    Are we rotating the beam taper?
 c    UWts       If its not natural weighting, this contains the
 c               uniform weight information.
 c    wnu,wnv    Weight array size.
+c    wmidu      Weight array midpoint in u (half grid or full grid)
 c    npnt       Number of pointings.
 c    wdu,wdv    Weight cell size.
 c    nvis       Number of visibilities.
@@ -1476,8 +1633,8 @@ c
         else
           k = 1
           do i=1,n
-            if(Vis(k+InU).gt.0)then
-              u = nint(Vis(k+InU)/wdu)         + 1
+            if(Vis(k+InU).gt.0.or.wmidu.gt.1)then
+              u = nint(Vis(k+InU)/wdu) + wmidu
               v = nint(Vis(k+InV)/wdv) + wnv/2 + 1
             else
               u = nint(-Vis(k+InU)/wdu)         + 1
@@ -1659,17 +1816,17 @@ c
       end
 c***********************************************************************
       subroutine GetOpt(uvflags,double,systemp,mfs,sdb,mosaic,doimag,
-     *        doamp,dophase,dosin,doncp,dorad,dotaper,mode)
+     *        doamp,dophase,dosin,doncp,dorad,doradfft,dotaper,mode)
 c
       character uvflags*(*),mode*(*)
       logical systemp(2),mfs,sdb,doimag,mosaic,double,doamp,dophase,
-     * dosin,doncp,dorad,dotaper
+     * dosin,doncp,dorad,doradfft,dotaper
 c
 c  Get extra processing options.
 c
 c-----------------------------------------------------------------------
       integer NOPTS, NMODES
-      parameter (NOPTS=16, NMODES=3)
+      parameter (NOPTS=17, NMODES=3)
 
       integer nmode
       logical present(NOPTS)
@@ -1678,7 +1835,8 @@ c-----------------------------------------------------------------------
       data opts/'nocal    ','nopol    ','nopass   ','double   ',
      *          'systemp  ','mfs      ','sdb      ','mosaic   ',
      *          'imaginary','amplitude','phase    ','sin      ',
-     *          'ncp      ','fsystemp ','radial   ','taper    '/
+     *          'ncp      ','fsystemp ','radial   ','taper    ',
+     *          'radfft   '/
       data modes/'fft     ','dft     ','median  '/
 c-----------------------------------------------------------------------
       call options('options',opts,present,NOPTS)
@@ -1703,6 +1861,7 @@ c     Extra processing options.
       systemp(2) = present(14).and.mfs
       dorad   = present(15)
       dotaper = present(16).and.dorad
+      doradfft = present(17)
 
 c     Check options.
       if(sdb.and..not.mfs)call bug('f',
@@ -1716,6 +1875,8 @@ c     Check options.
      *  'The fsystemp option is ignored unless mfs is specified')
       if(present(12).and.present(13)) call bug('f',
      *  'Choose at most one of options sin and ncp')
+      if(present(15).and.present(17)) call bug('f',
+     *  'Please choose only one of options radial and radfft')
 
 c     Imaging algorithm.
       call keymatch('mode',NMODES,modes,1,mode,nmode)
