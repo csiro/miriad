@@ -257,7 +257,7 @@ c       replaced with 0, or to be estimated by linear interpolation of
 c       two adjacent good channels.  See the Users Guide for the merits
 c       and evils of the two approaches.  The default is 'zero'.
 c
-c$Id: invert.for,v 1.27 2019/05/24 05:47:26 wie017 Exp $
+c$Id: invert.for,v 1.28 2019/07/04 06:32:48 wie017 Exp $
 c--
 c  History
 c    rjs        89  Initial version
@@ -441,8 +441,8 @@ c
 c-----------------------------------------------------------------------
       version = versan ('invert',
 
-     :                  '$Revision: 1.27 $',
-     :                  '$Date: 2019/05/24 05:47:26 $')
+     :                  '$Revision: 1.28 $',
+     :                  '$Date: 2019/07/04 06:32:48 $')
 c
 c  Get the input parameters. Convert all angular things into
 c  radians as soon as possible!!
@@ -727,7 +727,7 @@ c
      *      wdv,wnu,wnv,npnt,nvis,npol*nchan,dmax,dmin,alpha,dotaper)
           call MemFrex(sUWts,nUWts,'r')
         elseif (doradfft) then
-          call Memalloc(sUWts,nUwts,'c')
+          call Memallox(sUWts,nUwts,'c')
           call WtCalcRF(tscr,memr(UWts),memc(sUWts),wdu,
      *      wdv,wnu,wnv,npnt,nvis,npol*nchan,cellx,celly,supx,supy)
           call MemFrex(sUwts,nUwts,'c')
