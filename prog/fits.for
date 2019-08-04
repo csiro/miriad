@@ -135,7 +135,7 @@ c         velocity=lsr
 c       indicates that fits is to determine the observatory velocity
 c       wrt the LSR frame using an appropriate model.
 c
-c$Id: fits.for,v 1.33 2018/12/04 04:02:11 wie017 Exp $
+c$Id: fits.for,v 1.34 2019/08/04 23:07:40 wie017 Exp $
 c--
 c
 c  Bugs:
@@ -158,6 +158,7 @@ c    Refer to the RCS log, v1.1 includes prior revision information.
 c    mhw 26oct12  Initialize map rotation to zero
 c    rjs 21mar13  Fix check for buffer overflow in uvin.
 c    mhw 01may14  Cope with HPX rotation
+c    mhw 05aug19  Be more lenient with missing polarisations (70%->50%)
 c
 c-----------------------------------------------------------------------
       integer   MAXBOXES
@@ -173,8 +174,8 @@ c-----------------------------------------------------------------------
       character versan*72
 c-----------------------------------------------------------------------
       version = versan('fits',
-     *                 '$Revision: 1.33 $',
-     *                 '$Date: 2018/12/04 04:02:11 $')
+     *                 '$Revision: 1.34 $',
+     *                 '$Date: 2019/08/04 23:07:40 $')
 c
 c  Get the input parameters.
 c
@@ -3566,7 +3567,7 @@ c  The "pols" array counts the polarisations that were found in the
 c  input data.  Because FITS can only handle a regular Stokes axis, and
 c  because Miriad allows an arbitrary Stokes "dimension", we have to
 c  form a regular axis.  The rule is to find the commonest polarisation,
-c  and then to copy "adjacent" polarisations that are at least 70% as
+c  and then to copy "adjacent" polarisations that are at least 50% as
 c  common.  When a required polarisation is missing, we give a dummy
 c  (but flagged) value.
 c
@@ -3597,10 +3598,10 @@ c
      *    (pols(i).eq.pols(imax) .and. abs(i).lt.abs(imax))) imax = i
       enddo
 c
-c  Around the commonest type, find those types that are at least 70% as
+c  Around the commonest type, find those types that are at least 50% as
 c  common. This spans the polarisations that we will choose.
 c
-      thresh = nint(0.7*pols(imax))
+      thresh = nint(0.5*pols(imax))
       PolMn = imax
       more = .true.
       do while (PolMn-1.ge.PolMin .and. more)
