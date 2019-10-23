@@ -17,7 +17,7 @@ import numpy as np
 atca = EarthLocation('149d33m00.5s','-30d18m46.385s',236.87*u.m)
 
 if (len(sys.argv)<2):
-    print("Usage: ",sys.argv[0],' mirfile [bary|lsr] [update-interval(s)]')
+    print ("Usage: ",sys.argv[0],' mirfile [bary|lsr] [update-interval(s)]')
     exit(1)
 vis = sys.argv[1]
 lsr = len(sys.argv)<3 or sys.argv[2]=='lsr'
@@ -53,6 +53,9 @@ mjd0=Time(timeIso).mjd
 direction = SkyCoord('18h', '30d', frame='fk5', equinox='J1900')
 velocity = 20 #*u.km/u.s
 uvw_lsr = direction.galactic.cartesian
+# in km/s
+lightspeed = 299792.458
+
 
 
 n=len(ra)
@@ -60,6 +63,10 @@ lastra=-1
 lastdec=-1
 lasttime=-1
 veldif=0
+
+meanvel = 0
+count = 0
+
 with open('newvel.log','w') as f:
     #f.write('# velocity table for '+vis+'\n')
     for i in range(0,n):
@@ -72,14 +79,29 @@ with open('newvel.log','w') as f:
             newvel = sc.radial_velocity_correction('barycentric',obstime=time,
              location=atca).to(u.km/u.s).value
             lsrvel= sc.galactic.cartesian.dot(uvw_lsr)*velocity
-            if lsr: newvel+=lsrvel
+            # astropy radial_velocity_correction method returns lightspeed * z_b, miriad's math would be correct 
+            # if it returned lightspeed * ((z_b+1)^2 - 1) / ((z_b+1)^2 + 1)
+            # See astropy issue #9269 and ATCASUP-3515
+            zb = newvel / lightspeed
+            zb_plus1_squared = (zb + 1.) * (zb + 1.)
+            newvel = lightspeed * (zb_plus1_squared - 1.) / (zb_plus1_squared + 1.)
+            #
+            if lsr: 
+               newvel+=lsrvel
+               print ("LSR velocity component in observatory velocity: ", -lsrvel, ' km/s')
             lastra=ra[i]
             lastdec=dec[i]
             lasttime=t[i]
             veldif=max(veldif,abs(vel[i]+newvel))
             #print ra[i,0]/24,-newvel,vel[i,1],1000*(newvel+vel[i,1])
             f.write("%9.7f  %10.6f \n"%(t[i]/24,-newvel))
-print('Maximum velocity correction: ',veldif,' km/s')
+            meanvel += -newvel
+            count = count + 1
+          
+print ('Maximum velocity correction: ',veldif,' km/s')
+if count > 0:
+   meanvel /= float(count)
+   print ('Mean observatory velocity: ',meanvel,' km/s')
 
 cmd=['uvputhd','vis='+vis,'out='+vis+'.velcor','hdvar=veldop',
       'table=newvel.log','time0='+timeIso]
