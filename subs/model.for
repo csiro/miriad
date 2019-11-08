@@ -63,8 +63,9 @@ c    rjs  14aug00 Re-Added "sources" file support.
 c    rjs  18sep05 Type mismatch error.
 c    mhw  17jan12 Use ptrdiff for scr routines to handle larger files
 c    mhw  24mar15 Add spectral parameters for flux model
-c
-c $Id: model.for,v 1.11 2018/12/04 04:07:54 wie017 Exp $
+c    jbs  08nov19 Change to allow mixing with UV models in uvmodel
+c     
+c $Id: model.for,v 1.12 2019/11/08 06:43:50 ste616 Exp $
 c***********************************************************************
 c*ModelIni -- Ready the uv data file for processing by the Model routine
 c&rjs
@@ -976,11 +977,11 @@ c  Find a matching record in the model visibility dataset.
 c
           do while (more)
             call uvread(tmod,pmod,dmod,flmod,MAXCHAN,nread)
-            if (nread.ne.nchan) call bug('f',
-     *        'Incompatible number of channels in Model(vis)')
             more = nint(pin(6)-pmod(6)).ne.0 .or.
-     *             abs(pin(4)-pmod(4)).gt.1/86400.0 .or.
+     *             abs(pin(4)-pmod(4)).gt.5./86400.0 .or.
      *             nint(pin(5)-pmod(5)).ne.0
+            if ((more.eqv..true.).and.(nread.ne.nchan)) call bug('f',
+     *        'Incompatible number of channels in Model(vis)')
           enddo
 c
 c  Weave the data and model visibility records into one.
