@@ -96,7 +96,7 @@ c       only as many channels as there are planes in the model cube.
 c       The various uv variables that describe the windows are adjusted
 c       accordingly.  No default. 
 c
-c$Id: uvmodel.for,v 1.9 2018/12/04 04:06:01 wie017 Exp $
+c$Id: uvmodel.for,v 1.10 2019/11/08 06:44:15 ste616 Exp $
 c--
 c
 c  History:
@@ -141,6 +141,7 @@ c    rjs  01dec98 More warning messages.
 c    rjs  03apr09 Fix long standing bug in "options=flag"
 c    mhw  17jan12 Use ptrdiff for scr routines to handle larger files
 c    mhw  24jan15 Add spectral parameters to flux keyword
+c    jbs  08nov19 Changes to allow for mixing with UV-based models
 c-----------------------------------------------------------------------
       include 'maxdim.h'
 
@@ -163,13 +164,13 @@ c-----------------------------------------------------------------------
       common /uvmodcom/ calcrms, dounflag
 
       external  hdprsnt, header, keyprsnt, polsp2c, versan
-      logical   hdprsnt, keyprsnt
+      logical   hdprsnt, keyprsnt, modisuv
       integer   polsp2c
       character versan*72
 c-----------------------------------------------------------------------
       version = versan('uvmodel',
-     *                 '$Revision: 1.9 $',
-     *                 '$Date: 2018/12/04 04:06:01 $')
+     *                 '$Revision: 1.10 $',
+     *                 '$Date: 2019/11/08 06:44:15 $')
 
 c     Get the input parameters.
       call keyini
@@ -254,22 +255,29 @@ c     Do the model calculation for point source or model image.
         call Model(flag2,tVis,0,offset,flux,tScr,NHEAD,header,
      *                                                nchan,nvis)
       else
-        call xyopen(tMod,Modl,'old',3,nsize)
-        if (Defline) then
-c         Convert double to real and back again       
-          p1 = lstart
-          p2 = lwidth
-          p3 = lstep
-          call rdhda(tMod,'ltype',ltype,ltype)
-          call rdhdr(tMod,'lstart',p1,p1)
-          call rdhdr(tMod,'lwidth',p2,p2)
-          call rdhdr(tMod,'lstep',p3,p3)
-          lstart = p1
-          lwidth = p2
-          lstep  = p3
-          if (.not.mfs)nchan = nsize(3)
-        endif
-        call uvset(tVis,'data',ltype,nchan,lstart,lwidth,lstep)
+         if (hdprsnt(tMod,'image')) then
+            modisuv = .false.
+            call xyopen(tMod,Modl,'old',3,nsize)
+            if (Defline) then
+c     Convert double to real and back again       
+               p1 = lstart
+               p2 = lwidth
+               p3 = lstep
+               call rdhda(tMod,'ltype',ltype,ltype)
+               call rdhdr(tMod,'lstart',p1,p1)
+               call rdhdr(tMod,'lwidth',p2,p2)
+               call rdhdr(tMod,'lstep',p3,p3)
+               lstart = p1
+               lwidth = p2
+               lstep  = p3
+               if (.not.mfs)nchan = nsize(3)
+            endif
+            call uvset(tVis,'data',ltype,nchan,lstart,lwidth,lstep)
+         else
+            modisuv = .true.
+            call uvopen(tMod, modl,'old')
+            call SelApply(tMod,sels,.true.)
+         endif
         call ModelIni(tMod,tVis,sels,flag1)
         call Model(flag2,tVis,tMod,offset,Clip,tScr,NHEAD,header,
      *                                                nchan,nvis)
@@ -331,7 +339,13 @@ c     Write history.
       call hisClose(tOut)
 
 c     Close up shop.
-      if (Modl.ne.' ') call xyclose(tMod)
+      if (Modl.ne.' ') then
+         if (modisuv.eqv..true.) then
+            call uvClose(tMod)
+         else
+            call xyclose(tMod)
+         endif
+      endif
       call uvClose(tVis)
       call uvClose(tOut)
 
