@@ -113,7 +113,12 @@ c       hh:mm:ss,dd:mm:ss format, or as decimal hours and decimal
 c       degrees.  The default is 0,30.
 c@ harange
 c       Hour Angle range (start,stop,step) in hours.  Default is
-c       -6 hrs to + 6 hrs, with a sample interval=0.1 (6 minute)
+c     -6 hrs to + 6 hrs, with a sample interval of 10 seconds
+c     (although see caveat in inttime).
+c@ inttime
+c       The cycle integration time to use in seconds. Default is
+c       10 seconds. If only the third parameter to harange is not
+c       specified, the sample interval will be this value.
 c@ ellim
 c       Elevation limit in degrees.  The default is not to limit
 c       uv coverage by elevation.  If set, then hour angles below the
@@ -352,7 +357,9 @@ c                  Tidy up messages.
 c    05apr11 mhw   Change epoch to J2000
 c    01aug11 mhw   Add variation with frequency in phase and leakage,
 c                  bandpass and spectral index.
-c
+c    11nov19 jbs   Add inttime parameter so we can use uvgen to closely
+c                  match an existing dataset's uv coordinates and times.
+c     
 c  Bugs/Shortcomings:
 c    * Frequency and time smearing is not simulated.
 c    * Primary beam is a gaussian -- which is too ideal.
@@ -383,8 +390,8 @@ c-----------------------------------------------------------------------
       integer MW
       parameter(MW=4)
       character version*(*)
-      parameter(version = 'Uvgen: $Revision: 1.10 $, '//
-     *  '$Date: 2018/12/04 04:02:11 $')
+      parameter(version = 'Uvgen: $Revision: 1.11 $, '//
+     *  '$Date: 2019/11/10 22:58:30 $')
       integer ALTAZ,EQUATOR,XYEW
       parameter(ALTAZ=0,EQUATOR=1,XYEW=3)
       integer PolRR,PolLL,PolRL,PolLR,PolXX,PolYY,PolXY,PolYX
@@ -413,7 +420,7 @@ c-----------------------------------------------------------------------
       double precision preamble(5),timeout
       real b1(MAXANT),b2(MAXANT),b3(MAXANT),temp,psi,sinq,cosq,leakrms
       real systemp(MAXANT*maxspect),inttime
-      double precision restfreq(maxspect),lst
+      double precision restfreq(maxspect),lst,utc,butc
       double precision antpos(3*MAXANT),ra,dec
       integer item, unit
       character line*132, umsg*80
@@ -526,9 +533,10 @@ c
       sinl = sin(alat)
       cosl = cos(alat)
 
+      call keyr('inttime',inttime,10.)
       call keyr('harange',hbeg,-6.)
       call keyr('harange',hend,6.)
-      call keyr('harange',hint,.1)
+      call keyr('harange',hint,(inttime / 3600.))
       if(hbeg.ge.hend.or.hint.lt.0)
      *  call bug('w','Invalid harange parameter')
       call keyr('cycle',cycleon,hint)
@@ -827,7 +835,7 @@ c
 c  Fake some header information.
 c
       call uvputvrr(unit,'jyperk',jyperk,1)
-      inttime = max(3600*hint,1.)
+c      inttime = max(3600*hint,1.)
       call uvputvrr(unit,'inttime',inttime,1)
       call uvputvrr(unit,'vsource',0.,1)
       call uvputvrr(unit,'veldop',0.,1)
@@ -1018,9 +1026,17 @@ c
           lst = ha * pi / 12 + ra
           if (lst.lt.0.d0) lst = lst + 2*pi
           h = lst - ra
+c     Round the UTC to an integer number of inttime from midnight.
+          utc = timeout + 365.25 / 366.25 * ha / 24.
+          butc = DBLE(INT(utc))
+          utc = (utc - butc) * 86400.
+          utc = NINT(((utc-inttime/2.)/inttime))
+          utc = DBLE(utc) * inttime + (inttime / 2.)
+          utc = (utc / 86400.) + butc
           call uvputvrd(unit,'ut',lst,1)
           call uvputvrd(unit,'lst',lst,1)
-          preamble(4) = timeout + 365.25/366.25*ha/24.
+c     preamble(4) = timeout + 365.25/366.25*ha/24.
+          preamble(4) = utc
           sinha = sin(h)
           cosha = cos(h)
           sinq = cosl*sinha
