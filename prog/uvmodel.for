@@ -96,7 +96,7 @@ c       only as many channels as there are planes in the model cube.
 c       The various uv variables that describe the windows are adjusted
 c       accordingly.  No default. 
 c
-c$Id: uvmodel.for,v 1.10 2019/11/08 06:44:15 ste616 Exp $
+c$Id: uvmodel.for,v 1.11 2019/12/03 02:15:23 ste616 Exp $
 c--
 c
 c  History:
@@ -142,6 +142,8 @@ c    rjs  03apr09 Fix long standing bug in "options=flag"
 c    mhw  17jan12 Use ptrdiff for scr routines to handle larger files
 c    mhw  24jan15 Add spectral parameters to flux keyword
 c    jbs  08nov19 Changes to allow for mixing with UV-based models
+c    jbs  03dec19 Fixed a bug in determining if the model was image
+c                 or uv.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
 
@@ -151,7 +153,7 @@ c-----------------------------------------------------------------------
       logical   calcrms, defline, doclip, dounflag, flags(MAXCHAN),
      *          mfs, selradec, unflag, updated, zero
       integer   i, length, nchan, npol, nread, nsize(3), nvis, pol,
-     *          pols(-8:4), tMod, tOut, tScr, tVis
+     *          pols(-8:4), tMod, tOut, tScr, tVis, tChk, chkStat
       ptrdiff   off
       real      buffer(NBUF), clip, flux(6),
      *          offset(2), sels(MAXSELS), sigma
@@ -169,8 +171,8 @@ c-----------------------------------------------------------------------
       character versan*72
 c-----------------------------------------------------------------------
       version = versan('uvmodel',
-     *                 '$Revision: 1.10 $',
-     *                 '$Date: 2019/11/08 06:44:15 $')
+     *                 '$Revision: 1.11 $',
+     *                 '$Date: 2019/12/03 02:15:23 $')
 
 c     Get the input parameters.
       call keyini
@@ -255,7 +257,9 @@ c     Do the model calculation for point source or model image.
         call Model(flag2,tVis,0,offset,flux,tScr,NHEAD,header,
      *                                                nchan,nvis)
       else
-         if (hdprsnt(tMod,'image')) then
+         call hopen(tChk, modl, 'old', chkStat)
+         if (hdprsnt(tChk,'image')) then
+            call hclose(tChk)
             modisuv = .false.
             call xyopen(tMod,Modl,'old',3,nsize)
             if (Defline) then
@@ -274,6 +278,7 @@ c     Convert double to real and back again
             endif
             call uvset(tVis,'data',ltype,nchan,lstart,lwidth,lstep)
          else
+            call hclose(tChk)
             modisuv = .true.
             call uvopen(tMod, modl,'old')
             call SelApply(tMod,sels,.true.)
