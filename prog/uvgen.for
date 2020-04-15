@@ -359,7 +359,9 @@ c    01aug11 mhw   Add variation with frequency in phase and leakage,
 c                  bandpass and spectral index.
 c    11nov19 jbs   Add inttime parameter so we can use uvgen to closely
 c                  match an existing dataset's uv coordinates and times.
-c     
+c    15apr20 mhw   Add conversion from utc seconds to lst seconds to
+c                  avoid duplicate utc times  
+c
 c  Bugs/Shortcomings:
 c    * Frequency and time smearing is not simulated.
 c    * Primary beam is a gaussian -- which is too ideal.
@@ -390,8 +392,8 @@ c-----------------------------------------------------------------------
       integer MW
       parameter(MW=4)
       character version*(*)
-      parameter(version = 'Uvgen: $Revision: 1.11 $, '//
-     *  '$Date: 2019/11/10 22:58:30 $')
+      parameter(version = 'Uvgen: $Revision: 1.12 $, '//
+     *  '$Date: 2020/04/15 08:11:34 $')
       integer ALTAZ,EQUATOR,XYEW
       parameter(ALTAZ=0,EQUATOR=1,XYEW=3)
       integer PolRR,PolLL,PolRL,PolLR,PolXX,PolYY,PolXY,PolYX
@@ -536,7 +538,7 @@ c
       call keyr('inttime',inttime,10.)
       call keyr('harange',hbeg,-6.)
       call keyr('harange',hend,6.)
-      call keyr('harange',hint,(inttime / 3600.))
+      call keyr('harange',hint,(inttime * 366.25 / 365.25/ 3600.))
       if(hbeg.ge.hend.or.hint.lt.0)
      *  call bug('w','Invalid harange parameter')
       call keyr('cycle',cycleon,hint)
@@ -1018,7 +1020,7 @@ c
             if (dodelay) then
               pnoise(2,n) = rang(0.,prms)
               gain(2,n) = gain(1,n) * expi(pnoise(2,n))
-            endif  
+            endif
           enddo
         endif
 
@@ -1435,9 +1437,9 @@ c-----------------------------------------------------------------------
         endif
 c
 c  Add a complex bandpass, different one for each antenna
-c        
+c
         if (doband) then
-          Gain1 = 0.75 + 0.5*sin(3.1415*i/nchan) + 
+          Gain1 = 0.75 + 0.5*sin(3.1415*i/nchan) +
      *      0.1*expi(3.1415*(5+ant1/5.0)*i/nchan)
           Gain2 = 0.75 + 0.5*sin(3.1415*i/nchan) +
      *      0.1*expi(3.1415*(5+ant2/5.0)*i/nchan)
