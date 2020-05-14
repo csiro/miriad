@@ -114,7 +114,7 @@ c       Integer used to initialise the random number generator.  The
 c       same value of SEED produces the same noise, different values
 c       produce different noise.
 c
-c$Id: imgen.for,v 1.7 2018/11/29 23:32:11 wie017 Exp $
+c$Id: imgen.for,v 1.8 2020/05/14 01:59:40 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -126,7 +126,7 @@ c-----------------------------------------------------------------------
       integer    MAXOBJS, NOBJECTS
       parameter (MAXOBJS = 3000000, NOBJECTS = 12)
 
-      logical   totflux
+      logical   totflux, warned
       integer   i, j, k, lIn, lOut, n1, n2, n3, naxis, nobjs,
      *          nsize(MAXNAX), seed
       real      amp(MAXOBJS), bmaj, bmin, bpa, buff(MAXDIM), fac, fac3,
@@ -151,8 +151,8 @@ c-----------------------------------------------------------------------
      *             'cluster ', 'gauss3  ', 'jet     ', 'source  '/
 c-----------------------------------------------------------------------
       version = versan('imgen',
-     *                 '$Revision: 1.7 $',
-     *                 '$Date: 2018/11/29 23:32:11 $')
+     *                 '$Revision: 1.8 $',
+     *                 '$Date: 2020/05/14 01:59:40 $')
 c
 c  Get the parameters from the user.
 c
@@ -174,7 +174,7 @@ c  Get the source parameters.
 c
       if(objs(1).eq.'source')then
         call keya('source',sfile,' ')
-        if(sfile.eq.' ')call 
+        if(sfile.eq.' ')call
      *       bug('f','Option source: A source table must be given')
         totflux = .TRUE.
         nobjs = 0
@@ -203,7 +203,7 @@ c
         line = stcat(itoaf(nobjs),' sources read from model')
         call output(line)
         msg = 'IMGEN: '//line
-      else        
+      else
         do i = 1, nobjs
           call keyr('spar',amp(i),1.0)
           if (objs(i).ne.'level'.and. objs(i).ne.'noise') then
@@ -339,6 +339,7 @@ c
 c  Fiddle fwhm and position angle parameters to be with respect to the
 c  pixel grid.
 c
+      warned = .false.
       do k = 1, n3
         if (lIn.ne.0) call xysetpl(lIn,1,k)
         call xysetpl(lOut,1,k)
@@ -357,6 +358,14 @@ c       Convert offsets and Gaussian parameters to pixel coordinates.
               call coGauCvt(lOut,'ow/ow/ow',x1,
      *          'w',fwhm1(i), fwhm2(i), posang(i),
      *          'p',fwhm1d(i),fwhm2d(i),posangd(i))
+              if (.not.warned.and.objs(i)(1:5).eq.'gauss') then
+                if (fwhm1d(i).lt.2.0 .or. fwhm2d(i).lt.2.0) then
+                  call bug('w',
+     *              'gaussian component fwhm < 2 * cellsize,'//
+     *              ' results will be inaccurate')
+                  warned = .true.
+                endif
+              endif
             else
               fwhm1d(i)  = 0.0
               fwhm2d(i)  = 0.0
