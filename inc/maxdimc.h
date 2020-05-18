@@ -20,13 +20,13 @@
 *
 *  MAXBASE, MAXCHAN, and MAXWIDE are not used by anything.
 *
-* $Id: maxdimc.h,v 1.10 2014/05/21 04:32:23 wie017 Exp $
+* $Id: maxdimc.h,v 1.11 2020/05/18 05:35:41 mirmgr Exp $
 *---------------------------------------------------------------------------*/
 /* Maximum buffer size for xyzio (N.B. see comment above). */
 #define MAXBUF  16777216
 
 /* Maximum number of pixels on an image axis. */
-#define MAXDIM  16384
+#define MAXDIM  65536
 
 /* Maximum number of image axes. */
 #define MAXNAX  7

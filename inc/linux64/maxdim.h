@@ -1,5 +1,5 @@
 C=======================================================================
-C $Id: maxdim.h,v 1.14 2017/03/15 23:36:03 wie017 Exp $
+C $Id: maxdim.h,v 1.15 2020/05/18 05:33:42 mirmgr Exp $
 C-----------------------------------------------------------------------
 C     Size of an INTEGER array used to implement a memory heap.  This
 C     array is the sole variable in blank COMMON in Miriad.  Trial-and-
@@ -22,7 +22,7 @@ C     memory allocation to store a single image plane below the current
 C     limit of 8GB. Note that invert is limited to 32768, the highest
 C     power of 2 below the limit.
       INTEGER   MAXDIM
-      PARAMETER(MAXDIM = 46340)
+      PARAMETER(MAXDIM = 65536)
 
 C     Maximum number of antennas (ATA=64).
       INTEGER   MAXANT
