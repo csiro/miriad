@@ -94,7 +94,7 @@ c                        scale on the displayed baseline, for all
 c                        baselines.
 c       <                Flag using SumThreshold method, using
 c                        the parameters in flagpar
-c       T                Change the Threshold and other parameters 
+c       T                Change the Threshold and other parameters
 c                        of the SumThreshold algorithm
 c       rr               Remove all current user-specified flags
 c                        on this baseline; r must be pressed twice
@@ -209,15 +209,15 @@ c
 c     Non interactive flagging:
 c     Using the command parameter and the flagpar parameters you can use
 c     pgflag in non-interactive mode. The recommended strategy is to run
-c     pgflag interactively, work out what flagpar parameters work best 
+c     pgflag interactively, work out what flagpar parameters work best
 c     using the * command to see the effect of background subtraction and
-c     the < command to see the effects of SumThreshold flagging. 
+c     the < command to see the effects of SumThreshold flagging.
 c     If too much or too little was flagged, change the parameters with
 c     the 'T' command and undo the flagging with the 'rr' command and try
-c     again. Once the right parameters are found you can abort with 'a' 
-c     and run pgflag with command set to "<" or "<be" to flag the entire 
+c     again. Once the right parameters are found you can abort with 'a'
+c     and run pgflag with command set to "<" or "<be" to flag the entire
 c     dataset. You can use options=nodisp if you don't want to watch the
-c     flagging. If you do want to see what is happening, you'll want to 
+c     flagging. If you do want to see what is happening, you'll want to
 c     specify command='.=<' or the like to scale the data for the display.
 c
 c@ vis
@@ -235,11 +235,11 @@ c     Select Stokes parameter(s) or polarization(s) from:
 c       xx, yy, xy, yx,  i, q, u, v,
 c       rr, ll, rl, lr
 c     Default is Stokes i.
-c     If more than one polarization is specified only the LAST one is 
+c     If more than one polarization is specified only the LAST one is
 c     displayed.
 c     If one 'raw' polarization is specified, only that one is flagged.
-c     If multiple 'raw' polarizations or one or more 'converted' 
-c     polarizations are specified, all polarizations in the data are 
+c     If multiple 'raw' polarizations or one or more 'converted'
+c     polarizations are specified, all polarizations in the data are
 c     flagged.
 c@ device
 c     PGPLOT plot device/type, which must be interactive. No default.
@@ -256,7 +256,7 @@ c     is selected. For mode=``phase'', the phase is in degrees.
 c@ flagpar
 c     Parameters for SumThreshold flagging, dusting and extending
 c     (see Offringa et al,2010, MNRAS 405,155)
-c     1 : Threshold in estimated sigma's (estimated using the 
+c     1 : Threshold in estimated sigma's (estimated using the
 c         median absolute deviation), default 7
 c     2 : Convolution size for channel direction (in channels), used
 c         to generate a smooth background, default 1. Zero disables
@@ -269,7 +269,7 @@ c         operation.The threshold level decreases by a factor of two
 c         each iteration. Default 3
 c     5 : Power of two of the maximum number of points used in the
 c         SumThreshold operation (e.g., 5 -> 32 points). Default 5.
-c     6 : Dust the plot - flag points with less than flagpar(6) 
+c     6 : Dust the plot - flag points with less than flagpar(6)
 c         unflagged neighbours. Useful range 1-4, default 3.
 c     7 : Extend flags to all points which are in a time or
 c         channel sequence with less than flagpar(7) % good data,
@@ -311,14 +311,14 @@ c       nosrc   Do not cause a break in the display when the source
 c               changes. Normally PGFLAG puts a gap in the display
 c               whenever the source changes.
 c       noapply Do not apply the flagging.
-c       nodisp  Do not use the display, just use the specified command 
+c       nodisp  Do not use the display, just use the specified command
 c               to flag all baselines in the dataset.
 c     The following options can be used to disable calibration.
 c       nocal   Do not apply antenna gain calibration.
 c       nopass  Do not apply bandpass correction.
 c       nopol   Do not apply polarisation leakage correction.
 c
-c$Id: pgflag.for,v 1.31 2018/12/06 04:52:42 wie017 Exp $
+c$Id: pgflag.for,v 1.32 2020/05/18 06:52:30 wie017 Exp $
 c--
 c
 c  History:
@@ -466,8 +466,8 @@ c
       logical uvDatOpn
 
       version = versan ('pgflag',
-     :                  '$Revision: 1.31 $',
-     :                  '$Date: 2018/12/06 04:52:42 $')
+     :                  '$Revision: 1.32 $',
+     :                  '$Date: 2020/05/18 06:52:30 $')
 
 c
 c Get user inputs
@@ -499,7 +499,7 @@ c
       call GetOpt(selgen,noapply,nosrc,nodisp,genpatch,uvflags)
       verbose = .not.nodisp
       if (command.eq.''.and.nodisp) call bug('f','Nothing to do')
-      if (device.eq.' '.and..not.nodisp) 
+      if (device.eq.' '.and..not.nodisp)
      *   call bug('f','A PGPLOT device must be given')
       call uvDatInp('vis',uvflags)
       call keyfin
@@ -1097,7 +1097,7 @@ c     fiddle the colour amplitude scale
             needplot=.true.
             plot_main=.true.
          elseif (pressed(1:1).eq.'.') then
-            if (verbose) 
+            if (verbose)
      *         call output('Resetting colour amplitude scaling.')
             use_fiddle=.false.
             needplot=.true.
@@ -1268,7 +1268,7 @@ c     available
             plot_average=.true.
             plot_top=.true.
          elseif (pressed(1:1).eq.'<') then
-            write(status,'(A,I3,1x,I3)') 
+            write(status,'(A,I3,1x,I3)')
      *        'Do SumThreshold operation on baseline ',f_a1,f_a2
             if (verbose) call output(status)
             needplot=.true.
@@ -1284,7 +1284,7 @@ c     available
 	      call Thres(memR(iDat),memI(iFlg),nchan,ntime,chans,times,
      *          bases,flagval,MAXEDIT,nflags,cbl,t1,level,
      *          nint(flagpar(5)),verbose)
-            enddo 
+            enddo
          elseif (pressed(1:1).eq.'b') then
             if (verbose) call output('Blow away the dust...')
             needplot=.true.
@@ -1330,49 +1330,49 @@ c     available
             endif
          elseif (pressed(1:1).eq.'T') then
             call output('Change SumThreshold parameters')
-            write(promp,'(A,F4.1,A)') 
+            write(promp,'(A,F4.1,A)')
      *        'Threshold             (',flagpar(1),'): '
             call prompt(string,length,promp)
             if (length.gt.0) then
               call atorf(string,result,ok)
               if (ok) flagpar(1)=max(1.,result)
-            endif 
-            write(promp,'(A,F4.1,A)') 
+            endif
+            write(promp,'(A,F4.1,A)')
      *        'Conv size - channels  (',flagpar(2),'): '
             call prompt(string,length,promp)
             if (length.gt.0) then
               call atorf(string,result,ok)
-              if (ok) flagpar(2)=max(0.,result) 
+              if (ok) flagpar(2)=max(0.,result)
             endif
-            write(promp,'(A,F4.1,A)') 
+            write(promp,'(A,F4.1,A)')
      *        'Conv size - timeslots (',flagpar(3),'): '
             call prompt(string,length,promp)
             if (length.gt.0) then
               call atorf(string,result,ok)
               if (ok) flagpar(3)=max(0.,result)
-            endif 
-            write(promp,'(A,I2,A)') 
+            endif
+            write(promp,'(A,I2,A)')
      *        'Iterations              (',nint(flagpar(4)),'): '
             call prompt(string,length,promp)
             if (length.gt.0) then
               call atoif(string,iresult,ok)
               if (ok) flagpar(4)=max(1,iresult)
-            endif 
-            write(promp,'(A,I2,A)') 
+            endif
+            write(promp,'(A,I2,A)')
      *        'Max #points as 2^n    (n=',nint(flagpar(5)),'): '
             call prompt(string,length,promp)
             if (length.gt.0) then
               call atoif(string,iresult,ok)
               if (ok) flagpar(5)=max(1,iresult)
             endif
-            write(promp,'(A,I2,A)') 
+            write(promp,'(A,I2,A)')
      *        'Minumum # neighbours    (',nint(flagpar(6)),'): '
             call prompt(string,length,promp)
             if (length.gt.0) then
               call atoif(string,iresult,ok)
               if (ok) flagpar(6)=max(1,iresult)
             endif
-            write(promp,'(A,F4.1,A)') 
+            write(promp,'(A,F4.1,A)')
      *        'Percentage            (',flagpar(7)*100,'): '
             call prompt(string,length,promp)
             if (length.gt.0) then
@@ -1645,8 +1645,9 @@ c-----------------------------------------------------------------------
       complex data(MAXCHAN)
       logical flags(MAXCHAN),flagged,more,blselect
       real t,tprev
-      integer oldflags_bad,oldflags_good,newflags_bad,newflags_good
-      integer flags_goodtobad,flags_badtogood
+      ptrdiff oldflags_bad,oldflags_good
+      ptrdiff newflags_bad,newflags_good
+      ptrdiff flags_goodtobad,flags_badtogood
       integer time1,time2,ntflag,tflag(MAXEDIT2)
       character outline*256
       character flagfile*32
@@ -1810,7 +1811,7 @@ c     do the flagging
                   if ((t1(time1).le.t).and.
      *                (t1(time2).ge.t)) then
                      ntflag=ntflag+1
-                     if (ntflag.gt.MAXEDIT2) 
+                     if (ntflag.gt.MAXEDIT2)
      *                 call bug('f','MAXEDIT2 exceeded')
                      tflag(ntflag)=i
                   endif
@@ -1821,7 +1822,7 @@ c     do the flagging
                blselect = bases(2,i).eq.4.or.
      *         (bases(2,i).eq.1.and.bases(1,i).eq.bl).or.
      *         (bases(2,i).eq.2.and.bases(1,i).eq.ant1).or.
-     *         (bases(2,i).eq.3.and.bases(1,i).eq.ant2)     
+     *         (bases(2,i).eq.3.and.bases(1,i).eq.ant2)
                if (blselect) then
                   flagged=.true.
                   do j=chans(1,i),chans(2,i)
@@ -1999,7 +2000,7 @@ c
             iflag(i,j,2)=iflag(i,j,1)
          enddo
       enddo
-      
+
       bsln = 0
       do j=1,mant
         do i=1,j
@@ -2304,11 +2305,11 @@ c
           endif
         enddo
       enddo
-      
+
       call stats(iflag,Nx,Ny,t1,nflags, MAXEDIT,verbose)
 
       end
-      
+
 c***********************************************************************
       subroutine Stats(iflag,Nx,Ny,t1,nflags,MAXEDIT,verbose)
       include 'maxdim.h'
@@ -2435,7 +2436,7 @@ c     build up the average spectrum
             endif
          enddo
       enddo
-      
+
       do i=chanmin,chanmax
          if (nspectrum(i).gt.0) then
             spectrum(i)=spectrum(i)/real(nspectrum(i))
@@ -3369,15 +3370,15 @@ c    valarray	On input, it contains the original values.
 c    xdim	Number of channels.
 c    ydim	Number of time slots.
 c    iflag	Flags for the data.
-c    sigx,sigy  The width of the gaussian convolution in pixels 
+c    sigx,sigy  The width of the gaussian convolution in pixels
 c               for channels and time slots respectively
 c  Output:
-c    valarray	The input minus the input convolved in time and 
+c    valarray	The input minus the input convolved in time and
 c		channel. Flagged data is skipped over and time gaps
 c               are not convolved across.
 c
 c-----------------------------------------------------------------------
-c 
+c
       include 'maxdim.h'
       integer maxk
       parameter (maxk=99)
@@ -3390,7 +3391,7 @@ c
 c  Determine the ranges to average over for each time slot.
 c
       call AvRange(ydim,t1,cstart,cend)
-        
+
 c
 c  Generate the convolution over time
 c
@@ -3423,7 +3424,7 @@ c  convolved value (a few isolated points will be zeroed instead)
 c
               if (wtsum-1.gt.maxwt/4) then
                 valarray(j,i,2) = acc/wtsum
-              else 
+              else
                 valarray(j,i,2) = 0
               endif
             else
@@ -3468,7 +3469,7 @@ c
 	      enddo
               if (wtsum-1.gt.maxwt/4) then
                 c(j) = acc/wtsum
-              else 
+              else
                 c(j) = 0
               endif
             endif
@@ -3488,13 +3489,13 @@ c
               valarray(j,i,2) = valarray(j,i,1) - valarray(j,i,2)
             else
               valarray(j,i,2) = 0
-            endif  
+            endif
           enddo
         enddo
       endif
 c
-            
-c      
+
+c
       end
 c***********************************************************************
       subroutine dust(iflag,t1,xdim,ydim,minN,
@@ -3506,7 +3507,7 @@ c
       integer chans(2,MAXEDIT),times(2,MAXEDIT),bases(2,MAXEDIT)
       logical flagval(MAXEDIT),verbose
 c
-c  Dust the array - flag all pixels with less than minN neighbours 
+c  Dust the array - flag all pixels with less than minN neighbours
 c
 c  Input:
 c    valarray	On input, it contains the original values.
@@ -3522,7 +3523,7 @@ c  Output:
 c    valarray	The input with 'dust' flagged out
 c
 c-----------------------------------------------------------------------
-c 
+c
       include 'maxdim.h'
       integer cstart(MAXDIM),cend(MAXDIM)
       integer i,j,i0,j0,n,lastnflags,niter
@@ -3532,7 +3533,7 @@ c
 c  Determine the valid ranges for each time slot.
 c
       call AvRange(ydim,t1,cstart,cend)
-        
+
 c
 c  Blow away the dust
 c
@@ -3580,10 +3581,10 @@ c
       logical flagval(MAXEDIT),verbose
 c
 c  Expand the flagged areas by applying the Scale Invariant Rank operator
-c  to the array - flag pixels in all ranges where the 
+c  to the array - flag pixels in all ranges where the
 c  fraction of good pixels is less than frac, Applied first in time,
 c  then in channel. Exclude fully flagged times and channels from the
-c  algorithm to avoid 'eating away' too much good data. 
+c  algorithm to avoid 'eating away' too much good data.
 c
 c  Input:
 c    iflag	Flags for the data.
@@ -3598,7 +3599,7 @@ c  Output:
 c    iflag	The input with bad areas flagged out
 c
 c-----------------------------------------------------------------------
-c 
+c
       include 'maxdim.h'
       integer p(MAXDIM),q(MAXDIM)
       integer inx(MAXDIM),iny(MAXDIM)
@@ -3625,12 +3626,12 @@ c
           endif
         endif
       enddo
-        
+
 c
 c  Determine what to flag, use Offringa's linear time SIR algorithm
 c
 c  Do the time direction
-c     
+c
       do ix=1,xdim
         do iy=1,ny
           psi(iy) = frac - iflag(ix,iny(iy),2)
@@ -3664,7 +3665,7 @@ c
           endif
         enddo
       enddo
-      
+
 c
 c  Exclude completely flagged channels
 c
@@ -3683,7 +3684,7 @@ c
       enddo
 c
 c  Do the channel direction
-c     
+c
       do iy=1,ny
         do ix=1,nx
           psi(ix) = frac - iflag(inx(ix),iny(iy),2)
@@ -3718,7 +3719,7 @@ c
         enddo
       enddo
       call stats(iflag,xdim,ydim,t1,nflags,MAXEDIT,verbose)
-      
+
       end
 c***********************************************************************
 	subroutine AvRange(Ny,t1,cstart,cend)
@@ -4463,7 +4464,7 @@ c      write(time2,'(F18.5)') real(day0+dbl(t2))
      *        dt1,dt2,
      *        chan1,chan2,isave(5)
       endif
-c     
+c
       end
 c***********************************************************************
       subroutine monthstring(month,string)

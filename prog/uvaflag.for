@@ -5,40 +5,40 @@ c= uvaflag - Use flags in one visibility dataset to flag another.
 c& rjs
 c: calibration
 c+
-c       UVAFLAG is a MIRIAD task which flags correlations in one 
+c       UVAFLAG is a MIRIAD task which flags correlations in one
 c       visibility dataset based on the flag status of matching
 c       correlations in a template dataset.
 c
 c       The template dataset should be a subset of the visibility dataset
-c       being flagged, and the order of records in the two datasets 
-c       should be the same. Normally correlations in the template and 
-c       visibility datasets are matched by comparing time, polarisation, 
-c       baseline, bin and frequency. However options `nopol',`nofreq' 
+c       being flagged, and the order of records in the two datasets
+c       should be the same. Normally correlations in the template and
+c       visibility datasets are matched by comparing time, polarisation,
+c       baseline, bin and frequency. However options `nopol',`nofreq'
 c       and 'nobin' can turn off the matching of polarisation, frequency
 c       and bin  number.
 c@ vis
 c       The input visibility file to be flagged. No default.
 c@ tvis
 c       The template input visibility file. The default is the same
-c       as the `vis' dataset. This default makes no sense without the 
-c       `nopol' or `nofreq' options. Several files can be given. 
+c       as the `vis' dataset. This default makes no sense without the
+c       `nopol' or `nofreq' options. Several files can be given.
 c       Wildcards are supported.
 c@ select
 c       Normal visibility selection, which is applied to the template
 c       dataset. See the help on "select" for more information.
 c@ options
-c       Extra processing options. Several can be given, separated by 
+c       Extra processing options. Several can be given, separated by
 c       commas.
 c       Minimum match is supported. Possible values are:
 c         nopol  The polarisation of the records in the template are
 c                ignored. If any polarisation in the template is
 c                flagged, then all polarisations in the input are flagged
 c                This can be useful when applying flagging based on one
-c                polarisation type (e.g. stokes V) to the other 
+c                polarisation type (e.g. stokes V) to the other
 c                polarisations.
 c         nofreq The frequency of the correlations in the template are
 c                ignored. If any channel in the template is flagged, then
-c                all channels in the input are flagged. This can be 
+c                all channels in the input are flagged. This can be
 c                useful when applying flagging based on a `channel-0'
 c                dataset.
 c         nobin  The bin numbers of the correlations in the template are
@@ -49,11 +49,11 @@ c         freq   The first baseline of the template is read and the
 c                flags are applied to all times, baselines and bins
 c                in the input. This can be useful when applying spectral
 c                flags based on a small sample of data or time averaged
-c                data. Option freq implies nobin. It can be combined 
+c                data. Option freq implies nobin. It can be combined
 c                with nopol, but not with nofreq.
 c         noapply Do not apply the flagging, just report the statistics
 c                about what would be flagged.
-c$Id: uvaflag.for,v 1.6 2018/12/04 04:02:11 wie017 Exp $
+c$Id: uvaflag.for,v 1.7 2020/05/18 06:51:35 wie017 Exp $
 c--
 c  History:
 c     nebk 25may89 Original program
@@ -73,14 +73,15 @@ c------------------------------------------------------------------------
         include 'mem.h'
         integer MAXSELS,MAXFILES,MAXPOL
         character version*(*)
-        parameter(version='Uvaflag: $Revision: 1.6 $, '//
-     *             '$Date: 2018/12/04 04:02:11 $')
+        parameter(version='Uvaflag: $Revision: 1.7 $, '//
+     *             '$Date: 2020/05/18 06:51:35 $')
         parameter(MAXSELS=512,MAXFILES=64,MAXPOL=4)
 c
         complex data(maxchan)
         double precision ttbp(4,MAXPOL,MAXBASE),vtbp(4)
         real sels(MAXSELS)
-        integer lVis,lTmp,vVis,vTmp,ntot,ngood,nflag,i,npol,nt,nv,offset
+        ptrdiff ntot,ngood,nflag
+        integer lVis,lTmp,vVis,vTmp,i,npol,nt,nv,offset
         integer nfiles,k,ib,ip,nbl,npol1,off
         character in1(MAXFILES)*64,in2*64,line*64
         logical vflags(MAXCHAN)
@@ -153,7 +154,7 @@ c
               do while (.not.match.and.ib.le.nbl)
                 if ((freq.or.nint(vtbp(2)-ttbp(2,ip,ib)).eq.0.).and.
      *                (nopol.or.nint(vtbp(3)-ttbp(3,ip,ib)).eq.0)) then
-c                      
+c
 c matching baseline + pol found
 c
                   match = .true.
@@ -181,9 +182,9 @@ c
                 endif
               enddo
             else
-c             
+c
 c Time or bin doesn't match, read next template
-c             
+c
               skip=.false.
               do while
      *         (.not.eof.and.((vtbp(1)-ttbp(1,1,1)).gt.1./86400.
@@ -193,7 +194,7 @@ c
                 skip = .true.
               enddo
             endif
-            if (.not.match.and..not.skip) 
+            if (.not.match.and..not.skip)
      *        call countit(vflags,nv,ntot,ngood)
 c
 c  Go back for more.
@@ -228,7 +229,8 @@ c************************************************************************
      *                                  nofreq,ntot,ngood,nflag)
 c
         implicit none
-        integer nt,nv,ntot,ngood,nflag,offset
+        ptrdiff ntot,ngood,nflag
+        integer nt,nv,offset
         logical tflags(nt),vflags(nv),nofreq
 c------------------------------------------------------------------------
         integer i
@@ -268,7 +270,8 @@ c************************************************************************
         subroutine countit(flags,n,ntot,ngood)
 c
         implicit none
-        integer n,ntot,ngood
+        ptrdiff ntot,ngood
+        integer n
         logical flags(n)
 c------------------------------------------------------------------------
         integer i
@@ -362,9 +365,9 @@ c
           do ip=2,npol
             call uvread(lTmp,ttbp(1,ip,ib),data,flags2,MAXCHAN,nchan)
             do i=1,nchan
-              if (nopol) then 
+              if (nopol) then
                 flags(i,1) = flags(i,1).and.flags2(i)
-              else 
+              else
                 flags(i,ip) = flags2(i)
               endif
             enddo
@@ -383,8 +386,8 @@ c
               nt = 1
             else
               do i=1,nchan
-                memL(pFlag+off) = flags(i,ip)  
-                off = off + 1                 
+                memL(pFlag+off) = flags(i,ip)
+                off = off + 1
               enddo
               nt = nchan
             endif
@@ -395,7 +398,7 @@ c
           more = nchan1.gt.0.and.nchan1.eq.nchan.and.
      *      abs(ttbp(1,1,ib)-ttbp(1,1,ib-1)).lt.1./86400.and.
      *      nint(ttbp(4,1,ib)-ttbp(4,ib-1,1)).eq.0
-          if (off.gt.nFlags) 
+          if (off.gt.nFlags)
      *      call bug('f','Internal flag storage exceeded')
         enddo
         eof = nchan1.le.0
@@ -522,4 +525,3 @@ c------------------------------------------------------------------------
         call uvVarSet(vTmp,'wfreq')
         call uvVarSet(vTmp,'wwidth')
         end
-        
