@@ -318,7 +318,7 @@ c       nocal   Do not apply antenna gain calibration.
 c       nopass  Do not apply bandpass correction.
 c       nopol   Do not apply polarisation leakage correction.
 c
-c$Id: pgflag.for,v 1.32 2020/05/18 06:52:30 wie017 Exp $
+c$Id: pgflag.for,v 1.33 2020/06/17 06:11:42 wie017 Exp $
 c--
 c
 c  History:
@@ -430,7 +430,7 @@ c
 c Data storage.
 c
       double precision day0,cfreq(MAXCHAN)
-      integer lScr,nchan,ntime,nvis,chanoff,chanw,nbl,cbl
+      integer lScr,nchan,ntime,nvis,chanoff,chanw,nbl,cbl,loop
       integer newbl,tbl,mbl,mant,k1,k2,toklen
       integer pant1,pant2,pchan1,pchan2,pflag
       real t1(MAXTIME),ttol,curs_x,curs_y
@@ -466,8 +466,8 @@ c
       logical uvDatOpn
 
       version = versan ('pgflag',
-     :                  '$Revision: 1.32 $',
-     :                  '$Date: 2020/05/18 06:52:30 $')
+     :                  '$Revision: 1.33 $',
+     :                  '$Date: 2020/06/17 06:11:42 $')
 
 c
 c Get user inputs
@@ -625,7 +625,8 @@ c
             if (.not.scale_locked) then
                use_fiddle=.false.
             endif
-            do while (some_unflagged.eqv..false.)
+            loop = 0
+            do while (.not.some_unflagged.and.loop.lt.2)
                call Gridit(memI(iFlg),memR(iDat),nchan,ntime,cbl,
      *              day0,lScr,nvis,t1,some_unflagged)
                call ApplyFlags(memI(iFlg),nchan,ntime,chans,times,
@@ -641,6 +642,7 @@ c
  20                  if (newbl.eq.cbl) then
                         going_forward=.false.
                         going_backward=.true.
+                        loop = loop + 1
                      else
                         cbl=newbl
                      endif
@@ -653,6 +655,7 @@ c
                      if (newbl.eq.cbl) then
                         going_forward=.true.
                         going_backward=.false.
+                        loop = loop + 1
                      else
                         cbl=newbl
                      endif
