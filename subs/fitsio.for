@@ -132,7 +132,7 @@ c    Refer to the RCS log, v1.1 includes prior revision information.
 c    mhw  02jul12  Read/write of images with dimensions up to MAXDIM
 c    rjs  16feb13  Support really large FITS files (>200GB)
 c
-c $Id: fitsio.for,v 1.12 2013/02/17 22:59:21 wie017 Exp $
+c $Id: fitsio.for,v 1.13 2020/07/30 01:47:39 wie017 Exp $
 c***********************************************************************
 
 c* FxyOpen -- Open a FITS image file.
@@ -394,7 +394,11 @@ c
      *                                                      iostat)
          if (iostat.ne.0) call bugno('f',iostat)
           do i = 1, length
-             data(i) = darray(i)
+             if (isnan(darray(i))) then
+                 data(i) = 0
+             else
+                 data(i) = darray(i)
+             endif
           enddo
         endif
 c
@@ -498,13 +502,19 @@ c
      *                                                        iostat)
         endif
         if (iostat.ne.0) call bugno('f',iostat)
-        if (float(lu).and.BypPix(lu).eq.4) then
-          do i = 1, length
-            flags(i) = (2139095040.gt.array(i) .or.
+        if (float(lu)) then
+            if (BypPix(lu).eq.4) then
+                do i = 1, length
+                    flags(i) = (2139095040.gt.array(i) .or.
      *                  array(i).gt.2147483647) .and.
      *                 (-8388608.gt.array(i) .or.
      *                  array(i).gt.-1)
-          enddo
+                enddo
+            else
+                do i = 1 , length
+                    flags(i) = .not.isnan(darray(i))
+                enddo
+            endif
         else if (BypPix(lu).eq.8) then
           do i = 1, length
             flags(i) = darray(i).ne.blank
@@ -2854,9 +2864,9 @@ c         ... HdOff(lu) = offset
         call mpSubmm(HdSize3(1,lu),offset3)
 c
 c  If the size is really big, trim it back
-c        
+c
         call mpCvtim(bigint,2**30)
-        if(mpCmp(HdSize3(1,lu),bigint).gt.0) 
+        if(mpCmp(HdSize3(1,lu),bigint).gt.0)
      *    call mpSet(HdSize3(1,lu),bigint)
         call mpDivmi(HdSize3(1,lu),2880,rem)
         call mpMulmi(HdSize3(1,lu),2880)
