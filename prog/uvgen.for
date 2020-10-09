@@ -104,6 +104,9 @@ c       or
 c         yymmmdd:hh:mm:ss.s
 c       The default is 80JAN01.0.  A function of this is also used
 c       as a seed for the random number generator.
+c@ seed
+c       Set the seed for the random number generator
+c       If this is not set or zero, the time is used as the seed
 c@ freq
 c       Frequency and IF frequency in GHz.
 c       Defaults are 100,0.0 GHz.
@@ -361,6 +364,7 @@ c    11nov19 jbs   Add inttime parameter so we can use uvgen to closely
 c                  match an existing dataset's uv coordinates and times.
 c    15apr20 mhw   Add conversion from utc seconds to lst seconds to
 c                  avoid duplicate utc times  
+c    09oct20 mhw   Add explicit seed parameter for random numbers
 c
 c  Bugs/Shortcomings:
 c    * Frequency and time smearing is not simulated.
@@ -392,8 +396,8 @@ c-----------------------------------------------------------------------
       integer MW
       parameter(MW=4)
       character version*(*)
-      parameter(version = 'Uvgen: $Revision: 1.12 $, '//
-     *  '$Date: 2020/04/15 08:11:34 $')
+      parameter(version = 'Uvgen: $Revision: 1.13 $, '//
+     *  '$Date: 2020/10/09 03:41:04 $')
       integer ALTAZ,EQUATOR,XYEW
       parameter(ALTAZ=0,EQUATOR=1,XYEW=3)
       integer PolRR,PolLL,PolRL,PolLR,PolXX,PolYY,PolXY,PolYX
@@ -436,7 +440,7 @@ c
       real hbeg, hend, hint, arms, prms, utns
       real tsys,tsky,tau,trms,tatm,cycleon,cycleoff
       double precision alat,along,sdec,sra,elev
-      integer pol(maxpol),npol,ipol,npolar,ipolar
+      integer pol(maxpol),npol,ipol,npolar,ipolar, seed
       character polar(MAXPOLAR)*27,xpolar*27
 c     character polar(MAXPOLAR)*MAXANT,xpolar*MAXANT
 c
@@ -516,6 +520,7 @@ c
       call keyd('freq',iffreq,0.0d0)
       call keyt('time',timeout,'atime',0.d0)
       if(timeout.le.1)call dayjul('80JAN01',timeout)
+      call keyi('seed',seed,0)
       call keyt('radec',sra,'hms',0.d0)
       call keyt('radec',sdec,'dms',30.d0*dpi/180.)
       doellim = keyprsnt('ellim')
@@ -928,8 +933,12 @@ c  Miscellaneous initialization.
 c
       item = 0
 c       call Randset(nint(10*timeout))
-      call Randset(nint(timeout) +
+      if (seed.ne.0) then
+         call Randset(seed)
+      else
+         call Randset(nint(timeout) +
      *             nint(10000000 * (timeout - int(timeout))))
+      endif
 c       timeout = int(timeout-0.5) + 0.5
 c
 c  Initialise the effective source parameters, to account for pointing
