@@ -1047,8 +1047,11 @@ c
 c
 	  do isol=1,nsols
 	    offset = (isol-1)*nants*nfeeds
-	    do j=1,nfeeds*nants
-	      y(j) = GetVal(G(offset+j),Value(j))
+	    do ifeed=1,nfeeds
+              do iant=1,nants
+                j = ifeed + (iant-1)*nfeeds
+	        y(iant+(ifeed-1)*nants) = GetVal(G(offset+j),Value(j))
+              enddo
 	    enddo
 	    do j1=1,nfeeds*nants,6
 	      j2 = min(j1+5,nfeeds*nants)
