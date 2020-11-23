@@ -163,7 +163,7 @@ c                    solution for the observation already exists.  This
 c                    preliminary solution must be formed from a
 c                    calibrator with known Stokes-V.
 c
-c$Id: gpcal.for,v 1.22 2016/05/01 22:31:05 wie017 Exp $
+c$Id: gpcal.for,v 1.23 2020/11/23 04:42:34 wie017 Exp $
 c--
 c  History:
 c    rjs,nebk 1may91 Original version.
@@ -314,8 +314,8 @@ c-----------------------------------------------------------------------
       external  itoaf, keyprsnt, uvDatOpn
 c-----------------------------------------------------------------------
       version = versan('gpcal',
-     *                 '$Revision: 1.22 $',
-     *                 '$Date: 2016/05/01 22:31:05 $')
+     *                 '$Revision: 1.23 $',
+     *                 '$Date: 2020/11/23 04:42:34 $')
 c
 c  Get inputs.
 c
@@ -3285,7 +3285,7 @@ c-----------------------------------------------------------------------
         endif
 
         write(umsg, 10) flux, freq
- 10     format('Using IQUV =',f8.4,3(',',f8.4),' at',f9.4,' GHz.')
+ 10     format('Using IQUV =',f8.4,3(',',f8.4),' at',f12.7,' GHz.')
         call output(umsg)
       endif
 
