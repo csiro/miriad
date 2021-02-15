@@ -2,7 +2,7 @@
 # GNUmakefile for compiling Miriad tasks.
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.12 2010/07/28 07:55:42 cal103 Exp $
+# $Id: GNUmakefile,v 1.13 2021/02/15 00:28:26 mci156 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
@@ -237,6 +237,15 @@ ifeq "$(MAKEMODE)" "system"
   $(DPNDTMPD)/%.f $(DPNDINCD)/% : %.for
 	   $(depend-for)
 
+  # DPNDINCL is included by this make file (at the bottom).
+  # It contains the explicit dependencies needed to trigger the pattern
+  # rules above; e.g.  $(MIRBIND)/uvlist : $(MIRPROGD)/uvlist.h.
+  # IF this file is empty or does not exist, the pattern rules can't trigger.
+  # It's pulled in with -include, which is silent if the file doesn't exist.
+  # So we need a recipe to make it.
+  $(DPNDINCL) : $(DPNDINCD)
+	   $(update-list)
+
   # This little rule tells make not to fret if it can't find a header file.
   # It may be important if a header file is deleted but remains as a
   # prerequisite for some of the object modules in the include-file dependency
@@ -459,5 +468,12 @@ $(MIRBIND)/wblod   : $(RPFITSLIB)
 # it then apparently considers that the .f intermediary of the system
 # "$(DPNDTMPD)/%.f $(DPNDINCD)/%" pattern rule "ought to exist" and recompiles
 # the executable if it doesn't.
+#
+# Notes:
+#  * if make includes a file like this, it checks if it needs to be remade.
+#  * '-include' doesn't error or complain if the target file doesn't exist.
+#    DPNDOBJL is not always needed, and reliably gets built when needed,
+#    so this is fine.
+#    DPNDINCL is always needed for system builds - see rule above.
 -include $(DPNDINCL)
 -include $(DPNDOBJL)
