@@ -20,6 +20,8 @@ c	            into Miriad's date format.
 c	  pol       The value is assumed to be a polarization tag, and is
 c	            formatted as I,Q,U,V,XX,YY, etc.
 c	The following assume that the value is in radians.
+c       Note that for bpa this assumption is incorrect, it is stored as 
+c       degrees and should be retrieved with format left empty.
 c	  arcsec    The value is converted to arcsec.
 c	  arcmin    The value is converted to arcmin.
 c	  degrees   The value is converted to degrees.

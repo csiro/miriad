@@ -24,7 +24,8 @@ c       "arcminutes", "arcseconds", "time", "hours", "hms", and "dms"
 c       (with mininum match).  Times are given in the standard Miriad
 c       form and are stored as Julian dates.  Angular units are
 c       converted if necessary and stored in radians.  bpa, being the
-c       exception, is stored in degrees.
+c       exception, is stored in degrees, but value is still interpreted
+c       as radians unless you specify "degrees" as the unit.
 c@ type
 c       The data type of the argument.  Values can be 'integer', 'real',
 c       'double' and 'ascii'.  The default is determined from the format
@@ -51,8 +52,8 @@ c-----------------------------------------------------------------------
       character versan*72
 c-----------------------------------------------------------------------
       version = versan ('puthd',
-     *                  '$Revision: 1.3 $',
-     *                  '$Date: 2011/09/15 05:53:36 $')
+     *                  '$Revision: 1.4 $',
+     *                  '$Date: 2021/03/08 00:37:26 $')
 
       call keyini
       call keya('in',in,' ')
