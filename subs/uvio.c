@@ -257,7 +257,7 @@
 *  mhw  08aug12 merge in some CARMA mods
 *  mhw  10oct18 add fix to velocity suggested by M Voronkov
 *
-* $Id: uvio.c,v 1.11 2018/12/04 04:07:54 wie017 Exp $
+* $Id: uvio.c,v 1.12 2021/06/02 04:03:07 wie017 Exp $
 *===========================================================================*/
 #define VERSION_ID "08-Aug-2012 mhw"
 
@@ -269,6 +269,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <math.h>
 #include "miriad.h"
 #include "io.h"
@@ -1185,7 +1186,7 @@ private VARIABLE *uv_mkvar(int tno,Const char *name,int type)
   v = uv_locvar(tno,name);
   if(v != NULL) return(v);
 
-/* Check that the variable has a good name. *
+/* Check that the variable has a good name. */
   if((int)strlen(name) > MAXNAM)
     ERROR('f',(message,"The variable name %s is too long, in UVPUTVR",name));
 

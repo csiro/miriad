@@ -158,6 +158,21 @@ fortran subroutine hread3r(integer item,real buffer,
   *(iostat.addr) = temp;
 }
 /************************************************************************/
+fortran subroutine hread3c(integer item,complex buffer,
+	integer offset,integer length,integer iostat)
+{
+  int temp;
+  fort_integer *s;
+  off_t a,b,x,off;
+
+  s = offset.addr;
+  a = *s++; b = *s++; x = *s++;
+  off = a + b*x;
+
+  hreadr_c(item.val,buffer.addr,off,length.val,&temp);
+  *(iostat.addr) = temp;
+}
+/************************************************************************/
 fortran subroutine hwrite3r(integer item,real buffer,
 	integer offset,integer length,integer iostat)
 {

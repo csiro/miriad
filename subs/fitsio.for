@@ -131,8 +131,9 @@ c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c    mhw  02jul12  Read/write of images with dimensions up to MAXDIM
 c    rjs  16feb13  Support really large FITS files (>200GB)
+c    mhw  31may21  Clean up scalar/array arguments
 c
-c $Id: fitsio.for,v 1.13 2020/07/30 01:47:39 wie017 Exp $
+c $Id: fitsio.for,v 1.14 2021/06/02 04:03:07 wie017 Exp $
 c***********************************************************************
 
 c* FxyOpen -- Open a FITS image file.
@@ -3507,7 +3508,22 @@ c       Found a match, return info about it.
       end
 
 c***********************************************************************
+c* ftabGetI1 -- Return integer value from a FITS table.
+c& rjs
+c: fits
+c+
+      subroutine ftabGetI1(lu,name,irow,val)
 
+      integer lu,val,irow
+      character name*(*)
+c
+      integer data(1)
+c-----------------------------------------------------------------------
+      call ftabGetI(lu,name,irow,data)
+      val = data(1)
+      
+      end
+c***********************************************************************
 c* ftabGetI -- Return integer valued data from a FITS table.
 c& rjs
 c: fits
@@ -3592,6 +3608,23 @@ c         ... offset = offset + (irow-1)*width(lu)
 
       end
 
+c***********************************************************************
+c* ftabGetR1 -- Return real value from a FITS table.
+c& rjs
+c: fits
+c+
+      subroutine ftabGet1R(lu,name,irow,val)
+
+      integer lu, irow
+      real val
+      character name*(*)
+c
+      real data(1)
+c-----------------------------------------------------------------------
+      call ftabGetR(lu,name,irow,data)
+      val = data(1)
+      
+      end
 c***********************************************************************
 
 c* ftabGetR -- Get real data from the current FITS table.
@@ -3772,7 +3805,7 @@ c       ... offset = DatOff(lu) + ColOff(i,lu)
 c         ... offset = offset + (irow-1)*width(lu)
       endif
       do j = ifirst, ilast
-        call hread3r(item(lu),data(idx),offset3,ColCnt(i,lu)/8,iostat)
+        call hread3c(item(lu),data(idx),offset3,ColCnt(i,lu)/8,iostat)
         if (iostat.ne.0) then
           call bug('w','I/O error while reading FITS table')
           call bugno('f',iostat)
@@ -4172,7 +4205,24 @@ c-----------------------------------------------------------------------
       width(lu) = width(lu) + (size*nval+7)/8
 
       end
+c***********************************************************************
 
+c* ftabputr1 -- Put real value into the current FITS table.
+c& rjs
+c: fits
+c+
+      subroutine ftabputr1(lu,name,irow,val)
+
+      integer lu, irow
+      real val
+      character name*(*)
+c-----------------------------------------------------------------------
+      real data(1)
+c-----------------------------------------------------------------------
+      data(1) = val
+      call ftabputr(lu,name,irow,data)
+      
+      end
 c***********************************************************************
 
 c* ftabputr -- Put real data into the current FITS table.
@@ -4217,6 +4267,23 @@ c-----------------------------------------------------------------------
       end
 
 c***********************************************************************
+c* ftabputd1 -- Put double value into the current FITS table.
+c& rjs
+c: fits
+c+
+      subroutine ftabputd1(lu,name,irow,val)
+
+      integer lu, irow
+      double precision val
+      character name*(*)
+c-----------------------------------------------------------------------
+      double precision data(1)
+c-----------------------------------------------------------------------
+      data(1) = val
+      call ftabputd(lu,name,irow,data)
+
+      end
+c***********************************************************************
 
 c* ftabputd -- Put double precision data into the current FITS table.
 c& rjs
@@ -4259,6 +4326,24 @@ c-----------------------------------------------------------------------
 
       end
 
+c***********************************************************************
+
+c* ftabputi1 -- Put integer value into the current FITS table.
+c& rjs
+c: fits
+c+
+      subroutine ftabputi1(lu,name,irow,val)
+
+      integer lu, irow
+      integer val
+      character name*(*)
+c-----------------------------------------------------------------------
+      integer data(1)
+c-----------------------------------------------------------------------
+      data(1) = val
+      call ftabputi(lu,name,irow,data)
+
+      end
 c***********************************************************************
 
 c* ftabputi -- Put integer data into the current FITS table.
