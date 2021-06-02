@@ -37,7 +37,7 @@ c  Output:
 c    Jo   The 2x2 Jones matrix which is real-valued for the ATCA.
 c    pb   The mean total intensity primary beam response at this point.
 c
-c $Id: atjones.for,v 1.4 2016/10/28 00:43:28 wie017 Exp $
+c $Id: atjones.for,v 1.5 2021/06/02 03:12:53 wie017 Exp $
 c-----------------------------------------------------------------------
       include 'mirconst.h'
 
@@ -78,7 +78,7 @@ c     alpha2 = 4*log(2).
 c-----------------------------------------------------------------------
       if (freq.gt.1d0 .and. freq.lt.2d0) then
 c       L-band (20cm) response.
-        rdist =  rad / (1.384/freq * (34.61/60.0)*D2R)
+        rdist =  real(rad / (1.384/freq * (34.61/60.0)*D2R))
         x(1) = exp(-alpha2*(rdist/aL(1,1))**2)
         x(2) = aL(1,2)*sin(PI_2*rdist/aL(2,2))**2
         pb = x(1)*x(1) + 0.5*x(2)*x(2)
@@ -97,7 +97,7 @@ c       L-band (20cm) response.
 
       else if (freq.gt.2d0 .and. freq.lt.3d0) then
 c       S-band (13cm) response.
-        rdist =  rad / (2.368/freq * (20.9882/60.0)*D2R)
+        rdist =  real(rad / (2.368/freq * (20.9882/60.0)*D2R))
         x(1) = exp(-alpha2*(rdist/aS(1,1))**2)
         x(2) = aS(1,2)*sin(PI_2*rdist/aS(2,2))**2
         pb = x(1)*x(1) + 0.5*x(2)*x(2)
@@ -111,12 +111,14 @@ c       S-band (13cm) response.
         Jo(1,1) = x(1) + x(2)*cos(2.0*px) + x(3)*cos(px) + x(4)*sin(px)
         Jo(2,2) = x(1) + x(2)*cos(2.0*py) + x(3)*cos(py) + x(4)*sin(py)
         py = -py
-        Jo(1,2) =   cmplx(x(5),x(6))*sin(px) + cmplx(x(7),0.0)*cos(px)
-        Jo(2,1) = -(cmplx(x(5),x(6))*sin(py) + cmplx(x(7),0.0)*cos(py))
+        Jo(1,2) = real(cmplx(x(5),x(6))*sin(px) +
+     *    cmplx(x(7),0.0)*cos(px))
+        Jo(2,1) = real(-(cmplx(x(5),x(6))*sin(py) +
+     *    cmplx(x(7),0.0)*cos(py)))
 
       else if (freq.gt.4d0 .and. freq.lt.6d0) then
 c       C-band (6cm) response.
-        rdist =  rad / (4.800/freq * (10.06250/60.0)*D2R)
+        rdist =  real(rad / (4.800/freq * (10.06250/60.0)*D2R))
         x(1) = exp(-alpha2*(rdist/aC(1,1))**2)
         x(2) = aC(1,2)*sin(PI_2*rdist/aC(2,2))**2
         pb = x(1)*x(1) + 0.5*x(2)*x(2)
@@ -135,7 +137,7 @@ c       C-band (6cm) response.
 
       else if (freq.gt.8d0 .and. freq.lt.9d0) then
 c       X-band (3cm) response.
-        rdist =  rad / (8.640/freq * (5.86/60.0)*D2R)
+        rdist =  real(rad / (8.640/freq * (5.86/60.0)*D2R))
         x(1) = exp(-alpha2*(rdist/aX(1,1))**2)
         x(2) = aX(1,2)*sin(PI_2*rdist/aX(2,2))**2
         pb = x(1)*x(1) + 0.5*x(2)*x(2)
@@ -149,8 +151,10 @@ c       X-band (3cm) response.
         Jo(1,1) = x(1) + x(2)*cos(2.0*px) + x(3)*cos(px) + x(4)*sin(px)
         Jo(2,2) = x(1) + x(2)*cos(2.0*py) + x(3)*cos(py) + x(4)*sin(py)
         py = -py
-        Jo(1,2) = cmplx(x(5),0.0)*sin(2.0*px) + cmplx(x(6),x(7))*sin(px)
-        Jo(2,1) = cmplx(x(5),0.0)*sin(2.0*py) + cmplx(x(6),x(7))*sin(py)
+        Jo(1,2) = real(cmplx(x(5),0.0)*sin(2.0*px) +
+     *    cmplx(x(6),x(7))*sin(px))
+        Jo(2,1) = real(cmplx(x(5),0.0)*sin(2.0*py) +
+     *    cmplx(x(6),x(7))*sin(py))
 
       else
         call bug('f','Polarimetric response not known at this freq')
@@ -197,7 +201,7 @@ c
       if (th.lt.0) th=th+360
       if (th.ge.360) th=th-360
       th=th/dth
-      f=max(0.d0,(freq*1000-f0)/df)
+      f=real(max(0.d0,(freq*1000-f0)/df))
       typ=2
 c
 c     0'th order: return nearest value
@@ -288,7 +292,7 @@ c         for others constant (for now, could use extrapolation)
               b(kr,kf)=P(xr(kr),xf(kf))
             enddo
           enddo
-          pb = bicubicInterpolate(b,fmu,rmu)
+          pb = real(bicubicInterpolate(b,fmu,rmu))
         endif
       endif
       end

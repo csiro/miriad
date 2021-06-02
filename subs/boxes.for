@@ -70,7 +70,7 @@ c  CARMA Customizations:
 c
 c  2011-Jul-13  pkgw  Add box(m) shorthand for box(-m,-m,m,m)
 c
-c $Id: boxes.for,v 1.11 2018/11/29 22:50:56 wie017 Exp $
+c $Id: boxes.for,v 1.12 2021/06/02 03:12:53 wie017 Exp $
 c--
 c***********************************************************************
 
@@ -229,10 +229,10 @@ c       Finish up with this subcommand.
             coordini = .true.
             if (file.eq.' ') call bug('f',
      *        'Only absolute pixel region specification supported')
-            call xyopen(lu,file,'old',MAXNAX,nsize)
+            call xyopen(lu(1),file,'old',MAXNAX,nsize)
             call coInit(lu)
-            call rdhdi(lu,'naxis1',lu(2),1)
-            call rdhdi(lu,'naxis2',lu(3),1)
+            call rdhdi(lu(1),'naxis1',lu(2),1)
+            call rdhdi(lu(1),'naxis2',lu(3),1)
             call xyclose(lu)
           endif
 
@@ -904,10 +904,10 @@ c
             fx = boxes(offset+DATA)/100.0
             fy = boxes(offset+DATA+1)/100.0
             boxes(offset+ITYPE) = IMAGE
-            boxes(offset+XMIN) = boxes(NX)*(1-fx)/2 + 1
-            boxes(offset+XMAX) = max(1.,boxes(NX)*(1+fx)/2)
-            boxes(offset+YMIN) = boxes(NY)*(1-fy)/2 + 1
-            boxes(offset+YMAX) = max(1.,boxes(NY)*(1+fy)/2)
+            boxes(offset+XMIN) = int(boxes(NX)*(1-fx)/2 + 1)
+            boxes(offset+XMAX) = int(max(1.,boxes(NX)*(1+fx)/2))
+            boxes(offset+YMIN) = int(boxes(NY)*(1-fy)/2 + 1)
+            boxes(offset+YMAX) = int(max(1.,boxes(NY)*(1+fy)/2))
           endif
 
           if (boxes(offset+XMIN).eq.0) boxes(offset+XMIN) = 1
