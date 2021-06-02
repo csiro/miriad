@@ -93,7 +93,7 @@ c
 	  call ScrOpen(lScr(lu))
 	endif
 c
-	if(memsize(lu).gt.0)call memallop(buf(lu),memsize(lu),'r')
+	if(memsize(lu).gt.0)call memalloc(buf(lu),memsize(lu),'r')
 	p(lu) = 0
 	end
 c***********************************************************************
@@ -314,7 +314,7 @@ c-----------------------------------------------------------------------
 	include 'trnio.h'
 	inuse(lu) = .false.
 	if (lScr(lu).ge.0) call ScrClose(lScr(lu))
-	if (memsize(lu).ne.0) call MemFrep(buf(lu),memsize(lu),'r')
+	if (memsize(lu).ne.0) call MemFree(buf(lu),memsize(lu),'r')
 	end
 c***********************************************************************
 	subroutine trnflpx(Data,n1,n2)

@@ -93,7 +93,7 @@ c------------------------------------------------------------------------
 	logical first
 	ptrdiff pivot
 c
-	call memAllop(pivot,n,'i')
+	call memAlloc(pivot,n,'i')
 c
 	first = .true.
 	hs = 0
@@ -162,5 +162,5 @@ c
 c
 c ENDE:
   30	continue
-	call memfrep(pivot,n,'i')
+	call memfree(pivot,n,'i')
 	end

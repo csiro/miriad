@@ -1,7 +1,7 @@
 	integer MAXHASH
 	parameter(MAXHASH=4*MAXPNT+1)
 	integer nxy,coRef
-        ptrdiff pX,pY
+	ptrdiff pX,pY
 	integer pntno,npnt,vPntUpd,HashSize,Hash(MAXHASH),nx2,ny2
 	integer pbObj(MAXPNT)
 	logical solar,doinit, otf

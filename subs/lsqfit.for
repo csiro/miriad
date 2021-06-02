@@ -61,8 +61,8 @@ c------------------------------------------------------------------------
         ptrdiff wa,iwa
 c
 	lwa = m*n + 5*n + 2*m
-	call memallop(wa,lwa,'r')
-	call memallop(iwa,n,'i')
+	call memalloc(wa,lwa,'r')
+	call memalloc(iwa,n,'i')
 	call lmdiff(FCN,m,n,x,memr(wa),epsfcn,tol,
      *	  ifail1,memi(iwa),memr(wa+m),lwa-m)
 c
@@ -82,8 +82,8 @@ c
 c
 c  Free up memory.
 c
-	call memfrep(iwa,n,'i')
-	call memfrep(wa,lwa,'r')
+	call memfree(iwa,n,'i')
+	call memfree(wa,lwa,'r')
 	end
 c************************************************************************
 	subroutine getcovar(FCN,m,n,x,fvec,wrk,pivot,

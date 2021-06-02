@@ -37,7 +37,7 @@ c    22jun12 pjt  Fixed some ptrdiff
 c    16jul14 mhw  Add frequency interpolation options
 c    18jul14 mhw  Fix array bounds violations in uvGnPsMa
 c
-c $Id: uvgn.for,v 1.22 2014/07/18 04:54:00 wie017 Exp $
+c $Id: uvgn.for,v 1.23 2021/06/02 03:56:29 wie017 Exp $
 c***********************************************************************
 
       subroutine uvGnIni(tno1,dogains1,dopass1)
@@ -143,7 +143,7 @@ c
         off = off + 8 + ngains * 8
       enddo
       call hdaccess(gitem,iostat)
-      
+
 c
 c  Read in the binned gain solutions
 c
@@ -166,7 +166,7 @@ c
         call hreadd(gitem,freq(k),off,8,iostat)
         if (iostat.ne.0) call UvGnBug(iostat,'reading gainsf')
         off = off + 8
-      enddo       
+      enddo
       call hdaccess(gitem,iostat)
 
       end
@@ -174,7 +174,7 @@ c
 c***********************************************************************
 
       subroutine uvGnRead(tno,G,time,freq,ngains,nfeeds,ntau,nsols,
-     *  nfbin,maxgains,maxtimes,maxfbin) 
+     *  nfbin,maxgains,maxtimes,maxfbin)
       integer tno,ngains,nfeeds,ntau,nsols,nfbin,maxgains,maxtimes
       integer maxfbin
       complex G(maxgains)
@@ -189,7 +189,7 @@ c    maxgains maximum number of gains to be read
 c    maxtimes maximum number of solution intervals
 c    maxfbin  maximum number of freq bins
 c  Output:
-c    G        the gains, both continuum and freq binned gains 
+c    G        the gains, both continuum and freq binned gains
 c             are returned
 c    time     the time for each solution
 c    freq     the frequency for each bin
@@ -238,7 +238,7 @@ c
         k=k+ngains
       enddo
       call hdaccess(item,iostat)
-      
+
 c
 c  Read in the binned gain solutions
 c
@@ -262,7 +262,7 @@ c
         call hreadd(item,freq(j),off,8,iostat)
         if (iostat.ne.0) call UvGnBug(iostat,'reading gainsf')
         off = off + 8
-      enddo       
+      enddo
       call hdaccess(item,iostat)
 
       end
@@ -270,7 +270,7 @@ c
 c***********************************************************************
 
       subroutine uvGnWrit(tno,G,time,freq,ngains,nsols,
-     *  nfbin,maxgains,maxtimes,maxfbin,replace) 
+     *  nfbin,maxgains,maxtimes,maxfbin,replace)
       integer tno,ngains,nsols,nfbin,maxgains,maxtimes
       integer maxfbin
       complex G(maxgains)
@@ -303,7 +303,7 @@ c
         k=k+ngains
       enddo
       call hdaccess(item,iostat)
-      
+
 c
 c  Write the binned gain solutions
 c
@@ -324,7 +324,7 @@ c
           call hwrited(item,freq(j),off,8,iostat)
           if (iostat.ne.0) call UvGnBug(iostat,'writing gainsf')
           off = off + 8
-        enddo       
+        enddo
         call hdaccess(item,iostat)
       endif
       end
@@ -380,33 +380,33 @@ c  Free up all the memory that may have been allocated for the antenna
 c  based bandpass calibration.
 c
       if (nTab.ne.0) then
-        call MemFrep(pTab, nTab, 'c')
+        call memFree(pTab, nTab, 'c')
         nTab = 0
       endif
       if (nDat(1).ne.0) then
-        call MemFrep(pDat(1),nDat(1),'c')
-        call MemFrep(pFlags(1),nDat(1),'l')
+        call memFree(pDat(1),nDat(1),'c')
+        call memFree(pFlags(1),nDat(1),'l')
         nDat(1) = 0
       endif
       if (nDat(2).ne.0) then
-        call MemFrep(pDat(2),nDat(2),'c')
-        call MemFrep(pFlags(2),nDat(2),'l')
+        call memFree(pDat(2),nDat(2),'c')
+        call memFree(pFlags(2),nDat(2),'l')
         nDat(2) = 0
       endif
       if (nFreq(1).ne.0) then
-        call MemFrep(pFreq(1),nFreq(1),'d')
+        call memFree(pFreq(1),nFreq(1),'d')
         nFreq(1) = 0
       endif
       if (nFreq(2).ne.0) then
-        call MemFrep(pFreq(2),nFreq(2),'d')
+        call memFree(pFreq(2),nFreq(2),'d')
         nFreq(2) = 0
       endif
 c
 c  Free up all the memory that may have been allocated for the baseline
 c  based bandpass calibration.
 c
-      if (docgains) call MemFrep(pCgains,ncgains*ncbase,'c')
-      if (dowgains) call MemFrep(pWgains,nwgains*nwbase,'c')
+      if (docgains) call memFree(pCgains,ncgains*ncbase,'c')
+      if (dowgains) call memFree(pWgains,nwgains*nwbase,'c')
 c
 c  Clear out everything.
 c
@@ -539,7 +539,7 @@ c
         gpant = nfeeds + ntau
         i1 = gpant*(ant1-1) + 1
         i2 = gpant*(ant2-1) + 1
-        
+
         do k=0,nfbin
 c
 c  Determine the gains for each antenna.
@@ -608,7 +608,7 @@ c  If all is good, interpolate the gains to the current time interval.
 c
           if (flag(k)) then
             epsi = 0
-            if (t1.ne.t2) 
+            if (t1.ne.t2)
      *         epsi = (timetab(t2)-time)/(timetab(t2)-timetab(t1))
 
             g = ga1/ga2
@@ -632,7 +632,7 @@ c
           flag(k) = .true.
         enddo
       endif
-      
+
       if (updated) then
         call uvGnInt(chnfreq,nread)
       endif
@@ -640,7 +640,7 @@ c
 c  Apply the gain to the data.
 c
   100 continue
-      if (nfbin.eq.0.and..not.flag(0)) then 
+      if (nfbin.eq.0.and..not.flag(0)) then
         do i = 1, nread
           flags(i) = .false.
         enddo
@@ -658,7 +658,7 @@ c
 c                 fimode=2: use single gain amp per bin, but interpolate phase
                    g = gain(b(2,i))/gain(b(1,i))
                   mag = abs(g)
-                  data(i) = data(i)*gain(b(1,i))*(g/mag)**(1-fac(i))            
+                  data(i) = data(i)*gain(b(1,i))*(g/mag)**(1-fac(i))
                 else
                   g = gain(b(1,i))/gain(b(2,i))
                   mag = abs(g)
@@ -668,7 +668,7 @@ c                 fimode=2: use single gain amp per bin, but interpolate phase
               else
                 flags(i) = .false.
               endif
-            enddo 
+            enddo
           endif
         endif
         if (dopass .or. dotau)
@@ -1119,7 +1119,7 @@ c     Get the dimensionality numbers.
       if (ngains.le.0 .or. nchan.le.0 .or. nspect.le.0) call bug('f',
      *  'Invalid value for nchan, ngains or nspect, in uvDat')
       Size = ngains*nchan*n
-      call MemAllop(pGains,Size,'c')
+      call MemAlloc(pGains,Size,'c')
       if (nspect.gt.maxspect) call bug('f',
      *  'Too many spectral windows for me to handle, in uvDat')
 
@@ -1228,12 +1228,12 @@ c     Generate the gains?
 c       Check if we have enough space.
         if (nDat.lt.nfeeds*nants*nread) then
           if (nDat.gt.0) then
-            call MemFrep(pDat,nDat,'c')
-            call MemFrep(pFlags,nDat,'l')
+            call memFree(pDat,nDat,'c')
+            call memFree(pFlags,nDat,'l')
           endif
           nDat = nfeeds*nants*nread
-          call MemAllop(pDat,nDat,'c')
-          call MemAllop(pFlags,nDat,'l')
+          call MemAlloc(pDat,nDat,'c')
+          call MemAlloc(pFlags,nDat,'l')
         endif
 
         call uvGnPsMa(nbpsols,nfeeds*nants,nchan,nspect,sfreq,sdf,
@@ -1245,9 +1245,9 @@ c     Generate the frequency table?
       if (dotau) then
 c       Check if we have enough space.
         if (nFreq.lt.nread) then
-          if (nFreq.gt.0) call MemFrep(pFreq,nFreq,'d')
+          if (nFreq.gt.0) call memFree(pFreq,nFreq,'d')
           nFreq = nread
-          call MemAllop(pFreq,nFreq,'d')
+          call MemAlloc(pFreq,nFreq,'d')
         endif
 
         call uvGnPsFq(nread,nspect0,sfreq0,sdf0,nschan0,memD(pFreq))
@@ -1600,7 +1600,7 @@ c
 c
 c  Allocate memory.
 c
-      call MemAllop(pCgains,ncgains*ncbase,'c')
+      call MemAlloc(pCgains,ncgains*ncbase,'c')
 c
 c  Open the cgains item.
 c
@@ -1639,7 +1639,7 @@ c
 c
 c  Allocate memory.
 c
-      call MemAllop(pWgains,nwgains*nwbase,'c')
+      call MemAlloc(pWgains,nwgains*nwbase,'c')
 c
 c  Open the wgains item.
 c

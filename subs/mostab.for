@@ -29,7 +29,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: mostab.for,v 1.14 2018/11/29 22:50:56 wie017 Exp $
+c $Id: mostab.for,v 1.15 2021/06/02 03:56:29 wie017 Exp $
 c***********************************************************************
 
       subroutine MosCIni
@@ -398,8 +398,8 @@ c
 c  Allocate the arrays to determine shifts.
 c
       nxy = nchan*npnt
-      call MemAllop(pX,nxy,'r')
-      call MemAllop(pY,nxy,'r')
+      call MemAlloc(pX,nxy,'r')
+      call MemAlloc(pY,nxy,'r')
 c
 c  Do the shift calculations.
 c
@@ -973,8 +973,8 @@ c-----------------------------------------------------------------------
       real Sig
 c-----------------------------------------------------------------------
       if (nxy.gt.0) then
-        call MemFrep(pX,nxy,'r')
-        call MemFrep(pY,nxy,'r')
+        call memFree(pX,nxy,'r')
+        call MemFree(pY,nxy,'r')
         nxy = 0
       endif
 
@@ -1325,6 +1325,7 @@ c-----------------------------------------------------------------------
 
       integer   runs(3)
       double precision xref(3)
+      real g(1),r(1)
 c-----------------------------------------------------------------------
 c     Determine the location of the reference position in pixel coords.
       call coCvt(coObj, in, x, 'ap/ap/ap', xref)
@@ -1336,8 +1337,10 @@ c     Mosaic, tidy up.
       runs(1) = nint(xref(2))
       runs(2) = nint(xref(1))
       runs(3) = runs(2)
-      call mosWtsr(runs, 1, gain, rms, 1)
+      call mosWtsr(runs, 1, g, r, 1)
 
+      gain = g(1)
+      rms = r(1)
       if (gain.gt.0.0) then
         gain = 1.0 / gain
         rms  = sqrt(rms*gain)
