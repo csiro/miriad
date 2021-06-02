@@ -178,7 +178,7 @@ c                    same Y-axis scale, that embraces all sub-plots.
 c                    This option forces each sub-plot to be scaled
 c                    independently.
 c
-c$Id: imrm.for,v 1.10 2018/05/28 05:48:19 wie017 Exp $
+c$Id: imrm.for,v 1.11 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -194,10 +194,11 @@ c-----------------------------------------------------------------------
       logical   accum, ambig, blank, doerrbl, dopabl, dormbl,
      *          flags(MAXDIM,MAXIM), flagsE(MAXDIM,MAXIM), guess, noerr,
      *          oblank, oflags(MAXDIM), relax, yind
-      integer   axLen(MAXNAX), axLenP, blsum, i, imin, ippyd, ippyf,
-     *          ipyd, ipyf, j, jmin, k, l, left, lInE(MAXIM),
+      integer   axLen(MAXNAX), axLenP, blsum, i, imin, j, jmin, k, l,
+     *          left, lInE(MAXIM),
      *          lIn(MAXIM), lOutPA, lOutPAe, lOutRM, lOutRMe, naxis,
      *          nbl(6), nIn, nInE, nx, ny
+      ptrdiff   ippyd, ippyf, ipyd, ipyf
       real      cs, d2, diff, errcut, lmbdsq(MAXIM), pa(MAXIM),
      *          pa2(MAXIM), pacut, padummy, q, qcut, rmcut, rmi,
      *          row(MAXDIM,MAXIM), rowE(MAXDIM,MAXIM), rowPA(MAXDIM),
@@ -213,8 +214,8 @@ c-----------------------------------------------------------------------
       data padummy /-100000.0/
 c-----------------------------------------------------------------------
       version = versan ('imrm',
-     *                  '$Revision: 1.10 $',
-     *                  '$Date: 2018/05/28 05:48:19 $')
+     *                  '$Revision: 1.11 $',
+     *                  '$Date: 2021/06/02 04:45:09 $')
 
 c     Get the inputs.
       call keyini
@@ -340,7 +341,7 @@ c     Open the error images and check consistency.
 c     Find wavelength of each image at pixel 1 in metres.
       call output(' ')
       do i = 1, nIn
-        lmbdsq(i) = (DCMKS / (freq(i) * 1e9))**2
+        lmbdsq(i) = real((DCMKS / (freq(i) * 1e9))**2)
         write(text,10) freq(i)
 10      format('Found frequency ',f8.4,' GHz')
         call output(text)
@@ -350,7 +351,7 @@ c     Warn user if degenerate frequencies.
       diff = 1e30
       do i = 1, nIn-1
         do j = i+1, nIn
-          d2 = abs(freq(j) - freq(i))
+          d2 = real(abs(freq(j) - freq(i)))
           if (d2.eq.0.0) call bug('w',
      *      'There are degenerate frequencies amongst the PA images')
           if (d2.lt.diff) then
@@ -443,11 +444,11 @@ c           than the specified cutoff.
             endif
 
 c           Work out weights if error images given.
-            pa(k) = row(i,k) * DD2R
+            pa(k) = row(i,k) * D2R
             wt(k) = 1.0
             if (.not.noerr) then
               if (rowE(i,k).ne.0.0) then
-                wt(k) = 1.0 / (rowE(i,k)*DD2R)**2
+                wt(k) = 1.0 / (rowE(i,k)*D2R)**2
               else
                 blank = .true.
                 nbl(3) = nbl(3) + 1
@@ -466,14 +467,14 @@ c           Do the fit if all the input criteria are satisified.
 
 c           Fill the fit into the plot buffer.
             do l = 1, nIn
-              memr(ippyf) = (rowPA(i) + rowRM(i)*lmbdsq(l))*DR2D
+              memr(ippyf) = (rowPA(i) + rowRM(i)*lmbdsq(l))*R2D
               ippyf = ippyf + 1
             enddo
 
 c           Put output position angle between +/- 90 degrees.
             call pm90(rowPA(i))
-            rowPA(i) = rowPA(i) * DR2D
-            rowPAe(i) = rowPAe(i) * DR2D
+            rowPA(i) = rowPA(i) * R2D
+            rowPAe(i) = rowPAe(i) * R2D
 
 c           Ditch this pixel if output blanking criteria so dictate.
             oflags(i) = .true.
@@ -971,11 +972,11 @@ c     pa        Position angle in radians.
 c-----------------------------------------------------------------------
       include 'mirconst.h'
 c-----------------------------------------------------------------------
-      pa = mod(dble(pa), DPI)
-      if (pa.gt.DPI_2) then
-        pa = pa - DPI
-      else if (pa.lt.-DPI_2) then
-        pa = pa + DPI
+      pa = mod(pa, PI)
+      if (pa.gt.PI_2) then
+        pa = pa - PI
+      else if (pa.lt.-PI_2) then
+        pa = pa + PI
       endif
 
       end
@@ -990,10 +991,10 @@ c-----------------------------------------------------------------------
       double precision d
 c-----------------------------------------------------------------------
       d = pa1 - pa2
-      if (d.gt.DPI_2) then
-        pa2 = pa2 + DPI
-      else if (d.lt.-DPI_2) then
-        pa2 = pa2 - DPI
+      if (d.gt.PI_2) then
+        pa2 = pa2 + PI
+      else if (d.lt.-PI_2) then
+        pa2 = pa2 - PI
       endif
 
       end
@@ -1061,7 +1062,7 @@ c         How many turns will place the actual position angle closest to
 c         the predicted position angle?  Add these turns to the data.
           yp = rmg*lmbdsq(i) + pag
           nturns = nint((yp - pa(i))/DPI)
-          pa(i) = pa(i) + nturns*DPI
+          pa(i) = real(pa(i) + nturns*DPI)
         endif
       enddo
 
@@ -1176,7 +1177,7 @@ c     fitted, but with the angle subtracted for the initial RM estimate
 c     added back in.
       if (ambig) rmi = rm0
       do i = 1, n
-        ypl(i) = (pa(i) + rmi*lmbdsq(i)) * DR2D
+        ypl(i) = (pa(i) + rmi*lmbdsq(i)) * R2D
       enddo
 
       end

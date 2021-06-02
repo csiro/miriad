@@ -50,7 +50,7 @@ c          image is blanked).
 c       "force"     Force masking of pixels in the output image which
 c          are masked in the input image.
 c
-c$Id: smooth.for,v 1.5 2013/08/30 01:49:21 wie017 Exp $
+c$Id: smooth.for,v 1.6 2021/06/02 04:45:09 wie017 Exp $
 c--
 c
 c  History:
@@ -79,7 +79,8 @@ c-----------------------------------------------------------------------
       parameter (MAXK = 100, MAXK2 = (2*MAXK+1)**2, NTYPE = 2)
 
       logical   force, lrow(MAXDIM), nocheck
-      integer   ipin, ipmin, ipmout, ipout, k, kipnt(MAXK2),
+      ptrdiff   ipin, ipmin, ipmout, ipout
+      integer   k, kipnt(MAXK2),
      *          kjpnt(MAXK2), ksize2, ksizex, ksizey, lin, lout, naxis,
      *          nktype, nsize(MAXNAX)
       real      bmaj, bmin, bpa, data(MAXBUF), fwhm1, fwhm2,
@@ -97,8 +98,8 @@ c-----------------------------------------------------------------------
       data type  /'gaussian', 'boxcar'/
 c-----------------------------------------------------------------------
       version = versan('smooth',
-     *                 '$Revision: 1.5 $',
-     *                 '$Date: 2013/08/30 01:49:21 $')
+     *                 '$Revision: 1.6 $',
+     *                 '$Date: 2021/06/02 04:45:09 $')
 c
 c  Get the input parameters.
 c
@@ -331,8 +332,8 @@ c
 c
 c Convert increments to pixels (rounded up).
 c
-      d1a = abs(cdelt1) * DR2AS
-      d2a = abs(cdelt2) * DR2AS
+      d1a = real(abs(cdelt1) * DR2AS)
+      d2a = real(abs(cdelt2) * DR2AS)
       ksizex = int(xmax / d1a) + 1
       ksizey = int(ymax / d2a) + 1
 c

@@ -82,7 +82,7 @@ c  25aug98  pjt  change keywords in doc section to lower case
 c                and removed that awkward case checking code
 c  14mar00  ks/pjt format and output changes
 c  20nov01  pjt  minor output format change
-c  05jul12  mhw  use memallop/memfrep, remove size limits
+c  05jul12  mhw  remove size limits
 c-------------------------------------------------------------------------
       include 'clstats.h'
       include 'mem.h'
@@ -99,8 +99,8 @@ c.....dynamic memory pointers
 c-----------------------------------------------------------------------
 
       version = versan('clstats',
-     *                 '$Revision: 1.4 $',
-     *                 '$Date: 2013/08/30 01:49:21 $')
+     *                 '$Revision: 1.5 $',
+     *                 '$Date: 2021/06/02 04:45:09 $')
 
 c.....Get the parameters from the user.
       call keyini
@@ -139,9 +139,9 @@ c.....Open data cube
      *  call bug('f','Image too big')
       call rdhd(lin1)
 
-      call memallop(It,nx*ny*nv,'r')
-      call memallop(Ic,nx*ny*nv,'i')
-      call memallop(Im,nx*ny*nv,'l')
+      call memalloc(It,nx*ny*nv,'r')
+      call memalloc(Ic,nx*ny*nv,'i')
+      call memalloc(Im,nx*ny*nv,'l')
 
       call prthead(pos)
 
@@ -159,9 +159,9 @@ c.....Open data cube
 
       call output(line(1:lenline(line))//line(1:lenline(line)))
 
-      call memfrep(It,nx*ny*nv,'r')
-      call memfrep(Ic,nx*ny*nv,'i')
-      call memfrep(Im,nx*ny*nv,'l')
+      call memfree(It,nx*ny*nv,'r')
+      call memfree(Ic,nx*ny*nv,'i')
+      call memfree(Im,nx*ny*nv,'l')
 
       end
 c------------------------------------------------------------------
@@ -364,9 +364,6 @@ c.......whether relative or absolute positions are requested
  20     continue
       enddo
 
- 200  format(i3,1x,f7.2,1x,f7.2,1x,f7.2,1x,f6.2,1x,f6.2,
-     *         1x,f7.2,1x,f7.2,1x,f7.2,1x,f7.2,1x,
-     *         1pe9.2,1x,0pf7.1,1x,1pe9.2,2x,i4,1x,a4)
  201    format(i3,1x,f7.2,1x,f7.2,1x,f7.2,1x,f6.2,1x,f6.2,
      *         1x,f7.2,1x,f7.2,1x,f7.2,1x,f7.2,1x,
      *         1pe9.2,1x,0pf7.1,1x,1pe9.2,2x,i4,1x,a4)
@@ -745,9 +742,11 @@ C-----------------------------------------------------------------
 C-------------------------------------------------
 C     Initialize CCELL to blanks.
       JMAX=LEN(CCELL(1))
-      DO 50 I=1,20
-      DO 50 J=1,JMAX
-   50    CCELL(I)(J:J)=' '
+      DO I=1,20
+        DO J=1,JMAX
+          CCELL(I)(J:J)=' '
+	ENDDO
+      ENDDO
 C----------------------------------------------------------------------
 C     Convert letters to upper case and purge any = signs.
       IMAX=LEN(STRING)

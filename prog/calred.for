@@ -18,7 +18,7 @@ c          as the rms of the visibility amplitudes
 c       Vec (mJy) - the vector average fluxdensity estimate,
 c           not listed with options=triple
 c       Tri (mJy) - the triple product fluxdensity estimate, this
-c          is the cube root of the real part of the average of 
+c          is the cube root of the real part of the average of
 c          V12*V23*conj(V13) (note that this can be negative).
 c          Only listed with options=triple.
 c       Con - the confusion percentage, calculated from the ratio of the
@@ -26,7 +26,7 @@ c          rms in the imaginary and real component of the triple ampl.
 c       The - the theoretical noise in mJy
 c       Act - the actual noise in mJy
 c       NCorr - the number of correlations contributing
-c       
+c
 c@ vis
 c	The input visibility datasets. Several datasets can be given.
 c@ select
@@ -50,7 +50,7 @@ c	  nopass    Do not perform bandpass calibration on the data.
 c	  norm      Divide the noise estimates by the square root of the
 c	            number of points.
 c
-c$Id: calred.for,v 1.8 2013/08/30 01:49:21 wie017 Exp $
+c$Id: calred.for,v 1.9 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  History:
 c    rjs  23feb00 Original version.
@@ -79,7 +79,8 @@ c
 	real scat2,SSms,flux,flux2,SSmm,rp,ip,SconN,SConD,norm
 	integer ncorr
 	complex SSdm
-	integer isrc,nsrc,iplanet,tno,vsource,pnt1,pnt2,pnt3
+	integer isrc,nsrc,iplanet,tno,vsource
+    ptrdiff pnt1,pnt2,pnt3
 c
 	real Smm(MAXDAT,MAXSRC),Sms(MAXDAT,MAXSRC),Sdd(MAXDAT,MAXSRC)
 	complex Sdm(MAXDAT,MAXSRC)
@@ -95,8 +96,8 @@ c
 c
 c  Integration buffers.
 c
-	integer corrpnt(MAXBASE,MAXPOL),flagpnt(MAXBASE,MAXPOL)
-	integer modpnt(MAXBASE,MAXPOL)
+	ptrdiff corrpnt(MAXBASE,MAXPOL),flagpnt(MAXBASE,MAXPOL)
+	ptrdiff modpnt(MAXBASE,MAXPOL)
 	integer nchan(MAXBASE,MAXPOL)
 	logical init(MAXBASE,MAXPOL)
 	real sigma2(MAXBASE,MAXPOL)
@@ -107,8 +108,8 @@ c
 	character versan*72
 c-----------------------------------------------------------------------
       version = versan ('calred',
-     :                  '$Revision: 1.8 $',
-     :                  '$Date: 2013/08/30 01:49:21 $')
+     :                  '$Revision: 1.9 $',
+     :                  '$Date: 2021/06/02 04:45:09 $')
 c
 c Lets go! Get user inputs.
 c
@@ -171,7 +172,7 @@ c
 c
 c  Handle time information, and do fiddles for the first time through.
 c
-	    if(p.gt.0)then	
+	    if(p.gt.0)then
 	      bl = (ant2-1)*(ant2-2)/2 + ant1
 	      if(first)then
 	        tprev = preamble(3)
@@ -206,14 +207,14 @@ c
 c
 	      if(nchan(bl,p).ne.nread)then
 		if(nchan(bl,p).gt.0)then
-		  call MemFree(corrpnt(bl,p),nchan(bl,p),'c')
-		  call MemFree(flagpnt(bl,p),nchan(bl,p),'l')
-		  call MemFree(modpnt(bl,p),nchan(bl,p),'r')
+		  call memFree(corrpnt(bl,p),nchan(bl,p),'c')
+		  call memFree(flagpnt(bl,p),nchan(bl,p),'l')
+		  call memFree(modpnt(bl,p),nchan(bl,p),'r')
 		endif
 		nchan(bl,p) = nread
-		call MemAlloc(corrpnt(bl,p),nchan(bl,p),'c')
-		call MemAlloc(flagpnt(bl,p),nchan(bl,p),'l')
-		call MemAlloc(modpnt(bl,p),nchan(bl,p),'r')
+		call memAlloc(corrpnt(bl,p),nchan(bl,p),'c')
+		call memAlloc(flagpnt(bl,p),nchan(bl,p),'l')
+		call memAlloc(modpnt(bl,p),nchan(bl,p),'r')
 	      endif
 c
 	      pnt1 = corrpnt(bl,p) - 1

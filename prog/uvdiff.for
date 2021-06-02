@@ -47,7 +47,7 @@ c       Interpolation tolerance, in minutes.  This gives the maximum gap
 c       between two integrations to interpolate across.  The default is
 c       2 minutes.
 c
-c$Id: uvdiff.for,v 1.9 2018/12/04 04:02:11 wie017 Exp $
+c$Id: uvdiff.for,v 1.10 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  History:
 c    04-jun-96 rjs  Preliminary version.
@@ -83,8 +83,8 @@ c     Externals.
      *           '-difference ','-one        ','-two        '/
 c-----------------------------------------------------------------------
       version = versan ('uvdiff',
-     :                  '$Revision: 1.9 $',
-     :                  '$Date: 2018/12/04 04:02:11 $')
+     :                  '$Revision: 1.10 $',
+     :                  '$Date: 2021/06/02 04:45:09 $')
 
 c     Get the input parameters.
       call keyini
@@ -221,7 +221,8 @@ c-----------------------------------------------------------------------
       parameter(mtol = 2.0*PI/86400.0)
 
       logical oki, okj
-      integer bl1, cidxi, cidxj, fidxi, fidxj, i, ipol1
+      integer bl1, i, ipol1
+      ptrdiff cidxi, cidxj, fidxi, fidxj
       real    wi, wj
       double precision ha1
 
@@ -267,8 +268,8 @@ c     Cases of straight copy.
      *  (ha1-ha2(iha))*(ha2(jha)-ha1).ge.0.0 .and.
      *   abs(ha2(jha)-ha2(iha)).le.tol)then
 c       Interpolate linearly between the two now.
-        wi = 1.0 - abs((ha1-ha2(iha))/(ha2(jha)-ha2(iha)))
-        wj = 1.0 - abs((ha1-ha2(jha))/(ha2(jha)-ha2(iha)))
+        wi = real(1.0 - abs((ha1-ha2(iha))/(ha2(jha)-ha2(iha))))
+        wj = real(1.0 - abs((ha1-ha2(jha))/(ha2(jha)-ha2(iha))))
         do i=1,nchan1
           data2(i)  = wi*Memc(cidxi+i) + wj*Memc(cidxj+i)
           flags2(i) = Meml(fidxi+i).and.Meml(fidxj+i)
@@ -369,7 +370,8 @@ c-----------------------------------------------------------------------
       include 'uvdiff.h'
 
       logical lspare(MAXCHAN)
-      integer base(2), cidx, fidx, i, ibase, ipol, nspare, pol(2)
+      integer base(2), i, ibase, ipol, nspare, pol(2)
+      ptrdiff cidx, fidx
       double precision ha, pspare(4)
       complex cspare(MAXCHAN)
 

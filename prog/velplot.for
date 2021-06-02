@@ -57,7 +57,7 @@ c@ log
 c       The output log file. The default filename is velplot.log
 c       Results from image analysis are written into the log file.
 c
-c$Id: velplot.for,v 1.11 2011/10/27 04:18:03 cal103 Exp $
+c$Id: velplot.for,v 1.12 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -68,8 +68,8 @@ c-----------------------------------------------------------------------
       integer    MAXBOXES
       parameter (MAXBOXES=128)
 
-      integer   ary, boxes(MAXBOXES), lIn, length, nc, nsize(3), nx, ny,
-     *          v
+      integer   boxes(MAXBOXES), lIn, length, nc, nsize(3), nx, ny
+      ptrdiff   ary, v
       real      vlsr(MAXDIM)
       character ans*1, line*80, logfil*80, version*72
 
@@ -86,8 +86,8 @@ c     Set default plotting parameters.
       data levels/15,30,45,60,75,90,0,0,0,0/,nlevels/6/
 c-----------------------------------------------------------------------
       version = versan('velplot',
-     *                 '$Revision: 1.11 $',
-     *                 '$Date: 2011/10/27 04:18:03 $')
+     *                 '$Revision: 1.12 $',
+     *                 '$Date: 2021/06/02 04:45:09 $')
 c
 c  Get the input parameters.
 c
@@ -257,25 +257,26 @@ c
 c  Initialize convolved output array.
 c
       wt = 0.0
-      do 10 k = 1, nc
-10      conary(k) = 0.0
+      do k = 1, nc
+        conary(k) = 0.0
+      enddo
 c
 c  Convolve array by convolution function.
 c
       mid = ncon/2 + 1
-      do 40 ic = 1, ncon
+      do ic = 1, ncon
         i = ix + ic - mid
-        if (i.lt.1 .or. i.gt.nx) go to 40
-        do 30 jc = 1, ncon
+        if (i.lt.1 .or. i.gt.nx) cycle
+        do jc = 1, ncon
           j = iy + jc - mid
-          if (j.lt.1 .or. j.gt.ny) go to 30
+          if (j.lt.1 .or. j.gt.ny) cycle
           gaus = con(ic, jc, ioff, joff)
           wt = wt + gaus
-          do 20 k = 1, nc
+          do k = 1, nc
             conary(k) = conary(k) + gaus * ary(i,j,k)
-20        continue
-30      continue
-40    continue
+          enddo
+        enddo
+      enddo
 c
 c  renormalize
 c
@@ -317,18 +318,18 @@ c     Position angle north tho' east.
 c     Center to nearest 1/off of a pixel.
       mid  = NCON/2 + 1
       off  = 4.0
-      noff = off
+      noff = int(off)
 c
 c  Build convolution function
 c
-      do 20 ioff = 1, noff
+      do ioff = 1, noff
         xp = real(ioff - 1)/off
-        do 20 joff = 1, noff
+        do joff = 1, noff
           yp = real(joff - 1)/off
           sum = 0.0
-          do 10 i = 1, ncon
+          do i = 1, ncon
             x = real(i-mid) - xp
-            do 10 j = 1, ncon
+            do j = 1, ncon
               y = real(j-mid) - yp
               gaus = ((-x*sinpa+y*cospa)/cma)**2
      *                         + ((x*cospa+y*sinpa)/cmi)**2
@@ -337,12 +338,17 @@ c
               else
                 con(i,j,ioff,joff) = 0.0
               endif
-10            sum = sum + con(i,j,ioff,joff)
-              do 15 i = 1, ncon
-                do 15 j = 1, ncon
-15              if (sum.ne.0.0)
-     *            con(i,j,ioff,joff) = con(i,j,ioff,joff)/sum
-20    continue
+              sum = sum + con(i,j,ioff,joff)
+	    enddo
+	  enddo
+          do i = 1, ncon
+            do j = 1, ncon
+              if (sum.ne.0.0)
+     *          con(i,j,ioff,joff) = con(i,j,ioff,joff)/sum
+            enddo
+	  enddo
+	enddo
+      enddo
 
       end
 
@@ -378,13 +384,13 @@ c
       if (length.eq.0) goto 20
         call matodf(line,dval,3,ok)
         if (ok) then
-          cmaj = dval(1)
-          cmin = dval(2)
-          cpa  = dval(3)
+          cmaj = real(dval(1))
+          cmin = real(dval(2))
+          cpa  = real(dval(3))
         else
           goto 10
         endif
-20    ncon = 2*cmaj/xy + 1
+20    ncon = int(2*cmaj/xy + 1)
       ncon = min(99,(max(ncon,3)))
       call output('Gaussian falls to 6% at edge of array')
       write(line, 30) ncon, ncon*xy
@@ -661,7 +667,7 @@ c-----------------------------------------------------------------------
      *          spec, tlen
       real      a(NMA), alamda, alpha(NMA,NMA), amp, chisq,
      *          covar(NMA,NMA), mom1, mom2, ochisq, rmsEst,
-     *          sig(MAXDIM), t, value, vlsr
+     *          sig(MAXDIM), t(MAXDIM), value, vlsr(nc)
       double precision dval
       character ans*80, line*80, string*80
 
@@ -681,7 +687,7 @@ c get number of simultaneous gaussians to fit
       call promptf(value,'f2.0',
      *  '>Enter number of gaussians to fit',real(ngauss(spec)))
       if (value.lt.1.0) return
-      ngauss(spec)=value
+      ngauss(spec)=int(value)
 c ma is the number of free parameters to be fit
       ma=ngauss(spec)*3
 c mfit must be fit if some parameters held fixed; for the future
@@ -707,7 +713,7 @@ c
             call atodf(string,dval,ok)
             if (ok) then
               k = k+1
-              gauss(spec,k,i) = dval
+              gauss(spec,k,i) = real(dval)
             else
               call bug('w', 'bad input in gaufit')
               return
@@ -720,17 +726,17 @@ c
       call promptf(rmsEst, 'f10.4', '>Enter rms estimate: ', rms)
       rms = rmsEst
 
-      do 13 i = 1, mfit
+      do i = 1, mfit
         lista(i)=i
-13    continue
+      enddo
 
       j=1
-      do 14 i = 1, ngauss(spec)
+      do i = 1, ngauss(spec)
         a(j) = gauss(spec,1,i)
         a(j+1)=gauss(spec,2,i)
         a(j+2)=gauss(spec,3,i)
         j = j + 3
-14    continue
+      enddo
 
       do i = 1, nc
         sig(i)=rmsEst
@@ -772,12 +778,12 @@ c
      *            nma,chisq,fgauss,alamda)
 
       j = 1
-      do 24 i = 1, ngauss(spec)
+      do i = 1, ngauss(spec)
         gauss(spec,1,i) = a(j)
         gauss(spec,2,i)=a(j+1)
         gauss(spec,3,i)=a(j+2)
         j = j + 3
-24    continue
+      enddo
 c
 c print results and write them into the log
 c
@@ -826,7 +832,7 @@ c***********************************************************************
       integer i
 c-----------------------------------------------------------------------
       Y=0.0
-      DO 11 I=1,NA-1,3
+      DO I=1,NA-1,3
         ARG=(X-A(I+1))/A(I+2)
         EX=EXP(-ARG**2)
         FAC=A(I)*EX*2.0*ARG
@@ -834,7 +840,7 @@ c-----------------------------------------------------------------------
         DYDA(I)=EX
         DYDA(I+1)=FAC/A(I+2)
         DYDA(I+2)=FAC*ARG/A(I+2)
-11    CONTINUE
+      ENDDO
       RETURN
 
       END
@@ -850,14 +856,14 @@ c***********************************************************************
       integer i,j,k,l,irow,icol
       real big,dum,pivinv
 c-----------------------------------------------------------------------
-      DO 11 J=1,N
+      DO J=1,N
         IPIV(J)=0
-11    CONTINUE
-      DO 22 I=1,N
+      ENDDO
+      DO I=1,N
         BIG=0.0
-        DO 13 J=1,N
+        DO J=1,N
           IF(IPIV(J).NE.1) THEN
-            DO 12 K=1,N
+            DO K=1,N
               IF (IPIV(K).EQ.0) THEN
                 IF (ABS(A(J,K)).GE.BIG) THEN
                   BIG=ABS(A(J,K))
@@ -867,55 +873,55 @@ c-----------------------------------------------------------------------
               ELSE IF (IPIV(K).GT.1) THEN
                 call bug('f', 'Singular matrix.')
               ENDIF
-12          CONTINUE
+            ENDDO
           ENDIF
-13      CONTINUE
+        ENDDO
         IPIV(ICOL)=IPIV(ICOL)+1
         IF (IROW.NE.ICOL) THEN
-          DO 14 L=1,N
+          DO L=1,N
             DUM=A(IROW,L)
             A(IROW,L)=A(ICOL,L)
             A(ICOL,L)=DUM
-14        CONTINUE
-          DO 15 L=1,M
+          ENDDO
+          DO L=1,M
             DUM=B(IROW,L)
             B(IROW,L)=B(ICOL,L)
             B(ICOL,L)=DUM
-15        CONTINUE
+          ENDDO
         ENDIF
         INDXR(I)=IROW
         INDXC(I)=ICOL
         IF (A(ICOL,ICOL).EQ.0.0) call bug('f', 'Singular matrix.')
         PIVINV=1.0/A(ICOL,ICOL)
         A(ICOL,ICOL)=1.0
-        DO 16 L=1,N
+        DO L=1,N
           A(ICOL,L)=A(ICOL,L)*PIVINV
-16      CONTINUE
-        DO 17 L=1,M
+        ENDDO
+        DO L=1,M
           B(ICOL,L)=B(ICOL,L)*PIVINV
-17      CONTINUE
-        DO 21 LL=1,N
+        ENDDO
+        DO LL=1,N
           IF(LL.NE.ICOL) THEN
             DUM=A(LL,ICOL)
             A(LL,ICOL)=0.0
-            DO 18 L=1,N
+            DO L=1,N
               A(LL,L)=A(LL,L)-A(ICOL,L)*DUM
-18          CONTINUE
-            DO 19 L=1,M
+            ENDDO
+            DO L=1,M
               B(LL,L)=B(LL,L)-B(ICOL,L)*DUM
-19          CONTINUE
+            ENDDO
           ENDIF
-21      CONTINUE
-22    CONTINUE
-      DO 24 L=N,1,-1
+        ENDDO
+      ENDDO
+      DO L=N,1,-1
         IF(INDXR(L).NE.INDXC(L)) THEN
-          DO 23 K=1,N
+          DO K=1,N
             DUM=A(K,INDXR(L))
             A(K,INDXR(L))=A(K,INDXC(L))
             A(K,INDXC(L))=DUM
-23        CONTINUE
+          ENDDO
         ENDIF
-24    CONTINUE
+      ENDDO
       RETURN
 
       END
@@ -961,54 +967,54 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
       IF(ALAMDA.LT.0.0) THEN
         KK=MFIT+1
-        DO 12 J=1,MA
+        DO J=1,MA
           IHIT=0
-          DO 11 K=1,MFIT
+          DO K=1,MFIT
             IF(LISTA(K).EQ.J) IHIT=IHIT+1
-11        CONTINUE
+          ENDDO
           IF (IHIT.EQ.0) THEN
             LISTA(KK)=J
             KK=KK+1
           ELSE IF (IHIT.GT.1) THEN
             call bug('f', 'Improper permutation in LISTA')
           ENDIF
-12      CONTINUE
+        ENDDO
         IF (KK.NE.(MA+1)) call bug('f', 'Improper permutation in LISTA')
         ALAMDA=0.001
         CALL MRQCOF(X,Y,SIG,NDATA,A,MA,LISTA,MFIT,ALPHA,BETA,NCA,CHISQ,
      *              FUNCS)
         OCHISQ=CHISQ
-        DO 13 J=1,MA
+        DO J=1,MA
           ATRY(J)=A(J)
-13      CONTINUE
+        ENDDO
       ENDIF
-      DO 15 J=1,MFIT
-        DO 14 K=1,MFIT
+      DO J=1,MFIT
+        DO K=1,MFIT
           COVAR(J,K)=ALPHA(J,K)
-14      CONTINUE
+        ENDDO
         COVAR(J,J)=ALPHA(J,J)*(1.0+ALAMDA)
         DA(J)=BETA(J)
-15    CONTINUE
+      ENDDO
       CALL GAUSSJ(COVAR,MFIT,NCA,DA,1,1)
       IF(ALAMDA.EQ.0.0) THEN
         CALL COVSRT(COVAR,NCA,MA,LISTA,MFIT)
         RETURN
       ENDIF
-      DO 16 J=1,MFIT
+      DO J=1,MFIT
         ATRY(LISTA(J))=A(LISTA(J))+DA(J)
-16    CONTINUE
+      ENDDO
       CALL MRQCOF(X,Y,SIG,NDATA,ATRY,MA,LISTA,MFIT,COVAR,DA,NCA,CHISQ,
      *            FUNCS)
       IF(CHISQ.LT.OCHISQ) THEN
         ALAMDA=0.1*ALAMDA
         OCHISQ=CHISQ
-        DO 18 J=1,MFIT
-          DO 17 K=1,MFIT
+        DO J=1,MFIT
+          DO K=1,MFIT
             ALPHA(J,K)=COVAR(J,K)
-17        CONTINUE
+          ENDDO
           BETA(J)=DA(J)
           A(LISTA(J))=ATRY(LISTA(J))
-18      CONTINUE
+        ENDDO
       ELSE
         ALAMDA=10.0*ALAMDA
         CHISQ=OCHISQ
@@ -1032,31 +1038,31 @@ c***********************************************************************
       DIMENSION X(NDATA),Y(NDATA),SIG(NDATA),ALPHA(NALP,NALP),BETA(MA),
      *  DYDA(MMAX),LISTA(MFIT),A(MA)
 c-----------------------------------------------------------------------
-      DO 12 J=1,MFIT
-        DO 11 K=1,J
+      DO J=1,MFIT
+        DO K=1,J
           ALPHA(J,K)=0.0
-11      CONTINUE
+        ENDDO
         BETA(J)=0.0
-12    CONTINUE
+      ENDDO
       CHISQ=0.0
-      DO 15 I=1,NDATA
+      DO I=1,NDATA
         CALL FUNCS(X(I),A,YMOD,DYDA,MA)
         SIG2I=1.0/(SIG(I)*SIG(I))
         DY=Y(I)-YMOD
-        DO 14 J=1,MFIT
+        DO J=1,MFIT
           WT=DYDA(LISTA(J))*SIG2I
-          DO 13 K=1,J
+          DO K=1,J
             ALPHA(J,K)=ALPHA(J,K)+WT*DYDA(LISTA(K))
-13        CONTINUE
+          ENDDO
           BETA(J)=BETA(J)+DY*WT
-14      CONTINUE
+        ENDDO
         CHISQ=CHISQ+DY*DY*SIG2I
-15    CONTINUE
-      DO 17 J=2,MFIT
-        DO 16 K=1,J-1
+      ENDDO
+      DO J=2,MFIT
+        DO K=1,J-1
           ALPHA(K,J)=ALPHA(J,K)
-16      CONTINUE
-17    CONTINUE
+        ENDDO
+      ENDDO
       RETURN
 
       END
@@ -1069,38 +1075,38 @@ c***********************************************************************
       real covar,swap
       DIMENSION COVAR(NCVM,NCVM),LISTA(MFIT)
 c-----------------------------------------------------------------------
-      DO 12 J=1,MA-1
-        DO 11 I=J+1,MA
+      DO J=1,MA-1
+        DO I=J+1,MA
           COVAR(I,J)=0.0
-11      CONTINUE
-12    CONTINUE
+        ENDDO
+      ENDDO
 
-      DO 14 I=1,MFIT-1
-        DO 13 J=I+1,MFIT
+      DO I=1,MFIT-1
+        DO J=I+1,MFIT
           IF(LISTA(J).GT.LISTA(I)) THEN
             COVAR(LISTA(J),LISTA(I))=COVAR(I,J)
           ELSE
             COVAR(LISTA(I),LISTA(J))=COVAR(I,J)
           ENDIF
-13      CONTINUE
-14    CONTINUE
+        ENDDO
+      ENDDO
 
       SWAP=COVAR(1,1)
-      DO 15 J=1,MA
+      DO J=1,MA
         COVAR(1,J)=COVAR(J,J)
         COVAR(J,J)=0.0
-15    CONTINUE
+      ENDDO
 
       COVAR(LISTA(1),LISTA(1))=SWAP
-      DO 16 J=2,MFIT
+      DO J=2,MFIT
         COVAR(LISTA(J),LISTA(J))=COVAR(1,J)
-16    CONTINUE
+      ENDDO
 
-      DO 18 J=2,MA
-        DO 17 I=1,J-1
+      DO J=2,MA
+        DO I=1,J-1
           COVAR(I,J)=COVAR(J,I)
-17      CONTINUE
-18    CONTINUE
+        ENDDO
+      ENDDO
       RETURN
 
       END
@@ -1227,9 +1233,9 @@ c-----------------------------------------------------------------------
           call atodf(string,dval,ok)
           if (ok) then
             k = k+1
-            if (k.eq.1) i = dval
-            if (k.eq.2) velmin = dval
-            if (k.eq.3) velmax = dval
+            if (k.eq.1) i = int(dval)
+            if (k.eq.2) velmin = real(dval)
+            if (k.eq.3) velmax = real(dval)
           else
             goto 20
           endif
@@ -2202,7 +2208,7 @@ c
       do j = ny,1,-1
         do i = 1, iend
           if (ary(i,j).gt.-99999.0) then
-            line(i)=scale*ary(i,j)
+            line(i)=int(scale*ary(i,j))
           else
             line(i)=0
           endif
@@ -2311,10 +2317,10 @@ c
         if (length.eq.0) goto 50
         call matodf(line,dval,4,ok)
         if (ok) then
-          i    = dval(1)
-          xin  = dval(2)
-          yin  = dval(3)
-          pain = dval(4)
+          i    = int(dval(1))
+          xin  = real(dval(2))
+          yin  = real(dval(3))
+          pain = real(dval(4))
         else
           goto 20
         endif
@@ -2356,9 +2362,9 @@ c
         if (length.eq.0) goto 50
         call matodf(line,dval,3,ok)
         if (ok) then
-          pstart = dval(1)
-          pend   = dval(2)
-          pinc   = dval(3)
+          pstart = real(dval(1))
+          pend   = real(dval(2))
+          pinc   = real(dval(3))
           i = 1
           pos = pstart
           do while (i.le.128 .and. pos.le.pend)
@@ -2379,9 +2385,9 @@ c
         if (length.eq.0) goto 50
         call matodf(line,dval,3,ok)
         if (ok) then
-          pstart = dval(1)
-          pend   = dval(2)
-          pinc   = dval(3)
+          pstart = real(dval(1))
+          pend   = real(dval(2))
+          pinc   = real(dval(3))
           i = 1
           pos = pstart
           do while (i.le.128 .and. pos.le.pend)
@@ -2658,8 +2664,8 @@ c
       if (length.ne.0) then
         call matodf(line,dval,2,ok)
         if (ok) then
-          if (dval(1).ne.0d0) windx=dval(1)
-          if (dval(2).ne.0d0) windy=dval(2)
+          if (dval(1).ne.0d0) windx=int(dval(1))
+          if (dval(2).ne.0d0) windy=int(dval(2))
         endif
       endif
 
@@ -2783,7 +2789,7 @@ c     Check the celestial coordinate increments.
      *  call bug('f', 'Unequal coordinate increments (cdelt).')
 
 c     Fill the velplot commons.
-      xy = abs(cdelt1)*R2AS
+      xy = real(abs(cdelt1))*R2AS
       call rdhdr(lIn, 'crval1', crval(1), 0.0)
       call rdhdr(lIn, 'crval2', crval(2), 0.0)
       call rdhda(lIn, 'ctype1', ctype(1), ' ')
@@ -2813,7 +2819,7 @@ c     Reference pixel in box coordinates.
       delv = real(cdelt3)
       do i = 1, nc
         call coCvt1(lIn, k, 'ap', dble(blc(3)+i-1), 'aw', dVal)
-        vlsr(i) = dVal
+        vlsr(i) = real(dVal)
       enddo
 
 c     Read the data into memory.
@@ -3061,9 +3067,9 @@ c
       if (length.eq.0) goto 20
       call matodf(line,dval,3,ok)
       if (ok) then
-        i = dval(1)
-        x = dval(2)
-        y = dval(3)
+        i = int(dval(1))
+        x = real(dval(2))
+        y = real(dval(3))
       else
         goto 11
       endif
@@ -3589,7 +3595,7 @@ c-----------------------------------------------------------------------
       include 'mirconst.h'
       include 'mem.h'
 
-      integer vmom1,vmom2,vmom3,vmom4
+      ptrdiff vmom1,vmom2,vmom3,vmom4
       real vmax(128),vmin(128),xmin,xmax,ymin,ymax,vmean,vwidth
       integer imaps,nmaps,i,j,k,nmom,length
       integer windx,windy,sym,lwidth

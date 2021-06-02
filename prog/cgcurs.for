@@ -195,7 +195,7 @@ c       (which is ~ 1/40 of the view surface height) for the plot axis
 c       labels and the velocity/channel labels.
 c       Defaults choose something sensible.
 c
-c$Id: cgcurs.for,v 1.15 2015/03/05 04:23:49 wie017 Exp $
+c$Id: cgcurs.for,v 1.16 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -210,7 +210,7 @@ c-----------------------------------------------------------------------
       real      TFDISP, WEDWID
       parameter (TFDISP = 0.5, WEDWID = 0.05)
 
-      integer ipim, ipim2, ipnim, ipims
+      ptrdiff ipim, ipim2, ipnim, ipims
 
       real    levs(MAXLEV), pixr(2), tr(6), cs(2), pixr2(2), scale(2),
      *        tfvp(4), wdgvp(4), cumhis(NBINS), dmm(3)
@@ -239,8 +239,8 @@ c-----------------------------------------------------------------------
       data gaps, doabut /.false., .false./
 c-----------------------------------------------------------------------
       version = versan ('cgcurs',
-     *                  '$Revision: 1.15 $',
-     *                  '$Date: 2015/03/05 04:23:49 $')
+     *                  '$Revision: 1.16 $',
+     *                  '$Date: 2021/06/02 04:45:09 $')
 
 c     Get user inputs.
       call inputs(MAXLEV, img, ibin, jbin, kbin, levtyp, slev, levs,
@@ -270,23 +270,23 @@ c     Finish key inputs for region of interest now.
      *            win, ngrps, grpbeg, ngrp)
 
 c     Try to allocate memory for images.
-      call memalloc(ipim,  win(1)*win(2), 'r')
-      call memalloc(ipnim, win(1)*win(2), 'i')
+      call memAlloc(ipim,  win(1)*win(2), 'r')
+      call memAlloc(ipnim, win(1)*win(2), 'i')
       if (cursor .or. stats) then
 c       Need a copy of the image if we have histogram equalized it and
 c       want to use the "cursor" or "stats" option to find out image
 c       values.
-        call memalloc(ipims, win(1)*win(2), 'r')
+        call memAlloc(ipims, win(1)*win(2), 'r')
       else
 c       If we don't need a copy of this image, we must still have
 c       a pointer to pass down.
-        call memalloc(ipims, 1, 'r')
+        call memAlloc(ipims, 1, 'r')
       endif
 
       ipim2 = ipim
       if (dotwo) then
 c       Memory for the contour overlay.
-        call memalloc(ipim2,  win(1)*win(2), 'r')
+        call memAlloc(ipim2,  win(1)*win(2), 'r')
       endif
 
 c     Open log files.

@@ -300,7 +300,7 @@ c       already exists, new models are appended to it.  The columns of
 c       the file are the slice number, the model peak, centre, FWHM,
 c       baseline offset and baseline slope.
 c
-c$Id: cgslice.for,v 1.14 2012/03/02 00:55:01 cal103 Exp $
+c$Id: cgslice.for,v 1.15 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  Notes:
 c   SLice abcissa values are still in linear world coordiantes as
@@ -334,13 +334,14 @@ c-----------------------------------------------------------------------
      *          first, gaps, noimage, none, radians, redisp
       integer   bgcol, blc(3), coltab, concol, grpbeg(maxchan),
      *          his(NBINS), i, ibin(2), icol, ierr, ilen, iostat, ipage,
-     *          ipim, ipims, ipnim, ipp, ipsle(MAXNSL), ipsls(MAXNSL),
-     *          ipslx(MAXNSL), ipsly(MAXNSL), j, jbin(2), jj, k,
+     *          j, jbin(2), jj, k,
      *          kbin(2), krng(2), labcol, lin, lmod, lposi, lposo, lval,
      *          naxis, ngrp(maxchan), ngrps, nlast, nlevs, nseg(MAXNSL),
      *          nslice, nslp(MAXNSL), nx, ny, pgbeg, seg(2,maxdim),
      *          size(maxnax), slbcol, slpos(6,MAXNSL), slsize(MAXNSL),
      *          srtlev(MAXLEV), trc(3), wedcod, win(maxnax)
+      ptrdiff   ipim, ipims, ipnim, ipp, ipsle(MAXNSL),
+     *          ipsls(MAXNSL), ipslx(MAXNSL), ipsly(MAXNSL)
       real      blank, bound(4,MAXNSL), cs(3), cumhis(NBINS), dmm(3),
      *          groff, levs(MAXLEV), pixr(2), pixr2(2), scale(2), slev,
      *          sxmax, sxmin, symax, symin, tfvp(4), tr(6), vblc(2,2),
@@ -367,8 +368,8 @@ c-----------------------------------------------------------------------
       data xdispls, ydispbs /3.5, 3.5/
 c-----------------------------------------------------------------------
       version = versan ('cgslice',
-     *                  '$Revision: 1.14 $',
-     *                  '$Date: 2012/03/02 00:55:01 $')
+     *                  '$Revision: 1.15 $',
+     *                  '$Date: 2021/06/02 04:45:09 $')
 
 c     Get user inputs.
       call inputs(NLTYPE, ltype, MAXLEV, in, ibin, jbin, kbin,
@@ -619,7 +620,7 @@ c           Modify OFM for interactive devices here.
 c         Define slice ends with cursor or read from file.
           redisp = .false.
           if (fslposi.eq.' ' .and. .not.noimage) then
-            call curpos(win(1), win(2), ibin, jbin, blc, redisp,
+            call curpos(win(1), win(2), ibin(1), jbin(1), blc, redisp,
      *                  MAXNSL, nslice, slpos)
 
 c           Erase subplot or write positions file if desired.
@@ -628,7 +629,7 @@ c           Erase subplot or write positions file if desired.
      *                      blc(2)-0.5, trc(2)+0.5)
             else
               if (fslposo.ne.' ') call slposw(lin, lposo, krng,
-     *          radians, blc, ibin, jbin, MAXNSL, nslice, slpos)
+     *          radians, blc, ibin(1), jbin(1), MAXNSL, nslice, slpos)
             endif
           else
 
@@ -638,7 +639,7 @@ c           Read positions from text file and decode.
      *      call bug('f', 'Error opening input text file'//fslposi)
 
             call posdec(lin, krng, noimage, lposi, win(1), win(2),
-     *        blc, trc, ibin, jbin, NLTYPE, ltype, MAXNSL, size,
+     *        blc, trc, ibin(1), jbin(1), NLTYPE, ltype, MAXNSL, size,
      *        nslice, slpos)
             call txtclose(lposi)
           endif
@@ -660,7 +661,7 @@ c           Mark slice on display if given by input text file.
             if (fslposi.ne.' ' .and. .not.noimage) then
               call setcolcg(i, icol)
               call pgsci(icol)
-              call slmark(blc, ibin, jbin, slpos(1,i))
+              call slmark(blc, ibin(1), jbin(1), slpos(1,i))
             endif
 
 c           Allocate memory for slice.
@@ -673,7 +674,7 @@ c           applied.
             ipp = ipim
             if (.not.noimage .and. dopixel .and. trfun.ne.'lin')
      *         ipp = ipims
-            call slice(lin, ibin, jbin, slpos(1,i), GRID, win(1),
+            call slice(lin, ibin(1), jbin(1), slpos(1,i), GRID, win(1),
      *         win(2), memr(ipp), memi(ipnim), radians, slsize(i),
      *         memr(ipslx(i)), memr(ipsly(i)), nslp(i), bound(1,i),
      *         nseg(i), seg)
@@ -1217,7 +1218,8 @@ c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mem.h'
 
-      integer i, ipx, ipy
+      integer i
+      ptrdiff  ipx, ipy
       double precision fac1, fac2, fac3, phisq, delx, dexpun
       common /trans/ ipx, ipy
 c-----------------------------------------------------------------------
@@ -1258,7 +1260,8 @@ c     dfdx    The derivatives w.r.t. peak, pos'n, fwhm, offset and slope
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mem.h'
-      integer i, ipx, ipy
+      integer i
+      ptrdiff ipx, ipy
       double precision fac1, fac2, fac3, phisq, delx, dexpun
       common /trans/ ipx, ipy
 c-----------------------------------------------------------------------
@@ -1286,7 +1289,8 @@ c***********************************************************************
      *   labtyp)
 
       real xdispl, ydispb
-      integer n, ipslx, ipsly, ipsls, ipsle, nseg, islice, lmod, slbcol
+      integer n, nseg, islice, lmod, slbcol
+      ptrdiff ipslx, ipsly, ipsls, ipsle
       character*(*) xlabel, ylabel,labtyp
       logical dobase, doxrng
 c-----------------------------------------------------------------------
@@ -1321,7 +1325,8 @@ c-----------------------------------------------------------------------
 
       real wx1, wx2, wy1, wy2, xsol(5), h(5), dx(5), aa(25),
      *  wy1s, wy2s, xc, yc, scafac
-      integer ipf, ipfp, ipdfdx, ipxx, ipyy, ifail, iostat, is, n2
+      ptrdiff ipf, ipfp, ipdfdx, ipxx, ipyy
+      integer ifail, iostat, is, n2
       character aline*132
       logical more
 
@@ -1481,7 +1486,8 @@ c-----------------------------------------------------------------------
       include 'mem.h'
       double precision fac, dexpun
       real x
-      integer i, ipx, ipy, iter
+      integer i,iter
+      ptrdiff ipx, ipy
       save iter
       common /trans/ ipx, ipy
       data iter /0/
@@ -1523,7 +1529,8 @@ c-----------------------------------------------------------------------
 
       double precision fac, dexpun
       real x
-      integer i, ipx, ipy, iter
+      integer i, iter
+      ptrdiff ipx, ipy
       save iter
       common /trans/ ipx, ipy
       data iter /0/
@@ -2276,7 +2283,8 @@ c***********************************************************************
      *  ipsle, xsol, xdispl, ydispb, xlabel, ylabel, slbcol,labtyp)
 
       real xdispl, ydispb, xsol(5)
-      integer n, ipslx, ipsly, ipsls, ipsle, nseg, islice, slbcol
+      integer n, nseg, islice, slbcol
+      ptrdiff ipslx, ipsly, ipsls, ipsle
       character*(*) xlabel, ylabel,labtyp
       logical dobase
 c-----------------------------------------------------------------------
@@ -2304,7 +2312,8 @@ c-----------------------------------------------------------------------
 
       double precision fac, dexpun
       real x, y, ymin, ymax, coord, xl1, xl, yl
-      integer ipmy, ipdy, i, ics, ic1, ic2
+      ptrdiff ipmy, ipdy
+      integer i, ics, ic1, ic2
 c-----------------------------------------------------------------------
       call memalloc(ipmy, n, 'r')
       call memalloc(ipdy, n, 'r')
@@ -2726,7 +2735,8 @@ c***********************************************************************
      *   slbcol,labtyp)
 
       real ydispb, xdispl, ymin, ymax
-      integer islice, nseg, ipslx, ipsly, ipsls, ipsle, n, slbcol
+      integer islice, nseg, n, slbcol
+      ptrdiff ipslx, ipsly, ipsls, ipsle
       logical usenew
       character*(*) xlabel, ylabel,labtyp
 c-----------------------------------------------------------------------

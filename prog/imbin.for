@@ -34,7 +34,7 @@ c       ambiguity is needed.
 c         sum       Produce sum rather than average of pixels in
 c                   each bin
 c
-c$Id: imbin.for,v 1.9 2013/08/30 01:49:21 wie017 Exp $
+c$Id: imbin.for,v 1.10 2021/06/02 04:45:09 wie017 Exp $
 c--
 c
 c  History:
@@ -57,9 +57,10 @@ c-----------------------------------------------------------------------
       parameter (MAXBOX = 1024, NOPTS = 1)
 
       logical   aver, blanks, flags(MAXDIM), present(NOPTS)
-      integer   bin(2,MAXNAX), blc(MAXNAX), boxes(MAXBOX), i, ip, ipn,
-     *          j, k, krng(2), lin, lout, naxis, nbin, npnt, nx, ny, p,
-     *          pn, sizin(MAXNAX), sizout(MAXNAX), trc(MAXNAX)
+      integer   bin(2,MAXNAX), blc(MAXNAX), boxes(MAXBOX), i,
+     *          j, k, krng(2), lin, lout, naxis, nbin, npnt, nx, ny,
+     *          sizin(MAXNAX), sizout(MAXNAX), trc(MAXNAX)
+      ptrdiff   ip, ipn, p, pn
       real      dmm(2), mm(3)
       double precision cdelti(MAXNAX), cdelto(MAXNAX), crpixi(MAXNAX),
      *          crpixo(MAXNAX), crvali(MAXNAX)
@@ -73,8 +74,8 @@ c     Externals.
       data opts /'sum     '/
 c-----------------------------------------------------------------------
       version = versan ('imbin',
-     *                  '$Revision: 1.9 $',
-     *                  '$Date: 2013/08/30 01:49:21 $')
+     *                  '$Revision: 1.10 $',
+     *                  '$Date: 2021/06/02 04:45:09 $')
 
       do i = 1, MAXNAX
         blc(i) = 1

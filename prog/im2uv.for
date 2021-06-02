@@ -23,7 +23,7 @@ c@ select
 c       Visibility data selection - only 'uvrange' selection is
 c       supported.  See the help on "select" for more information.
 c
-c$Id: im2uv.for,v 1.5 2018/12/04 04:02:11 wie017 Exp $
+c$Id: im2uv.for,v 1.6 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -35,7 +35,8 @@ c-----------------------------------------------------------------------
       parameter (MAXSELS=1000, MAXBOXES=2048, MAXRUNS=3*MAXDIM)
 
       logical   doSel
-      integer   boxes(MAXBOXES), n1, n2, nRuns, nsize(2), pnt,
+      ptrdiff   pnt
+      integer   boxes(MAXBOXES), n1, n2, nRuns, nsize(2),
      *          runs(3,MAXRUNS), tIn, tOut, xmax, xmin, ymax, ymin
       real      dx, dy, sels(MAXSELS), xpix, ypix
       double precision freq, time
@@ -47,8 +48,8 @@ c-----------------------------------------------------------------------
       character versan*72
 c-----------------------------------------------------------------------
       version = versan('im2uv',
-     *                 '$Revision: 1.5 $',
-     *                 '$Date: 2018/12/04 04:02:11 $')
+     *                 '$Revision: 1.6 $',
+     *                 '$Date: 2021/06/02 04:45:09 $')
 
 c     Get the input parameters.
       call keyini
@@ -306,8 +307,8 @@ c     RA and DEC info.
       if (iax.ne.1) call bug('f','First axis is not an RA axis')
       call coAxGet(tIn,iax,ctype,crpix,ra,cdelt)
       call rdhdd(tIn,'obsra',obsra,ra)
-      dx = 1/(cdelt*f0)
-      xpix = crpix
+      dx = 1/real(cdelt*f0)
+      xpix = real(crpix)
       call uvputvrd(tOut,'ra',ra,1)
       call uvputvrd(tOut,'obsra',obsra,1)
 
@@ -315,8 +316,8 @@ c     RA and DEC info.
       if (iax.ne.2) call bug('f','Second axis is not a DEC axis')
       call coAxGet(tIn,iax,ctype,crpix,dec,cdelt)
       call rdhdd(tIn,'obsdec',obsdec,dec)
-      dy = 1/(cdelt*f0)
-      ypix = crpix
+      dy = 1/real(cdelt*f0)
+      ypix = real(crpix)
       call uvputvrd(tOut,'dec',dec,1)
       call uvputvrd(tOut,'obsdec',obsdec,1)
 

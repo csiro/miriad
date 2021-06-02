@@ -141,9 +141,9 @@ c
 	character flag1*8,flag2*8
 	integer tvis,tmod,tscr(4),nfiles
 	integer nModel,minants,refant,nants,nsize(3),nchan,nvis,i
-	real sels(MAXSELS),clip,interval,offset(2)
+	real sels(MAXSELS),interval,offset(2)
         double precision lstart,lwidth,lstep
-	real flux(4),flx(6),alpha(3)
+	real flux(4),flx(6),clip(6),alpha(3)
 	double precision Saved(16),Time0,reffreq
 	logical phase,amp,doline,mfs,doxy,xyvary,doref,noscale,doclip
 c
@@ -161,7 +161,7 @@ c
 	call SelInput('select',sels,MAXSELS)
 	call mkeyf('model',Models,4,nModel)
 	doclip = keyprsnt('clip')
-	call keyr('clip',clip,0.)
+	call keyr('clip',clip(1),0.)
 	call keyr('interval',interval,5.)
 	call keyi('minants',minants,0)
  	call keyi('refant',refant,3)
@@ -247,7 +247,7 @@ c
 	      call uvrewind(tvis)
 	      flx(1) = flux(i)
 	      flx(2) = i
-              flx(3) = reffreq
+              flx(3) = real(reffreq)
               flx(4) = alpha(1)
               flx(5) = alpha(2)
               flx(6) = alpha(3)
@@ -461,11 +461,11 @@ c
 	  nants = max(nants,i1,i2)
 	  Out(1) = npol
 	  Out(2) =  pol
-	  Out(3) = preamble(5)
-	  Out(4) = preamble(4) - time0
+	  Out(3) = real(preamble(5))
+	  Out(4) = real(preamble(4) - time0)
 	  call uvinfo(tvis,'variance',sigma2)
 	  if(sigma2.le.0) sigma2 = 1
-	  Out(5) = sigma2
+	  Out(5) = real(sigma2)
 	else
 	  nbad = nbad + 1
 	endif
@@ -552,7 +552,8 @@ c------------------------------------------------------------------------
 c
 	logical doleak
 	complex xyp(MAXANT),D(2,MAXANT),xyref
-	integer pSumVM,pSumMM,pGains,pTime,pCount,pData,pModel,pFlags
+	ptrdiff pSumVM,pSumMM,pGains,pTime,pCount
+	ptrdiff pData,pModel,pFlags
 	integer Hash(maxHash),Indx(maxHash)
 c
 c  Externals.
@@ -1708,11 +1709,11 @@ c
 	SumRVM = 0
 	SumRMM = 0
 	do i=1,nbl
-	  SumRVM = SumRVM + conjg(G(b1(i)))*G(b2(i))*
-     *	     ( SumVM(XX,i) + axy(b1(i))*axy(b2(i))*SumVM(YY,i) )
-	  SumRMM = SumRMM +   G(b1(i))*G(b2(i))  *
+	  SumRVM = SumRVM + real(conjg(G(b1(i)))*G(b2(i))*
+     *	     ( SumVM(XX,i) + axy(b1(i))*axy(b2(i))*SumVM(YY,i) ))
+	  SumRMM = SumRMM +   real(G(b1(i))*G(b2(i))  *
      *			conjg(G(b1(i))*G(b2(i))) *
-     *	      (SumMM(XX,i) + (axy(b1(i))*axy(b2(i)))**2 * SumMM(YY,i))
+     *	      (SumMM(XX,i) + (axy(b1(i))*axy(b2(i)))**2 * SumMM(YY,i)))
 	enddo
 	alpha = sqrt( abs(SumRVM / SumRMM) )
 c

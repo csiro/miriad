@@ -99,8 +99,8 @@ c------------------------------------------------------------------------
 	include 'mem.h'
 c
 	double precision freq
-	integer pGains,pTime,lGain
-	integer ngains,ntau,nsols,nfeeds,nants,iostat
+	ptrdiff pGains,pTime
+	integer ngains,ntau,nsols,nfeeds,nants,iostat,lGain
 c
 c  Externals.
 c
@@ -215,7 +215,7 @@ c------------------------------------------------------------------------
 	real factor
 	integer i,j
 c
-	factor = (freq/freq0)**(-0.5*spindx)
+	factor = real(freq/freq0)**(-0.5*spindx)
 	do j=1,nsols
 	  do i=1,nants
 	    Gains(1,i,j) = factor*Gains(1,i,j)

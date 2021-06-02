@@ -29,7 +29,7 @@ c@ nmin
 c     Minimum number of pixels in each clump.
 c     Any clumps with fewer pixels are rejected (default=4).
 c
-c$Id: clfind.for,v 1.10 2013/08/30 01:49:21 wie017 Exp $
+c$Id: clfind.for,v 1.11 2021/06/02 04:45:09 wie017 Exp $
 c--
 c       this used to be a parameter, but - as discussed in the paper -
 c       we don't want users to mess with this. (:-)
@@ -52,7 +52,7 @@ c   09/20/96 jpw/pjt   Formal miriad version (finally)
 c   18-may-98 rjs/pjt  Moved over to a single-source file
 c   13-jul-98 pjt linux/g77 cleanup, and fixed CntLevs counting bug
 c   09-nov-05 rjs Update link in documentation.
-c   05-jul-12 mhw Use memallop/memfrep, remove limits on size of cube
+c   05-jul-12 mhw Remove limits on size of cube
 c
 c  Note:
 c   This program comes with a testsuite dataset, which you should run
@@ -84,8 +84,8 @@ c-----------------------------------------------------------------------
       ptrdiff   Ia, Ipos, Ipos1, Ireg, It
 c-----------------------------------------------------------------------
       version = versan('clfind',
-     *                 '$Revision: 1.10 $',
-     *                 '$Date: 2013/08/30 01:49:21 $')
+     *                 '$Revision: 1.11 $',
+     *                 '$Date: 2021/06/02 04:45:09 $')
 
 c     Get the parameters from the user.
       call keyini
@@ -164,8 +164,8 @@ c     Open the output, and add a header to it.
       call wrhd(lin, lout, version)
 
 c     space allocation for data and assign arrays
-      call memallop(Ia,nx*ny*nz,'i')
-      call memallop(It,nx*ny*nz,'r')
+      call memalloc(Ia,nx*ny*nz,'i')
+      call memalloc(It,nx*ny*nz,'r')
 
 c     Start reading the input file
       call rdgrdclf(memR(It),memI(Ia))
@@ -188,9 +188,9 @@ c 1013 format(' t(1) = ',f)
       nlevels=nlevs
 
 c     space allocation for coded position arrays
-      call memallop(Ipos1,npx1,'i')
-      call memallop(Ipos,nlevs*npx2,'i')
-      call memallop(Ireg,nlevs*npx2,'i')
+      call memalloc(Ipos1,npx1,'i')
+      call memalloc(Ipos,nlevs*npx2,'i')
+      call memalloc(Ireg,nlevs*npx2,'i')
 
       call FillLevs(memR(It),nlevs,npx1,npx2,
      *              memI(Ipos1),memI(Ipos),memI(Ireg))
@@ -243,11 +243,11 @@ c     clumps must have greater than nmin pixels
       call wrgrdclf(memI(Ia))
       call xyclose(lout)
 
-      call memfrep(Ia,nx*ny*nz,'i')
-      call memfrep(It,nx*ny*nz,'r')
-      call memfrep(Ipos1,npx1,'i')
-      call memfrep(Ipos,nlevs*npx2,'i')
-      call memfrep(Ireg,nlevs*npx2,'i')
+      call memfree(Ia,nx*ny*nz,'i')
+      call memfree(It,nx*ny*nz,'r')
+      call memfree(Ipos1,npx1,'i')
+      call memfree(Ipos,nlevs*npx2,'i')
+      call memfree(Ireg,nlevs*npx2,'i')
 
       end
 

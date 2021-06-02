@@ -60,7 +60,7 @@ c@ log
 c       File in which to write the data, if y-axis is amplitude.
 c       The default is no logfile.
 c
-c$Id: psrplt.for,v 1.7 2013/08/30 01:49:21 wie017 Exp $
+c$Id: psrplt.for,v 1.8 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  History:
 c    rjs  03jun96 Original version.
@@ -102,8 +102,8 @@ c     Externals.
       data fluxes/'real     ','imaginary','amplitude','phase    '/
 c-----------------------------------------------------------------------
       version = versan('psrplt',
-     :                 '$Revision: 1.7 $',
-     :                 '$Date: 2013/08/30 01:49:21 $')
+     :                 '$Revision: 1.8 $',
+     :                 '$Date: 2021/06/02 04:45:09 $')
 
 c     Get parameters.
       call output(version)
@@ -295,7 +295,7 @@ c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mem.h'
       integer l
-      integer pImage
+      ptrdiff pImage
       real zmin,zmax,tr(6),ymin,ymax,delta
       character title*64,line*80
 
@@ -313,8 +313,8 @@ c
         ymin = 1
         ymax = nchan
       else
-        ymin = sfreq(1)
-        ymax = sfreq(nchan)
+        ymin = real(sfreq(1))
+        ymax = real(sfreq(nchan))
       endif
       delta = (ymax - ymin)/(nchan-1)
       tr(1) = 0
@@ -618,7 +618,7 @@ c-----------------------------------------------------------------------
       complex w
 c-----------------------------------------------------------------------
       do i=1,nchan
-        theta = -2*PI * (shift(1)*uv(1) + shift(2)*uv(2)) * sfreq(i)
+        theta=real(-2*PI * (shift(1)*uv(1) + shift(2)*uv(2)) * sfreq(i))
         w = cmplx(cos(theta),sin(theta))
         data(i) = w * data(i)
       enddo

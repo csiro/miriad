@@ -25,7 +25,7 @@ c-----------------------------------------------------------------------
 	double precision freqs(2),interval,freq(MAXFBIN)
 	integer pnants,p2nants
 	integer iGains,iLeak,iPass,tVis
-        integer pGains,pTimes
+        ptrdiff pGains,pTimes
 	logical dopol,dopol2,dopolf
 c
 c  Externals.

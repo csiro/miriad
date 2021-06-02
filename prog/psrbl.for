@@ -333,7 +333,7 @@ c------------------------------------------------------------------------
 	include 'psrbl.h'
 	integer b,p,i,j,i1,i2,np,bl
 	integer pslot(MAXPOL),ptype(MAXPOL)
-	integer rFlags,rData,iFlags,iData,oFlags,oData
+	ptrdiff rFlags,rData,iFlags,iData,oFlags,oData
 	double precision preamble(5),binfac(nbins)
         logical binuse(nbins)
 c
@@ -496,8 +496,8 @@ c
 	    do j=1,nbins
 	      do k=1,nchan
 		if (binuse(j)) then
-		  DatOut(k,i) = DatOut(k,i) + binfac(j)*DatIn(k,j)
-		  FlgOut(k,i) = FlgOut(k,i).and.FlgIn(k,j)
+		  DatOut(k,i)=cmplx(DatOut(k,i) + binfac(j)*DatIn(k,j))
+		  FlgOut(k,i)=FlgOut(k,i).and.FlgIn(k,j)
 		endif
 	      enddo
 	    enddo

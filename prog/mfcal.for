@@ -10,7 +10,7 @@ c	MfCal is a Miriad task which determines calibration corrections
 c	(antenna gains, delay terms and passband responses) from a
 c	multi-frequency observation.  The delays and passband are
 c	determined from an average of all the selected data.  The gains
-c	are worked out periodically depending upon the user set interval. 
+c	are worked out periodically depending upon the user set interval.
 c@ vis
 c	Input visibility data file. No default. This can (indeed should)
 c	contain multiple channels and spectral windows. The frequency
@@ -30,14 +30,14 @@ c	value is 0.
 c@ select
 c	Standard uv selection. The default is to select all data.
 c@ flux
-c	Three to five numbers, giving the source flux density, a reference 
-c	frequency (in GHz) and the source spectral index parameters. 
+c	Three to five numbers, giving the source flux density, a reference
+c	frequency (in GHz) and the source spectral index parameters.
 c       The flux and spectral index parameters are at the reference frequency.
 c	If no values are given, then MFCAL checks whether the source is one
 c	of a set of known sources, and uses the appropriate flux variation
-c	with frequency. Otherwise the default flux is determined so that 
+c	with frequency. Otherwise the default flux is determined so that
 c	the rms gain amplitude is 1, and the default spectral index is 0.
-c	The default reference frequency is the mean of the frequencies in 
+c	The default reference frequency is the mean of the frequencies in
 c	the input data. Also see the `oldflux' option.
 c@ refant
 c	The reference antenna. Default is 3. The reference antenna needs
@@ -48,7 +48,7 @@ c	The minimum number of antennae that must be present before a
 c	solution is attempted. Default is 2.
 c@ interval
 c	This gives one, two or three numbers, all in units of minutes, being
-c	used to determine the lengths of the antenna gain and passband 
+c	used to determine the lengths of the antenna gain and passband
 c	calibration solution interval.
 c	The first gives the maximum length of a gain solution interval.
 c	The default is 5 minutes.
@@ -73,17 +73,17 @@ c	  interpolate Interpolate (and extrapolate) via a spline fit (to
 c	            the real and imaginary parts) bandpass values for
 c	            channels with no solution. This is commonly used because
 c	            a set of channels are flagged, possibly because of RFI or
-c	            spectral features in the bandpass calibrator.  If 
-c	            less than 50% of the channels are good, the 
+c	            spectral features in the bandpass calibrator.  If
+c	            less than 50% of the channels are good, the
 c	            interpolation (extrapolation) is not done and those
 c	            channels will not have a bandpass solution
 c	  oldflux   This causes MFCAL to use the pre-August 1994 ATCA flux
-c	            density scale below 11 GHz and and the pre-May 2016 mm 
+c	            density scale below 11 GHz and and the pre-May 2016 mm
 c                   fluxscale above 11 GHz.
 c                   See the help on "oldflux" for more information.
 c@ tol
 c	Solution convergence tolerance. Default is 0.001.
-c$Id: mfcal.for,v 1.20 2017/05/08 02:31:10 wie017 Exp $
+c$Id: mfcal.for,v 1.21 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  History:
 c    rjs   8jul92 Original version.
@@ -92,7 +92,7 @@ c    rjs  19oct92 Simple polarisation handling.
 c    rjs  30oct92 Change minant to minants.
 c    rjs  22nov92 Fixed dimensioning of b1,b2 in Solve.
 c    rjs  19jan93 Fix bug handling single IF.
-c    rjs   9feb93 Use memalloc more, to reduce size of executable.
+c    rjs   9feb93 Use memAlloc more, to reduce size of executable.
 c    rjs  19mar93 Discard autocorrelation data.
 c    nebk 18jun93 Documentation clarification
 c    rjs  24jun93 Determine nants in a different way.
@@ -147,14 +147,15 @@ c------------------------------------------------------------------------
 	parameter(MAXSOLN=1024,MAXPOL=2)
 c
 	character version*(*)
-	parameter(version='MfCal: $Revision: 1.20 $, '//
-     *             '$Date: 2017/05/08 02:31:10 $')
+	parameter(version='MfCal: $Revision: 1.21 $, '//
+     *             '$Date: 2021/06/02 04:45:09 $')
 c
 	integer tno
-	integer pWGains,pFreq,pSource,pPass,pGains,pTau
-	integer pOPass,pOGains,pOTau
-	integer nvis,pVID,pVis,pWt
-	integer nspect,nschan(MAXSPECT),ischan(MAXSPECT),nv(MAXSPECT)
+	ptrdiff pWGains,pFreq,pSource,pPass,pGains,pTau
+	ptrdiff pOPass,pOGains,pOTau
+	ptrdiff pVID,pVis,pWt
+	integer nvis,nspect,nschan(MAXSPECT)
+	integer ischan(MAXSPECT),nv(MAXSPECT)
 	integer spectn(MAXSPECT),chanoff(MAXSPECT),nvo,nso,nspectd
 	integer npol,nants,nsoln,Count(MAXSOLN),nchan,refant,minant
         integer npsoln,Range(2,MAXSOLN)
@@ -232,10 +233,10 @@ c
 	call HisInput(tno,'MFCAL')
 c
 c Allocate some storage
-c        
-        call MemAlloc(pVID,MAXVIS,'d')
-        call MemAlloc(pVis,MAXVIS,'c')
-        call MemAlloc(pWt,MAXVIS,'r')
+c
+        call memAlloc(pVID,MAXVIS,'d')
+        call memAlloc(pVis,MAXVIS,'c')
+        call memAlloc(pWt,MAXVIS,'r')
 c
 c  Get the input data.
 c
@@ -257,12 +258,12 @@ c
      *      nvo,nso)
 	  nvis = nvo
 	  nsoln = nso
-	  nspect = nspectd 
+	  nspect = nspectd
 	endif
 c
 c  Determine the passband solution intervals
-c        
-        call pbranges(MAXSOLN,nsoln,time,interval,npsoln,Range)        
+c
+        call pbranges(MAXSOLN,nsoln,time,interval,npsoln,Range)
 	call output('Number of frequency bands/settings: '
      *	  //itoaf(nspect))
 	call output('Number of polarisations selected: '
@@ -288,13 +289,13 @@ c
 c
 c  Generate the frequencies for each channel in the total passband.
 c
-	call MemAlloc(pFreq,nchan,'d')
+	call memAlloc(pFreq,nchan,'d')
 	call FreqGen(nspect,nschan,sfreq,sdf,
      *				freqc,MemD(pFreq),nchan)
 c
 c  Generate the source model.
 c
-	call MemAlloc(pSource,nchan,'r')
+	call memAlloc(pSource,nchan,'r')
 	call SrcGen(Source,oldflux,defflux,
      *	  MemR(pSource),nchan,MemD(pFreq),mfreq0,flux(1),flux(3))
 c
@@ -305,17 +306,17 @@ c
 c
 c  Allocate some extra memory.
 c
-	call MemAlloc(pPass,nants*npsoln*nchan*npol,'c')
-	call MemAlloc(pGains,nants*nsoln*npol,'c')
-	call MemAlloc(pTau,nants*nsoln,'r')
-	call MemAlloc(pOPass,nants*npsoln*nchan*npol,'c')
-	call MemAlloc(pOGains,nants*nsoln*npol,'c')
-	call MemAlloc(pOTau,nants*nsoln,'r')
+	call memAlloc(pPass,nants*npsoln*nchan*npol,'c')
+	call memAlloc(pGains,nants*nsoln*npol,'c')
+	call memAlloc(pTau,nants*nsoln,'r')
+	call memAlloc(pOPass,nants*npsoln*nchan*npol,'c')
+	call memAlloc(pOGains,nants*nsoln*npol,'c')
+	call memAlloc(pOTau,nants*nsoln,'r')
 c
 c  Get an initial estimate of the wide gains and passband.
 c
 	call output('Generating initial solution estimate ...')
-	call MemAlloc(pWGains,nants*nspect*nsoln*npol,'c')
+	call memAlloc(pWGains,nants*nspect*nsoln*npol,'c')
 	call WGIni(MemC(pVis),MemR(pWt),MemD(pVID),ischan,nvis,npol,
      *	  Count,nsoln,nchan,nants,nspect,MemR(pSource),MemC(pWGains),
      *    refant,minant)
@@ -323,7 +324,7 @@ c
 	call BPIni(npol,nants,nchan,nsoln,npsoln,nspect,nschan,
      *	  MemC(pWGains),freqc,MemC(pPass),MemC(pGains),MemR(pTau),
      *    dodelay,dopass)
-	call MemFree(pWGains,nants*nspect*nsoln*npol,'c')
+	call memFree(pWGains,nants*nspect*nsoln*npol,'c')
 c
 c  Normalise the gains, and make a copy for later comparison.
 c
@@ -399,17 +400,17 @@ c
 c
 c  Free up all the memory, and close down shop.
 c
-	call MemFree(pVis,MAXVIS,'c')
-	call MemFree(pWt,MAXVIS,'r')
-	call MemFree(pVID,MAXVIS,'d')
-	call MemFree(pOTau,nants*nsoln,'r')
-	call MemFree(pOGains,nants*nsoln*npol,'c')
-	call MemFree(pOPass,nants*nchan*npol*npsoln,'c')
-	call MemFree(pTau,nants*nsoln,'r')
-	call MemFree(pGains,nants*nsoln*npol,'c')
-	call MemFree(pPass,nants*nchan*npol*npsoln,'c')
-	call MemFree(pSource,nchan,'r')
-	call MemFree(pFreq,nchan,'d')
+	call memFree(pVis,MAXVIS,'c')
+	call memFree(pWt,MAXVIS,'r')
+	call memFree(pVID,MAXVIS,'d')
+	call memFree(pOTau,nants*nsoln,'r')
+	call memFree(pOGains,nants*nsoln*npol,'c')
+	call memFree(pOPass,nants*nchan*npol*npsoln,'c')
+	call memFree(pTau,nants*nsoln,'r')
+	call memFree(pGains,nants*nsoln*npol,'c')
+	call memFree(pPass,nants*nchan*npol*npsoln,'c')
+	call memFree(pSource,nchan,'r')
+	call memFree(pFreq,nchan,'d')
 	call hisclose(tno)
 	call uvDatCls
 c
@@ -646,7 +647,7 @@ c  Write out all the gains.
 c
 	ntau = 0
 	if(dodelay)ntau = 1
-	ngains = (npold+ntau)*nants 
+	ngains = (npold+ntau)*nants
 c
 	off = 8
 	do i=1,nsoln
@@ -758,7 +759,7 @@ c  Write out all the gains. Write one antenna and one polarisation at
 c  a time. Because the input ("Pass") is in antenna/channel/pol order,
 c  and the output table is in channel/pol/antenna order, we have to
 c  rearraneg before writing out. Also convert from a "error" to a "correction"
-c  by taking the inverse. 
+c  by taking the inverse.
 c  Because "nchan" is the sum of all the channels from the frequency
 c  bands observed, nchan may be larger than MAXCHAN. To cope with this,
 c  copy the output channels in a strip-mining approach.
@@ -831,7 +832,7 @@ c
 	  endif
 	  freqs(1) = sfreq(i)
 	  freqs(2) = sdf(i)
-	  call hwrited(item,freqs,off,2*8,iostat)
+	  call hwrited(item,freqs(1),off,2*8,iostat)
 	  off = off + 2*8
 	  if(iostat.ne.0)then
 	    call bug('w','Error writing freqs to freq table')
@@ -907,7 +908,7 @@ c
 	  do p=1,npol
 	    do j=1,nchan
 	      do i=1,nants
-	        temp = real(Pass(i,j,p,k))**2 + 
+	        temp = real(Pass(i,j,p,k))**2 +
      *                aimag(Pass(i,j,p,k))**2
 	        if(temp.gt.0)then
 	          nPass(i,p) = nPass(i,p) + 1
@@ -951,7 +952,7 @@ c
 	  do p=1,npol
 	    do j=1,nchan
 	      do i=1,nants
-	        theta = 2*pi * SumTau(i) * freq(j)
+	        theta = 2*pi * SumTau(i) * real(freq(j))
 	        Pass(i,j,p,k) = Pass(i,j,p,k) *
      *			cmplx(cos(theta),sin(theta))/ RmsPass(i,p)
 	      enddo
@@ -1127,9 +1128,9 @@ c
 	    enddo
 	  else
 	    do i=1,nchan
-              lfr = log(freq(i)/freq0)
+              lfr = real(log(freq(i)/freq0))
               al = alpha(1)+lfr*(alpha(2)+lfr*alpha(3))
-	      sflux(i) = flux * (freq(i)/freq0) ** al
+	      sflux(i) = real(flux * (freq(i)/freq0) ** al)
 	    enddo
 	  endif
 	else if(ierr.eq.1)then
@@ -1310,7 +1311,7 @@ c
 c************************************************************************
 	subroutine DatRead(tno,maxvis,nvis,npol,Vis,Wt,VID,
      *			maxspect,nspect,sfreq,sdf,nschan,nv,nants,
-     *			maxsoln,nsoln,time,Count, 
+     *			maxsoln,nsoln,time,Count,
      *                  minant,refant,interval,
      *			edge,Source,PolMap)
 c
@@ -1398,7 +1399,7 @@ c
 	npol = 0
 c
 	nsoln = 0
-        
+
 	nspect = 0
 	pnspect = 0
 	nvis = 0
@@ -1465,7 +1466,7 @@ c
 	      Count(nsoln) = 0
 c
 c  See if we can speed up the clearing of the giant hash table
-c  when we have only changed a small number of values	      
+c  when we have only changed a small number of values
 c
 	      if (nsoln.gt.1) then
 		if (Count(nsoln-1).lt.5000.and.Count(nsoln-1).gt.0) then
@@ -1505,7 +1506,7 @@ c
 	        present(i1,p) = .true.
 	        present(i2,p) = .true.
 		ninter = ninter + 1
-		w = abs(sdf(spect(i)))
+		w = real(abs(sdf(spect(i))))
 	        call packit(i1,i2,p,spect(i),chan(i),VisId)
 		call hashIdx(VisId,nvis,idx,new)
                 if (idx.gt.MAXVIS) call bug('f','Too many visibilities')
@@ -1602,7 +1603,7 @@ c  Reinitialize the last n slots used in the hash table.
 c
 c    Inputs:
 c    n          number of slots to initialize
-c    nslot      number of slots used sofar	
+c    nslot      number of slots used sofar
 c    VID	A positive 'integer' unique to a particular channel/polarisation/antenna pair
 c------------------------------------------------------------------------
 	include 'mfcal.h'
@@ -1616,12 +1617,12 @@ c
 	  VisId=VID(nslot-i)
 	  d = mod(1.d0*VisId,1.d0*nHash) + 1
 	  idx = nint(d)
-	  do while(Hashval(idx).ne.0.and.Hashval(idx).ne.VisId)        
+	  do while(Hashval(idx).ne.0.and.Hashval(idx).ne.VisId)
 	    idx = idx + 1
 	  enddo
 	  if(idx.eq.MAXHASH)then
 	    idx = 1
-	    do while(Hashval(idx).ne.0.and.Hashval(idx).ne.VisId)        
+	    do while(Hashval(idx).ne.0.and.Hashval(idx).ne.VisId)
 	      idx = idx + 1
 	    enddo
 	    if(idx.eq.MAXHASH)
@@ -1660,12 +1661,12 @@ c  Find this channel in the hash table.
 c
         d = mod(1.d0*VisId,1.d0*nHash) + 1
 	idx = nint(d)
-	do while(Hashval(idx).ne.0.and.Hashval(idx).ne.VisId)        
+	do while(Hashval(idx).ne.0.and.Hashval(idx).ne.VisId)
 	  idx = idx + 1
 	enddo
 	if(idx.eq.MAXHASH)then
 	  idx = 1
-	  do while(Hashval(idx).ne.0.and.Hashval(idx).ne.VisId)        
+	  do while(Hashval(idx).ne.0.and.Hashval(idx).ne.VisId)
 	    idx = idx + 1
 	  enddo
 	  if(idx.eq.MAXHASH)
@@ -1724,7 +1725,7 @@ c
 	  enddo
 c
 c  Case of combining where a match was found.
-c 
+c
 	  if(id.gt.0)then
 	    spectn(j) = id
 	    off = nint((sfreq(j) - sfreq(id))/sdf(id))
@@ -1737,7 +1738,7 @@ c
 		if(spectn(i).eq.id)
      *		  chanoff(i) = chanoff(i) - off
 	      enddo
-	    endif	    
+	    endif
 c
 c  Case of simply copying where no match was found but there is appropriate
 c  data.
@@ -1824,7 +1825,7 @@ c
 	if(k.ne.nvi)call bug('f','Something screwy in Squeeze routine')
 c
 	end
-        
+
 c************************************************************************
 	subroutine pbranges(maxsoln,nsoln,time,interval,npsoln,Range)
 c
@@ -1848,7 +1849,7 @@ c------------------------------------------------------------------------
         double precision tfirst
 c
 c  Now determine passband solution intervals
-c       
+c
         npsoln=1
         if (interval(3).lt.interval(1)) then
           Range(1,1)=1
@@ -1924,14 +1925,14 @@ c------------------------------------------------------------------------
 	double precision VisId
 c
 	VisId = VID - 1
-        spect = mod(VisId,3.d0*MAXWIN)
+        spect = int(mod(VisId,3.d0*MAXWIN))
         VisId = VisId/(3*MAXWIN)
-	p     = mod(VisId,1.d0*MAXPOL)
+	p     = int(mod(VisId,1.d0*MAXPOL))
 	VisId = VisId/MAXPOL
-	i2    = mod(VisId,1.d0*MAXANT)
+	i2    = int(mod(VisId,1.d0*MAXANT))
 	VisId = VisId/MAXANT
-	i1    = mod(VisId,1.d0*MAXANT)
-        chan  = VisId/MAXANT
+	i1    = int(mod(VisId,1.d0*MAXANT))
+        chan  = int(VisId/MAXANT)
 c
 	i1 = i1 + 1
 	i2 = i2 + 1
@@ -2383,7 +2384,7 @@ c
 	do k=1,nsoln
 	  do i=1,nants
 c
-c  Solve for the delay term. Use a simple linear approach. 
+c  Solve for the delay term. Use a simple linear approach.
 c
 	    if(dodelay)then
 	      SumF = 0
@@ -2395,7 +2396,7 @@ c
 	        do j=1,nspect
 		  V = WGains(i,j,p,k)
 		  if(abs(real(V))+abs(aimag(V)).gt.0)then
-		    f = freq(j)
+		    f = real(freq(j))
 		    temp = V / (WPass(i,j,p) * Gains(i,p,k))
 		    theta = atan2(aimag(temp),real(temp))
      *    			  - 2*pi*Tau(i,k)*f
@@ -2429,7 +2430,7 @@ c
 	      do j=1,nspect
 		V = WGains(i,j,p,k)
 		if(abs(real(V))+abs(aimag(V)).gt.0)then
-		  theta = 2*pi * Tau(i,k) * freq(j)
+		  theta = 2*pi * Tau(i,k) * real(freq(j))
 		  M = WPass(i,j,p) * cmplx(cos(theta),sin(theta))
 		  SumVM = SumVM + V*conjg(M)
 		  SumMM = SumMM + real(M)**2 + aimag(M)**2
@@ -2506,7 +2507,7 @@ c
 	      do i=1,nants
 	        g = WGains(i,j,p,k)
 	        if(abs(real(g))+abs(aimag(g)).gt.0)then
-		  theta = 2*pi * freq(j) * Tau(i,k)
+		  theta = 2*pi * real(freq(j)) * Tau(i,k)
 		  V = Gains(i,p,k) * cmplx(cos(theta),sin(theta))
 		  SumVM(i,j,p) = SumVM(i,j,p) + g*conjg(V)
 		  SumMM(i,j,p) = SumMM(i,j,p) + real(V)**2 + aimag(V)**2
@@ -2568,7 +2569,7 @@ c    Pass	Pass band.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
         include 'mem.h'
-	integer pSumVM,pSumMM
+	ptrdiff pSumVM,pSumMM
 	real epsi
 	integer nbl,off,i,p,k
 c
@@ -2576,8 +2577,8 @@ c
 c
 c  Allocate memory.
 c
-	call MemAlloc(pSumVM,nbl*nchan*npol,'c')
-	call MemAlloc(pSumMM,nbl*nchan*npol,'r')
+	call memAlloc(pSumVM,nbl*nchan*npol,'c')
+	call memAlloc(pSumMM,nbl*nchan*npol,'r')
 
         do k=1,npsoln
 
@@ -2602,8 +2603,8 @@ c
 c
 c  Free up the allocated memory.
 c
-	call MemFree(pSumVM,nbl*nchan*npol,'c')
-	call MemFree(pSumMM,nbl*nchan*npol,'r')
+	call memFree(pSumVM,nbl*nchan*npol,'c')
+	call memFree(pSumMM,nbl*nchan*npol,'r')
 	end
 c************************************************************************
 	subroutine Solve(nants,nbl,SumVM,SumMM,Gains,
@@ -2690,7 +2691,7 @@ c
 	  else
 	    ref = 1
 	  endif
-c	
+c
 	  do i=1,nants
 	    if(Idx(i).gt.0)then
 	      Gains(i) = ref * G(Idx(i))
@@ -2812,7 +2813,7 @@ c
 	SumRMM = 0
 	do i=1,nbl
 	  t = conjg(Gain(b1(i))) * Gain(b2(i))
-	  SumRVM = SumRVM + t*SumVM(i)
+	  SumRVM = real(SumRVM + t*SumVM(i))
 	  SumRMM = SumRMM + (real(t)**2 + aimag(t)**2) * SumMM(i)
 	enddo
 	Factor = sqrt(abs(SumRVM / SumRMM))
@@ -2963,12 +2964,13 @@ c
 	    V = Vis(off)
 	    W = Wt(off)
 c
-	    theta = 2*pi* freq(chan) * ( Tau(i1,j) - Tau(i2,j) )
+	    theta = 2*pi* real(freq(chan)) * ( Tau(i1,j) - Tau(i2,j) )
 	    Model = Source(chan)*Gains(i1,p,j)*conjg(Gains(i2,p,j))
      *		  * cmplx(cos(theta),sin(theta))
 	    bl = (i2-1)*(i2-2)/2 + i1
 	    SumVM(bl,chan,p) = SumVM(bl,chan,p) + V*conjg(Model)
-	    SumMM(bl,chan,p) = SumMM(bl,chan,p) + W*Model*conjg(Model)
+	    SumMM(bl,chan,p) = SumMM(bl,chan,p) +
+     *        real(W*Model*conjg(Model))
 	  enddo
 	enddo
 	end
@@ -3015,7 +3017,7 @@ c
 c  Find the passband solution index for the given gain solution index
 c
         integer j
-c        
+c
         do j=1,npsoln
           if (i.ge.Range(1,j).and.i.le.Range(2,j)) then
             findPass = j
@@ -3025,8 +3027,8 @@ c
         findPass = 1
         return
         end
-        
-              
+
+
 c************************************************************************
 	subroutine SolveGT1(refant,nants,nspect,nchan,npol,
      *	  Pass,Source,freq,Dat,Wt,VID,ischan,n,Gains,Tau,tol)
@@ -3071,7 +3073,7 @@ c
 c  Scratch arrays for the least squares solver.
 c
 	real x(MAXVAR),dx(MAXVAR),W
-	integer dfdx,aa,f,fp
+	ptrdiff dfdx,aa,f,fp
 c
 c  Externals.
 c
@@ -3117,7 +3119,7 @@ c
 	  b2(i) = Idx(i2,p)
 	  t1(i) = TIdx(i1)
 	  t2(i) = TIdx(i2)
-	  angfreq(i) = 2*pi*freq(chan)
+	  angfreq(i) = 2*pi*real(freq(chan))
 	  W = sqrt(Wt(i))
 	  Model(i) = W * Source(chan) *
      *			Pass(i1,chan,p) * conjg(Pass(i2,chan,p))
@@ -3153,10 +3155,10 @@ c
 c
 c  Allocate memory for scratch arrays.
 c
-	call memalloc(dfdx,neqn*nvar,'r')
-	call memalloc(aa,nvar*nvar,'r')
-	call memalloc(f,neqn,'r')
-	call memalloc(fp,neqn,'r')
+	call memAlloc(dfdx,neqn*nvar,'r')
+	call memAlloc(aa,nvar*nvar,'r')
+	call memAlloc(f,neqn,'r')
+	call memAlloc(fp,neqn,'r')
 c
 c  Call the solver at last.
 c
@@ -3167,10 +3169,10 @@ c
 c
 c  Free up the memory now.
 c
-	call memfree(fp,neqn,'r')
-	call memfree(f,neqn,'r')
-	call memfree(aa,nvar*nvar,'r')
-	call memfree(dfdx,neqn*nvar,'r')
+	call memFree(fp,neqn,'r')
+	call memFree(f,neqn,'r')
+	call memFree(aa,nvar*nvar,'r')
+	call memFree(dfdx,neqn*nvar,'r')
 c
 c  Now unpack the solution.
 c
@@ -3202,7 +3204,7 @@ c------------------------------------------------------------------------
 	complex temp
 	real theta
 c
-c  Fudge equations to ensure that the phase and delay of the reference antenna 
+c  Fudge equations to ensure that the phase and delay of the reference antenna
 c  is 0.
 c
 	do i=1,nzero
@@ -3348,7 +3350,7 @@ c
 	  call Solve(nants,nbl,SumVM(1,p),SumMM(1,p),
      *	      Gains(1,p),refant,minant,tol*tol,epsi,.false.)
 	enddo
-	
+
 	end
 c************************************************************************
 	subroutine intext(npol,nants,nchan,nspect,nschan,npsoln,Pass)
@@ -3462,7 +3464,7 @@ c
 		    Pass(k,i+ischan,l,m) = cmplx(
      *		      rcoeff(1) + (rcoeff(2) + rcoeff(3)*x)*x ,
      *		    icoeff(1) + (icoeff(2) + icoeff(3)*x)*x )
-		  enddo 
+		  enddo
 	        enddo
 c
 	        ischan = ischan + nschan(j)

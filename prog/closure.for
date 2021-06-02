@@ -80,7 +80,7 @@ c	  nocal     Do not perform gain calibration.
 c	  nopol     Do not perform polarisation calibration on the data.
 c	  nopass    Do not perform bandpass calibration on the data.
 c
-c$Id: closure.for,v 1.8 2013/08/30 01:49:21 wie017 Exp $
+c$Id: closure.for,v 1.9 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  History:
 c    rjs   7sep94 Original version.
@@ -110,7 +110,8 @@ c
 	logical avall,notrip,doamp,doerr,quad,dolog
 	character uvflags*16,device*64,version*72
 	real interval,yrange(2)
-	integer nx,ny,nread,i,j,mpnts,mplots,tno,pnt1,pnt2
+	integer nx,ny,nread,i,j,mpnts,mplots,tno
+	ptrdiff pnt1,pnt2
 	integer npol,polcvt(PolMin:PolMax),p,ant1,ant2,nants,bl
 	double precision preamble(4),time0,t,tmin,tmax,tprev
 	logical first,more,doii
@@ -133,7 +134,7 @@ c
 c
 c  Integration buffers.
 c
-	integer corrpnt(MAXBASE,MAXPOL),flagpnt(MAXBASE,MAXPOL)
+	ptrdiff corrpnt(MAXBASE,MAXPOL),flagpnt(MAXBASE,MAXPOL)
 	integer nchan(MAXBASE,MAXPOL)
 	logical init(MAXBASE,MAXPOL)
 	real sigma2(MAXBASE,MAXPOL)
@@ -144,8 +145,8 @@ c
 	character versan*72
 c-----------------------------------------------------------------------
       version = versan ('closure',
-     :                  '$Revision: 1.8 $',
-     :                  '$Date: 2013/08/30 01:49:21 $')
+     :                  '$Revision: 1.9 $',
+     :                  '$Date: 2021/06/02 04:45:09 $')
 c
 c Lets go! Get user inputs.
 c
@@ -419,7 +420,7 @@ c------------------------------------------------------------------------
 	include 'mirconst.h'
 	real amp
 c
-	x = 24*3600*time/n
+	x = real(24*3600*time/n)
 c
 	amp = abs(trip/n)
 	if(quad)then
@@ -457,7 +458,7 @@ c************************************************************************
 c
 	integer nants,npol,maxbase,maxpol,maxtrip
 	double precision time,triptime(maxtrip)
-	integer CorrPnt(maxbase,maxpol),FlagPnt(maxbase,maxpol)
+	ptrdiff CorrPnt(maxbase,maxpol),FlagPnt(maxbase,maxpol)
 	integer ntrip(maxtrip),nchan(maxbase,maxpol)
 	logical quad,avall,init(maxbase,maxpol),Flags(*)
 	real sigma2(maxbase,maxpol),tripsig2(maxtrip)
@@ -465,8 +466,8 @@ c
 c------------------------------------------------------------------------
 	real flux
 	integer p,i4,i3,i2,i1,bl12,bl13,bl23,bl14,bl34,k,i,nread
-	integer pflag12,pflag13,pflag23,pdata12,pdata23,pdata13
-	integer pflag14,pflag34,        pdata14,pdata34
+	ptrdiff pflag12,pflag13,pflag23,pdata12,pdata23,pdata13
+	ptrdiff pflag14,pflag34,        pdata14,pdata34
 	complex denom
 c
 	do p=1,npol

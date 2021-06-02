@@ -138,7 +138,7 @@ c       nosrc   Do not cause a break in the display when the source
 c               changes. Normally TVFLAG puts a gap in the display
 c               whenever the source changes.
 c
-c$Id: tvflag.for,v 1.10 2018/12/05 00:17:10 wie017 Exp $
+c$Id: tvflag.for,v 1.11 2021/06/02 04:45:09 wie017 Exp $
 c--
 c
 c  History:
@@ -269,8 +269,8 @@ c-----------------------------------------------------------------------
 c  Announce program.
 c
       version = versan ('tvflag',
-     :                  '$Revision: 1.10 $',
-     :                  '$Date: 2018/12/05 00:17:10 $')
+     :                  '$Revision: 1.11 $',
+     :                  '$Date: 2021/06/02 04:45:09 $')
 c-----------------------------------------------------------------------
 c  Use the key routines to get the user input parameters.
 c
@@ -385,7 +385,7 @@ c
 	call HisInput(Lin,PROG)
 	call UvRewind(Lin)
       if (nchan .ge. 0 .and. chanw.ne. 1) call UvSet(Lin,'data',Line,
-     *	chanw*nchan,real(chanoff+1),1.0,1.0)
+     *	chanw*nchan,dble(chanoff+1),1.d0,1.d0)
 	call doFlag(Lin,edits,MAXBASE,day0,times,chans,flagval,
      *    nedit,chanoff,chanw)
 	call HisClose(Lin)
@@ -465,7 +465,7 @@ c-----------------------------------------------------------------------
 	real t1(MAXTIME),t2(MAXTIME)
 	integer ntime,nbased,nchan,iret,nbl,nbld,nvis,nout,bl
 	integer nstep,npass
-	integer iDat,iFlg,iDato,iFlgo
+	ptrdiff iDat,iFlg,iDato,iFlgo
 	logical blpres(MAXBASE)
 	integer bl2idx(MAXBASE),idx2bl(MAXBASE),trevidx(2,MAXTREV)
 	integer idx1(MAXTIME2),idx2(MAXTIME2)
@@ -728,7 +728,7 @@ c
 	  call scrread(lScr,buf,offset,length)
 	  offset = offset + length
 	  bl = nint(buf(1))
-	  t = buf(2) + (dble(buf(3)) - day0)
+	  t = buf(2) + real(dble(buf(3)) - day0)
 	  bl = bl2idx(bl)
 	  if(bl.gt.0)then
 	    do pnt = 1, ntime
@@ -1066,14 +1066,14 @@ c
 	dowhile(nread.eq.nchan)
 	  call basant(preamble(4),ant1,ant2)
 	  bl = ((ant2-1)*ant2)/2 + ant1
-	  t = preamble(3) - day0
+	  t = real(preamble(3) - day0)
 	  if(t.lt.0)then
 	    day1 = nint(preamble(3)-1) + 0.5d0
 	    do i=1,ntime
-	      if(time(i).gt.-1)time(i) = time(i) + day0 - day1
+	      if(time(i).gt.-1)time(i) = time(i) + real(day0 - day1)
 	    enddo
-	    tprev = tprev + day0 - day1
-	    t = t + day0 - day1
+	    tprev = tprev + real(day0 - day1)
+	    t = t + real(day0 - day1)
 	    day0 = day1
 	  endif
 	  if(bl.gt.0.and.bl.lt.nbase)then
@@ -1102,7 +1102,7 @@ c  Write the data to a scratch file (if one exists).
 c
 	    buf(1) = bl
 	    buf(2) = t
-	    buf(3) = day0
+	    buf(3) = real(day0)
 	    i0 = 3
 	    do i=1,nchan
 	      buf(i0+1) = ctoapri(data(i), apri)
@@ -1125,7 +1125,7 @@ c
 	if(time(ntime).lt.-1) ntime = ntime - 1
 	if(ntime.eq.0)call bug('f','No data found')
 c
-	nvis = offset / length
+	nvis = int(offset / length)
 c
 	end
 c***********************************************************************
@@ -1274,7 +1274,7 @@ c-----------------------------------------------------------------------
 	integer isave(5),chan1,chan2
 	complex data(MAXCHAN)
 	logical flags(MAXCHAN),flagged
-	real t, t2
+	real t, t1(1), t2(1)
 	double precision preamble(4)
 c
 	integer Len1
@@ -1287,9 +1287,9 @@ c
 	    isave(4) = chans(2, j)
 	    isave(5) = 0
 	    if (flagval(j)) isave(5) = 1
-	    t = times(1, j)
-	    t2 = times(2, j)
-	    call FmtCmd(string, isave, t, t2, 1, chanoff,chanw)
+	    t1(1) = times(1, j)
+	    t2(1) = times(2, j)
+	    call FmtCmd(string, isave, t1, t2, 1, chanoff,chanw)
 	    i = Len1(string)
 	    if (i .gt. 0) call HisWrite(Lin, 'TVFLAG: '//string(:i))
 	  enddo
@@ -1297,7 +1297,7 @@ c
 c
 	call uvread(Lin,preamble,data,flags,MAXCHAN,nchan)
 	dowhile(nchan.gt.0)
-	  t = preamble(3) - day0
+	  t = real(preamble(3) - day0)
 	  flagged = .false.
 	  call basant(preamble(4),ant1,ant2)
 	  bl = ((ant2-1)*ant2)/2 + ant1

@@ -135,7 +135,7 @@ c         velocity=lsr
 c       indicates that fits is to determine the observatory velocity
 c       wrt the LSR frame using an appropriate model.
 c
-c$Id: fits.for,v 1.34 2019/08/04 23:07:40 wie017 Exp $
+c$Id: fits.for,v 1.35 2021/06/02 04:45:09 wie017 Exp $
 c--
 c
 c  Bugs:
@@ -174,8 +174,8 @@ c-----------------------------------------------------------------------
       character versan*72
 c-----------------------------------------------------------------------
       version = versan('fits',
-     *                 '$Revision: 1.34 $',
-     *                 '$Date: 2019/08/04 23:07:40 $')
+     *                 '$Revision: 1.35 $',
+     *                 '$Date: 2021/06/02 04:45:09 $')
 c
 c  Get the input parameters.
 c
@@ -891,7 +891,7 @@ c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mem.h'
       integer nants,nbl,ntab,npol,nif
-      integer pBlTab
+      ptrdiff pBlTab
       common/blcomm/pBlTab,nants,nbl,ntab,npol,nif
 c-----------------------------------------------------------------------
 c     Look for BL tables.
@@ -962,11 +962,11 @@ c  Loop over all the rows in the FITS table.
 c
       warn = .false.
       do i = 1, nrows
-        call ftabGeti(lIn,'ANTENNA1',i,ant1)
-        call ftabGeti(lIn,'ANTENNA2',i,ant2)
-        call ftabGeti(lIn,'FREQ ID',i,fid)
-        call ftabGeti(lIn,'SOURCE ID',i,sid)
-        call ftabGeti(lIn,'SUBARRAY',i,config)
+        call ftabGeti1(lIn,'ANTENNA1',i,ant1)
+        call ftabGeti1(lIn,'ANTENNA2',i,ant2)
+        call ftabGeti1(lIn,'FREQ ID',i,fid)
+        call ftabGeti1(lIn,'SOURCE ID',i,sid)
+        call ftabGeti1(lIn,'SUBARRAY',i,config)
         if (.not.warn .and.
      *     (fid.ne.1 .or. sid.ne.1 .or. config.ne.1)) then
           warn = .true.
@@ -1019,7 +1019,7 @@ c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mem.h'
       integer nants,nbl,ntab,npol,nif
-      integer pBlTab
+      ptrdiff pBlTab
       common/blcomm/pBlTab,nants,nbl,ntab,npol,nif
 c-----------------------------------------------------------------------
       if (min(ant1,ant2).lt.1 .or. max(ant1,ant2).gt.nants) return
@@ -1075,7 +1075,7 @@ c***********************************************************************
 
 c-----------------------------------------------------------------------
       integer nants,nbl,ntab,npol,nif
-      integer pBlTab
+      ptrdiff pBlTab
       common/blcomm/pBlTab,nants,nbl,ntab,npol,nif
 c-----------------------------------------------------------------------
       if (ntab.ne.0) call memFree(pBlTab,ntab,'c')
@@ -1144,7 +1144,7 @@ c-----------------------------------------------------------------------
 
       character type*1,units*16
       integer nrows,nval
-      integer pSrc,pSub,pAnts,pTime,pIfs,pChans,pFreq
+      ptrdiff pSrc,pSub,pAnts,pTime,pIfs,pChans,pFreq
 c-----------------------------------------------------------------------
       call ftabInfo(lIn,'SOURCE',type,units,nrows,nval)
       if (nrows.le.0 .or. nval.ne.1 .or. type.ne.'I') then
@@ -1282,7 +1282,8 @@ c***********************************************************************
 
       subroutine FgGeti(lIn,pnt,name,nx,ny)
 
-      integer pnt,nx,ny,lIn
+      ptrdiff pnt
+      integer nx,ny,lIn
       character name*(*)
 c-----------------------------------------------------------------------
 c  Check whether something is in the flagging table.  If so get it.  If
@@ -1291,7 +1292,8 @@ c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mem.h'
 
-      integer nrow,nval,i
+      integer nrow,nval
+      ptrdiff i
       character type*1,units*24
 c-----------------------------------------------------------------------
       call MemAlloc(pnt,nx*ny,'i')
@@ -1312,7 +1314,8 @@ c***********************************************************************
 
       subroutine FgGetr(lIn,pnt,name,nx,ny)
 
-      integer pnt,nx,ny,lIn
+      ptrdiff pnt
+      integer nx,ny,lIn
       character name*(*)
 c-----------------------------------------------------------------------
 c  Check whether something is in the flagging table.  If so get it.  If
@@ -1320,7 +1323,8 @@ c  not set default values to 0.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mem.h'
-      integer nrow,nval,i
+      integer nrow,nval
+      ptrdiff i
       character type*1,units*24
 c-----------------------------------------------------------------------
       call MemAlloc(pnt,nx*ny,'r')
@@ -1516,7 +1520,7 @@ c  Set default values for reference freq, lat, long, mount, evector.
 c  Also determine the only values for systemp and jyperk.
 c
       call telpar(telescop,systemp,systok,jyperk,jok,
-     *  llok,lat,long,height,emok,evec,mount)
+     *  llok,lat(1),long(1),height(1),emok,evec,mount(1))
       if (.not.emok .and. dochi) call bug('w',
      *  'Insufficient information to determine parallactic angle')
       emok = emok .and. dochi
@@ -2386,8 +2390,8 @@ c-----------------------------------------------------------------------
         ischan(i) = nchan*(i-1) + 1
         nschan(i) = nchan
       enddo
-      call uvputvri(tno,'ischan',ischan,nif)
-      call uvputvri(tno,'nschan',nschan,nif)
+      call uvputvri(tno,'ischan',ischan(1),nif)
+      call uvputvri(tno,'nschan',nschan(1),nif)
 
       if (systok) call uvputvrr(tno,'systemp',systemp,1)
       if (jok)   call uvputvrr(tno,'jyperk',jyperk,1)
@@ -3171,25 +3175,25 @@ c-----------------------------------------------------------------------
       call fitwrhda(tOut,'VELDEF','RADIO')
 
       do i = 1, nSrc
-        call ftabputi(tOut,'ID. NO.',  i,i)
+        call ftabputi1(tOut,'ID. NO.',  i,i)
         call ftabputa(tOut,'SOURCE',   i,sources(i))
-        call ftabputi(tOut,'QUAL',     i,0)
+        call ftabputi1(tOut,'QUAL',     i,0)
         call ftabputa(tOut,'CALCODE',  i,'    ')
-        call ftabputr(tOut,'IFLUX',    i,0.0)
-        call ftabputr(tOut,'QFLUX',    i,0.0)
-        call ftabputr(tOut,'UFLUX',    i,0.0)
-        call ftabputr(tOut,'VFLUX',    i,0.0)
-        call ftabputd(tOut,'FREQOFF',  i,0d0)
-        call ftabputd(tOut,'BANDWIDTH',i,df)
-        call ftabputd(tOut,'RAEPO',    i,ras(i)*DR2D)
-        call ftabputd(tOut,'DECEPO',   i,decs(i)*DR2D)
-        call ftabputd(tOut,'EPOCH',    i,dble(epoch))
-        call ftabputd(tOut,'RAAPP',    i,aras(i)*DR2D)
-        call ftabputd(tOut,'DECAPP',   i,adecs(i)*DR2D)
-        call ftabputd(tOut,'LSRVEL',   i,v0)
-        call ftabputd(tOut,'RESTFREQ', i,restfreq)
-        call ftabputd(tOut,'PMRA',     i,0d0)
-        call ftabputd(tOut,'PMDEC',    i,0d0)
+        call ftabputr1(tOut,'IFLUX',    i,0.0)
+        call ftabputr1(tOut,'QFLUX',    i,0.0)
+        call ftabputr1(tOut,'UFLUX',    i,0.0)
+        call ftabputr1(tOut,'VFLUX',    i,0.0)
+        call ftabputd1(tOut,'FREQOFF',  i,0d0)
+        call ftabputd1(tOut,'BANDWIDTH',i,df)
+        call ftabputd1(tOut,'RAEPO',    i,ras(i)*DR2D)
+        call ftabputd1(tOut,'DECEPO',   i,decs(i)*DR2D)
+        call ftabputd1(tOut,'EPOCH',    i,dble(epoch))
+        call ftabputd1(tOut,'RAAPP',    i,aras(i)*DR2D)
+        call ftabputd1(tOut,'DECAPP',   i,adecs(i)*DR2D)
+        call ftabputd1(tOut,'LSRVEL',   i,v0)
+        call ftabputd1(tOut,'RESTFREQ', i,restfreq)
+        call ftabputd1(tOut,'PMRA',     i,0d0)
+        call ftabputd1(tOut,'PMDEC',    i,0d0)
       enddo
 
       end
@@ -3293,16 +3297,16 @@ c
           xyzd(3) = DCMKS*1d-9*xyz(i,3) + xyzc(3)
 	endif
         call ftabputd(tOut,'STABXYZ',i,xyzd)
-        call ftabputi(tOut,'NOSTA',  i,i)
-        call ftabputi(tOut,'MNTSTA', i,mount)
-        call ftabputr(tOut,'STAXOF', i,0.0)
+        call ftabputi1(tOut,'NOSTA',  i,i)
+        call ftabputi1(tOut,'MNTSTA', i,mount)
+        call ftabputr(tOut,'STAXOF', i,zero)
         call ftabputa(tOut,'POLTYA', i,polty(1:1))
         if (telescop.eq.'ATCA') then
-           call ftabputr(tOut,'POLAA',  i, 45.0)
-           call ftabputr(tOut,'POLAB',  i, 135.0)
+           call ftabputr1(tOut,'POLAA',  i, 45.0)
+           call ftabputr1(tOut,'POLAB',  i, 135.0)
         else
-           call ftabputr(tOut,'POLAA',  i, 0.0)
-           call ftabputr(tOut,'POLAB',  i, 0.0)
+           call ftabputr1(tOut,'POLAA',  i, 0.0)
+           call ftabputr1(tOut,'POLAB',  i, 0.0)
         endif
         call ftabputr(tOut,'POLCALA',i,zero)
         call ftabputa(tOut,'POLTYB', i,polty(2:2))
@@ -4382,7 +4386,8 @@ c-----------------------------------------------------------------------
       logical   doflag, done
       integer   inPlane(maxnax), nOut(MAXNAX), outPlane(maxnax),
      *          blc(maxnax), i, j, j0, lIn, lOut, naxis, nsize(MAXNAX),
-     *          one(maxnax), pArray, pFlags, trc(maxnax)
+     *          one(maxnax),trc(maxnax)
+      ptrdiff   pArray, pFlags
       character string*64
 
       external  fitBlank, hdprsnt
@@ -4440,7 +4445,7 @@ c     Initialise the plane indices.
           endif
           j0 = j0 + 1
         enddo
-        call planeInc(maxnax-2,1,blc(3),trc(3),inPlane,done)
+        call planeInc(maxnax-2,one,blc(3),trc(3),inPlane,done)
         call planeInc(maxnax-2,one,one,nOut(3),outPlane,done)
       enddo
 

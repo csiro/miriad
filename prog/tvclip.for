@@ -175,7 +175,7 @@ c
 c< select
 c     NOTE: The default is to use all visibilities.
 c
-c$Id: tvclip.for,v 1.12 2018/12/05 00:17:10 wie017 Exp $
+c$Id: tvclip.for,v 1.13 2021/06/02 04:45:09 wie017 Exp $
 c--
 c
 c  History:
@@ -308,8 +308,8 @@ c-----------------------------------------------------------------------
 c  Announce program.
 c
       version = versan ('tvclip',
-     :                  '$Revision: 1.12 $',
-     :                  '$Date: 2018/12/05 00:17:10 $')
+     :                  '$Revision: 1.13 $',
+     :                  '$Date: 2021/06/02 04:45:09 $')
 c-----------------------------------------------------------------------
 c  Use the key routines to get the user input parameters.
 c
@@ -386,7 +386,7 @@ c
         msglen = Len1(errmsg)
         call Bug('f', errmsg(1:msglen))
       endif
-      amp = max(width, step)
+      amp = real(max(width, step))
       if (amp .ne. 1.0) then
         errmsg = PROG // 'Maximum width and step must be 1.'
         msglen = Len1(errmsg)
@@ -551,7 +551,7 @@ c-----------------------------------------------------------------------
 	real t1(MAXTIME),t2(MAXTIME)
 	integer ntime,nbased,nchan,iret,nbl,nbld,nvis,nout,bl
 	integer nstep,npass
-	integer iDat,iFlg,iDato,iFlgo
+	ptrdiff iDat,iFlg,iDato,iFlgo
 	logical blpres(MAXBASE)
 	integer bl2idx(MAXBASE),idx2bl(MAXBASE),trevidx(2,MAXTREV)
 	integer idx1(MAXTIME2),idx2(MAXTIME2)
@@ -835,7 +835,7 @@ c
 	  call scrread(lScr,buf,offset,length)
 	  offset = offset + length
 	  bl = nint(buf(1))
-	  t = buf(2) + (dble(buf(3)) - day0)
+	  t = buf(2) + real((dble(buf(3)) - day0))
 	  bl = bl2idx(bl)
 	  if(bl.gt.0)then
 	    do pnt = 1, ntime
@@ -1147,8 +1147,8 @@ c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	logical flags(MAXCHAN),newsrc
 	complex data(MAXCHAN)
-	double precision preamble(4),line(6),day1
-	real buf(2*MAXCHAN+3),t,tprev
+	double precision preamble(4),line(6),day1, t, tprev
+	real buf(2*MAXCHAN+3)
 	logical torder
 	integer vsrc,nread,length,ant1,ant2,i,bl,i0
         ptrdiff offset
@@ -1182,11 +1182,11 @@ c
 	dowhile(nread.eq.nchan)
 	  call basant(preamble(4),ant1,ant2)
 	  bl = ((ant2-1)*ant2)/2 + ant1
-	  t = preamble(3) - day0
+	  t = real(preamble(3) - day0)
 	  if(t.lt.0)then
 	    day1 = nint(preamble(3)-1) + 0.5d0
 	    do i=1,ntime
-	      if(time(i).gt.-1)time(i) = time(i) + day0 - day1
+	      if(time(i).gt.-1)time(i) = time(i) + real(day0 - day1)
 	    enddo
 	    tprev = tprev + day0 - day1
 	    t = t + day0 - day1
@@ -1209,7 +1209,7 @@ c
 	      endif
 	      if(ntime.ge.MAXTIME)call bug('f','Too many times for me')
 	      ntime = ntime + 1
-	      time(ntime) = t
+	      time(ntime) = real(t)
 	      tprev = t
 	    endif
 	    blpres(bl) = .true.
@@ -1217,8 +1217,8 @@ c
 c  Write the data to a scratch file (if one exists).
 c
 	    buf(1) = bl
-	    buf(2) = t
-	    buf(3) = day0
+	    buf(2) = real(t)
+	    buf(3) = real(day0)
 	    i0 = 3
 	    do i=1,nchan
 	      buf(i0+1) = ctoapri(data(i), apri)
@@ -1241,7 +1241,7 @@ c
 	if(time(ntime).lt.-1) ntime = ntime - 1
 	if(ntime.eq.0)call bug('f','No data found')
 c
-	nvis = offset / length
+	nvis = int(offset / length)
 c
 	end
 c***********************************************************************
@@ -1389,7 +1389,7 @@ c-----------------------------------------------------------------------
 c
 	call uvread(Lin,preamble,data,flags,MAXCHAN,nchan)
 	dowhile(nchan.gt.0)
-	  t = preamble(3) - day0
+	  t = real(preamble(3) - day0)
 	  flagged = .false.
 	  call basant(preamble(4),ant1,ant2)
 	  bl = ((ant2-1)*ant2)/2 + ant1
@@ -2247,7 +2247,7 @@ c
         call Clip(array,iflag,Mx,Nx,Ny,SumoverX,SumoverY,
      *		NoverX,NoverY,isave,changes,x0,y0,
      *          bmin,bmax,chan,
-     *		t1,t2,chanoff,cliplev, notime, nochan, nopixel, notv)
+     *		t1,cliplev, notime, nochan, nopixel, notv)
 c
 c  List all changes made to this baseline.
 c
@@ -2615,13 +2615,13 @@ c
 c***********************************************************************
 	subroutine Clip(array,iflag,Mx,Nx,Ny,SumoverX,SumoverY,
      *		NoverX,NoverY,isave,changes,x0,y0,bmin,bmax,chan,
-     *		t1,t2,chanoff,cliplev, notime, nochan, nopixel, notv)
+     *		t1,cliplev, notime, nochan, nopixel, notv)
 c
 	integer Mx, Nx, Ny
 	real array(Mx,Ny),SumoverX(Ny),SumoverY(Nx)
-	real bmin,bmax,t1(Ny), t2(Ny), avdev, cliplev
+	real bmin,bmax,t1(Ny), avdev, cliplev
 	integer iflag(Mx,Ny),NoverX(Ny),NoverY(Nx),isave(5,*)
-	integer x0,y0,chan,chanoff, count, changes
+	integer x0,y0,chan, count, changes
         logical  notime, nochan, nopixel, notv
 c
 c  Apply a clip operation to the data, recompute the wedges,

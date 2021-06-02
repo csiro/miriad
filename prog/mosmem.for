@@ -135,7 +135,7 @@ c         verbose    Give lots of messages during the iterations.  The
 c                    default is to give a one line message at each
 c                    iteration.
 c
-c$Id: mosmem.for,v 1.9 2018/11/29 23:30:11 wie017 Exp $
+c$Id: mosmem.for,v 1.10 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  History:
 c    rjs  23nov94  Adapted from MAXEN.
@@ -208,8 +208,8 @@ c-----------------------------------------------------------------------
       external  hdprsnt, itoaf, len1, versan
 c-----------------------------------------------------------------------
       version = versan('mosmem',
-     *                 '$Revision: 1.9 $',
-     *                 '$Date: 2018/11/29 23:30:11 $')
+     *                 '$Revision: 1.10 $',
+     *                 '$Date: 2021/06/02 04:45:09 $')
 c
 c  Get and check the input parameters.
 c
@@ -715,18 +715,18 @@ c
 c  Release memory.
 c
       if (maxPoint.le.0) call bug('f','No data deconvolved')
-      call memFrep(pEst,maxPoint,'r')
-      call memFrep(pDef,maxPoint,'r')
-      call memFrep(pNewEst,maxPoint,'r')
-      call memFrep(pMapa,maxPoint,'r')
-      call memFrep(pWta,maxPoint,'r')
-      call memFrep(pResa,maxPoint,'r')
-      call memFrep(pNewResa,maxPoint,'r')
+      call memFrex(pEst,maxPoint,'r')
+      call memFrex(pDef,maxPoint,'r')
+      call memFrex(pNewEst,maxPoint,'r')
+      call memFrex(pMapa,maxPoint,'r')
+      call memFrex(pWta,maxPoint,'r')
+      call memFrex(pResa,maxPoint,'r')
+      call memFrex(pNewResa,maxPoint,'r')
       if (dosingle) then
-        call memFrep(pMapb,maxPoint,'r')
-        call memFrep(pWtb,maxPoint,'r')
-        call memFrep(pResb,maxPoint,'r')
-        call memFrep(pNewResb,maxPoint,'r')
+        call memFrex(pMapb,maxPoint,'r')
+        call memFrex(pWtb,maxPoint,'r')
+        call memFrex(pResb,maxPoint,'r')
+        call memFrex(pNewResb,maxPoint,'r')
       endif
 c
 c  Thats all folks.

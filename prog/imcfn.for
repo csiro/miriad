@@ -98,7 +98,7 @@ c       a plot device but not an output or beam image if you just
 c       want to see the plots but don't want to spend ages computing
 c       the beam integral.
 c
-c$Id: imcfn.for,v 1.8 2013/08/30 01:49:21 wie017 Exp $
+c$Id: imcfn.for,v 1.9 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  History:
 c    nebk 13sep95 Original version
@@ -113,8 +113,9 @@ c-----------------------------------------------------------------------
       integer   MAXPC, MAXPTS
       parameter (MAXPC = 6, MAXPTS = 10000)
 
-      integer   i, iAxLen(MAXNAX), ierr, ip, ipi, ipo, j, li, lo,
+      integer   i, iAxLen(MAXNAX), ierr,  j, li, lo,
      *          naxisi, nc, oAxLen(MAXNAX)
+      ptrdiff   ip, ipi, ipo
       real      xmax, xmin, xx(MAXPTS), ymax, ymax2, ymin, ymin2,
      *          yy(MAXPTS), yy2(MAXPTS)
       double precision a, b, c(MAXPC), cdelti(MAXNAX), crpixi(MAXNAX),
@@ -133,8 +134,8 @@ c-----------------------------------------------------------------------
       data ymin2, ymax2 /1e30, -1e30/
 c-----------------------------------------------------------------------
       version = versan('imcfn',
-     *                 '$Revision: 1.8 $',
-     *                 '$Date: 2013/08/30 01:49:21 $')
+     *                 '$Revision: 1.9 $',
+     *                 '$Date: 2021/06/02 04:45:09 $')
 
 c     Get the inputs.
       call keyini
@@ -197,9 +198,9 @@ c       Update sum.
         sum = sum + sjy**2*n*ds
 
 c       Fill plot arrays.
-        xx(i) = s
-        yy(i) =  log10(n)
-        yy2(i) = log10(nn)
+        xx(i) = real(s)
+        yy(i) = real(log10(n))
+        yy2(i) = real(log10(nn))
         xmin  = min (xmin,xx(i))
         xmax  = max (xmax,xx(i))
         ymin  = min (ymin,yy(i))
@@ -342,12 +343,12 @@ c     Loop through output image locations.
           call output(str)
         endif
 
-        dj = j - crpix(2)
+        dj = int(j - crpix(2))
         do i = i1, i2
 
 c         Compute sum of PB and SB images for this shift.
           sum = 0.0
-          di = i - crpix(1)
+          di = int(i - crpix(1))
           do k = 1, nx*ny
             jj = k/nx
             if (mod(k,nx).ne.0) jj = jj + 1
@@ -360,7 +361,7 @@ c         Compute sum of PB and SB images for this shift.
 
 c         Fill output image as sigma in Jy.
           imax = max(imax,sum)
-          cf(i-i1+1,j-j1+1) = sqrt(ssum*sum)
+          cf(i-i1+1,j-j1+1) = real(sqrt(ssum*sum))
         enddo
       enddo
       write(line,10) imax

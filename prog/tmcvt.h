@@ -7,7 +7,8 @@ c
 	parameter(MAXPOL=4)
 	include 'maxdim.h'
 	double precision preamble(7,MAXBASE)
-	integer blmax,pntc(MAXPOL,MAXBASE),pntr(MAXPOL,MAXBASE)
+	integer blmax
+	ptrdiff pntc(MAXPOL,MAXBASE),pntr(MAXPOL,MAXBASE)
 	integer cnt(MAXBASE),nchans(MAXBASE)
 	real tints(MAXPOL,MAXBASE)
-	common/tmcvtc/preamble,blmax,pntc,pntr,cnt,nchans,tints
+	common/tmcvtc/preamble,pntc,pntr,cnt,nchans,tints,blmax

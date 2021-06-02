@@ -109,7 +109,7 @@ c
         complex gain(0:MAXFBIN),Leaks(2,MAXANT)
         real sels(MAXSELS),amph(MAXFBIN+1),phi
         logical mask(2*MAXANT)
-        integer pGains,pTimes
+        ptrdiff pGains,pTimes
         double precision freq(MAXFBIN)
 c
 c  Externals.
@@ -122,8 +122,8 @@ c
 c  Get the input parameters.
 c
         version = versan('gpedit',
-     *                   '$Revision: 1.13 $',
-     *                   '$Date: 2018/02/25 22:59:59 $')
+     *                   '$Revision: 1.14 $',
+     *                   '$Date: 2021/06/02 04:45:09 $')
         call keyini
         call keya('vis',vis,' ')
         if(vis.eq.' ')call bug('f','No input vis data-set given')
@@ -338,7 +338,7 @@ c
         if (n+2.gt.MAXSOLN) call bug('f','Too many bandpass solutions')
         if (ngains.le.0 ) call bug('f','Invalid value for ngains')
         Size0 = ngains*nchan0*n
-        call MemAllop(pGains0,Size0,'c')
+        call MemAlloc(pGains0,Size0,'c')
 
 c     Load the frequency table.
         if (doext) then
@@ -410,7 +410,7 @@ c     Figure out how much to extend the bandpass by
           endif
         endif
         Size1 = ngains*(nchan0+nlow+nhigh)*n
-        call MemAllop(pGains1,Size1,'c')
+        call MemAlloc(pGains1,Size1,'c')
         if (doext) call PassExt(memC(pGains0),memC(pGains1),nchan0,
      *      ngains,n,nlow,nhigh,dolin)
         if (dohan.or.dobox) call PassSm(memC(pGains0),memC(pGains1),
@@ -433,8 +433,8 @@ c     Figure out how much to extend the bandpass by
           if (iostat.ne.0) call bug('f','Error writing bandpass table')
         enddo
         call hdaccess(item,iostat)
-        call MemFrep(pGains1,Size1,'c')
-        call MemFrep(pGains0,Size0,'c')
+        call MemFree(pGains1,Size1,'c')
+        call MemFree(pGains0,Size0,'c')
 
 c
 c  Update the frequency table

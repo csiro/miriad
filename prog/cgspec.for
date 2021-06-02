@@ -337,7 +337,7 @@ c       XSIZ and YSIZ are the spatial half-sizes in ARCSEC over which
 c       each spectrum is spatially averaged.  These are optional and
 c       default to 0 (no binning, just a spectrum at each spatial pixel)
 c
-c$Id: cgspec.for,v 1.18 2014/08/22 01:54:42 wie017 Exp $
+c$Id: cgspec.for,v 1.19 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -377,8 +377,8 @@ c-----------------------------------------------------------------------
      *          clines(MAXCON), cnaxis(MAXCON), coltab,
      *          csize(MAXNAX,MAXCON), defwid, gnaxis, grpbeg(MAXCHAN),
      *          gsize(MAXNAX), his(NBINS), i, ibin(2), iblc, ierr, ilen,
-     *          imsp, insp, ipim, ipimb, ipnim, ipsp, iside(MAXSPEC),
-     *          ispc, iwsp, ixsp, iysp, j, jbin(2), krng(2), labcol, lb,
+     *          iside(MAXSPEC), ispc,
+     *          j, jbin(2), krng(2), labcol, lb,
      *          lc(MAXCON), lcn(MAXCON), lg, lgn, lh, ls,
      *          nblnkc(MAXCON), nblnkcs, nblnkg, ncon, ngrp(MAXCHAN),
      *          ngrps, nlevs(MAXCON), nofile, npos, npts, nspec,
@@ -386,7 +386,8 @@ c-----------------------------------------------------------------------
      *          slines(2,MAXSPEC), snaxis, srtlev(MAXLEV,MAXCON),
      *          ssize(MAXNAX), strc(MAXNAX), tflen(0:2), trc(3),
      *          virsiz(MAXNAX), win(MAXNAX)
-      ptrdiff   vircsiz(MAXNAX)
+      ptrdiff	ipim, ipimb, ipnim, ipsp, iwsp, ixsp, iysp
+      ptrdiff   imsp, insp, vircsiz(MAXNAX)
       real      blankc, blankg, break(MAXCON), cmm(3,MAXCON), cs(2),
      *          cumhis(NBINS), gmm(3), groff, imax, imin, irange(2),
      *          iscale(MAXSPEC), levs(MAXLEV,MAXCON), pixr(2),
@@ -419,8 +420,8 @@ c-----------------------------------------------------------------------
       data axC /'xyzabcd'/
 c-----------------------------------------------------------------------
       version = versan ('cgspec',
-     *                  '$Revision: 1.18 $',
-     *                  '$Date: 2014/08/22 01:54:42 $')
+     *                  '$Revision: 1.19 $',
+     *                  '$Date: 2021/06/02 04:45:09 $')
 
 c     Get user inputs.
       call inputs(MAXLEV, MAXCON, MAXSPEC, MAXTYP, ltypes, ncon, nspec,
@@ -494,8 +495,8 @@ c     Check consistency of input images.
       call chkim(relax, ncon, cin, lc, gin, lg, bin, lb)
 
 c     Finish key inputs for region of interest.
-      call region(MAXNAX, cin, lc, csize, cnaxis, gin, lg, gsize,
-     *  gnaxis, ibin, jbin, blc, trc, win, ngrps, grpbeg, ngrp)
+      call region(MAXNAX, cin(1), lc(1), csize, cnaxis(1), gin, lg,
+     * gsize, gnaxis, ibin, jbin, blc, trc, win, ngrps, grpbeg, ngrp)
 
 c     Allocate memory for pixel map/contour and mask images.
       call memalloc(ipim,  win(1)*win(2), 'r')
@@ -701,7 +702,7 @@ c     Plot annotation.
         call pgsci(labcol)
         call fullann(lh, ncon, cin, gin, nspec, spin, lc, lg, MAXLEV,
      *       nlevs, levs, srtlev, slev, trfun, pixr, vymin, blc, trc,
-     *       cs, ydispb, iscale, labtyp, ibin, jbin, gmm, cmm)
+     *       cs(1), ydispb, iscale, labtyp, ibin, jbin, gmm, cmm)
       endif
 
 c     Close files and free memory.
@@ -1144,8 +1145,8 @@ c     Check contour images for self consistency.
 
 c     Check first contour image for consistency with other images.
       if (ncon.gt.0) then
-        if (gin.ne.' ') call chkdes(relax, lc, lg, cin, gin)
-        if (bin.ne.' ') call chkdes(relax, lc, lb, cin, bin)
+        if (gin.ne.' ') call chkdes(relax, lc(1), lg, cin(1), gin)
+        if (bin.ne.' ') call chkdes(relax, lc(1), lb, cin(1), bin)
       endif
 
 c     Check pixel map images for consistency with other images.
@@ -2890,10 +2891,11 @@ c            BLC and TRC of sub-cube to read in.
 c    fits(2) True if spatial and spectral areas fit partly or wholly
 c            in spectrum image.
 c-----------------------------------------------------------------------
-      integer   axtype, i, i1, i2, j, naxis, pt(3)
+      integer   i, i1, i2, j, naxis, pt(3)
       real      dv
       double precision wcen(3), win(3), wout(3)
       character iwtype(2)*16, swtype*16, typei(3)*6, typeo(3)*6, units*8
+      character axtype*16
 c-----------------------------------------------------------------------
 c     World coordinate types for the spatial image.
       call coAxType(lh, 1, axtype, iwtype(1), units)

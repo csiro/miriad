@@ -66,7 +66,7 @@ c       the linearly polarized intensity spectral index image, and the
 c       second will receive an estimate of the rotation measure (units
 c       of rad/m**2).
 c
-c$Id: mfspin.for,v 1.11 2018/11/29 23:30:11 wie017 Exp $
+c$Id: mfspin.for,v 1.12 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -102,8 +102,8 @@ c-----------------------------------------------------------------------
       common dat
 c-----------------------------------------------------------------------
       version = versan('mfspin',
-     *                 '$Revision: 1.11 $',
-     *                 '$Date: 2018/11/29 23:30:11 $')
+     *                 '$Revision: 1.12 $',
+     *                 '$Date: 2021/06/02 04:45:09 $')
 c
 c  Get the input parameters.
 c
@@ -317,12 +317,12 @@ c
 c
 c  All said and done. Close up the files, and leave.
 c
-      call MemFrep(Flux1,mModel*nModel,'r')
-      call MemFrep(Alpha1,mModel*nModel,'r')
+      call MemFrex(Flux1,1_8*mModel*nModel,'r')
+      call MemFrex(Alpha1,1_8*mModel*nModel,'r')
       call xyclose(lMod1)
       if (doQU) then
-        call MemFrep(Flux2,mModel*nModel,'r')
-        call MemFrep(Alpha2,mModel*nModel,'r')
+        call MemFrex(Flux2,1_8*mModel*nModel,'r')
+        call MemFrex(Alpha2,1_8*mModel*nModel,'r')
         call xyclose(lMod2)
       endif
 

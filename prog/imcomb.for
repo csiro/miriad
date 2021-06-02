@@ -43,7 +43,7 @@ c                      single plane, average the input images in
 c                      frequency, instead of producing a cube
 c                      containing all planes.
 c
-c$Id: imcomb.for,v 1.11 2013/08/30 01:49:21 wie017 Exp $
+c$Id: imcomb.for,v 1.12 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  History:
 c    rjs  29nov94 Original version.
@@ -72,8 +72,8 @@ c-----------------------------------------------------------------------
 
       logical equal, interp, mosaic, nonorm, relax, fqaver
       integer i, k, maxpix, minpix, nOpen, nOut(MAXNAX), naxis, nin,
-     *        nrms, nsize(3,MAXIN), off(3), pData, pFlags, pWts, tOut,
-     *        tno(MAXIN)
+     *        nrms, nsize(3,MAXIN), off(3), tOut, tno(MAXIN)
+      ptrdiff pData, pFlags, pWts
       real    blctrc(6,MAXIN), rms(MAXIN), rms0
       double precision f(MAXIN)
       character in(MAXIN)*64, line*80, out*64, version*72
@@ -82,8 +82,8 @@ c-----------------------------------------------------------------------
       external  stcat, versan
 c-----------------------------------------------------------------------
       version = versan ('imcomb',
-     *                  '$Revision: 1.11 $',
-     *                  '$Date: 2013/08/30 01:49:21 $')
+     *                  '$Revision: 1.12 $',
+     *                  '$Date: 2021/06/02 04:45:09 $')
 c
 c  Get the inputs.
 c
@@ -350,9 +350,9 @@ c-----------------------------------------------------------------------
         if (.not.valid) call bug('f',
      *    'Invalid coordinates prevented aligning images')
 
-        blctrc(1) = in(1) - out(1) + 1d0
-        blctrc(2) = in(2) - out(2) + 1d0
-        blctrc(3) = in(3) - out(3) + 1d0
+        blctrc(1) = real(in(1) - out(1) + 1d0)
+        blctrc(2) = real(in(2) - out(2) + 1d0)
+        blctrc(3) = real(in(3) - out(3) + 1d0)
         blctrc(4) = blctrc(1) + nsize(1) - 1
         blctrc(5) = blctrc(2) + nsize(2) - 1
         blctrc(6) = blctrc(3) + nsize(3) - 1
@@ -365,9 +365,9 @@ c-----------------------------------------------------------------------
         if (.not.valid) call bug('f',
      *    'Invalid coordinates prevented aligning images')
 
-        blctrc(1) = 2d0 - out(1)
-        blctrc(2) = 2d0 - out(2)
-        blctrc(3) = 2d0 - out(3)
+        blctrc(1) = real(2d0 - out(1))
+        blctrc(2) = real(2d0 - out(2))
+        blctrc(3) = real(2d0 - out(3))
         in(1) = nsize(1)
         in(2) = nsize(2)
         in(3) = nsize(3)
@@ -375,9 +375,9 @@ c-----------------------------------------------------------------------
         if (.not.valid) call bug('f',
      *    'Invalid coordinates prevented aligning images')
 
-        blctrc(4) = 2*nsize(1) - out(1)
-        blctrc(5) = 2*nsize(2) - out(2)
-        blctrc(6) = 2*nsize(3) - out(3)
+        blctrc(4) = real(2*nsize(1) - out(1))
+        blctrc(5) = real(2*nsize(2) - out(2))
+        blctrc(6) = real(2*nsize(3) - out(3))
       endif
 
       interp = .false.

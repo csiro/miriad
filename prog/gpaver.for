@@ -45,8 +45,8 @@ c
         character versan*72
 c------------------------------------------------------------------------
         version = versan('gpaver',
-     *                   '$Revision: 1.4 $',
-     *                   '$Date: 2015/10/29 01:31:20 $')       
+     *                   '$Revision: 1.5 $',
+     *                   '$Date: 2021/06/02 04:45:09 $')       
 c
 c  Get the input parameters.
 c
@@ -131,7 +131,7 @@ c------------------------------------------------------------------------
         include 'mem.h'
 	integer MAXSOLS,maxgains
 	parameter(MAXSOLS=10000)
-	integer pGains, pTimes, oGains, oTimes
+	ptrdiff pGains, pTimes, oGains, oTimes
 	double precision int1,dtemp, freq(MAXFBIN)
 	integer nsols,nnsols,ngains,nfbin
         integer ntau,nfeeds,nants

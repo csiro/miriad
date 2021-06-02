@@ -53,7 +53,7 @@ c                data. Option freq implies nobin. It can be combined
 c                with nopol, but not with nofreq.
 c         noapply Do not apply the flagging, just report the statistics
 c                about what would be flagged.
-c$Id: uvaflag.for,v 1.7 2020/05/18 06:51:35 wie017 Exp $
+c$Id: uvaflag.for,v 1.8 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  History:
 c     nebk 25may89 Original program
@@ -73,8 +73,8 @@ c------------------------------------------------------------------------
         include 'mem.h'
         integer MAXSELS,MAXFILES,MAXPOL
         character version*(*)
-        parameter(version='Uvaflag: $Revision: 1.7 $, '//
-     *             '$Date: 2020/05/18 06:51:35 $')
+        parameter(version='Uvaflag: $Revision: 1.8 $, '//
+     *             '$Date: 2021/06/02 04:45:09 $')
         parameter(MAXSELS=512,MAXFILES=64,MAXPOL=4)
 c
         complex data(maxchan)
@@ -345,8 +345,8 @@ c
           if (.not.nofreq) nFlags = nFlags * nchan
           if (.not.nopol) nFlags = nFlags * npol
           if (i.lt.nFlags) then
-            if (i.ne.0) call memFrep(pFlag,i,'l')
-            call memAllop(pFlag,nFlags,'l')
+            if (i.ne.0) call memFree(pFlag,i,'l')
+            call memAlloc(pFlag,nFlags,'l')
           else
             nFlags=i
           endif
@@ -464,7 +464,7 @@ c
             n = 0
             dowhile(more.and.i.lt.vnspect)
               i = i + 1
-              t = ( tsfreq(1) - vsfreq(i) ) / vsdf(i)
+              t = real(( tsfreq(1) - vsfreq(i) ) / vsdf(i))
               o = nint(t)
               more = abs(vsdf(i)-tsdf(1)).gt.
      *          0.05*min(abs(vsdf(i)),abs(tsdf(1)))     .or.

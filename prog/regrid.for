@@ -233,7 +233,7 @@ c       Interpolation tolerance.  Tolerate an error of the specified
 c       amount in converting pixel locations in the input to the output.
 c       Must be less that 0.5.  The default is 0.05.
 c
-c$Id: regrid.for,v 1.18 2017/05/11 00:08:56 wie017 Exp $
+c$Id: regrid.for,v 1.19 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -252,11 +252,12 @@ c-----------------------------------------------------------------------
       logical   altPrj, doDesc, doEqEq, doGalEq, doNear, doOff, noScale,
      *          doTCel, doZero
       integer   axMap(MAXNAX), BufSize, cOut, gnx, gny, GridSize, i,
-     *          ilat, ilng, ispc, k, lBuf, lDef, lIn, lOut, lTem, m,
+     *          ilat, ilng, ispc, k, lDef, lIn, lOut, lTem, m,
      *          maxc(3), maxv(3), minc(3), minv(3), n, naxes,
      *          nAxIn(MAXNAX), nAxOut(MAXNAX), nAxTem(MAXNAX), nblank,
      *          nBuf(3), ndesc, nIAxes, npv, nTAxes, nxy, off(3),
-     *          offset, order(3), rBuf, valid, xv, xyzero, yv, zv
+     *          offset, order(3), xyzero
+      ptrdiff   xv, yv, zv, valid, rBuf, lBuf
       real      tol, fblank
       double precision cdelt, crpix, crval, desc(4,MAXNAX), latpol,
      *          llrot, lonpol, phi0, pv(0:29), theta0
@@ -275,8 +276,8 @@ c     Projection codes.
      *  'pco', 'tsc', 'csc', 'qsc', 'hpx'/
 c-----------------------------------------------------------------------
       version = versan ('regrid',
-     *                  '$Revision: 1.18 $',
-     *                  '$Date: 2017/05/11 00:08:56 $')
+     *                  '$Revision: 1.19 $',
+     *                  '$Date: 2021/06/02 04:45:09 $')
 
 c     Get the input parameters.
       call keyini
@@ -1071,9 +1072,9 @@ c-----------------------------------------------------------------------
           call pCvt(xmid(1,k),txmid(1,k),3,valid)
           if (.not.valid)
      *      call bug('f','Invalid coordinate: please use tol=0')
-          err = max(abs(0.5*(tx(1,k)+tmid(1)) - txmid(1,k)),
-     *              abs(0.5*(tx(2,k)+tmid(2)) - txmid(2,k)),
-     *              abs(0.5*(tx(3,k)+tmid(3)) - txmid(3,k)))
+          err = real(max(abs(0.5*(tx(1,k)+tmid(1)) - txmid(1,k)),
+     *                   abs(0.5*(tx(2,k)+tmid(2)) - txmid(2,k)),
+     *                   abs(0.5*(tx(3,k)+tmid(3)) - txmid(3,k))))
           if (err.gt.errmax) then
             kmax = k
             errmax = err
@@ -1157,12 +1158,12 @@ c-----------------------------------------------------------------------
           in(1) = dble(nx-1)/dble(gnx-1) * (i-1) + 1
           call pCvt(in,out,3,valid(i,j))
           if (valid(i,j)) then
-            xv(i,j) = out(1)
-            yv(i,j) = out(2)
+            xv(i,j) = real(out(1))
+            yv(i,j) = real(out(2))
             if (nz.gt.1) then
-              zv(i,j) = out(3)
+              zv(i,j) = real(out(3))
             else
-              zv(i,j) = in(3)
+              zv(i,j) = real(in(3))
             endif            
           endif
         enddo
@@ -1258,8 +1259,8 @@ c***********************************************************************
 
       integer lIn
       integer minr(3),maxr(3),n(3)
-      integer nBuf(3),off(3),minc(3),maxc(3)
-      integer rBuf,lBuf,BufSize
+      integer nBuf(3),off(3),minc(3),maxc(3),BufSize
+      ptrdiff rBuf,lBuf
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mem.h'
@@ -1572,10 +1573,10 @@ c-----------------------------------------------------------------------
         imax = jx+2
 
         fx = x - jx
-        Wtx(1) = ((-0.5*fx + 1.0)*fx - 0.5)*fx
-        Wtx(2) =  ((1.5*fx - 2.5)*fx      )*fx + 1.0
-        Wtx(3) = ((-1.5*fx + 2.0)*fx + 0.5)*fx
-        Wtx(4) =  ((0.5*fx - 0.5)*fx      )*fx
+        Wtx(1) = real(((-0.5*fx + 1.0)*fx - 0.5)*fx)
+        Wtx(2) = real((( 1.5*fx - 2.5)*fx      )*fx + 1.0)
+        Wtx(3) = real(((-1.5*fx + 2.0)*fx + 0.5)*fx)
+        Wtx(4) = real((( 0.5*fx - 0.5)*fx      )*fx)
       else
         call bug('f','Unsupported order, in Coeff')
       endif

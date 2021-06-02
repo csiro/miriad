@@ -473,7 +473,7 @@ c       3) Check the rms of the background. If this is high then firstly
 c          the fit may not be good (as per 1), and secondly the source
 c          is in a noisy area and should be treated with caution anyway.
 c
-c$Id: sfind.for,v 1.20 2017/03/09 01:37:11 wie017 Exp $
+c$Id: sfind.for,v 1.21 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -502,7 +502,7 @@ c-----------------------------------------------------------------------
       parameter (maxlev = 50, maxpos = 50, nxdef = 4, nydef = 4,
      *   wedisp = 1.0, tfdisp = 0.5, wedwid = 0.05, nbins = 128)
 
-      integer ipim, ipnim
+      ptrdiff ipim, ipnim
 
       real levs(maxlev), pixr(2), tr(6), cs(2), pixr2(2), scale(2),
      *  tfvp(4), wdgvp(4), cumhis(nbins), dmm(3)
@@ -532,8 +532,8 @@ c-----------------------------------------------------------------------
       character versan*72, version*72
 c-----------------------------------------------------------------------
       version = versan('sfind',
-     *                 '$Revision: 1.20 $',
-     *                 '$Date: 2017/03/09 01:37:11 $')
+     *                 '$Revision: 1.21 $',
+     *                 '$Date: 2021/06/02 04:45:09 $')
 c
 c Get user inputs
 c
@@ -1125,8 +1125,8 @@ c read cursor to get yay or nay or exit from user. This bit is skipped
 c entirely if "auto" is selected.
 c
         if (.not.auto) then
-         wsave(1) = wa(1)
-         wsave(2) = wa(2)
+         wsave(1) = real(wa(1))
+         wsave(2) = real(wa(2))
          cch = ' '
          do while (cch.ne.'A' .and. cch.ne.'D')
           ww(1) = wsave(1)
@@ -1567,7 +1567,7 @@ c overall region to include (boxsize and 4*boxsize, respectively)
 c (Note that here, we are no longer interested in base0 and it has been
 c replaced by a dummy var. "dumm".)
 c
-      boxsz4 = 4*boxsize
+      boxsz4 = int(4*boxsize)
       call basecal_old(nx,ny,lx,my,dumm,sigma,boxsz4,image,nimage,
      *             boxsize,ok)
 c
@@ -1680,8 +1680,8 @@ c
          call ppconcg(2, blc(2), bin(2), wa(2))
          x(i) = real(wa(1))
          y(i) = real(wa(2))
-         xt = xt + x(i)
-         yt = yt + y(i)
+         xt = xt + int(x(i))
+         yt = yt + int(y(i))
         else
          ascpic(mm-mmn+2) = ' '//ascpic(mm-mmn+2)(:79)
         endif
@@ -1747,7 +1747,7 @@ c-----------------------------------------------------------------------
 c
       integer nx, ny, blc(2), llog, ibin, jbin, lin, nimage(nx,ny),
      *  krng(2), size(maxnax)
-      integer ipim,ip2im,ip3im,ip4im
+      ptrdiff ipim,ip2im,ip3im,ip4im
       real image(nx,ny), alpha, xrms
       logical negative, pbcor, fdrimg, sigmaimg, rmsimg, normimg,
      *        auto, kvannot, fdrpeak, allpix, psfsize, bright
@@ -2644,8 +2644,9 @@ c
       logical dofit, fitok, fdrpeak, fdrpeakdum, allpix, psfsize
       integer ifail1,ifail2,lIn, i, blc(2), bin(2), maxline
       integer k,m,nvar,lx,my, nx,ny, krng(2), nimage(nx,ny), fiterr
-      integer boxsize,ipim,ip2im,xpixused(n),ypixused(n), usedpixels
+      integer boxsize,xpixused(n),ypixused(n), usedpixels
       integer nfdrused, dumcount
+      ptrdiff ipim,ip2im
       real image(nx,ny), meanimg(nx,ny), sgimg(nx,ny)
       real xvar(MAXVAR),covar(MAXVAR*MAXVAR),rms
       real bvol,bvolp, xpos, ypos, pkfl, intfl
@@ -2847,7 +2848,7 @@ c (moderately) arbitrary number is, however, an unsatisfactory way of
 c dealing with the problem, and a better one would be appreciated.
 c
        if (max(abs(fwhm1),abs(fwhm2)).lt.min(nx,ny,240)/4) then
-        boxsize = 3.0*max(abs(fwhm1),abs(fwhm2))
+        boxsize = int(3.0*max(abs(fwhm1),abs(fwhm2)))
         goto 1200
        else
         fitok = .false.
@@ -2907,14 +2908,16 @@ c-----------------------------------------------------------------------
       XXP = XXP / P - XP*XP
       XYP = XYP / P - XP*YP
       YYP = YYP / P - YP*YP
-      l0  = XP
-      m0  = YP
+      l0  = real(XP)
+      m0  = real(YP)
 
       fac = 4.0*log(2.0)
-      fwhm1 = sqrt(fac*(XXP + YYP + sqrt((XXP-YYP)**2 + 4*(XYP)**2)))
-      fwhm2 = sqrt(fac*(XXP + YYP - sqrt((XXP-YYP)**2 + 4*(XYP)**2)))
-      pa    = 0.5*atan2(2*XYP,YYP-XXP)
-      flux  = sign(fac*P/(PI*fwhm1*fwhm2), SP)
+      fwhm1 = real(sqrt(fac*(XXP + YYP + sqrt((XXP-YYP)**2 +
+     *  4*(XYP)**2))))
+      fwhm2 = real(sqrt(fac*(XXP + YYP - sqrt((XXP-YYP)**2 +
+     *  4*(XYP)**2))))
+      pa    = real(0.5*atan2(2*XYP,YYP-XXP))
+      flux  = real(sign(fac*P/(PI*fwhm1*fwhm2), SP))
 
       end
 
@@ -3150,8 +3153,8 @@ c
          call ppconcg(2, blc(2), bin(2), wa(2))
          x(i) = real(wa(1))
          y(i) = real(wa(2))
-         xt = xt + x(i)
-         yt = yt + y(i)
+         xt = xt + int(x(i))
+         yt = yt + int(y(i))
         endif
        enddo
       enddo
@@ -3523,8 +3526,8 @@ c     Convert the uncertainties.
       sfwhm2 = sfwhm2 * bmin / fwhm2
       if ((spa+sl0+sm0).gt.0.0) then
         call coLin(lIn,'ap/ap/ap',x1,2,ctype,crpix,crval,cdelt)
-        dx = abs(cdelt(1))
-        dy = abs(cdelt(2))
+        dx = real(abs(cdelt(1)))
+        dy = real(abs(cdelt(2)))
         sl0 = sl0 * dx
         sm0 = sm0 * dy
         spa = spa / ((dy/dx)*cos(pa)**2 + (dx/dy)*sin(pa)**2)
@@ -3639,7 +3642,7 @@ c
         x(2) = 0
         x(3) = k
         call coLin(lIn,'op/op/ap',x,2,ctype,crpix,crval,cdelt)
-        bvol = abs(cdelt(1)*cdelt(2))
+        bvol = real(abs(cdelt(1)*cdelt(2)))
         bvolp = 1
       else if (index(bunit,'/BEAM').ne.0 .and. bmaj*bmin.gt.0.0) then
         bvol  = bmaj  * bmin  * PI_4 / log(2.0)
@@ -3710,7 +3713,8 @@ c-----------------------------------------------------------------------
       integer nimage(nx,ny)
 c
       integer lOut,lOut1,lOut2,lOut3,lOut4,axes(2),nfdrpix,nblanks
-      integer iii,jjj,ipim,ip2im
+      integer iii,jjj
+      ptrdiff ipim,ip2im
       real rrow(maxdim),image2(nx,ny),meanimg(nx,ny),sgimg(nx,ny)
       double precision wa(2)
       real fluxctoff,sigctoff

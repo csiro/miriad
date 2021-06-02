@@ -239,7 +239,7 @@ c       The output logfile name. The default is the terminal.
 c@ comment
 c       A one line comment which is written into the logfile.
 c
-c$Id: uvplt.for,v 1.19 2018/06/12 04:53:25 wie017 Exp $
+c$Id: uvplt.for,v 1.20 2021/06/02 04:45:09 wie017 Exp $
 c--
 c
 c  History:
@@ -343,7 +343,8 @@ c
       real size(2), xmin, xmax, ymin, ymax, u, v, uvdist, uvpa, xvalr,
      *  yvalr, paran, jyperk, rms
       integer lin, ivis, nread, dayoff, j,  nx, ny, inc, hann, tunit,
-     *  ofile, ifile, jfile, vupd, ip, nkeep, npnts
+     *  ofile, ifile, jfile, vupd, nkeep, npnts
+      ptrdiff ip
       character in*64, xaxis*10, yaxis*10, pdev*80, comment*80,
      *  logf*80, str*2, title*100, ops*9
       logical xrtest, yrtest, more, dodoub, reset, doave, dowave,
@@ -371,8 +372,8 @@ c
       data polmsk /13*0/
 c-----------------------------------------------------------------------
       version = versan ('uvplt',
-     *                  '$Revision: 1.19 $',
-     *                  '$Date: 2018/06/12 04:53:25 $')
+     *                  '$Revision: 1.20 $',
+     *                  '$Date: 2021/06/02 04:45:09 $')
 c
 c  Get the parameters given by the user and check them for blunders
 c
@@ -818,7 +819,7 @@ c-----------------------------------------------------------------------
 
         do while (j.le.n .and. ok)
           call getval(ilen, aline, ib, val, ok)
-          arr(j) = val
+          arr(j) = real(val)
           j = j + 1
         enddo
       else
@@ -2315,13 +2316,13 @@ c    uvpa         Position angle of u,v clockwise from v axis
 c-----------------------------------------------------------------------
       include 'mirconst.h'
 c-----------------------------------------------------------------------
-      u = preamble(1)
-      v = preamble(2)
+      u = real(preamble(1))
+      v = real(preamble(2))
 
       uvdist = sqrt(u*u + v*v)
 
       if (u.ne.0.0 .or. v.ne.0.0) then
-        uvpa = atan2(u,v)*DR2D
+        uvpa = atan2(u,v)*R2D
       else
 c
 c Signal this one no good
@@ -2581,7 +2582,7 @@ c
           tunit = 24 * 60
         endif
 
-        dayav = dayav / tunit
+        dayav = real(dayav / tunit)
       else
         if (doavall) then
           call bug('w', 'OPTIONS=AVALL only useful if time averaging')
@@ -2776,7 +2777,7 @@ c
         else if (tunit.eq.24*60*60) then
           str2 = '\us\d'
         endif
-        av = dayav * tunit
+        av = real(dayav * tunit)
 
         call strfr(av, '(f20.2)', str3, il3)
         str = str3(1:il3)//str2
@@ -3511,28 +3512,28 @@ c
       ok = .true.
       if (axis.eq.'uvdistance') then
         val = uvdist
-	if(.not.donano)val = val * freq(ichan) / freq(1) / 1000.0
+	if(.not.donano)val = val * real(freq(ichan) / freq(1)) / 1000.0
       else if (axis.eq.'uu' .or. axis.eq.'uc') then
         val = u
-	if(.not.donano)val = val * freq(ichan) / freq(1) / 1000.0
+	if(.not.donano)val = val * real(freq(ichan) / freq(1)) / 1000.0
       else if (axis.eq.'freq') then
-        val = freq(ichan)
+        val = real(freq(ichan))
       else if (axis.eq.'vv' .or. axis.eq.'vc') then
         val = v
-	if(.not.donano)val = val * freq(ichan) / freq(1) / 1000.0
+	if(.not.donano)val = val * real(freq(ichan) / freq(1)) / 1000.0
       else if (axis.eq.'uvangle') then
         val = uvpa
         if (uvpa.eq.999.0) ok = .false.
       else if (axis.eq.'parang') then
-        val = parang * DR2D
+        val = parang * R2D
       else if (axis.eq.'lst') then
-        val = lst * 12.0/PI
+        val = real(lst) * 12.0/PI
       else if (axis.eq.'az') then
-        val = az * R2D
+        val = real(az) * R2D
       else if (axis.eq.'el') then
-        val = el * R2D
+        val = real(el) * R2D
       else if (axis.eq.'airmass') then
-        val = 1.0/sin(el)
+        val = real(1.0/sin(el))
       else if (axis.eq.'jyperk') then
         val = jyperk
       else if (axis.eq.'rms') then
@@ -3541,27 +3542,27 @@ c
 c
 c Fractional year
 c
-        val = fyear
+        val = real(fyear)
       else if (axis.eq.'dtime') then
 c
 c Fractional days
 c
-        val = fday
+        val = real(fday)
       else if (axis.eq.'time') then
 c
 c Seconds
 c
-        val = fday * 24.0 * 3600.0
+        val = real(fday * 24.0 * 3600.0)
       else if (axis.eq.'hangle') then
 c
 c Seconds
 c
-        val = ha
+        val = real(ha)
       else if (axis.eq.'dhangle') then
 c
 c Fractional hours
 c
-        val = ha / 3600.0
+        val = real(ha / 3600.0)
       else
         call setvl2(axis, data, val)
       endif
@@ -3827,10 +3828,10 @@ c Convert to seconds
 c
         s = 1
         if (t(1).lt.0d0) s = -1
-        tlo = s * (3600.0*abs(t(1)) + 60.0*t(2) + t(3))
+        tlo = real(s * (3600.0*abs(t(1)) + 60.0*t(2) + t(3)))
         s = 1
         if (t(4).lt.0d0) s = -1
-        thi = s * (3600.0*abs(t(4)) + 60.0*t(5) + t(6))
+        thi = real(s * (3600.0*abs(t(4)) + 60.0*t(5) + t(6)))
       endif
 
       end
@@ -3876,8 +3877,8 @@ c
 c
 c Convert to seconds
 c
-        tlo = 3600.0*24.0*t(1) + 3600.0*t(2) + 60.0*t(3) + t(4)
-        thi = 3600.0*24.0*t(5) + 3600.0*t(6) + 60.0*t(7) + t(8)
+        tlo = real(3600.0*24.0*t(1) + 3600.0*t(2) + 60.0*t(3) + t(4))
+        thi = real(3600.0*24.0*t(5) + 3600.0*t(6) + 60.0*t(7) + t(8))
       endif
 
       end
@@ -4092,7 +4093,7 @@ c     asked for everything in the file in this case.
 
 c     Fish out what they set with the 'stokes=' selection.
       call uvdatgti('npol', npols2)
-      call uvdatgti('pols', pols2)
+      call uvdatgti('pols', pols2(1))
 
 c     Merge the two lists into one.
       if (npols2.gt.0) then

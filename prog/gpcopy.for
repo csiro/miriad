@@ -93,8 +93,8 @@ c
         character*72 versan
 c
 	version = versan('gpcopy',
-     *                   '$Revision: 1.13 $',
-     *                   '$Date: 2015/10/29 01:31:39 $')
+     *                   '$Revision: 1.14 $',
+     *                   '$Date: 2021/06/02 04:45:09 $')
 	call keyini
 	call keya('vis',vis,' ')
 	if(vis.eq.' ')call bug('f','Input data-set must be given')
@@ -419,7 +419,7 @@ c------------------------------------------------------------------------
 c
 	integer ngains,nfeeds,ntau,nsols1,nsols2,nfbin,maxtimes,maxgains
 	double precision int1,int2,freq(maxfbin)
-	integer pGain1,pGain2,pGainO,pTim1,pTim2,pTimO
+	ptrdiff pGain1,pGain2,pGainO,pTim1,pTim2,pTimO
 c
 c  Get info about the two gain tables.
 c
@@ -494,7 +494,7 @@ c
 	integer ngains,nfeeds,ntau,nsols1,nsols2,nsols,nfbin,maxtimes
         integer maxgains
 	double precision int1,int2,freq(maxfbin)
-	integer pGain1,pGain2,pGain,pTim1,pTim2,pTim
+	ptrdiff pGain1,pGain2,pGain,pTim1,pTim2,pTim
 c
 c  Get info about the two gain tables.
 c
@@ -941,8 +941,8 @@ c------------------------------------------------------------------------
 	real epsi1,epsi2,mag
 	logical dotau,bad1i,bad1j,bad2i,bad2j
 c
-	epsi1 = (tj1-t)/(tj1-ti1)
-	epsi2 = (tj2-t)/(tj2-ti2)
+	epsi1 = real((tj1-t)/(tj1-ti1))
+	epsi2 = real((tj2-t)/(tj2-ti2))
 c
 	do i=1,ngains
 	  dotau = ntau.gt.0.and.mod(i-nfeeds,nfeeds+ntau).eq.1
@@ -998,7 +998,7 @@ c------------------------------------------------------------------------
 	real epsi,mag
 	logical dotau,bad,bad1i,bad1j
 c
-	epsi = (tj1-t)/(tj1-ti1)
+	epsi = real((tj1-t)/(tj1-ti1))
 c
 	do i=1,ngains
 	  dotau = ntau.gt.0.and.mod(i-nfeeds,nfeeds+ntau).eq.1

@@ -131,7 +131,7 @@ c         nocal   Do not apply antenna gain calibration.
 c         nopass  Do not apply bandpass correction.
 c         nopol   Do not apply polarisation leakage correction.
 c
-c$Id: blflag.for,v 1.22 2015/12/04 03:07:29 wie017 Exp $
+c$Id: blflag.for,v 1.23 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -164,8 +164,8 @@ c     Data store (48*MAXBUF bytes).
       character itoaf*10, versan*72
 c-----------------------------------------------------------------------
       version = versan('blflag',
-     *                 '$Revision: 1.22 $',
-     *                 '$Date: 2015/12/04 03:07:29 $')
+     *                 '$Revision: 1.23 $',
+     *                 '$Date: 2021/06/02 04:45:09 $')
 
 c     Get the input parameters.
       call keyini
@@ -199,18 +199,18 @@ c     Open the plot device.
       call pgask(.false.)
 
 c     Allocate memory for getDat.
-      call memAllop(pblDat, MAXDAT, 'i')
-      call memAllop(pchDat, MAXDAT, 'i')
-      call memAllop(ptDat,  MAXDAT, 'r')
-      call memAllop(pxDat,  MAXDAT, 'r')
-      call memAllop(pyDat,  MAXDAT, 'r')
+      call memAlloc(pblDat, MAXDAT, 'i')
+      call memAlloc(pchDat, MAXDAT, 'i')
+      call memAlloc(ptDat,  MAXDAT, 'r')
+      call memAlloc(pxDat,  MAXDAT, 'r')
+      call memAlloc(pyDat,  MAXDAT, 'r')
       
-      call memAllop(pFlags, MAXCHAN, 'l')
-      call memAllop(pNpnt,  MAXCHAN, 'i')
-      call memAllop(pCorr,  MAXCHAN, 'c')
-      call memAllop(pCorr1, MAXCHAN, 'c')
-      call memAllop(pCorr2, MAXCHAN, 'c')
-      call memAllop(pVis,   MAXCHAN, 'c')
+      call memAlloc(pFlags, MAXCHAN, 'l')
+      call memAlloc(pNpnt,  MAXCHAN, 'i')
+      call memAlloc(pCorr,  MAXCHAN, 'c')
+      call memAlloc(pCorr1, MAXCHAN, 'c')
+      call memAlloc(pCorr2, MAXCHAN, 'c')
+      call memAlloc(pVis,   MAXCHAN, 'c')
       
 
 c     Get the data.
@@ -224,12 +224,12 @@ c     Get the data.
       if (nDat.eq.0) call bug('f','No points to flag')
 
 c     Free memory (in reverse order).
-      call memFrep(pVis,   MAXCHAN, 'c')
-      call memFrep(pCorr2, MAXCHAN, 'c')
-      call memFrep(pCorr1, MAXCHAN, 'c')
-      call memFrep(pCorr,  MAXCHAN, 'c')
-      call memFrep(pNpnt,  MAXCHAN, 'i')
-      call memFrep(pFlags, MAXCHAN, 'l')
+      call memFree(pVis,   MAXCHAN, 'c')
+      call memFree(pCorr2, MAXCHAN, 'c')
+      call memFree(pCorr1, MAXCHAN, 'c')
+      call memFree(pCorr,  MAXCHAN, 'c')
+      call memFree(pNpnt,  MAXCHAN, 'i')
+      call memFree(pFlags, MAXCHAN, 'l')
 
 c     Loop over the baselines.
       call output('Entering interactive mode...')
@@ -305,11 +305,11 @@ c     Apply the changes.
       endif
 
 c     Free more memory      
-      call memFrep(pblDat, MAXDAT, 'i')
-      call memFrep(pchDat, MAXDAT, 'i')
-      call memFrep(ptDat,  MAXDAT, 'r')
-      call memFrep(pxDat,  MAXDAT, 'r')
-      call memFrep(pyDat,  MAXDAT, 'r')
+      call memFree(pblDat, MAXDAT, 'i')
+      call memFree(pchDat, MAXDAT, 'i')
+      call memFree(ptDat,  MAXDAT, 'r')
+      call memFree(pxDat,  MAXDAT, 'r')
+      call memFree(pyDat,  MAXDAT, 'r')
       
 
       end

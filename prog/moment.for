@@ -69,7 +69,7 @@ c       range pkmask(1) to pkmask(2) exclusive.  If only one value is
 c       given, then mask pixels with peak intensity less than pkmask.
 c       Default = 0.
 c
-c$Id: moment.for,v 1.17 2011/10/25 09:43:44 cal103 Exp $
+c$Id: moment.for,v 1.18 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -84,7 +84,8 @@ c-----------------------------------------------------------------------
       logical   rngmsk
       integer   axis, blc(MAXNAX), boxes(MAXBOX), i, iSpc, j, lIn,
      *          lOut, mom, n1, n2, n3, naxes, naxis(MAXNAX), nchan,
-     *          oaxis(MAXNAX), pMasks, pSpecs, span, trc(MAXNAX)
+     *          oaxis(MAXNAX), span, trc(MAXNAX)
+      ptrdiff   pMasks, pSpecs
       real      blo, bhi, clip(2), pkmask(2), offset, scl, tmp,
      *          vrange(2)
       double precision cdelt, crpix, crval
@@ -95,8 +96,8 @@ c-----------------------------------------------------------------------
       external  itoaf, keyprsnt, hdprsnt, versan
 c-----------------------------------------------------------------------
       version = versan ('moment',
-     *                  '$Revision: 1.17 $',
-     *                  '$Date: 2011/10/25 09:43:44 $')
+     *                  '$Revision: 1.18 $',
+     *                  '$Date: 2021/06/02 04:45:09 $')
 
 c     Get inputs.
       call keyini
@@ -204,8 +205,8 @@ c       Spectral axis, switch to velocity.
       endif
 
       call coAxGet(lIn, axis, ctype, crpix, crval, cdelt)
-      offset = crpix - crval/cdelt
-      scl = cdelt
+      offset = real(crpix - crval/cdelt)
+      scl = real(cdelt)
       call coFin(lIn)
 
 c     Transform to pixel coordinates of output axis.

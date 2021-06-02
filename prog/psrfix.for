@@ -378,7 +378,7 @@ c------------------------------------------------------------------------
 	include 'psrfix.h'
 	integer b,p,i,j,i1,i2,np,bl,obins
 	integer pslot(MAXPOL),ptype(MAXPOL)
-	integer rFlags,rData,iFlags,iData,oFlags,oData
+	ptrdiff rFlags,rData,iFlags,iData,oFlags,oData
 	double precision preamble(5)
 c
 c  Allocate scratch buffers.
@@ -552,7 +552,7 @@ c SJ NOTE - again the -ve sign
 	      dt = (-4.149383E3 * dm/(sfreq(i)*1e3)**2) - dtcfreq
 
 c work out mv in terms of bins and force it to lie between 0 and nbins
-	      mv = dt/pperiod * nbins
+	      mv = real(dt/pperiod * nbins)
 	      dowhile (mv.gt.nbins)
 		mv = mv - nbins
 	      enddo

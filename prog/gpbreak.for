@@ -50,7 +50,7 @@ c
 	double precision btimes(MAXTIME)
 	integer ants(MAXANT),feeds(MAXFEED)
 	logical mask(2*MAXANT)
-        integer pGains,pGains2,pTimes
+        ptrdiff pGains,pGains2,pTimes
         double precision freq(MAXFBIN)
 c
 c  Externals.
@@ -359,8 +359,9 @@ c
 	    good1 = abs(real(G1(i)))+abs(aimag(G1(i))).gt.0
 	    good2 = abs(real(G2(i)))+abs(aimag(G2(i))).gt.0
 	    if(good1.and.good2)then
-	     Gout(i) = ((tout-t1)*alpha2*G2(i) - (tout-t2)*alpha1*G1(i))
-	     Gout(i) = Gout(i) / (t2 - t1)
+	     Gout(i) = (real(tout-t1)*alpha2*G2(i) - 
+     *          real(tout-t2)*alpha1*G1(i))
+	     Gout(i) = Gout(i) / real(t2 - t1)
 	    else if(good1)then
 	      Gout(i) = alpha1 * G1(i)
 	    else if(good2)then

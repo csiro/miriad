@@ -318,7 +318,7 @@ c       nocal   Do not apply antenna gain calibration.
 c       nopass  Do not apply bandpass correction.
 c       nopol   Do not apply polarisation leakage correction.
 c
-c$Id: pgflag.for,v 1.33 2020/06/17 06:11:42 wie017 Exp $
+c$Id: pgflag.for,v 1.34 2021/06/02 04:45:09 wie017 Exp $
 c--
 c
 c  History:
@@ -437,7 +437,8 @@ c
       logical blpres(MAXBASE),nosrc,nodisp,logstats,needplot,needread
       logical genpatch,keepreading,pantok,genlog,autopatch
       parameter(ttol=1.0/86400.0)
-      integer iFlg,iDat,curr_zooms(2,2),points(2,2)
+      ptrdiff iFlg,iDat
+      integer curr_zooms(2,2),points(2,2)
       integer min_x_zoom,max_x_zoom,min_y_zoom,max_y_zoom,patchlen
       character pressed*2,previous_pressed*2,patchline*80
       integer meas_channel,shift_x,shift_y,f_a1,f_a2,f_mode
@@ -466,8 +467,8 @@ c
       logical uvDatOpn
 
       version = versan ('pgflag',
-     :                  '$Revision: 1.33 $',
-     :                  '$Date: 2020/06/17 06:11:42 $')
+     :                  '$Revision: 1.34 $',
+     :                  '$Date: 2021/06/02 04:45:09 $')
 
 c
 c Get user inputs
@@ -1802,7 +1803,7 @@ c     do the flagging
                   oldflags_bad=oldflags_bad+1
                endif
             enddo
-            t=preamble(3)-day0
+            t=real(preamble(3)-day0)
             flagged=.false.
             call basant(preamble(4),ant1,ant2)
             bl=((ant2-1)*ant2)/2+ant1
@@ -1881,7 +1882,7 @@ c     summary of flagging
         call output(outline)
         if (logstats) call hiswrite(tno,'PGFLAG: '//outline)
         write(outline,'(F5.1,''% of the data is now flagged'')')
-     *    newflags_bad*100.0/(newflags_bad+newflags_good)
+     *    newflags_bad*100.d0/(newflags_bad+newflags_good)
         call output(outline)
         if (logstats) call hiswrite(tno,'PGFLAG: '//outline)
         call hisclose(tno)
@@ -2583,7 +2584,7 @@ c     check we have a valid time
       enddo
       if ((zerot.ge.0.0).and.(zerot.le.1.0)) then
          meas_channel=chanoff+int(curs_x)*chanw
-         meas_frequency=cfreq(int(curs_x))*1000.0
+         meas_frequency=real(cfreq(int(curs_x))*1000.0)
          if (iflag(int(curs_x),int(curs_y),2).ge.1) then
             if (meastype.eq.0) then
                meas_amplitude=array(int(curs_x),int(curs_y),1)
@@ -3940,7 +3941,7 @@ c
          offset=offset+length
          bl=nint(buf(1))
          if (bl.eq.rqbl) then
-            t=buf(2)+(dble(buf(3))-day0)
+            t=real(buf(2)+(dble(buf(3))-day0))
             do pnt=1,ntime
                if (t1(pnt).gt.-1.0) then
                   if (pnt.le.ntime-1) then
@@ -4126,16 +4127,16 @@ c      call uvread(lIn,preamble,data,flags,MAXCHAN,nchan)
         mant=max(max(mant,ant1),ant2)
         bl = ((ant2-1)*ant2)/2 + ant1
         mbl=max(mbl,bl)
-        t = preamble(3) - day0
+        t = real(preamble(3) - day0)
         if(t.lt.0)then
           day1 = nint(preamble(3)-1) + 0.5d0
           do i=1,ntime
 c             write(status,'(A,F20.10)') 'timebad',time(i)
 c             call output(status)
-            if(time(i).gt.-1)time(i) = time(i) + day0 - day1
+            if(time(i).gt.-1)time(i) = time(i) + real(day0 - day1)
           enddo
-          tprev = tprev + day0 - day1
-          t = t + day0 - day1
+          tprev = tprev + real(day0 - day1)
+          t = t + real(day0 - day1)
           day0 = day1
         endif
         if(bl.gt.0.and.bl.lt.nbase)then
@@ -4166,7 +4167,7 @@ c  Write the data to a scratch file (if one exists).
 c
           buf(1) = bl
           buf(2) = t
-          buf(3) = day0
+          buf(3) = real(day0)
           i0 = 3
           do i=1,nchan
             buf(i0+1) = ctoapri(data(i), apri)
@@ -4190,7 +4191,7 @@ c
       if(time(ntime).lt.-1) ntime = ntime - 1
       if(ntime.eq.0)call bug('f','No data found')
 c
-      nvis = offset / length
+      nvis = int(offset / length)
 c
       end
 c***********************************************************************
@@ -4246,7 +4247,7 @@ c
       endif
 
       if (julian.ge.igreg) then
-        ia = (real(julian-1867216)-0.25)/36524.25
+        ia = int((real(julian-1867216)-0.25)/36524.25)
         ja = julian + 1+ia-int(0.25*ia)
       else
         ja = julian
@@ -4254,7 +4255,7 @@ c
 
       jb = ja + 1524
       xc = (real(jb-2439870)-122.1)/365.25
-      jc = 6680.0 + xc
+      jc = int(6680.0 + xc)
       jd = 365*jc + int(0.25*real(jc))
       je = int(real(jb-jd)/30.6001)
 

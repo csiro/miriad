@@ -105,7 +105,7 @@ c       the linetype parameters used to construct the map.  If you wish
 c       to override this, or if the info is not in the header, or if you
 c       are using a point source model, this parameter can be useful.
 c
-c$Id: selfcal.for,v 1.21 2018/12/04 23:00:41 wie017 Exp $
+c$Id: selfcal.for,v 1.22 2021/06/02 04:45:09 wie017 Exp $
 c--
 c
 c  History:
@@ -197,8 +197,8 @@ c     Externals.
       external  hdprsnt, header, versan
 c-----------------------------------------------------------------------
       version = versan('selfcal',
-     *                 '$Revision: 1.21 $',
-     *                 '$Date: 2018/12/04 23:00:41 $')
+     *                 '$Revision: 1.22 $',
+     *                 '$Date: 2021/06/02 04:45:09 $')
 c
 c  Get the input parameters.
 c
@@ -297,7 +297,7 @@ c
         call SelfSet(.true.,MinAnts)
         call SelApply(tvis,sels,.true.)
         call getFreq(tvis,sfreq,numchan)
-        call Model(flag2,tvis,0,offset,flux,tscr,
+        call Model(flag2,tvis,0,offset,flux(1),tscr,
      *                        NHEAD,header,nchan,nvis)
         call SelfIni(nfbin)
         call output('Accumulating statistics ...')
@@ -517,12 +517,12 @@ c  If all looks OK, then calculate the theoretical rms, and store away
 c  the information that we need.
 c
       if (accept) then
-        out(1) = preamble(5)
+        out(1) = real(preamble(5))
         out(2) = int(preamble(4) - time0)
-        out(3) = (preamble(4) - time0) - out(2)
+        out(3) = real((preamble(4) - time0) - out(2))
         call uvinfo(tvis,'variance',rms)
         if (rms.le.0) rms=1
-        out(4) = rms
+        out(4) = real(rms)
       else if (.not.okpol) then
         nbstok = nbstok + 1
       else
@@ -636,7 +636,7 @@ c-----------------------------------------------------------------------
       complex vis(MAXCHAN)
 c-----------------------------------------------------------------------
       call uvread(tvis,preamble,vis,flags,MAXCHAN,nchan)
-      call uvinfo(tVis,'sfreq',sfreq)
+      call uvinfo(tVis,'sfreq',sfreq(1))
       call uvrewind(tvis)
       end
 ***********************************************************************
@@ -671,7 +671,7 @@ c-----------------------------------------------------------------------
       start = (fbin-1)*(nchan/nfbin)+1
       nchan1 = nchan/nfbin
       if (fbin.eq.nfbin) nchan1=nchan-start+1 
-      call uvset(tvis,'data','channel',nchan1,start*1.0,1.0,1.0)
+      call uvset(tvis,'data','channel',nchan1,start*1.d0,1.d0,1.d0)
       end
 
 c***********************************************************************
@@ -880,7 +880,7 @@ c       large number of correlations in the solution interval.
         enddo
 
 c       Accumulate statistics for this spectrum.
-        wgt = 0.5d0 / Out(4)
+        wgt = 0.50 / Out(4)
         rTime(i)     =  rTime(i)     + sTime
         do fbin=0,nfbin
           count(i,fbin)     =  count(i,fbin)     + sCount(fbin)
@@ -1058,7 +1058,7 @@ c     Write the gains out to a gains table.
       header(1) = 0
       header(2) = 0
       offset = 0
-      call hwritei(item,header,offset,8,iostat)
+      call hwritei(item,header(1),offset,8,iostat)
       if (iostat.ne.0) then
         call bug('w','Error opening output gains item')
         call bugno('f',iostat)
@@ -1642,7 +1642,7 @@ c
       SumRVM = 0
       SumRVV = 0
       do i = 1, NBlines
-        SumRVM = SumRVM + conjg(gain(b1(i)))*gain(b2(i))*SumVM(i)
+        SumRVM = SumRVM + real(conjg(gain(b1(i)))*gain(b2(i))*SumVM(i))
         SumRVV = SumRVV + SumVV(i)
       enddo
       Factor = sqrt(abs(SumRVM / SumRVV))

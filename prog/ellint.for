@@ -86,7 +86,7 @@ c
 c@ log
 c       The output log file. The default is the terminal.
 c
-c$Id: ellint.for,v 1.7 2013/08/30 01:49:21 wie017 Exp $
+c$Id: ellint.for,v 1.8 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  History:
 c    mchw  aug 1982     Original version.
@@ -145,7 +145,8 @@ c-----------------------------------------------------------------------
 c
       integer boxes(maxboxes)
       integer i,j,ir,lin,lout,nsize(maxnax),blc(maxnax),trc(maxnax)
-      integer irmin,irmax,pbobj,ipm(maxring),axnum(maxnax),nspl
+      integer irmin,irmax,pbobj,axnum(maxnax),nspl
+      ptrdiff ipm(maxring)
       real crpix(maxnax),cdelt(maxnax),var,med, xmode
       real center(2),pa,incline,rmin,rmax,rstep,scale
       real buf(maxdim),cospa,sinpa,cosi,x,y,r,ave,rms,fsum,cbof
@@ -169,8 +170,8 @@ c
       real totalj,medsmooth,fmed(maxdim),fmed1(maxdim)
 c-----------------------------------------------------------------------
       version = versan('ellint',
-     +                 '$Revision: 1.7 $',
-     +                 '$Date: 2013/08/30 01:49:21 $')
+     +                 '$Revision: 1.8 $',
+     +                 '$Date: 2021/06/02 04:45:09 $')
 
 c Get inputs.
 c
@@ -344,7 +345,7 @@ c
 c
 c  Pixels on outer edge of ring go into next ring
 c
-              ir = (r-rmin)/rstep + 1
+              ir = int((r-rmin)/rstep + 1)
 c
               pixe(ir) = pixe(ir) + 1.0
               flux(ir) = flux(ir) + buf(i)
@@ -387,7 +388,7 @@ c
               r = sqrt((y*cospa-x*sinpa)**2 +
      *                ((y*sinpa+x*cospa)/cosi)**2)
               if (r.ge.rmin .and. r.lt.rmax .and. keep) then
-                ir = (r-rmin)/rstep + 1
+                ir = int((r-rmin)/rstep + 1)
 
                 pixe(ir) = pixe(ir) + 1.0
                 memr(ipm(ir)+nint(pixe(ir))-1) = buf(i)
@@ -550,7 +551,7 @@ c
                 r = sqrt((y*cospa-x*sinpa)**2 +
      *                  ((y*sinpa+x*cospa)/cosi)**2)
                 if (r.ge.rmin .and. r.lt.rmax .and. keep) then
-                  ir = (r-rmin)/rstep + 1
+                  ir = int((r-rmin)/rstep + 1)
                   if (dospline) then
                     rd = r
                     buf(i) = buf(i) - seval(nspl,rd,rad(irmin),
@@ -665,9 +666,9 @@ c  Output:
 c    xmode      The mode of the data.
 c
 c-----------------------------------------------------------------------
-      integer i,j,ilo,ihi,iter,maxcount
+      integer i,j,ilo,ihi,iter,maxcount,xcount(MAXBINS)
       real sum,sum2,av,rms,xi,xmed,xmode
-      real xlo,xhi,dx,xnext,xcount(MAXBINS)
+      real xlo,xhi,dx,xnext
 c
 c     sort data and evaluate the median
 c

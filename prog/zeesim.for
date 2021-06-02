@@ -98,7 +98,7 @@ c@ nran
 c       Throw away NRAN random numbers before starting.  Use this to
 c       continue a set of simulations with different random numbers.
 c
-c$Id: zeesim.for,v 1.3 2011/10/05 06:24:26 cal103 Exp $
+c$Id: zeesim.for,v 1.4 2021/06/02 04:45:09 wie017 Exp $
 c--
 c
 c  History:
@@ -116,9 +116,10 @@ c-----------------------------------------------------------------------
      *          liin, llog(MAXREG), lvin, maxy, nbin(3,MAXREG), nblc(2),
      *          nchan, nchuck, nnbin(2), nruns, nsdim, nsim,
      *          nsp(MAXREG), nsum(MAXREG), ntrc(2), nwin, obin(3),
-     *          pt(MAXREG), ptbemf, ptihat, ptispe, ptnoic, ptnois,
-     *          ptvhat, ptvspe, runs(3,MAXRUNS), totsize, trc(3,MAXREG),
+     *          pt(MAXREG), runs(3,MAXRUNS), totsize, trc(3,MAXREG),
      *          vsize(3), wsize(MAXREG), xoff, yoff
+      ptrdiff   ptbemf, ptihat, ptispe, ptnoic, ptnois,
+     *          ptvhat, ptvspe
       real      a(MAXREG), data(maxbuf), eta2(MAXREG), freq, mean,
      *          meanb, nsigma, row(MAXDIM), scale, sdev, siga(MAXREG),
      *          sigb, sigi(MAXREG), sigim, split, suma(MAXREG),
@@ -137,8 +138,8 @@ c-----------------------------------------------------------------------
      *   /0, 0, 0, 0, 0, 0, 0/
 c-----------------------------------------------------------------------
       version = versan('zeesim',
-     *                 '$Revision: 1.3 $',
-     *                 '$Date: 2011/10/05 06:24:26 $')
+     *                 '$Revision: 1.4 $',
+     *                 '$Date: 2021/06/02 04:45:09 $')
 
 c First section: read in data
 c----------------------------
@@ -166,7 +167,7 @@ c
 c
 c Get conversion factor from splitting in channels to B field strength
 c
-      call bfac(liin, obin, freq, scale)
+      call bfac(liin, obin(1), freq, scale)
 c
 c Allocate memory for I and V cubes in the DATA array and return
 c pointers with filthy memalloc routines
@@ -720,7 +721,7 @@ c
             if (j.le.3) then
               pos(j) = nint(val)
             else
-              pos(j) = abs(val)
+              pos(j) = int(abs(val))
             endif
           else
 c

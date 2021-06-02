@@ -97,7 +97,7 @@ c                    match any residual primary beam response in the
 c                    high-resolution image.  This option causes this
 c                    step to be skipped.
 c
-c$Id: immerge.for,v 1.7 2013/08/30 01:49:21 wie017 Exp $
+c$Id: immerge.for,v 1.8 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -114,7 +114,8 @@ c-----------------------------------------------------------------------
      *          dozero, notaper
       integer   box(MAXBOX), i, iax, ifail, k, lIn1, lIn2, lOut, n,
      *          naxis, ngx, ngy, nin(3), nout(MAXNAX), npnt, ntemp(3),
-     *          pIn1, pIn2, pWt1, pWt2, xoff, yoff, zoff
+     *          xoff, yoff, zoff
+      ptrdiff   pIn1, pIn2, pInc1, pInc2, pWt1, pWt2
       real      bmaj, bmaj1, bmaj2, bmajt, bmin, bmin1, bmin2, bmint,
      *          bpa, bpa1, bpa2, bpat, du, dv, fac, freq, lambda, norm,
      *          pfac, sfac, sxx, sxy, syy, temp, uvhi, uvlo, xs, ys
@@ -131,8 +132,8 @@ c-----------------------------------------------------------------------
      *           'feet        '/
 c-----------------------------------------------------------------------
       version = versan('immerge',
-     *                 '$Revision: 1.7 $',
-     *                 '$Date: 2013/08/30 01:49:21 $')
+     *                 '$Revision: 1.8 $',
+     *                 '$Date: 2021/06/02 04:45:09 $')
 
       call keyini
       call GetOpt(domerge,dozero,dofeath,doshift,notaper)
@@ -241,7 +242,7 @@ c     Determine the scaling factor to convert uvlo and uvhi to lambda.
           if (min(freq1,freq2).le.0d0)
      *      call bug('f','Could not determine observing frequency')
 
-          freq = sqrt(freq1*freq2)
+          freq = real(sqrt(freq1*freq2))
           write(line,'(a,f8.3,a)')'Using a frequency of ',freq,
      *        ' GHz, to convert annulus to wavelengths'
           call trimout(line)
@@ -251,13 +252,16 @@ c     Determine the scaling factor to convert uvlo and uvhi to lambda.
         uvlo = uvlo * temp
         uvhi = uvhi * temp
       endif
-      du = 1/(ngx*cdelt1)
-      dv = 1/(ngy*cdelt2)
+      du = 1/real(ngx*cdelt1)
+      dv = 1/real(ngy*cdelt2)
 
 c     Allocate memory if needed.
       if (dofac .or. domerge) then
         call memAlloc(pIn1,(ngx+2)*ngy,'r')
         call memAlloc(pIn2,(ngx+2)*ngy,'r')
+c       pointers to view data as complex	
+ 	pInc1 = (pIn1-1)/2+1
+	pInc2 = (pIn2-1)/2+1
         if (dotaper) then
           call mosLoad(lIn1,npnt)
           call memAlloc(pWt1,nIn(1)*nIn(2),'r')
@@ -271,8 +275,9 @@ c     Allocate memory if needed.
 c     Determine the scale factor.
       if (dofac) then
         call boxSet(box,3,nIn,' ')
-        pfac = (4.0*log(2.0))/PI*abs(cdelt1*cdelt2)/(bmaj2*bmin2)
-        call GetFac(lIn1,lIn2,box,memr(pIn1),memr(pIn2),
+        pfac = real(4.0*log(2.0)/PI*abs(cdelt1*cdelt2)/(bmaj2*bmin2))
+        call GetFac(lIn1,lIn2,box,memr(pIn1),memc(pInc1),
+     *    memr(pIn2),memc(pInc2),
      *    nIn(1),nIn(2),ngx,ngy,dozero,device,
      *      sfac,sxx,sxy,syy,uvlo,uvhi,du,dv,fac,pfac,
      *      dotaper,memr(pWt1),memr(pWt2),xs,ys,doshift)
@@ -312,17 +317,23 @@ c     Open the output.
             call xySetpl(lIn2,1,k)
             call xySetpl(lOut,1,k)
           endif
+c
+c         Note we are passing a real and a complex view of the same
+c          data to GetDat here (and a few other places) to stop
+c          modern compilers complaining about passing real to 
+c          complex and v.v.
+c
 
           if (domerge) then
-            call GetDat(lIn1,memr(pIn1),nIn(1),nIn(2),
+            call GetDat(lIn1,memr(pIn1),memc(pInc1),nIn(1),nIn(2),
      *          ngx,ngy,dozero,.false.,memr(pWt1),memr(pWt2))
             if (dotaper) call mosMIni(lIn1,real(k))
-            call GetDat(lIn2,memr(pIn2),nIn(1),nIn(2),
+            call GetDat(lIn2,memr(pIn2),memc(pInc1),nIn(1),nIn(2),
      *          ngx,ngy,dozero,dotaper,memr(pWt1),memr(pWt2))
             if (abs(xs)+abs(ys).gt.0)
-     *        call shiftit1(memr(pIn2),ngx,ngy,xs,ys)
+     *        call shiftit1(memc(pInc2),ngx,ngy,xs,ys)
             if (dotaper) call mosMFin
-            call Mergeit(dofeath,memr(pIn1),memr(pIn2),ngx,ngy,
+            call Mergeit(dofeath,memc(pInc1),memc(pInc2),ngx,ngy,
      *        uvlo,uvhi,du,dv,fac/sfac,sxx,sxy,syy)
             call WriteOut(lOut,memr(pIn1),ngx,nOut(2))
           else
@@ -361,8 +372,8 @@ c-----------------------------------------------------------------------
       sfac = PI/(4*log(2.0)) * bmaj * bmin / norm
       bmajf = 4*log(2.0)/PI/bmaj
       bminf = 4*log(2.0)/PI/bmin
-      dx = 1/(cdelt1*ngx)
-      dy = 1/(cdelt2*ngy)
+      dx = 1/real(cdelt1*ngx)
+      dy = 1/real(cdelt2*ngy)
 
       theta = pi/180.0 * bpa
       s2 = -sin(2*theta)
@@ -476,11 +487,12 @@ c     Create the output history.
 
 c***********************************************************************
 
-      subroutine GetDat(lIn,In,nx,ny,ngx,ngy,dozero,dotaper,Wt1,Wt2)
+      subroutine GetDat(lIn,In,Inc,nx,ny,ngx,ngy,dozero,dotaper,Wt1,Wt2)
 
       integer lIn,nx,ny,ngx,ngy
       logical dozero,dotaper
       real In(ngx+2,ngy),Wt1(nx,ny),Wt2(nx,ny)
+      complex Inc(ngx/2+1,ngy)
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       integer i,j,length,ntaper
@@ -572,7 +584,7 @@ c     Report on the tapering.
       endif
 
 c     Fourier transform the image.
-      call FFFT(In,ngx,ngy)
+      call FFFT(Inc,ngx,ngy)
 
       end
 
@@ -630,14 +642,15 @@ c     a single dish, and try to get the primary beam size.
 
 c***********************************************************************
 
-      subroutine GetFac(lIn1,lIn2,box,In1,In2,nx,ny,ngx,ngy,
+      subroutine GetFac(lIn1,lIn2,box,In1,Inc1,In2,Inc2,nx,ny,ngx,ngy,
      *  dozero,device,sfac,sxx,sxy,syy,uvlo,uvhi,du,dv,fac,pfac,
      *  dotaper,Wt1,Wt2,xs,ys,doshift)
 
       integer nx,ny,ngx,ngy,lIn1,lIn2
       integer box(*)
       logical dozero,doshift,dotaper
-      complex In1(ngx/2+1,ngy),In2(ngx/2+1,ngy)
+      real In1(ngx+2,ngy), In2(ngx+2,ngy)
+      complex Inc1(ngx/2+1,ngy),Inc2(ngx/2+1,ngy)
       real sfac,sxx,sxy,syy,uvlo,uvhi,fac,du,dv,pfac,xs,ys
       character device*(*)
       real Wt1(nx,ny),Wt2(nx,ny)
@@ -661,7 +674,8 @@ c-----------------------------------------------------------------------
       include 'mem.h'
       integer MAXRUNS
       parameter (MAXRUNS=MAXDIM+1)
-      integer nul,nuh,nvl,nvh,n,pX,pY,pUU,pVV,np,npd
+      integer nul,nuh,nvl,nvh,n,np,npd
+      ptrdiff pXc,pYc,pXr,pYr,pUU,pVV
       integer imin,imax,jmin,jmax,kmin,kmax,k
       integer nruns,runs(3,MAXRUNS)
       integer blc(3),trc(3)
@@ -681,8 +695,11 @@ c     Determine the number of pixels which are in the overlap annulus.
       nvh = nint(abs(uvhi/dv)+0.5)
       n = (kmax-kmin+1)*
      *        nint(0.5*PI*(nuh*nvh - nul*nvl) + nuh - nul + 1.5)
-      call memAlloc(pX,n,'c')
-      call memAlloc(pY,n,'c')
+      call memAlloc(pXc,n,'c')
+      call memAlloc(pYc,n,'c')
+c     Make alternative pointers to view data as reals      
+      pXr = (pXc-1)*2+1
+      pYr = (pYc-1)*2+1
       call memAlloc(pUU,n,'i')
       call memAlloc(pVV,n,'i')
 
@@ -701,13 +718,13 @@ c     Get all the data in the annuli.
             call xysetpl(lIn1,1,k)
             call xysetpl(lIn2,1,k)
           endif
-          call GetDat(lIn1,In1,nx,ny,ngx,ngy,dozero,
+          call GetDat(lIn1,In1,Inc1,nx,ny,ngx,ngy,dozero,
      *                                        .false.,Wt1,Wt2)
           if (dotaper) call mosMIni(lIn1,real(k))
-          call GetDat(lIn2,In2,nx,ny,ngx,ngy,dozero,
+          call GetDat(lIn2,In2,Inc2,nx,ny,ngx,ngy,dozero,
      *                                        dotaper,Wt1,Wt2)
           if (dotaper) call mosMFin
-          call AnnExt(In1,In2,ngx,ngy,memc(pX+np),memc(pY+np),
+          call AnnExt(Inc1,Inc2,ngx,ngy,memc(pXc+np),memc(pYc+np),
      *        memi(pUU+np),memi(pVV+np),
      *        n-np,npd,sfac,sxx,sxy,syy,uvlo,uvhi,du,dv)
           np = np + npd
@@ -720,24 +737,24 @@ c     Get all the data in the annuli.
 
 c     Determine the offset.
       if (doshift) then
-        call GetShift(np,memi(pUU),memi(pVV),memc(pX),memc(pY),
-     *                                        In1,ngx,ngy,xs,ys)
-        call Shiftit2(np,memi(pUU),memi(pVV),memc(pY),xs,ys,ngx,ngy)
+        call GetShift(np,memi(pUU),memi(pVV),memc(pXc),memc(pYc),
+     *                                     In1,Inc1,ngx,ngy,xs,ys)
+        call Shiftit2(np,memi(pUU),memi(pVV),memc(pYc),xs,ys,ngx,ngy)
       else
         xs = 0
         ys = 0
       endif
 
 c     Fit for the scale factor.
-      call DetFac(memc(pX),memc(pY),2*np,fac)
+      call DetFac(memr(pXr),memr(pYr),2*np,fac)
 
 c     Plot the scale factor, if the user wanted this.
-      if (device.ne.' ') call PlotFac(device,memc(pX),memc(pY),
+      if (device.ne.' ') call PlotFac(device,memr(pXr),memr(pYr),
      *                                2*np,fac,pfac,doshift)
 
 c     Free the allocated memory.
-      call memFree(pX,n,'c')
-      call memFree(pY,n,'c')
+      call memFree(pXc,n,'c')
+      call memFree(pYc,n,'c')
       call memFree(pUU,n,'i')
       call memFree(pVV,n,'i')
 
@@ -751,11 +768,13 @@ c     Reset to select the first plane.
 
 c***********************************************************************
 
-      subroutine GetShift(np,uu,vv,x,y,data,ngx,ngy,xs,ys)
+      subroutine GetShift(np,uu,vv,x,y,rdata,cdata,ngx,ngy,xs,ys)
 
       integer np,ngx,ngy
       integer uu(np),vv(np)
-      complex x(np),y(np),data(ngx/2+1,ngy)
+      complex x(np),y(np)
+      complex cdata(ngx/2+1,ngy)
+      real rdata(ngx+2,ngy)
       real xs,ys
 c-----------------------------------------------------------------------
 c  Determine the required shift to optimally align the X and Y data.
@@ -765,7 +784,7 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
       do j = 1, ngy
         do i = 1, ngx/2+1
-          data(i,j) = (0.0,0.0)
+          cdata(i,j) = (0.0,0.0)
         enddo
       enddo
 
@@ -773,17 +792,17 @@ c     Accumulate the cross correlation between X and Y.
       do k = 1, np
         l = uu(k) + vv(k)
         if (2*(l/2).eq.l) then
-          data(uu(k),vv(k)) = data(uu(k),vv(k)) + x(k)*conjg(y(k))
+          cdata(uu(k),vv(k)) = cdata(uu(k),vv(k)) + x(k)*conjg(y(k))
         else
-          data(uu(k),vv(k)) = data(uu(k),vv(k)) - x(k)*conjg(y(k))
+          cdata(uu(k),vv(k)) = cdata(uu(k),vv(k)) - x(k)*conjg(y(k))
         endif
       enddo
 
 c     Fourier transform it now.
-      call IFFT(data,ngx,ngy)
+      call IFFT(cdata,ngx,ngy)
 
 c     Find the peak of the data.
-      call findpk(data,ngx,ngy,xs,ys)
+      call findpk(rdata,ngx,ngy,xs,ys)
 
       end
 
@@ -870,8 +889,8 @@ c-----------------------------------------------------------------------
 
 c     Locate the peak.
       call pkfit(fit,3,fmax,pixmax,coeffs)
-      xs = imax + pixmax(1) - (ngx/2+1)
-      ys = jmax + pixmax(2) - (ngy/2+1)
+      xs = real(imax + pixmax(1) - (ngx/2+1))
+      ys = real(jmax + pixmax(2) - (ngy/2+1))
 
       end
 
@@ -973,8 +992,8 @@ c     Determine the least squares fit first.
 
       if (SumYY.eq.0) call bug('f','Low resolution image is zero')
       if (SumXX.eq.0) call bug('f','High resolution image is zero')
-      a = SumXY/SumYY
-      rms = (SumXX + a*a*SumYY - 2*a*SumXY)/(n*SumYY)
+      a = real(SumXY/SumYY)
+      rms = real((SumXX + a*a*SumYY - 2*a*SumXY)/(n*SumYY))
       rms = max(0.01*a,sqrt(max(0.0,rms)))
 
       a1 = a

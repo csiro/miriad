@@ -40,7 +40,7 @@ c
 c       Pixels are blanked if the input pixel is blanked, the averaged
 c       channel pixel is blanked, or the output is undefined.
 c
-c$Id: avmaths.for,v 1.7 2013/08/30 01:49:21 wie017 Exp $
+c$Id: avmaths.for,v 1.8 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  History:
 c    nebk 26jul90 Original version.
@@ -53,7 +53,7 @@ c    mchw 26mar91 Fixed a bug in plane counter "pinc"
 c                 Added pbfwhm and bunit header items.
 c    nebk 27jan92 Moved location of copying of bunit code.
 c    rjs  10mar92 Increased size of maxruns.
-c    nebk 22jun92 Add OPTIONS=REPLACE,NOREDUCE, adapt to MEMALLOC
+c    nebk 22jun92 Add OPTIONS=REPLACE,NOREDUCE, adapt to memAlloc
 c                 and add BTYPE
 c    mjs  12mar93 Use maxnax.h rather than setting maxnax=5
 c    nebk 03jun94 CLarify use of region keyword
@@ -72,9 +72,10 @@ c-----------------------------------------------------------------------
       parameter (MAXBOXES = 1024, MAXRUNS = 9*MAXDIM, MAXPLANE = 1024)
 
       logical   domul, dood, dored, dorepl, dosub, flags(MAXDIM), more
-      integer   avpnt, blc(MAXNAX), boxes(MAXBOXES), i, iend(MAXPLANE),
+      ptrdiff   avpnt, npnt
+      integer   blc(MAXNAX), boxes(MAXBOXES), i, iend(MAXPLANE),
      *          isnext, istart(MAXPLANE), k, lin, lout, naxis, nplanes,
-     *          npnt, nruns, nsect, planes(MAXPLANE), runs(3,MAXRUNS),
+     *          nruns, nsect, planes(MAXPLANE), runs(3,MAXRUNS),
      *          size(MAXNAX), size3, trc(MAXNAX), xblc, xtrc, yblc, ytrc
       real      buffer(MAXBUF), rline(MAXDIM)
       double precision cdelt3, zav
@@ -86,8 +87,8 @@ c-----------------------------------------------------------------------
       common buffer
 c-----------------------------------------------------------------------
       version = versan('avmaths',
-     *                 '$Revision: 1.7 $',
-     *                 '$Date: 2013/08/30 01:49:21 $')
+     *                 '$Revision: 1.8 $',
+     *                 '$Date: 2021/06/02 04:45:09 $')
 c
 c  Get the input parameters.
 c
@@ -106,8 +107,8 @@ c
 c
 c Allocate memory for images
 c
-      call memalloc(avpnt, size(1)*size(2), 'r')
-      call memalloc(npnt,  size(1)*size(2), 'r')
+      call memAlloc(avpnt, size(1)*size(2), 'r')
+      call memAlloc(npnt,  size(1)*size(2), 'r')
 c
 c Deal partly with region
 c

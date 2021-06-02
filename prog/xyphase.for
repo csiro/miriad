@@ -84,9 +84,11 @@ c
 	double precision xytimes(MAXVAL),pbtimes(MAXVAL)
 	integer xyants(MAXVAL),pbants(MAXVAL)
 	logical flags(MAXVIS)
-	complex vis(MAXVIS)
 	complex xy(MAXVAL)
 	complex Gains(GAINSIZE)
+	complex vis(MAXVIS)
+	real buf(MAXVIS*2)
+	equivalence (vis,buf)
 c
 c  Get input parameters.
 c
@@ -182,14 +184,14 @@ c
 	    call output('Determining antenna XY phases from '//
      *	      'autocorrelation solution ...')
 	    call XySol(npb,pbants,pbtimes,xy,interval,gap,break,nbreak,
-     *	      maxsol,nsols,nants,Gains,xytimes,xyants,vis)
+     *	      maxsol,nsols,nants,Gains,xytimes,xyants,buf)
 	    if(refant.gt.0)call RefSet(Gains,nants,nsols,refant)
 	    call GainTab(tIn,xytimes,Gains,nants,nsols)
 	  else
 	    call output('Averaging xyphase variable to determine '//
      *	      'antenna XY phase ...')
 	    call XySol(nxy,xyants,xytimes,xy,interval,gap,break,nbreak,
-     *	      maxsol,nsols,nants,Gains,pbtimes,pbants,vis)
+     *	      maxsol,nsols,nants,Gains,pbtimes,pbants,buf)
 	    if(refant.gt.0)call RefSet(Gains,nants,nsols,refant)
 	    call GainTab(tIn,pbtimes,Gains,nants,nsols)
 	  endif

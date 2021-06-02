@@ -47,7 +47,7 @@ c         shift  Determine an optimum shift of the phase centre to
 c                be applied before the error is evaluated. This
 c                shift will minimise the error in some sense.
 c
-c$Id: conterr.for,v 1.5 2013/08/30 01:49:21 wie017 Exp $
+c$Id: conterr.for,v 1.6 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  History:
 c    rjs  28oct93 Original version.
@@ -65,7 +65,8 @@ c-----------------------------------------------------------------------
 
       logical   doout,doshift, higher
       integer   i, ierr, ifax, iorder, lIn, lOut, naxis, nsize(MAXNAX),
-     *          nx, ny, order(2), pCont, pErr
+     *          nx, ny, order(2)
+      ptrdiff   pCont, pErr
       real      dnu, maxerr, nu, off1, off2, thetax, thetay, x, y
       double precision cdelt1, cdelt2, crpix1, crpix2, f0, finc
       character aorder*3, hline*80, in*64, line*80, out*64, version*72
@@ -75,8 +76,8 @@ c-----------------------------------------------------------------------
       external  hdprsnt, versan
 c-----------------------------------------------------------------------
       version = versan('conterr',
-     *                 '$Revision: 1.5 $',
-     *                 '$Date: 2013/08/30 01:49:21 $')
+     *                 '$Revision: 1.6 $',
+     *                 '$Date: 2021/06/02 04:45:09 $')
 c
 c  Get the input parameters.
 c
@@ -509,7 +510,7 @@ c-----------------------------------------------------------------------
       nz = 0
       do j = 1, order
         if (aimag(roots(j)).eq.0) then
-          x = roots(j)
+          x = real(roots(j))
           nz = nz + 1
         endif
       enddo

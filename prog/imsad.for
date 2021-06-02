@@ -118,9 +118,10 @@ c-----------------------------------------------------------------------
 
       logical   arcsec, beam, dobox, dofid, dohist, dolog, doplot,
      *          hisok, inten, nofit
-      integer   lui, blc(MAXNAX), boxes(MAXBOX), ip, iptr,
-     *          iwin(2,MAXSRC), jwin(2,MAXSRC), luo, mptr, naxis, nbox,
+      integer   lui, blc(MAXNAX), boxes(MAXBOX), ip,
+     *          iwin(2,MAXSRC), jwin(2,MAXSRC), luo, naxis, nbox,
      *          ng, ni, nj, nsize(MAXNAX), trc(MAXNAX)
+      ptrdiff   iptr, mptr
       real      bmaj, bmajp, bmin, bminp, box(2), bpa, bpap, bvol,
      *          bvolp, clip, de0, hvp(4), ivp(4), ivp2(4), ra0,
      *          range(2), range2(2)
@@ -330,7 +331,7 @@ c
           pf(5,ic) = pf(4,ic)
           pf(6,ic) = 0.0
         else
-          pf(6,ic) = 0.5 * atan2(2.0*XYP,YYP-XXP)
+          pf(6,ic) = real(0.5 * atan2(2.0*XYP,YYP-XXP))
         endif
       else if (dopoint) then
         pf(4,ic) = bmaj
@@ -338,7 +339,7 @@ c
         pf(6,ic) = bpa
       endif
       if (pf(4,ic)*pf(5,ic).eq.0.0) call bug('f', 'Error - zero width')
-      pf(1,ic) = sign(WS*P/(PI*pf(4,ic)*pf(5,ic)),SP)
+      pf(1,ic) = real(sign(WS*P/(PI*pf(4,ic)*pf(5,ic)),SP))
 
 c      write(*,*) pf(1,ic), pf(2,ic), pf(3,ic)
 c      write(*,*) pf(4,ic), pf(5,ic), pf(6,ic)
@@ -694,7 +695,7 @@ c
         call pgsch(0.8)
         call pgbox('BCNTS',0.0,0,'BCNTS',0.0,0)
         call pglabel('Image Intensity', 'Normalized counts',' ')
-        call pgpoint(nd,xd,data,21)
+        call pgpt(nd,xd,data,21)
       endif
 c
 c Set Gaussian fits parameter estimates.
@@ -1012,9 +1013,9 @@ c
 c Get spatial reference value
 c
       call rdhdd(lu,'crval1',tmp,0d0)
-      ra0 = tmp
+      ra0 = real(tmp)
       call rdhdd(lu,'crval2',tmp,0d0)
-      de0 = tmp
+      de0 = real(tmp)
 c
 c Get beam parameters from image header
 c
@@ -2025,7 +2026,7 @@ c
 c
 c Convert RA and Dec to formatted strings
 c
-        if (ra.lt.0.0) ra = ra + DTWOPI
+        if (ra.lt.0.0) ra = ra + TWOPI
         ras = hangle(dble(ra))
         if (ras(3:3).ne.':') then
           ctmp = ras
@@ -2055,7 +2056,7 @@ c
       wra = sumwra / sumwgt
       wde = sumwde / sumwgt
 
-      if (wra.lt.0.0) wra = wra + DTWOPI
+      if (wra.lt.0.0) wra = wra + TWOPI
       ras = hangle(dble(wra))
       if (ras(3:3).ne.':') then
         ctmp = ras

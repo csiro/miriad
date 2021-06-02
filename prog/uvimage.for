@@ -101,7 +101,7 @@ c
        character*128 vis,out,linetype,line
        character*10 view
        integer antsel(MAXANT),ant1,ant2,nant,ntime
-       integer apnt
+       ptrdiff apnt
        integer lout,nsize(3),i,j,k,l
        real v
        real datamin,datamax

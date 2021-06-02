@@ -41,7 +41,7 @@ c***********************************************************************
       integer           virax(MAXNAX)
       ptrdiff           vircsize(MAXNAX)
       character         inp*80, out*80
-      integer           dat1, dat2, msk
+      ptrdiff           dat1, dat2, msk
 
 c Announce
       call output(version)

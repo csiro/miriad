@@ -16,7 +16,7 @@ c       No default.
 c@ out
 c       The output image.  No default.
 c
-c$Id: shifty.for,v 1.5 2013/08/30 01:49:21 wie017 Exp $
+c$Id: shifty.for,v 1.6 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  History:
 c    rjs  21nov90 Original version.
@@ -35,8 +35,8 @@ c-----------------------------------------------------------------------
       external  versan
 c-----------------------------------------------------------------------
       version = versan('shifty',
-     *                 '$Revision: 1.5 $',
-     *                 '$Date: 2013/08/30 01:49:21 $')
+     *                 '$Revision: 1.6 $',
+     *                 '$Date: 2021/06/02 04:45:09 $')
 
 c     Get the input parameters and check them.
       call keyini
@@ -109,9 +109,9 @@ c               change pixel (i,j) in image 2, to pixel
 c               (i+xshift,j+yshift).
 c-----------------------------------------------------------------------
       include 'maxdim.h'
-      integer iIn1,iIn2,iOut,iScr1,iScr2,i,k
-      real Scratch(maxbuf)
-      common Scratch
+      include 'mem.h'
+      ptrdiff iIn1,iIn2,iOut,iScr1,iScr2, i
+      integer j,k
 
 c     Externals.
       integer isamax
@@ -122,30 +122,30 @@ c
       call memalloc(iIn1,n1*n2,'r')
       call memalloc(iIn2,n1*n2,'r')
       call memalloc(iOut,n1*n2,'r')
-      call memalloc(iScr1,2*(n1/2+1)*n2,'r')
-      call memalloc(iScr2,2*(n1/2+1)*n2,'r')
+      call memalloc(iScr1,(n1/2+1)*n2,'c')
+      call memalloc(iScr2,(n1/2+1)*n2,'c')
 c
 c  Initialise the output work buffer.
 c
       do i = iOut, iOut+n1*n2-1
-        Scratch(i) = 0
+        MemR(i) = 0
       enddo
 c
 c  Loop over all the planes.
 c
       do k = 1, n3
-        call ImLoad(lIn1,n1,n2,k,Scratch(iIn1))
-        call ImLoad(lIn2,n1,n2,k,Scratch(iIn2))
-        call Xcorr(Scratch(iIn1),Scratch(iIn2),n1,n2,Scratch(iOut),
-     *    Scratch(iScr1),Scratch(iScr2))
+        call ImLoad(lIn1,n1,n2,k,MemR(iIn1))
+        call ImLoad(lIn2,n1,n2,k,MemR(iIn2))
+        call Xcorr(MemR(iIn1),MemR(iIn2),n1,n2,MemR(iOut),
+     *    MemC(iScr1),MemC(iScr2))
       enddo
 c
 c  Now find the peak in the output, and thats that.
 c
-      i = isamax(n1*n2,Scratch(iOut),1) - 1
-      yshift = i / n1
+      j = isamax(n1*n2,MemR(iOut),1) - 1
+      yshift = j / n1
       if (yshift.gt.n2/2) yshift = yshift - n2
-      xshift = mod(i,n1)
+      xshift = mod(j,n1)
       if (xshift.gt.n1/2) xshift = xshift - n1
 c
 c  Free up the allocated memory.
@@ -153,8 +153,8 @@ c
       call memfree(iIn1,n1*n2,'r')
       call memfree(iIn2,n1*n2,'r')
       call memfree(iOut,n1*n2,'r')
-      call memfree(iScr1,2*(n1/2+1)*n2,'r')
-      call memfree(iScr2,2*(n1/2+1)*n2,'r')
+      call memfree(iScr1,(n1/2+1)*n2,'c')
+      call memfree(iScr2,(n1/2+1)*n2,'c')
 
       end
 

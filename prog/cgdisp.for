@@ -615,7 +615,7 @@ c       ocircle hms dms red_circle no 09 02 14.0 -46 24 36.0 828.0 0 0
 c       color 4
 c       ocircle hms dms blue_circle no 09 01 01.593  -46 38 55.498  439.09 0 0
 c
-c$Id: cgdisp.for,v 1.28 2018/11/29 23:30:11 wie017 Exp $
+c$Id: cgdisp.for,v 1.29 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -690,8 +690,8 @@ c     Plotting parameters.
       data getvsc /.true./
 c-----------------------------------------------------------------------
       version = versan ('cgdisp',
-     *                  '$Revision: 1.28 $',
-     *                  '$Date: 2018/11/29 23:30:11 $')
+     *                  '$Revision: 1.29 $',
+     *                  '$Date: 2021/06/02 04:45:09 $')
 
 c     Get user inputs.
       call inputs(maxchan, MAXLEV, MAXCON, MAXTYP, ltypes, ncon, cin,
@@ -1089,7 +1089,7 @@ c     Close down.
         call memfrex(ipim2,  npixels, 'r')
         call memfrex(ipnim2, npixels, 'i')
       endif
-      if (mskin.ne.' ') call memfrep(ipimm, npixels, 'i')
+      if (mskin.ne.' ') call memfrex(ipimm, npixels, 'i')
 
       do i = 1, ncon
         call coFin(lc(i))

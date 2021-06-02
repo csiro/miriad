@@ -75,7 +75,7 @@ c------------------------------------------------------------------------
 	integer nsamp,nBemMax
 	parameter(nsamp=100,nBemMax=51*51)
 c
-        integer ptv, pti
+        ptrdiff ptv, pti
         real data(maxbuf)
         common data
 c
@@ -88,7 +88,8 @@ c
         character aveop*1,outf*64, ctypei*8, ctypev*8, itoaf*1
 	integer blc(3),trc(3),isize(3),vsize(3),bsize(2),n(3)
 	integer size,nbx,nby,npix,nspec
-	integer i,j,k,i0,v0,b0,length,iostat,delta,ii0,vv0
+	integer i,j,k,b0,length,iostat,delta
+	ptrdiff i0, v0, ii0, vv0
 c
 c  Externals.
 c
@@ -271,7 +272,7 @@ c
      *      (beam.ne.' '.and.n(2)*n(3).gt.1))then
   	    if(beam.ne.' '.and.n(2)*n(3).gt.1)then
 	      call xyopen(lBeam,beam,'old',2,bsize)
-	      nbx = sqrt(real((nBemMax*bsize(1))/bsize(2)))
+	      nbx = int(sqrt(real((nBemMax*bsize(1))/bsize(2))))
  	      nbx = min(nbx,bsize(1))
 	      nby = min(nBemMax / nbx, bsize(2))
 	      if(min(nbx,nby).lt.1) call bug('f','Something is wrong')

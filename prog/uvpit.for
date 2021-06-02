@@ -41,7 +41,7 @@ c	  residual The output data-set is the residual visibilities.
 c	           If an output is being created, the default is to make
 c	           this the fitted model.
 c
-c$Id: uvpit.for,v 1.6 2013/08/30 01:49:21 wie017 Exp $
+c$Id: uvpit.for,v 1.7 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  History:
 c    rjs  13dec90  Original version.
@@ -75,7 +75,8 @@ c
 	double precision preamble(4),sfreq(MAXCHAN),time0
 	complex data(MAXCHAN),Model(MAXCHAN)
 	logical flags(MAXCHAN),dores,cross
-	integer fvec,wa,iwa(MAXVAR),lwa
+	integer iwa(MAXVAR),lwa
+	ptrdiff fvec,wa
 	integer ipol
 	real chi0
 c
@@ -90,8 +91,8 @@ c
 	include 'mem.h'
 c-----------------------------------------------------------------------
       version = versan ('uvpit',
-     :                  '$Revision: 1.6 $',
-     :                  '$Date: 2013/08/30 01:49:21 $')
+     :                  '$Revision: 1.7 $',
+     :                  '$Date: 2021/06/02 04:45:09 $')
 c
 c  Get the inputs.
 c
@@ -125,11 +126,11 @@ c
 	      cross = cross.or.ipol.eq.PolXY.or.ipol.eq.PolYX
 	      nvis = nvis + 1
 	      if(nvis.gt.MAXVIS)call bug('f','Buffer overflow')
-	      u(nvis) = preamble(1)*sfreq(i)
-	      v(nvis) = preamble(2)*sfreq(i)
+	      u(nvis) = real(preamble(1)*sfreq(i))
+	      v(nvis) = real(preamble(2)*sfreq(i))
 	      chi(nvis) = chi0
 	      pol(nvis) = ipol
-	      t(nvis) = preamble(3) - time0
+	      t(nvis) = real(preamble(3) - time0)
 	      vis(nvis) = data(i)
 	    endif
 	  enddo
@@ -215,11 +216,11 @@ c
 	    call uvrdvrr(lIn,'chi',chi0,0.)
 	    call uvinfo(lIn,'sfreq',sfreq)
 	    do i=1,nread
-	      u(i) = preamble(1) * sfreq(i)
-	      v(i) = preamble(2) * sfreq(i)
+	      u(i) = real(preamble(1) * sfreq(i))
+	      v(i) = real(preamble(2) * sfreq(i))
 	      chi(i) = chi0
 	      pol(i) = ipol
-	      t(i)   = preamble(3) - time0
+	      t(i)   = real(preamble(3) - time0)
 	    enddo
 	    if(dores)then
 	      call Eval(u,v,chi,t,pol,Model,nread)
@@ -258,8 +259,8 @@ c
 	  call coCvt(lIn,'op/op',x1,'ow/ow',x2)
 	endif
 c
-	offset(1) = x2(1)
-	offset(2) = x2(2)
+	offset(1) = real(x2(1))
+	offset(2) = real(x2(2))
 c
 	end
 c***********************************************************************
@@ -279,7 +280,7 @@ c
 	  dtemp = dtemp + real(fvec(i))**2 + aimag(fvec(i))**2
 	enddo
 c
-	rms = sqrt(dtemp / (2*m))
+	rms = real(sqrt(dtemp / (2*m)))
 	end
 c***********************************************************************
 	subroutine PackPar(x,nvar,MAXVAR)
@@ -375,6 +376,7 @@ c
 	do i=1,nvis
 	  fvec(i) = vis(i) - fvec(i)
 	enddo
+	iflag = 0
 c
 	end
 c***********************************************************************

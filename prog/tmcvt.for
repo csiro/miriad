@@ -316,10 +316,10 @@ c
 	    tint = tint + tints(i,bl)
 	  enddo
 c
-	  chi = preamble(iChi1,bl) / tint
+	  chi = real(preamble(iChi1,bl) / tint)
 	  chi = chi1 - 2*PI*nint((chi1-chi)/(2*PI))
 	  preamble(iChi1,bl) = preamble(iChi1,bl) + inttime*chi
-	  chi = preamble(iChi2,bl) / tint
+	  chi = real(preamble(iChi2,bl) / tint)
 	  chi = chi2 - 2*PI*nint((chi2-chi)/(2*PI))
 	  preamble(iChi2,bl) = preamble(iChi2,bl) + inttime*chi
 	endif
@@ -423,8 +423,8 @@ c
 	preambl(iBl)   = preamble(iBl,bl)
 c
 	inttime = tint / np
-	chi1 = preamble(iChi1,bl)/tint
-	chi2 = preamble(iChi2,bl)/tint
+	chi1 = real(preamble(iChi1,bl)/tint)
+	chi2 = real(preamble(iChi2,bl)/tint)
 	call basant(preambl(iBl),i1,i2)
 c
 	call getcoeff(i1,i2,circ,doleak1,doleak2,leak1,leak2,nants,

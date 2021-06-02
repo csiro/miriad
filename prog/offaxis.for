@@ -47,7 +47,7 @@ c                   The default is to apply these if they are available.
 c         nopass    Do not apply bandpass calibration. The default is to
 c                   apply these calibrations if they are available.
 c
-c$Id: offaxis.for,v 1.6 2018/12/04 04:02:11 wie017 Exp $
+c$Id: offaxis.for,v 1.7 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  History:
 c    rjs  02may96 Original version.
@@ -68,8 +68,9 @@ c-----------------------------------------------------------------------
 
       logical   flags(MAXCHAN,4), first, replace
 
-      integer   i, j, nCmp, nchan, npol, nsize(2), nx, ny, pFlux, pPsi,
-     *          pRad, pll, pmm, pols(MAXPOL), tMod, tOut, tVis
+      integer   i, j, nCmp, nchan, npol, nsize(2), nx, ny, pols(MAXPOL),
+     *          tMod, tOut, tVis
+      ptrdiff   pFlux, pPsi,pRad, pll, pmm
       real      chi, clip
       double precision preamble(5), sfreq(MAXCHAN)
       complex   sim(MAXCHAN,4), uvdata(MAXCHAN,4)
@@ -80,8 +81,8 @@ c     Externals.
       character itoaf*8, versan*72
 c-----------------------------------------------------------------------
       version = versan('offaxis',
-     :                 '$Revision: 1.6 $',
-     :                 '$Date: 2018/12/04 04:02:11 $')
+     :                 '$Revision: 1.7 $',
+     :                 '$Date: 2021/06/02 04:45:09 $')
 c
 c  Get and check the inputs.
 c
@@ -108,7 +109,7 @@ c
         call uvDatSet('stokes',PolYX)
         npol = 4
       else
-        call uvDatGti('pols',pols)
+        call uvDatGti('pols',pols(1))
         if(npol.eq.4)then
           if(pols(1).ne.PolXX.or.pols(2).ne.PolYY.or.
      *       pols(3).ne.PolXY.or.pols(4).ne.PolYX)
@@ -253,7 +254,7 @@ c-----------------------------------------------------------------------
         XY = (0.0,0.0)
         YX = (0.0,0.0)
 
-        omega = TWOPI * sfreq(j)
+        omega = TWOPI * real(sfreq(j))
         do i = 1, nCmp
           call atJones(rad(i),psi(i)-chi,sfreq(j),Jo,pb)
 
@@ -264,7 +265,7 @@ c         Coherence matrix elements.
           cyy = Jo(2,1)*Jo(2,1) + Jo(2,2)*Jo(2,2)
 
 c         Model Stokes I visibility.
-          theta = omega * (uv(1)*ll(i) + uv(2)*mm(i))
+          theta = real(omega * (uv(1)*ll(i) + uv(2)*mm(i)))
           vis = (flux(i) / pb) * cmplx(cos(theta),sin(theta))
 
           XX = XX + vis * (cxx - pb)
@@ -373,8 +374,8 @@ c     Load the model map.
             nCmp = nCmp + 1
             if (nCmp.gt.maxCmp) call bug('f','Too many components')
             flux(nCmp) = map(i)
-            ll(nCmp) = cdelt1*(i-crpix1)
-            mm(nCmp) = cdelt2*(j-crpix2)
+            ll(nCmp) = real(cdelt1*(i-crpix1))
+            mm(nCmp) = real(cdelt2*(j-crpix2))
           endif
         enddo
       enddo

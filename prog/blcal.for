@@ -82,7 +82,7 @@ c
 	logical uvDatOpn
 c
 c  Data.
-c	
+c
 	data pols/-7,-7,-6,-5,-3,-3,-2,-1,0,1,1,1,1/
 c
 c  Get the inputs.
@@ -383,7 +383,7 @@ c
      *		data,flags,co(4),nchan)
 c
 c  Book keeping.
-c	
+c
 	      if(.not.buffered)then
 	        pmin = pol
 	        pmax = pmin
