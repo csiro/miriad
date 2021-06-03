@@ -112,7 +112,7 @@ c------------------------------------------------------------------------
 	include 'gpplt.h'
 	integer iostat,tIn,nx,ny,nfeeds,nants,nsols,ierr,symbol,nchan
 	integer ntau,length,i,k,off,nbpsols,nfbin,ngains
-	character vis*64,device*64,logfile*64,BaseTime*20
+	character vis*256,device*256,logfile*256,BaseTime*20
 	double precision T0,freq(MAXFBIN),time(maxTimes)
 	logical doamp,dophase,doreal,doimag,dogains,dopol,dodtime,doxy
 	logical doxbyy,doplot,dolog,more,ltemp,dodots,dodelay,dopass

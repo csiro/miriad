@@ -98,7 +98,8 @@ c
        integer lIn,nchan,nread,nvis,nchannel,vmode,nbl,omode
        integer nspect
        double precision start,width,step
-       character*128 vis,out,linetype,line
+       character*256 vis,out
+       character*128 linetype,line
        character*10 view
        integer antsel(MAXANT),ant1,ant2,nant,ntime
        ptrdiff apnt

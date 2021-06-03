@@ -156,7 +156,7 @@ c again until the list is exhausted.
       character*72 versan
       character*72 version
 
-      character*64     vis
+      character*256    vis
 
       integer	       NSELS
       parameter        ( NSELS = 25000 )
@@ -176,8 +176,8 @@ c again until the list is exhausted.
       data	       usech / MAXCHAN * .true. /
 
       version = versan('uvflag',
-     *                 '$Revision: 1.11 $',
-     *                 '$Date: 2018/12/05 00:08:29 $')
+     *                 '$Revision: 1.12 $',
+     *                 '$Date: 2021/06/03 07:09:31 $')
 
       call keyini
       call keyf( 'vis', vis, ' ' )

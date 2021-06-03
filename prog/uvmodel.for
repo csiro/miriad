@@ -96,7 +96,7 @@ c       only as many channels as there are planes in the model cube.
 c       The various uv variables that describe the windows are adjusted
 c       accordingly.  No default. 
 c
-c$Id: uvmodel.for,v 1.11 2019/12/03 02:15:23 ste616 Exp $
+c$Id: uvmodel.for,v 1.12 2021/06/03 07:09:31 wie017 Exp $
 c--
 c
 c  History:
@@ -160,8 +160,8 @@ c-----------------------------------------------------------------------
       double precision preamble(5), lstart, lstep, lwidth
       real      p1,p2,p3
       complex   uvdata(MAXCHAN)
-      character flag1*8, flag2*8, ltype*32, modl*64, oper*8, out*64,
-     *          poltype*4, type*1, version*72, vis*64
+      character flag1*8, flag2*8, ltype*32, modl*256, oper*8, out*256,
+     *          poltype*4, type*1, version*72, vis*256
 
       common /uvmodcom/ calcrms, dounflag
 
@@ -171,8 +171,8 @@ c-----------------------------------------------------------------------
       character versan*72
 c-----------------------------------------------------------------------
       version = versan('uvmodel',
-     *                 '$Revision: 1.11 $',
-     *                 '$Date: 2019/12/03 02:15:23 $')
+     *                 '$Revision: 1.12 $',
+     *                 '$Date: 2021/06/03 07:09:31 $')
 
 c     Get the input parameters.
       call keyini

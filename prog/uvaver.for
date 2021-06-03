@@ -108,7 +108,7 @@ c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
 	parameter(version='UvAver: version 1.0 17-Nov-08')
-	character uvflags*12,ltype*16,out*64
+	character uvflags*12,ltype*16,out*256
 	integer npol,Snpol,pol,tIn,tOut,vupd,nread,nrec,i,nbin
 	real inttime,jyperk
 	logical dotaver,doflush,buffered,PolVary,ampsc,vecamp,first

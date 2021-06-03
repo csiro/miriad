@@ -82,7 +82,7 @@ c	  noapply Do not apply the scale factor - just evaluate it.
 c         nospec Do not try to determine and correct the spectral index across
 c                the band.
 c
-c$Id: mfboot.for,v 1.15 2014/06/05 03:49:06 wie017 Exp $
+c$Id: mfboot.for,v 1.16 2021/06/03 07:09:31 wie017 Exp $
 c--
 c  History:
 c    rjs     15jan06 Original version adapted from plboot.
@@ -101,7 +101,7 @@ c------------------------------------------------------------------------
 	integer MAXVIS,MAXPNTS
 	parameter(MAXVIS=32,MAXPNTS=4000000)
 c
-	character vis(MAXVIS)*64,source*32,line*64,device*64,mode*8
+	character vis(MAXVIS)*256,source*32,line*64,device*64,mode*8
 	character psource*32
 	logical noapply,nospec
 	integer nvis,lVis,vsource,nchan,iplanet,i,n(2),nants,nfeeds
@@ -124,8 +124,8 @@ c
 	character streal*16, versan*72
         
         version = versan('mfboot',
-     *                   '$Revision: 1.15 $',  
-     *                   '$Date: 2014/06/05 03:49:06 $')
+     *                   '$Revision: 1.16 $',  
+     *                   '$Date: 2021/06/03 07:09:31 $')
 c
 c  Get the user input.
 c

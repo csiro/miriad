@@ -69,7 +69,7 @@ c       range pkmask(1) to pkmask(2) exclusive.  If only one value is
 c       given, then mask pixels with peak intensity less than pkmask.
 c       Default = 0.
 c
-c$Id: moment.for,v 1.18 2021/06/02 04:45:09 wie017 Exp $
+c$Id: moment.for,v 1.19 2021/06/03 07:09:31 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -89,15 +89,15 @@ c-----------------------------------------------------------------------
       real      blo, bhi, clip(2), pkmask(2), offset, scl, tmp,
      *          vrange(2)
       double precision cdelt, crpix, crval
-      character algo*3, ctype*16, in*128, text*72, out*128, version*72
+      character algo*3, ctype*16, in*256, text*72, out*256, version*72
 
       logical   keyprsnt, hdprsnt
       character itoaf*1, versan*72
       external  itoaf, keyprsnt, hdprsnt, versan
 c-----------------------------------------------------------------------
       version = versan ('moment',
-     *                  '$Revision: 1.18 $',
-     *                  '$Date: 2021/06/02 04:45:09 $')
+     *                  '$Revision: 1.19 $',
+     *                  '$Date: 2021/06/03 07:09:31 $')
 
 c     Get inputs.
       call keyini

@@ -96,7 +96,7 @@ c                      when the fractional bandwidth is > 0.4 (this
 c                      is because higher orders are needed to model
 c                      the primary beam response with frequency).
 c
-c$Id: linmos.for,v 1.33 2018/11/29 23:30:11 wie017 Exp $
+c$Id: linmos.for,v 1.34 2021/06/03 07:09:31 wie017 Exp $
 c--
 c
 c  History:
@@ -171,7 +171,7 @@ c-----------------------------------------------------------------------
 
       real      TOL
       integer   MAXIN, MAXLEN, MAXOPN
-      parameter (MAXIN=8192, MAXLEN=MAXIN*64, MAXOPN=6, TOL=0.01)
+      parameter (MAXIN=8192, MAXLEN=MAXIN*256, MAXOPN=6, TOL=0.01)
 
       logical   defrms, dosen, dogain, dofreq, docar, exact, taper, mfs
       logical   cube, doalpha, nodata
@@ -182,15 +182,15 @@ c-----------------------------------------------------------------------
       real      blctrc(4,MAXIN), extent(4), rms(MAXIN), sigt, xoff,
      *          yoff, bw, wt, cutoff
       double precision f, fout
-      character inName*64, inbuf*(MAXLEN), outNam*64, version*72
+      character inName*256, inbuf*(MAXLEN), outNam*256, version*72
 
       integer   len1
       character versan*72
       external  len1, versan
 c-----------------------------------------------------------------------
       version = versan ('linmos',
-     *                  '$Revision: 1.33 $',
-     *                  '$Date: 2018/11/29 23:30:11 $')
+     *                  '$Revision: 1.34 $',
+     *                  '$Date: 2021/06/03 07:09:31 $')
 
 c     Get and check inputs.
       call keyini

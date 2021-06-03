@@ -240,8 +240,8 @@ c
 c
 c  Internal variables.
 c
-      character Vis(MAXFILES)*132, Outsave*132, Outfile*132
-      character Selsrc*132, apFile*132, source*132
+      character Vis(MAXFILES)*256, Outsave*256, Outfile*256
+      character Selsrc*132, apFile*256, source*132
       character except(15)*11, type*1, corrtype*1
       character errmsg*175, mesg*80, antkey*7
       integer j, k, m

@@ -615,7 +615,7 @@ c       ocircle hms dms red_circle no 09 02 14.0 -46 24 36.0 828.0 0 0
 c       color 4
 c       ocircle hms dms blue_circle no 09 01 01.593  -46 38 55.498  439.09 0 0
 c
-c$Id: cgdisp.for,v 1.29 2021/06/02 04:45:09 wie017 Exp $
+c$Id: cgdisp.for,v 1.30 2021/06/03 07:09:31 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -642,8 +642,8 @@ c     Plotting parameters.
      *  msize(maxnax), bsize(maxnax), lc(MAXCON), lg, lv(2), lm, lb,
      *  lhead, concol(MAXCON), veccol, boxcol, bemcol, ovrcol, labcol
       logical doaxlab, doaylab, donxlab(2), donylab(2)
-      character cin(MAXCON)*64, gin*64, vin(2)*64, mskin*64, bin*64,
-     *  ltypes(MAXTYP)*6, versan*72, version*72
+      character cin(MAXCON)*256, gin*256, vin(2)*256, mskin*256,
+     *  bin*256, ltypes(MAXTYP)*6, versan*72, version*72
 
       real levs(MAXLEV,MAXCON), pixr(2,maxchan), tr(6), bmin(MAXCON+4),
      *  bmaj(MAXCON+4), bpa(MAXCON+4), scale(2), cs(4), pixr2(2),
@@ -663,7 +663,7 @@ c     Plotting parameters.
      *  ncols(MAXCON), jplot, fs, firstimage, ncomm
 
       character labtyp(2)*6, levtyp(MAXCON)*1, trfun(maxchan)*3
-      character pdev*132, xlabel*40, ylabel*40, hard*20, ofile*64,
+      character pdev*132, xlabel*40, ylabel*40, hard*20, ofile*256,
      *  aline*72, val3form*20, comments(5)*132
 
       logical solneg(MAXCON), doblv(2), bemprs(MAXCON+4)
@@ -690,8 +690,8 @@ c     Plotting parameters.
       data getvsc /.true./
 c-----------------------------------------------------------------------
       version = versan ('cgdisp',
-     *                  '$Revision: 1.29 $',
-     *                  '$Date: 2021/06/02 04:45:09 $')
+     *                  '$Revision: 1.30 $',
+     *                  '$Date: 2021/06/03 07:09:31 $')
 
 c     Get user inputs.
       call inputs(maxchan, MAXLEV, MAXCON, MAXTYP, ltypes, ncon, cin,

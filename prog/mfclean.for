@@ -105,7 +105,7 @@ c       x and y pixel coordinate (in the output model; this goes from 1
 c       to N), the "I" component and the "I*alpha" component.  The
 c       default is to not create a log file.
 c
-c$Id: mfclean.for,v 1.16 2019/01/29 23:03:22 wie017 Exp $
+c$Id: mfclean.for,v 1.17 2021/06/03 07:09:31 wie017 Exp $
 c--
 c  History:
 c    rjs   Nov89 - Original version.
@@ -185,7 +185,7 @@ c-----------------------------------------------------------------------
       ptrdiff Map0,Map1,Res0,Res1,Est0,Est1,Tmp
       ptrdiff FFT0,FFT1,FFT01,FFT10,FFT00,FFT11
       real Rcmp0(maxCmp2),Rcmp1(maxCmp2),Ccmp0(maxCmp2),Ccmp1(maxCmp2)
-      real Histo(maxP/2+1)
+      real Histo((maxP+1)/2)
       real Patch00(maxBeam),Patch11(maxBeam)
       real Patch01(maxBeam),Patch10(maxBeam)
       integer Icmp(maxCmp1),JCmp(maxCmp1)
@@ -196,8 +196,8 @@ c-----------------------------------------------------------------------
       integer maxNiter(2),Niter,totNiter,minPatch,maxPatch,curMaxNiter
       integer naxis,n1,n2,n1d,n2d,ic,jc,nx,ny,nCmp
       integer xmin,xmax,ymin,ymax,xoff,yoff,zoff
-      character MapNam*64,BeamNam*64,ModelNam*64,OutNam*64,line*72
-      character logf*64, version*72
+      character MapNam*256,BeamNam*256,ModelNam*256,OutNam*256,line*72
+      character logf*256, version*72
       integer lMap,lBeam,lModel,lOut
       integer nMap(3),nBeam(3),nModel(3),nOut(4)
       real EstASum
@@ -210,8 +210,8 @@ c-----------------------------------------------------------------------
       external  itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('mfclean',
-     *                 '$Revision: 1.16 $',
-     *                 '$Date: 2019/01/29 23:03:22 $')
+     *                 '$Revision: 1.17 $',
+     *                 '$Date: 2021/06/03 07:09:31 $')
 c
 c  Get the input parameters.
 c
@@ -422,7 +422,7 @@ c
       do while (More)
         curMaxNiter = min(Niter+MaxNiter(2), MaxNiter(1))
         if (mode.eq.'hogbom') then
-          nCmp=nPoint
+          nCmp=int(nPoint)
           call Hogbom(maxPatch,Patch00,Patch11,Patch01,Patch10,nx,ny,
      *      dat(Res0),dat(Res1),dat(Est0),dat(Est1),Icmp,Jcmp,
      *      dat(Tmp),nCmp,Run,nRun,EstASum,Cutoff,Gain0,Gain1,
@@ -763,7 +763,7 @@ c
         do i = 1, n
           Drms = Drms + Data(i)*Data(i)
         enddo
-        Drms = sqrt(Drms/n)
+        Drms = sqrt(Drms/real(n))
       else
         k=0
         Drms=0
@@ -777,7 +777,7 @@ c
             k=k+1
           endif
         enddo
-        if (k.gt.0) Drms=sqrt(Drms/k)
+        if (k.gt.0) Drms=sqrt(Drms/real(k))
       endif
 
       DAmax = max(abs(Dmax),abs(Dmin))
@@ -830,7 +830,7 @@ c-----------------------------------------------------------------------
       if (map.eq.' ' .or. beam.eq.' ' .or. out.eq.' ')
      *  call bug('f', 'A file name was missing from the parameters')
       call keyi('niters', Niter(1), 250)
-      call keyi('niters', Niter(2), 1000)
+      call keyi('niters', Niter(2), max(1000,Niter(1)/10))
       negStop = Niter(1).lt.0
       Niter(1) = abs(Niter(1))
       Niter(2) = max(1,abs(Niter(2)))

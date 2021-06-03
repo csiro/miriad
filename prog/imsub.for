@@ -15,7 +15,7 @@ c       See the Users Manual for instructions on how to specify this.
 c@ incr
 c       Increment to be used along each axis. Default is 1.
 c
-c$Id: imsub.for,v 1.6 2013/08/30 01:49:21 wie017 Exp $
+c$Id: imsub.for,v 1.7 2021/06/03 07:09:31 wie017 Exp $
 c--
 c  History:
 c    rjs Dark-ages Original version.
@@ -58,15 +58,15 @@ c-----------------------------------------------------------------------
      *          outPlane(MAXNAX), trc(MAXNAX)
       real      mapIn(MAXDIM), mapOut(MAXDIM)
       double precision cdelt, crpix
-      character inName*80, keyw*8, outNam*80, version*72
+      character inName*256, keyw*8, outNam*256, version*72
 
       logical   BoxRect, hdprsnt
       character itoaf*1, versan*72
       external  BoxRect, hdprsnt, itoaf, versan
 c-----------------------------------------------------------------------
       version = versan('imsub',
-     *                 '$Revision: 1.6 $',
-     *                 '$Date: 2013/08/30 01:49:21 $')
+     *                 '$Revision: 1.7 $',
+     *                 '$Date: 2021/06/03 07:09:31 $')
 
 c     Get the input parameters.
       call keyini
