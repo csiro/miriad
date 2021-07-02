@@ -28,6 +28,10 @@ c       primary beam.  The task DEMOS can be used to extract primary
 c       beam weighted models from a mosaiced image.  If no models are
 c       given, a point source model is assumed.
 c
+c       Instead of a model image, you can also use a visibility model.
+c       Visibility models should have the same layout as the data and
+c       the same selections will be applied.
+c
 c       NOTE: When you give SELFCAL a model, it will, by default, select
 c       the data associated with this model from the visibility data-
 c       set.  This includes selecting the appropriate range of channels
@@ -105,7 +109,7 @@ c       the linetype parameters used to construct the map.  If you wish
 c       to override this, or if the info is not in the header, or if you
 c       are using a point source model, this parameter can be useful.
 c
-c$Id: selfcal.for,v 1.22 2021/06/02 04:45:09 wie017 Exp $
+c$Id: selfcal.for,v 1.23 2021/07/02 03:23:16 wie017 Exp $
 c--
 c
 c  History:
@@ -171,6 +175,7 @@ c    mhw  27jan15 Fix number of solutions written
 c    mhw  24mar15 Add spectral parameters to flux keyword 
 c    mhw  29jan16 Use double precision for time offsets to avoid
 c                 loss of precision for multi-config data
+c    mhw  02jul21 Document visibility model option
 c
 c  Bugs/Shortcomings:
 c   * Selfcal should check that the user is not mixing different
@@ -197,8 +202,8 @@ c     Externals.
       external  hdprsnt, header, versan
 c-----------------------------------------------------------------------
       version = versan('selfcal',
-     *                 '$Revision: 1.22 $',
-     *                 '$Date: 2021/06/02 04:45:09 $')
+     *                 '$Revision: 1.23 $',
+     *                 '$Date: 2021/07/02 03:23:16 $')
 c
 c  Get the input parameters.
 c
