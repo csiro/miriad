@@ -104,9 +104,24 @@ c	NOTE: When antennas are in a shuffled order, or for arrays using
 c	the north spur, you should generally give the list of station
 c	names, as the standard array configuration names assume the
 c	standard antenna order (not the shuffled order).
-c
 c	If in doubt, see the on-line history of configurations:
 c	  http://www.narrabri.atnf.csiro.au/operations/array_configurations/config_hist.html
+c@ gainel
+c       Optionally specify the gain elevation curve to be used as a polynomial of
+c       the antenna gain vs zenith angle.
+c       First parameter is elevation cutoff in degrees below which gain is kept
+c        constant (default 0, no cutoff)
+c       Second parameter is number of terms (default 0), followed by the
+c       coefficients. If one set of coefficients is specified, the same curve 
+c       is used for all antennas. Otherwise specify 6 lots of coefficients, all
+c       with the same number of terms. 
+c       E.g., 12,2,1,-1e-2,1,-2e-2,1,-3e-2,1,-4e-2,1,-5e-2,1,-6e-2
+c       The built-in models for 4cm and 3mm vary with antenna based on
+c       measurements from early 2000's. Default is to select the built in model
+c       based on frequency (4-12 GHz, or >70GHz). Note the 3mm model has a 
+c       built-in cutoff of 40 degrees.
+c
+
 c
 c--
 c  History:
@@ -132,17 +147,18 @@ c    27feb06 rjs  Fix bug when there are multiple frequencies.
 c    25sep06 tw/rjs  Fix bug precluding inst phase correction without dantpos
 c    08jan07 rjs  Small documentation correction.
 c    09sep13 mhw  Fix optimization bug causing tsys jumps at freq change
+c    27sep21 mhw  Widen 3cm band to 4-12 GHz in EleScale, allow user poly
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
 	character version*72
-	integer MAXSELS,ATANT
-	parameter(MAXSELS=256,ATANT=6)
+	integer MAXSELS,ATANT, MAXPOLY
+	parameter(MAXSELS=256,ATANT=6,MAXPOLY=4)
 c
 	real sels(MAXSELS),xyz(3*MAXANT)
 	character array(MAXANT)*8,aname*8,tsyscal*12
 	integer lVis,lOut,vant,vgmet,vnif
-	integer pol,npol,i,j,k
+	integer pol,npol,i,j,k, npoly, ant
 	logical updated,dogel,doinst,dobl
 	character vis*64,out*64,type*1
 	integer nschan(MAXWIN),nif,nchan,nant,length,na,ifreq
@@ -151,7 +167,7 @@ c
 c
 	real delta(3,MAXANT)
 	real freq0(MAXWIN),jyperk
-	double precision ra,dec,lat,lst,az,el
+	double precision ra,dec,lat,lst,az,el,ellim,poly(ATANT,MAXPOLY)
 c
 	complex data(MAXCHAN)
 	logical flags(MAXCHAN)
@@ -163,10 +179,11 @@ c
 	integer uvscan
 	real elescale
         character*72 versan
+	character*2 itoaf
 c
 	version = versan('atfix',
-     :                   '$Revision: 1.7 $',
-     :                   '$Date: 2018/12/04 04:02:11 $')
+     :                   '$Revision: 1.8 $',
+     :                   '$Date: 2021/09/27 23:36:23 $')
 	call keyini
 	call keya('vis',vis,' ')
 	call selInput('select',sels,MAXSELS)
@@ -195,6 +212,33 @@ c
 c
 	call GetOpt(dogel,doinst,tsyscal)
 	dobl = dobl.or.doinst
+	
+	call keyd('gainel',ellim,0.0)
+	call keyi('gainel',npoly,0)
+	if (npoly.lt.0.or.npoly.gt.MAXPOLY) 
+     *    call bug('f','Up to '//itoaf(MAXPOLY)//
+     '    ' polynomial terms allowed')
+	if (npoly.gt.0) then
+	  call output('User gain curve with '//itoaf(npoly)//' terms')
+c
+c       read poly coeffs for up to ATANT antennas, missing ones get 
+c       values for first antenna. Default is unity gain.
+c
+     	  do j=1,ATANT
+	    if (j.eq.1.or.keyprsnt('gainel')) then
+              call keyd('gainel',poly(j,1),1.0)
+              do i=2,npoly
+	        call keyd('gainel',poly(j,i),0.0)
+	      enddo
+	    else
+  	      poly(j,1) = poly(1,1)
+	      do i=2,npoly
+	        poly(j,i) = poly(1,i)
+	      enddo
+	    endif
+	    print *,'Antenna',j,' poly: ',(poly(j,i),i=1,npoly)
+	 enddo
+	endif
 	call keyfin
 c
 c  Check the inputs.
@@ -354,7 +398,7 @@ c
 	  if(dogel)then
 	    k = 0
 	    do i=1,nif
-              gel = EleScale(el,freq0(i),preamble(5))
+              gel = EleScale(el,freq0(i),preamble(5),ellim,npoly,poly)
 	      if(i.eq.1)jyperk = jyperk / gel
 	      dojpk = .true.
 	      do j=1,nschan(i)
@@ -793,30 +837,35 @@ c
 c
 	end
 c************************************************************************
-	real function EleScale(el,freq0,baseline)
+	real function EleScale(el,freq0,baseline,ellim,npoly,poly)
 c
 	implicit none
-	double precision el
+	double precision el, ellim
 	real freq0
 	double precision baseline
+	integer npoly
+	integer ATANT
+	parameter(ATANT=6)
+	double precision poly(ATANT,npoly)
 c
 c  Input:
 c     el        elevation   (rad)
 c     freq0     freq of obs (Hz)
 c     baseline  baseline number
+c     npoly     number of poly terms
+c     poly      polynomial coefficients for antenna gain-el curve
 c  Output:
-c     EleScale  factor to multiply vis by
+c     EleScale  factor to divide vis by
 c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
-	integer ATANT
-	parameter(ATANT=6)
 c
 	integer ant1, ant2
 	real elev,za
 	real g1,g2
 c
-	integer j
+	integer j,i
+	logical first /.true./
 c
 c  3cm gain/elevation
 c
@@ -877,23 +926,52 @@ c
 c
 	elev = real(el*180.0/PI)
 	za=90.0 - elev
+	
+	if (npoly.eq.0) then
+	
 c
 c  3cm correction.
 c
-	if ((8.0e+9 .le. freq0) .and. (freq0 .le. 9.2e+9)) then
-	  g1=1/(xpc(ant1,1) + za*(xpc(ant1,2) + za*xpc(ant1,3)))
-	  g2=1/(xpc(ant2,1) + za*(xpc(ant2,2) + za*xpc(ant2,3)))
+	  if ((4.0e+9 .le. freq0) .and. (freq0 .le. 12.0e+9)) then
+	    g1=1/(xpc(ant1,1) + za*(xpc(ant1,2) + za*xpc(ant1,3)))
+	    g2=1/(xpc(ant2,1) + za*(xpc(ant2,2) + za*xpc(ant2,3)))
+	    if (first) then
+	      call output('Using 3cm polynomial for gain curve')
+	      first = .false.
+	    endif
+
 c
 c  3mm correction.
 c
-	else if(70e9.le.freq0 .and. freq0.le.120e9)then
-	  elev = max(elev,40.0)
-	  g1=wpc(ant1,1) + elev*(wpc(ant1,2)+elev*wpc(ant1,3))
-	  g2=wpc(ant2,1) + elev*(wpc(ant2,2)+elev*wpc(ant2,3))
+	  else if(70e9.le.freq0 .and. freq0.le.120e9)then
+	    if (first) then
+	      call output('Using 3mm polynomial for gain curve')
+	      first = .false.
+	    endif
+	    elev = max(elev,40.0)
+	    g1=wpc(ant1,1) + elev*(wpc(ant1,2)+elev*wpc(ant1,3))
+	    g2=wpc(ant2,1) + elev*(wpc(ant2,2)+elev*wpc(ant2,3))
+	  else
+	    g1=1.
+	    g2=1.
+	  endif
+c
+c   User specified gain curve
+c
 	else
-	  g1=1.
-	  g2=1.
+	  za = min(za,90.-ellim)
+	  g1 = poly(ant1,npoly)
+	  g2 = poly(ant2,npoly)
+	  do i=npoly-1,1,-1
+	    g1 = za * g1 + poly(ant1,i)
+	    g2 = za * g2 + poly(ant2,i)
+	  enddo
+	  if (first) then
+	    call output('Using user polynomial for gain curve')
+	    first=.false.
+	  endif
 	endif
+	  
 c
 	EleScale=g1*g2
 c
@@ -1078,8 +1156,8 @@ c
      *	    xtsys(1,1,ntcal),ytsys(1,1,ntcal),
      *	    xtrec(1,1,ntcal),ytrec(1,1,ntcal))
 	  tvalid(ntcal) = .true.
-          if (ntcal.gt.161.and.ntcal.lt.167) 
-     *         print *,ntcal,xtsys(1,1,ntcal),xtrec(1,1,ntcal),doatm
+c          if (ntcal.gt.161.and.ntcal.lt.167) 
+c     *         print *,ntcal,xtsys(1,1,ntcal),xtrec(1,1,ntcal),doatm
 c	else if(neednew)then
 c	  call bug('w',
 c     *	  'New frequency without new system temperature measurement')
@@ -1296,13 +1374,13 @@ c
 	          ytcur(i,j) = (t+Tb(j))/fac(j)
 	        enddo
 	      enddo
-              if (t1.gt.161.and.t1.lt.167) then
-                print *,'time: ',t1,t2 
-                print *,tfreq(t1),tfreq(t2),Tb(1),fac(1)
-                print *,a1,a2,xtrec(1,1,t1),xtrec(1,1,t2)
-                print *,'tsys',xtsys(1,1,t1),xtsys(1,1,t2)
-                print *,xtcur(1,1)
-              endif
+c              if (t1.gt.161.and.t1.lt.167) then
+c                print *,'time: ',t1,t2 
+c                print *,tfreq(t1),tfreq(t2),Tb(1),fac(1)
+c                print *,a1,a2,xtrec(1,1,t1),xtrec(1,1,t2)
+c                print *,'tsys',xtsys(1,1,t1),xtsys(1,1,t2)
+c                print *,xtcur(1,1)
+c              endif
 	    else
 	      do j=1,nwin
 	        do i=1,nants
