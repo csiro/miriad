@@ -50,7 +50,7 @@ c	  nopass    Do not perform bandpass calibration on the data.
 c	  norm      Divide the noise estimates by the square root of the
 c	            number of points.
 c
-c$Id: calred.for,v 1.10 2021/11/20 23:15:48 wie017 Exp $
+c$Id: calred.for,v 1.11 2021/11/20 23:24:20 wie017 Exp $
 c--
 c  History:
 c    rjs  23feb00 Original version.
@@ -108,8 +108,8 @@ c
 	character versan*72
 c-----------------------------------------------------------------------
       version = versan ('calred',
-     :                  '$Revision: 1.10 $',
-     :                  '$Date: 2021/11/20 23:15:48 $')
+     :                  '$Revision: 1.11 $',
+     :                  '$Date: 2021/11/20 23:24:20 $')
 c
 c Lets go! Get user inputs.
 c
@@ -455,8 +455,8 @@ c***********************************************************************
 c
 	integer nants,npol,maxbase,maxpol,maxdat,ndat
 	integer indx(maxbase,maxpol)
-	integer CorrPnt(maxbase,maxpol),FlagPnt(maxbase,maxpol)
-	integer ModPnt(maxbase,maxpol)
+	ptrdiff CorrPnt(maxbase,maxpol),FlagPnt(maxbase,maxpol)
+	ptrdiff ModPnt(maxbase,maxpol)
 	integer nchan(maxbase,maxpol)
 	logical dotrip,init(maxbase,maxpol)
 	complex Corrs(*)
@@ -467,8 +467,8 @@ c
 	complex Sdm(maxdat)
 c-----------------------------------------------------------------------
 	integer p,i3,i2,i1,bl12,bl13,bl23,k,id,n,i,count
-	integer pflag12,pflag13,pflag23,pdata12,pdata23,pdata13
-	integer pmod12,pmod23,pmod13,pflag,pdata,pmod
+        ptrdiff pflag12,pflag13,pflag23,pdata12,pdata23,pdata13
+        ptrdiff pmod12,pmod23,pmod13,pflag,pdata,pmod
 	complex data
 	real model,fac
 c
