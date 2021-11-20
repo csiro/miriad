@@ -50,7 +50,7 @@ c	  nopass    Do not perform bandpass calibration on the data.
 c	  norm      Divide the noise estimates by the square root of the
 c	            number of points.
 c
-c$Id: calred.for,v 1.9 2021/06/02 04:45:09 wie017 Exp $
+c$Id: calred.for,v 1.10 2021/11/20 23:15:48 wie017 Exp $
 c--
 c  History:
 c    rjs  23feb00 Original version.
@@ -80,7 +80,7 @@ c
 	integer ncorr
 	complex SSdm
 	integer isrc,nsrc,iplanet,tno,vsource
-    ptrdiff pnt1,pnt2,pnt3
+        ptrdiff pnt1,pnt2,pnt3
 c
 	real Smm(MAXDAT,MAXSRC),Sms(MAXDAT,MAXSRC),Sdd(MAXDAT,MAXSRC)
 	complex Sdm(MAXDAT,MAXSRC)
@@ -108,8 +108,8 @@ c
 	character versan*72
 c-----------------------------------------------------------------------
       version = versan ('calred',
-     :                  '$Revision: 1.9 $',
-     :                  '$Date: 2021/06/02 04:45:09 $')
+     :                  '$Revision: 1.10 $',
+     :                  '$Date: 2021/11/20 23:15:48 $')
 c
 c Lets go! Get user inputs.
 c
