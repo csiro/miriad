@@ -39,7 +39,7 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: cgpgsubs.for,v 1.14 2014/08/22 01:54:11 wie017 Exp $
+c $Id: cgpgsubs.for,v 1.15 2021/11/20 22:57:07 wie017 Exp $
 c***********************************************************************
 
 c* annboxCG -- Annotate plot with information from a box image
@@ -2389,7 +2389,8 @@ c-----------------------------------------------------------------------
       include 'mem.h'
       real wx1, wx2, wy1, wy2, vx1s, vx2s, vy1s, vy2s, wdginc, tr(6),
      *  b1, b2
-      integer i, ipw, nbins2
+      ptrdiff ipw
+      integer i, nbins2
 
       save tr
       data tr /0.0, 1.0, 0.0, 0.0, 0.0, 1.0/
@@ -2901,7 +2902,7 @@ c
           if (dopara) then
             tmins = abs(tmin) / tscale
             tmaxs = abs(tmax) / tscale
-            call pgnpl(-1, nint(max(tints,tmins,tmaxs)), npl)
+            call pgnplcg(nint(max(tints,tmins,tmaxs)), npl)
             if (npl.le.3) then
               ntick = 6
             else if (npl.eq.4) then
@@ -2922,7 +2923,7 @@ c
 c Select nearest tick from list; 1 choose nearest nice integer
 c scaled by the appropriate power of 10
 c
-          call pgnpl(-1, nint(tock), npl)
+          call pgnplcg(nint(tock), npl)
           tock2 = tock / 10**(npl-1)
 
           call pgtbx2cg(tock2, nlist4, ticks4, nsubs4, tick,
@@ -3073,3 +3074,32 @@ c
       endif
 
       end
+
+C
+CPGNPL -- Work out how many numerals there are in an integer
+C.
+      SUBROUTINE pgnplcg (N, NPL)
+C
+      INTEGER N, NPL
+C
+C     Work out how many numerals there are in an integer for use with 
+C     format statements.   
+C     e.g.  N=280 => NPL=3,   N=-3 => NPL=2
+C
+C     Input:
+C       N      :   Integer of interest
+C     Output:
+C       NPL    :   Number of numerals
+C
+C-
+C  20-Apr-1991 -- new routine (Neil Killeen)
+C-------------------------------------------------------------------------
+      IF (n.EQ.0) THEN
+        npl = 1
+      ELSE
+        npl = int(log10(real(abs(n)))) + 1
+      END IF
+      IF (n.LT.0) npl = npl + 1
+      RETURN
+      END
+
