@@ -4,7 +4,7 @@
 #-----------------------------------------------------------------------------
 # Write the Miriad architecture name to stdout.
 #
-# $Id: mirarch,v 1.3 2011/03/23 04:50:08 cal103 Exp $
+# $Id: mirarch,v 1.4 2021/12/01 03:43:14 mirmgr Exp $
 #-----------------------------------------------------------------------------
 
   MIRARCH=`uname -s`
@@ -51,8 +51,8 @@
     i*86 | x86_64)
       MIRARCH=darwin_x86_64
       ;;
-    Power*)
-      MIRARCH=darwin_ppc
+    arm64*)
+      MIRARCH=darwin_arm64
       ;;
     esac
     ;;

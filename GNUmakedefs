@@ -25,7 +25,7 @@
 # target names by running 'gmake help'
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakedefs,v 1.38 2017/10/03 01:02:12 wie017 Exp $
+# $Id: GNUmakedefs,v 1.39 2021/12/01 03:47:25 mirmgr Exp $
 #-----------------------------------------------------------------------------
 # We rely only on the MIR environment variable.
 MIRROOT  := $(MIR)
@@ -157,7 +157,7 @@ TIMER     := date +"%a %Y/%m/%d %X %z, executing on $(HOST)"
 SUBSalpha         := alpha_linux
 SUBSconvex        := convex
 SUBScygwin        := alpha_linux
-SUBSdarwin_ppc    :=
+SUBSdarwin_arm64  := alpha_linux
 SUBSdarwin_x86    := alpha_linux
 SUBSdarwin_x86_64 := alpha_linux
 SUBShpux          := hpux
@@ -233,7 +233,7 @@ READLINELIB := -lreadline -ltermcap
 # define symbols needed by an executable.  It is mainly intended for Miriad
 # systems where the library is under development, to save having to recompile
 # every Miriad task if just one object module changes.  Appropriate commands
-# are pre-defined for linux, linux64, darwin_x86, darwin_x86_64, darwin_ppc,
+# are pre-defined for linux, linux64, darwin_x86, darwin_x86_64, darwin_arm64,
 # and sun4sol.
 #
 # If you don't know how to set this for your platform (or don't want this
@@ -245,7 +245,7 @@ nm-syms.linux         := nm -g $$OBJ | awk '/ T [a-z]/ {print $$3}'
 nm-syms.linux64       := $(nm-syms.linux)
 nm-syms.darwin_x86    := nm -g $$OBJ | awk '/ T _[a-z]/ {print $$3}'
 nm-syms.darwin_x86_64 := $(nm-syms.darwin_x86)
-nm-syms.darwin_ppc    := $(nm-syms.darwin_x86)
+nm-syms.darwin_arm64  := $(nm-syms.darwin_x86)
 nm-syms.sun4sol       := nm -g -p $$OBJ | awk '/ T / {print $$3}'
 
 #=============================================================================
