@@ -8,12 +8,13 @@
 <LI>
 Open a Terminal window, choose where you want to install miriad (this can be your home directory), cd to that directory.
 
-<LI> Download the files  miriad-common.tar.bz2 and  miriad-darwin_x86_64.tar.bz2, e.g., with: 
+<LI> Download the files  miriad-common.tar.bz2 and  miriad-darwin_x86_64.tar.bz2 or miriad-darwin_arm64.tar.bz2 (for apple silicon), e.g., with: 
 <pre>
 curl -O  ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad-darwin_x86_64.tar.bz2
 curl -O ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad-common.tar.bz2
 </pre>
-<LI> The above version should work on OSX 10.11 or later. If you are still running an older OSX version, get the file miriad-darwin_x86_64.OSX10.6.tar.bz2 instead. This file contains a snapshot of Miriad from May 2016. Don't update this version using mirsync or it will stop working and you'll have to reinstall Miriad (unless you update OSX).
+<LI> The above x86 version should work on OSX 10.11 or later.
+<LI> The arm64 version is still experimental, you may need install gfortran libraries and X11 and set DYLD_FALLBACK_LIBRARY_PATH to point to the locations of libgfortran.5.dylib and libX11.6.dylib to get it to run. Send feedback to miriad @ atnf.csiro.au.
 <LI> Extract the  files: 
 <pre>
 tar xzf miriad-darwin_x86_64.tar.bz2
@@ -55,6 +56,6 @@ miriad
 <LI> If you get a message about a missing X11 library you need to install <a href="https://www.xquartz.org/">XQuartz</a>.
 </UL>
 <HR><P>
-<small> miriad @ atnf.csiro.au - 02-Jun-2021</small>
+<small> miriad @ atnf.csiro.au - 02-Dec-2021</small>
 </BODY>
 </HTML>
