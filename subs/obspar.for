@@ -41,7 +41,7 @@ c                 allow greater flexability. Rather than having data hard
 c                 coded into the program.
 c    rjs  08jan07 Eliminate spurious message. Tidy up to use tin routines.
 c
-c $Id: obspar.for,v 1.8 2019/03/18 22:00:22 wie017 Exp $
+c $Id: obspar.for,v 1.9 2021/12/21 22:54:23 wie017 Exp $
 c************************************************************************
 c* ObsPrint -- Print list of known observatories.
 c: utility
@@ -87,8 +87,8 @@ c  Return the specified telescope parameter obtained from
 c  observatories.dat.
 c
 c  Input:
-c    observ	Name of the observatory. 
-c                 
+c    observ	Name of the observatory.
+c
 c    object     Name of the parameter, refer to observatories.dat for a
 c               list of recognized names.
 c
@@ -131,8 +131,9 @@ c------------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'obspar.h'
 c
-	double precision ALTAZ,EQUATOR,NASMYTH,XYEW
-	parameter(ALTAZ=0.d0, EQUATOR=1.d0, XYEW=3.d0, NASMYTH=4.d0)
+	double precision ALTAZ,EQUATOR,NASMYTH,XYEW,FIXED
+	parameter(ALTAZ=0.d0, EQUATOR=1.d0, XYEW=3.d0, NASMYTH=4.d0,
+     *    	FIXED=6.d0)
 c
         double precision value
         character input*24,param*24,observ*24,cvalue*24
@@ -161,7 +162,7 @@ c
         if (obsfile.eq.' ') then
           call getenv('MIRCAT',obsfile)
           obsfile = stcat(obsfile,'/observatories.dat')
-        end if 
+        end if
 c
 c  Open and read observatories.dat.
 c
@@ -181,6 +182,8 @@ c
               call obsad(input,XYEW)
             else if (cvalue.eq.'NASMYTH') then
               call obsad(input,NASMYTH)
+            else if (cvalue.eq.'FIXED') then
+              call obsad(input,FIXED)
             end if
 c
 c  Latitude and longitude.
@@ -196,7 +199,7 @@ c  For ellimit & evector convert
 c
           else if (param.eq.'ellimit'.or.param.eq.'evector') then
             call tinGetd(value,0.d0)
-            call obsad(input,value*dpi/180.0) 
+            call obsad(input,value*dpi/180.0)
 c
 c  General parameter.
 c
