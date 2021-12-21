@@ -66,6 +66,7 @@ c                  be interpretted as the reciprocal of the noise
 c                  variance on that visibility.
 c         blcal    Apply AIPS baseline-dependent calibration to the
 c                  data.
+c         nofq     Ignore the FQ table
 c
 c       These options for op=uvout only.
 c         nocal    Do not apply the gains table to the data.
@@ -75,7 +76,7 @@ c         nopass   Do not apply the bandpass table correctsions
 c                  to the data.
 c         topo     Label the frequencies as topocentric. Use this when
 c                  exporting spectral line data from non doppler tracking
-c                  arrays like ATCA, EVLA, ALMA, to CASA to get the 
+c                  arrays like ATCA, EVLA, ALMA, to CASA to get the
 c                  velocities right.
 c
 c       These options apply for op=xyin only.
@@ -135,7 +136,7 @@ c         velocity=lsr
 c       indicates that fits is to determine the observatory velocity
 c       wrt the LSR frame using an appropriate model.
 c
-c$Id: fits.for,v 1.36 2021/06/03 07:09:31 wie017 Exp $
+c$Id: fits.for,v 1.37 2021/12/21 22:54:58 wie017 Exp $
 c--
 c
 c  Bugs:
@@ -165,7 +166,7 @@ c-----------------------------------------------------------------------
       parameter (MAXBOXES=2048)
 
       logical   altr, compress, dobl, docal, dochi, dopass, dopol, dss,
-     *          lefty, nod2, varwt, topo
+     *          lefty, nod2, varwt, topo, nofq
       integer   boxes(MAXBOXES), velsys
       real      altrpix, altrval
       character in*256, op*8, out*256, uvdatop*12, version*72
@@ -174,8 +175,8 @@ c-----------------------------------------------------------------------
       character versan*72
 c-----------------------------------------------------------------------
       version = versan('fits',
-     *                 '$Revision: 1.36 $',
-     *                 '$Date: 2021/06/03 07:09:31 $')
+     *                 '$Revision: 1.37 $',
+     *                 '$Date: 2021/12/21 22:54:58 $')
 c
 c  Get the input parameters.
 c
@@ -192,7 +193,7 @@ c
 c  Get options.
 c
       call getopt(docal,dopol,dopass,dss,nod2,dochi,compress,
-     *                                  lefty,varwt,dobl,topo)
+     *                             lefty,varwt,dobl,topo,nofq)
       if (op.eq.'uvout') then
         uvdatop = 'sdlb3'
         if (docal) uvdatop(7:7) = 'c'
@@ -211,7 +212,7 @@ c  Handle the five cases.
 c
       if (op.eq.'uvin') then
         call uvin(in,out,velsys,altr,altrpix,altrval,dochi,
-     *                          compress,lefty,varwt,dobl,version)
+     *               compress,lefty,varwt,dobl,nofq,version)
       else if (op.eq.'uvout') then
         call uvout(out,version,topo)
       else if (op.eq.'xyin') then
@@ -300,10 +301,10 @@ c-----------------------------------------------------------------------
 c***********************************************************************
 
       subroutine getopt(docal,dopol,dopass,dss,nod2,dochi,
-     *                               compress,lefty,varwt,dobl,topo)
+     *                      compress,lefty,varwt,dobl,topo,nofq)
 
       logical docal,dopol,dopass,dss,dochi,nod2,compress,lefty,varwt
-      logical dobl,topo
+      logical dobl,topo,nofq
 c-----------------------------------------------------------------------
 c  Get a couple of the users options from the command line
 c
@@ -320,14 +321,16 @@ c    varwt   Interpret the visibility weight as the reciprocal of the
 c            noise variance.
 c    dobl    Apply AIPS baseline-dependent calibration.
 c    topo    Label frequency reference frame as topocentric
+c    nofq    Ignore FQ table if present
 c-----------------------------------------------------------------------
       integer nopt
-      parameter (nopt = 12)
+      parameter (nopt = 13)
       character opts(nopt)*8
       logical present(nopt),olddss
       data opts /'nocal   ','nopol   ','nopass  ','rawdss  ',
      *           'nod2    ','nochi   ','compress','lefty   ',
-     *           'varwt   ','dss     ','blcal   ','topo    '/
+     *           'varwt   ','dss     ','blcal   ','topo    ',
+     *           'nofq    '/
 c-----------------------------------------------------------------------
       call options('options', opts, present, nopt)
       docal    = .not.present(1)
@@ -342,6 +345,7 @@ c-----------------------------------------------------------------------
       olddss   =      present(10)
       dobl     =      present(11)
       topo     =      present(12)
+      nofq     =      present(13)
 
       if (olddss) then
         call bug('w','Option DSS is deprecated. Please use RAWDSS')
@@ -385,12 +389,12 @@ c-----------------------------------------------------------------------
       end
 c***********************************************************************
       subroutine uvin(in,out,velsys,altr,altrpix,altrval,dochi,
-     *                        compress,lefty,varwt,dobl,version)
+     *                    compress,lefty,varwt,dobl,nofq,version)
 c
       implicit none
       character in*(*),out*(*)
       integer velsys
-      logical altr,dochi,compress,lefty,varwt,dobl
+      logical altr,dochi,compress,lefty,varwt,dobl,nofq
       real altrpix,altrval
       character version*(*)
 c-----------------------------------------------------------------------
@@ -409,6 +413,7 @@ c    lefty      Assume the antenna table uses a left-handed system.
 c    varwt      Interpret the visibility weight as the reciprocal of the
 c               noise variance.
 c    dobl       Apply AIPS baseline-dependent calibration.
+c    nofq       Ignore FQ table
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       integer PolXX,PolYY,PolXY,PolYX
@@ -429,6 +434,7 @@ c-----------------------------------------------------------------------
       real times(MAXTIME),inttime
       integer ntimes,refbase,litime
       integer uvU,uvV,uvW,uvBl,uvT,uvSrcId,uvFreqId,uvData
+      integer uvSubArray, uvAnt1, uvAnt2
       character telescop*32,itime*8
 
 c     Externals.
@@ -457,7 +463,8 @@ c
 c  Determine if its a multisource file, and set the random parameters to
 c  handle accordingly.
 c
-      call Indices(lu,uvU,uvV,uvW,UvT,uvBl,uvSrcId,uvFreqid,uvData)
+      call Indices(lu,uvU,uvV,uvW,UvT,uvBl,uvSrcId,uvFreqid,
+     *  uvSubarray,uvAnt1,uvAnt2,uvData)
       if (uvW.eq.0) then
         call uvset(tno,'preamble','uv/time/baseline',0,0.d0,0.d0,0.d0)
       else
@@ -469,7 +476,7 @@ c  information.
 c
       call TabLoad(lu,uvSrcId.ne.0,uvFreqId.ne.0,
      *        telescop,anfound,Pol0,PolInc,nif,dochi,lefty,
-     *        nants)
+     *        nofq,nants)
       call TabVeloc(velsys,altr,altrval,altrpix)
 c
 c  Load any FG tables.
@@ -577,9 +584,16 @@ c
           ww = 0
         endif
         time = visibs(uvT) + T0
-        call fbasant(visibs(uvBl),ant1,ant2,config)
+        if (uvBl.gt.0) then
+          call fbasant(visibs(uvBl),ant1,ant2,config)
+        else
+          ant1 = visibs(uvAnt1)
+          ant2 = visibs(uvAnt2)
+          config = visibs(uvSubArray)
+        endif
         if (uvSrcid.gt.0) srcid  = nint(visibs(uvSrcId))
         if (uvFreqid.gt.0) freqid = nint(visibs(uvFreqId))
+
 c
 c  Apply baseline calibration if required.
 c
@@ -593,7 +607,7 @@ c
 c  In both cases, ant1 < ant2.
 c  the variables ant1,ant2 are Miriad antenna numbers.
 c
-        conj = ant2.gt.ant1
+        conj = ant2.ge.ant1
         if (conj) then
           uu = -uu
           vv = -vv
@@ -601,6 +615,7 @@ c
           offset = uvData
           do j = 1, npol*nfreq
             visibs(offset+1) = -visibs(offset+1)
+c  why + 3? flip all imaginary parts (re,im,wt)
             offset = offset + 3
           enddo
         else
@@ -613,7 +628,7 @@ c
         bl = nint(antbas(ant1,ant2))
         nconfig = max(config,nconfig)
 c
-c  Determine some times at whcih data are observed. Use these later to
+c  Determine some times at which data are observed. Use these later to
 c  guestimate the integration time.
 c
         if (i.eq.1) refbase = bl
@@ -748,21 +763,23 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine Indices(lu,uvU,uvV,uvW,uvT,uvBl,uvSrcId,
-     *                                                uvFreqid,uvData)
+      subroutine Indices(lu,uvU,uvV,uvW,uvT,uvBl,uvSrcId,uvFreqid,
+     *                      uvSubArray,uvAnt1,uvAnt2,uvData)
 
       integer lu
       integer uvU,uvV,uvW,uvT,uvBl,uvSrcid,uvFreqid,uvData
+      integer uvSubarray, uvAnt1, uvAnt2
 c-----------------------------------------------------------------------
 c  Determine indices for the random parameters and data.
 c
 c  Input:
 c    lu         Handle of the FITS file.
 c  Output:
-c    uvU,uvV,uvW,uvT,uvBl,uvSrcid,uvFreqid,uvData
+c    uvU,uvV,uvW,uvT,uvT2,uvBl,uvSrcid,uvFreqid,uvSubArray,uvAnt1,
+c     uvAnt2,uvData
 c-----------------------------------------------------------------------
-      integer   iax, naxis, nrandom
-      character cax*2, ptype*16, random(7)*8
+      integer   iax, naxis, nrandom, uvT2
+      character cax*2, ptype*16, random(11)*8
 
       external  itoaf
       character itoaf*2
@@ -771,27 +788,42 @@ c-----------------------------------------------------------------------
       random(1) = 'UU'
       uvV = 2
       random(2) = 'VV'
-      uvBl = 3
-      random(3) = 'BASELINE'
-      uvT = 4
-      random(4) = 'DATE'
-      nrandom = 4
+      uvBl = 0
+      uvT = 0
+      uvT2 = 0
+      nrandom = 2
 
       uvW = 0
       uvSrcid = 0
       uvFreqid = 0
+      uvSubarray = 0
+      uvAnt1 = 0
+      uvAnt2 = 0
 
-c     Are the source-id and freq-id random parameters present?
+c     Check which random parameters are present
       call fitrdhdi(lu, 'PCOUNT', naxis, 0)
       do iax = 1, naxis
         cax = itoaf(iax)
         call fitrdhda(lu, 'PTYPE'//cax, ptype, ' ')
 
         if (uvW.eq.0 .and.
-     *     (ptype(:3).eq.'WW' .or. ptype(:3).eq.'WW-')) then
+     *     (ptype(:2).eq.'WW' .or. ptype(:3).eq.'WW-')) then
           nrandom = nrandom + 1
           uvW     = nrandom
           random(nrandom) = 'WW'
+        endif
+
+        if (uvBl.eq.0 .and.
+     *   (ptype(1:8).eq.'BASELINE')) then
+          nrandom = nrandom +1
+          uvBl = nrandom
+          random(nrandom) = 'BASELINE'
+        endif
+
+        if (uvT.eq.0. .and. ptype(1:4).eq.'DATE') then
+          nrandom = nrandom + 1
+          uvT = nrandom
+          random(nrandom) = 'DATE'
         endif
 
         if (ptype.eq.'SOURCE' .and. uvSrcid.eq.0) then
@@ -805,6 +837,25 @@ c     Are the source-id and freq-id random parameters present?
           uvFreqid = nrandom
           random(nrandom) = 'FREQSEL'
         endif
+
+        if (ptype.eq.'SUBARRAY' .and. uvSubArray.eq.0) then
+          nrandom  = nrandom + 1
+          uvSubArray = nrandom
+          random(nrandom) = 'SUBARRAY'
+        endif
+
+        if (ptype.eq.'ANTENNA1' .and. uvAnt1.eq.0) then
+          nrandom  = nrandom + 1
+          uvAnt1 = nrandom
+          random(nrandom) = 'ANTENNA1'
+        endif
+
+        if (ptype.eq.'ANTENNA2' .and. uvAnt2.eq.0) then
+          nrandom  = nrandom + 1
+          uvAnt2 = nrandom
+          random(nrandom) = 'ANTENNA2'
+        endif
+
       enddo
 
       uvData = nrandom + 1
@@ -1407,10 +1458,10 @@ c
 c***********************************************************************
 
       subroutine TabLoad(lu,dosu,dofq,tel,anfound,Pol0,PolInc,nif0,
-     *  dochi,lefty,numants)
+     *  dochi,lefty,nofq,numants)
 
       integer lu,Pol0,PolInc,nif0
-      logical dosu,dofq,anfound,dochi,lefty
+      logical dosu,dofq,anfound,dochi,lefty,nofq
       character tel*(*)
       integer numants
 c-----------------------------------------------------------------------
@@ -1429,6 +1480,7 @@ c    lu         Handle of the input FITS file.
 c    dosu,dofq  Expect a multisource/multi-freq file.
 c    dochi      Attempt to compute the parallactic angle.
 c    lefty      Assume the antenna table uses a left-handed system.
+c    nofq       Ignore FQ table
 c  Output:
 c    tel        Telescope name.
 c    anfound    True if antenna tables were found.
@@ -1442,6 +1494,7 @@ c-----------------------------------------------------------------------
 
       logical   badan, badapp, badepo, badmnt, found, more,docio
       integer   i, itemp, j, n, naxis, nd, nval, nxyz, sta(MAXANT), t
+      integer   stamin
       real      defepoch, diff, rsdf(MAXFREQ*MAXIF)
       double precision coord(3,4), d0, dtemp, eporef, freq, r0, rfreq,
      *          vddef, veldef, xc, xyz(3,MAXANT), yc, zc
@@ -1456,6 +1509,7 @@ c  Set default nants, source and freq ids.
 c
       inited = .false.
       numants = 0
+
 c
 c  Get some preliminary info from the main header.
 c
@@ -1539,7 +1593,6 @@ c
         call output('  Using antenna table information')
         nconfig = nconfig + 1
         call ftabInfo(lu,'STABXYZ',type,units,n,nxyz)
-
         if (nconfig.gt.MAXCONFG)
      *    call bug('f','Too many array configurations')
         if (nxyz.ne.3 .or. n.le.0 .or. type.ne.'D')
@@ -1547,9 +1600,18 @@ c
         if (n.gt.MAXANT) call bug('f','Too many antennas for me')
 
         call ftabGeti(lu,'NOSTA',0,sta)
-
+c
+c       Cope with station numbers starting at 0
+c
+        stamin = n
+        do i = 1, n
+          if (stamin.eq.0.and.sta(i).eq.0)
+     *      call bug('f','Invalid antenna numbers')
+          stamin = min(stamin,sta(i))
+        enddo
         nd = 0
         do i = 1, n
+          if (stamin.eq.0) sta(i) = sta(i) + 1
           if (sta(i).le.0) call bug('f','Invalid antenna numbers')
           nd = max(nd,sta(i))
         enddo
@@ -1672,7 +1734,7 @@ c  Load the FQ table if its present.
 c
       found = .false.
       call ftabLoc(lu,'AIPS FQ',found)
-      if (found) then
+      if (found.and..not.nofq) then
         call ftabInfo(lu,'FRQSEL',type,units,nfreq,nval)
         if (nfreq.gt.1 .and. .not.dofq)
      *    call bug('f','FQ table present for non-multi-freq file')
@@ -1721,7 +1783,7 @@ c  If neither a CH or FQ table were found, just use the info in the
 c  header.
 c
         else
-          if (dofq) call bug('w',
+          if (dofq.and..not.nofq) call bug('w',
      *                'Neither an FQ nor CH table were found')
           nfreq = 1
           freqids(1) = 1
@@ -1737,7 +1799,7 @@ c  relative to channel 1.
 c
       dtemp = 1 - Coord(uvCrpix,uvFreq)
       do i = 1, nif*nfreq
-        sfreq(i) = 1d-9 * (sfreq(i) + dtemp * sdf(i))
+        sfreq(i) = 1d-9 * (abs(sfreq(i)) + dtemp * sdf(i))
         sdf(i)   = 1d-9 * sdf(i)
       enddo
 c
@@ -2741,8 +2803,8 @@ c-----------------------------------------------------------------------
       character sources(MAXSRC)*16
 
       integer MAXPARMS
-      parameter (MAXPARMS=6)
-      integer nparms
+      parameter (MAXPARMS=9)
+      integer nparms, off
       character parms(MAXPARMS)*8
 
 c     Externals.
@@ -2750,7 +2812,8 @@ c     Externals.
       logical uvdatopn
       logical hdprsnt
       data parms/'UU      ','VV      ','WW      ',
-     *           'BASELINE','DATE    ','SOURCE  '/
+     *           'BASELINE','DATE    ','SOURCE  ',
+     *           'ANTENNA1','ANTENNA2','SUBARRAY'/
       data vtype/'FELO-LSR','FELO-HEL','FELO-OBS',
      *           'VELO-LSR','VELO-HEL','VELO-OBS'/
 c-----------------------------------------------------------------------
@@ -2787,10 +2850,6 @@ c
       call uvrdvrd(tIn,'pntdec',pntdec,decs(1))
       nchan = nread
 
-      nvis = 0
-      length = uvRandom + 1 + 3*nchan
-      call scrrecsz(tScr,length)
-      offset = 0
 c
 c  Get things which define the coordinate system.
 c
@@ -2848,6 +2907,12 @@ c
         call uvgetvrd(tIn,'antpos',xyz,3*nants)
         call getarr(tIn,mount,lat,long,height)
       endif
+
+      nvis = 0
+      length = uvRandom + 1 + 3*nchan
+      call scrrecsz(tScr,length)
+      offset = 0
+
 c
 c  Read the data. Check that we are dealing with a single pointing.
 c  If the polarisation code is OK, do some conversions, and write to
@@ -2947,6 +3012,22 @@ c
       call fuvSetT0(tOut,T0)
       nparms = 5
       if (nSrc.gt.1) nparms = 6
+c
+c  Use different random parameters for nants>255
+c
+      if (nants.gt.255) then
+        parms(4) = parms(5)
+        off = 2
+        nparms = 7
+        if (nSrc.gt.1) then
+          off=1
+          nparms = 8
+        endif
+        parms(5) = parms(5+off)
+        parms(6) = parms(6+off)
+        parms(7) = parms(7+off)
+        if (nparms.eq.8) parms(8) = parms(9)
+      endif
       call fuvSetPa(tOut,nparms,parms)
       call fuvWrhd(tOut,Coord)
       if (sources(1).ne.' ') call fitwrhda(tOut,'OBJECT',sources(1))
@@ -2983,7 +3064,7 @@ c  We now have all the data we want in a scratch file. Copy this
 c  data to the output FITS file.
 c
       call uvoutWr(tScr,tOut,nvis,nVisRef,npol,nchan,Pol0,PolInc,
-     *  nSrc.gt.1)
+     *  nSrc.gt.1,nants.gt.255)
 c
 c  Write the source file.
 c
@@ -3319,10 +3400,10 @@ c
 c***********************************************************************
 
       subroutine uvoutWr(tScr,tOut,nvis,nVisRef,npol,nchan,Pol0,
-     *                                                PolInc,doSrc)
+     *                                     PolInc,doSrc,doAntPar)
 
       integer tScr,tOut,nvis,nVisRef,npol,nchan,Pol0,PolInc
-      logical doSrc
+      logical doSrc,doAntPar
 c-----------------------------------------------------------------------
 c  This reads visibilities back from the scratch file, and forms a
 c  visibility record the way FITS likes it. That is the visibility
@@ -3340,6 +3421,7 @@ c    nchan      The number of frequency channels in the output file.
 c    Pol0       The code of the first polarisation.
 c    PolInc     The increment between polarisations.
 c    doSrc      True if we should write the source number.
+c    doAntPar   True if we should write antenna pair instead of baseline
 c-----------------------------------------------------------------------
 c  Records are copied or discarded according to whether the reference
 c  polarisation is present or not.  If not, the record is discarded.
@@ -3349,16 +3431,17 @@ c
       include 'maxdim.h'
       integer maxPol,RefPol,PolMin,PolMax
       parameter (RefPol=1,PolMin=-8,PolMax=4,maxPol=4)
-      integer uvU,uvV,uvW,uvBl,uvT,uvSrc,uvRandom,uvData
+      integer uvU,uvV,uvW,uvBl,uvT,uvSrc,uvRandom,uvData,maxRandomOut
       parameter (uvU=1,uvV=2,uvW=3,uvBl=4,uvT=5,uvSrc=6,uvRandom=6)
-      parameter (uvData=uvRandom+1)
+      parameter (uvData=uvRandom+1,maxRandomOut=uvRandom+2)
+      integer nRandomOut
 
       integer pols(PolMin:PolMax),discard(PolMin:PolMax),pnt(maxPol)
       integer ncopy,totcopy,l,l2,InPnt,OutPnt,Bl,P,iP,i,j,jd,k
-      integer iSrc
+      integer iSrc, ant1, ant2, subArr
       logical copied(maxPol)
       character num*8,num2*8
-      real In(uvRandom+1+3*maxchan),Out(uvRandom+3*maxPol*maxchan)
+      real In(uvRandom+1+3*maxchan),Out(maxRandomOut+3*maxPol*maxchan)
       real Time,wt
       ptrdiff offset
 
@@ -3412,23 +3495,24 @@ c  case where we have only one polarisation to handle.
 c
         if (iP.eq.0) then
           discard(P) = discard(P) + 1
-        else if (npol.eq.1) then
-          jd = jd + 1
-          totcopy = totcopy + 1
-          if (doSrc) then
-            call fuvwrite(tOut,in(2),jd,1)
-          else
-            in(7) = in(6)
-            in(6) = in(5)
-            in(5) = in(4)
-            in(4) = in(3)
-            in(3) = in(2)
-            call fuvwrite(tOut,in(3),jd,1)
-          endif
+c        else if (npol.eq.1) then
+c  this assumes doAntPar=false - skip and use code below
+c          jd = jd + 1
+c          totcopy = totcopy + 1
+c          if (doSrc) then
+c            call fuvwrite(tOut,in(2),jd,1)
+c          else
+c            in(7) = in(6)
+c            in(6) = in(5)
+c            in(5) = in(4)
+c            in(4) = in(3)
+c            in(3) = in(2)
+c            call fuvwrite(tOut,in(3),jd,1)
+c          endif
         else
 c
 c  We have a good polarisation, and we are handling more than one
-c  polarisation.  If it does not match with the pervious record, then
+c  polarisation.  If it does not match with the previous record, then
 c  we have to rid ourselves of the previous record.
 c
 c  If the "reference" polarisation is not present, discard the previous
@@ -3444,7 +3528,8 @@ c
                 if (copied(i)) discard(pnt(i)) = discard(pnt(i)) + 1
               enddo
             else
-              if (ncopy.lt.npol) call ZeroOut(copied,npol,nchan,out,wt)
+              if (ncopy.lt.npol)
+     *           call ZeroOut(copied,npol,nchan,nRandomOut,out,wt)
               jd = jd + 1
               totcopy = totcopy + ncopy
               call fuvwrite(tOut,Out,jd,1)
@@ -3456,12 +3541,30 @@ c
               copied(i) = .false.
             enddo
             ncopy = 0
-            Out(uvU) = In(uvU+1)
-            Out(uvV) = In(uvV+1)
-            Out(uvW) = In(uvW+1)
-            Out(uvT) = In(uvT+1)
-            Out(uvBl) = In(uvBl+1)
-            Out(uvSrc) = In(uvSrc+1)
+            Out(1) = In(uvU+1)
+            Out(2) = In(uvV+1)
+            Out(3) = In(uvW+1)
+            if (doAntPar) then
+              call fbasant(In(uvBl+1),ant1,ant2,subArr)
+              Out(4) = In(uvT+1)
+              nRandomOut = 4
+              if (doSrc) then
+                Out(5) = In(uvSrc+1)
+                nRandomOut = 5
+              endif
+              Out(nRandomOut+1) = ant1
+              Out(nRandomOut+2) = ant2
+              Out(nRandomOut+3) = subArr
+              nRandomOut = nRandomOut + 3
+            else
+              Out(4) = In(uvBl+1)
+              Out(5) = In(uvT+1)
+              nRandomOut = 5
+              if (doSrc) then
+                Out(6) = In(uvSrc+1)
+                nRandomOut = 6
+              endif
+            endif
             Bl = nint(In(uvBl+1))
             Time = In(uvT+1)
             iSrc = nint(In(uvSrc+1))
@@ -3471,8 +3574,7 @@ c
 c  We have to add visibilities to the currently existing record.
 c
           InPnt = uvData
-          OutPnt = uvRandom - 1 + 3*(iP-1)
-          if (doSrc) OutPnt = OutPnt + 1
+          OutPnt = nRandomOut + 3*(iP-1)
           do k = 1, nchan
             out(OutPnt+1) = in(InPnt+1)
             out(OutPnt+2) = in(InPnt+2)
@@ -3494,7 +3596,8 @@ c
             if (copied(i)) discard(pnt(i)) = discard(pnt(i)) + 1
           enddo
         else
-          if (ncopy.lt.npol) call ZeroOut(copied,npol,nchan,out,wt)
+          if (ncopy.lt.npol)
+     *      call ZeroOut(copied,npol,nchan,nRandomOut,out,wt)
           jd = jd + 1
           totcopy = totcopy + ncopy
           call fuvwrite(tOut,Out,jd,1)
@@ -3525,11 +3628,11 @@ c
 
 c***********************************************************************
 
-      subroutine ZeroOut(copied,npol,nchan,out,wt)
+      subroutine ZeroOut(copied,npol,nchan,nRandomOut,out,wt)
 
-      integer npol,nchan
+      integer npol,nchan,nRandomOut
       logical copied(npol)
-      real out(5+3*npol*nchan),wt
+      real out(8+3*npol*nchan),wt
 c-----------------------------------------------------------------------
 c  This blanks out any polarisations that have not truely been copied.
 c  It does this by setting the correlation value to zero, and the weight
@@ -3541,6 +3644,7 @@ c               has been copied.
 c    wt         The weight to associate with the blanked out data.
 c    npol       Number of polarisations.
 c    nchan      Number of channels.
+c    nRandomOut Number of random parameters in output
 c  Input/Output:
 c    out        The visibility record (FITS style).  Missing
 c               polarisations are blanked out.
@@ -3549,7 +3653,7 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
       do i = 1, npol
         if (.not.copied(i)) then
-          OutPnt = 5 + 3*(i-1)
+          OutPnt = nRandomOut + 3*(i-1)
           do k = 1, nchan
             out(OutPnt+1) = 0
             out(OutPnt+2) = 0
@@ -4094,14 +4198,14 @@ c     Determine the increment and rotation for celestial axes.
       if (ilat.ne.0 .and. ilng.ne.0) then
         call cdget(lIn,ilng,ilat,cdelt(ilng),cdelt(ilat),llrot)
       endif
-      
+
 c     Convert to Miriad units (ignoring CUNITi).
       do iax = 1, naxis
         call coCtype(ctype(iax), axtype, wtype, algo, units, scl)
         cdelt(iax) = cdelt(iax) / scl
         crval(iax) = crval(iax) / scl
       enddo
-      
+
       end
 
 c***********************************************************************
@@ -4131,15 +4235,15 @@ c-----------------------------------------------------------------------
 
       call fitrdhdd(lIn,m0ij(pc,ilng,ilng),dtemp,cos(crota2))
       call fitrdhdd(lIn,mi_j(pc,ilng,ilng),pc11,dtemp)
-      
+
       call fitrdhdd(lIn,m0ij(pc,ilng,ilat),dtemp,
      *                  -sin(crota2)*cdelt2/cdelt1)
       call fitrdhdd(lIn,mi_j(pc,ilng,ilat),pc12,dtemp)
-      
+
       call fitrdhdd(lIn,m0ij(pc,ilat,ilng),dtemp,
      *                   sin(crota2)*cdelt1/cdelt2)
       call fitrdhdd(lIn,mi_j(pc,ilat,ilng),pc21,dtemp)
-      
+
       call fitrdhdd(lIn,m0ij(pc,ilat,ilat),dtemp,cos(crota2))
       call fitrdhdd(lIn,mi_j(pc,ilat,ilat),pc22,dtemp)
 

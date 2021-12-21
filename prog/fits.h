@@ -3,12 +3,12 @@ c  fits.h
 c-----------------------------------------------------------------------
 c  Include file for fits.for.
 c
-c  $Id: fits.h,v 1.7 2017/09/04 23:00:05 wie017 Exp $
+c  $Id: fits.h,v 1.8 2021/12/21 22:54:58 wie017 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
 
-      integer    ALTAZ,   EQUATOR,   NASMYTH
-      parameter (ALTAZ=0, EQUATOR=1, NASMYTH=4)
+      integer    ALTAZ,   EQUATOR,   NASMYTH, FIXED
+      parameter (ALTAZ=0, EQUATOR=1, NASMYTH=4, FIXED=6)
 
       integer    uvCRVAL,   uvCDELT,   uvCRPIX
       parameter (uvCRVAL=1, uvCDELT=2, uvCRPIX=3)
