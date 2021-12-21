@@ -49,7 +49,7 @@
 #			   Additional info for ASKAP.
 #    18-sep-14 Bob Sault - Change evector for ASKAP.
 #
-# $Id: observatories.dat,v 1.7 2014/09/17 23:32:42 sau078 Exp $
+# $Id: observatories.dat,v 1.8 2021/12/21 22:53:16 wie017 Exp $
 #-----------------------------------------------------------------------------
 
 # Atacama Large Millimeter Array - provisional.
@@ -98,7 +98,7 @@ askap		ew		    0.0
 askap		height		121.3529
 askap		jyperk		50
 askap		latitude	-1  26 42 15.00
-askap		longitude	+1 116 39 32.0 
+askap		longitude	+1 116 39 32.0
 askap		mount		EQUATOR
 askap		nants		   36.0
 askap		systemp		   50.0
@@ -330,6 +330,18 @@ sest		antdiam		   15.0
 sest		height		 2400.0
 sest		latitude	-1  29 15 34.0
 sest		longitude	+1 070 44 04.0
+
+# SKA1-LOW
+ska1-low height   368
+ska1-low latitude  -1  26 49 29
+ska1-low longitude +1 116 45 50
+ska1-low mount     FIXED
+
+#SKA1-MID
+ska1-mid height   1053
+ska1-mid latitude  -1 30 42 46
+ska1-mid longitude +1 21 26 36
+ska1-mid mount     ALTAZ
 
 # Submillimeter Array (SMA).
 # Supplied by Ramprasad Rao.
