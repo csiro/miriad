@@ -12,7 +12,7 @@ c@ telescop
 c       Name of the observatory.  Several can be given.  If none are
 c       given, TELEPAR simply lists the known observatories.
 c
-c$Id: telepar.for,v 1.8 2013/08/30 01:49:21 wie017 Exp $
+c$Id: telepar.for,v 1.9 2021/12/21 22:56:11 wie017 Exp $
 c--
 c  History:
 c    rjs  20jun91 Original version.
@@ -43,8 +43,8 @@ c     Externals.
       character rangle*20, versan*72
 c-----------------------------------------------------------------------
       version = versan ('telepar',
-     :                  '$Revision: 1.8 $',
-     :                  '$Date: 2013/08/30 01:49:21 $')
+     :                  '$Revision: 1.9 $',
+     :                  '$Date: 2021/12/21 22:56:11 $')
 
       call keyini
       call mkeya('telescop',observs,MAXOBS,nobs)
@@ -104,6 +104,7 @@ c       Put output here to get better output order
           if(value.eq.1)string = 'Equatorial'
           if(value.eq.3)string = 'XY-EW'
           if(value.eq.4)string = 'Nasmyth'
+          if(value.eq.6)string = 'Fixed'
           call output('Mount:                 '//string)
         endif
 
