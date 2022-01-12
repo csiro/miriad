@@ -97,7 +97,7 @@ c                    match any residual primary beam response in the
 c                    high-resolution image.  This option causes this
 c                    step to be skipped.
 c
-c$Id: immerge.for,v 1.8 2021/06/02 04:45:09 wie017 Exp $
+c$Id: immerge.for,v 1.9 2022/01/12 03:58:09 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -132,8 +132,8 @@ c-----------------------------------------------------------------------
      *           'feet        '/
 c-----------------------------------------------------------------------
       version = versan('immerge',
-     *                 '$Revision: 1.8 $',
-     *                 '$Date: 2021/06/02 04:45:09 $')
+     *                 '$Revision: 1.9 $',
+     *                 '$Date: 2022/01/12 03:58:09 $')
 
       call keyini
       call GetOpt(domerge,dozero,dofeath,doshift,notaper)
@@ -260,8 +260,8 @@ c     Allocate memory if needed.
         call memAlloc(pIn1,(ngx+2)*ngy,'r')
         call memAlloc(pIn2,(ngx+2)*ngy,'r')
 c       pointers to view data as complex	
- 	pInc1 = (pIn1-1)/2+1
-	pInc2 = (pIn2-1)/2+1
+        pInc1 = (pIn1-1)/2+1
+        pInc2 = (pIn2-1)/2+1
         if (dotaper) then
           call mosLoad(lIn1,npnt)
           call memAlloc(pWt1,nIn(1)*nIn(2),'r')
@@ -328,7 +328,7 @@ c
             call GetDat(lIn1,memr(pIn1),memc(pInc1),nIn(1),nIn(2),
      *          ngx,ngy,dozero,.false.,memr(pWt1),memr(pWt2))
             if (dotaper) call mosMIni(lIn1,real(k))
-            call GetDat(lIn2,memr(pIn2),memc(pInc1),nIn(1),nIn(2),
+            call GetDat(lIn2,memr(pIn2),memc(pInc2),nIn(1),nIn(2),
      *          ngx,ngy,dozero,dotaper,memr(pWt1),memr(pWt2))
             if (abs(xs)+abs(ys).gt.0)
      *        call shiftit1(memc(pInc2),ngx,ngy,xs,ys)
