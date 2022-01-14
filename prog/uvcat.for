@@ -63,6 +63,7 @@ c    mhw  07aug12   Merge atca and carma version (ifchain and bfmask)
 c    mhw  15oct12   Make sure sfreq appears in output, even if uvprobvr
 c                   claims it never updates
 c    mhw  05nov12   Revert some of the 07aug changes - missing systemps
+c    mhw  14jan22   Always write uvw triple like uvaver
 c
 c  Bugs:
 c
@@ -110,7 +111,7 @@ c
 	integer nchan,vhand,lIn,lOut,i,j,nspect,nPol,Pol,SnPol,SPol
 	integer nschan(MAXWIN),ischan(MAXWIN),ioff,nwdata,length
 	integer lflags
-	double precision preamble(4)
+	double precision preamble(5)
 	complex data(maxchan),wdata(maxchan)
 	logical flags(maxchan),wflags(maxchan)
 	logical nocal,nopol,window,wins(MAXWIN)
@@ -126,8 +127,8 @@ c
 	call output(version)
 	call keyini
 	call GetOpt(nocal,nopol,nopass,nowide,nochan,doall)
-	lflags = 3
-	uvflags(1:3) = 'dsl'
+	lflags = 4
+	uvflags(1:) = 'dsl3'
 	if(.not.nocal)then
 	  lflags = lflags + 1
 	  uvflags(lflags:lflags) = 'c'
@@ -151,6 +152,8 @@ c
 c  Open the output.
 c
 	call uvopen(lOut,out,'new')
+	call uvset(lOut,'preamble','uvw/time/baseline',0,0.d0,0.d0,0.d0)
+
 c
 c  Determine which windows have possibly been selected.
 c
@@ -479,7 +482,7 @@ c
 	  if(wins(i))then
 	    nout = nout + 1
 	    nschand(nout) = nschan(i)
-	    ischand(nout) = ischan(i)	    
+	    ischand(nout) = ischan(i)
 	    nschan(nout) = nschan(i)
 	    ischan(nout) = offset
 	    offset = offset + nschan(i)
