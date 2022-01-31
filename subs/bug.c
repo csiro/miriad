@@ -13,7 +13,7 @@
 *                    though cannot be exported to Fortran              
 *    pkgw    14dec11 Make errmsg_c public for use in uvio.c            
 *
-*  $Id: bug.c,v 1.6 2012/06/21 23:00:19 wie017 Exp $
+*  $Id: bug.c,v 1.7 2022/01/31 06:36:29 wie017 Exp $
 *===========================================================================*/
 
 #include <stdio.h>
@@ -162,7 +162,7 @@ char *errmsg_c(int n)
   return(strerror(n));
 #else
   static char string[128];
-# if !defined(linux) && !defined(linux64) && !defined(darwin_ppc) && !defined(darwin_x86) && !defined(darwin_x86_64)
+# if !defined(linux) && !defined(linux64) && !defined(darwin_ppc) && !defined(darwin_x86) && !defined(darwin_x86_64) && !defined(darwin_arm64)
   extern int sys_nerr;
   extern char *sys_errlist[];
 # endif
