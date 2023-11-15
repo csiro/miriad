@@ -31,6 +31,7 @@ c		  that double). Fix this.
 c    13mar09 rjs/pjt Peter noted the ATNF version had not updated the leap
 c		  second table for the 1 Jan 2009 leap. Do this.
 c    13jun12 mhw  Add leap second for 2012JUL01
+c    16nov23 mhw  Add forgotten leap seconds
 c
 c  General Reference:
 c    Explanatory Supplement to the Astronomical Almanac. 1993.
@@ -485,7 +486,7 @@ c------------------------------------------------------------------------
 c
 	logical init
 	integer NLEAP
-	parameter(NLEAP=25)
+	parameter(NLEAP=27)
 	character leap(NLEAP)*7
 	double precision dtime(NLEAP)
 	save init,leap
@@ -499,6 +500,7 @@ c
      *		   '82JUL01','83JUL01','85JUL01','88JAN01','90JAN01',
      *		   '91JAN01','92JUL01','93JUL01','94JUL01','96JAN01',
      *		   '97JUL01','99JAN01','06JAN01','09JAN01','12JUL01',
+     *		   '15JUL01','17JAN01'/
 c
 c  Initialise the table of leap seconds.
 c
