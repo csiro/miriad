@@ -243,6 +243,10 @@ c       composed of a correlator efficiency (0.88) and an antenna
 c       efficiency (0.65 at 6 cm).  The overall result is jyperk=12.7.
 c       The default jyperk=150, a typical value for the Hat Creek 6.1m
 c       antennas.
+c@ antfac
+c       In case not all antennas should have equal sensitivity, specify
+c       a factor to apply to the noise, followed by a list of antenna
+c       numbers. Default is to treat all antennas the same.
 c@ options
 c       A number of options can be specified, separated by commas.
 c         'leakfvar' Add linear variation of leakage parameters across
@@ -363,8 +367,10 @@ c                  bandpass and spectral index.
 c    11nov19 jbs   Add inttime parameter so we can use uvgen to closely
 c                  match an existing dataset's uv coordinates and times.
 c    15apr20 mhw   Add conversion from utc seconds to lst seconds to
-c                  avoid duplicate utc times  
+c                  avoid duplicate utc times
 c    09oct20 mhw   Add explicit seed parameter for random numbers
+c    04mar24 mhw   Add antfac parameter to enable arrays with non uniform
+c                  sensitivity
 c
 c  Bugs/Shortcomings:
 c    * Frequency and time smearing is not simulated.
@@ -396,8 +402,8 @@ c-----------------------------------------------------------------------
       integer MW
       parameter(MW=4)
       character version*(*)
-      parameter(version = 'Uvgen: $Revision: 1.13 $, '//
-     *  '$Date: 2020/10/09 03:41:04 $')
+      parameter(version = 'Uvgen: $Revision: 1.14 $, '//
+     *  '$Date: 2024/03/04 01:15:22 $')
       integer ALTAZ,EQUATOR,XYEW
       parameter(ALTAZ=0,EQUATOR=1,XYEW=3)
       integer PolRR,PolLL,PolRL,PolLR,PolXX,PolYY,PolXY,PolYX
@@ -425,7 +431,8 @@ c-----------------------------------------------------------------------
       integer n,nant,npnt,ipnt,i,jj,m,is,ic,nchan,nospect
       double precision preamble(5),timeout
       real b1(MAXANT),b2(MAXANT),b3(MAXANT),temp,psi,sinq,cosq,leakrms
-      real systemp(MAXANT*maxspect),inttime
+      real systemp(MAXANT*maxspect),inttime, antfac(MAXANT), fac
+      integer ant
       double precision restfreq(maxspect),lst,utc,butc
       double precision antpos(3*MAXANT),ra,dec
       integer item, unit
@@ -591,6 +598,19 @@ c
       call keyr('tpower',tatm,0.)
       call keyr('jyperk',jyperk,150.)
       call getopt(dofleak,dodelay,doband)
+      do i=1,MAXANT
+          antfac(i) = 1.0
+      enddo
+      call keyr('antfac',fac,1.0)
+      if (fac.ne.1.0) then
+          ant = 1
+          do while (ant.gt.0)
+              call keyi('antfac',ant,-1)
+              if (ant.gt.0.and.ant.le.MAXANT) then
+                  antfac(ant) = fac
+              endif
+          enddo
+      endif
 
       call keya('out',outfile,' ')
       if(outfile.eq.' ')
@@ -891,7 +911,8 @@ c
         systemp(1) = Tsys
       endif
       call NoiseRms
-     *  (unit,nant,npol,jyperk,systemp,pol,inttime,wrms,rrms,wsignal)
+     *  (unit,nant,npol,jyperk,systemp,pol,inttime,wrms,rrms,wsignal,
+     *   antfac)
 c
 c  Write noise info to the history file.
 c
@@ -1074,11 +1095,11 @@ c
             temp = exp(-tau/sinel)
             systemp(1) = 2.*(Tsys + Tsky*(1-temp)) / temp
             call NoiseRms(unit,nant,npol,jyperk,systemp,pol,
-     *                        inttime,wrms,rrms,wsignal)
+     *                        inttime,wrms,rrms,wsignal,antfac)
           endif
           if(trms.gt.0. .or. tatm.gt.0.) then
             do n = 1, nant
-              tpower(n) = rang(1.,trms)*systemp(1) + tatm*pnoise(1,n)
+              tpower(n) = rang(1.,trms)*systemp(n) + tatm*pnoise(1,n)
             enddo
             call uvputvri(unit,'ntpower',nant,1)
             call uvputvrr(unit,'tpower',tpower,nant)
@@ -1181,7 +1202,8 @@ c
      *             call PolLeak(chan,numchan,MAXCHAN,npol,
      *                leak(1,m),leak(1,n),dofleak)
                 if(donoise)
-     *             call NoiseAdd(chan,numchan,MAXCHAN,npol,rrms)
+     *             call NoiseAdd(chan,numchan,MAXCHAN,npol,
+     *                      rrms*sqrt(antfac(n)*antfac(m)))
               endif
 
 c
@@ -1733,7 +1755,8 @@ c
       end
 c***********************************************************************
       subroutine NoiseRms
-     *  (unit,nant,npol,jyperk,systemp,pol,inttime,wrms,rrms,wsignal)
+     *  (unit,nant,npol,jyperk,systemp,pol,inttime,wrms,rrms,wsignal,
+     *   antfac)
 
 c  Calculate random noise based on system temperature, integration time
 c  and bandwidth.
@@ -1743,29 +1766,32 @@ c  and bandwidth.
       integer unit,nant,npol,pol(MAXPOL)
       real jyperk,inttime
       real wrms(MAXSPECT,MAXPOL),rrms(MAXCHAN,MAXPOL)
-      real systemp(MAXANT*MAXSPECT),wsignal(MAXSPECT)
+      real systemp(MAXANT*MAXSPECT),wsignal(MAXSPECT),antfac(MAXANT)
 c-----------------------------------------------------------------------
       integer i,j,jj,ipol
-      real sqrt2,temp
+      real sqrt2,temp,systmp
       parameter(sqrt2=1.414214)
 
-      jj = 1
-      do j = 2,nant*max(nwide,nspect)
-        jj = jj + 1
-        systemp(jj)=systemp(1)
-      end do
+      systmp = systemp(1)
+      jj = 0
+      do i = 1,max(nwide,nspect)
+        do j = 1,nant
+            jj = jj + 1
+            systemp(jj)=systmp*antfac(j)
+        end do
+      enddo
       call uvputvrr(unit,'systemp',systemp,max(1,nant*nspect))
       call uvputvrr(unit,'wsystemp',systemp,max(1,nant*nwide))
 
       do i=1,nwide
-        wrms(i,1) = jyperk*systemp(1) / sqrt(2*wwidth(i)*1e9*inttime)
+        wrms(i,1) = jyperk*systmp / sqrt(2*wwidth(i)*1e9*inttime)
         wsignal(i) = 0
         do ipol=1,npol
           wrms(i,ipol) = wrms(i,1)
         enddo
       enddo
       do j = 1,nspect
-        temp = jyperk * systemp(1) / sqrt(2*abs(sdf(j))*1e9*inttime)
+        temp = jyperk * systmp / sqrt(2*abs(sdf(j))*1e9*inttime)
         do ipol=1,npol
           do i = ischan(j), ischan(j)+nschan(j)-1
             rrms(i,ipol) = temp
