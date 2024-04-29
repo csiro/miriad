@@ -145,6 +145,9 @@ c                   XX and YY will contain GTP and SDO data in the real
 c                   and imaginary part; XY will contain the OFF data and
 c                   YX will contain the ON-OFF data (for XY). This will
 c                   allow recalculation of the Tsys and xyphase later.
+c         'purpose' Fill purpose variable with scan type, this will
+c                   allow selection on scantype later using 'purpose'
+c                   selection, but will disable calcode selection.
 c@ nfiles
 c       This gives one or two numbers, being the number of files to
 c       skip, followed by the number of files to process.  This is only
@@ -176,7 +179,7 @@ c       For concatenated spectra the width of a single zoom is used.
 c       Note that noise and artefacts go up quickly towards the band 
 c       edge so making this much smaller will not gain you much.
 c
-c$Id: atlod.for,v 1.56 2021/06/03 07:09:31 wie017 Exp $
+c$Id: atlod.for,v 1.57 2024/04/29 01:54:50 wie017 Exp $
 c--
 c
 c  Program Structure:
@@ -346,8 +349,9 @@ c    mhw  27jul15 Fix problem loading some CABB zoom data
 c    mhw  18jul16 Store project code
 c    mhw  26aug16 Fix nopol option
 c    mhw  13nov18 Avoid loss of precision in frequency variables
+c    mhw  26apr24 Add dopurp option (fill purpose with scantype)
 c
-c $Id: atlod.for,v 1.56 2021/06/03 07:09:31 wie017 Exp $
+c $Id: atlod.for,v 1.57 2024/04/29 01:54:50 wie017 Exp $
 c-----------------------------------------------------------------------
 
         integer MAXFILES,MAXTIMES,MAXSIM
@@ -361,6 +365,7 @@ c
         logical doauto,docross,docomp,dosam,relax,unflag,dohann
         logical dobary,doif,birdie,dowt,dopmps,doxyp,doop,dopack,dotsys
         logical polflag,hires,sing,docaldat,nocacal,nopol,rfiflag
+        logical dopurp
         integer fileskip,fileproc,scanskip,scanproc
         real edge
 c
@@ -369,8 +374,8 @@ c
         character itoaf*8, rperr*32, versan*72
 c-----------------------------------------------------------------------
       version = versan ('atlod',
-     :                  '$Revision: 1.56 $',
-     :                  '$Date: 2021/06/03 07:09:31 $')
+     :                  '$Revision: 1.57 $',
+     :                  '$Date: 2024/04/29 01:54:50 $')
 c
 c  Get the input parameters.
 c
@@ -389,7 +394,7 @@ c
         call mkeyd('restfreq',rfreq,2,nfreq)
         call getopt(doauto,docross,docaldat,docomp,dosam,doxyp,doop,
      *    relax,sing,unflag,dohann,birdie,dobary,doif,dowt,dopmps,
-     *    nopol,polflag,hires,nocacal,rfiflag,dopack,dotsys)
+     *    nopol,polflag,hires,nocacal,rfiflag,dopack,dotsys,dopurp)
         call keyi('nfiles',fileskip,0)
         call keyi('nfiles',fileproc,nfiles-fileskip)
         if(nfiles.gt.1.and.fileproc+fileskip.gt.nfiles)
@@ -451,7 +456,7 @@ c
             endif
             call RPDisp(in(i),scanskip,scanproc,doauto,docross,
      *          docaldat,relax,sing,unflag,nopol,polflag,dotsys,
-     *          ifsel,nsel,rfreq,nfreq,iostat)
+     *          dopurp,ifsel,nsel,rfreq,nfreq,iostat)
           endif
         enddo
 c
@@ -527,11 +532,11 @@ c***********************************************************************
         subroutine GetOpt(doauto,docross,docaldat,docomp,dosam,doxyp,
      *    doop,relax,sing,
      *    unflag,dohann,birdie,dobary,doif,dowt,dopmps,
-     *    nopol,polflag,hires,nocacal,rfiflag,dopack,dotsys)
+     *    nopol,polflag,hires,nocacal,rfiflag,dopack,dotsys,dopurp)
 c
         logical doauto,docross,dosam,relax,unflag,dohann,dobary,doop
         logical docomp,doif,birdie,dowt,dopmps,doxyp,polflag,hires,sing
-        logical docaldat,nocacal,nopol,rfiflag,dopack,dotsys
+        logical docaldat,nocacal,nopol,rfiflag,dopack,dotsys,dopurp
 c
 c  Get the user options.
 c
@@ -559,9 +564,11 @@ c    sing       Single dish mode.
 c    rfiflag    Flag known rfi sources
 c    dopack     Pack bin 1 and 2 into 1, discard bin 2
 c    dotsys     Use online tsys correction
+c    dopurp     Fill purpose variable with scantype (ATCA)
+c               (disables calcode selection)
 c-----------------------------------------------------------------------
         integer nopt
-        parameter(nopt=24)
+        parameter(nopt=25)
         character opts(nopt)*8
         logical present(nopt)
         data opts/'noauto  ','nocross ','compress','relax   ',
@@ -569,7 +576,8 @@ c-----------------------------------------------------------------------
      *            'noif    ','birdie  ','reweight','xycorr  ',
      *            'opcorr  ','nopflag ','hires   ','pmps    ',
      *            'mmrelax ','single  ','caldata ','nocacal ',
-     *            'nopol   ','rfiflag ','nopack  ','notsys  '/
+     *            'nopol   ','rfiflag ','nopack  ','notsys  ',
+     *            'purpose '/
         call options('options',opts,present,nopt)
         doauto = .not.present(1)
         docross = .not.present(2)
@@ -597,6 +605,7 @@ c       mmrelax = present(16)
         rfiflag = present(22)
         dopack  = .not.present(23).and.doauto
         dotsys  = .not.present(24)     
+        dopurp  = present(25)
 c
         if((dosam.or.doxyp.or.doop).and.relax)call bug('f',
      *    'You cannot use options samcorr, xycorr or opcorr with relax')
@@ -1557,10 +1566,12 @@ c
 c
         end
 c***********************************************************************
-        subroutine PokeMisc(telescop,observer,version,sctype,project)
+        subroutine PokeMisc(telescop,observer,version,sctype,project,
+     *       dopurp)
 c
         character telescop*(*),observer*(*),version*(*),sctype*(*),
      *       project*(*)
+        logical dopurp
 c
 c  Set various miscellaneous parameters.
 c-----------------------------------------------------------------------
@@ -1586,7 +1597,12 @@ c
         if(length.gt.0)call uvputvra(tno,'version',atemp(1:length))
 c
         call AsciiCpy(sctype,atemp,length)
-        if(length.gt.0)call uvputvra(tno,'sctype',atemp(1:length))
+        if(length.gt.0) then
+          call uvputvra(tno,'sctype',atemp(1:length))
+          if (dopurp) then
+            call uvputvra(tno,'purpose',atemp(1:length))
+          endif
+        endif
 c
         call AsciiCpy(project,atemp,length)
         if(length.gt.0)call uvputvra(tno,'project',atemp(1:length))
@@ -2425,14 +2441,14 @@ c-----------------------------------------------------------------------
         end
 c***********************************************************************
         subroutine RPDisp(in,scanskip,scanproc,doauto,docross,docaldat,
-     *    relax,sing,unflag,nopol,polflag,dotsys,ifsel,nsel,
+     *    relax,sing,unflag,nopol,polflag,dotsys,dopurp,ifsel,nsel,
      *    userfreq,nuser,iostat)
 c
         character in*(*)
         integer scanskip,scanproc,nsel,ifsel(nsel),nuser,iostat
         double precision userfreq(*)
         logical doauto,docross,relax,unflag,polflag,sing,docaldat,nopol,
-     *          dotsys
+     *          dotsys,dopurp
 c
 c  Process an RPFITS file. Dispatch information to the
 c  relevant Poke routine. Then eventually flush it out with PokeFlsh.
@@ -2762,7 +2778,7 @@ c
                 time = ut / (3600.d0*24.d0) + jday0
                 call Poke1st(time,nifs(simno),nant,cabb)
                 if(NewScan)call PokeMisc(instrument,rp_observer,
-     *                                   version,sctype,project)
+     *                                   version,sctype,project,dopurp)
                 if(an_found)call PokeAnt(nant,x,y,z)
                 if(NewScan.or.NewFreq)then
                   kband = .false.
