@@ -13,9 +13,9 @@ c
 c	These are defined as
 c
 c	  Closure (triple) phase:    arg( V12*V23*conjg(V13) )
-c	  Closure (quad) amplitude:  abs( (V12*V34)/(V14*conjg(V34)) )
+c	  Closure (quad) amplitude:  abs( (V12*V34)/(V14*conjg(V23)) )
 c	  Triple amplitude:          abs( V12*V23*conjg(V13) )**0.3333
-c	  Quad phase:                arg( (V12*V34)/(V14*conjg(V34)) )
+c	  Quad phase:                arg( (V12*V34)/(V14*conjg(V23)) )
 c
 c	The closure phase, quad phase and closure amplitude should be
 c	independent of antenna-based errors, and for a point source
@@ -80,7 +80,7 @@ c	  nocal     Do not perform gain calibration.
 c	  nopol     Do not perform polarisation calibration on the data.
 c	  nopass    Do not perform bandpass calibration on the data.
 c
-c$Id: closure.for,v 1.9 2021/06/02 04:45:09 wie017 Exp $
+c$Id: closure.for,v 1.10 2024/05/30 06:30:55 mirmgr Exp $
 c--
 c  History:
 c    rjs   7sep94 Original version.
@@ -145,8 +145,8 @@ c
 	character versan*72
 c-----------------------------------------------------------------------
       version = versan ('closure',
-     :                  '$Revision: 1.9 $',
-     :                  '$Date: 2021/06/02 04:45:09 $')
+     :                  '$Revision: 1.10 $',
+     :                  '$Date: 2024/05/30 06:30:55 $')
 c
 c Lets go! Get user inputs.
 c
