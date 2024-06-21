@@ -256,8 +256,9 @@
 *  mhw  06mar12 add spectrum version of variance - variancef
 *  mhw  08aug12 merge in some CARMA mods
 *  mhw  10oct18 add fix to velocity suggested by M Voronkov
-*
-* $Id: uvio.c,v 1.12 2021/06/02 04:03:07 wie017 Exp $
+*  mhw  21jun24 repurpose purpose selection for scantype
+
+* $Id: uvio.c,v 1.13 2024/06/21 05:11:00 mirmgr Exp $
 *===========================================================================*/
 #define VERSION_ID "08-Aug-2012 mhw"
 
@@ -3504,7 +3505,7 @@ private int uvread_select(UV *uv)
     if(op->type == SEL_PURP){
       discard = !op->discard;
       while(n < sel->noper && op->type == SEL_PURP){
-	if(uvread_matchp(op->stval,uv->purpose->buf,uv->purpose->length))
+	if(uvread_match(op->stval,uv->purpose->buf,uv->purpose->length))
 	  discard = op->discard;
 	op++; n++;
       }
