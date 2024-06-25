@@ -183,7 +183,7 @@ c-----------------------------------------------------------------------
      *          ydmin, yrange(2), yv(2), yw(2)
       double precision coord(2), pixcen(3), pixcrd(3), world(3)
       character algo*3, comment*80, cpoly*64, dec1*13, dec2*13,
-     *          device*64, in*132, logf*132, object*9, out*132, ra1*13,
+     *          device*148, in*132, logf*132, object*9, out*132, ra1*13,
      *          ra2*13, str*3, txt*72, unit0*16, version*72, xaxis*64,
      *          xlabel*64, yaxis*64, ylabel*64, xlab*64, ylab*64
 
