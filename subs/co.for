@@ -2055,6 +2055,9 @@ c     Check validity.
 c     Find the spectral axis type.
       status = spcgtc(spc(1,icrd), SPC_TYPE, stype)
 
+c     Set again - gets corrupted without debug
+      ispc = spcax(icrd)
+
       if (stype.ne.'FREQ') then
 c       Switch it to frequency.
         call coSpcSet(lu, 'FREQ', ' ', ispc, algo)

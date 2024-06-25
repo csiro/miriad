@@ -45,6 +45,10 @@ if test "x$ac_cv_f77_compiler_gnu" = xyes ; then
     FCSTD="-ff90-intrinsics-hide -Wno-globals"
   fi
 fi
+if test "x$F77" = xgfortran ; then
+    FCSTD="-fimplicit-none -fallow-argument-mismatch -fno-automatic"
+fi
+
 
 AC_SUBST([FCSTD])
 
@@ -55,7 +59,7 @@ AC_MSG_NOTICE([
 Looking for an ANSI C compiler...])
 
 AC_PROG_CC
-AC_PROG_CC_STDC
+#AC_PROG_CC_STDC
 AC_C_CONST
 AC_TYPE_SIZE_T
 if test "x$ac_cv_prog_cc_stdc" = xno -o \
@@ -75,7 +79,7 @@ AC_MSG_NOTICE([
 
 Checking ANSI C header files...])
 
-AC_HEADER_STDC
+#AC_HEADER_STDC
 AC_CHECK_HEADERS([errno.h limits.h math.h stdio.h stdlib.h string.h])
 if test "x$ac_cv_header_stdc" = xno ; then
   AC_MSG_ERROR([
@@ -166,9 +170,10 @@ EXTDIRS="$EXTDIRS              \
          /sw/lib/pgplot        \
          /opt/sw/lib           \
          /opt/sw/lib/pgplot    \
+	 /opt/homebrew/lib     \
          /usr/lib              \
          /lib                  \
-         /opt/SUNWspro/lib     \
+         /usr/lib/x86_64-linux-gnu  \
          /usr/ucblib"
 
 DIRS=
