@@ -35,8 +35,8 @@ c       'radio' velocity ('VELO'), 'optical' velocity ('FELO'), or the
 c       units in the image.  The default is whatever units are in the
 c       header. A second value will overwrite the default label for this
 c       axis. You can use pgplot escape characters to change fonts
-c       and sub/superscript level, e.g., 
-c       'Optical Velocity, \ficz\fr km\u-1s\d' will write 'cz' in 
+c       and sub/superscript level, e.g.,
+c       'Optical Velocity, \ficz\fr km\u-1s\d' will write 'cz' in
 c        italics and '-1' as a superscript.
 c@ yaxis
 c       If 'average' then the pixels enclosed in the x-y area specified
@@ -143,7 +143,7 @@ c@ lines
 c       Up to 2 values. Line widths for the axes and the plot.
 c       Defaults to 1,1.
 c@ colors
-c       Up to 3 values. Colors for the main spectrum, the polynomial 
+c       Up to 3 values. Colors for the main spectrum, the polynomial
 c       fit and the 'measure' parameters. Defaults to 1,2,3
 c@ log
 c       Write spectrum to this ascii file. Spectral axis units are as
@@ -262,7 +262,7 @@ c     Get inputs.
       call keyi('colors',color(1),1)
       call keyi('colors',color(2),2)
       call keyi('colors',color(3),3)
-      
+
       call keya('log',logf,' ')
       comment = ' '
       do while (keyprsnt('comment'))
@@ -611,7 +611,7 @@ c       Label sizes.
         else
           call pgline(nchan,value,spec)
         endif
-        
+
         call pgsci(color(2))
         if (poly.ge.0) then
           if (subpoly) then
@@ -659,7 +659,7 @@ c       Label sizes.
         endif
         call pgslw(1)
         call pgsci(1)
-        
+
 c       Axis labelling, except for options=pstyle2.
         if (.not.pstyle2) call pglab(xlabel,ylabel,' ')
 
@@ -1327,7 +1327,7 @@ c     Normalize the spectra and get the yaxis.
         unit0='Jy'
         ylabel = 'Total Intensity (Jy)'
 
-      else if (bunitup(1:7).eq.'JY/BEAM' 
+      else if (bunitup(1:7).eq.'JY/BEAM'
      *         .and. bmaj*bmin*omega.ne.0) then
         do i = 1, NCHAN
           spec(i) = spec(i)/cbof
