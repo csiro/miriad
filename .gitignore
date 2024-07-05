@@ -26,3 +26,13 @@ _$*
 *.ln
 core
 # CVS default ignores end
+linux64
+MIRRC
+MIRRC.sh
+config.log
+config.status
+doc
+html
+inc/wcslib
+specdoc/cheat.doc
+specdoc/tasks.doc
