@@ -1,5 +1,6 @@
 #include "sxmtv.h"
 #include <X11/cursorfont.h>
+void srcwrt();
 
 /*
  *  If the user moves the mouse out of the window, the line is erased

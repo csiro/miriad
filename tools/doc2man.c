@@ -40,12 +40,14 @@
 #define TRUE 1
 #define FALSE 0
 
-private void process(), filling(), usage();
+private void process(FILE *, FILE *, char *, char *);
+private void filling(char *, FILE *);
+private void usage();
 private char *skip(),*gline();
 
 /************************************************************************/
 
-main(argc,argv)
+int main(argc,argv)
 int argc;
 char *argv[];
 {
@@ -121,7 +123,7 @@ char *argv[];
       fclose(infd);
     }
   } else {
-    process(stdin,outfd,keyword);
+    process(stdin,outfd,keyword,NULL);
   }
 
   return 0;

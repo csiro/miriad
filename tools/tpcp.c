@@ -29,6 +29,7 @@ Example:
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/types.h>
+#include <unistd.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #define MAXBUF 45000
@@ -36,7 +37,7 @@ Example:
 int idec();
 void usage();
 /************************************************************************/
-main(argc,argv)
+int main(argc,argv)
 int argc;
 char *argv[];
 {

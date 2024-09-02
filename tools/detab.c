@@ -11,7 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-main(argc,argv)
+int main(argc,argv)
 int argc;
 char *argv[];
 {
@@ -69,4 +69,5 @@ char *argv[];
 
   (void)fclose(in);
   (void)fclose(out);
+  return 0;
 }

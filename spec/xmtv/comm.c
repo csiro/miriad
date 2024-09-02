@@ -18,6 +18,7 @@
 #include <sys/un.h>
 #include <netdb.h>
 #include <netinet/in.h>
+#include <unistd.h>
 
 #define UNIX_DOMAIN 0
 #define INET_DOMAIN 1

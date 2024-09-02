@@ -34,7 +34,7 @@
 
 char *usage="Usage: tract [-a | -c | -m] [-s] [-q#] <file|directory>";
 
-main(argc,argv)
+int main(argc,argv)
 
 int   argc;
 char  *argv[];

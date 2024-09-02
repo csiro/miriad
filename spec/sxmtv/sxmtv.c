@@ -34,7 +34,7 @@
 
 static Bool connected = False;
 
-main (argc, argv)
+int main (argc, argv)
 int argc;
 char *argv[];
 {
@@ -233,7 +233,7 @@ char *argv[];
       } /* end while */
 } /* end main */
 /*-------------------------------------------------------------------*/
-ProcessMirRequest()
+void ProcessMirRequest()
 {
 
     ybuf.status = 0;

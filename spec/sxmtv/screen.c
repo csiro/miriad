@@ -1,8 +1,9 @@
 /*--------------------------------------------------------------------*/
 
 #include "sxmtv.h"
+#include <strings.h>
 
-scrwrt (xs, ys, xe, ye)
+void scrwrt (xs, ys, xe, ye)
 /*--------------------------------------------------------------------*/
 /* Draws from memory image to the screen taking account of zoom,      */
 /* scroll and window offsets etc. Updates that rectangle enclosed by  */

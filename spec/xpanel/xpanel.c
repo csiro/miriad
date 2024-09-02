@@ -78,6 +78,7 @@ Xpanel provides the following resources, along with their defaults:
 *************************************************************************/
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/socket.h>

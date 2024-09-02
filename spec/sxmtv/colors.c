@@ -1,6 +1,9 @@
 #include "sxmtv.h"
 
-cmap_wlut()
+int cmap_change();
+void scrwrt();
+
+int cmap_wlut()
 /*--------------------------------------------------------------------*/
 /*   Write the NColour LookUpTable into memory and to colormap        */
 /*--------------------------------------------------------------------*/
@@ -26,7 +29,7 @@ cmap_wlut()
       }
 }
 
-cmap_rlut()
+int cmap_rlut()
 /*--------------------------------------------------------------------*/
 /*   Read the NColour LookUpTable from  memory                        */
 /*--------------------------------------------------------------------*/
@@ -53,7 +56,7 @@ cmap_rlut()
       }
 }
 
-cmap_wofm()
+int cmap_wofm()
 /*--------------------------------------------------------------------*/
 /*   Write the NINTENS OutputFunction into memory and to colormap     */
 /*--------------------------------------------------------------------*/
@@ -73,7 +76,7 @@ cmap_wofm()
    return (cmap_change());
 }
 
-cmap_rofm()
+int cmap_rofm()
 /*--------------------------------------------------------------------*/
 /*   Read the NINTENS OutputFunction from memory                      */
 /*--------------------------------------------------------------------*/
@@ -93,7 +96,7 @@ cmap_rofm()
    return (0);
 }
 
-cmap_change()
+int cmap_change()
 /*--------------------------------------------------------------------*/
 /* Changes the colormap based on the stored LUTs and OFMs in core.    */
 /* Adapted from a routine used in  SSS.                               */
@@ -132,7 +135,7 @@ cmap_change()
    return (0);
 }
 
-cmap_graph()
+int cmap_graph()
 /*--------------------------------------------------------------------*/
 /*   Switch graphics plane(s) on or off.                              */
 /*--------------------------------------------------------------------*/
@@ -162,7 +165,7 @@ cmap_graph()
       }
 }
 
-cmap_split()
+int cmap_split()
 /*--------------------------------------------------------------------*/
 /*   Switch grey channel on or off.                                   */
 /*--------------------------------------------------------------------*/
@@ -192,7 +195,7 @@ cmap_split()
          }
 }
 
-cmap_wgrfx()
+int cmap_wgrfx()
 /*--------------------------------------------------------------------*/
 /* Writes the cursor and graphics colour assignment.                  */
 /*                                                                    */
@@ -261,7 +264,7 @@ void crscol (grfx, gcol)
    *(gcol+15) = *(grfx+0);
 }
 
-cmap_rgrfx()
+int cmap_rgrfx()
 /*--------------------------------------------------------------------*/
 /* Reads the cursor and graphics colour assignment.                   */
 /*                                                                    */

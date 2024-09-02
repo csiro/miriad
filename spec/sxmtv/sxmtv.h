@@ -11,9 +11,31 @@
 #endif
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/keysym.h>
+
+void init();
+void scrwrt();
+void SetupWindow();
+void RecordCursor();
+int GetCursor();
+int MakeLink();
+int ReadLink();
+int WriteLink();
+int closedown();
+void ProcessMirRequest();
+int CheckKey();
+void resize_canvas();
+int selectPoints();
+int cmap_wlut(), cmap_rlut(), cmap_wofm(), cmap_rofm(), cmap_graph(), cmap_split();
+int cmap_wgrfx(), cmap_rgrfx();
+int zoom(), read_zoom(), windo_status(), movecursor(), readbuttons(), cursor_button();
+void printbufin(), resize_pressed();
+int Interogate(), ClearChan(), imwrt(), imrd();
+
 
 #if BSD
 

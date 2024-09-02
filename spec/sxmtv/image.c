@@ -3,6 +3,7 @@
 /*--------------------------------------------------------------------*/
 
 #include "sxmtv.h"
+void scrwrt();
 
 int imwrt() 
 /* IMWRT Writes an image plane or a graphics plane to the internal sxmtv*/
@@ -269,7 +270,7 @@ void resize_pressed()
      "resize_pressed: W H, X Y %d %d, %d %d\n", itx, ity, icx, icy);
 }
 
-windo_status()
+int windo_status()
 /*--------------------------------------------------------------------*/
 /*  Returns current window corners                                    */
 /*--------------------------------------------------------------------*/
@@ -320,7 +321,7 @@ windo_status()
    return (0);
 }
 
-Interogate (nparms)
+int Interogate (nparms)
 /*--------------------------------------------------------------------*/
 /* This subroutine returns the critical parameters of the TV to the   */
 /* client in the order of DTVC.INC                                    */
@@ -363,7 +364,7 @@ short int *nparms;
    return (0);
 }
 
-ClearChan()
+int ClearChan()
 /*----------------------------------------------------------------------*/
 /* ClearChan clears both graphics and image planes, if requested        */
 /* Inputs                                                               */
@@ -452,7 +453,7 @@ ClearChan()
    return (0);
 }
 
-zoom()
+int zoom()
 /*--------------------------------------------------------------------*/
 /* Sets the zoom registers                                            */
 /*--------------------------------------------------------------------*/
@@ -483,7 +484,7 @@ zoom()
    return (0);
 }
 
-read_zoom(nparms)
+int read_zoom(nparms)
 /*--------------------------------------------------------------------*/
 /* Read the zoom/scroll registers.                                    */
 /*--------------------------------------------------------------------*/

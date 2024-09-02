@@ -1,5 +1,6 @@
 #include "sxmtv.h"
 
+
 static int button_a = 0;                     /* Number of times each  */
 static int button_b = 0;                     /* button was pressed    */
 static int button_c = 0;                     /* since the last RBUTT  */
@@ -9,7 +10,7 @@ static int cursor_y = 0;                     /* position.             */
 
 /*--------------------------------------------------------------------*/
 
-RecordCursor (x, y)
+void RecordCursor (x, y)
 int x, y;
 {
                                         /* -> wrt to window           */
@@ -64,7 +65,7 @@ KeySym key;
        case XK_KP_Add:
        case XK_F7:
        case XK_F2:
-           (void) resize_pressed();
+           resize_pressed();
            fprintf (stderr,"SXMTV   : Screen Resize Toggled with button F2\n");
            break;
        case XK_F20:
@@ -77,7 +78,7 @@ KeySym key;
       return(retval);
 }
 
-GetCursor(cx, cy)
+int GetCursor(cx, cy)
 short int *cx;
 short int *cy;
 {
@@ -87,7 +88,7 @@ short int *cy;
     return(0);
 }
 
-movecursor()
+int movecursor()
 {
    int xc, yc;
 
@@ -105,7 +106,7 @@ movecursor()
     return (0);
 }
 
-readbuttons()
+int readbuttons()
 {
     ybuf.data[0] =  button_a;
     ybuf.data[1] =  button_b;

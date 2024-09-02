@@ -19,6 +19,7 @@
 #define private static
 #include <stdlib.h>
 #include <stdio.h>
+#include <ctype.h>
 #define MAXLINE 512
 
 #define TRUE 1

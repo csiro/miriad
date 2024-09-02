@@ -5,6 +5,7 @@
 #include "sxmtv.h"
 #include <stdlib.h>
 #include <strings.h>
+#include <unistd.h>
 
 short int swapbytes( a )
 short int a;
@@ -21,7 +22,7 @@ short int a;
 
 #if BSD
 
-MakeLink()
+int MakeLink()
 /*--------------------------------------------------------------------*/
 /* Get a socket and bind it appropriately, if possible.  The          */
 /* environmental variable TVDEV is expanded to find the TV            */
@@ -149,7 +150,7 @@ MakeLink()
 
 #if BSD
 
-ReadLink (link, in, out)
+int ReadLink (link, in, out)
 int link;
 Sxmtvinput *in;
 Sxmtvoutput *out;
@@ -201,7 +202,7 @@ Sxmtvoutput *out;
 } /* end ReadLink */
 
 
-WriteLink (link, in, out)
+int WriteLink (link, in, out)
 int link;
 Sxmtvoutput *out;
 Sxmtvinput *in;
@@ -330,7 +331,7 @@ WriteLink()
 #endif
 
 
-closedown()
+int closedown()
 {
    int status, i;
 
@@ -357,7 +358,7 @@ closedown()
    exit(1);
 }
 
-printbufin()
+void printbufin()
 {
     int i, j, limit;
 
@@ -372,7 +373,7 @@ printbufin()
        }
 } /* end printfbuf */
 
-printbufout()
+void printbufout()
 {
     int i, j, limit;
 

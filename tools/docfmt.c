@@ -31,7 +31,7 @@ private char *skip();
 
 /**********************************************************************/
 
-main(argc,argv)
+int main(argc,argv)
 int argc;
 char *argv[];
 {
