@@ -7,12 +7,12 @@
   Miriad is a a synthesis radio-astronomy data reduction, imaging and
   analysis package. Full documentation on Miriad is available from
 
-    http://www.atnf.csiro.au/computing/software/miriad
+    https://www.atnf.csiro.au/computing/software/miriad
 
 
   Type
     help tasks
-  for a list of Miriad tasks, or 
+  for a list of Miriad tasks, or
     help <topic>
   for information about a specific topic.
 

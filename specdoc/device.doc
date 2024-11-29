@@ -13,7 +13,7 @@
 	type are:
 
 	  xs	X-windows output. This window is resizeable and
-	        persistent. 
+	        persistent.
 	  xw	X-windows output. A transient window that disappears
 		when your task exists.
 	  ps	Postscript (landscape mode).
@@ -31,4 +31,4 @@
 	separately. The command needed for this is site and device specific.
 
 	For a comprehensive description of PGPLOT devices, see
-	  http://www.astro.caltech.edu/~tjp/pgplot/
+	  https://www.astro.caltech.edu/~tjp/pgplot/
