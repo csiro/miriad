@@ -35,11 +35,12 @@ echo 's/</\&lt;/g'			>> $sed_script
 echo 's/>/\&gt;/g'			>> $sed_script
 echo 's/WARNING:/<B>WARNING:<\/B>/g'	>> $sed_script
 echo 's/NOTE:/<B>NOTE:<\/B>/g'		>> $sed_script
-echo 's/astro-ph\/\([0-9]*\)/<a href="http:\/\/xxx\.lanl\.gov\/abs\/astro-ph\/\1">astro-ph\/\1<\/a>/' >> $sed_script
+echo 's/astro-ph\/\([0-9]*\)/<a href="https:\/\/xxx\.lanl\.gov\/abs\/astro-ph\/\1">astro-ph\/\1<\/a>/' >> $sed_script
 
 # Look for HTML and ftp links.
 cat $argv[1]|tr -s "[:space:]" "[\n*]" > junk.doc2html.$$
-grep http:// junk.doc2html.$$ > junk.tmp.$$
+grep http:// junk.doc2html.$$ | sed -e 's/http:/https:/g' > junk.tmp.$$
+grep https:// junk.doc2html.$$ > junk.tmp.$$
 grep ftp:// junk.doc2html.$$ >> junk.tmp.$$
 set links = (`sort junk.tmp.$$|uniq`)
 rm -rf junk.tmp.$$ junk.doc2html.$$
