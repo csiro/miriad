@@ -25,8 +25,8 @@ values).
 \begin{latexonly}
 More details can be found in the on-line documentation available on the ATNF
 web pages \htmladdnormallink
-{(http://www.atnf.csiro.au/computing/software/karma/)}
-{http://www.atnf.csiro.au/computing/software/karma/}
+{(https://www.atnf.csiro.au/computing/software/karma/)}
+{https://www.atnf.csiro.au/computing/software/karma/}
 or in a gzipped \htmladdnormallink{postscript}
 {ftp://ftp.atnf.csiro.au/pub/software/karma/usermanual.ps.gz} document on the
 ATNF
@@ -35,7 +35,7 @@ through the ATNF web pages).
 \end{latexonly}
 \begin{htmlonly}
 More details can be found in the on-line documentation available on the
-\htmladdnormallink{ATNF web pages}{http://www.atnf.csiro.au/computing/software/karma/}, or
+\htmladdnormallink{ATNF web pages}{https://www.atnf.csiro.au/computing/software/karma/}, or
 in a gzipped \htmladdnormallink{postscript}
 {ftp://ftp.atnf.csiro.au/pub/software/karma/usermanual.ps.gz} document on the ATNF
 ftp server.
@@ -45,8 +45,8 @@ KARMA replaces the ATNF Visualisation suite,
 \begin{latexonly}
 details of which can be found in the on-line documentation available on the ATNF
 web pages \htmladdnormallink
-{(http://www.atnf.csiro.au/computing/software/visualisation/)}
-{http://www.atnf.csiro.au/computing/software/visualisation/}
+{(https://www.atnf.csiro.au/computing/software/visualisation/)}
+{https://www.atnf.csiro.au/computing/software/visualisation/}
 or in a gzipped \htmladdnormallink{postscript}
 {ftp://ftp.atnf.csiro.au/pub/software/sutra/vizdoc.ps.gz} document on the
 ATNF
@@ -55,7 +55,7 @@ through the ATNF web pages).
 \end{latexonly}
 \begin{htmlonly}
 details of which can be found in the on-line documentation available on the
-\htmladdnormallink{ATNF web pages}{http://www.atnf.csiro.au/computing/software/visualisation/}, or
+\htmladdnormallink{ATNF web pages}{https://www.atnf.csiro.au/computing/software/visualisation/}, or
 in a gzipped \htmladdnormallink{postscript}
 {ftp://ftp.atnf.csiro.au/pub/software/sutra/vizdoc.ps.gz} document on the ATNF
 ftp server.
@@ -123,7 +123,7 @@ Tasks which use the PGPLOT software always use the {\tt device}
 keyword to allow you to select a plotting device. Only a brief review of PGPLOT, from a users
 perspective, is given here. A more complete description, both for users and
 programmers, can be found in the
-\htmladdnormallink{PGPLOT manual}{http://astro.caltech.edu/\~{}tjp/pgplot/}.
+\htmladdnormallink{PGPLOT manual}{https://astro.caltech.edu/\~{}tjp/pgplot/}.
 
 PGPLOT devices are specified in the standard PGPLOT manner, namely
 \begin{verse}

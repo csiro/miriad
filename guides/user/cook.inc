@@ -2210,7 +2210,7 @@ data accordingly.
 Updated solutions are sometimes stored in parameter files in the 
 \miriad\ system directory \verb+$MIRCAT+ (or otherwise can be obtained by
 request from ATCA observatory staff, or from
-\htmladdnormallink{http://www.narrabri.atnf.csiro.au/observing/antpos/}{this website}).
+\htmladdnormallink{https://www.narrabri.atnf.csiro.au/observing/antpos/}{this website}).
 These solutions
 are distributed via the \miriad\ update mechanism, and
 have file names of the form ``\verb+dantpos.+{\em yymmdd}''. Here
@@ -3503,13 +3503,13 @@ information.
 \subsection{Polarisation}
 Much of the theory here has been borrowed from the memo
 \htmladdnormallink{`AT Polarisation Calibration'}
-{http://www.atnf.csiro.au/observers/memos/d97b7f\~{}1.pdf} (AT Memo 39.3/015).
+{https://www.atnf.csiro.au/observers/memos/d97b7f\~{}1.pdf} (AT Memo 39.3/015).
 See that memo for more details.
 A more detailed description of polarimetric interferometry can be found in
 \htmladdnormallink{Hamaker, Bregman \& Sault (1996)}
-{http://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1996A\%26AS..117..137H}
+{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1996A\%26AS..117..137H}
 and \htmladdnormallink{Sault, Hamaker \& Bregman (1996)}
-{http://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1996A\%26AS..117..149S}
+{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1996A\%26AS..117..149S}
 (A\&AS 117, 137 and A\&AS 117, 149).
 
 Recall from Chapter~\ref{c:visconcepts} that \miriad\ models a feed
@@ -3578,9 +3578,9 @@ position angle of the polarisation ellipses of each feed.
 
 Incorporating these leakage terms results in fairly gory equations -- see
 \htmladdnormallink{Hamaker, Bregman \& Sault (1996)}
-{http://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1996A\%26AS..117..137H}
+{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1996A\%26AS..117..137H}
 and \htmladdnormallink{Sault, Hamaker \& Bregman (1996)}
-{http://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1996A\%26AS..117..149S}
+{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1996A\%26AS..117..149S}
 (A\&AS 117, 137 and A\&AS 117, 149) for more details.
 
 \subsection{Atmospheric opacity and system temperature}\label{s:atmosop}
@@ -3631,7 +3631,7 @@ temperature in front of the feed system.
 The technique to do this is the so-called ``chopper wheel''
 method (e.g.
 \htmladdnormallink{Ulich 1980}
-{http://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1980ApL....21...21U}).
+{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1980ApL....21...21U}).
 The ATCA uses the chopper wheel method (also called paddle or vane calibration)
 in its 3-mm system
 to determine an above atmosphere
@@ -3647,7 +3647,7 @@ based on changes in telescope elevation and weather.
 \subsection{Antenna gain considerations and flux calibration}
 One characteristic of the ATCA dishes is that they are big by 3-mm
 standards. Indeed \htmladdnormallink{van Hoerner (1967)}
-{http://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1967AJ.....72...35V}
+{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1967AJ.....72...35V}
 has considered the limits to the size
 of an antenna before various effects become significant.
 For construction styles like the ATCA dishes, he suggests that 11m is the
@@ -3662,7 +3662,7 @@ tend to bear this out, with changes in antenna gain of 25\% noted that
 appear to be related to thermal effects.
 Distortion of the dishes by gravity is also significant
 (eg \htmladdnormallink{Subrahmanyan 2005}
-{http://ieeexplore.ieee.org/iel5/8/32084/01492610.pdf?tp=&arnumber=1492610&isnumber=32084}). 
+{https://ieeexplore.ieee.org/iel5/8/32084/01492610.pdf?tp=&arnumber=1492610&isnumber=32084}). 
 A gain/elevation
 correction will solve this - to first order at least.
 Because of the way the ATCA panels are set, the antenna gain peaks at
@@ -4357,7 +4357,7 @@ your observations:
 The two most commonly used flux calibrators at the ATCA are 1934-638 and the
 planet Uranus. For frequencies between 1 GHz and 10 GHz, 1934-638 is the preferred
 flux calibrator; its cm model is described in the memo \htmladdnormallink{``A revised flux scale for the AT
-Compact Array''}{http://www.atnf.csiro.au/observers/memos/d96783\~{}1.pdf}
+Compact Array''}{https://www.atnf.csiro.au/observers/memos/d96783\~{}1.pdf}
 (AT Memo 39.3/040). For frequencies above this, Uranus is the preferred flux
 calibrator, although until early 2010 the \miriad\ model did not correctly take
 into account how Uranus' brightness temperature changed with its orientiation to the
@@ -4371,7 +4371,7 @@ Since May 2010, the \miriad\ model of 1934-638 covers frequencies all the way up
 the top of the 7mm band (50 GHz), so it can be used a flux calibrator now for all
 bands other than 3mm. The flux model in the 12mm band is described in the 
 \htmladdnormallink{memo by Bob Sault}
-{http://www.atnf.csiro.au/observers/memos/AT39.3_124.pdf}
+{https://www.atnf.csiro.au/observers/memos/AT39.3_124.pdf}
 ``ATCA flux density scale at 12mm'' (2003).
 The flux model for frequencies above 25 GHz will be described in a forthcoming memo.
 
@@ -5179,7 +5179,7 @@ ephemeris used for RA and DEC is not sufficiently accurate to point or
 phase track the telescope).
 
 Information on using the ATCA to observe a planet is available on-line at
-\htmladdnormallink{http://www.narrabri.atnf.csiro.au/observing/users_guide/html/new_atug_20.html#Scheduling-Strategy}.
+\htmladdnormallink{https://www.narrabri.atnf.csiro.au/observing/users_guide/html/new_atug_20.html#Scheduling-Strategy}.
 
 \section{The Interpolation Process}\index{calibration, interpolation}
 You should now have a program source dataset containing the
@@ -5397,7 +5397,7 @@ per bin for calibration of amplitude (use for MWA data).
 The ATCA potentially can produce polarimetric data to very high precision, with
 polarimetric measurements down to the level of 1 part in 100000 of Stokes I.
 The extra steps to attain this are beyond the scope of this manual.
-\htmladdnormallink{David Rayner's memo}{http://www.atnf.csiro.au/observers/memos/circpolguide.pdf}
+\htmladdnormallink{David Rayner's memo}{https://www.atnf.csiro.au/observers/memos/circpolguide.pdf}
 ``Circular polarization user's guide'' (2000) contains much useful information
 on this topic.
 
@@ -5407,7 +5407,7 @@ calibrator, 1934-638, was revised to give better agreement between
 the ATCA's flux density scale and the flux scales used in the northern
 hemisphere (the VLA in particular). For more discussion, see John
 Reynolds' memo \htmladdnormallink{``A revised flux scale for the AT
-Compact Array''}{http://www.atnf.csiro.au/observers/memos/d96783\~{}1.pdf}
+Compact Array''}{https://www.atnf.csiro.au/observers/memos/d96783\~{}1.pdf}
 (AT Memo 39.3/040).
 
 This introduces a problem when mixing data (either combining or
@@ -5531,7 +5531,7 @@ weighting) minimises sidelobes, whereas natural weighting minimises
 the noise level. Robust weighting provides a compromise between the two,
 doing so in an optimal sense (similar to Wiener optimisation).
 See \htmladdnormallink{Dan Briggs' thesis}
-{http://www.aoc.nrao.edu/dissertations/dbriggs/}
+{https://www.aoc.nrao.edu/dissertations/dbriggs/}
 for more information.
 \item[Tapering] In signal processing theory, the optimum way to
 detect a signal of known form, which is buried in noise, is to convolve that
@@ -5917,7 +5917,7 @@ whether CLEAN or MEM was used) or the restoring beam.
 \index{deconvolution, H\"ogbom CLEAN}
 
 The CLEAN algorithm \htmladdnormallink{(H\"ogbom 1974)}
-{http://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1974A\%26AS...15..417H}
+{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1974A\%26AS...15..417H}
 (A\&AS 15, 417)
 represents the image as a number of point
 sources in an otherwise empty field of view.  A simple iterative procedure is
@@ -5946,7 +5946,7 @@ because the equivalent area of the CLEAN beam can be calculated.
 
 \subsection*{The Clark CLEAN}\index{deconvolution, Clark CLEAN}
 The Clark CLEAN algorithm \htmladdnormallink{(Clark 1980)}
-{http://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1980A\%26A....89..377C}
+{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1980A\%26A....89..377C}
 (A\&A 26, 89)
 is a variant of the H\"ogbom CLEAN,
 and aims at improved speed for large images. The original H\"ogbom algorithm
@@ -5993,7 +5993,7 @@ well to prevent it putting in badly wrong values.
 
 Another variant of the CLEAN algorithm which helps suppress CLEAN stripes,
 is the SDI CLEAN \htmladdnormallink{(Steer, Dewdney, and Ito 1984)}
-{http://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1984A\%26A...137..159S}
+{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1984A\%26A...137..159S}
 (A\&A 137, 159).
 In this variant
 any point in the residual image greater than some factor times the
@@ -6058,7 +6058,7 @@ patch, and relax the criteria to perform a major cycle ({\it i.e.} perform fewer
 minor cycles per major cycle).
 
 \htmladdnormallink{Cornwell (1983)}
-{http://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1983A\%26A...121..281C}
+{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1983A\%26A...121..281C}
 (A\&A 121, 281)
 suggested that the CLEAN stripe
 instability can be suppressed by the addition of a delta function to the
@@ -6483,7 +6483,7 @@ The problem of multi-frequency deconvolution is to estimate
 \MM{I} and $I\alpha$ images simultaneously. A more detailed discussion of the
 algorithm \task{mfclean} uses is
 given in \htmladdnormallink{Sault \& Wieringa (1994)}
-{http://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1994A\%26AS..108..585S}
+{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1994A\%26AS..108..585S}
 (A\&AS 108, 585).
 
 But how important are the effects that spectral variation causes?
@@ -6566,7 +6566,7 @@ Stokes parameters simultaneously. With polarised emission being potentially
 positive and negative valued, the entropy measure for this is different
 from a simple total intensity deconvolution. See
 \htmladdnormallink{Sault et al. (1999)}
-{http://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1999A\%26AS..139..387S}
+{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1999A\%26AS..139..387S}
 (A\&A, 139, 387) for more background on joint polarimetric deconvolution.
 
 Often joint polarimetric deconvolution does not do a better job than
@@ -6695,7 +6695,7 @@ of time, or you have flagged it out because of poor data quality.
 There are other problems to do with the east-west nature of the ATCA  -- see
 Bob Sault's technical memo \htmladdnormallink{`Some simulations of
 self-calibration for the AT'}
-{http://www.atnf.csiro.au/observers/memos/d96f87~{}1.pdf} (AT Memo 39.3/058).
+{https://www.atnf.csiro.au/observers/memos/d96f87~{}1.pdf} (AT Memo 39.3/058).
 One important point to keep in mind is that
 self-calibration with the ATCA  depends  crucially on the initial
 model that you start with -- much more so than with the VLA where you can
@@ -7189,7 +7189,7 @@ been lost somewhere. Although this loss will affect the calculation of
 \MM{u-v} coordinates, the error that it introduces is generally negligible
 (see the discussion in the spectral-line processing chapter of Neil Killeen's
 \htmladdnormallink{``Analysis of Australia Telescope Compact Array Data''}
-{http://www.atnf.csiro.au/computing/software/atca_aips/atcal_html.html}).
+{https://www.atnf.csiro.au/computing/software/atca_aips/atcal_html.html}).
 
 Regardless of whether or not the observatory Doppler tracks, \miriad\ stores
 the radial velocity of the observatory (with respect to the rest frame)
@@ -7203,7 +7203,7 @@ for the spectral line observer. One aspect of the ATCA correlator
 that you should note is that the spectral resolution is often
 moderately different to the channel increment. For a full
 description of this, see the \htmladdnormallink{memo by Neil Killeen}
-{http://www.atnf.csiro.au/observers/memos/d98b8b\~{}1.pdf} (AT Memo 39.3/057).
+{https://www.atnf.csiro.au/observers/memos/d98b8b\~{}1.pdf} (AT Memo 39.3/057).
 
 \section{Spectral Line Processing and RPFITS files}\label{s:specrpfits}\index{atlod}
 When using \task{atlod} to read in spectral line data, there are a few
@@ -7456,14 +7456,14 @@ artifacts from the continuum).  Consequently it is usually best to
 subtract the continuum from the data.  A good description of the
 algorithms to do this is given by
 \htmladdnormallink{Cornwell, Uson and Haddad (1992)}
-{http://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1992A\%26A...258..583C}.
+{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1992A\%26A...258..583C}.
 (A\&A 258, 583).
 Neil Killeen's
 \htmladdnormallink{``Analysis of Australia Telescope Compact Array Data''}
-{http://www.atnf.csiro.au/computing/software/atca_aips/atcal_html.html}
+{https://www.atnf.csiro.au/computing/software/atca_aips/atcal_html.html}
 also gives a good summary as well as describing the \aips\
 possibilities.  The paper \htmladdnormallink{Sault (1994)}
-{http://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1994A\%26AS..107...55S}
+{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1994A\%26AS..107...55S}
 (A\&AS 107, 55)
 describes one of the algorithms in detail.
 Yet another summary is given below.
@@ -7653,7 +7653,7 @@ if your continuum is dominated by the Sun, this will help eliminate it.
 You will normally want to use the ``\verb+twofit+'' option with this (see
 below).
 Also see \htmladdnormallink{Sault \& Noordam (1995)}
-{http://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1995A\%26AS..109..593S}
+{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1995A\%26AS..109..593S}
 (A\&AS 109, 593) for information and an example.
 \item {\tt twofit}: If an ``\verb+offset+'' is given, or if the ``\verb+sun+''
 option is used, \task{uvlin} normally fits for continuum just at the

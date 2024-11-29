@@ -4,7 +4,7 @@
 This manual is also available, in hypertext form, on the World
 Wide Web at 
 \begin{verse}
-{\verb+http://www.atnf.csiro.au/computing/software/miriad+.}
+{\verb+https://www.atnf.csiro.au/computing/software/miriad+.}
 \end{verse}
 This also contains information on retrieving and installing \miriad.
 \end{latexonly}
@@ -34,7 +34,7 @@ with the \miriad\ package, we recommend that you read through Chapters
 For those interested, an overview of some of the history and design
 decisions of \miriad, the `standard reference' is: Sault R.J., Teuben P.J.,
 Wright M.C.H., 1995, \htmladdnormallink{``A retrospective view of Miriad''}
-{http://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1995ASPC...77..433S}
+{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1995ASPC...77..433S}
 in {\it Astronomical Data Analysis Software and
 Systems IV},
 ed. R. Shaw, H.E. Payne, J.J.E. Hayes, ASP Conf. Ser., {\bf 77}, 433-436.
@@ -81,19 +81,19 @@ of observing and data reduction.
 \item  
 \htmladdnormallink{
 Journal of Electrical and Electronics Engineering, Australia: Special
-Issue}{http://www.narrabri.atnf.csiro.au/observing/iree.pdf}
+Issue}{https://www.narrabri.atnf.csiro.au/observing/iree.pdf}
 -- The Australia Telescope, Volume 12, Number 2, June 1992.
 
 \item Australia Telescope Compact Array User's Guide \\
 \htmladdnormallink{
-http://www.narrabri.atnf.csiro.au/observing/users\_guide/html/atug.html}
-{http://www.narrabri.atnf.csiro.au/observing/users_guide/html/atug.html}
+https://www.narrabri.atnf.csiro.au/observing/users\_guide/html/atug.html}
+{https://www.narrabri.atnf.csiro.au/observing/users_guide/html/atug.html}
 
 \end{itemize}
 A large amount of can be found on the ATNF web sites
 \begin{verse}
-  \htmladdnormallink{http://www.atnf.csiro.au}{http://www.atnf.csiro.au}\\
-  \htmladdnormallink{http://www.narrabri.atnf.csiro.au}{http://www.narrabri.atnf.csiro.au}
+  \htmladdnormallink{https://www.atnf.csiro.au}{https://www.atnf.csiro.au}\\
+  \htmladdnormallink{https://www.narrabri.atnf.csiro.au}{https://www.narrabri.atnf.csiro.au}
 \end{verse}
 
 \section*{Acknowledgements}
@@ -465,7 +465,7 @@ TMPDIR    & Directory for scratch files (see Section~~\ref{s:scratch-files}).
 A hypertext version of this manual, as well as other \miriad\
 information, is available on the World Wide Web. Its URL is
 \begin{verse}
-{\tt http://www.atnf.csiro.au/computing/software/miriad}
+{\tt https://www.atnf.csiro.au/computing/software/miriad}
 \end{verse}
 
 

@@ -17,7 +17,7 @@ Currently these models assume the primary beam is circularly symmetric and time
 independent. The task \task{pbplot} produces some information and can
 make a plot of the primary beam models. The model of the ATCA primary
 beam is described in \htmladdnormallink{Mark Wieringa \& Mike Kesteven's memo}
-{http://www.atnf.csiro.au/observers/memos/d97f7b\~{}1.pdf} (AT Memo 39.3/024).
+{https://www.atnf.csiro.au/observers/memos/d97f7b\~{}1.pdf} (AT Memo 39.3/024).
 
 If you wish to override \miriad's model, or if \miriad\ does not have a
 model of the telescope of interest, you may set the primary beam
@@ -78,13 +78,13 @@ is low. A description of the theory behind mosaicing can be found in
 the NRAO Synthesis Imaging Summer School (Lecture 15 -- Wide Field
 Imaging III: Mosaicing -- by Tim Cornwell). Other notable references
 are \htmladdnormallink{Cornwell (1988)}
-{http://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1988A\%26A...202..316C}
+{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1988A\%26A...202..316C}
 (A\&A, 143, 77)
 and  \htmladdnormallink{Cornwell, Holdaway \& Uson (1993)}
-{http://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1993A\%26A...271..697C}
+{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1993A\%26A...271..697C}
 (A\&A, 271, 697).
 \htmladdnormallink{Sault, Staveley-Smith and Brouw (1996)}
-{http://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1996A\%26AS..120..375S}
+{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1996A\%26AS..120..375S}
 (A\&AS, 120, 376) describe some of the algorithms used by \miriad.
 
 \section{Mosaicing Observing Strategies}\label{s:mosobs}\index{mosaicing, observing strategies}
@@ -727,7 +727,7 @@ processing the different pointings. With polarised emission being potentially
 positive and negative valued, the entropy measure for this is different
 from a simple total intensity deconvolution. See
 \htmladdnormallink{Sault et al. (1999)}
-{http://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1999A\%26AS..139..387S}
+{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1999A\%26AS..139..387S}
 (A\&A 139, 387) for more background on joint polarimetric deconvolution.
 
 \end{itemize}
@@ -880,7 +880,7 @@ see the help file on using the \verb+options+ keyword for these.
 For a good discussion of the theory and practice of combining single
 dish and mosaic data, see the 
 \htmladdnormallink{paper by Snezana Stanimirovic}
-{http://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=2002sdra.conf..375S}
+{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=2002sdra.conf..375S}
 (ASP Conf. Series, vol 278, p 375).
 
 
@@ -1342,7 +1342,7 @@ of these (e.g. \task{immerge} can do this for you).
 Some examples of using these approaches are given
 in the
 \htmladdnormallink{paper by Snezana Stanimirovic}
-{http://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=2002sdra.conf..375S}
+{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=2002sdra.conf..375S}
 (ASP Conf. Series, vol. 278, p. 375).
 
 \begin{itemize}

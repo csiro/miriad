@@ -62,7 +62,7 @@ as at the lower frequencies. 1934-638 is about 1 Jy at 12-mm wavelengths: the
 \miriad\ calibration software contains a built-in model of 1934-638's change
 of flux density with frequency. For information about this flux scale,
 see the \htmladdnormallink{memo by Bob Sault}
-{http://www.atnf.csiro.au/observers/memos/AT39.3_124.pdf}
+{https://www.atnf.csiro.au/observers/memos/AT39.3_124.pdf}
 ``ATCA flux density scale at 12mm'' (2003).
 
 As 1934-638 is comparatively week at 12-mm wavelength, it is not an
@@ -171,7 +171,7 @@ temperature in front of the feed system.
 The technique to do this is the so-called ``chopper wheel''
 method (e.g.
 \htmladdnormallink{Ulich 1980}
-{http://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1980ApL....21...21U}).
+{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1980ApL....21...21U}).
 The ATCA uses the chopper wheel method (also call paddle or vane calibration)
 in its 3-mm system
 to determine an above atmosphere
@@ -187,7 +187,7 @@ based on changes in telescope elevation and weather.
 \subsection{Antenna gain considerations and flux calibration}
 One characteristic of the ATCA dishes is that they are big by 3-mm
 standards. Indeed \htmladdnormallink{van Hoerner (1967)}
-{http://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1967AJ.....72...35V}
+{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1967AJ.....72...35V}
 has considered the limits to the size
 of an antenna before various effects become significant.
 For construction styles like the ATCA dishes, he suggests that 11m is the
@@ -203,7 +203,7 @@ being attributed
 to thermal effects.
 Distortion of the dishes by gravity is also significant
 (eg \htmladdnormallink{Subrahmanyan 2005}
-{http://ieeexplore.ieee.org/iel5/8/32084/01492610.pdf?tp=&arnumber=1492610&isnumber=32084}). 
+{https://ieeexplore.ieee.org/iel5/8/32084/01492610.pdf?tp=&arnumber=1492610&isnumber=32084}). 
 A gain/elevation
 correction will solve this - to first order at least.
 Because of the way the ATCA panels are set, the antenna gain peaks at
@@ -836,11 +836,11 @@ Information on using the ATCA to observe a planet is available
 \begin{latexonly}
 from
 \begin{verbatim}
-  http://www.narrabri.atnf.csiro.au/observing/sched/solsys.html
+  https://www.narrabri.atnf.csiro.au/observing/sched/solsys.html
 \end{verbatim}
 \end{latexonly}
 \begin{htmlonly}
-\htmladdnormallink{on-line}{http://www.narrabri.atnf.csiro.au/observing/sched/solsys.html}
+\htmladdnormallink{on-line}{https://www.narrabri.atnf.csiro.au/observing/sched/solsys.html}
 \end{htmlonly}
 
 \section{Handling large spectral bandwidths}

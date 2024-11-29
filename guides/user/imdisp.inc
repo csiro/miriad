@@ -41,7 +41,7 @@ this interactively.  Note that for the contouring, the two datasets do
 not have to be on the same grid, although they should have a proper coordinate
 system defined.  Also note that the visualisation software can read
 data in {\tt FITS} format so one can load images from e.g. 
-\htmladdnormallink{{\tt skyview}}{http://skview.gsfc.nasa.gov/skyview.html}
+\htmladdnormallink{{\tt skyview}}{https://skview.gsfc.nasa.gov/skyview.html}
 directly and overlay \miriad\ datasets.
 
 {\tt kvis} can also produce full colour postscript output of whatever
