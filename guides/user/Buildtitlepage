@@ -78,7 +78,7 @@ RM LM sub (Bob Sault and Neil Killeen) stringwidth pop sub
 RM LM sub ($DATE) stringwidth pop sub
 2 div 100 moveto
 ($DATE) show
-RM LM sub (See http://www.atnf.csiro.au/computing/software/miriad)
+RM LM sub (See https://www.atnf.csiro.au/computing/software/miriad)
 stringwidth pop sub 2 div 20 sub 50 moveto
-(See http://www.atnf.csiro.au/computing/software/miriad) show
+(See https://www.atnf.csiro.au/computing/software/miriad) show
 EOF

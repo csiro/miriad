@@ -685,10 +685,10 @@ with \task{maths} to obtain the final 3-dimensional tilted ring model.
 There is a suite of tasks to help analyse Zeeman data.  These tasks
 implement the techniques discussed in gruesome detail
 by \htmladdnormallink{Sault, Killeen, Zmuidzinas \& Loushin (1990)}
-{http://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1990ApJS...74..437S}
+{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1990ApJS...74..437S}
 (ApJS 74, 437) and by 
 \htmladdnormallink{Killeen, Lo \& Crutcher (1992)}
-{http://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1992ApJ...385..585K}
+{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1992ApJ...385..585K}
 (ApJ 385, 585). 
 
 
@@ -808,7 +808,7 @@ out=log.out       & Write results to this file \\
 \item The task \task{zeesim} is used to get reliable estimates of the
 error in the fitted magnetic field derived by \task{zeestat}.  See
 \htmladdnormallink{Killeen, Lo \& Crutcher (1992)}
-{http://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1992ApJ...385..585K}
+{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1992ApJ...385..585K}
 (ApJ, 385, 585) for gruesome details.  It is used when
 you have invoked spatial averaging, or when the signal-to-noise ratio
 is very poor for spatial averaging.  The technique involves taking the

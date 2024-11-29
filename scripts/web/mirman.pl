@@ -77,7 +77,7 @@ EOF
     } else {
         $line = '/usr/bin/man ' . $topic . '|/usr/bin/rman -f html -r "mirman.pl?topic=%s"';
         $page = `$line`;
-        $page =~ s{(http://[\w/\+\?\&;%.~=-]*[\w/])}{&deamp1($1)}eg;
+        $page =~ s{(https?://[\w/\+\?\&;%.~=-]*[\w/])}{&deamp1($1)}eg;
         $page =~ s{(ftp://[\w/\.-]*\w)}{<A HREF="\1">\1</A>}g;
     }
 

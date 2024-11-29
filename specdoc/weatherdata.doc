@@ -1,12 +1,12 @@
 A few tasks require ATCA weather data for their operation. Prior to
 October 2003 meteorlogical data was not recorded in the RPFITS file.
 Prior to the December 2003 version of atlod, these data were not
-copied from the RPFITS file to the Miriad output file. 
+copied from the RPFITS file to the Miriad output file.
 
 If your Miriad data set does not contain your weather information
 you can get the  data from the ATCA's monthly weather data page
 
-http://www.narrabri.atnf.csiro.au/cgi-bin/Weather/hisdata.cgi
+https://www.narrabri.atnf.csiro.au/cgi-bin/Weather/hisdata.cgi
 
 Using your browser, download the data file for the appropriate month.
 
@@ -28,7 +28,7 @@ data.
 
 The files are in AEST times.  If you observe over an AEST month change,
 then you will need to download the files for the two months, and concatenate
-them together. 
+them together.
 
 The data file for the current month is updated nightly.
 

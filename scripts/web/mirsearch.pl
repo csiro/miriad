@@ -17,7 +17,6 @@ my ($Matches, $Search);
 
 $TOP='/var/www/vhosts/www.atnf.csiro.au';
 push(@INC, "$TOP/cgi-bin");
-require "www-lib.pl";
 $miriad_uri = "/computing/software/miriad";
 $miriad_dir = "$TOP/htdocs/$miriad_uri";
 
@@ -37,7 +36,7 @@ sub ReadParse
     for ($i = 0; $i < $ENV{'CONTENT_LENGTH'}; $i++) {
       $instr .= getc;
     }
-  } 
+  }
 
   @in = split(/&/,$instr);
 
