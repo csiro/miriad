@@ -37,7 +37,7 @@ sub ReadParse
     for ($i = 0; $i < $ENV{'CONTENT_LENGTH'}; $i++) {
       $instr .= getc;
     }
-  } 
+  }
 
   @in = split(/&/,$instr);
 
