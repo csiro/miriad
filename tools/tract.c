@@ -34,13 +34,9 @@
 
 char *usage="Usage: tract [-a | -c | -m] [-s] [-q#] <file|directory>";
 
-int main(argc,argv)
-
-int   argc;
-char  *argv[];
-
+int main(int argc, char* argv[])
 {
-   int atoi(), gotpath, hms, j, query;
+   int gotpath, hms, j, query;
    char mode;
    char *path;
    time_t tract, now, qtime;

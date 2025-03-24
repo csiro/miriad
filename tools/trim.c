@@ -25,12 +25,11 @@
 #define TRUE 1
 #define FALSE 0
 
-private void process();
+
+private void process(FILE* fout,FILE* fin,int fort,int blank);
 
 /************************************************************************/
-int main(argc,argv)
-int argc;
-char *argv[];
+int main(int argc,char* argv[])
 {
   char *outfile,*s;
   int fort,blank,i,nfiles;
@@ -80,9 +79,7 @@ char *argv[];
  return(0);
 }
 /************************************************************************/
-private void process(fout,fin,fort,blank)
-FILE *fout,*fin;
-int fort,blank;
+private void process(FILE* fout,FILE* fin,int fort,int blank)
 /*
   Process an input file, and write it to the output.
   Inputs:

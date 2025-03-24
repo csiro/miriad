@@ -360,39 +360,83 @@ typedef struct symbol {	char *name;
 		struct symbol *fwd;} SYMBOL;
 
 /* Declare all the routines that I use. */
-
-private void bug(),error(),clear_hash_table(),the_end();
-private void define_intrinsics(),define_specifics(),define_statements();
-private void generate_output(),generate_function(),generate_line();
-
-private void call_statement(),declaration_statement(),close_statement();
-private void simple_statement(),data_statement(),do_statement(),dowhile_statement();
-private void if_elseif_statement(),ignore_statement(),end_statement();
-private void prog_sub_func_statement(),goto_statement(),include_statement();
-private void equivalence_statement(),vms_record_statement();
-private void inquire_statement(),open_statement(),parameter_statement();
-private void read_write_statement(),rewind_statement(),common_statement();
-private void blockdata_statement(),block_statement();
-private int assignment_statement();
-private void parse_line(),parse_file();
-
-private void add_inc();
-private FILE *open_inc();
-private char *handle_implied_do_loop(),*handle_dio_list();
-private char *handle_variable(),*handle_expression();
-private char *handle_indices(),*handle_length(),*handle_label();
-private char *handle_sub_func_call(),*handle_keywords(),*handle_value();
-private char *handle_operator(),*handle_statement_func();
-private char *get_line(),*get_name();
-private char *skip_integer(),*skip_expression(),*skip_enclosed(),*skip_token();
-private char *skip_numeric(),*skip_logical(),*skip_string();
-private char *usage(),*crosssum();
-private SYMBOL *get_keyword();
-private SYMBOL *create_symbol(),*add_symbol(),*find_symbol();
-private int set_variable(),inquire_variable(),set_label();
-private SYMBOL *set_routine(),*inquire_routine();
-private int isfunction(),issubstring(),get_arg_intent();
-private void banish_hollerith(),set_block(),end_label(),end_block();
+private void add_inc(char* dir);
+private FILE *open_inc(char* name);
+private void generate_output(char* output_file);
+private void generate_function(FILE* fh, SYMBOL *p);
+private void generate_line(FILE* fh, char* leader, char* trailer, int mask,  int target, int flags[],int n);
+private void bug(char* a, char* b);
+private void error(char* text);
+private void define_intrinsics();
+private void define_specifics();
+private void define_statements();
+private void parse_file(char*  name);
+private char *get_line(char* line, int maxline, FILE* stream, int* flag, int* colnum);
+private void parse_line(char* s);
+private void common_statement(char* s, STATEMENT* f);
+private void declaration_statement(char* s, STATEMENT* f);
+private int issubstring(char* s);
+private int isfunction(char* s, STATEMENT* f);
+private void parameter_statement(char* s, STATEMENT* f);
+private void block_statement(char* s, STATEMENT* f);
+private void do_statement(char* s, STATEMENT* f);
+private void open_statement(char* s, STATEMENT* f);
+private void close_statement(char* s, STATEMENT* f);
+private void rewind_statement(char* s, STATEMENT* f);
+private void inquire_statement(char* s, STATEMENT* f);
+private void read_write_statement(char* s, STATEMENT* f);
+private void data_statement(char* s, STATEMENT* f);
+private void call_statement(char* s, STATEMENT* f);
+private int assignment_statement(char* s);
+private void end_statement(char* s, STATEMENT* f);
+private void the_end();
+private void dowhile_statement(char* s, STATEMENT* f);
+private void if_elseif_statement(char* s, STATEMENT* f);
+private void goto_statement(char* s, STATEMENT* f);
+private void blockdata_statement(char* s, STATEMENT* f);
+private void prog_sub_func_statement(char* s, STATEMENT* f);
+private void vms_record_statement(char* s, STATEMENT* f);
+private void equivalence_statement(char* s, STATEMENT* f);
+private void include_statement(char* s, STATEMENT* f);
+private void simple_statement(char* s, STATEMENT* f);
+private void ignore_statement(char* s, STATEMENT* f);
+private char *skip_expression(char* s);
+private char *skip_token(char* s, int* Token);
+private char *skip_string(char* s);
+private char *skip_integer(char* s);
+private char *skip_numeric(char* s, int* typed);
+private char *skip_logical(char* s, int* Token);
+private char *skip_enclosed(char* s);
+private void banish_hollerith(char* s);
+private int get_arg_intent(char* name);
+private char *get_name(char* s, char* name);
+private SYMBOL *get_keyword(char* name, SYMBOL keys[], int nkeys);
+private char *handle_keywords(char* s,SYMBOL keys[], int nkeys, char* defaults[], int ndefaults);
+private char *handle_statement_func(char* s, char* variable, int* type);
+private char *handle_expression(char* s, int* typed);
+private char *handle_value(char* s, int* Token);
+private char *handle_operator(char* s, int* Token);
+private char *handle_dio_list(char* s, int flags);
+private char *handle_implied_do_loop(char* s, int flags);
+private char *handle_length(char* s);
+private char *handle_label(char* s, int flags);
+private char *handle_indices(char* s, int flags);
+private char *handle_variable(char* s, char* variable);
+private char *handle_sub_func_call(char* s, int rflags, int* type);
+private int set_label(int labno, int flags);
+private void end_label();
+private void set_block(int block);
+private void end_block();
+private SYMBOL *inquire_routine(char* name);
+private SYMBOL *set_routine(SYMBOL* route);
+private char *crosssum(int flags, char* line);
+private char *usage(int flags, char* line);
+private int inquire_variable(char* name);
+private int set_variable(char* name, int flags);
+private void clear_hash_table(SYMBOL* hash[], int nhash);
+private SYMBOL *create_symbol(char* name, SYMBOL* hash[]);
+private SYMBOL *add_symbol(SYMBOL* p, SYMBOL* hash[]);
+private SYMBOL *find_symbol(char* name, SYMBOL* hash[]);
 
 #define issymbol(s) (isalnum(s) || (s) == '_' || (s) == '$' || (s) == '%')
 
@@ -415,9 +459,7 @@ INC_DIR *dirhead;
 
 #define ERROR(a) sprintf a;error(errmsg)
 /************************************************************************/
-int main(argc,argv)
-int argc;
-char *argv[];
+int main(int argc, char* argv[])
 {
   char *output_file,*s,*library_flag;
   int i,i0;
@@ -559,8 +601,7 @@ char *argv[];
   exit(0);
 }
 /************************************************************************/
-private void add_inc(dir)
-char *dir;
+private void add_inc(char* dir)
 /*
   Add a directory to the list of include directories to search.
 ------------------------------------------------------------------------*/
@@ -582,8 +623,7 @@ char *dir;
   }
 }
 /************************************************************************/
-private FILE *open_inc(name)
-char *name;
+private FILE *open_inc(char* name)
 /*
   Open an include file (or any other file for that matter).
 ------------------------------------------------------------------------*/
@@ -608,8 +648,7 @@ char *name;
   return(stream);
 }
 /************************************************************************/
-private void generate_output(output_file)
-char *output_file;
+private void generate_output(char* output_file)
 /*
   Generate an output file.
 ------------------------------------------------------------------------*/
@@ -630,9 +669,7 @@ char *output_file;
   fclose(out);
 }
 /************************************************************************/
-private void generate_function(fh,p)
-FILE *fh;
-SYMBOL *p;
+private void generate_function(FILE* fh, SYMBOL *p)
 /*
   Generate a function into the output file.
 ------------------------------------------------------------------------*/
@@ -672,10 +709,8 @@ SYMBOL *p;
   fprintf(fh,"\tend\n");
 }
 /************************************************************************/
-private void generate_line(fh,leader,trailer,mask,target,flags,n)
-FILE *fh;
-char *leader,*trailer;
-int mask,target,flags[],n;
+private void generate_line(FILE* fh, char* leader, char* trailer, int mask,
+ int target, int flags[],int n)
 /*
   Output a line to the summary file, in a neat FORTRAN syntax.
 ------------------------------------------------------------------------*/
@@ -704,16 +739,14 @@ int mask,target,flags[],n;
   if(used)fprintf(fh,"%s\n",trailer);
 }
 /************************************************************************/
-private void bug(a,b)
-char *a,*b;
+private void bug(char* a, char* b)
 {
   fprintf(stderr,a,b); fprintf(stderr,"\n");
   perror("Flint");
   exit(0);
 }
 /************************************************************************/
-private void error(text)
-char *text;
+private void error(char* text)
 {
   if(library_mode)return;
   if(log != NULL){
@@ -969,8 +1002,7 @@ private void define_statements()
   }
 }
 /************************************************************************/
-private void parse_file(name)
-char *name;
+private void parse_file(char* name)
 /*
   Process this particular file. Open the file, then loop through it,
   reading full lines of FORTRAN, then call the routine to parse the
@@ -1039,10 +1071,7 @@ char *name;
   fclose(stream);
 }
 /************************************************************************/
-private char *get_line(line,maxline,stream,flag,colnum)
-char *line;
-FILE *stream;
-int maxline,*flag,*colnum;
+private char *get_line(char* line, int maxline, FILE* stream, int* flag, int* colnum)
 /*
   Get a line of FORTRAN, skip over leading blanks or statement labels,
   and determine whether its a continuation line of not. Ignore comments.
@@ -1106,8 +1135,7 @@ int maxline,*flag,*colnum;
   return(s);
 }
 /************************************************************************/
-private void parse_line(s)
-char *s;
+private void parse_line(char* s)
 /*
   Determine what sort of FORTRAN statement this line represents,
   then call the appropriate routine to proccess it.
@@ -1162,9 +1190,7 @@ char *s;
   if(new_state != 0) state = new_state;
 }
 /************************************************************************/
-private void common_statement(s,f)
-char *s;
-STATEMENT *f;
+private void common_statement(char* s, STATEMENT* f)
 /*
   Handle a COMMON statement
 ------------------------------------------------------------------------*/
@@ -1222,9 +1248,7 @@ STATEMENT *f;
    numeric and character data in the common. */
 }
 /************************************************************************/
-private void declaration_statement(s,f)
-char *s;
-STATEMENT *f;
+private void declaration_statement(char* s, STATEMENT* f)
 /*
 	Handle declaration and COMMON statements.
 ------------------------------------------------------------------------*/
@@ -1276,8 +1300,7 @@ STATEMENT *f;
   }
 }
 /************************************************************************/
-private int issubstring(s)
-char *s;
+private int issubstring(char* s)
 /*
   Determine if the following bracketting looks like substring specs.
 ------------------------------------------------------------------------*/
@@ -1298,9 +1321,7 @@ char *s;
   return(*s == ':');
 }
 /************************************************************************/
-private int isfunction(s,f)
-char *s;
-STATEMENT *f;
+private int isfunction(char* s, STATEMENT* f)
 /*
   Determine if we are looking at a FUNCTION declaration.
 ------------------------------------------------------------------------*/
@@ -1315,9 +1336,7 @@ STATEMENT *f;
   return(FALSE);
 }
 /************************************************************************/
-private void parameter_statement(s,f)
-char *s;
-STATEMENT *f;
+private void parameter_statement(char* s, STATEMENT* f)
 /*
   Handle the parameter statement.
 ------------------------------------------------------------------------*/
@@ -1340,9 +1359,7 @@ STATEMENT *f;
   else if(dec)error("Non-ANSI PARAMETER statement");
 }
 /************************************************************************/
-private void block_statement(s,f)
-char *s;
-STATEMENT *f;
+private void block_statement(char* s, STATEMENT* f)
 /*
   Handle various block statements. Its pretty trivial.
 ------------------------------------------------------------------------*/
@@ -1352,9 +1369,7 @@ STATEMENT *f;
   set_block(f->flags);
 }
 /************************************************************************/
-private void do_statement(s,f)
-char *s;
-STATEMENT *f;
+private void do_statement(char* s, STATEMENT* f)
 /*
   Handle a DO statement (either the normal or VAX forms).
 ------------------------------------------------------------------------*/
@@ -1382,9 +1397,7 @@ STATEMENT *f;
   }
 }
 /************************************************************************/
-private void open_statement(s,f)
-char *s;
-STATEMENT *f;
+private void open_statement(char* s, STATEMENT* f)
 /*
   Handle the OPEN statement.
 ------------------------------------------------------------------------*/
@@ -1407,9 +1420,7 @@ STATEMENT *f;
   if(*s)error("Bad OPEN statement");
 }
 /************************************************************************/
-private void close_statement(s,f)
-char *s;
-STATEMENT *f;
+private void close_statement(char* s, STATEMENT* f)
 /*
   Handle a CLOSE statement.
 ------------------------------------------------------------------------*/
@@ -1427,9 +1438,7 @@ STATEMENT *f;
   if(*s)error("Bad CLOSE statement");
 }
 /************************************************************************/
-private void rewind_statement(s,f)
-char *s;
-STATEMENT *f;
+private void rewind_statement(char* s, STATEMENT* f)
 /*
   Handle a REWIND, BACKSPACE and ENDFILE statement.
 ------------------------------------------------------------------------*/
@@ -1446,9 +1455,7 @@ STATEMENT *f;
   if(*s){ERROR((errmsg,"Bad %s statement.",f->name));}
 }
 /************************************************************************/
-private void inquire_statement(s,f)
-char *s;
-STATEMENT *f;
+private void inquire_statement(char* s, STATEMENT* f)
 /*
   Handle a CLOSE statement.
 ------------------------------------------------------------------------*/
@@ -1480,9 +1487,7 @@ STATEMENT *f;
   if(*s)error("Bad INQUIRE statement");
 }
 /************************************************************************/
-private void read_write_statement(s,f)
-char *s;
-STATEMENT *f;
+private void read_write_statement(char* s, STATEMENT* f)
 /*
   Handle either a READ or WRITE statement.
 ------------------------------------------------------------------------*/
@@ -1513,9 +1518,7 @@ STATEMENT *f;
   if(*s)error("Bad READ or WRITE statement");
 }
 /************************************************************************/
-private void data_statement(s,f)
-char *s;
-STATEMENT *f;
+private void data_statement(char* s, STATEMENT* f)
 /*
   Handle a DATA statement.
 ------------------------------------------------------------------------*/
@@ -1540,9 +1543,7 @@ STATEMENT *f;
   }
 }
 /************************************************************************/
-private void call_statement(s,f)
-char *s;
-STATEMENT *f;
+private void call_statement(char* s, STATEMENT* f)
 /*
   Handle the call statement.
 ------------------------------------------------------------------------*/
@@ -1552,8 +1553,7 @@ STATEMENT *f;
   if(*s)error("Bad CALL syntax");
 }  
 /************************************************************************/
-private int assignment_statement(s)
-char *s;
+private int assignment_statement(char* s)
 /*
   Handle an assignment statement.
 ------------------------------------------------------------------------*/
@@ -1590,9 +1590,7 @@ char *s;
   return(new_state);
 }
 /************************************************************************/
-private void end_statement(s,f)
-char *s;
-STATEMENT *f;
+private void end_statement(char* s, STATEMENT* f)
 /*
   Handle the END statement. Find all the variables that have not been used.
 ------------------------------------------------------------------------*/
@@ -1693,9 +1691,7 @@ private void the_end()
   clear_hash_table(vhash,HASHSIZE);
 }
 /************************************************************************/
-private void dowhile_statement(s,f)
-char *s;
-STATEMENT *f;
+private void dowhile_statement(char* s, STATEMENT* f)
 /*
   Handle the dowhile statement.
 ------------------------------------------------------------------------*/
@@ -1707,9 +1703,7 @@ STATEMENT *f;
   if(*s) error("Failed to find end of expression");
 }
 /************************************************************************/
-private void if_elseif_statement(s,f)
-char *s;
-STATEMENT *f;
+private void if_elseif_statement(char* s, STATEMENT* f)
 /*
   Handle the IF statement.
 ------------------------------------------------------------------------*/
@@ -1739,9 +1733,7 @@ STATEMENT *f;
   }
 }
 /************************************************************************/
-private void goto_statement(s,f)
-char *s;
-STATEMENT *f;
+private void goto_statement(char* s, STATEMENT* f)
 /*
   Handle the goto statement.
 ------------------------------------------------------------------------*/
@@ -1766,17 +1758,13 @@ STATEMENT *f;
   if(*s)error("Bad GOTO statement");
 }
 /************************************************************************/
-private void blockdata_statement(s,f)
-char *s;
-STATEMENT *f;
+private void blockdata_statement(char* s, STATEMENT* f)
 /*----------------------------------------------------------------------*/
 {
   if( *(s+f->length) )error("Extra characters after BLOCK DATA statement");
 }
 /************************************************************************/
-private void prog_sub_func_statement(s,f)
-char *s;
-STATEMENT *f;
+private void prog_sub_func_statement(char* s, STATEMENT* f)
 /*
   Handle a PROGRAM, SUBROUTINE or FUNCTION statement.
 ------------------------------------------------------------------------*/
@@ -1817,9 +1805,7 @@ STATEMENT *f;
   if(*s) error("Bad SUBROUTINE or FUNCTION statement");
 }
 /************************************************************************/
-private void vms_record_statement(s,f)
-char *s;
-STATEMENT *f;
+private void vms_record_statement(char* s, STATEMENT* f)
 /*
   Give warning about VMS record declarations.
 ------------------------------------------------------------------------*/
@@ -1827,9 +1813,7 @@ STATEMENT *f;
   error("VMS record structures are not supported");
 }
 /************************************************************************/
-private void equivalence_statement(s,f)
-char *s;
-STATEMENT *f;
+private void equivalence_statement(char* s, STATEMENT* f)
 /*
   Handle the EQUIVALENCE statement.
 ------------------------------------------------------------------------*/
@@ -1863,9 +1847,7 @@ STATEMENT *f;
   if(*s != 0)error("Bad EQUIVALENCE statement");
 }
 /************************************************************************/
-private void include_statement(s,f)
-char *s;
-STATEMENT *f;
+private void include_statement(char* s, STATEMENT* f)
 /*
   Handle the INCLUDE statement.
 ------------------------------------------------------------------------*/
@@ -1887,9 +1869,7 @@ STATEMENT *f;
   if(!ok)error("Bad INCLUDE statement");
 }    
 /************************************************************************/
-private void simple_statement(s,f)
-char *s;
-STATEMENT *f;
+private void simple_statement(char* s, STATEMENT* f)
 /*
   Handle a statement that consists of a single word (e.g. RETURN, STOP,
   etc). Check that the end-of-line occurs in the place that its expected.
@@ -1899,16 +1879,13 @@ STATEMENT *f;
   if(*s){ERROR((errmsg,"Bad %s statement.",f->name));}
 }
 /************************************************************************/
-private void ignore_statement(s,f)
-char *s;
-STATEMENT *f;
+private void ignore_statement(char* s, STATEMENT* f)
 /*
   Some statement that I do not particularly care about. Just ignore it.
 ------------------------------------------------------------------------*/
 {}
 /************************************************************************/
-private char *skip_expression(s)
-char *s;
+private char *skip_expression(char* s)
 /*
   Skip over an expression.
 ------------------------------------------------------------------------*/
@@ -1933,9 +1910,7 @@ char *s;
   return(sd);
 }
 /************************************************************************/
-private char *skip_token(s,Token)
-char *s;
-int *Token;
+private char *skip_token(char* s, int* Token)
 /*
   Get a token from the expression stream. Handle variables and function
   calls.
@@ -1988,8 +1963,7 @@ int *Token;
   return(s);
 }
 /************************************************************************/
-private char *skip_string(s)
-char *s;
+private char *skip_string(char* s)
 /*
   Skip over a string.
 ------------------------------------------------------------------------*/
@@ -2001,8 +1975,7 @@ char *s;
   return(s);
 }
 /************************************************************************/
-private char *skip_integer(s)
-char *s;
+private char *skip_integer(char* s)
 /*
   Span across an integer.
 ------------------------------------------------------------------------*/
@@ -2011,9 +1984,7 @@ char *s;
   return(s);
 }
 /************************************************************************/
-private char *skip_numeric(s,typed)
-char *s;
-int *typed;
+private char *skip_numeric(char* s, int* typed)
 /*
   Skip across an integer, real or double precision number. Determine the
   type as we go. Be careful of periods, otherwise we could screw us
@@ -2042,9 +2013,7 @@ int *typed;
   return(s);
 }
 /************************************************************************/
-private char *skip_logical(s,Token)
-char *s;
-int *Token;
+private char *skip_logical(char* s, int* Token)
 /*
   Determine what the logical value, relational operator or logical
   operator in the input string is.
@@ -2087,8 +2056,7 @@ int *Token;
   return(s);
 }
 /************************************************************************/
-private char *skip_enclosed(s)
-char *s;
+private char *skip_enclosed(char* s)
 /*
   Skip over a something (?) which is enclosed in brackets. So we keep
   track of bracket nesting and quotes.
@@ -2105,8 +2073,7 @@ char *s;
   return(s);
 }
 /************************************************************************/
-private void banish_hollerith(s)
-char *s;
+private void banish_hollerith(char* s)
 /*
   This crudely filters out Hollerith variables. This replaces the Hollerith
   value with an integer which has the same number of characters. A hollerith
@@ -2141,8 +2108,7 @@ char *s;
   }while(*s);
 }
 /************************************************************************/
-private int get_arg_intent(name)
-char *name;
+private int get_arg_intent(char* name)
 /*
   This looks up the intent of an argument of the current subroutine or
   function.
@@ -2181,8 +2147,7 @@ char *name;
   return(*(r->args + i) & IO_MASK);
 }
 /************************************************************************/
-private char *get_name(s,name)
-char *s,*name;
+private char *get_name(char* s, char* name)
 /*
   Take as much of the input string as forms a valid FORTRAN variable name.
 ------------------------------------------------------------------------*/
@@ -2192,10 +2157,7 @@ char *s,*name;
   return(s);
 }
 /************************************************************************/
-private SYMBOL *get_keyword(name,keys,nkeys)
-char *name;
-int nkeys;
-SYMBOL keys[];
+private SYMBOL *get_keyword(char* name, SYMBOL keys[], int nkeys)
 /*
   Perform a binary search to locate a keyword in an array of keywords.
 ------------------------------------------------------------------------*/
@@ -2214,11 +2176,8 @@ SYMBOL keys[];
   return(NULL);
 }
 /************************************************************************/
-private char *handle_keywords(s,keys,nkeys,defaults,ndefaults)
-char *s;
-int nkeys,ndefaults;
-SYMBOL keys[];
-char *defaults[];
+private char *handle_keywords(char* s,SYMBOL keys[], int nkeys,
+ char* defaults[], int ndefaults)
 /*
   Handle keyword-driven commands such as OPEN, CLOSE, INQUIRE,
   READ and WRITE.
@@ -2286,9 +2245,7 @@ char *defaults[];
   return(s);
 }
 /************************************************************************/
-private char *handle_statement_func(s,variable,type)
-char *s,*variable;
-int *type;
+private char *handle_statement_func(char* s, char* variable, int* type)
 /*
   Handle a statement function definition. This does the unpleasant thing
   of temporarily turning off the initialisation checking algorithm.
@@ -2336,9 +2293,7 @@ int *type;
   return(s);  
 }
 /************************************************************************/
-private char *handle_expression(s,typed)
-char *s;
-int *typed;
+private char *handle_expression(char* s, int* typed)
 /*
   This analyses an expression to determine its data type (logical, real,
   etc). It also flags (as used) the variables used in the expression.
@@ -2394,9 +2349,7 @@ int *typed;
   return(sd);
 }
 /************************************************************************/
-private char *handle_value(s,Token)
-char *s;
-int *Token;
+private char *handle_value(char* s, int* Token)
 /*
   Scan through the input, getting the next value from it.
 ------------------------------------------------------------------------*/
@@ -2455,9 +2408,7 @@ int *Token;
   return(s);
 }
 /************************************************************************/
-private char *handle_operator(s,Token)
-char *s;
-int *Token;
+private char *handle_operator(char* s, int* Token)
 /*
   Scan through the input, getting the next operator from it.
 ------------------------------------------------------------------------*/
@@ -2488,9 +2439,7 @@ int *Token;
   return(s);
 }
 /************************************************************************/
-private char *handle_dio_list(s,flags)
-char *s;
-int flags;
+private char *handle_dio_list(char* s, int flags)
 /*
   This parses a string of variable names or implied do loops, and sets the
   the flags of the appropriate variables.
@@ -2530,9 +2479,7 @@ int flags;
   return(s);
 }
 /************************************************************************/
-private char *handle_implied_do_loop(s,flags)
-char *s;
-int flags;
+private char *handle_implied_do_loop(char* s, int flags)
 /*
   Handle an implied do loop.
 ------------------------------------------------------------------------*/
@@ -2572,8 +2519,7 @@ int flags;
   return(*s ? ss : se);
 }
 /************************************************************************/
-private char *handle_length(s)
-char *s;
+private char *handle_length(char* s)
 /*
   Skip over a string length specification.
 ------------------------------------------------------------------------*/
@@ -2583,9 +2529,7 @@ char *s;
   else return(handle_indices(s+1,INDICE_1ONLY|INDICE_WILD));
 }
 /************************************************************************/
-private char *handle_label(s,flags)
-char *s;
-int flags;
+private char *handle_label(char* s, int flags)
 /*
   Decode a statement label number, and save the flags about this label.
 ------------------------------------------------------------------------*/
@@ -2600,9 +2544,7 @@ int flags;
   return s;
 }
 /************************************************************************/
-private char *handle_indices(s,flags)
-char *s;
-int flags;
+private char *handle_indices(char* s, int flags)
 /*
   This analyses and skips over array index and substring specifications.
 ------------------------------------------------------------------------*/
@@ -2638,8 +2580,7 @@ int flags;
   return(s);
 }
 /************************************************************************/
-private char *handle_variable(s,variable)
-char *s,*variable;
+private char *handle_variable(char* s, char* variable)
 /*
   This looks at the next bit of the code, to see if it represents a simple
   variable (possibly with indices, if the variable represents an array).
@@ -2666,9 +2607,7 @@ char *s,*variable;
   return(sd);
 }
 /************************************************************************/
-private char *handle_sub_func_call(s,rflags,type)
-char *s;
-int *type,rflags;
+private char *handle_sub_func_call(char* s, int rflags, int* type)
 /*
   Handle a subroutine or function call.
 ------------------------------------------------------------------------*/
@@ -2782,8 +2721,7 @@ int *type,rflags;
   return(s1);
 }
 /************************************************************************/
-private int set_label(labno,flags)
-int labno,flags;
+private int set_label(int labno, int flags)
 /*
   This keeps track of the statement labels.
 ------------------------------------------------------------------------*/
@@ -2845,8 +2783,7 @@ private void end_label()
   }
 }
 /************************************************************************/
-private void set_block(block)
-int block;
+private void set_block(int block)
 /*
   This keeps track of nested loops, so make sure they are correctly
   nested.
@@ -2896,8 +2833,7 @@ private void end_block()
   nblocks = 0;
 }
 /************************************************************************/
-private SYMBOL *inquire_routine(name)
-char *name;
+private SYMBOL *inquire_routine(char* name)
 /*
   Find info about a particular routine.
 ------------------------------------------------------------------------*/
@@ -2905,8 +2841,7 @@ char *name;
   return(find_symbol(name,rhash));
 }
 /************************************************************************/
-private SYMBOL *set_routine(route)
-SYMBOL *route;
+private SYMBOL *set_routine(SYMBOL* route)
 /*
   Define a subroutine or function. First this looks up to see if the
   function has been defined before. If so, it compares the definitions
@@ -3024,9 +2959,7 @@ SYMBOL *route;
   return(p);	  
 }
 /************************************************************************/
-private char *crosssum(flags,line)
-int flags;
-char *line;
+private char *crosssum(int flags, char* line)
 /*
   Summarise the usage of this variable or whatever, for the cross reference
   listing.
@@ -3046,9 +2979,7 @@ char *line;
   return(line);
 }
 /************************************************************************/
-private char *usage(flags,line)
-int flags;
-char *line;
+private char *usage(int flags, char* line)
 /*
   Format the particular usage of this variable into something nice and neat.
 ------------------------------------------------------------------------*/
@@ -3105,8 +3036,7 @@ char *line;
   return(line);
 }
 /************************************************************************/
-private int inquire_variable(name)
-char *name;
+private int inquire_variable(char* name)
 /*
   Look at the characteristics of a variable which should be visible in the
   current routine.
@@ -3118,9 +3048,7 @@ char *name;
   return(p->flags);
 }
 /************************************************************************/
-private int set_variable(name,flags)
-char *name;
-int flags;
+private int set_variable(char* name, int flags)
 /*
 	Set flags of a particular variable.
 ------------------------------------------------------------------------*/
@@ -3197,9 +3125,7 @@ int flags;
   return(p->flags);
 }
 /************************************************************************/
-private void clear_hash_table(hash,nhash)
-SYMBOL *hash[];
-int nhash;
+private void clear_hash_table(SYMBOL* hash[], int nhash)
 /*
     A subroutine has ended. Go through the variable table, deleting each
     variable entry, and giving warnings about unused variables.
@@ -3220,9 +3146,7 @@ int nhash;
   }
 }
 /************************************************************************/
-private SYMBOL *create_symbol(name,hash)
-char *name;
-SYMBOL *hash[];
+private SYMBOL *create_symbol(char* name, SYMBOL* hash[])
 {
   char *s;
   int hashval,length;
@@ -3249,8 +3173,7 @@ SYMBOL *hash[];
   return(p);
 }
 /************************************************************************/
-private SYMBOL *add_symbol(p,hash)
-SYMBOL *p,*hash[];
+private SYMBOL *add_symbol(SYMBOL* p, SYMBOL* hash[])
 {
   char *s;
   int hashval;
@@ -3266,9 +3189,7 @@ SYMBOL *p,*hash[];
   return(p);
 }
 /************************************************************************/
-private SYMBOL *find_symbol(name,hash)
-char *name;
-SYMBOL *hash[];
+private SYMBOL *find_symbol(char* name, SYMBOL* hash[])
 /*
 	This tries to find a symbol in the given hash table.
 ------------------------------------------------------------------------*/

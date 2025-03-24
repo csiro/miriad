@@ -34,12 +34,10 @@ Example:
 #include <fcntl.h>
 #define MAXBUF 45000
 
-int idec();
+int idec(char* s);
 void usage();
 /************************************************************************/
-int main(argc,argv)
-int argc;
-char *argv[];
+int main(int argc, char* argv[])
 {
   char buf[MAXBUF],*in,*out,*s,c;
   int fin,fout,length,maxbuf,i;
@@ -53,7 +51,7 @@ char *argv[];
     s = argv[i];
     if(*s == '-'){
       s++;
-      while(c = *s++)switch(c){
+      while((c = *s++))switch(c){
 	case 'b':
 	  if(++i < argc)maxbuf = idec(argv[i]);
 	  break;
@@ -96,8 +94,7 @@ void usage()
   fprintf(stderr,"   tpcp [-b blocksize] in out\n");
 }
 /************************************************************************/
-int idec(s)
-char *s;
+int idec(char* s)
 {
   int l;
 

@@ -26,13 +26,12 @@
 
 # define LENGTH 256 	/* Maximum length of command */
 
-static int mychar();
-static void output(),insert(),wipe();
+static int mychar(int fd);
+static void output(int fd, char* line),insert(char* line, int coord, char ch),
+  wipe(char* line, int coord, int size);
 
 /*------------------------------------------------------------------------*/
-int main(argc,argv)
-int argc;
-char *argv[];
+int main(int argc, char* argv[])
 { 
   char ch,buffer[LENGTH],line[LENGTH+20];
   int j,ct,i,in_length,c_length;
@@ -183,27 +182,21 @@ char *argv[];
     return(0);
 }
 /************************************************************************/
-static int mychar(fd)
-int fd;
+static int mychar(int fd)
 {
   char ch;
   if(read(fd,&ch,1) != 1) return(0);
   else return(ch);
 }
 /************************************************************************/
-static void output(fd,line)
-int fd;
-char *line;
+static void output(int fd, char* line)
 {
   int length;
   length = strlen(line);
   write(fd,line,length);
 }
 /************************************************************************/
-static void insert(line,coord,ch)
-char *line;
-int coord;
-char ch;
+static void insert(char* line, int coord, char ch)
 /*
   Insert character ch in line[coord], shifting the rest of the array
 ------------------------------------------------------------------------*/
@@ -217,9 +210,7 @@ char ch;
   strcpy(line,temp);
 }
 /************************************************************************/
-static void wipe(line,coord,size)
-char *line;
-int coord,size;
+static void wipe(char* line, int coord, int size)
 /* 
     Wipe out line[coord] to line[coord+size]
 ------------------------------------------------------------------------*/

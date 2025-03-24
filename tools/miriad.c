@@ -180,26 +180,43 @@ int   dopopen[MAXINPUT];
 
 /* forward references to make (ansi) compilers happy */
 
-char *getenv();
-void dosetenv(),dounsetenv();
-void get_vars(),save_vars(),doset(),dounset(),doinp(),dogo(),dohelp(),
-     dotask(),dosource(), doer(), docd(), doload(), dosave(),
-     docommand(), doview(), dotput(), dotget(),motd(),newenv();
-void filename(), bug();
-int  get_line(),task_args();
+void doset(int argc, char* argv[]);
+void dounset(int argc, char* argv[]);
+void doer(int argc, char* argv[]);
+void doinp(int argc, char* argv[]);
+void dosource(int argc, char* argv[]);
+void doview(int argc, char* argv[]);
+void dotput(int argc, char* argv[]);
+void dogo(int argc, char* argv[]);
+void dohelp(int argc, char* argv[]);
+void dosave(int argc, char* argv[]);
+void doload(int argc, char* argv[]);
+void dotget(int argc, char* argv[]);
+void docd(int argc, char* argv[]);
+void dotask(int argc, char* argv[]);
+void dosetenv(int argc, char* argv[]);
+void dounsetenv(int argc, char* argv[]);
+void docommand(int argc, char* argv[]);
+void get_vars(char* name);
+void save_vars(char* name);
+void filename(char* out, char* envvar, char* name, char* type);
+void bug(char* message);
+void newenv(char* var, char* value);
+void motd();
+int get_line(char* argv[]);
+int task_args(char* task);
 #if defined(INTERRUPT)
 void review();
 #endif
-char *xpand(),*tlate();
+char *xpand(char* s, char* t);
+char *tlate(char* var);
 
 extern int errno;       /* or <errno.h> */
 extern char **environ;  /* point to environment */
 
 
 /****************************************************************************/
-int main(ac,av)
-int ac;
-char *av[];
+int main(int ac, char* av[])
 {
   int i,more,argc;
   char *argv[MAXARG];
@@ -265,7 +282,6 @@ char *av[];
 * Print the message of the day.
 *---------------------------------------------------------------------------*/
 void motd()
-
 {
   char path[MAXBUF],line[MAXBUF];
   FILE *f;
@@ -283,9 +299,7 @@ void motd()
 * Prompt and read a line from STDIN and break it into tokens.  If the second
 * token is an equals sign, then make it into a "set" command.
 *---------------------------------------------------------------------------*/
-int get_line(argv)
-char *argv[];
-
+int get_line(char* argv[])
 {
   int n,inter,doset,i,ntrys,within;
   char prompt[MAXBUF],buffer2[MAXBUF];
@@ -380,9 +394,7 @@ char *argv[];
 /*****************************************************************************
 * Expand any $ characters into the equivalent text or environment variables.
 *---------------------------------------------------------------------------*/
-char *xpand(s,t)
-char *s,*t;
-
+char *xpand(char* s, char* t)
 {
   char var[MAXBUF],*u;
 
@@ -403,9 +415,7 @@ char *s,*t;
 /*****************************************************************************
 * Return the value of a symbol or environment variable.
 *---------------------------------------------------------------------------*/
-char *tlate(var)
-char *var;
-
+char *tlate(char* var)
 {
   int hashval;
   char *t;
@@ -432,10 +442,7 @@ char *var;
 
 
 /****************************************************************************/
-void doset(argc,argv)
-int argc;
-char *argv[];
-
+void doset(int argc, char* argv[])
 {
   char *s,*t,prev;
   int hashval,i,len;
@@ -512,10 +519,7 @@ char *argv[];
 
 
 /****************************************************************************/
-void dounset(argc,argv)
-int argc;
-char *argv[];
-
+void dounset(int argc, char* argv[])
 {
   int i,hashval;
   char *t;
@@ -540,10 +544,7 @@ char *argv[];
 /*****************************************************************************
 * A quick edit of various keywords.
 *---------------------------------------------------------------------------*/
-void doer(argc,argv)
-int argc;
-char *argv[];
-
+void doer(int argc, char* argv[])
 {
   char line[MAXBUF];
   int hashval;
@@ -585,10 +586,7 @@ char *argv[];
 
 
 /****************************************************************************/
-void doinp(argc,argv)
-int argc;
-char *argv[];
-
+void doinp(int argc, char* argv[])
 {
   int i,n;
   char *task;
@@ -610,10 +608,7 @@ char *argv[];
 
 
 /****************************************************************************/
-void dosource(argc,argv)
-int argc;
-char *argv[];
-
+void dosource(int argc, char* argv[])
 {
   if(argc > 2) fprintf(stderr,"### Extra arguments on line ignored.\n");
 
@@ -633,10 +628,7 @@ char *argv[];
 
 
 /****************************************************************************/
-void doview(argc,argv)
-int argc;
-char *argv[];
-
+void doview(int argc, char* argv[])
 {
   int i,n;
   FILE *fd;
@@ -670,10 +662,7 @@ char *argv[];
 
 
 /****************************************************************************/
-void dotput(argc,argv)
-int argc;
-char *argv[];
-
+void dotput(int argc, char* argv[])
 {
   int i,n,dolocal;
   FILE *fd;
@@ -713,11 +702,7 @@ char *argv[];
 
 
 /****************************************************************************/
-void dogo(argc,argv)
-int argc;
-char *argv[];
-
-
+void dogo(int argc, char* argv[])
 {
   FILE *fd;
   int i,n,bg,length,fh;
@@ -838,10 +823,7 @@ char *argv[];
 
 
 /****************************************************************************/
-void dohelp(argc,argv)
-int argc;
-char *argv[];
-
+void dohelp(int argc, char* argv[])
 {
   char rest[MAXBUF],command[MAXBUF],*task,*key,*s;
   int i,doweb;
@@ -885,10 +867,7 @@ char *argv[];
 
 
 /****************************************************************************/
-void dosave(argc,argv)
-int argc;
-char *argv[];
-
+void dosave(int argc, char* argv[])
 {
   char path[MAXBUF];
 
@@ -903,10 +882,7 @@ char *argv[];
 
 
 /****************************************************************************/
-void doload(argc,argv)
-int argc;
-char *argv[];
-
+void doload(int argc, char* argv[])
 {
   char path[MAXBUF];
 
@@ -920,10 +896,7 @@ char *argv[];
 
 
 /****************************************************************************/
-void dotget(argc,argv)
-int argc;
-char *argv[];
-
+void dotget(int argc, char* argv[])
 {
   char path[MAXBUF],*vals[MAXARGS+1],*task,*s;
   int n,narg,i,dolocal;
@@ -961,10 +934,7 @@ char *argv[];
 
 
 /****************************************************************************/
-void docd(argc,argv)
-int argc;
-char *argv[];
-
+void docd(int argc, char* argv[])
 {
     if (argc == 2) {     /* change directory */
         if (chdir(argv[1]) != 0)
@@ -980,10 +950,7 @@ char *argv[];
 
 
 /****************************************************************************/
-void dotask(argc,argv)
-int argc;
-char *argv[];
-
+void dotask(int argc, char* argv[])
 {
   if(argc > 1) {
     strcpy(taskname,argv[1]);
@@ -994,10 +961,7 @@ char *argv[];
 
 
 /****************************************************************************/
-void dosetenv(argc,argv)
-int argc;
-char *argv[];
-
+void dosetenv(int argc, char* argv[])
 {
     if ( argc < 3) {
         fprintf(stderr,"### Usage: setenv env_var value\n");
@@ -1008,10 +972,7 @@ char *argv[];
 
 
 /****************************************************************************/
-void dounsetenv(argc,argv)
-int argc;
-char *argv[];
-
+void dounsetenv(int argc, char* argv[])
 {
     if ( argc < 2) {
         fprintf(stderr,"### Usage: unsetenv env_var\n");
@@ -1022,10 +983,7 @@ char *argv[];
 
 
 /****************************************************************************/
-void docommand(argc,argv)
-int argc;
-char *argv[];
-
+void docommand(int argc, char* argv[])
 {
   char *s, buffer[MAXBUF];
   int i,pid;
@@ -1061,9 +1019,7 @@ char *argv[];
 
 
 /****************************************************************************/
-void get_vars(name)
-char *name;
-
+void get_vars(char* name)
 {
   FILE *fd;
   char *argv[3],line[MAXBUF],*s;
@@ -1091,9 +1047,7 @@ char *name;
 
 
 /****************************************************************************/
-void save_vars(name)
-char *name;
-
+void save_vars(char* name)
 {
   int i;
   VARIABLE *v;
@@ -1142,9 +1096,7 @@ char *name;
 /*****************************************************************************
 * Get the arguments and their values, for a particular task.
 *---------------------------------------------------------------------------*/
-int task_args(task)
-char *task;
-
+int task_args(char* task)
 {
   char *dir, keyword[MAXBUF], line[MAXBUF], path[MAXBUF], *t;
   FILE *fd;
@@ -1171,7 +1123,7 @@ char *task;
             dir = 0;
           }
 
-          if (fd = fopen(path, "r")) break;
+          if ((fd = fopen(path, "r"))) break;
         }
       }
 
@@ -1223,9 +1175,7 @@ char *task;
 /*****************************************************************************
 * Make a filename from the input components.
 *---------------------------------------------------------------------------*/
-void filename(out,envvar,name,type)
-char *out,*envvar,*name,*type;
-
+void filename(char* out, char* envvar, char* name, char* type)
 {
   char *s;
 
@@ -1245,9 +1195,7 @@ char *out,*envvar,*name,*type;
 /*****************************************************************************
 * Print an error message then exit.
 *---------------------------------------------------------------------------*/
-void bug(message)
-char *message;
-
+void bug(char* message)
 {
   fprintf(stderr,"%s\n",message);
   exit(1);
@@ -1260,9 +1208,7 @@ char *message;
 *   input:  var         name of env. variable
 *           value       value of env. variable
 *---------------------------------------------------------------------------*/
-void newenv(var,value)
-char *var, *value;
-
+void newenv(char* var, char* value)
 {
     char **ep, **newep, **epfrom, **epto, *cp;
     int  elen, vlen, nev, i;
@@ -1308,9 +1254,7 @@ char *var, *value;
 * getenv: a local version, in case *getenv() is not supplied by your OS
 *---------------------------------------------------------------------------*/
 #if defined(GETENV)
-char *getenv(var)
-char *var;
-
+char *getenv(char* var)
 {
     char **ep, *cp;
     int vlen, elen;
@@ -1333,7 +1277,6 @@ char *var;
 /****************************************************************************/
 #if defined(INTERRUPT)
 void review()
-
 {
   fprintf(stderr,
        "Miriad shell cannot be interrupted, type 'help miriad' for info\n");

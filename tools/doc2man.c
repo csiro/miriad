@@ -43,13 +43,12 @@
 private void process(FILE *, FILE *, char *, char *);
 private void filling(char *, FILE *);
 private void usage();
-private char *skip(),*gline();
+private char *gline(char* line,int length,FILE* fd);
+private char *skip(char*);
 
 /************************************************************************/
 
-int main(argc,argv)
-int argc;
-char *argv[];
+int main(int argc, char* argv[])
 {
   char *outfile,*s,*keyword,*section="1";
   int i,nin;
@@ -144,10 +143,7 @@ private void usage()
 
 /**********************************************************************/
 
-private void process(fin,fout,keyword,section)
-FILE *fin,*fout;
-char *keyword;
-char *section;
+private void process(FILE* fin,FILE* fout,char* keyword,char* section)
 /*
   This takes a Miriad .doc file (FILE *fin), and writes to the output
   (FILE *fout) a man format version of it.
@@ -254,9 +250,7 @@ char *section;
 
 /**********************************************************************/
 
-private void filling(line,fout)
-char *line;
-FILE *fout;
+private void filling(char* line,FILE* fout)
 {
   static int filling=0;
 
@@ -271,8 +265,7 @@ FILE *fout;
 
 /**********************************************************************/
 
-private char *skip(line)
-char *line;
+private char *skip(char* line)
 /*
   This skips over the leading %, X and following blanks.
   Note it returns pointer to the private space given to the routine
@@ -291,10 +284,7 @@ char *line;
 
 /************************************************************************/
 
-private char *gline(line,length,fd)
-char *line;
-int length;
-FILE *fd;
+private char *gline(char* line,int length,FILE* fd)
 {
   static int first = 1, skip = 0;
   char sline[MAXLINE], *s;

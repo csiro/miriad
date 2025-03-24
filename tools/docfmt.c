@@ -26,14 +26,12 @@
 #define TRUE 1
 #define FALSE 0
 
-private void process(),usage();
-private char *skip();
+private void process(FILE* fin, FILE* fout, char* keyword),usage();
+private char *skip(char* line);
 
 /**********************************************************************/
 
-int main(argc,argv)
-int argc;
-char *argv[];
+int main(int argc, char* argv[])
 {
   char *outfile,*s,*keyword;
   int i,nin;
@@ -109,9 +107,7 @@ private void usage()
 
 /**********************************************************************/
 
-private void process(fin,fout,keyword)
-FILE *fin,*fout;
-char *keyword;
+private void process(FILE* fin, FILE* fout, char* keyword)
 /*
   This takes a Miriad .doc file (FILE *fin), and writes to the output
   (FILE *fout) a format version of it.
@@ -171,8 +167,7 @@ char *keyword;
 
 /**********************************************************************/
 
-private char *skip(line)
-char *line;
+private char *skip(char* line)
 /*
   Skip over the leading %x and blanks.
 

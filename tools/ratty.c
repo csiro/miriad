@@ -308,8 +308,7 @@ int main(int argc,char *argv[])
 
 /* Get lowest label to use, and the increment to apply. */
 
-private void get_labelnos(slower,sinc)
-char *slower,*sinc;
+private void get_labelnos(char* slower, char* sinc)
 {
   char *s;
   lower = 0;
@@ -334,9 +333,7 @@ char *slower,*sinc;
 /* Process a newly opened input file, writing code to the output.
    Note: process() is called recursively. */
 
-private void process(in,infile)
-FILE *in;
-char *infile;
+private void process(FILE* in, char* infile)
 {
   int type,lineno,lineno1,indent,bracketting, glines=0, oldglines;
   char *s,*s0,line[MAXLINE],pathname[MAXLINE],token[MAXLINE],msg[MAXLINE];
@@ -487,8 +484,7 @@ char *infile;
 
 /****************************************************************************/
 
-private void message(text)
-char *text;
+private void message(char* text)
 {
   fprintf(stderr,"### %s\n",text);
   fprintf(out,"c### %s\n",text);
@@ -496,8 +492,7 @@ char *text;
 
 /****************************************************************************/
 
-private void textout(text)
-char *text;
+private void textout(char* text)
 {
   int l;
   if(!chars ) comment = (*text == 'c');
@@ -514,8 +509,7 @@ char *text;
 
 /****************************************************************************/
 
-private void numout(label)
-int label;
+private void numout(int label)
 {
   char num[10];
   sprintf(num,"%d",label);
@@ -526,8 +520,7 @@ int label;
 
 /****************************************************************************/
 
-private void labelout(label)
-int label;
+private void labelout(int label)
 {
   fprintf(out,"%5d",label);
   chars += 5;
@@ -536,8 +529,7 @@ int label;
 
 /****************************************************************************/
 
-private void blankout(blanks)
-int blanks;
+private void blankout(int blanks)
 {
   chars += blanks;
   while(blanks-- > 0)Fputc(' ',out);
@@ -548,8 +540,7 @@ int blanks;
 
 /* Convert a string to lower case. */
 
-private void lowercase(string)
-char *string;
+private void lowercase(char* string)
 {
   while(*string){
     if(*string >= 'A' && *string <= 'Z') *string = *string - 'A' + 'a';
@@ -559,8 +550,7 @@ char *string;
 
 /****************************************************************************/
 
-private char *getparm(line,token)
-char *line,*token;
+private char *getparm(char* line, char* token)
 {
   while(*line == ' ')line++;				/* Skip white. */
   while(*line != ' ' && *line != 0)*token++ = *line++;	/* Copy token. */
@@ -570,8 +560,7 @@ char *line,*token;
 
 /****************************************************************************/
 
-private void cppline(line)
-char *line;
+private void cppline(char* line)
 {
   int ok,loop;
   char *s,token[MAXLINE],parm[MAXLINE];
@@ -668,9 +657,7 @@ char *line;
    Some checks are also made for "standard" format of comments and
    parameter statements. */
 
-private char *progtok(line,token,indent,lineno,bracketting)
-char *line,*token;
-int *indent,*lineno,*bracketting;
+private char *progtok(char* line, char* token, int* indent, int* lineno, int* bracketting)
 {
   char *s,*t,*u;
 
@@ -768,9 +755,7 @@ int *indent,*lineno,*bracketting;
 /* This skips over an expression.  It returns a pointer to the first non-blank
    character after the expression. */
 
-private char *skipexp(s,bracketting)
-char *s;
-int *bracketting;
+private char *skipexp(char* s,int* bracketting)
 {
   int inchar,inexp,depth;
 
@@ -795,9 +780,7 @@ int *bracketting;
    it is.  This returns: 'c' if its a comment, ' ' for a normal line, '#' for
    a preprocessor line, and 0 for EOF. */
 
-private int get_line(in,line)
-FILE *in;
-char *line;
+private int get_line(FILE* in, char* line)
 {
   char *s;
   int type;
@@ -838,8 +821,7 @@ char *line;
 /* Reformat a normal line. Get rid of tabs. Look for special characters.
    Check for unbalanced quotes. Strip off trailing ! comments. */
 
-private int reformat(s)
-char *s;
+private int reformat(char* s)
 {
   char *s0,*t,line[MAXLINE],c;
   int pad,first,type;
@@ -902,9 +884,7 @@ char *s;
 
 /* Indicate that a thing is defined. */
 
-private struct link_list *add_list(list,name)
-struct link_list *list;
-char *name;
+private struct link_list *add_list(struct link_list *list, char* name)
 {
   struct link_list *s,*t;
 
@@ -926,8 +906,7 @@ char *name;
 
 /* Attempt to open an include file. */
 
-private FILE *incopen(name,pathname)
-char *name,*pathname;
+private FILE *incopen(char* name, char* pathname)
 {
   char c, *s;
   int  i;
@@ -967,8 +946,7 @@ char *name,*pathname;
 
 /* Check whether a thingo is defined. */
 
-private int isdefine(name)
-char *name;
+private int isdefine(char* name)
 {
   struct link_list *t;
   t = defines;
