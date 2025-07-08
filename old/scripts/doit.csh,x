@@ -1,7 +1,0 @@
-#!/bin/csh -xef
-
-foreach f (Incremental_????_??_??-????.tar.Z)
-  set out = `echo $f|sed -e "s/Incremental_//" -e "s/-....\.tar\.Z//" -e "s/_//g"`
-  set out = mirupd-${out}-8.tar.Z
-  cp $f $MIR/ftp/updates/$out
-end

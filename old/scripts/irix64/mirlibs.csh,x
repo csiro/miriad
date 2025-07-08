@@ -1,2 +1,0 @@
-#!/bin/csh -f
-echo $MIRLIB/libmir.a /usr/local/lib/rpfits.a -lcomplib.sgimath -L/usr/local/lib64 -lpgplot -lm -L/usr/lib64 -lX11

@@ -1,2 +1,0 @@
-#!/bin/csh -f
-echo $MIRLIB/libmir.a -L/usr/local/lib -lpgplot -lveclib -lC2_old -lm -L/usr/local/X11/lib -lX11

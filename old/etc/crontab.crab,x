@@ -1,5 +1,0 @@
-# The nightly darwin_ppc build runs after linux but before sun4sol.
-# It has no special work to do.
-30 22 * * 1-5 . $HOME/.profile ; cd $MIR && make MIRATNF=1 allsys 2>&1 | tee $MIRARCH/gmake.log
-#
-# $Id: crontab.crab,x 1.4 2008/09/15 00:09:40 cal103 Exp $

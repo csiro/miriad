@@ -1,2 +1,0 @@
-#!/bin/csh -f
-echo -L$MIRLIB -Wl,-rpath,$MIRLIB -lmir -L/usr/local/lib -Wl,-rpath,/usr/local/lib -lpgplot -L/usr/local/X11/lib -lX11
