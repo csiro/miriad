@@ -1,4 +1,3 @@
-% $Id: mm.inc,v 1.3 2015/09/19 23:14:35 sau078 Exp $
 
 %\nonstopmode
 %\input{latexdefs.inc}
@@ -27,7 +26,7 @@ the \task{atlod} step.  To apply this correction, \task{atlod} uses a
 model of the atmosphere (using meteorological data contained
 within the dataset) to compute a model opacity.  Note that this is just
 that -- a model -- and so has its limitation.  To apply atmospheric
-opacity correction, use \verb+options=opcorr+. 
+opacity correction, use \verb+options=opcorr+.
 
 \begin{center}
 \begin{tabular}{|l|l|}
@@ -45,7 +44,7 @@ options=opcorr,hanning,compress		& possible options for spectral\\
 Please note the following:
 \begin{itemize}
 \item ATCA observations made before October 2003 failed to contain the
-meteorological data, and so \verb+options=opcorr+ cannot be used. 
+meteorological data, and so \verb+options=opcorr+ cannot be used.
 \item At 12mm, no self-generated RFI at multiples of 128~MHz is seen. Task
 \task{atlod}'s \verb+birdie+ option for continuum data is
 used to discard edge channels and every second channel (as noted earlier,
@@ -61,8 +60,7 @@ the same fashion
 as at the lower frequencies. 1934-638 is about 1 Jy at 12-mm wavelengths: the
 \miriad\ calibration software contains a built-in model of 1934-638's change
 of flux density with frequency. For information about this flux scale,
-see the \htmladdnormallink{memo by Bob Sault}
-{https://www.atnf.csiro.au/observers/memos/AT39.3_124.pdf}
+see the \href{https://www.atnf.csiro.au/observers/memos/AT39.3_124.pdf}{memo by Bob Sault}
 ``ATCA flux density scale at 12mm'' (2003).
 
 As 1934-638 is comparatively week at 12-mm wavelength, it is not an
@@ -75,7 +73,7 @@ important to consider it when high precision flux calibration is required.
 In the flux bootstrapping step,
 \task{gpboot} determines the boot factor to be applied to the gains of
 the secondary calibrator to make them the same as the primary. As the opacity
-correction 
+correction
 done by \task{atlod} is only correct to first order,
 ideally the comparison between primary and secondary gains would be made
 {\em at the same elevation and under the same weather conditions}.
@@ -91,7 +89,7 @@ elevation corresponds most closely to the elevation during the primary's
 observation.  When the weather changes significantly during the
 observation, it is probably best to use a time range of the secondary
 which is close to the primary's observation.  Tasks \task{uvplt} and
-\task{varplt} can plot source elevation as a function of time. 
+\task{varplt} can plot source elevation as a function of time.
 
 Typical inputs to \task{gpboot} are:
 
@@ -104,7 +102,7 @@ vis=vela.uv		& Input visibility dataset.\\
 select=time(1:00,2:00)	& Select a time range in the ``vela.uv''\\
 			& dataset where the amplitude gains should be\\
 			& comparable to those in the primary calibrator.\\
-cal=1934-638.18001	& Primary flux calibrator.\\  
+cal=1934-638.18001	& Primary flux calibrator.\\
 \hline
 \end{tabular}
 \end{center}
@@ -150,7 +148,7 @@ T_{\rm sky} = T_{\rm 0}\left(1-\exp(-\tau/\sin e)\right)
 and the atmospheric transmissivity is $\exp(-\tau/\sin e)$.
 
 In converting correlation coefficients to visibility measurements, we
-can notionally include the effect of the atmospheric 
+can notionally include the effect of the atmospheric
 attenuation either in the effective system efficiency
 factor, or in an effective system temperature.
 The approach used will depend on the calibration scheme
@@ -170,15 +168,14 @@ by periodically flipping an absorber at atmospheric
 temperature in front of the feed system.
 The technique to do this is the so-called ``chopper wheel''
 method (e.g.
-\htmladdnormallink{Ulich 1980}
-{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1980ApL....21...21U}).
+\href{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1980ApL....21...21U}{Ulich 1980}).
 The ATCA uses the chopper wheel method (also call paddle or vane calibration)
 in its 3-mm system
 to determine an above atmosphere
 system temperature.
 
 This measurement will only be done occasionally. That is, unlike the
-centimetre and 12-mm bands, continuous measurement of system temperature 
+centimetre and 12-mm bands, continuous measurement of system temperature
 is not available at 3-mm wavelength. To partly remedy this, \miriad's \task{atfix}
 includes an algorithm to ``interpolate'' the above-atmosphere
 system temperature measurements
@@ -186,8 +183,7 @@ based on changes in telescope elevation and weather.
 
 \subsection{Antenna gain considerations and flux calibration}
 One characteristic of the ATCA dishes is that they are big by 3-mm
-standards. Indeed \htmladdnormallink{van Hoerner (1967)}
-{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1967AJ.....72...35V}
+standards. Indeed \href{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1967AJ.....72...35V}{van Hoerner (1967)}
 has considered the limits to the size
 of an antenna before various effects become significant.
 For construction styles like the ATCA dishes, he suggests that 11m is the
@@ -202,18 +198,17 @@ tend to bear this out with changes in antenna gain of 25\% in some observations
 being attributed
 to thermal effects.
 Distortion of the dishes by gravity is also significant
-(eg \htmladdnormallink{Subrahmanyan 2005}
-{https://ieeexplore.ieee.org/iel5/8/32084/01492610.pdf?tp=&arnumber=1492610&isnumber=32084}). 
+(eg \href{https://ieeexplore.ieee.org/iel5/8/32084/01492610.pdf?tp=&arnumber=1492610&isnumber=32084}{Subrahmanyan 2005}).
 A gain/elevation
 correction will solve this - to first order at least.
 Because of the way the ATCA panels are set, the antenna gain peaks at
-about 60\degrees\ elevation. 
+about 60\degrees\ elevation.
 
 Note that gravitational
 and thermal distortions can be coupled -- perfect measurement or correction for these
-effects is never possible. 
+effects is never possible.
 
-To first order, the gain change will be calibrated out provided the 
+To first order, the gain change will be calibrated out provided the
 secondary calibrator is very close to the target source.
 Applying the standard gain/elevation curve to the data as the first step in
 the data reduction will also help.
@@ -227,7 +222,7 @@ elevation changes in an observation is to observe in a hybrid array -- hybrid ar
 allow an observation to be performed without the need to track the source from
 horizon to horizon.
 
-Gain variations must be considered when bootstrapping the flux density 
+Gain variations must be considered when bootstrapping the flux density
 scale. The best approach to ensuring a good flux scale is to ensure that the
 secondary and the flux density calibrator are observed nearly
 simultaneously and at the same elevation.
@@ -308,7 +303,7 @@ equatorial and cold polar regions.
 
 Although Uranus or Mars (preferably Uranus) are the best flux density
 calibrators, frequently they may not be accessible to your observation. To
-account for this, the Narrabri Observatory regularly monitors some 
+account for this, the Narrabri Observatory regularly monitors some
 additional sources (usually 1253-055 and 1921-293) to allow them to be used
 as flux density calibrators. Be warned though that these sources can
 vary substantially on month timescales.
@@ -318,10 +313,10 @@ about the next best source to be used for flux density bootstrapping.
 \section{Practical loading and calibration}
 When observing at two bands with the ATCA, it is generally sensible to
 set the two bands so that they do not overlap. In terms
-of sensitivity, there is 
+of sensitivity, there is
 nothing to be gained by setting the bands to the same frequency as the noise
 will be common to the the bands.
-Additionally having the bands overlap complicates the data reduction 
+Additionally having the bands overlap complicates the data reduction
 process in \miriad.
 The best approach is to avoid the problem, by setting the bands so that
 they do not overlap at all, or overlap by a comparatively small amount.
@@ -350,7 +345,7 @@ Typical inputs to \task{atlod} are:
 \multicolumn{2}{|c|}{{\bf ATLOD}} \\
 \hline
 in=2006-02-18\_1234.C123	& Input RPFITS file.\\
-out=vela.uv		& Output \miriad\ dataset.\\  
+out=vela.uv		& Output \miriad\ dataset.\\
 options=nopol,birdie,reweight	& Typical options used.\\
 \hline
 \end{tabular}
@@ -363,7 +358,7 @@ for the continuum ATCA correlator configuration, successive channels are
 not independent and so there is no sensitivity penalty in discarding
 every second channel.
 
-\subsection{Initial ``fixes'' to millimetre data}\label{s:atfix} 
+\subsection{Initial ``fixes'' to millimetre data}\label{s:atfix}
 The
 next step after loading is to apply a number of ``fixes'' that are
 important for 3-mm data.  Note that there is no record in the data
@@ -376,7 +371,7 @@ performs the following functions:
 
 \item By default \task{atfix} applies the ``standard'' gain/elevation
 model for the antennas.  You can disable this by using
-\verb+options=nogainel+. 
+\verb+options=nogainel+.
 
 \item By default \task{atfix} corrects for a ``standard'' instrumental phase
 model.  You can disable this with \verb+options=noinst+.
@@ -384,15 +379,15 @@ model.  You can disable this with \verb+options=noinst+.
 \item As mentioned above, the ATCA uses the chopper wheel method to
 measure an above atmosphere system temperature.  The nature of the
 hardware means the measurement is done only typically every 5 to
-30~minutes.  When observing, the ATCA on-line system can either 
+30~minutes.  When observing, the ATCA on-line system can either
 apply a nominal system
 temperature value to the visibility data, or it can apply the actual
-measured system temperature values.  In applying these measured values, 
+measured system temperature values.  In applying these measured values,
 on-line system will apply the
-most recent measurement. 
+most recent measurement.
 
 Task \task{atfix} includes an algorithm to interpolate measured
-system temperature values, between measurements, and to correct the 
+system temperature values, between measurements, and to correct the
 visibility data accordingly. In doing this it correctly handles whether
 a nominal or the measured system temperature value applied to the
 data on-line. The interpolation
@@ -413,7 +408,7 @@ On the night of an ATCA reconfiguration, a solution for the antenna
 positions is derived. The practise is to install this solution as
 the ``standard solution''. The on-line system will then use this solution in
 subsequent observations in that array configuration.
-The quality of this solution is important for the 
+The quality of this solution is important for the
 ultimate phase calibration of 3mm data.
 
 Experience has shown that often
@@ -421,12 +416,12 @@ the position solution derived at the time of the reconfiguration is not
 necessarily the best possible. For example the solution will depend
 critically on the atmospheric phase stability at the time of the solution,
 and this might be less than ideal on the night of the reconfiguration.
-Consequently improved solutions will often be derived at a later time. 
+Consequently improved solutions will often be derived at a later time.
 If improved
 solutions become available, then 3-mm observers should correct their
 data accordingly.
 
-Updated solutions are stored in parameter files in the 
+Updated solutions are stored in parameter files in the
 \miriad\ system directory \verb+$MIRCAT+. These solutions
 are distributed via the \miriad\ update mechanism, and
 have file names of the form ``\verb+dantpos.+{\em yymmdd}''. Here
@@ -436,7 +431,7 @@ Task \task{atfix} corrects the data for an improved antenna location
 solution via the {\tt dantpos} parameter.
 If an improved solution file is present, you can instruct \task{atfix}\
 to read this
-directly using the indirect parameter input mechanism 
+directly using the indirect parameter input mechanism
 (see Section~\ref{s:atfile}). For example, to use the antenna location
 solution appropriate for a hypothetical array reconfiguration
 that happened on 16 October 2002, use
@@ -450,7 +445,7 @@ not in use. While this might not seem a serious flaw (who cares about
 the antennas if they are not in use?), the unused antennas
 can still cause shadowing -- true antenna locations are needed
 for shadowing calculation. This was a particular issue with the interim
-3-antenna 3-mm system when observing in compact arrays. 
+3-antenna 3-mm system when observing in compact arrays.
 
 By giving a value to the {\tt array} parameter, \task{atfix} will fill in any
 antenna locations that are missing in the input visibility file.
@@ -468,8 +463,7 @@ the north spur, you should generally give the list of station
 names, as the standard array configuration names assume an
 antenna orderwhich is probably not correct.
 
-If in doubt the \htmladdnormallink{on-line configuration history}
-{../doc/confighist.html} should be consulted.
+If in doubt the \href{../doc/confighist.html}{on-line configuration history} should be consulted.
 
 \end{itemize}
 
@@ -481,7 +475,7 @@ Typical inputs to \task{atfix} are:
 \multicolumn{2}{|c|}{{\bf ATFIX}} \\
 \hline
 in=vela.uv		& Input visibility dataset.\\
-out=vela.fixed.uv	& Output corrected visibility dataset.\\  
+out=vela.fixed.uv	& Output corrected visibility dataset.\\
 dantpos=@\$MIRCAT/dantpos.021016 & Antenna location correction.\\
 \hline
 \end{tabular}
@@ -510,7 +504,7 @@ These variables can be plotted or listed with \task{varplt}, e.g.
 \multicolumn{2}{|c|}{{\bf VARPLT}} \\
 \hline
 in=vela.uv		& Input visibility dataset.\\
-device=/xs		& PGPLOT plotting device.\\  
+device=/xs		& PGPLOT plotting device.\\
 yaxis=axisrms		& Plot rms tracking error. \\
 \hline
 \end{tabular}
@@ -537,16 +531,16 @@ particiularly soon after a change in source.
 
 Note that tracking errors should be distinguished from pointing errors.
 Tracking errors are the inability of the antenna drive system
-to follow the requested path. Pointing errors correspond 
+to follow the requested path. Pointing errors correspond
 to the difference between the position that the astronomer
 requests and the actual position. Tracking errors are caused by
 flaws in the drive servo system, whereas pointing errors are a sum of
 tracking errors and errors in the antenna pointing model.
 
 Since October 2003, tracking errors have been saved in the \miriad\ dataset.
-The uv variables corresponding to the rms and 
+The uv variables corresponding to the rms and
 maximum tracking
-error in a cycle are \verb+axisrms+ and \verb+axismax+. 
+error in a cycle are \verb+axisrms+ and \verb+axismax+.
 
 Both the maximum and rms give two tracking error values for each antenna, nominally corresponding
 to the tracking error in the azimuth and elevation axes. However the ATCA on-line
@@ -567,7 +561,7 @@ To do this, use the selection
 \multicolumn{2}{|c|}{{\bf UVFLAG}} \\
 \hline
 in=vela.uv		& Input visibility dataset.\\
-flagval=flag		& Flag selected points.\\  
+flagval=flag		& Flag selected points.\\
 select=pointing(15,1000)& Flag when the rms tracking error \\
 			& is between $15''$ and $1000''$. \\
 \hline
@@ -591,11 +585,11 @@ ATCA. The steps are as follows:
 
 \begin{enumerate}
 \item The first step is not a step at all! Unlike the approach of
-Chapter~\ref{c:cal}, the approach described here {\it does not} split the 
+Chapter~\ref{c:cal}, the approach described here {\it does not} split the
 data into separate single source, single frequency files before
-calibration. Rather the 
+calibration. Rather the
 current approach assumes that you have a single \miriad\ dataset containing
-bandpass calibrator, secondary calibrator, flux density calibrator and 
+bandpass calibrator, secondary calibrator, flux density calibrator and
 target source. We focus on data having two simultaneous frequency bands
 here, but the approach works equally well for one or many simultaneous
 frequency bands within the dataset.
@@ -605,12 +599,12 @@ dealing with two frequency bands, each with two polarisation products
 (XX and YY), it is
 generally appropriate to
 assume that the bandpasses of the bands and the phase offsets between
-bands and polarisations are constant with time. 
+bands and polarisations are constant with time.
 
 To determine the bandpasses and the phase offsets, you need
 to use \task{mfcal} on an observation of a strong continuum source.
-Typically this would be 
-1253-055, 1921-293 or 0537-441. 
+Typically this would be
+1253-055, 1921-293 or 0537-441.
 Typical inputs are as follows:
 
 \begin{center}
@@ -619,7 +613,7 @@ Typical inputs are as follows:
 \multicolumn{2}{|c|}{{\bf MFCAL}} \\
 \hline
 in=vela.fixed.uv	& Input multi-source, dual-band dataset.\\
-select=source(1921-293)	& Select the strong continuum ``bandpass'' calibrator.\\  
+select=source(1921-293)	& Select the strong continuum ``bandpass'' calibrator.\\
 \hline
 \end{tabular}
 \end{center}
@@ -649,23 +643,23 @@ according to their relative bandwidth. Consequently if one of the bands
 is quite narrow relative to the other, then it will contribute little to
 the overall gain solution.
 \item If the calibrator is an SiO maser, you will want to select only those
-channels that contain strong SiO signal. 
+channels that contain strong SiO signal.
 \item With either a continuum calibrator or an SiO maser, it is possible to
-either determine antenna gain calibrations for the two polarisation products 
+either determine antenna gain calibrations for the two polarisation products
 independently, or to determine a
 single joint solution for the two polarisations. The latter will give
 a $\sqrt{2}$ improvement in sensitivity in the solution process.
 The latter is also the
-desirable approach if the calibrator is strongly polarised (some SiO 
+desirable approach if the calibrator is strongly polarised (some SiO
 masers are more than 50\% polarised). Doing a joint solution is
 generally a reasonable approximation given that the antenna gains
 are dominated by changes common to both polarisations: in amplitude, it is
-from the physical antenna 
-gain change, and in phase it is from the atmosphere and instrumental 
+from the physical antenna
+gain change, and in phase it is from the atmosphere and instrumental
 contributions common to both polarisations.
 \end{itemize}
 
-Note in this calibration scheme, it is implicitly assumed that the antenna 
+Note in this calibration scheme, it is implicitly assumed that the antenna
 gain changes are common to both frequency bands. This is a reasonable
 approximation given that the frequency separation between the bands is
 at most 2.7 GHz and potentially much less. Consequently the fractional
@@ -682,7 +676,7 @@ two polarisations:
 \multicolumn{2}{|c|}{{\bf MFCAL}} \\
 \hline
 vis=vela.fixed.uv	& Input multi-source, dual-band dataset.\\
-select=source(1622-297)	& Select secondary calibrator.\\  
+select=source(1622-297)	& Select secondary calibrator.\\
 options=nopassol	& {\it Do not} solve for bandpass.\\
 stokes=i		& Do a joint solution for both polarisations.\\
 \hline
@@ -691,7 +685,7 @@ stokes=i		& Do a joint solution for both polarisations.\\
 To derive a separate solution for the two polarisation products, the
 {\tt stokes} keyword would be left unset. Note the use of \verb+options=nopassol+.
 This causes \task{mfcal} to not attempt to solve for the
-bandpass and phase offsets again, but rather to apply the previously 
+bandpass and phase offsets again, but rather to apply the previously
 determined bandpass and phase offset solutions.
 
 Typical inputs when using an SiO maser would be as follows:
@@ -702,7 +696,7 @@ Typical inputs to \task{mfcal} are as follows:
 \multicolumn{2}{|c|}{{\bf MFCAL}} \\
 \hline
 vis=vela.fixed.uv	& Input multi-source, dual-band dataset.\\
-select=source(oceti)	& Select SiO secondary calibrator.\\  
+select=source(oceti)	& Select SiO secondary calibrator.\\
 options=nopassol	& {\it Do not} solve for bandpass.\\
 stokes=i		& Do a joint solution for both polarisations.\\
 line=chan,20,45		& Select the range of channels where the SiO\\
@@ -718,7 +712,7 @@ The best task to correct the flux scale of an observation is \task{mfboot} -
 It works by scaling the antenna gain table so that the flux density
 scale of the observed data agrees with some model.
 
-Task \task{mfboot} models a planet as a simple disk with constant brightness 
+Task \task{mfboot} models a planet as a simple disk with constant brightness
 temperature. It has built-in ephemerides of the planets, and so
 knows their apparent size and orientation. It also has a model
 of the brightness temperature variation with frequency. Hence \task{mfboot}
@@ -739,10 +733,10 @@ the same elevation as the secondary calibrator.  This is required
 because the antenna gain changes with both elevation and with thermal
 changes.  The most reliable approach to tying the secondary and the flux
 density calibrators flux scales together is through observations with
-the same elevation and thermal environment. 
+the same elevation and thermal environment.
 
 Task \task{mfboot} will apply the bandpass and antenna gain
-solutions to the observed data before it does a comparison with the 
+solutions to the observed data before it does a comparison with the
 models. While it is not generally important that the flux density calibrator
 data is phase calibrated, it is important that it has the antenna amplitude
 calibration, derived from the secondary, is applied. This is critical in
@@ -755,13 +749,13 @@ We will discuss the various input parameters for \task{mfboot}:
 flux density calibrator.
 \item {\tt flux}: If using a point source as a flux density calibrator, use
 this parameter to set the flux density of the source (in Jansky). If using
-a planet, you may set this parameter (in Kelvin) 
+a planet, you may set this parameter (in Kelvin)
 to override the brightness temperature
 value that
 \task{mfboot} would use by default.
 \item {\tt mode}: The comparison between the model and observed
 data can be done using
-either the scalar average (effectively the amplitude of the data), 
+either the scalar average (effectively the amplitude of the data),
 the vector average (effectively the
 real part of the data), or the triple product of the data. The amplitude and
 triple product are insensitive to phase errors, and so are normally the
@@ -782,7 +776,7 @@ a simple disk model is significant. In practise, it is best to ignore
 the visibility data outside the main central lobe of the visibility
 function. The way to do this is by using the {\tt clip}
 parameter.
-For Mars it is recommended that you set \verb+clip=0.4+, which 
+For Mars it is recommended that you set \verb+clip=0.4+, which
 will ignore
 data where the visibility function model is less than 40\% of the
 model zero spacing value.
@@ -795,7 +789,7 @@ feel for the quality of the fit.
 factor.
 \end{itemize}
 
-In the general case, to use \task{mfboot} with the calibration scheme 
+In the general case, to use \task{mfboot} with the calibration scheme
 recommended above is
 straightforward enough: you simply run \task{mfboot} on the dataset, having
 selected the flux density calibrator. For example:
@@ -806,7 +800,7 @@ selected the flux density calibrator. For example:
 \multicolumn{2}{|c|}{{\bf MFBOOT}} \\
 \hline
 vis=vela.fixed.uv	& Input multi-source, dual-band dataset.\\
-select=source(uranus)	& Select flux density calibrator.\\  
+select=source(uranus)	& Select flux density calibrator.\\
 \hline
 \end{tabular}
 \end{center}
@@ -819,7 +813,7 @@ You will most likely want to check this visibility function
 before observing and discovering that the planet is resolved out!
 {\bf NOTE} that \task{mfboot} and \task{plplt} do not include the effect of the
 ATCA's primary beam -- the planet is implicitly (and silently) assumed to be
-small compared with the primary beam. This may not be the case at 3-mm. 
+small compared with the primary beam. This may not be the case at 3-mm.
 If there is a significant change in the visibility function between baseline
 lengths of 0 and 22~metres,
 then primary beam effects are important, and you probably do not
@@ -827,29 +821,29 @@ want to use the planet (most likely it would be resolved out anyway).
 
 Task \task{planets} can give you basic information about a planet, including
 rise and set times (but note these are quoted at the horizon, not the ATCA's
-elevation limit), the planet's angular size at a particular time, and its 
+elevation limit), the planet's angular size at a particular time, and its
 RA and DEC (note that the
 ephemeris used for RA and DEC is not sufficiently accurate to point or
 phase track the telescope).
 
 Information on using the ATCA to observe a planet is available
-\begin{latexonly}
-from
-\begin{verbatim}
-  https://www.narrabri.atnf.csiro.au/observing/sched/solsys.html
-\end{verbatim}
-\end{latexonly}
-\begin{htmlonly}
-\htmladdnormallink{on-line}{https://www.narrabri.atnf.csiro.au/observing/sched/solsys.html}
-\end{htmlonly}
+%\begin{latexonly}
+%from
+%\begin{verbatim}
+%  https://www.narrabri.atnf.csiro.au/observing/sched/solsys.html
+%\end{verbatim}
+%\end{latexonly}
+%\begin{htmlonly}
+\href{https://www.narrabri.atnf.csiro.au/observing/sched/solsys.html}{on-line}
+%\end{htmlonly}
 
 \section{Handling large spectral bandwidths}
 When using a single spectral window, and observing spectral lines, the
-bandwidth of the ATCA can be problematically narrow, or the channel 
+bandwidth of the ATCA can be problematically narrow, or the channel
 widths can be too coarse. This is most likely to be an issue when observing
 spectral lines of extragalactic sources at high frequencies.
 
-A partial work around for this situation is to use the two ATCA 
+A partial work around for this situation is to use the two ATCA
 frequency bands to observe in adjacent somewhat overlapping windows, and using the
 same bandwidths and channel counts for the two windows. With the ATCA this
 is possible with some correlator configurations when observing with
@@ -889,7 +883,7 @@ experimentation (and certainly thought) will be required.
 
 Note that
 when handling multiple bands, both \miriad's \verb+line+ and \task{uvlin}'s
-\verb+chans+ parmaters number channels consecutively from 1 to the total 
+\verb+chans+ parmaters number channels consecutively from 1 to the total
 number of simultaneous channels. The distinction between simultaneous bands is
 ignored in this numbering. But when fitting to the continuum, the
 boundaries between bands act as a break point.

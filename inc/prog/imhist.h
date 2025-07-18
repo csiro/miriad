@@ -1,6 +1,5 @@
 c imhist.h: Include file for imhist.for.
 c
-c $Id: imhist.h,v 1.2 2010/08/18 07:29:19 cal103 Exp $
 c-----------------------------------------------------------------------
       character*80 plotopts
       parameter    ( plotopts =

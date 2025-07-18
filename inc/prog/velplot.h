@@ -1,7 +1,6 @@
 c***********************************************************************
 c       velplot.h - include file for velplot program.
 c
-c $Id: velplot.h,v 1.2 2010/10/22 03:45:47 cal103 Exp $
 c-----------------------------------------------------------------------
 c  Maximum array dimensions and size.
 c  MAXDIM is used to read the image and for 1-dimensional arrays.

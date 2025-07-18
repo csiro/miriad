@@ -62,7 +62,6 @@ c
 c@ type
 c       The line type - "e" for emission (default), "a" for absorption.
 c
-c$Id: zeefake.for,v 1.7 2013/08/30 01:49:21 wie017 Exp $
 c--
 c
 c  History:
@@ -87,9 +86,7 @@ c-----------------------------------------------------------------------
       character versan*72
       external  versan
 c-----------------------------------------------------------------------
-      version = versan('zeefake',
-     *                 '$Revision: 1.7 $',
-     *                 '$Date: 2013/08/30 01:49:21 $')
+      version = versan('zeefake')
 
 c     Get inputs.
       call keyini

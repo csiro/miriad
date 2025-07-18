@@ -13,7 +13,6 @@
 *                    though cannot be exported to Fortran
 *    pkgw    14dec11 Make errmsg_c public for use in uvio.c
 *
-*  $Id: bug.c,v 1.7 2022/01/31 06:36:29 wie017 Exp $
 *===========================================================================*/
 
 #include <stdio.h>

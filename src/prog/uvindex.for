@@ -22,7 +22,6 @@ c	Extra processing options. Currently there is but one of these:
 c	  mosaic  Do not generate messages for different pointings
 c	          of a mosaic.
 c
-c $Id: uvindex.for,v 1.7 2014/09/30 13:58:54 wie017 Exp $
 c--
 c
 c  History:
@@ -98,9 +97,7 @@ c
 	character rangle*14,hangle*14,PolsC2P*2,itoaf*8,versan*72
 	logical uvvarupd
 c----------------------------------------------------------------------c
-        version = versan ('uvindex',
-     *                    '$Revision: 1.7 $',
-     *                    '$Date: 2014/09/30 13:58:54 $')
+        version = versan('uvindex')
 c
 c  Get the parameters given by the user.
 c

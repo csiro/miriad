@@ -96,7 +96,6 @@ c                      when the fractional bandwidth is > 0.4 (this
 c                      is because higher orders are needed to model
 c                      the primary beam response with frequency).
 c
-c$Id: linmos.for,v 1.34 2021/06/03 07:09:31 wie017 Exp $
 c--
 c
 c  History:
@@ -188,9 +187,7 @@ c-----------------------------------------------------------------------
       character versan*72
       external  len1, versan
 c-----------------------------------------------------------------------
-      version = versan ('linmos',
-     *                  '$Revision: 1.34 $',
-     *                  '$Date: 2021/06/03 07:09:31 $')
+      version = versan('linmos')
 
 c     Get and check inputs.
       call keyini

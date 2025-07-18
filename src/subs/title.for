@@ -3,7 +3,6 @@ c* Title -  Write title in standard format into LogFile.
 c& mchw
 c: image analysis,log-file
 c+
-c $Id: title.for,v 1.3 2011/10/25 01:40:01 cal103 Exp $
 
       subroutine Title(lIn,naxis,blc,trc,cbof)
 

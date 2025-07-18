@@ -25,7 +25,6 @@ c	          zero.
 c	  noapply Do not apply the flagging, just report the statistics
 c	          about what would be flagged.
 c
-c$Id: uvzflag.for,v 1.2 2018/12/04 04:02:11 wie017 Exp $
 c--
 c  History:
 c     rjs  11may10 Adapted from uvaflag.
@@ -50,9 +49,7 @@ c
 c
 c Get inputs
 c
-	version = versan('uvzflag',
-     *                    '$Revision: 1.2 $',
-     *			  '$Date: 2018/12/04 04:02:11 $')
+	version = versan('uvzflag')
 	call keyini
 	call mkeyf('vis',in,MAXFILES,nfiles)
 	if(nfiles.eq.0)call bug('f','An input dataset must be given')

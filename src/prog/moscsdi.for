@@ -40,7 +40,6 @@ c@ region
 c       The standard region of interest keyword.  See the help on
 c       "region" for more information. The default is the entire image.
 c
-c$Id: moscsdi.for,v 1.2 2018/11/29 23:30:11 wie017 Exp $
 c--
 c  History:
 c    rjs 31oct94 - Original version.
@@ -81,9 +80,7 @@ c-----------------------------------------------------------------------
       character itoaf*8, versan*72
       external  itoaf, versan
 c-----------------------------------------------------------------------
-      version = versan('moscsdi',
-     *                 '$Revision: 1.2 $',
-     *                 '$Date: 2018/11/29 23:30:11 $')
+      version = versan('moscsdi')
 c
 c  Get the input parameters.
 c

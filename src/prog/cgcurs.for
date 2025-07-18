@@ -195,7 +195,6 @@ c       (which is ~ 1/40 of the view surface height) for the plot axis
 c       labels and the velocity/channel labels.
 c       Defaults choose something sensible.
 c
-c$Id: cgcurs.for,v 1.17 2021/06/03 07:09:31 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -238,9 +237,7 @@ c-----------------------------------------------------------------------
       data dmm /1e30, -1e30, -1.0/
       data gaps, doabut /.false., .false./
 c-----------------------------------------------------------------------
-      version = versan ('cgcurs',
-     *                  '$Revision: 1.17 $',
-     *                  '$Date: 2021/06/03 07:09:31 $')
+      version = versan ('cgcurs')
 
 c     Get user inputs.
       call inputs(MAXLEV, img, ibin, jbin, kbin, levtyp, slev, levs,

@@ -52,7 +52,6 @@ c       lmc_1, lmc_2, etc.  The full name must be 9 characters or less.
 c@ cycles
 c       For mode=atmosaic, the number of cycles spent on each pointing.
 c
-c$Id: mosgen.for,v 1.6 2012/01/30 00:37:52 wie017 Exp $
 c--
 c
 c  History:
@@ -85,9 +84,7 @@ c
       logical   keyprsnt
 
 c-----------------------------------------------------------------------
-      version = versan('mosgen',
-     *                 '$Revision: 1.6 $',
-     *                 '$Date: 2012/01/30 00:37:52 $')
+      version = versan('mosgen')
 
       call keyini
       call keyt('radec',ra, 'hms',0d0)

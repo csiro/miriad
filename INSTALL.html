@@ -27,7 +27,7 @@ platforms.
 
 <p>
 In the past (and present) <em>Miriad</em> has also run on
-32-bit Linux, 
+32-bit Linux,
 <a href="https://en.wikipedia.org/wiki/Powerpc">PowerPC</a> Macs, in the
 <a href="https://en.wikipedia.org/wiki/Microsoft_Windows">Windows</a>
 <a href="https://en.wikipedia.org/wiki/Cygwin">Cygwin</a> environment, on
@@ -95,7 +95,7 @@ system is available for them and other unix-based platforms.
 <a name="installing"><h1>Instructions for installing <em>Miriad</em></h1>
 
 <p>
-For a quick binary install guide to get Miriad on your Mac, look <a href="MacBinaryInstall.html"> here</a>, otherwise, read on. 
+For a quick binary install guide to get Miriad on your Mac, look <a href="MacBinaryInstall.html"> here</a>, otherwise, read on.
 <p>
 <a href="https://www.atnf.csiro.au/computing/software/miriad"><em>Miriad</em>
 </a> is distributed via
@@ -185,7 +185,7 @@ libraries</a>:
 
 <li>
   <p>
-  The 
+  The
   <a href="https://www.atnf.csiro.au/computing/software/miriad/doc/miriad.html">
   <code>miriad</code> shell</a> also requires
   <a href="https://en.wikipedia.org/wiki/C_shell"><code>csh</code></a> for
@@ -243,7 +243,7 @@ code is straightforward, (<code>configure ; gmake</code>), or you may be able
 to find a
 <a href="https://www.atnf.csiro.au/~mcalabre/WCS/wcslib/software.html">
 pre-built package</a>.
-If you are building from source on a platform for which a binary Miriad 
+If you are building from source on a platform for which a binary Miriad
 distribution is available, a quick way to resolve the above dependencies is
 to install the binary distribution before running configure.
 </p>
@@ -350,7 +350,7 @@ Note that if you don't have an account at the ATNF that would allow you to run
   <a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad-sun4sol.tar.bz2">
   <code>miriad-sun4sol.tar.bz2</code></a>).
   </p>
- 
+
   <p>
   If you are running an older version of linux you may get error messages like:
   "uvplt: /lib64/libc.so.6: version `GLIBC_2.14' not found (required by uvplt)".
@@ -847,7 +847,7 @@ A few more steps are required to finalize the installation:
 
 <li>
   <p>
-  Finally, check out the <a href="https://atcaforum.atnf.csiro.au/viewforum.php?f=4"> Data Reduction area on the ATCA forum </a>. You can sign up to post questions on the forum and receive notifications of new posts. 
+  Finally, check out the <a href="https://atcaforum.atnf.csiro.au/viewforum.php?f=4"> Data Reduction area on the ATCA forum </a>. You can sign up to post questions on the forum and receive notifications of new posts.
   <!-- register yourself as a <em>Miriad</em> user by sending an email to
   <a href="mailto:miriad@atnf.csiro.au"><code>miriad@atnf.csiro.au</code></a>,
   this allows us to monitor usage wordwide, to send you important update
@@ -892,7 +892,7 @@ A few more steps are required to finalize the installation:
   Alternatively, copy the library into
   <code>/usr/local/lib/</code>.
   </p>
-  
+
   <p>
   If the required libraries are not found on your system you will need to
   install them.
@@ -1055,7 +1055,7 @@ A few more steps are required to finalize the installation:
     CPPSTD += -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE
 </pre>
   If your operating system has LFS then you can add this manually to your
-  local <code>GNUmakedefs</code>.  However, note that Darwin 
+  local <code>GNUmakedefs</code>.  However, note that Darwin
   <a href="https://developer.apple.com/documentation/Darwin/Reference/Manpages/man3/freopen.3.html">supports files >2GiB natively</a>
   without needing the above C-preprocessor definitions.
   </p>
@@ -1481,7 +1481,7 @@ is intended for programmer compilations.
 <p>
 To create a <em>Miriad</em> workspace, first ensure that the <em>Miriad</em>
 environment is defined (e.g. <a href="#post-install"><code>
-source&nbsp;MIRRC</code></a>), then 
+source&nbsp;MIRRC</code></a>), then
 <pre>
   cd ~
   mirtree
@@ -1546,7 +1546,7 @@ It is possible to control <code>GNUmakefile</code> variables by making private
 definitions in <code>~/miriad/$MIRARCH/GNUmakedefs</code>.  For your workspace
 alone, these override the settings in <code>$MIR/GNUmakedefs</code> and
 <code>$MIR/$MIRARCH/GNUmakedefs</code> &ndash; particularly useful for
-experimenting with compiler options.  To get a context-sensitive list of 
+experimenting with compiler options.  To get a context-sensitive list of
 <code>GNUmakefile</code> variables with personal overrides (different for each
 directory):
 <pre>
@@ -1565,7 +1565,3 @@ private version:
 </p>
 
 <hr>
-
-<p>
-<small>$Id: INSTALL.html,v 1.32 2017/12/21 02:18:18 mirmgr Exp $</small>
-</p>

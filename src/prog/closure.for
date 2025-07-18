@@ -80,7 +80,6 @@ c	  nocal     Do not perform gain calibration.
 c	  nopol     Do not perform polarisation calibration on the data.
 c	  nopass    Do not perform bandpass calibration on the data.
 c
-c$Id: closure.for,v 1.10 2024/05/30 06:30:55 mirmgr Exp $
 c--
 c  History:
 c    rjs   7sep94 Original version.
@@ -144,9 +143,7 @@ c
 	logical uvDatOpn
 	character versan*72
 c-----------------------------------------------------------------------
-      version = versan ('closure',
-     :                  '$Revision: 1.10 $',
-     :                  '$Date: 2024/05/30 06:30:55 $')
+      version = versan('closure')
 c
 c Lets go! Get user inputs.
 c

@@ -31,7 +31,6 @@ c
 c@ log
 c	The list output file name. The default is the terminal.
 c
-c$Id: uvclip.for,v 1.6 2018/12/04 04:02:11 wie017 Exp $
 c--
 c
 c  History:
@@ -115,9 +114,7 @@ c     initialise some variables
       data type / 'YX', 'XY', 'YY', 'XX', 'LR', 'RL', 'LL', 'RR',
      -            '  ', 'I ', 'Q ', 'U ', 'V ' /
 c-----------------------------------------------------------------------
-      version = versan ('uvclip',
-     :                  '$Revision: 1.6 $',
-     :                  '$Date: 2018/12/04 04:02:11 $')
+      version = versan('uvclip')
 
 c     +++ read inputs
 

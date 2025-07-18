@@ -65,7 +65,6 @@ c    mhw  17jan12 Use ptrdiff for scr routines to handle larger files
 c    mhw  24mar15 Add spectral parameters for flux model
 c    jbs  08nov19 Change to allow mixing with UV models in uvmodel
 c     
-c $Id: model.for,v 1.12 2019/11/08 06:43:50 ste616 Exp $
 c***********************************************************************
 c*ModelIni -- Ready the uv data file for processing by the Model routine
 c&rjs

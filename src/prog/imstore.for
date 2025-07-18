@@ -48,7 +48,6 @@ c     are displayed in arcsecs. The default is "relative".
 c@ log
 c     The output log file. The default is the terminal.
 c
-c$Id: imstore.for,v 1.5 2013/08/30 01:49:21 wie017 Exp $
 c--
 c  Bugs:
 c     * The uvgen and nemo modes should use the proper coordinate
@@ -101,9 +100,7 @@ c
       data unitss/'relative','absolute'/
       data modes /'dump    ','uvgen   ','nemo    '/
 c-----------------------------------------------------------------------
-      version = versan ('imstore',
-     :                  '$Revision: 1.5 $',
-     :                  '$Date: 2013/08/30 01:49:21 $')
+      version = versan('imstore')
 c
 c  Get user inputs
 c

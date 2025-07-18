@@ -4,7 +4,6 @@ c-----------------------------------------------------------------------
 c  Include file for the coordinate conversion routines.  Intended for
 c  the exclusive use of co.for.
 c
-c  $Id: co.h,v 1.9 2012/03/05 03:36:22 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxnax.h'
       include 'wcslib/cel.inc'

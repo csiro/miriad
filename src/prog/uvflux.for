@@ -141,9 +141,7 @@ c
 c
 c  Get the user parameters.
 c
-	version = versan('uvflux',
-     :                   '$Revision: 1.4 $',
-     :                   '$Date: 2013/08/30 01:49:21 $')
+	version = versan('uvflux')
 	call keyini
 	call GetOpt(docal,dopol,dopass,douvpol,dovlbi,long)
         l=80

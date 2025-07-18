@@ -79,7 +79,6 @@ c    There is a single option
 c      inter - interpolate real and double precision values linearly
 c@ out
 c    Name of the output dataset. No default.
-c$Id: uvputhd.for,v 1.7 2018/12/04 04:02:11 wie017 Exp $
 c-----------------------------------------------------------------------
         include 'uvputhd.h'
         character version*72
@@ -98,9 +97,7 @@ c Externals
 c
         character*72 versan
 c-----------------------------------------------------------------------
-        version = versan ('uvputhd',
-     :                    '$Revision: 1.7 $',
-     :                    '$Date: 2018/12/04 04:02:11 $')
+        version = versan('uvputhd')
         call keyini
         call keyf('vis',infile,' ')
         call keya('hdvar',hdvar,' ')

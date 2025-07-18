@@ -38,7 +38,6 @@ c       Output amplitude image.  Default is not to write it.
 c@ phase
 c       Output phase image.  Default is not to write it.
 c
-c$Id: fft.for,v 1.8 2018/12/05 23:36:20 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -61,9 +60,7 @@ c-----------------------------------------------------------------------
       ptrdiff   Data, cData, npix
       character versan*72
 c-----------------------------------------------------------------------
-      version = versan('fft',
-     *                 '$Revision: 1.8 $',
-     *                 '$Date: 2018/12/05 23:36:20 $')
+      version = versan('fft')
 
 c     Get the input parameters.
       call keyini

@@ -102,7 +102,6 @@ c@ clip
 c       This sets the relative clip level in Steer mode. Values are
 c       typically 0.75 to 0.9. The default is image dependent.
 c
-c$Id: clean.for,v 1.17 2019/02/09 06:59:27 wie017 Exp $
 c--
 c
 c  History:
@@ -207,9 +206,7 @@ c-----------------------------------------------------------------------
 c     Externals.
       character itoaf*8, versan*72
 c-----------------------------------------------------------------------
-      version = versan ('clean',
-     *                  '$Revision: 1.17 $',
-     *                  '$Date: 2019/02/09 06:59:27 $')
+      version = versan('clean')
 c
 c  Get the input parameters.
 c

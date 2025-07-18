@@ -1,7 +1,6 @@
 c***********************************************************************
 c       clplot.h - include file for clumplot program.
 c
-c $Id: clplot.h,v 1.3 2010/10/22 03:44:23 cal103 Exp $
 c-----------------------------------------------------------------------
       integer    MAXBUF, MAXDIM
       parameter (MAXBUF=4194304, MAXDIM=400)

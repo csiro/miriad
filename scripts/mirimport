@@ -4,8 +4,6 @@
 #-----------------------------------------------------------------------------
 # Fetch and recompile (unless -noupdate is specified) Miriad updates from the
 # anonymous ftp area at the ATNF.
-#
-# $Id: mirimport,v 1.3 2007/02/13 23:17:34 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Initialise.
   set path = ($MIRBIN $path)

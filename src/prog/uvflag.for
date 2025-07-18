@@ -175,9 +175,7 @@ c again until the list is exhausted.
 
       data	       usech / MAXCHAN * .true. /
 
-      version = versan('uvflag',
-     *                 '$Revision: 1.12 $',
-     *                 '$Date: 2021/06/03 07:09:31 $')
+      version = versan('uvflag')
 
       call keyini
       call keyf( 'vis', vis, ' ' )

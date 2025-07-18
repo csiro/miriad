@@ -40,7 +40,6 @@ c
 c       Pixels are blanked if the input pixel is blanked, the averaged
 c       channel pixel is blanked, or the output is undefined.
 c
-c$Id: avmaths.for,v 1.8 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  History:
 c    nebk 26jul90 Original version.
@@ -86,9 +85,7 @@ c-----------------------------------------------------------------------
 
       common buffer
 c-----------------------------------------------------------------------
-      version = versan('avmaths',
-     *                 '$Revision: 1.8 $',
-     *                 '$Date: 2021/06/02 04:45:09 $')
+      version = versan('avmaths')
 c
 c  Get the input parameters.
 c

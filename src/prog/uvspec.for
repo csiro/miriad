@@ -106,7 +106,6 @@ c@ log
 c	Log file into which the spectra are dumped in the order in which
 c	they are plotted.  Really only useful if your plot is quite simple.
 c
-c$Id: uvspec.for,v 1.17 2018/06/25 21:08:49 wie017 Exp $
 c--
 c  History:
 c    rjs  18sep92 Derived from uvaver.
@@ -177,9 +176,7 @@ c
         character versan*72
 
 
-        version = versan('uvspec',
-     *                   '$Revision: 1.17 $',
-     *                   '$Date: 2018/06/25 21:08:49 $')
+        version = versan('uvspec')
 c
 c  Get the input parameters.
 c

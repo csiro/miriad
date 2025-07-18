@@ -23,7 +23,6 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: zed.for,v 1.4 2011/10/06 07:10:02 cal103 Exp $
 c***********************************************************************
 
 c* ZedScale -- Determine conv. factor from channels to magnetic field.

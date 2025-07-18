@@ -92,9 +92,7 @@ c
 	logical hdprsnt
         character*72 versan
 c
-	version = versan('gpcopy',
-     *                   '$Revision: 1.14 $',
-     *                   '$Date: 2021/06/02 04:45:09 $')
+	version = versan('gpcopy')
 	call keyini
 	call keya('vis',vis,' ')
 	if(vis.eq.' ')call bug('f','Input data-set must be given')

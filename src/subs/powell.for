@@ -114,7 +114,6 @@ c  History:
 c    rjs Dark-ages Stolen from somewhere.
 c    rjs  25jan90  Minor documentation improvement.
 c
-c $Id: powell.for,v 1.3 2009/09/01 07:26:04 cal103 Exp $
 c----------------------------------------------------------------------
       integer nfcc,i,j,jj,jjj,k,ind,inn,iterc,isgrad,itone,ixp,idirn
       integer iline,is,jil

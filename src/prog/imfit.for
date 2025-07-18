@@ -101,7 +101,6 @@ c         residual The output data-set is the residual image.
 c                  If an output is being created, the default is to make
 c                  this the fitted model.
 c
-c$Id: imfit.for,v 1.14 2018/11/29 02:59:28 wie017 Exp $
 c--
 c  History:
 c    mchw 22apr94 new task.
@@ -152,9 +151,7 @@ c     Externals.
       character itoaf*2, versan*72
       external FUNCTION
 c-----------------------------------------------------------------------
-      version = versan ('imfit',
-     *                '$Revision: 1.14 $',
-     *                '$Date: 2018/11/29 02:59:28 $')
+      version = versan('imfit')
 
 c     Get the input parameters.
       call keyini

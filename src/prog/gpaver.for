@@ -44,9 +44,7 @@ c  Externals
 c
         character versan*72
 c------------------------------------------------------------------------
-        version = versan('gpaver',
-     *                   '$Revision: 1.5 $',
-     *                   '$Date: 2021/06/02 04:45:09 $')       
+        version = versan('gpaver')       
 c
 c  Get the input parameters.
 c

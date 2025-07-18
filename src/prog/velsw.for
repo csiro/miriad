@@ -81,7 +81,6 @@ c                   should be enough to fix such headers; ctype and
 c                   specsys would be relabelled while leaving crval and
 c                   cdelt unchanged.
 c
-c$Id: velsw.for,v 1.6 2012/03/05 03:40:55 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -96,9 +95,7 @@ c-----------------------------------------------------------------------
       external  itoaf, versan
       character itoaf*2, versan*72
 c-----------------------------------------------------------------------
-      version = versan('velsw',
-     *                 '$Revision: 1.6 $',
-     *                 '$Date: 2012/03/05 03:40:55 $')
+      version = versan('velsw')
 
 c     Get input parameters.
       call keyini

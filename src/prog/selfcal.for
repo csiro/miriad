@@ -109,7 +109,6 @@ c       the linetype parameters used to construct the map.  If you wish
 c       to override this, or if the info is not in the header, or if you
 c       are using a point source model, this parameter can be useful.
 c
-c$Id: selfcal.for,v 1.23 2021/07/02 03:23:16 wie017 Exp $
 c--
 c
 c  History:
@@ -201,9 +200,7 @@ c     Externals.
       character versan*72
       external  hdprsnt, header, versan
 c-----------------------------------------------------------------------
-      version = versan('selfcal',
-     *                 '$Revision: 1.23 $',
-     *                 '$Date: 2021/07/02 03:23:16 $')
+      version = versan('selfcal')
 c
 c  Get the input parameters.
 c

@@ -57,7 +57,6 @@ c@ log
 c       The output log file. The default filename is velplot.log
 c       Results from image analysis are written into the log file.
 c
-c$Id: velplot.for,v 1.12 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -85,9 +84,7 @@ c     Set default plotting parameters.
       data lgaufit/'N'/,lgauplot/'Y'/
       data levels/15,30,45,60,75,90,0,0,0,0/,nlevels/6/
 c-----------------------------------------------------------------------
-      version = versan('velplot',
-     *                 '$Revision: 1.12 $',
-     *                 '$Date: 2021/06/02 04:45:09 $')
+      version = versan('velplot')
 c
 c  Get the input parameters.
 c

@@ -136,7 +136,6 @@ c         velocity=lsr
 c       indicates that fits is to determine the observatory velocity
 c       wrt the LSR frame using an appropriate model.
 c
-c$Id: fits.for,v 1.37 2021/12/21 22:54:58 wie017 Exp $
 c--
 c
 c  Bugs:
@@ -174,9 +173,7 @@ c-----------------------------------------------------------------------
       external  versan
       character versan*72
 c-----------------------------------------------------------------------
-      version = versan('fits',
-     *                 '$Revision: 1.37 $',
-     *                 '$Date: 2021/12/21 22:54:58 $')
+      version = versan('fits')
 c
 c  Get the input parameters.
 c

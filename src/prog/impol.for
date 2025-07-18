@@ -103,7 +103,6 @@ c       make this bias plot without actually working on any data if you
 c       wish. See also VLA memo no. 161 by Patrick Leahy.
 c       Default is no plot.
 c
-c$Id: impol.for,v 1.20 2011/11/03 04:42:13 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -136,9 +135,7 @@ c-----------------------------------------------------------------------
 
       data tIn, lpout, lmout, lpaout /3*0, 2*0, 2*0, 2*0/
 c-----------------------------------------------------------------------
-      version = versan('impol',
-     *                 '$Revision: 1.20 $',
-     *                 '$Date: 2011/11/03 04:42:13 $')
+      version = versan('impol')
 
 c     Get user inputs.
       call keyini

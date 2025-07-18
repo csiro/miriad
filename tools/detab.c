@@ -4,8 +4,6 @@
 * detab converts tabs into the equivalent number of blanks (replicating the
 * function of the 'expand' utility in unix).  By default, output goes to
 * stdout and input comes from stdin.
-*
-* $Id: detab.c,v 1.2 2006/10/19 06:07:43 cal103 Exp $
 *===========================================================================*/
 
 #include <stdio.h>

@@ -19,7 +19,6 @@ c    rjs   1mar90   Changed it to be a function, and return power of 2
 c		    greater of equal to k.
 c    rjs   8mar90   Deleted a redundant variable.
 c
-c $Id: nextpow2.for,v 1.2 2009/10/29 06:01:40 cal103 Exp $
 c-----------------------------------------------------------------------
 
       nextpow2 = 1

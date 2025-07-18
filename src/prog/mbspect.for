@@ -156,7 +156,6 @@ c
 c Note that this program does not report its version number so that gif
 c and ps output can be piped.
 c
-c$Id: mbspect.for,v 1.23 2015/05/12 00:05:35 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -193,9 +192,7 @@ c-----------------------------------------------------------------------
       character hangle*12, itoaf*3, rangle*12, versan*72
 c-----------------------------------------------------------------------
 c     Don't report the ID so that gif and ps output can be piped.
-      version = versan ('-mbspect',
-     *                  '$Revision: 1.23 $',
-     *                  '$Date: 2015/05/12 00:05:35 $')
+      version = versan('-mbspect')
 
 c     Get inputs.
       call keyini

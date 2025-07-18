@@ -114,7 +114,6 @@ c       Integer used to initialise the random number generator.  The
 c       same value of SEED produces the same noise, different values
 c       produce different noise.
 c
-c$Id: imgen.for,v 1.8 2020/05/14 01:59:40 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -150,9 +149,7 @@ c-----------------------------------------------------------------------
      *             'disk    ', 'j1x     ', 'shell   ', 'comet   ',
      *             'cluster ', 'gauss3  ', 'jet     ', 'source  '/
 c-----------------------------------------------------------------------
-      version = versan('imgen',
-     *                 '$Revision: 1.8 $',
-     *                 '$Date: 2020/05/14 01:59:40 $')
+      version = versan('imgen')
 c
 c  Get the parameters from the user.
 c

@@ -62,7 +62,6 @@ c@ maxwidth
 c        The maximum bandwidth (in GHz) for each output frequency band.
 c        Default is no subdivision of input bands. The maxwidth limit
 c        is only applied when splitting by frequency.
-c $Id: uvsplit.for,v 1.19 2018/12/04 04:02:11 wie017 Exp $
 c--
 c  History:
 c    rjs  13oct93 Original version.
@@ -108,9 +107,7 @@ c
 	logical SelProbe
         character versan*72
 c------------------------------------------------------------------------
-        version = versan ('uvsplit',
-     *                    '$Revision: 1.19 $',
-     *                    '$Date: 2018/12/04 04:02:11 $')
+        version = versan('uvsplit')
 c
 c  Get the input parameters.
 c

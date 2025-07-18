@@ -179,7 +179,6 @@ c       For concatenated spectra the width of a single zoom is used.
 c       Note that noise and artefacts go up quickly towards the band 
 c       edge so making this much smaller will not gain you much.
 c
-c$Id: atlod.for,v 1.57 2024/04/29 01:54:50 wie017 Exp $
 c--
 c
 c  Program Structure:
@@ -351,7 +350,6 @@ c    mhw  26aug16 Fix nopol option
 c    mhw  13nov18 Avoid loss of precision in frequency variables
 c    mhw  26apr24 Add dopurp option (fill purpose with scantype)
 c
-c $Id: atlod.for,v 1.57 2024/04/29 01:54:50 wie017 Exp $
 c-----------------------------------------------------------------------
 
         integer MAXFILES,MAXTIMES,MAXSIM
@@ -373,9 +371,7 @@ c  Externals.
 c
         character itoaf*8, rperr*32, versan*72
 c-----------------------------------------------------------------------
-      version = versan ('atlod',
-     :                  '$Revision: 1.57 $',
-     :                  '$Date: 2024/04/29 01:54:50 $')
+      version = versan('atlod')
 c
 c  Get the input parameters.
 c

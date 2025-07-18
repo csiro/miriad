@@ -44,7 +44,6 @@ c	Task enrichment options.  Minimum match is active.
 c	  natural   Assume keywords "center" and "radius" are in natural
 c	            units rather than arcsec.
 c
-c$Id: ellplt.for,v 1.7 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  History:
 c    rjs   06mar97	Adapted from ellint.
@@ -74,9 +73,7 @@ c
 	integer pgbeg
 	character itoaf*2, versan*72
 c-----------------------------------------------------------------------
-      version = versan ('ellplt',
-     :                  '$Revision: 1.7 $',
-     :                  '$Date: 2021/06/02 04:45:09 $')
+      version = versan('ellplt')
 c
 c Get inputs.
 c

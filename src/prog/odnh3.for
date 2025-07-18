@@ -45,7 +45,6 @@ c       No default.
 c@ out
 c       Name of the output image.  No default.
 c
-c$Id: odnh3.for,v 1.6 2018/11/29 23:35:24 wie017 Exp $
 c--
 c  The optical depth of the NH3(1,1) line is calculated from hyperfine
 c  ratios using a lookup table to invert the equation:
@@ -111,9 +110,7 @@ c-----------------------------------------------------------------------
       character versan*72
       external  boxrect, fill, paction, vaction, versan
 c-----------------------------------------------------------------------
-      version = versan('odnh3',
-     *                 '$Revision: 1.6 $',
-     *                 '$Date: 2018/11/29 23:35:24 $')
+      version = versan('odnh3')
 c
 c  Get the input parameters.
 c

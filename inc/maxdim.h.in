@@ -1,5 +1,4 @@
 C=======================================================================
-C $Id: maxdim.h,v 1.10 2017/03/15 23:36:18 wie017 Exp $
 C-----------------------------------------------------------------------
 C     Size of an INTEGER array used to implement a memory heap.  This
 C     array is the sole variable in blank COMMON in Miriad.  Trial-and-

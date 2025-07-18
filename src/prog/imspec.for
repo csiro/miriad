@@ -286,7 +286,6 @@ c@ log
 c       If specified, output is written to the file given by log=
 c       instead of to the terminal.
 c
-c$Id: imspec.for,v 1.12 2019/08/13 05:15:56 ste616 Exp $
 c--
 c
 c  History:
@@ -304,9 +303,7 @@ c-----------------------------------------------------------------------
       external  versan
       character versan*72
 c-----------------------------------------------------------------------
-      version = versan('imspec',
-     *                 '$Revision: 1.12 $',
-     *                 '$Date: 2019/08/13 05:15:56 $')
+      version = versan('imspec')
 
       call inputs(lIn,naxis,dim,corners,boxes,cut,counts,beaminfo,
      *  axlabel,device,MAXBOXES)

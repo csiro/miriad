@@ -91,8 +91,6 @@ vector processing capacities (compilers "unicos", "alliant" and "convex"):
 *
 * History:
 *   Refer to the RCS log, v1.1 includes prior revision information.
-*
-* $Id: ratty.c,v 1.10 2011/05/30 23:50:21 cal103 Exp $
 ******************************************************************************
 * ToDos/Shortcomings:
 *  The -u flag doesn't convert self-generated if/then/continue etc.
@@ -100,7 +98,7 @@ vector processing capacities (compilers "unicos", "alliant" and "convex"):
 *      textout("continue\n");
 *  to be changed to:
 *      (uflag?textout("continue\n"):textout("CONTINUE\n"));
-*  comment lines like "c#define foo bar" still define !!! 
+*  comment lines like "c#define foo bar" still define !!!
 *****************************************************************************/
 #define VERSION_ID   "2011/05/16"
 
@@ -246,7 +244,7 @@ int main(int argc,char *argv[])
                   break;
 	case 'i':
 	case 'I': if(++i < argc) incdir  = add_list(incdir,argv[i]);	break;
-	case 'p': 
+	case 'p':
 	case 'P': if(++i < argc) ptrdiff = argv[i];		break;
 	case 'g': gflag=TRUE; 					break;
         case 'l': lflag = TRUE;                                 break;
@@ -467,7 +465,7 @@ private void process(FILE* in, char* infile)
       } else if(!strcmp(token,"implicitnone") ||
 		!strcmp(token,"implicitundefined")){
         /* IMPLICIT NONE statement. */
-	if(sys == SYS_VMS || sys == SYS_FX || sys == SYS_CONVEX || 
+	if(sys == SYS_VMS || sys == SYS_FX || sys == SYS_CONVEX ||
            sys == SYS_SUN || sys == SYS_F2C) {
 	  blankout(indent); textout("implicit none\n");
 	} else if(sys == SYS_F77){
@@ -606,7 +604,7 @@ private void cppline(char* line)
       if(!*parm)message("Bad #define statement ignored.");
       else defines = add_list(defines,parm);
     }
-    
+
   } else if(!strcmp(token,"maxloop")){
     /* #maxloop directive. Issue a "short loop" directive if appropriate. */
     line = getparm(line,parm);
@@ -733,7 +731,7 @@ private char *progtok(char* line, char* token, int* indent, int* lineno, int* br
     }
 
   } else {
-    /* Make a few checks to see if its one of the other ANSI statements. */    
+    /* Make a few checks to see if its one of the other ANSI statements. */
     *token = 0;
   }
 
@@ -979,4 +977,3 @@ private void usage()
    fprintf(stderr,"-?           help (this list)\n");
    exit(0);
 }
-

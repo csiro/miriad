@@ -52,7 +52,6 @@ c       Lines beginning with "#" are ignored.
 c@ out
 c       The name of the output visibility data set (no default).
 c
-c$Id: uvsub.for,v 1.8 2018/12/04 06:36:14 wie017 Exp $
 c--
 c  History:
 c    05jan94 nebk  Original version.
@@ -78,9 +77,7 @@ c-----------------------------------------------------------------------
       character ltypes(2)*8
       data ltypes /'channel ','velocity'/
 c-----------------------------------------------------------------------
-      version = versan ('uvsub',
-     :                  '$Revision: 1.8 $',
-     :                  '$Date: 2018/12/04 06:36:14 $')
+      version = versan('uvsub')
 
 c     Get the inputs
       call keyini

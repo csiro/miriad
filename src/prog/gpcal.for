@@ -163,7 +163,6 @@ c                    solution for the observation already exists.  This
 c                    preliminary solution must be formed from a
 c                    calibrator with known Stokes-V.
 c
-c$Id: gpcal.for,v 1.23 2020/11/23 04:42:34 wie017 Exp $
 c--
 c  History:
 c    rjs,nebk 1may91 Original version.
@@ -313,9 +312,7 @@ c-----------------------------------------------------------------------
       character itoaf*3, versan*72
       external  itoaf, keyprsnt, uvDatOpn
 c-----------------------------------------------------------------------
-      version = versan('gpcal',
-     *                 '$Revision: 1.23 $',
-     *                 '$Date: 2020/11/23 04:42:34 $')
+      version = versan('gpcal')
 c
 c  Get inputs.
 c

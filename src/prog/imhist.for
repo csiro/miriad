@@ -67,7 +67,6 @@ c@ log
 c  If specified, output is written to the file given by log= instead
 c  of to the terminal.
 c
-c$Id: imhist.for,v 1.5 2016/09/13 23:30:14 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -80,9 +79,7 @@ c-----------------------------------------------------------------------
       external  versan
       character versan*72
 c-----------------------------------------------------------------------
-      version = versan('imhist',
-     *                 '$Revision: 1.5 $',
-     *                 '$Date: 2016/09/13 23:30:14 $')
+      version = versan('imhist')
 
       call output('IMHIST: ' // version)
       call inputs(tinp, cut, xrange, npixels, naxis, device)

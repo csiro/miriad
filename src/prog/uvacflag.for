@@ -22,7 +22,6 @@ c
 c       full    Instructs UVACFLAG to tell you about every record
 c               it flags.  The default is a summary at the end.
 c
-c$Id: uvacflag.for,v 1.8 2018/12/04 04:02:11 wie017 Exp $
 c--
 c
 c     mhw  19nov07 Original version, adapted uvpflag into uvacflag
@@ -52,9 +51,7 @@ c
       integer ntot,ngood,ngood2,ngood3,nflag
 c
 c-----------------------------------------------------------------------
-      version = versan ('uvacflag',
-     :                  '$Revision: 1.8 $',
-     :                  '$Date: 2018/12/04 04:02:11 $')
+      version = versan('uvacflag')
 
       ntot=0
       ngood=0

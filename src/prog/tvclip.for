@@ -175,7 +175,6 @@ c
 c< select
 c     NOTE: The default is to use all visibilities.
 c
-c$Id: tvclip.for,v 1.13 2021/06/02 04:45:09 wie017 Exp $
 c--
 c
 c  History:
@@ -307,9 +306,7 @@ c  End declarations.
 c-----------------------------------------------------------------------
 c  Announce program.
 c
-      version = versan ('tvclip',
-     :                  '$Revision: 1.13 $',
-     :                  '$Date: 2021/06/02 04:45:09 $')
+      version = versan('tvclip')
 c-----------------------------------------------------------------------
 c  Use the key routines to get the user input parameters.
 c

@@ -53,7 +53,6 @@ c                data. Option freq implies nobin. It can be combined
 c                with nopol, but not with nofreq.
 c         noapply Do not apply the flagging, just report the statistics
 c                about what would be flagged.
-c$Id: uvaflag.for,v 1.8 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  History:
 c     nebk 25may89 Original program

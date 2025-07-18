@@ -39,7 +39,6 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: cgpgsubs.for,v 1.15 2021/11/20 22:57:07 wie017 Exp $
 c***********************************************************************
 
 c* annboxCG -- Annotate plot with information from a box image

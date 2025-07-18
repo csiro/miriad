@@ -68,7 +68,6 @@ c@ log
 c       The output log file. The default is the terminal. Output to
 c       the terminal is paged.
 c
-c$Id: imom.for,v 1.6 2012/02/29 23:54:44 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -89,9 +88,7 @@ c-----------------------------------------------------------------------
       character versan*72
 c-----------------------------------------------------------------------
 c     Get input parameters.
-      version = versan('imom',
-     *                 '$Revision: 1.6 $',
-     *                 '$Date: 2012/02/29 23:54:44 $')
+      version = versan('imom')
 
       call keyini
       call keya('in', In, ' ')

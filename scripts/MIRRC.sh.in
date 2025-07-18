@@ -3,8 +3,6 @@
 # Usage: . MIRRC.sh
 #-----------------------------------------------------------------------------
 # Bourne shell (bash or ksh) version of MIRRC originally by George Martin.
-#
-# $Id: MIRRC.sh.in,v 1.8 2012/04/17 05:28:49 wie017 Exp $
 #-----------------------------------------------------------------------------
 # Miriad root directory set by configure or otherwise.
   MIR=@MIRROOT@; export MIR

@@ -14,7 +14,6 @@ c       Output image
 c@ value
 c       Value to replace blanked pixels by. Default is zero.
 c
-c$Id: imblr.for,v 1.5 2013/08/30 01:49:21 wie017 Exp $
 c--
 c
 c  History:
@@ -36,9 +35,7 @@ c-----------------------------------------------------------------------
       character versan*72
       external  versan
 c-----------------------------------------------------------------------
-      version = versan('imblr',
-     *                 '$Revision: 1.5 $',
-     *                 '$Date: 2013/08/30 01:49:21 $')
+      version = versan('imblr')
 
 c     Get user inputs.
       call keyini

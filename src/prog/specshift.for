@@ -33,7 +33,6 @@ c        doblank    Don't wrap profile around; blank if out of range.
 c                   By default the edge channels are assumed to be
 c                   noise so the profile is wrapped when shifting
 c                   beyond edges.
-c$Id: specshift.for,v 1.7 2012/03/13 02:21:33 wie017 Exp $
 c--
 c   History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -65,9 +64,7 @@ c-----------------------------------------------------------------------
       data opts /'doblank'/
       data axC  /'xyzabcd'/
 c-----------------------------------------------------------------------
-      version = versan('specshift',
-     *                 '$Revision: 1.7 $',
-     *                 '$Date: 2012/03/13 02:21:33 $')
+      version = versan('specshift')
 
 c     Get and check the inputs.
       call keyini

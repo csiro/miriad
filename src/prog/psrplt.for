@@ -60,7 +60,6 @@ c@ log
 c       File in which to write the data, if y-axis is amplitude.
 c       The default is no logfile.
 c
-c$Id: psrplt.for,v 1.8 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  History:
 c    rjs  03jun96 Original version.
@@ -101,9 +100,7 @@ c     Externals.
       data yaxes/'flux     ','frequency','channel  '/
       data fluxes/'real     ','imaginary','amplitude','phase    '/
 c-----------------------------------------------------------------------
-      version = versan('psrplt',
-     :                 '$Revision: 1.8 $',
-     :                 '$Date: 2021/06/02 04:45:09 $')
+      version = versan('psrplt')
 
 c     Get parameters.
       call output(version)

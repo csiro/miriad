@@ -4,14 +4,14 @@
 \chapter{Setting Up Your Account}
 \label{app:setup}
 
-Setting up your account to use \miriad\ and the ATNF Visualisation
+Setting up your account to use \miriad\ 
 Software varies from system to system.
 If in doubt, ask a local! We will assume you are using the \verb+csh+
 shell.
 
 If you are using the `standard' login scripts on the ATNF machines
-(Marsfield, Narrabri, Parkes), you will be prompted whether you wish to 
-use \miriad\ and the ATNF Visualisation Software when you
+(Marsfield, Narrabri, Parkes), you will be prompted whether you wish to
+use \miriad\ when you
 first log in. If you fail to do this, then you can edit the
 file \verb+.login.packages+ in your login directory, and change
 \verb|-miriad| to \verb|+miriad|. After this change, \miriad\ will be
@@ -23,7 +23,6 @@ include;
 \begin{verbatim}
        source /applic/miriad/bin/MIRRC
        set path = ($path $MIRBIN)
-       source /appplic/karma/.login
 \end{verbatim}
 Other sites should have similar arrangements -- only the directory
 should change.
@@ -33,8 +32,7 @@ The \verb+MIRRC+ script, in the first line, sets up environment
 variables (including \verb+MIRBIN+) to point to the appropriate directories.
 The second line includes the \miriad\ executables
 in your executable search path (you may choose to place it somewhere other
-than the end of the search path). The third line sets up the ATNF
-Visualisation Software.
+than the end of the search path).
 
 You may also wish to set the environment variable \verb+MIRDEF+ to point
 to a directory where the keyword files

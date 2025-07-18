@@ -138,7 +138,6 @@ c       nosrc   Do not cause a break in the display when the source
 c               changes. Normally TVFLAG puts a gap in the display
 c               whenever the source changes.
 c
-c$Id: tvflag.for,v 1.11 2021/06/02 04:45:09 wie017 Exp $
 c--
 c
 c  History:
@@ -268,9 +267,7 @@ c  End declarations.
 c-----------------------------------------------------------------------
 c  Announce program.
 c
-      version = versan ('tvflag',
-     :                  '$Revision: 1.11 $',
-     :                  '$Date: 2021/06/02 04:45:09 $')
+      version = versan('tvflag')
 c-----------------------------------------------------------------------
 c  Use the key routines to get the user input parameters.
 c

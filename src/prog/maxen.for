@@ -75,7 +75,6 @@ c                    This will give better stability if you are daring
 c                    enough to deconvolve more than the inner quarter of
 c                    the dirty image.
 c
-c$Id: maxen.for,v 1.8 2018/11/29 23:30:11 wie017 Exp $
 c--
 c  History:
 c    rjs   nov88 - Original version.
@@ -160,9 +159,7 @@ c-----------------------------------------------------------------------
       character itoaf*4, versan*72
       external  ismax8, itoaf, versan
 c-----------------------------------------------------------------------
-      version = versan('maxen',
-     *                 '$Revision: 1.8 $',
-     *                 '$Date: 2018/11/29 23:30:11 $')
+      version = versan('maxen')
 c
 c  Get the input parameters.
 c

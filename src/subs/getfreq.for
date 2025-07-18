@@ -24,7 +24,6 @@ c               1 -> no spectral axis,
 c History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: getfreq.for,v 1.4 2011/10/06 07:10:02 cal103 Exp $
 c-----------------------------------------------------------------------
       double precision freq1, freq2
       character algo*3, line*80

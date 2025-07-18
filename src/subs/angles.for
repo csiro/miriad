@@ -4,7 +4,6 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: angles.for,v 1.2 2012/03/02 06:06:17 cal103 Exp $
 c***********************************************************************
 
 c* dangle - Convert degrees/hours value into a formatted string.

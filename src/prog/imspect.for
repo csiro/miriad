@@ -51,7 +51,6 @@ c       Write spectrum to this ascii file.  Default is no output file.
 c@ comment
 c       A one-line comment which is written into the logfile.
 c
-c$Id: imspect.for,v 1.7 2015/05/12 00:05:35 wie017 Exp $
 c--
 c
 c  History:
@@ -81,9 +80,7 @@ c-----------------------------------------------------------------------
       integer   len1, pgbeg
       character itoaf*3, versan*72
 c-----------------------------------------------------------------------
-      version = versan('imspect',
-     *                 '$Revision: 1.7 $',
-     *                 '$Date: 2015/05/12 00:05:35 $')
+      version = versan('imspect')
 
 c     Get inputs.
       call keyini

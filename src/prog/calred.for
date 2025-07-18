@@ -50,7 +50,6 @@ c	  nopass    Do not perform bandpass calibration on the data.
 c	  norm      Divide the noise estimates by the square root of the
 c	            number of points.
 c
-c$Id: calred.for,v 1.11 2021/11/20 23:24:20 wie017 Exp $
 c--
 c  History:
 c    rjs  23feb00 Original version.
@@ -109,9 +108,7 @@ c
 	logical uvDatOpn,uvVarUpd
 	character versan*72
 c-----------------------------------------------------------------------
-      version = versan ('calred',
-     :                  '$Revision: 1.11 $',
-     :                  '$Date: 2021/11/20 23:24:20 $')
+      version = versan('calred')
 c
 c Lets go! Get user inputs.
 c

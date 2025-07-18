@@ -70,7 +70,6 @@ c                is used.
 c@ out
 c       The output restored image.  No default.
 c
-c$Id: restor.for,v 1.16 2019/05/17 05:37:03 wie017 Exp $
 c--
 c
 c  History:
@@ -124,9 +123,7 @@ c-----------------------------------------------------------------------
       character itoaf*4, versan*72
       external  itoaf, versan
 c-----------------------------------------------------------------------
-      version = versan('restor',
-     *                 '$Revision: 1.16 $',
-     *                 '$Date: 2019/05/17 05:37:03 $')
+      version = versan('restor')
 
 c     Get the input parameters.
       call keyini

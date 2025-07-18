@@ -2,74 +2,17 @@
 
 \section{Introduction}
 Display software for \miriad\ data falls into two main camps -- those that
-are part of the ATNF Visualisation Suite (not strictly part of \miriad)
-and those that 
-use a PGPLOT device (line plots plus some image display capability).
-Generally the Visualisation suite is better for interactive
+use a PGPLOT device (line plots plus some image display capability) and
+external packages like \href{https://cartavis.org}{CARTA}, generally the latter
+is better for interactive
 work and the PGPLOT software is better for quantitative work. This
 chapter will give an overview of using the PGPLOT software.
 
-Historically there is a third camp -- the  ``TV'' software. There is
-only one useful task left which uses this software, and so the ``TV''
-software will be described with that task. Unfortunately, the ``TV''
-software can only be used with 8-bit colour-depth displays, which limits its
-usage with modern computers which usually operate with far greater colour
-depths.
-
-\section{The ATNF Visualisation Suite}
-The KARMA visualisation suite is a set of X-windows-base interactive tools that 
-can display a wide variety of images and cubes -- in particular \miriad's image
-format. You select images, display
-options, etc, via pull-down menus (rather than setting parameter
-values). 
-\begin{latexonly}
-More details can be found in the on-line documentation available on the ATNF
-web pages \htmladdnormallink
-{(https://www.atnf.csiro.au/computing/software/karma/)}
-{https://www.atnf.csiro.au/computing/software/karma/}
-or in a gzipped \htmladdnormallink{postscript}
-{ftp://ftp.atnf.csiro.au/pub/software/karma/usermanual.ps.gz} document on the
-ATNF
-ftp server (usermanual.ps.gz under pub/software/karma, which is also available
-through the ATNF web pages).
-\end{latexonly}
-\begin{htmlonly}
-More details can be found in the on-line documentation available on the
-\htmladdnormallink{ATNF web pages}{https://www.atnf.csiro.au/computing/software/karma/}, or
-in a gzipped \htmladdnormallink{postscript}
-{ftp://ftp.atnf.csiro.au/pub/software/karma/usermanual.ps.gz} document on the ATNF
-ftp server.
-\end{htmlonly}
-
-KARMA replaces the ATNF Visualisation suite,
-\begin{latexonly}
-details of which can be found in the on-line documentation available on the ATNF
-web pages \htmladdnormallink
-{(https://www.atnf.csiro.au/computing/software/visualisation/)}
-{https://www.atnf.csiro.au/computing/software/visualisation/}
-or in a gzipped \htmladdnormallink{postscript}
-{ftp://ftp.atnf.csiro.au/pub/software/sutra/vizdoc.ps.gz} document on the
-ATNF
-ftp server (vizdoc.ps.gz under pub/software/sutra, which is also available
-through the ATNF web pages).
-\end{latexonly}
-\begin{htmlonly}
-details of which can be found in the on-line documentation available on the
-\htmladdnormallink{ATNF web pages}{https://www.atnf.csiro.au/computing/software/visualisation/}, or
-in a gzipped \htmladdnormallink{postscript}
-{ftp://ftp.atnf.csiro.au/pub/software/sutra/vizdoc.ps.gz} document on the ATNF
-ftp server.
-\end{htmlonly}
-
-See Appendix~\ref{app:setup} to set-up your account to use the visualisation
-software.
-
-To run a tool, type the program name, no arguments are
-required. You do not need to be running the {\tt miriad} front-end
-to use the tools.
+You may still see mentions of ``TV'' related tasks and software or the kvis visualisation suite.
+These are now effectively retired.
 
 \section{Using X Windows}
-The ATNF Visualisation software and some of the PGPLOT devices
+Some of the PGPLOT devices
 work via X-windows. For these to work, you must ensure that you have
 setup your environment to allow communication with your X server.
 In particular
@@ -81,7 +24,7 @@ In particular
 computer as the X-windows server.  However if you are running on a
 different machine, then you will need to tell the display software
 which machine is
-running your X server.  
+running your X server.
 
 If you have connected through SSH, then the SSH client should have, or
 can be made to automatically configure X-windows forwarding to your local
@@ -123,7 +66,7 @@ Tasks which use the PGPLOT software always use the {\tt device}
 keyword to allow you to select a plotting device. Only a brief review of PGPLOT, from a users
 perspective, is given here. A more complete description, both for users and
 programmers, can be found in the
-\htmladdnormallink{PGPLOT manual}{https://astro.caltech.edu/\~{}tjp/pgplot/}.
+\href{https://astro.caltech.edu/\~{}{PGPLOT manual}tjp/pgplot/}.
 
 PGPLOT devices are specified in the standard PGPLOT manner, namely
 \begin{verse}
@@ -136,9 +79,9 @@ can be given.  However if it contains a \verb+/+ character, then the
 entire file name should be enclosed in double quotes (\verb+"+).  Once a
 file has been created, you will generally have to issue operating system
 commands to spool this to the appropriate output plotter, etc.  The {\it
-name} part can often be left blank -- it defaults to something sensible. 
+name} part can often be left blank -- it defaults to something sensible.
 The most common case where you do not let it default is when you are
-specifying a disk plot file. 
+specifying a disk plot file.
 
 The {\it type} part tells PGPLOT what sort of graphics or hardcopy
 device is being used. Minimum match is used. Some possible types are:
@@ -149,33 +92,24 @@ device is being used. Minimum match is used. Some possible types are:
 
 \item[{\tt xw}] This is a transient X window.
 
-\item[{\tt xd}] This is the {\tt pgdisp} X windows server (deprecated). 
+\item[{\tt xd}] This is the {\tt pgdisp} X windows server (deprecated).
 
 \item[{\tt ps}] Postscript. PGPLOT will write the plot as a disk file
-in postscript form. At ATNF sites, you can print this postscript file with
-the command:
-\begin{verse}
-{{\tt\%\ lp }{\it filename}}
-\end{verse}
+in postscript form. You can use programs like ps2pdf to convert this to a more modern format.
 
 \item[{\tt vps}] Vertical postscript. The only difference between this and
 {\tt ps}, is that {\tt vps} generates a plot in portrait mode, whereas
 {\tt ps} is in landscape mode.
 
-\item[{\tt cps}] Colour postscript in landscape mode.  
+\item[{\tt cps}] Colour postscript in landscape mode.
 
 \item[{\tt vcps}] Colour postscript in portrait mode.
+
+\item[{\tt png}] A PNG graphics file.
 
 \item[{\tt null}] The null device.  Useful for debugging when you
 do not have a display.
 
-\item[{\tt re}] A VT100 with RETROgraphics card.
-
-\item[{\tt v603}] A V603 terminal.
-
-\item[{\tt krm3}] A Kermit 3 IBM-PC terminal emulator.
-
-\item[{\tt tek}] A TEK 4010 compatible terminal (or window).
 
 
 \end{description}
@@ -200,10 +134,10 @@ PGPLOT to communicate with your X server.
 
 PGPLOT has two X windows servers, and as of PGPLOT V5.0, one of which
 ({\tt pgdisp}) is deprecated.  The PGPLOT device types {\tt /xs} and
-{\tt /xd} are now mediated by a server (called {\tt pgxwin\_server}). 
+{\tt /xd} are now mediated by a server (called {\tt pgxwin\_server}).
 This server is automatically started whenever either of these devices is
 invoked.  The {\tt /xs} windows are permanent and resizable whereas the
-fixed size {\tt /xw} windows disappear as the application terminates. 
+fixed size {\tt /xw} windows disappear as the application terminates.
 This server allows multiple windows and you can choose to write to
 whichever one you like (see above example).  The resources for these
 windows are managed through the standard X windows resource file.
@@ -220,7 +154,7 @@ is written to with the keyword {\tt device}, see below).  This
 window can be used for line graphics as well as grey scales.  By
 default, the {\tt pgdisp} window only has 16 colour levels, which is
 insufficient for most image display applications, but fine for line
-graphics. 
+graphics.
 
 If you start it up with the command
 
@@ -229,8 +163,6 @@ If you start it up with the command
 \end{verbatim}
 
 then the window will be allocated 128 colours which is sufficient for
-imaging applications.    This window is much slower than the windows 
+imaging applications.    This window is much slower than the windows
 mediated by the {\tt pgxwin\_server}. In addition you can only have
-one.  
-
-
+one.

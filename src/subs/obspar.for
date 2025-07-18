@@ -41,7 +41,6 @@ c                 allow greater flexability. Rather than having data hard
 c                 coded into the program.
 c    rjs  08jan07 Eliminate spurious message. Tidy up to use tin routines.
 c
-c $Id: obspar.for,v 1.9 2021/12/21 22:54:23 wie017 Exp $
 c************************************************************************
 c* ObsPrint -- Print list of known observatories.
 c: utility

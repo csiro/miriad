@@ -58,7 +58,6 @@ c       number, which is the number of pixels over which you think the
 c       magnetic field might be constant.  Default is 1, try maybe 2
 c       or 4.
 c
-c$Id: zeemap.for,v 1.4 2010/11/22 05:06:16 cal103 Exp $
 c--
 c
 c  History:

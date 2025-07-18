@@ -44,7 +44,6 @@ c       List of stokes parameters, default is xx,xy,yx,yy
 c@ options
 c       cabb - interpret spwin to match CABB output (combine overlaps)
 c
-c$Id: rpgen.for,v 1.5 2013/08/30 01:49:21 wie017 Exp $
 c--
 c The program rpgen is roughly based on uvgen but currently
 c dummy fills most of the data fields.
@@ -66,9 +65,7 @@ c  Externals.
 c
 	character versan*72
 c-----------------------------------------------------------------------
-      version = versan ('rpgen',
-     :                  '$Revision: 1.5 $',
-     :                  '$Date: 2013/08/30 01:49:21 $')
+      version = versan('rpgen')
 c
 c  Get the input parameters.
 c

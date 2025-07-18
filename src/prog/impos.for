@@ -67,7 +67,6 @@ c         altspc    Report FREQ-{HEL,LSR} axes as is, namely
 c                   topocentric, i.e. don't Doppler shift to barycentric
 c                   or LSRK (see help for velsw).
 c
-c$Id: impos.for,v 1.16 2015/07/31 01:20:50 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -107,9 +106,7 @@ c-----------------------------------------------------------------------
       data typei /MAXNAX*' '/
       data nelem, ipix /0, MAXNAX*1/
 c-----------------------------------------------------------------------
-      version = versan ('impos',
-     *                  '$Revision: 1.16 $',
-     *                  '$Date: 2015/07/31 01:20:50 $')
+      version = versan('impos')
 
 c     Get inputs.
       call keyini

@@ -154,9 +154,7 @@ c  Externals.
         character  versan*72
 	logical uvDatOpn
 c-----------------------------------------------------------------------
-      version = versan ('uvlin',
-     :                  '$Revision: 1.6 $',
-     :                  '$Date: 2015/08/07 01:52:44 $')
+      version = versan('uvlin')
 c
 c
 c  Get the input parameters.

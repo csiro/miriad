@@ -98,7 +98,6 @@ c       a plot device but not an output or beam image if you just
 c       want to see the plots but don't want to spend ages computing
 c       the beam integral.
 c
-c$Id: imcfn.for,v 1.9 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  History:
 c    nebk 13sep95 Original version
@@ -133,9 +132,7 @@ c-----------------------------------------------------------------------
       data ymin,  ymax  /1e30, -1e30/
       data ymin2, ymax2 /1e30, -1e30/
 c-----------------------------------------------------------------------
-      version = versan('imcfn',
-     *                 '$Revision: 1.9 $',
-     *                 '$Date: 2021/06/02 04:45:09 $')
+      version = versan('imcfn')
 
 c     Get the inputs.
       call keyini

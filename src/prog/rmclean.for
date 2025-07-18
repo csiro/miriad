@@ -63,7 +63,6 @@ c       Derotate the spectrum? 0=no, 1=yes. Default 1.
 c@ debug
 c       Debug mode? 0=no, 1=yes. Default 0.
 c
-c $Id: rmclean.for,v 1.3 2013/05/30 23:07:02 wie017 Exp $
 c--
 c  RMCLEAN is a task to deconvolve output of RM Synthesis.
 c  It was written by George Heald <heald@astron.nl>

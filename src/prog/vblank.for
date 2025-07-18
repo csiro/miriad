@@ -29,7 +29,6 @@ c@ tol
 c       How far (in pixels) the nearest unmasked pixel can be for the
 c       given pixel to stay unmasked.  Default is 1.
 c
-c$Id: vblank.for,v 1.3 2011/04/04 05:56:01 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -46,9 +45,7 @@ c-----------------------------------------------------------------------
       external  versan
       character versan*72
 c-----------------------------------------------------------------------
-      version = versan('vblank',
-     *                 '$Revision: 1.3 $',
-     *                 '$Date: 2011/04/04 05:56:01 $')
+      version = versan('vblank')
 
 c     Get and check the inputs.
       call keyini

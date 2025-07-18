@@ -29,7 +29,6 @@
 #   with the "-c" option (linux-ia64 only).
 #
 # Original: 2006/09/20 Mark Calabretta, ATNF
-# $Id: objstats,v 1.1 2006/10/17 08:12:01 cal103 Exp $
 #-----------------------------------------------------------------------------
 
   if [ ! -f $MIRARCHD/aux/prog.objlist ]

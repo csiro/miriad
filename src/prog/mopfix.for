@@ -11,10 +11,10 @@ c       MOPFIX can also be used to resample in frequency (by spline
 c       interpolation), flag data over a certain time range, and convert
 c       BUNIT to 'K' (it does the last of these automatically).
 c
-c       Addendum Feb 9 2011 / ind006: Spoke with Tony Wong about the 
+c       Addendum Feb 9 2011 / ind006: Spoke with Tony Wong about the
 c       purpose of this program in MOPS years. There appears to be no
-c       practical reason why this should be used by any observers to 
-c       reduce their data from 2007 onwards. Originally, it changed 
+c       practical reason why this should be used by any observers to
+c       reduce their data from 2007 onwards. Originally, it changed
 c       position timestamps in OTF mapping to correspond to the
 c       spectral timestamps. Latency used to be too large for livedata
 c       to handle this properly in one pass. This however was fixed
@@ -59,7 +59,6 @@ c       'doextrap'  Use linear extrapolation if gap between flanking
 c                   position stamps exceeds maxgap.
 c       'noref'     Eliminate the reference scans from the file.
 c
-c$Id: mopfix.for,v 1.13 2013/08/30 01:49:21 wie017 Exp $
 c--
 c 28jun04 - tw - created from rpfread and mapread
 c 13jul04 - tw - write OBSTYPE card for LiveData
@@ -115,9 +114,7 @@ c-----------------------------------------------------------------------
       character hangle*12, rangle*12, versan*72
       external  hangle, len1, rangle, versan
 c-----------------------------------------------------------------------
-      versn = versan ('mopfix',
-     *                '$Revision: 1.13 $',
-     *                '$Date: 2013/08/30 01:49:21 $')
+      versn = versan ('mopfix')
 
 c Get input parameters
       call keyini ()
@@ -689,4 +686,3 @@ c-----------------------------------------------------------------------
 
       return
       end
-

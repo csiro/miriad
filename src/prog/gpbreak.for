@@ -59,9 +59,7 @@ c
 c
 c  Get the input parameters.
 c
-        version = versan('gpbreak',
-     *                   ' 1.0',
-     *                   ' ')
+        version = versan('gpbreak')
 	call keyini
 	call keya('vis',vis,' ')
 	call mkeyt('break',btimes,MAXTIME,numtime,'time')

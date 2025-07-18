@@ -50,7 +50,6 @@ c               corresponding to the "folding frequency" term.
 c               This array could alternately be dimensioned as N+2 real
 c               elements.
 c
-c$Id: fftsubs.for,v 1.4 2018/12/05 23:28:15 wie017 Exp $
 c--
 c-----------------------------------------------------------------------
       real pi

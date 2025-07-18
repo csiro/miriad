@@ -286,7 +286,6 @@ foreach(filename ${PROG_SOURCES})
     # Includes and linked libraries
     target_link_libraries(${target_name} PRIVATE
         mir linpack pgplot rpfits wcslib
-        ${CFITSIO_LIB}
         ${READLINE_LIB}
         ${X11_LIBRARIES}
         ${PNG_LIB}
@@ -300,7 +299,7 @@ foreach(filename ${PROG_SOURCES})
     add_custom_command(
         OUTPUT ${doc_output}
         COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/doc
-        COMMAND $<TARGET_FILE:doc> ${CMAKE_CURRENT_SOURCE_DIR}/${filename} > ${doc_output}
+        COMMAND $<TARGET_FILE:doc> -f ${CMAKE_CURRENT_SOURCE_DIR}/${filename} > ${doc_output}
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${filename} doc
         COMMENT "Extracting documentation from ${filename}"
     )

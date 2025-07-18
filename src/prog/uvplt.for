@@ -239,7 +239,6 @@ c       The output logfile name. The default is the terminal.
 c@ comment
 c       A one line comment which is written into the logfile.
 c
-c$Id: uvplt.for,v 1.21 2021/06/03 07:09:31 wie017 Exp $
 c--
 c
 c  History:
@@ -371,9 +370,7 @@ c
       data npts, plpts, basmsk /ifac1*0, ifac1*0, ifac2*0/
       data polmsk /13*0/
 c-----------------------------------------------------------------------
-      version = versan ('uvplt',
-     *                  '$Revision: 1.21 $',
-     *                  '$Date: 2021/06/03 07:09:31 $')
+      version = versan('uvplt')
 c
 c  Get the parameters given by the user and check them for blunders
 c

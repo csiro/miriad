@@ -27,6 +27,8 @@ cd miriad
 cmake -S . -B build -DCMAKE_INSTALL_PREFIX=$HOME/miriad
 cmake --build build --target install
 ```
+You can change the CMAKE_INSTALL_PREFIX to where you would like to install miriad.
+
 A patched version of PGPLOT is built as part of the Miriad build (as well as RPFITS and WCSLIB) because standard packaged versions are either not available or don't provide what Miriad needs.
 
 ## Optional: Enable Large N mode
@@ -36,10 +38,20 @@ To build with increased buffer sizes and internal limits, used for processing da
 cmake -S . -B build -DCMAKE_INSTALL_PREFIX=$HOME/miriad -DLARGEN=ON
 cmake --build build --target install
 ```
+Note that this will reduce a few other internal limits to compensate, so only use this for large N arrays.
 
-## Setting up your environment
+## Installation from pre-built binaries
+
+To install Miriad from a tar file with the binary installation, just download the file for your architecture (Linux and MacOS provided in location TBD) and extract in your preferred installation location.
+Then, from the installation directory, run
 ```bash
-. ./MIRRC.sh
+. ./post_install.sh
+```
+to prepare the MIRRC.sh file and, if needed, allow the binaries to be executed.
+
+## Setting up your environment after installation
+```bash
+. <install_path>/MIRRC.sh # replace <install_path> with the path to your new Miriad installation
 ```
 
 ## Documentation

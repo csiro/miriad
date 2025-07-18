@@ -318,7 +318,6 @@ c       nocal   Do not apply antenna gain calibration.
 c       nopass  Do not apply bandpass correction.
 c       nopol   Do not apply polarisation leakage correction.
 c
-c$Id: pgflag.for,v 1.34 2021/06/02 04:45:09 wie017 Exp $
 c--
 c
 c  History:
@@ -466,9 +465,7 @@ c
       integer pgopen,len1
       logical uvDatOpn
 
-      version = versan ('pgflag',
-     :                  '$Revision: 1.34 $',
-     :                  '$Date: 2021/06/02 04:45:09 $')
+      version = versan('pgflag')
 
 c
 c Get user inputs

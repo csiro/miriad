@@ -121,9 +121,7 @@ c
 c
 c  Get the input parameters.
 c
-        version = versan('gpedit',
-     *                   '$Revision: 1.14 $',
-     *                   '$Date: 2021/06/02 04:45:09 $')
+        version = versan('gpedit')
         call keyini
         call keya('vis',vis,' ')
         if(vis.eq.' ')call bug('f','No input vis data-set given')

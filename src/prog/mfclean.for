@@ -105,7 +105,6 @@ c       x and y pixel coordinate (in the output model; this goes from 1
 c       to N), the "I" component and the "I*alpha" component.  The
 c       default is to not create a log file.
 c
-c$Id: mfclean.for,v 1.17 2021/06/03 07:09:31 wie017 Exp $
 c--
 c  History:
 c    rjs   Nov89 - Original version.
@@ -209,9 +208,7 @@ c-----------------------------------------------------------------------
       character itoaf*8, versan*72
       external  itoaf, versan
 c-----------------------------------------------------------------------
-      version = versan('mfclean',
-     *                 '$Revision: 1.17 $',
-     *                 '$Date: 2021/06/03 07:09:31 $')
+      version = versan('mfclean')
 c
 c  Get the input parameters.
 c

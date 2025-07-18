@@ -8,8 +8,6 @@
 # Implemented as a shell script in order to capture the date and to handle
 # both guides.  The id argument should be specified as User (default) or
 # Programmer.
-#
-# $Id: Buildtitlepage,v 1.2 2006/10/06 04:29:38 cal103 Exp $
 #-----------------------------------------------------------------------------
 
   if [ $# -lt 1 ]

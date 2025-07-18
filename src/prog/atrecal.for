@@ -8,8 +8,8 @@ c: uv analysis
 c+
 c       atrecal copies a uv dataset and recomputes the systemp and
 c       xyphase variables from the autocorrelations.
-c       Useful for CABB data with RFI affected Tsys or when splitting  
-c       wide bands. Invert uses the systemp variable for the data 
+c       Useful for CABB data with RFI affected Tsys or when splitting
+c       wide bands. Invert uses the systemp variable for the data
 c       weights when options=systemp is used.
 c@ vis
 c       The name of the input uv data sets. Several can be given (wild
@@ -23,8 +23,8 @@ c       The default is all channels (or all wide channels if there are
 c       no spectral channels). The output will consist of only spectral
 c       or wideband data (but not both).
 c@ options
-c       This gives extra processing options. Several options can be 
-c       given, each separated by commas. They may be abbreviated to the 
+c       This gives extra processing options. Several options can be
+c       given, each separated by commas. They may be abbreviated to the
 c       minimum needed to avoid ambiguity. Possible options are:
 c          nocal       Do not apply the gains file. By default, atrecal
 c                      applies the gains file in copying the data.
@@ -43,7 +43,6 @@ c       The number of channels to average together to derive a point for
 c       the tsys spectrum. Defaults to 1.
 c@ out
 c       The name of the output uv data set. No default.
-c$Id: atrecal.for,v 1.5 2018/12/04 04:02:11 wie017 Exp $
 c--
 c  Recalibrate CABB data
 c  CABB data has auto correlations with noise cal OFF in bin 1 and ON in
@@ -56,7 +55,7 @@ c
 c  Atlod with option notsys undoes this calibration and produces counts
 c  divided by 10^6.
 c  Calibrating this data in the normal way appears to work ok, and
-c  produces images that differ very little. 
+c  produces images that differ very little.
 c
 c  Using raw counts as the visibilities means the amp level changes when
 c  you change attenuators on line -  hopefully this will be done only
@@ -92,9 +91,7 @@ c
 c
 c  Get the input parameters.
 c
-        version=versan('atrecal',
-     :                 '$Revision: 1.5 $',
-     :                 '$Date: 2018/12/04 04:02:11 $')   
+        version=versan('atrecal')
         call keyini
         call GetOpt(uvflags,relax,spect)
         call uvDatInp('vis',uvflags)
@@ -207,7 +204,7 @@ c
               call uvgetvri(tIn,'nspect',nspect,1)
               call uvgetvri(tIn,'ischan',ischan,nspect)
               call uvgetvri(tIn,'nants',nants,1)
-              call uvgetvrr(tIn,'jyperk',jyperk,1)            
+              call uvgetvrr(tIn,'jyperk',jyperk,1)
               call BufAcc(preamble,inttime,jyperk,data,flags,nread,
      *                    ischan,nspect,spect,naver)
               buffered = .true.
@@ -350,9 +347,9 @@ c
 c  Write out the new Tsys and xyphase values
 c
         if (nauto.eq.0) call bug('f','No autocorrelations found')
-        call Sct(tOut,'systemp',xtsys,ytsys,  
+        call Sct(tOut,'systemp',xtsys,ytsys,
      *           ATIF,ATANT,1,nif,nants)
-        if (spect) call Sct2(tOut,'systempf',xtsysf,ytsysf,  
+        if (spect) call Sct2(tOut,'systempf',xtsysf,ytsysf,
      *           MAXCHAN,ATANT,nread,nants)
         call Sco(tOut,'xyphase', xyphase,
      *           ATIF,ATANT,1,nif,nants)
@@ -480,7 +477,7 @@ c
         do i=1,npols(bl)
           if(pols(i,bl).eq.pol) p = i
         enddo
-                
+
 c
 c  A new baseline. Set up the description of it.
 c
@@ -535,7 +532,7 @@ c
               t=0
               if (i.eq.nwin) then
                 iend=nread
-              else 
+              else
                 iend=ischan(i+1)-1
               endif
               n=0
@@ -549,23 +546,23 @@ c
      *                   min(iend,j+nsmooth/2)
                       if (flags(k)) then
                         Wt = 1.0/(1+abs(k-j))
-                        if (pol.eq.PolXX) 
+                        if (pol.eq.PolXX)
      *                    xtsysf(j,i1)=xtsysf(j,i1)+Wt*real(data(k))
-                        if (pol.eq.PolYY) 
+                        if (pol.eq.PolYY)
      *                    ytsysf(j,i1)=ytsysf(j,i1)+Wt*real(data(k))
                         WtSum=WtSum+Wt
                       endif
                     enddo
                     if (WtSum.gt.0) then
-                      if (pol.eq.PolXX) 
+                      if (pol.eq.PolXX)
      *                  xtsysf(j,i1)=xtsysf(j,i1)/WtSum/jyperk
-                      if (pol.eq.PolYY) 
+                      if (pol.eq.PolYY)
      *                  ytsysf(j,i1)=ytsysf(j,i1)/WtSum/jyperk
                     endif
                   endif
                   t=t+data(j)
                   n=n+1
-                endif  
+                endif
               enddo
               if (n.gt.0) then
                 nauto = nauto + 1

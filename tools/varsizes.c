@@ -2,11 +2,9 @@
 *  Simple program to return variable sizes used on your platform.
 *  To build: cc -o varsizes varsizes.c
 *
-*  History 
+*  History
 *   31mar05 Chris Phillips Original version.
 *   02apr09 rjs		   Added several additional data types.
-*
-*  $Id: varsizes.c,v 1.4 2009/04/14 03:59:45 cal103 Exp $
 *===========================================================================*/
 
 #include <stddef.h>
@@ -18,9 +16,9 @@ int main (void)
   int i;
 
   printf("System variable sizes (in bytes)\n\n");
-  printf(" Sizeof char = %lu\n", sizeof(char));  
-  printf(" Sizeof short = %lu\n", sizeof(short));  
-  printf(" Sizeof int = %lu\n", sizeof(int));  
+  printf(" Sizeof char = %lu\n", sizeof(char));
+  printf(" Sizeof short = %lu\n", sizeof(short));
+  printf(" Sizeof int = %lu\n", sizeof(int));
   printf(" Sizeof long = %lu\n", sizeof(long));
   printf(" Sizeof long long = %lu\n", sizeof(long long));
   printf(" Sizeof *void = %lu\n", sizeof((void*) &i));

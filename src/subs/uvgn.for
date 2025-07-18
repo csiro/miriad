@@ -37,7 +37,6 @@ c    22jun12 pjt  Fixed some ptrdiff
 c    16jul14 mhw  Add frequency interpolation options
 c    18jul14 mhw  Fix array bounds violations in uvGnPsMa
 c
-c $Id: uvgn.for,v 1.23 2021/06/02 03:56:29 wie017 Exp $
 c***********************************************************************
 
       subroutine uvGnIni(tno1,dogains1,dopass1)

@@ -37,7 +37,7 @@ c	            simultaneously.
 c	  auto      Use the "tcorr" variable to determine whether Tsys
 c	            has been applied or not.
 c	            NOTE: Information needed for options=auto is lost if
-c	            you copy or split a dataset. If you are going to use 
+c	            you copy or split a dataset. If you are going to use
 c	            options=auto, you generally have to do it on the file
 c	            resulting from atlod.
 c         redo      Remove the existing Tsys correction from all IFs and
@@ -48,11 +48,10 @@ c                   This option cannot be combined with the previous ones.
 c         inverse   Apply the inverse correction for redo
 c         scale     Scale the existing tsys values by the value given by
 c                   the parameter factor (leaves data unchanged)
-c         nocal     Do not apply the gains file. 
+c         nocal     Do not apply the gains file.
 c         nopass    Do not apply bandpass corrections.
-c         nopol     Do not apply polarization corrections. 
+c         nopol     Do not apply polarization corrections.
 c
-c $Id: attsys.for,v 1.10 2018/12/04 04:02:11 wie017 Exp $
 c--
 c  History:
 c    17jul00 rjs  Original version.
@@ -81,9 +80,7 @@ c
 	logical uvvarUpd
         character versan*72
 c
-	version = versan('attsys',
-     *                   '$Revision: 1.10 $',
-     *                   '$Date: 2018/12/04 04:02:11 $')
+	version = versan('attsys')
 	call keyini
 	call GetOpt(uvflags,doapply,auto,redo,inv,scale)
 	call uvDatInp('vis',uvflags)
@@ -154,7 +151,7 @@ c
               do i=1,n
                 if (tsysif(i).lt.1.or.tsysif(i).gt.nif)
      *	          call bug('f','Invalid tsysif parameter')
-              enddo	
+              enddo
               if (n.lt.nif) then
                 do i=n+1,nif
                   tsysif(i)=tsysif(n)
@@ -181,7 +178,7 @@ c
 	    call uvgetvrr(lVis,'ytsys',ytsys,nants*nif)
             call uvprobvr(lVis,'systemp',type,nst,updated)
 	    call uvgetvrr(lVis,'systemp',systemp,nst)
-            
+
             update=.true.
 	  endif
 c
@@ -205,7 +202,7 @@ c
           if ((redo.or.scale).and.update) then
             k=0
             do i=1,nif
-              do j=1,na 
+              do j=1,na
                 k=k+1
                 if (redo) then
                   nxtsys(k)=xtsys(j+(tsysif(i)-1)*na)
@@ -218,7 +215,7 @@ c
             enddo
             call uvputvrr(lOut,'xtsys',nxtsys,na*nif)
             call uvputvrr(lOut,'ytsys',nytsys,na*nif)
-            call uvputvrr(lOut,'systemp',systemp,nst)      
+            call uvputvrr(lOut,'systemp',systemp,nst)
           endif
 	  call uvwrite(lOut,preamble,data,flags,nchan)
 	  call uvDatRd(preamble,data,flags,MAXCHAN,nchan)
@@ -267,11 +264,11 @@ c
 	    if (redo) then
               if (k.ne.tsysif(k)) then
                 if (inv) then
-                  data(i) = data(i)/sqrt(new_T1T2/T1T2) 
+                  data(i) = data(i)/sqrt(new_T1T2/T1T2)
                 else
-                  data(i) = data(i)*sqrt(new_T1T2/T1T2)               
-                endif  
-              endif      
+                  data(i) = data(i)*sqrt(new_T1T2/T1T2)
+                endif
+              endif
             else if(doapply)then
 	      data(i) = data(i)*sqrt(T1T2)/50.0
 	    else

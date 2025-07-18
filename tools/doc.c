@@ -29,8 +29,6 @@
 *     6feb00  rjs  Support for Perl.
 *    22may06  rjs  Change to appear cygwin.
 *    14jul06  mrc  Get it to compile with 'gcc -Wall' without warnings.
-*
-* $Id: doc.c,v 1.5 2010/04/28 07:36:59 cal103 Exp $
 *****************************************************************************/
 
 #define VERSION "doc: Revision 1.5, 2010/04/28"

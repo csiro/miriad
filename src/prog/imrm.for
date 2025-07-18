@@ -178,7 +178,6 @@ c                    same Y-axis scale, that embraces all sub-plots.
 c                    This option forces each sub-plot to be scaled
 c                    independently.
 c
-c$Id: imrm.for,v 1.11 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -213,9 +212,7 @@ c-----------------------------------------------------------------------
       data nbl /6*0/
       data padummy /-100000.0/
 c-----------------------------------------------------------------------
-      version = versan ('imrm',
-     *                  '$Revision: 1.11 $',
-     *                  '$Date: 2021/06/02 04:45:09 $')
+      version = versan('imrm')
 
 c     Get the inputs.
       call keyini

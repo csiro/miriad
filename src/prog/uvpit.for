@@ -41,7 +41,6 @@ c	  residual The output data-set is the residual visibilities.
 c	           If an output is being created, the default is to make
 c	           this the fitted model.
 c
-c$Id: uvpit.for,v 1.7 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  History:
 c    rjs  13dec90  Original version.
@@ -90,9 +89,7 @@ c  Dynamic memory commons.
 c
 	include 'mem.h'
 c-----------------------------------------------------------------------
-      version = versan ('uvpit',
-     :                  '$Revision: 1.7 $',
-     :                  '$Date: 2021/06/02 04:45:09 $')
+      version = versan('uvpit')
 c
 c  Get the inputs.
 c

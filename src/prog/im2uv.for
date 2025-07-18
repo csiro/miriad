@@ -23,7 +23,6 @@ c@ select
 c       Visibility data selection - only 'uvrange' selection is
 c       supported.  See the help on "select" for more information.
 c
-c$Id: im2uv.for,v 1.6 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -47,9 +46,7 @@ c-----------------------------------------------------------------------
       integer   nextpow2
       character versan*72
 c-----------------------------------------------------------------------
-      version = versan('im2uv',
-     *                 '$Revision: 1.6 $',
-     *                 '$Date: 2021/06/02 04:45:09 $')
+      version = versan('im2uv')
 
 c     Get the input parameters.
       call keyini

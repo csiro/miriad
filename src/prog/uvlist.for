@@ -136,9 +136,7 @@ c  Externals.
 c
 	logical uvVarUpd,uvDatOpn
 c
-      version = versan('uvlist',
-     *                 '$Revision: 1.8 $',
-     *                 '$Date: 2013/08/30 01:49:21 $')
+      version = versan('uvlist')
 
 c
 c  Read the inputs.

@@ -133,9 +133,7 @@ c
 c
 c  Get the user parameters.
 c
-	version = versan('gpplt',
-     *                   ' 1.0',
-     *                   ' ')
+	version = versan('gpplt')
 	call keyini
 	call keya('vis',vis,' ')
 	if(vis.eq.' ')call bug('f','Input data-set must be given')

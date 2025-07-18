@@ -20,7 +20,6 @@ c    mc   12mar07  external for ran fixes gfortran problem
 c    pjt  20mar07  merged previous MIR4 fortran standards
 c    mhw  03may16  improve gaussian noise generator
 c
-c $Id: noise.for,v 1.4 2016/05/03 01:26:25 wie017 Exp $
 c************************************************************************
 c
 c  Choose which random number style we are to use. We have three choices:

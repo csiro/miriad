@@ -98,7 +98,6 @@ c@ nran
 c       Throw away NRAN random numbers before starting.  Use this to
 c       continue a set of simulations with different random numbers.
 c
-c$Id: zeesim.for,v 1.4 2021/06/02 04:45:09 wie017 Exp $
 c--
 c
 c  History:
@@ -137,9 +136,7 @@ c-----------------------------------------------------------------------
       data ptispe, ptvspe, ptihat, ptvhat, ptnois, ptnoic, ptbemf
      *   /0, 0, 0, 0, 0, 0, 0/
 c-----------------------------------------------------------------------
-      version = versan('zeesim',
-     *                 '$Revision: 1.4 $',
-     *                 '$Date: 2021/06/02 04:45:09 $')
+      version = versan('zeesim')
 
 c First section: read in data
 c----------------------------

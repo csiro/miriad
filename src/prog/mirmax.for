@@ -5,7 +5,6 @@ c& mhw
 c+       
 c       Simple program to return maximum sizes used on your platform.
 c
-c$Id: mirmax.for,v 1.3 2013/08/30 01:49:21 wie017 Exp $
 c--
 c History:
 c   mhw  23may13 Original version
@@ -17,9 +16,7 @@ c------------------------------------------------------------------------
       character versan*72, itoaf*10
       external versan, itoaf
 c------------------------------------------------------------------------
-      version = versan('mirmax',
-     *                 '$Revision: 1.3 $',
-     *                 '$Date: 2013/08/30 01:49:21 $')
+      version = versan('mirmax')
       
       call output('Miriad''s compiled in limits from maxdim.h')
       call output(' Max Buffer size                 = '//itoaf(MAXBUF))

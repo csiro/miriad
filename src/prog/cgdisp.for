@@ -393,20 +393,20 @@ c       one value, the second defaults to that.
 c       Defaults choose scales to fill the page optimally. To default
 c       the first but the second, use 0.0,scale(2)
 c@ comment1
-c       A comment line to add at the bottom of the plot, use quotes 
+c       A comment line to add at the bottom of the plot, use quotes
 c       if the comment includes spaces. The comments will not appear
 c       when options=full is specified.
 c@ comment2
-c       A comment line to add at the bottom of the plot, use quotes 
+c       A comment line to add at the bottom of the plot, use quotes
 c       if the comment includes spaces.
 c@ comment3
-c       A comment line to add at the bottom of the plot, use quotes 
+c       A comment line to add at the bottom of the plot, use quotes
 c       if the comment includes spaces.
 c@ comment4
-c       A comment line to add at the bottom of the plot, use quotes 
+c       A comment line to add at the bottom of the plot, use quotes
 c       if the comment includes spaces.
 c@ comment5
-c       A comment line to add at the bottom of the plot, use quotes 
+c       A comment line to add at the bottom of the plot, use quotes
 c       if the comment includes spaces.
 c@ olay
 c       The name of a file containing a list of overlay descriptions.
@@ -615,7 +615,6 @@ c       ocircle hms dms red_circle no 09 02 14.0 -46 24 36.0 828.0 0 0
 c       color 4
 c       ocircle hms dms blue_circle no 09 01 01.593  -46 38 55.498  439.09 0 0
 c
-c$Id: cgdisp.for,v 1.30 2021/06/03 07:09:31 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -689,9 +688,7 @@ c     Plotting parameters.
       data lwid /1, MAXCON*1, 1, 1/
       data getvsc /.true./
 c-----------------------------------------------------------------------
-      version = versan ('cgdisp',
-     *                  '$Revision: 1.30 $',
-     *                  '$Date: 2021/06/03 07:09:31 $')
+      version = versan ('cgdisp')
 
 c     Get user inputs.
       call inputs(maxchan, MAXLEV, MAXCON, MAXTYP, ltypes, ncon, cin,
@@ -717,7 +714,7 @@ c     axis descriptors.
      *   ngrps, grpbeg, ngrp)
 
 c     Try to allocate memory for images. Make sure we don't get integer4 overflow
-      npixels = (1_8 * win(1)) * win(2) 
+      npixels = (1_8 * win(1)) * win(2)
       call memallox(ipim,  npixels, 'r')
       call memallox(ipnim, npixels, 'i')
       if (vin(1).ne.' ' .and. vin(2).ne.' ') then
@@ -795,7 +792,7 @@ c     Set label displacements from axes.
 c     Work out view port sizes and increments.
       call vpsizcg(dofull, dofid, ncon, gin, vin, 0, bin,
      *   MAXLEV, nlevs, srtlev, levs, slev, nx, ny, cs, xdispl, ydispb,
-     *   gaps, doabut, dotr, wedcod, WEDWID, TFDISP, labtyp, ncomm, 
+     *   gaps, doabut, dotr, wedcod, WEDWID, TFDISP, labtyp, ncomm,
      *   vxmin, vymin, vymax, vxgap, vygap, vxsize, vysize, tfvp, wdgvp)
 
 c     Adjust viewport increments and start locations if equal scales
@@ -2804,7 +2801,7 @@ c     give them bl.
       call keyr('scale', scale(2), scale(1))
       if (scale(1).lt.0.0) scale(1) = 0.0
       if (scale(2).lt.0.0) scale(2) = 0.0
-      
+
       ncomm=0
       if (.not.dofull) then
         call keya('comment1',comments(1),' ')

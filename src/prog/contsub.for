@@ -89,7 +89,6 @@ c       automatically, this may be used to indicate which it is.  Must
 c       be one of 'x', 'y', 'z', 'a', 'b', 'c', or 'd'.
 c       The default is 'z'.
 c
-c$Id: contsub.for,v 1.5 2012/03/13 02:21:33 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -103,9 +102,7 @@ c-----------------------------------------------------------------------
       external  versan
       character versan*72
 c-----------------------------------------------------------------------
-      version = versan('contsub',
-     *                 '$Revision: 1.5 $',
-     *                 '$Date: 2012/03/13 02:21:33 $')
+      version = versan('contsub')
 
       call inputs(lIn, lOut, lCon, nSpec, nChan, algorithm, opts,
      *  contchan)

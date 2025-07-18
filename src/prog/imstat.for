@@ -130,7 +130,6 @@ c@ log
 c       If specified, output is written to the file given by log=
 c       instead of to the terminal.
 c
-c$Id: imstat.for,v 1.10 2015/08/11 06:16:34 wie017 Exp $
 c--
 c  IMSPEC - plots spectra from image data
 c& bpw
@@ -304,9 +303,7 @@ c-----------------------------------------------------------------------
       external  versan
       character versan*72
 c-----------------------------------------------------------------------
-      version = versan('imstat',
-     *                 '$Revision: 1.10 $',
-     *                 '$Date: 2015/08/11 06:16:34 $')
+      version = versan('imstat')
 
       call inputs(lIn,naxis,dim,corners,boxes,cut,counts,beaminfo,
      *  axlabel,device,MAXBOXES)

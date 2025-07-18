@@ -72,9 +72,7 @@ c
 c
 c  Get the input parameters.
 c
-	version = versan('gpboot',
-     *                   '$Revision: 1.9 $',
-     *                   '$Date: 2015/10/29 01:31:30 $')
+	version = versan('gpboot')
 
 c       limit on ratio of scalings for adjacent frequency bins
         fl = 0.1

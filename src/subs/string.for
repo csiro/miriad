@@ -2,7 +2,6 @@ c***********************************************************************
 c  History
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: string.for,v 1.8 2018/10/16 03:41:55 wie017 Exp $
 c***********************************************************************
 
 c* stcat - Concatenate two strings avoiding blank padding.

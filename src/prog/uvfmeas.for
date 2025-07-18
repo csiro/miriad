@@ -103,7 +103,6 @@ c@ feval
 c       A frequency (in GHz) at which to evaluate the fit, and output
 c       the flux density in Jy.
 c
-c$Id: uvfmeas.for,v 1.25 2019/05/07 04:06:41 ste616 Exp $
 c--
 c  History:
 c    jbs  05jan12 Derived from uvspec.
@@ -159,9 +158,7 @@ c
 	character PolsC2P*2
 	character versan*72
 c-----------------------------------------------------------------------
-	version = versan ('uvfmeas',
-     :                    '$Revision: 1.25 $',
-     :                    '$Date: 2019/05/07 04:06:41 $')
+	version = versan('uvfmeas')
 c
 c  Get the input parameters.
 c

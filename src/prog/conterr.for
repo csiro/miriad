@@ -47,7 +47,6 @@ c         shift  Determine an optimum shift of the phase centre to
 c                be applied before the error is evaluated. This
 c                shift will minimise the error in some sense.
 c
-c$Id: conterr.for,v 1.6 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  History:
 c    rjs  28oct93 Original version.
@@ -75,9 +74,7 @@ c-----------------------------------------------------------------------
       character versan*72
       external  hdprsnt, versan
 c-----------------------------------------------------------------------
-      version = versan('conterr',
-     *                 '$Revision: 1.6 $',
-     *                 '$Date: 2021/06/02 04:45:09 $')
+      version = versan('conterr')
 c
 c  Get the input parameters.
 c

@@ -70,7 +70,6 @@ c  CARMA Customizations:
 c
 c  2011-Jul-13  pkgw  Add box(m) shorthand for box(-m,-m,m,m)
 c
-c $Id: boxes.for,v 1.12 2021/06/02 03:12:53 wie017 Exp $
 c--
 c***********************************************************************
 

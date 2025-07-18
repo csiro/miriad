@@ -105,7 +105,6 @@ c         limitmem Limit the amount of memory used. This may give
 c                  a buffer overflow error for complicated expressions.
 c                  Use for simple expressions with very large images.
 c
-c$Id: maths.for,v 1.7 2018/11/29 23:34:06 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -133,9 +132,7 @@ c-----------------------------------------------------------------------
       logical   boxRect, hdprsnt
       character versan*72
 c-----------------------------------------------------------------------
-      version = versan('maths',
-     *                 '$Revision: 1.7 $',
-     *                 '$Date: 2018/11/29 23:34:06 $')
+      version = versan('maths')
 
 c     Get input parameters.
       call keyini

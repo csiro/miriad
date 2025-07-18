@@ -86,7 +86,6 @@ c
 c@ log
 c       The output log file. The default is the terminal.
 c
-c$Id: ellint.for,v 1.8 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  History:
 c    mchw  aug 1982     Original version.
@@ -169,9 +168,7 @@ c
       integer jj, kk, jcount
       real totalj,medsmooth,fmed(maxdim),fmed1(maxdim)
 c-----------------------------------------------------------------------
-      version = versan('ellint',
-     +                 '$Revision: 1.8 $',
-     +                 '$Date: 2021/06/02 04:45:09 $')
+      version = versan('ellint')
 
 c Get inputs.
 c

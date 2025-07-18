@@ -37,7 +37,6 @@ c  Output:
 c    Jo   The 2x2 Jones matrix which is real-valued for the ATCA.
 c    pb   The mean total intensity primary beam response at this point.
 c
-c $Id: atjones.for,v 1.5 2021/06/02 03:12:53 wie017 Exp $
 c-----------------------------------------------------------------------
       include 'mirconst.h'
 

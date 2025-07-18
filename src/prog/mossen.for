@@ -24,7 +24,6 @@ c       edge of mosaiced regions, Miriad does not normally totally
 c       correct for the primary beam beyond a certain point. The default
 c       is that no gain image is formed.
 c
-c$Id: mossen.for,v 1.5 2018/11/29 23:30:11 wie017 Exp $
 c--
 c  History:
 c    rjs   6nov94 Original version.

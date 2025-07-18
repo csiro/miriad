@@ -29,7 +29,6 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: mostab.for,v 1.15 2021/06/02 03:56:29 wie017 Exp $
 c***********************************************************************
 
       subroutine MosCIni

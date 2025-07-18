@@ -84,9 +84,18 @@ add_subdirectory(src)
 add_subdirectory(specdoc)
 add_subdirectory(scripts)
 
+# Optional documentation build
+option(BUILD_GUIDES "Build user and programmer guides" OFF)
+if(BUILD_GUIDES)
+  add_subdirectory(guides)
+endif()
+
 # Install cat directory quietly
 set(CMAKE_INSTALL_MESSAGE LAZY)
 install(DIRECTORY cat DESTINATION .)
+
+# Install LICENSE & README
+install(FILES LICENSE README.md DESTINATION .)
 
 # CPack configuration
 include(InstallRequiredSystemLibraries)

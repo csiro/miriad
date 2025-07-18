@@ -32,7 +32,6 @@ c       value is given, this is used for both channels.  This is also
 c       used to determine the amount of noise in each spectrum.  Default
 c       is to use the original Tsys measurements from the input file.
 c
-c$Id: fakeotf.for,v 1.7 2013/08/30 01:49:21 wie017 Exp $
 c--
 c 21jun05 - tw - created
 c 20jul06 - tw - clean up for MOPS and miriad
@@ -67,9 +66,7 @@ c-----------------------------------------------------------------------
       character hangle*12, rangle*12, versan*72
 
 *--------------------------------------------------------------
-      versn = versan ('fakeotf',
-     :                '$Revision: 1.7 $',
-     :                '$Date: 2013/08/30 01:49:21 $')
+      versn = versan ('fakeotf')
 
 c Get input parameters
       call keyini ()

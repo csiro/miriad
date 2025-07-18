@@ -15,7 +15,6 @@ c       See the Users Manual for instructions on how to specify this.
 c@ incr
 c       Increment to be used along each axis. Default is 1.
 c
-c$Id: imsub.for,v 1.7 2021/06/03 07:09:31 wie017 Exp $
 c--
 c  History:
 c    rjs Dark-ages Original version.
@@ -64,9 +63,7 @@ c-----------------------------------------------------------------------
       character itoaf*1, versan*72
       external  BoxRect, hdprsnt, itoaf, versan
 c-----------------------------------------------------------------------
-      version = versan('imsub',
-     *                 '$Revision: 1.7 $',
-     *                 '$Date: 2021/06/03 07:09:31 $')
+      version = versan('imsub')
 
 c     Get the input parameters.
       call keyini

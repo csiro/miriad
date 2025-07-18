@@ -102,7 +102,6 @@ c         verbose    Give lots of messages during the iterations.  The
 c                    default is to give a one line message at each
 c                    iteration.
 c
-c$Id: pmosmem.for,v 1.8 2018/11/29 23:30:11 wie017 Exp $
 c--
 c  History:
 c    rjs  23nov94  Adapted from MAXEN.
@@ -162,9 +161,7 @@ c-----------------------------------------------------------------------
       character itoaf*4, versan*72
       external  hdprsnt, itoaf, len1, versan
 c-----------------------------------------------------------------------
-      version = versan('pmosmem',
-     *                 '$Revision: 1.8 $',
-     *                 '$Date: 2018/11/29 23:30:11 $')
+      version = versan('pmosmem')
 c
 c  Get and check the input parameters.
 c

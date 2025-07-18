@@ -144,7 +144,6 @@ c	formal errors in each (0.0 if not a free parameter); line 3 has
 c	the values of all three spectral terms; line 4 has the formal
 c	errors in those terms (again 0.0 if not included in the fit).
 c
-c$Id: uvsfit.for,v 1.7 2018/04/03 21:38:22 wie017 Exp $
 c--
 c  History:
 c    dmcc 12jan12  Original version, adapted from uvfit version 14jan05.
@@ -172,9 +171,7 @@ c
 	logical uvDatOpn
         external FUNCTION
 c-----------------------------------------------------------------------
-      version = versan ('uvsfit',
-     :                  '$Revision: 1.7 $',
-     :                  '$Date: 2018/04/03 21:38:22 $')
+      version = versan('uvsfit')
 c
 c  Get the inputs.
 c  Relative to original uvfit, insist on cross-corrlelations with flag 'x'.

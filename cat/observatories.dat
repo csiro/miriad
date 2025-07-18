@@ -48,8 +48,6 @@
 #    28-apr-14 Bob Sault - Change WSRT mount to "EQUATOR" and change comments.
 #			   Additional info for ASKAP.
 #    18-sep-14 Bob Sault - Change evector for ASKAP.
-#
-# $Id: observatories.dat,v 1.8 2021/12/21 22:53:16 wie017 Exp $
 #-----------------------------------------------------------------------------
 
 # Atacama Large Millimeter Array - provisional.

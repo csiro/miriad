@@ -26,7 +26,7 @@
 %  20-jan-91  pjt  fixed a few non-alphabetic errors, included proposed
 %                  polarization stuff from Mel's nov-30 mail message
 %   5-feb-91  pjt  added item list for UV files, cleared up obstype item
-%                  formally calling things RALINT variables, and not 
+%                  formally calling things RALINT variables, and not
 %                  'Hat Creek variables'
 %   7-feb-91  pjt  Clarified a few more variables...
 %  21-feb-91  pjt  added comments from Mel, fixed some margins stuff
@@ -52,7 +52,7 @@ set up ({\it e.g.} correlator set up and observing centres).
 
 Table~\ref{t:vis-items} gives a list of the items that are used to build up a
 \miriad\ uv dataset.
- 
+
 
 \begin{table}
 \caption{\miriad\ items in a uv visibility dataset}
@@ -83,14 +83,14 @@ nchan0      & integer & total number of channels in the bandpass function\\
 \end{center}
 \end{table}
 
-\begin{latexonly}
-The {\em Programmers Guide} contains more detailed 
+%\begin{latexonly}
+The {\em Programmers Guide} contains more detailed
 information on how a visibility
 dataset is constructed, this Appendix only reports which variables can
 \index{visdata, visibility item}
 be found in the item {\tt visdata}. The text item {\tt vartable}
 \index{vartable, visibility item}
-contains an ordered (for quick indexing) list of all the variables which 
+contains an ordered (for quick indexing) list of all the variables which
 exist in the {\tt visdata} item.
 
 A list of all items in a visibility dataset
@@ -188,7 +188,7 @@ coord(2)        \>D     \>nanosec
 \> uv baseline coordinates\\
 \>\>\> {\tt coord} is also known as {\tt preamble(1:2)}\\
 
-corbit		\>R	\>-	
+corbit		\>R	\>-
 \>  Number of correlator bits (Hat Ck)\\
 
 corbw(2)	\>R	\>MHz
@@ -312,7 +312,7 @@ lo1		\>D	\>GHz
 \> First local oscillator (Hat Ck)\\
 \>\>\> {\tt lo1} is in the range 70 GHz - 115 GHz.\\
 
-lo2		\>D	\>GHz	
+lo2		\>D	\>GHz
 \> Second local oscillator (Hat Ck)\\
 
 longitu		\>D	\>radians
@@ -336,17 +336,17 @@ name		\>A     \>-
 
 nants		\>I	\>-
 \> The number of antennas \\
-\>\>\> Following variables use a dimension of {\tt nants}:\\ 
-\>\>\>    antpos(nants, 3)  \\ 
-\>\>\>    focus(nants)  \\ 
-\>\>\>    phaselo[1-2](nants) \\ 
-\>\>\>    phasem1(nants) \\ 
-\>\>\>    systemp(nants, nspect) \\ 
+\>\>\> Following variables use a dimension of {\tt nants}:\\
+\>\>\>    antpos(nants, 3)  \\
+\>\>\>    focus(nants)  \\
+\>\>\>    phaselo[1-2](nants) \\
+\>\>\>    phasem1(nants) \\
+\>\>\>    systemp(nants, nspect) \\
 \>\>\>    wsystemp(nants, nwide) \\
-\>\>\>    temp(nants, ntemp) \\ 
-\>\>\>    tpower(nants, ntpower) \\ 
-\>\>\>    axisrms(2,nants) \\ 
-\>\>\> The antennas are always numbered starting at 1. \\ 
+\>\>\>    temp(nants, ntemp) \\
+\>\>\>    tpower(nants, ntpower) \\
+\>\>\>    axisrms(2,nants) \\
+\>\>\> The antennas are always numbered starting at 1. \\
 
 nbin		\>I	\>-
 \> Total number of pulsar bins.\\
@@ -448,7 +448,7 @@ pntra		\>R or	\>radians
 \> for coordinate definition.\\
 
 
-pol		\>I	\>-	
+pol		\>I	\>-
 \>  Polarization type of the correlation data. Values \\
 \>\>\>follow the AIPS/FITS convention, viz:\\
 \>\>\>\ \ 1: Stokes I\\
@@ -497,7 +497,7 @@ restfreq(nspect) \>D	\>GHz
 sctype	\>A	\>-
 \> Scan type\\
 
-sdf(nspect)	\>D	\>GHz	
+sdf(nspect)	\>D	\>GHz
 \> Change in frequency per channel\\
 
 sfreq(nspect)	\>D	\>GHz
@@ -506,7 +506,7 @@ sfreq(nspect)	\>D	\>GHz
 smonrms		\>R	\>$\mu$m
 \> ATCA seeing monitor rms value\\
 
-source(*)	\>A	\>-	
+source(*)	\>A	\>-
 \>The name of the source \\
 
 systemp		\>R	\>Kelvin
@@ -571,7 +571,7 @@ vsource		\>R	\>\kms
 \> Nominal radial systemic velocity of source.\\
 \>\>\> Positive velocity is away from observer.\\
 
-wcorr(nwide)		\>C     \>-  
+wcorr(nwide)		\>C     \>-
 \> Wideband correlations. The current ordering is:\\
 \>\>\>  wcorr(1:2) are the digital LSB and USB.\\
 \>\>\>  wcorr(3:4) are the analog LSB and USB.\\
@@ -621,4 +621,4 @@ ytsys(nants,nspect)		\>R	\>Kelvin
 \> System temperature of the Y feed (ATCA).\\
 
 \end{tabbing}\normalsize
-\end{latexonly}
+%\end{latexonly}

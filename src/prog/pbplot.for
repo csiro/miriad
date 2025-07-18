@@ -28,7 +28,6 @@ c       PGPLOT device.  Default is no plot.
 c@ log
 c       Log file for listing.  Default is no log file.
 c
-c$Id: pbplot.for,v 1.6 2013/10/24 01:03:53 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -51,9 +50,7 @@ c-----------------------------------------------------------------------
       real      pbder, pbget
       character versan*72
 c-----------------------------------------------------------------------
-      version = versan('pbplot',
-     *                 '$Revision: 1.6 $',
-     *                 '$Date: 2013/10/24 01:03:53 $')
+      version = versan('pbplot')
 
 c     Get input parameters.
       call keyini

@@ -15,7 +15,6 @@ c       Extra processing options.  Possible values are:
 c         brief   Give one line description of each file.
 c         full    Several line description of each file (default).
 c
-c$Id: prthd.for,v 1.10 2012/03/02 06:13:02 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -34,9 +33,7 @@ c-----------------------------------------------------------------------
       logical   hdprsnt
       character versan*72
 c-----------------------------------------------------------------------
-      version = versan('prthd',
-     *                 '$Revision: 1.10 $',
-     *                 '$Date: 2012/03/02 06:13:02 $')
+      version = versan('prthd')
 
 c     Get input parameters.
       call keyini

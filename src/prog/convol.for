@@ -78,7 +78,6 @@ c@ sigma
 c       When doing devonvolution (options=divide), this gives a noise
 c       parameter. Default is 0.
 c
-c$Id: convol.for,v 1.13 2018/12/05 23:26:16 wie017 Exp $
 c--
 c  History:
 c    rjs,mchw 18aug89 Converted from RESTORE.
@@ -135,9 +134,7 @@ c-----------------------------------------------------------------------
       character itoaf*8, versan*72, cellscal*8
       external  boxrect, itoaf, keyprsnt, versan
 c-----------------------------------------------------------------------
-      version = versan('convol',
-     *                 '$Revision: 1.13 $',
-     *                 '$Date: 2018/12/05 23:26:16 $')
+      version = versan('convol')
 c
 c  Get the input parameters.
 c

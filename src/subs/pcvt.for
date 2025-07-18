@@ -11,7 +11,6 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: pcvt.for,v 1.9 2012/02/15 06:36:55 cal103 Exp $
 c***********************************************************************
 
       subroutine pCvtInit(coObj1d, coObj2d)

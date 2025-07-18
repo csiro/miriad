@@ -300,7 +300,6 @@ c       already exists, new models are appended to it.  The columns of
 c       the file are the slice number, the model peak, centre, FWHM,
 c       baseline offset and baseline slope.
 c
-c$Id: cgslice.for,v 1.15 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  Notes:
 c   SLice abcissa values are still in linear world coordiantes as
@@ -367,9 +366,7 @@ c-----------------------------------------------------------------------
       data dmm, dunsl, gaps /1e30, -1e30, -1.0, .false., .false./
       data xdispls, ydispbs /3.5, 3.5/
 c-----------------------------------------------------------------------
-      version = versan ('cgslice',
-     *                  '$Revision: 1.15 $',
-     *                  '$Date: 2021/06/02 04:45:09 $')
+      version = versan ('cgslice')
 
 c     Get user inputs.
       call inputs(NLTYPE, ltype, MAXLEV, in, ibin, jbin, kbin,

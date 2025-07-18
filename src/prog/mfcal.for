@@ -83,7 +83,6 @@ c                   fluxscale above 11 GHz.
 c                   See the help on "oldflux" for more information.
 c@ tol
 c	Solution convergence tolerance. Default is 0.001.
-c$Id: mfcal.for,v 1.21 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  History:
 c    rjs   8jul92 Original version.

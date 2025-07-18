@@ -233,7 +233,6 @@ c       Interpolation tolerance.  Tolerate an error of the specified
 c       amount in converting pixel locations in the input to the output.
 c       Must be less that 0.5.  The default is 0.05.
 c
-c$Id: regrid.for,v 1.19 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -275,9 +274,7 @@ c     Projection codes.
      *  'cod', 'coo', 'sfl', 'gls', 'par', 'mol', 'ait', 'bon',
      *  'pco', 'tsc', 'csc', 'qsc', 'hpx'/
 c-----------------------------------------------------------------------
-      version = versan ('regrid',
-     *                  '$Revision: 1.19 $',
-     *                  '$Date: 2021/06/02 04:45:09 $')
+      version = versan('regrid')
 
 c     Get the input parameters.
       call keyini

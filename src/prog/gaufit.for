@@ -229,7 +229,6 @@ c@ log
 c       If the name of a file is given, the results of the fitting are
 c       written to this file instead of to the terminal
 c
-c$Id: gaufit.for,v 1.13 2013/01/29 03:09:28 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -291,9 +290,7 @@ c-----------------------------------------------------------------------
       external  versan
       character versan*72
 c-----------------------------------------------------------------------
-      version = versan ('gaufit',
-     *                  '$Revision: 1.13 $',
-     *                  '$Date: 2013/01/29 03:09:28 $')
+      version = versan('gaufit')
 
       call inputs(units,prfinfo,runs,ngauss,limlist,cmpsort,prnm)
       call work(units,prfinfo,runs,ngauss,limlist,cmpsort,prnm)

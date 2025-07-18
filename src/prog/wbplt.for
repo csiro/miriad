@@ -79,7 +79,6 @@ c                 a triangular weight function to the lag domain
 c       flag0     Filter on channel 0 for wbcorr data
 c       avall     Average all frequency channels
 c
-c$Id: wbplt.for,v 1.3 2010/04/30 08:23:28 cal103 Exp $
 c--
 c  History:
 c    lss  14sep02 Original version copied from calred.

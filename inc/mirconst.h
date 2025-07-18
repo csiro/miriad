@@ -6,7 +6,6 @@ c    jm  18dec90  Original code.  Constants taken from the paper
 c                 "The Fundamental Physical Constants" by E. Richard
 c                 Cohen and Barry N. Taylor (PHYICS TODAY, August 1989).
 c
-c $Id: mirconst.h,v 1.3 2018/11/15 23:31:35 wie017 Exp $
 c ----------------------------------------------------------------------
 c  Pi.
       double precision DPI, DPI_2, DPI_4, DTWOPI

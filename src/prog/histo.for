@@ -72,9 +72,7 @@ c
 c
 c  Open the input file, and make sure that I can handle it.
 c
-        version = versan('histo',
-     *                   '$Revision: 1.2 $',
-     *                   '$Date: 2018/11/29 23:30:11 $')
+        version = versan('histo')
 	call keyini
 	call keya('in',file,' ')
 	if(file.eq.' ')call bug('f','Input file must be given')

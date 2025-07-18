@@ -39,8 +39,6 @@
        05-nov-04  jwr	changed file sizes from size_t to off_t
        02-jan-05  rjs   Correct type of hreada/hwritea "length" parameter. Tidy.
        29-feb-15  mhw   Avoid storing gains table in header (readback incorrect)
-
- $Id: hio.c,v 1.8 2015/02/19 00:27:52 wie017 Exp $
 */
 
 
@@ -79,7 +77,7 @@ typedef struct {          /* buffer for I/O operations */
   char   *buf;
 } IOB;
 
-typedef struct item {	
+typedef struct item {
   char *name;
   int handle,flags,fd,last;
   off_t size;
@@ -1156,7 +1154,7 @@ private void hcheckbuf_c(ITEM *item,off_t next,int *iostat)
 
 /* Open a file if needed. Avoid storing gains in the header */
 
-  if(item->fd == 0 && 
+  if(item->fd == 0 &&
      (item->bsize > CACHESIZE || !strcmp(item->name,"gains")) &&
      !(item->flags & ITEM_NOCACHE)){
     t = item->tree;

@@ -133,7 +133,6 @@ c    mhw  02jul12  Read/write of images with dimensions up to MAXDIM
 c    rjs  16feb13  Support really large FITS files (>200GB)
 c    mhw  31may21  Clean up scalar/array arguments
 c
-c $Id: fitsio.for,v 1.14 2021/06/02 04:03:07 wie017 Exp $
 c***********************************************************************
 
 c* FxyOpen -- Open a FITS image file.

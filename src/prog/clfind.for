@@ -29,7 +29,6 @@ c@ nmin
 c     Minimum number of pixels in each clump.
 c     Any clumps with fewer pixels are rejected (default=4).
 c
-c$Id: clfind.for,v 1.11 2021/06/02 04:45:09 wie017 Exp $
 c--
 c       this used to be a parameter, but - as discussed in the paper -
 c       we don't want users to mess with this. (:-)
@@ -83,9 +82,7 @@ c-----------------------------------------------------------------------
 
       ptrdiff   Ia, Ipos, Ipos1, Ireg, It
 c-----------------------------------------------------------------------
-      version = versan('clfind',
-     *                 '$Revision: 1.11 $',
-     *                 '$Date: 2021/06/02 04:45:09 $')
+      version = versan('clfind')
 
 c     Get the parameters from the user.
       call keyini

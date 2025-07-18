@@ -43,7 +43,6 @@ c                      single plane, average the input images in
 c                      frequency, instead of producing a cube
 c                      containing all planes.
 c
-c$Id: imcomb.for,v 1.12 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  History:
 c    rjs  29nov94 Original version.
@@ -81,9 +80,7 @@ c-----------------------------------------------------------------------
       character stcat*80, versan*72
       external  stcat, versan
 c-----------------------------------------------------------------------
-      version = versan ('imcomb',
-     *                  '$Revision: 1.12 $',
-     *                  '$Date: 2021/06/02 04:45:09 $')
+      version = versan('imcomb')
 c
 c  Get the inputs.
 c

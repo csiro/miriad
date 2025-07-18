@@ -24,7 +24,6 @@ c       Output log file.  Default is "hermes.log".
 c@ out
 c       Output image.  Units JY/PIXEL.  No default.
 c
-c$Id: hermes.for,v 1.7 2013/08/30 01:49:21 wie017 Exp $
 c--
 c  History:
 c    D.Mitchell 01Jun89  Initial version.
@@ -45,9 +44,7 @@ c-----------------------------------------------------------------------
 
       data row /MAXDIM*0.0/
 c-----------------------------------------------------------------------
-      version = versan ('hermes',
-     *                '$Revision: 1.7 $',
-     *                '$Date: 2013/08/30 01:49:21 $')
+      version = versan('hermes')
 c
 c  Get the input parameters.
 c

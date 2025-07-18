@@ -34,7 +34,6 @@ c       ambiguity is needed.
 c         sum       Produce sum rather than average of pixels in
 c                   each bin
 c
-c$Id: imbin.for,v 1.10 2021/06/02 04:45:09 wie017 Exp $
 c--
 c
 c  History:
@@ -73,9 +72,7 @@ c     Externals.
 
       data opts /'sum     '/
 c-----------------------------------------------------------------------
-      version = versan ('imbin',
-     *                  '$Revision: 1.10 $',
-     *                  '$Date: 2021/06/02 04:45:09 $')
+      version = versan('imbin')
 
       do i = 1, MAXNAX
         blc(i) = 1

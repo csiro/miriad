@@ -28,7 +28,6 @@ c@ width
 c        The number of channels over which to smooth.  Must be an odd
 c        number.  Default is 3.
 c
-c$Id: hanning.for,v 1.7 2016/09/14 03:44:47 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -53,9 +52,7 @@ c-----------------------------------------------------------------------
 
       data axC /'xyzabcd'/
 c-----------------------------------------------------------------------
-      version = versan('hanning',
-     *                 '$Revision: 1.7 $',
-     *                 '$Date: 2016/09/14 03:44:47 $')
+      version = versan('hanning')
 
 c     Get and check the inputs.
       call keyini

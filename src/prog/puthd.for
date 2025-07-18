@@ -51,9 +51,7 @@ c-----------------------------------------------------------------------
       integer   len1
       character versan*72
 c-----------------------------------------------------------------------
-      version = versan ('puthd',
-     *                  '$Revision: 1.4 $',
-     *                  '$Date: 2021/03/08 00:37:26 $')
+      version = versan('puthd')
 
       call keyini
       call keya('in',in,' ')

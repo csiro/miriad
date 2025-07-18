@@ -3,8 +3,6 @@
 # Usage: source MIRRC
 #-----------------------------------------------------------------------------
 # Set Miriad environment variables.
-#
-# $Id: MIRRC.in,v 1.8 2020/10/12 03:54:35 mci156 Exp $
 #-----------------------------------------------------------------------------
 # Miriad root directory set by configure or otherwise.
   setenv MIR @MIRROOT@

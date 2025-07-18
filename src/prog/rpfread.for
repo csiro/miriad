@@ -27,7 +27,6 @@ c       Extra processing options.
 c       'brief'  Output a one-line summary for each scan.
 c       'header' Output only the source/frequency header information.
 c
-c$Id: rpfread.for,v 1.12 2010/09/21 23:49:07 cal103 Exp $
 c--
 c History:
 c 19 Feb 2004 by tw.
@@ -91,9 +90,7 @@ c-----------------------------------------------------------------------
       header = present(2)
 
       if (.not.brief) then
-        versn = versan ('rpfread',
-     *                  '$Revision: 1.12 $',
-     *                  '$Date: 2010/09/21 23:49:07 $')
+        versn = versan ('rpfread')
       endif
 
       if (fitsfile.eq.' ') then

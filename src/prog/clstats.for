@@ -98,9 +98,7 @@ c.....dynamic memory pointers
       ptrdiff It,Ic,Im
 c-----------------------------------------------------------------------
 
-      version = versan('clstats',
-     *                 '$Revision: 1.5 $',
-     *                 '$Date: 2021/06/02 04:45:09 $')
+      version = versan('clstats')
 
 c.....Get the parameters from the user.
       call keyini

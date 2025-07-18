@@ -22,7 +22,6 @@ c                 for a start.
 c    rjs  31oct94 Added CnvlExt, plus some comments.
 c    mhw  27oct11  Use ptrdiff type for memory allocations
 c
-c $Id: cnvl.for,v 1.6 2018/11/29 22:50:56 wie017 Exp $
 
 c***********************************************************************
 c* CnvlIniF -- Ready a beam, from a file, for a convolution operation.

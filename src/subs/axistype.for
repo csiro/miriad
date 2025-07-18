@@ -23,7 +23,6 @@ c    label      A nice label for this axis.
 c    value      The value at the plane along this axis.
 c    valstr     value as a formatted string.
 c--
-c $Id: axistype.for,v 1.6 2012/03/02 00:46:56 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'mirconst.h'
 

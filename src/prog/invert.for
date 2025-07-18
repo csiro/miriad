@@ -257,7 +257,6 @@ c       replaced with 0, or to be estimated by linear interpolation of
 c       two adjacent good channels.  See the Users Guide for the merits
 c       and evils of the two approaches.  The default is 'zero'.
 c
-c$Id: invert.for,v 1.29 2021/06/03 07:09:31 wie017 Exp $
 c--
 c  History
 c    rjs        89  Initial version
@@ -439,10 +438,7 @@ c
 c
       data slops/'zero        ','interpolate '/
 c-----------------------------------------------------------------------
-      version = versan ('invert',
-
-     :                  '$Revision: 1.29 $',
-     :                  '$Date: 2021/06/03 07:09:31 $')
+      version = versan('invert')
 c
 c  Get the input parameters. Convert all angular things into
 c  radians as soon as possible!!

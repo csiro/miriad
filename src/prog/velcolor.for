@@ -30,7 +30,6 @@ c       Two values.  Exclude pixels with values in the range clip(1) to
 c       clip(2).  If only one value is given, then exclude -abs(clip) to
 c       +abs(clip).
 c
-c$Id: velcolor.for,v 1.5 2011/07/04 00:59:16 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -49,9 +48,7 @@ c-----------------------------------------------------------------------
       logical   keyprsnt
       character versan*72
 c-----------------------------------------------------------------------
-      version = versan('velcolor',
-     *                 '$Revision: 1.5 $',
-     *                 '$Date: 2011/07/04 00:59:16 $')
+      version = versan('velcolor')
 
 c     Get inputs.
       call keyini

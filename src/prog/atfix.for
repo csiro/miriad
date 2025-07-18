@@ -181,9 +181,7 @@ c
         character*72 versan
 	character*2 itoaf
 c
-	version = versan('atfix',
-     :                   '$Revision: 1.8 $',
-     :                   '$Date: 2021/09/27 23:36:23 $')
+	version = versan('atfix')
 	call keyini
 	call keya('vis',vis,' ')
 	call selInput('select',sels,MAXSELS)

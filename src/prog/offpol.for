@@ -41,7 +41,6 @@ c         new16    Use the measured patterns for 16cm, these have some
 c                  obvious flaws but may give a better indication of the
 c                  current instrumental polaristion
 c
-c$Id: offpol.for,v 1.8 2016/10/28 00:42:38 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -76,9 +75,7 @@ c     Observatory latitude.
       data stokes / 1,   2,   3,   4,   -5,   -6,   -7,   -8 /
       data stokId /'i', 'q', 'u', 'v', 'xx', 'yy', 'xy', 'yx'/
 c-----------------------------------------------------------------------
-      version = versan('offpol',
-     *                 '$Revision: 1.8 $',
-     *                 '$Date: 2016/10/28 00:42:38 $')
+      version = versan('offpol')
 
 c     Get the inputs.
       call keyini

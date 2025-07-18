@@ -22,7 +22,6 @@ c              the maximum pixel value.
 c@ log
 c       Write results to this log file as well as screen.
 c
-c$Id: maxfit.for,v 1.7 2012/02/20 07:36:21 cal103 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -47,9 +46,7 @@ c-----------------------------------------------------------------------
       integer   len1
       character itoaf*2, versan*72
 c-----------------------------------------------------------------------
-      version = versan('maxfit',
-     *                 '$Revision: 1.7 $',
-     *                 '$Date: 2012/02/20 07:36:21 $')
+      version = versan('maxfit')
 
 c     Get inputs.
       call keyini

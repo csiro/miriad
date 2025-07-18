@@ -6,7 +6,7 @@ c: deconvolution
 c+
 c       CCLEAN is a MIRIAD task that performs the complex Steer, Hogbom
 c       or Clark Clean algorithm, which takes a Stokes Q and U
-c       dirty map and beam, and produces two output maps that consist 
+c       dirty map and beam, and produces two output maps that consist
 c       of the Stokes Q and U Clean components.
 c       These outputs can be input to RESTOR to produce a "clean" image.
 c       The model could be from a previous CCLEAN run, or from other
@@ -15,7 +15,7 @@ c
 c       The main difference with the standard Clean is that the search
 c       for a peak is done in linearly polarized intensity.
 c       Full details of the algorithm are found in:
-c       Pratley & Johnston-Hollitt, "An improved method for 
+c       Pratley & Johnston-Hollitt, "An improved method for
 c       polarimetric image restoration in interferometry",
 c       MNRAS, 2016. ArXiv: 1606.01482.
 c	Please acknowledge this work in publications using the code.
@@ -34,7 +34,7 @@ c@ out
 c       The names of the Stokes Q and U output map. The units of the
 c       output will be Jy/pixel.  The files will contain the contribution
 c       of the input models.  They should have a different name to the
-c       input model (if any).  They can be input to RESTOR or CCLEAN 
+c       input model (if any).  They can be input to RESTOR or CCLEAN
 c       (as a model,to do more cleaning)
 c@ gain
 c       The minor iteration loop gain. Default is 0.1.
@@ -45,14 +45,14 @@ c         asym      The beam is asymmetric.  By default CLEAN assumes
 c                   the beam has a 180 degree rotation symmetry, which
 c                   is the norm for beams in radio-astronomy.
 c         pad       Double the beam size by padding it with zeros. This
-c                   will give you better stability if you are daring 
+c                   will give you better stability if you are daring
 c                   enough to CLEAN an area more than half the size
 c                   (in each dimension) of the dirty beam.
 c@ cutoff
 c       CLEAN finishes either when the absolute maximum residual falls
 c       below CUTOFF, or when the criteria described below is
 c       satisfied. The default CUTOFF is 0. It is recommended that the
-c       cutoff is 3 times the rms noise of Stokes Q or U. 
+c       cutoff is 3 times the rms noise of Stokes Q or U.
 c       When two values are given, do a deep clean to the second cutoff
 c       limiting peak finding to the pixels that are already in the
 c       model.
@@ -60,7 +60,7 @@ c@ niters
 c       The maximum number of minor iterations.  The default is 250,
 c       which is too small for all but the simplest of images.  CLEAN
 c       will stop when either the maximum number of iterations is
-c       performed, or the cutoff (see above) is reached. Optional second 
+c       performed, or the cutoff (see above) is reached. Optional second
 c       value will force CCLEAN to report on the level reached and
 c       (for mode=clark) start a new major iteration at least every
 c       niters(2) iterations. This can be useful to avoid overcleaning.
@@ -77,7 +77,6 @@ c@ clip
 c       This sets the relative clip level in Steer mode. Values are
 c       typically 0.75 to 0.9. The default is image dependent.
 c
-c$Id: cclean.for,v 1.3 2018/11/29 23:30:11 wie017 Exp $
 c--
 c  CCLEAN History:
 c    lp  02aug15 - Original version modified from clean.for, v1.13
@@ -138,9 +137,7 @@ c-----------------------------------------------------------------------
 c     Externals.
       character itoaf*8, versan*72
 c-----------------------------------------------------------------------
-      version = versan ('cclean',
-     *                  '$Revision: 1.3 $',
-     *                  '$Date: 2018/11/29 23:30:11 $')
+      version = versan ('cclean')
 c
 c  Get the input parameters.
 c
@@ -417,7 +414,7 @@ c
      *           .or. (maxPres.le.Cutoff) .or. (Niter.ge.MaxNiter(1)))
 c
 c  Check if we want to go into the deep cleaning phase
-c     
+c
          if (.not.more.and..not.deep) then
            if (Cut(2).gt.0.and.Cut(2).lt.Cut(1).and.
      *     .not.(Niter.ge.MaxNiter(1))) then
@@ -541,7 +538,7 @@ c
         enddo
         Drms = sqrt(Drms/n)
       endif
-      
+
       end
 
 c***********************************************************************
@@ -608,10 +605,10 @@ c-----------------------------------------------------------------------
       ptrdiff i
 c-----------------------------------------------------------------------
       do i = 1, n
-        Mask(i)= (qData(i).ne.0.or.uData(i).ne.0) 
+        Mask(i)= (qData(i).ne.0.or.uData(i).ne.0)
       enddo
       end
-      
+
 c***********************************************************************
 
       subroutine GetPatch(lBeam,Patch,maxPatch,PHat,ic,jc)
@@ -1024,7 +1021,7 @@ c
 c  Input/Output:
 c    Niter      Number of Niter iterations.
 c
-c Note: this routine could probably be improved: 
+c Note: this routine could probably be improved:
 c - it is slow and uses too many major iterations (compared to clark)
 c - the residuals oscillate
 c-----------------------------------------------------------------------

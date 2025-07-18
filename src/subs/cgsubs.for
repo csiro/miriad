@@ -37,7 +37,6 @@ c
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
 c
-c $Id: cgsubs.for,v 1.11 2018/11/29 22:50:56 wie017 Exp $
 c***********************************************************************
 
 c* angconCG -- Convert radians to and from seconds of time/arc

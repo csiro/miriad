@@ -37,7 +37,6 @@ C    		  Derived from code in the NSWC library, from code written
 C		  by A.H. Morris.
 C     5nov93 rjs  Adapted to Miriad's needs. Minimal changes.
 C
-C $Id: wpfit.for,v 1.2 2009/08/20 07:13:29 cal103 Exp $
 C------------------------------------------------------------------------
       REAL LAMBDA,C,TEMP,XMIN,XMAX,ZA,ZB,ALPHA
       DOUBLE PRECISION DALPHA,DSUM

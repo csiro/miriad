@@ -135,7 +135,6 @@ c         verbose    Give lots of messages during the iterations.  The
 c                    default is to give a one line message at each
 c                    iteration.
 c
-c$Id: mosmem.for,v 1.10 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  History:
 c    rjs  23nov94  Adapted from MAXEN.
@@ -207,9 +206,7 @@ c-----------------------------------------------------------------------
       character itoaf*4, versan*72
       external  hdprsnt, itoaf, len1, versan
 c-----------------------------------------------------------------------
-      version = versan('mosmem',
-     *                 '$Revision: 1.10 $',
-     *                 '$Date: 2021/06/02 04:45:09 $')
+      version = versan('mosmem')
 c
 c  Get and check the input parameters.
 c

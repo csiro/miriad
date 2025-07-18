@@ -29,7 +29,6 @@ c       function.  The default is the reference frequency of the beam-
 c       cube.  The point-spread function is reasonably independent of
 c       frequency for most spectral line observations.
 c
-c$Id: mospsf.for,v 1.8 2021/06/02 04:45:09 wie017 Exp $
 c--
 c
 c  History:
@@ -59,9 +58,7 @@ c-----------------------------------------------------------------------
       character versan*72
       external  keyprsnt, versan
 c-----------------------------------------------------------------------
-      version = versan('mospsf',
-     *                 '$Revision: 1.8 $',
-     *                 '$Date: 2021/06/02 04:45:09 $')
+      version = versan('mospsf')
 
 c     Get the input parameters.
       call keyini

@@ -131,7 +131,6 @@ c         nocal   Do not apply antenna gain calibration.
 c         nopass  Do not apply bandpass correction.
 c         nopol   Do not apply polarisation leakage correction.
 c
-c$Id: blflag.for,v 1.23 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -163,9 +162,7 @@ c     Data store (48*MAXBUF bytes).
       integer   len1, pgbeg
       character itoaf*10, versan*72
 c-----------------------------------------------------------------------
-      version = versan('blflag',
-     *                 '$Revision: 1.23 $',
-     *                 '$Date: 2021/06/02 04:45:09 $')
+      version = versan('blflag')
 
 c     Get the input parameters.
       call keyini
@@ -204,14 +201,14 @@ c     Allocate memory for getDat.
       call memAlloc(ptDat,  MAXDAT, 'r')
       call memAlloc(pxDat,  MAXDAT, 'r')
       call memAlloc(pyDat,  MAXDAT, 'r')
-      
+
       call memAlloc(pFlags, MAXCHAN, 'l')
       call memAlloc(pNpnt,  MAXCHAN, 'i')
       call memAlloc(pCorr,  MAXCHAN, 'c')
       call memAlloc(pCorr1, MAXCHAN, 'c')
       call memAlloc(pCorr2, MAXCHAN, 'c')
       call memAlloc(pVis,   MAXCHAN, 'c')
-      
+
 
 c     Get the data.
       call getDat(lIn,rms,scalar,nofqaver,xaxis,yaxis,xmin,xmax,
@@ -304,13 +301,13 @@ c     Apply the changes.
         call uvDatCls
       endif
 
-c     Free more memory      
+c     Free more memory
       call memFree(pblDat, MAXDAT, 'i')
       call memFree(pchDat, MAXDAT, 'i')
       call memFree(ptDat,  MAXDAT, 'r')
       call memFree(pxDat,  MAXDAT, 'r')
       call memFree(pyDat,  MAXDAT, 'r')
-      
+
 
       end
 

@@ -66,7 +66,6 @@ c       the linearly polarized intensity spectral index image, and the
 c       second will receive an estimate of the rotation measure (units
 c       of rad/m**2).
 c
-c$Id: mfspin.for,v 1.12 2021/06/02 04:45:09 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -101,9 +100,7 @@ c-----------------------------------------------------------------------
 
       common dat
 c-----------------------------------------------------------------------
-      version = versan('mfspin',
-     *                 '$Revision: 1.12 $',
-     *                 '$Date: 2021/06/02 04:45:09 $')
+      version = versan('mfspin')
 c
 c  Get the input parameters.
 c

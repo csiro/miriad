@@ -107,7 +107,6 @@ c	           If an output is being created, the default is to make
 c	           this the fitted model.
 c         
 c
-c$Id: uvfit.for,v 1.10 2013/08/30 01:49:21 wie017 Exp $
 c--
 c  History:
 c    rjs  13dec90  Original version.
@@ -155,9 +154,7 @@ c
 	logical uvDatOpn
         external FUNCTION,FUNCTION1
 c-----------------------------------------------------------------------
-      version = versan ('uvfit',
-     :                  '$Revision: 1.10 $',
-     :                  '$Date: 2013/08/30 01:49:21 $')
+      version = versan('uvfit')
 c
 c  Get the inputs.
 c

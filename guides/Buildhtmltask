@@ -4,8 +4,6 @@
 #-----------------------------------------------------------------------------
 # Generates an HTML table, ncols wide, of all the task documentation.
 # ordered alphabetically in rows or columns.  Default is rows.
-#
-# $Id: Buildhtmltask,v 1.4 2006/11/13 07:40:38 cal103 Exp $
 #-----------------------------------------------------------------------------
 
 set out = $MIR/html

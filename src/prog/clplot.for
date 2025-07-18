@@ -54,7 +54,6 @@ c@ log
 c       The output log file. The default filename is clplot.log
 c       Results from image analysis are written into the log file.
 c
-c$Id: clplot.for,v 1.15 2013/08/30 01:49:21 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -87,9 +86,7 @@ c     Set default plotting parameters.
 c  real ary(128*128*64)=1048576 reals = 4 MBytes
 c  real ary(256*256*128)=8388608 reals = 32 MBytes
 c-----------------------------------------------------------------------
-      version = versan ('clplot',
-     *                  '$Revision: 1.15 $',
-     *                  '$Date: 2013/08/30 01:49:21 $')
+      version = versan('clplot')
 c
 c  Get the input parameters.
 c

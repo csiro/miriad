@@ -82,7 +82,6 @@ c	  noapply Do not apply the scale factor - just evaluate it.
 c         nospec Do not try to determine and correct the spectral index across
 c                the band.
 c
-c$Id: mfboot.for,v 1.16 2021/06/03 07:09:31 wie017 Exp $
 c--
 c  History:
 c    rjs     15jan06 Original version adapted from plboot.
@@ -123,9 +122,7 @@ c
 	integer plLook,len1
 	character streal*16, versan*72
         
-        version = versan('mfboot',
-     *                   '$Revision: 1.16 $',  
-     *                   '$Date: 2021/06/03 07:09:31 $')
+        version = versan('mfboot')
 c
 c  Get the user input.
 c

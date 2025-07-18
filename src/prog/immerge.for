@@ -97,7 +97,6 @@ c                    match any residual primary beam response in the
 c                    high-resolution image.  This option causes this
 c                    step to be skipped.
 c
-c$Id: immerge.for,v 1.9 2022/01/12 03:58:09 wie017 Exp $
 c--
 c  History:
 c    Refer to the RCS log, v1.1 includes prior revision information.
@@ -131,9 +130,7 @@ c-----------------------------------------------------------------------
       data units/'klambda     ','meters      ','nanoseconds ',
      *           'feet        '/
 c-----------------------------------------------------------------------
-      version = versan('immerge',
-     *                 '$Revision: 1.9 $',
-     *                 '$Date: 2022/01/12 03:58:09 $')
+      version = versan('immerge')
 
       call keyini
       call GetOpt(domerge,dozero,dofeath,doshift,notaper)

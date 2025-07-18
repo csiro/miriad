@@ -87,7 +87,6 @@ c                    fits to ATCA.L and ATCA.S
 c   01dec14   mhw    Reduce repetitive printout & fix compiler warnings
 c   22mar16   mhw    Deal with wide band cubes
 c
-c $Id: pb.for,v 1.21 2016/03/30 00:31:50 wie017 Exp $
 c***********************************************************************
 c* pbList -- List known primary beam types.
 c& rjs
