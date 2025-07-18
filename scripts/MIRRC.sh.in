@@ -45,3 +45,15 @@ else
   PATH="${MIRBIN}:${HOME}/bin:/usr/local/bin:/bin:/usr/bin"
 fi
 export PATH
+
+# Prefix MIRLIB to LD_LIBRARY_PATH
+if [ "${LD_LIBRARY_PATH}" != "" ]
+then
+  _hasit=`echo "$LD_LIBRARY_PATH" | grep -c -F "$MIRBIN"`
+  if [ "$_hasit" = "0" ]
+  then
+    PATH="${MIRLIB}:${LD_LIBRARY_PATH}"
+  fi
+  unset _hasit
+  export LD_LIBRARY_PATH
+fi
