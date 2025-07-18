@@ -39,6 +39,7 @@ cmake --build build --target install
 
 ## Setting up your environment
 ```bash
+cd $HOME/miriad
 . ./MIRRC.sh
 ```
 
