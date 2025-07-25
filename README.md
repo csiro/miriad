@@ -24,7 +24,8 @@ sudo apt install gfortran libx11-dev libpng-dev libreadline-dev
 
 git clone --branch cmake --depth 1  https://github.com/csiro-internal/miriad.git
 cd miriad
-cmake -S . -B build -DCMAKE_INSTALL_PREFIX=$HOME/miriad
+# replace <install_path> with the path to your new Miriad installation (e.g., $HOME/miriad or /opt/miriad)
+cmake -S . -B build -DCMAKE_INSTALL_PREFIX=<install_path>
 cmake --build build --target install
 ```
 You can change the CMAKE_INSTALL_PREFIX to where you would like to install miriad.
@@ -35,7 +36,7 @@ A patched version of PGPLOT is built as part of the Miriad build (as well as RPF
 To build with increased buffer sizes and internal limits, used for processing datasets from arrays with more than 64 antennas, pass the LARGEN=ON option to CMake:
 
 ```bash
-cmake -S . -B build -DCMAKE_INSTALL_PREFIX=$HOME/miriad -DLARGEN=ON
+cmake -S . -B build -DCMAKE_INSTALL_PREFIX=<install_path> -DLARGEN=ON
 cmake --build build --target install
 ```
 Note that this will reduce a few other internal limits to compensate, so only use this for large N arrays.
@@ -51,7 +52,7 @@ to prepare the MIRRC.sh file and, if needed, allow the binaries to be executed.
 
 ## Setting up your environment after installation
 ```bash
-. <install_path>/MIRRC.sh # replace <install_path> with the path to your new Miriad installation
+. <install_path>/MIRRC.sh
 ```
 
 ## Documentation
