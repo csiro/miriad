@@ -2,51 +2,15 @@
 
 \section{Introduction}
 As discussed in Chapter~\ref{c:pltvcon}, there are two basic suites of
-display software for \miriad\ data.  One uses the ATNF Visualisation
-suite, and the other is PGPLOT-based.
+display software for \miriad\ data.  One is PGPLOT-based, the other are external
+tools like \href{https://cartavis.org}{CARTA}.
 
-The ATNF visualisation software, which lies outside the domain of
-\miriad, uses an X-windows based user interface, with pop-up menus, etc.
-It is largely interactive, and tends to be less useful when quantitative
-information is needed. The PGPLOT-based software uses the normal
-\miriad\ user interface, tends to be better suited to hardcopy output,
+The CARTA software is actively developed and the number of things you can
+do with it is rapidly expanding. You may find it supersedes some of the old PGPLOT
+functionality described here. The PGPLOT-based software uses the normal
+\miriad\ user interface, may be better suited to hardcopy output,
 quantitative work, and for more specialised astronomical applications
-(e.g. plotting polarisation vectors).
-
-\section{The ATNF Visualisation Software}
-The ATNF Visualisation software is a suite of tools (outside \miriad) designed
-to display images and data cubes (including \miriad\ images and cubes). See
-Chapter~\ref{c:pltvcon} for more information.
-
-The main visualisation tool of interest in image display is {\tt kvis}.
-This tool allows you to inspect one or two 2- or
-3-dimensional datasets in several ways.  The simplest thing to use it
-for is displaying a dataset.  {\tt kvis}
-supports flexible zooming, special colour
-maps for velocity fields etc.  For 3-dimensional datasets one can play
-the channels -- as well as the RA-VEL and DEC-VEL slices -- of the data
-cube as a movie, in order to get an idea of the 3D structure of the
-emission in the data cube.
-
-{\tt kvis} can load two datasets, which can 
-then be viewed simultaneously in several
-ways, eg. blinking, or by displaying one data set as contour levels on top 
-of the other.  The
-advantage of {\tt kvis} is that one has interactive control over
-zooming, contour levels etc., so it gives more flexibility than
-e.g. \task{cgdisp}.  This mode of {\tt kvis} can be used for
-overlaying a radio-continuum map on an optical image, or the channels
-of an HI data cube on the continuum or an optical image and inspecting
-this interactively.  Note that for the contouring, the two datasets do
-not have to be on the same grid, although they should have a proper coordinate
-system defined.  Also note that the visualisation software can read
-data in {\tt FITS} format so one can load images from e.g. 
-\htmladdnormallink{{\tt skyview}}{https://skview.gsfc.nasa.gov/skyview.html}
-directly and overlay \miriad\ datasets.
-
-{\tt kvis} can also produce full colour postscript output of whatever
-you display.
-
+(e.g. plotting polarisation vectors or complicated overlays).
 
 \section{PGPLOT Device Tasks}
 \label{s:pgplot}
@@ -63,7 +27,7 @@ a laser printer (see Chapter~\ref{c:pltvcon} for details of how to use
 PGPLOT).  For image display, there is a suite of tasks called
 \task{cginit}, \task{cgdisp}, \task{cgcurs}, \task{cgslice}, and
 \task{cgspec}.  We will discuss the first four in this chapter, and
-\task{cgspec} in Chapter~\ref{c:spectra}. 
+\task{cgspec} in Chapter~\ref{c:spectra}.
 
 The `\verb+CG+' tasks attempt to label the plots in the correct non-linear
 axes. Provided the field is not too large, the labelling is good (use
@@ -72,7 +36,7 @@ for very large fields or where the non-linearity is particularly severe (e.g.
 south celestial pole), the `\verb+CG+' tasks will fail to label adequately.
 
 \subsection* {Common Keywords}
-\label{s:cg_common} 
+\label{s:cg_common}
 
 This suite has many common keywords and much common functionality.  We
 describe briefly now some of the common keywords, although not all the
@@ -81,7 +45,7 @@ individual help files to see what each task offers.  Specific uses by
 \task{cgspec} will be described in Chapter~\ref{c:spectra}.  Note that
 minimum match is usually accepted for the value of keywords.  Each
 keyword usually defaults to the same value in all tasks, but you
-should again refer to the help files for details. 
+should again refer to the help files for details.
 
 \begin{itemize}
 
@@ -107,27 +71,27 @@ displayed.
 region of the images for display.  It interacts with the keyword {\tt
 chan} (see below) which allows you to group planes (or channels)
 together onto separate subplots.  The region selected applies to all the
-input images and they must all have the same size on the first 2 axes. 
+input images and they must all have the same size on the first 2 axes.
 However, you can input a mix of 3-D and 2-D images.  If you input more
-than one 3-D image, they must all have the same size on the third axis. 
+than one 3-D image, they must all have the same size on the third axis.
 Any 3-D region selection indicated with the {\tt region} keyword is
 applied only to the 3-D images that you input.  An example of this usage
 would be overlaying a continuum image on each channel of a spectral line
-cube. 
+cube.
 
 \item The keyword {\tt xybin} allows you to spatially bin up (average)
 pixels, or to pick out pixels at regular increments.  This can be very
 handy for displaying large images, especially if you are making a hard
 copy on a postscript printer where the printer resolution does not merit
 retaining the individual pixels.  Using this keyword can make the
-postscript file much smaller and print much faster.    
+postscript file much smaller and print much faster.
 
 \medskip You can bin up the two spatial axes of an image independently, and
 you can enter up to 4 values, 2 for each axis specifying the increment
 and binning size.  As an example, {\tt xybin=4,4,3,1} would bin up the
 image by 4 pixels in the \MM{x} direction and pick out every third pixel
 in the \MM{y} direction.  If the binning size is not unity, it must
-equal the increment. 
+equal the increment.
 
 \item The keyword {\tt chan} is used to allow you to group the planes
 (or channels) that you selected with the keyword {\tt region} onto
@@ -135,24 +99,24 @@ separate subplots of the plotting page.  The first value you give is the
 channel increment to step through the image in.  The second value is the
 number of channels to average, for each sub-plot.  For example, {\tt
 chan=5,3} would average groups of 3 planes together, starting 5 channels
-apart such as 1-3, 6-8, 11-13 and so on. 
+apart such as 1-3, 6-8, 11-13 and so on.
 
 \medskip The channels available are those designated by the {\tt region}
 keyword.  A new group of channels (sub-plot) is started if there is a
 discontinuity in the {\tt region} selected channels (such as {\tt
 region=image(10,20),image(22,30)}.  The combination of the {\tt region}
-and {\tt chan} determines how many sub-plots there will be. 
+and {\tt chan} determines how many sub-plots there will be.
 
 \item The keywords {\tt slev} and {\tt levs} (or {\tt levs1, levs2, levs3}
 in \task{cgdisp} -- it can draw up to 3 contour maps at once) indicate at
 what values the contours should be drawn.  The first value of {\tt slev}
-can be {\tt p} or {\tt a}, indicating percentage or absolute levels. 
+can be {\tt p} or {\tt a}, indicating percentage or absolute levels.
 The second value of {\tt slev} is a scale factor to multiply the contour
 levels given in {\tt levs} by.  For example, {\tt slev=p,1} and {\tt
 levs=-1,1,2,4,8,16} would draw contours at -1\%, 1\%, 2\%, 4\%,
 8\% and 16\% of the peak value in the image.  On the other hand, {\tt
 slev=a,0.001}, {\tt levs=3,5,10} would draw contours at values of
-0.003, 0.005, 0.01. 
+0.003, 0.005, 0.01.
 
 \item The keyword {\tt range} is used to control the way in which pixel
 intensities are mapped onto the colour lookup table of the device for
@@ -163,13 +127,13 @@ which provides an interactive way to alter the lookup tables.
 
 \medskip The first two values indicate the range of pixel values
 (intensities) to map onto the lookup table.  Pixels with values outside
-this range will be represented with the colour of the nearest extremum. 
+this range will be represented with the colour of the nearest extremum.
 Thus, if the image was being displayed with a simple linear black and
 white transfer function on an interactive device, {\tt range=\MM{-0.2},
 \MM{2.0}} would cause all pixels with values below \MM{-0.2} to come out
 black, all pixels with values greater than \MM{2.0} to come out white, and
 all pixels in between that range to have shades of grey from black to
-white. 
+white.
 
 \medskip The third argument of {\tt range} allows you to specify a
 transfer function so that the pixel values can be mapped onto the lookup
@@ -178,14 +142,14 @@ lin,sqr,log,heq} for linear, square root, logarithmic and histogram
 equalisation transfer functions respectively.  Histogram equalisation can be very
 handy for images which have a large dynamic range.  What this does is
 use the device colour levels for pixel values which occur the most
-often. 
+often.
 
 \medskip The fourth argument of {\tt range} is an integer between 1 and
 9 specifying the type of lookup table.  The available tables are 1
 (b\&w), 2 (spectrum colours), 3 (linear pseudo colour), 4 (floating zero
 colour contours), 5 (fixed zero colour contours), 6 (rgb), 7
 (background), 8 (heat) and 9 (absolute b\&w) .  If you enter a negative
-integer, then the reversed lookup table is displayed.   
+integer, then the reversed lookup table is displayed.
 
 \medskip Fixed zero colour contours fix a colour boundary (blue-green)
 at 0 intensity, with 4 colour pairs ([light blue, light green], [dark
@@ -194,7 +158,7 @@ negative of 0.  There are then two more colours (red and white) for the
 remaining positive intensity values.  Once you have arranged the colour
 pairs so that they define the noise level, the red and white colours
 quickly show you the true signal.  You need to use {\tt options=fiddle}
-to get the scaling to the noise level right. 
+to get the scaling to the noise level right.
 
 \medskip Note that in \task{cgdisp}, you can enter a group of 4 values
 for each subplot that is drawn.  This is useful for hardcopy output, as
@@ -203,26 +167,26 @@ subplot.  For example, you may have made a ``cube'' with unlike
 quantities in different planes (total intensity, polarised intensity,
 fractional polarisation, rotation measure etc) and it would be
 impossible to display them all with just one set of 4 values for the
-{\tt range} keyword. 
+{\tt range} keyword.
 
 \medskip The following figure shows the possible colour table types for
 a simple image.  The colour bars or wedges show the differences most
-clearly. 
+clearly.
 
 
-\begin{latexonly}
+%\begin{latexonly}
 \begin{figure}
-\begin{center}\epsfysize=16cm\leavevmode\epsffile{colours.eps}\end{center}
+\begin{center}\includegraphics[height=16cm]{colours.pdf}\end{center}
 \caption{Available Colour Lookup Tables}
 \end{figure}
-\end{latexonly}
-\begin{rawhtml}
-<P><IMG ALIGN=BOTTOM ALT="" SRC="colours.gif"><P>
-\end{rawhtml}
+%\end{latexonly}
+%\begin{rawhtml}
+%<P><IMG ALIGN=BOTTOM ALT="" SRC="colours.gif"><P>
+%end{rawhtml}
 
 
 \item The keyword {\tt device} indicates the PGPLOT device upon
-which the plot will be drawn.  
+which the plot will be drawn.
 
 \item The keyword {\tt nxy} takes two values, which are the number
 of subplots in the \MM{x} and \MM{y} directions on the page (dictated
@@ -260,7 +224,7 @@ Possible values are:
 \item {\tt relghz} for a label in GHz offsets
 
 \item {\tt absnat} for a label in natural units as given
-by the axis label.  
+by the axis label.
 
 \item {\tt relnat} for a label in offset natural coordinates
 
@@ -269,10 +233,10 @@ by the axis label.
 \end{itemize}
 
 \medskip All the offsets are with respect to the reference pixel.  Note
-that you are expected to match your values with the order of the axes. 
+that you are expected to match your values with the order of the axes.
 For example, if you asked for {\tt labtyp=abskms,dms}, it is expected
 that the first two axes of the image are velocity and declination.  You
-will get rude messages if this is not the case. 
+will get rude messages if this is not the case.
 
 \item The keyword {\tt csize} gives you control over the size of
 characters on the plot such as axis labels, or annotation text.
@@ -283,41 +247,41 @@ details on what you can control in which task.
 
 \item The keyword {\tt options} offers a variety of enrichment options
 for each task.  There are a few that are common to most
-of the tasks in this suite. 
+of the tasks in this suite.
 
 \begin{itemize}
 
 
 \item Option {\tt wedge} causes a labelled colour bar or wedge to be
-drawn, showing the mapping between pixel intensity and colour. 
+drawn, showing the mapping between pixel intensity and colour.
 
-\item Option {\tt fiddle} invokes the interactive lookup table fiddler. 
+\item Option {\tt fiddle} invokes the interactive lookup table fiddler.
 This is mouse (or keyboard) driven, and
 instructions are given the in the window from which you invoked the
 task.  Basically, it is tree structured, with one branch to select
 different colour lookup tables, and one branch to modify the transfer
-function.  You can swap between these branches. 
+function.  You can swap between these branches.
 
 \medskip This option allows you to cycle through all of the same colour
 tables offered by keyword {\tt range} (see above), and reverse them if
 desired.  You can cycle through all of the same pre-defined transfer
-functions that are available with keyword {\tt range} (see above). 
+functions that are available with keyword {\tt range} (see above).
 
 \medskip In addition, there is an interactive linear transfer function
 fiddle mode, where you can change the slope and offset of the linear
 transfer function.  When you invoke the different transfer function
 modes, you get a little plot in the bottom right corner showing you what
-the transfer function is doing. 
+the transfer function is doing.
 
 \medskip Note that if you are plotting on a hard-copy device such as a
-postscript file, this option is then activated with keyboard inputs. 
+postscript file, this option is then activated with keyboard inputs.
 You have the usual ability to cycle through lookup tables and transfer
 functions, but you do not get the interactive linear transfer function
 fiddler for obvious reasons.  This gives you the same functionality as
-you could have obtained with the keyword {\tt range}. 
+you could have obtained with the keyword {\tt range}.
 
-\item Option {\tt grid} extends the coordinate ticks into a 
-full grid.  Minor ticks are excluded with this option. 
+\item Option {\tt grid} extends the coordinate ticks into a
+full grid.  Minor ticks are excluded with this option.
 
 \item The option {\tt unequal} instructs the software to fill the
 plotting page maximally.  By default, is tries to make the scales of the
@@ -365,10 +329,10 @@ values] boxes with size proportional to the pixel value) on a PGPLOT
 device.  Up to three contour plots, one pixel map, one vector plot and
 one box plot may be displayed in multi-panel plots of multi-channel
 images.  It also offers a ``mask'' image type, which is not displayed,
-but its blanking mask is applied to all the images that are. 
+but its blanking mask is applied to all the images that are.
 \task{cgdisp} can also display labelled overlay locations (plotted as
 boxes, stars, circles, ellipses, lines or see-through) which may be specified
-from an ASCII text file. 
+from an ASCII text file.
 
 We will just give a few examples of some common things that you might
 like to do with it.
@@ -383,13 +347,13 @@ fiddle loop.  \task{cgdisp} then draws some overlay crosses on the
 plot (the overlay file format is described in the help file) and draws
 the beam size in the bottom right corner of the plot.  The plot is
 annotated with useful information at the bottom and all four axes are
-labelled in arcsecond offsets from the reference pixel. 
+labelled in arcsecond offsets from the reference pixel.
 
 \begin{center}
-\begin{tabular}{|l|l|} 
-\hline 
+\begin{tabular}{|l|l|}
+\hline
 \multicolumn{2}{|c|}{{\bf CGDISP}} \\
-\hline 
+\hline
 in=cena.icln                        & Input image \\
 type=pixel                          & Display as a pixel map \\
 region=quarter                      & Display central quarter of image \\
@@ -414,7 +378,7 @@ break                               & Unset; no contours \\
 csize=1,1,0.8                       & Set overlay character size to 0.8 \\
 scale                               & Unset to fill page \\
 olay=stars.txt                      & Text file containing overlays \\
-\hline 
+\hline
 \end{tabular}
 \end{center}
 
@@ -432,7 +396,7 @@ will be one half of the displayed channel increment (they could of
 course be equal if you wish).  The first cube is contoured via
 percentage levels, the second via absolute levels.  The second cube's
 contours are drawn with a thicker linewidth.  The two cubes could be
-from different spectral-lines, for example. 
+from different spectral-lines, for example.
 
 Finally, a histogram equalised pixel map representation of a continuum
 image is overlaid on each channel sub-plot.  As the output file is a
@@ -444,30 +408,30 @@ interactive fiddle to do these things as the dialogue is keyboard driven
 for non-interactive devices.  In fact, if we had set a transfer function
 via the {\tt range} keyword and then invoked the interactive fiddle, we
 could have applied another transfer function to the already histogram
-equalised image ! 
+equalised image !
 
 The {\tt options} keyword is used to ask for an intensity wedge so that
 the map of colour to intensity can be seen.  It is also used to ask for
 a full coordinate grid on the plot instead of just ticks as well as to
 annotate the plot with information about the images.  Finally it is also
 used to ask for the value of the third axis (usually velocity or
-frequency) to be written in the corner of each subplot. 
+frequency) to be written in the corner of each subplot.
 
 When you ask \task{cgdisp} to display a mix of 2-D and 3-D images, the
 region (keyword {\tt region}) that you specify applies equally to the
 first two dimensions of all images.  However, any third axis region
 information that you give ({\it e.g.} {\tt region=image(10,120)})
-applies only to the 3-D images, and is ignored for the 2-D image. 
+applies only to the 3-D images, and is ignored for the 2-D image.
 Finally, if you ask for more sub-plots than can be fitted on the page,
 then the task will advance to a new page (you will be prompted to hit
 the carriage return key if you are plotting on an interactive device)
-when needed. 
+when needed.
 
 \begin{center}
-\begin{tabular}{|l|l|} 
-\hline 
+\begin{tabular}{|l|l|}
+\hline
 \multicolumn{2}{|c|}{{\bf CGDISP}} \\
-\hline 
+\hline
 in=oh.cube,hcn.cube,cont.icln       & Input images; two cubes and continuum \\
 type=c,c,p                          & Two contours and a pixel map  \\
 region=arcsec,kms,box(-20,-30,20,30)(-100,100) & Display central 40 by 60~arcsec \\
@@ -493,23 +457,23 @@ break                               & Unset \\
 csize=1,0.7                         & Character sizes for axis and velocity labels \\
 scale                               & Unset to fill page \\
 olay                                & Unset for no overlays \\
-\hline 
+\hline
 \end{tabular}
 \end{center}
 
 \item This third example shows how to display a position-velocity image.
 You could produce such an image by reordering a cube with \task{reorder}
-into velocity-x-y order.  You could then look at one or several 
+into velocity-x-y order.  You could then look at one or several
 planes of this cube.   Normally, \task{cgdisp} tries to display
 with equal \MM{x} and \MM{y} scales.  This equality is worked out
 using the linear axis descriptors.   Equal scales are meaningless
 when displaying unlike axes, so you should set {\tt options=unequal}.
 
 \begin{center}
-\begin{tabular}{|l|l|} 
-\hline 
+\begin{tabular}{|l|l|}
+\hline
 \multicolumn{2}{|c|}{{\bf CGDISP}} \\
-\hline 
+\hline
 in=neon.vxy                     & Input vxy cube \\
 type=p                          & Display as a pixel map \\
 region=image(1,16)              & Select first 16 planes, say \\
@@ -531,7 +495,7 @@ break                           & Unset \\
 csize                           & Unset \\
 scale                           & Unset \\
 olay				& Unset \\
-\hline 
+\hline
 \end{tabular}
 \end{center}
 
@@ -552,13 +516,13 @@ leave some of them out.  The default is to draw a vector every second
 pixel and to scale the vectors so that the longest one takes up
 \MM{1/20} of the plot.  You can display any combination of the images
 ({\it e.g.} vectors only), but you must give both the vector position
-angle and amplitude images. 
+angle and amplitude images.
 
 \begin{center}
-\begin{tabular}{|l|l|} 
-\hline 
+\begin{tabular}{|l|l|}
+\hline
 \multicolumn{2}{|c|}{{\bf CGDISP}} \\
-\hline 
+\hline
 in=0823.fp,0823.pa0,0823.i,0823.i   & Input images, order unimportant \\
 type=amp,ang,c     ,p               & Image types \\
 region=arcsec,box(-30,-30,30,30)& Display central 60 by 60~arcsec region \\
@@ -581,14 +545,14 @@ break                               & Unset \\
 csize                               & Unset or fiddle with \\
 scale                               & Unset to fill page \\
 olay                                & Unset for no overlays \\
-\hline 
+\hline
 \end{tabular}
 \end{center}
 
 \item The final example is also polarimetry display.  Displaying
 rotation measure images as a pixel map is sometimes unsatisfying, as the
 sign changes, if any, can be hard to see.  Similarly, contours can be
-pretty useless as the RM distribution is often very unsmooth. 
+pretty useless as the RM distribution is often very unsmooth.
 \task{cgdisp} offers the image type ``box'' whereupon each pixel is
 displayed as a small box.  Positive pixel values are shown as a solid
 box, and negative pixel values as a frame only.  The size of the box is
@@ -597,16 +561,16 @@ useful if you have RMs close to zero.  By default, the boxes are scaled
 so that there is a little gap between adjacent boxes.  You can control
 the boz sizes with the keyword {\tt boxfac} which gives an extra scale
 factor to multiply the box widths.  This keyword also gives the \MM{x} and
-\MM{y} increments (in pixels) across the image at which to plot the boxes. 
+\MM{y} increments (in pixels) across the image at which to plot the boxes.
 
 In this example, we also overlay contours of total intensity.  In
-addition, a global blanking mask is applied to both images. 
+addition, a global blanking mask is applied to both images.
 
 \begin{center}
-\begin{tabular}{|l|l|} 
-\hline 
+\begin{tabular}{|l|l|}
+\hline
 \multicolumn{2}{|c|}{{\bf CGDISP}} \\
-\hline 
+\hline
 in=0823.i,0823.rm,0823.msk          & Input images, order unimportant \\
 type=con,box,mask                   & Image types \\
 region=quarter                      & Display central quarter \\
@@ -630,7 +594,7 @@ break                               & Unset \\
 csize                               & Unset or fiddle with \\
 scale                               & Unset to fill page \\
 olay                                & Unset for no overlays \\
-\hline 
+\hline
 \end{tabular}
 \end{center}
 
@@ -646,7 +610,7 @@ spatial regions that can be output into a text file for use in other
 tasks (using the {\tt region=@{\it file}} facility).  In addition,
 \task{cgcurs} can be used to generate text files in a format suitable
 (almost) for input to \task{cgdisp} and \task{cgspec} as overlay
-files. 
+files.
 
 \task{cgcurs} only displays pixel maps or contour plots, and only one
 image at a time.  You can invoke all of \task{cgcurs}' cursor options in
@@ -659,28 +623,28 @@ lookup table fiddler, read some image values with the cursor, mark their
 locations on the plot, and output them into a text file (called
 `cgcurs.cur') for use as an overlay file in \task{cgdisp}.  In addition,
 the option to evaluate some statistics in a region defined by the cursor
-is also activated. 
+is also activated.
 
-\begin{center} 
-\begin{tabular}{|l|l|} 
-\hline 
-\multicolumn{2}{|c|} {{\bf CGCURS}} \\ 
-\hline 
-in=neon.mom0                  & Input image \\ 
-type=p                       & Display as a pixel map \\ 
+\begin{center}
+\begin{tabular}{|l|l|}
+\hline
+\multicolumn{2}{|c|} {{\bf CGCURS}} \\
+\hline
+in=neon.mom0                  & Input image \\
+type=p                       & Display as a pixel map \\
 region=arcsec,box(-10,-10,10,10) & Display central 20 by 20 arcsec \\
 xybin=1,1,3,1                 & Pick out every third y pixel \\
-chan                          & Unset \\ 
-slev                          & Unset \\ 
+chan                          & Unset \\
+slev                          & Unset \\
 levs                          & Unset \\
-range=\#,\#                   & Image intensity range or unset for full range \\ 
-device=/xs                    & PGPLOT device; must be interactive \\ 
-nxy=1                         & Just one plot \\ 
-labtyp=arcsec,arcsec          & Offset arcsecond labelling \\ 
-options=fiddle,curs,stats,mark,log,cgdisp & Fiddle, cursor and statistics options \\ 
-csize                         & Unset \\ 
-\hline 
-\end{tabular} 
+range=\#,\#                   & Image intensity range or unset for full range \\
+device=/xs                    & PGPLOT device; must be interactive \\
+nxy=1                         & Just one plot \\
+labtyp=arcsec,arcsec          & Offset arcsecond labelling \\
+options=fiddle,curs,stats,mark,log,cgdisp & Fiddle, cursor and statistics options \\
+csize                         & Unset \\
+\hline
+\end{tabular}
 \end{center}
 
 
@@ -691,39 +655,39 @@ file.  In addition, you can display many channels from an image, and
 generate slices differently from each channel.  Like \task{cgcurs},
 \task{cgslice} only displays one image (which could be 3-D of course) at
 a time via a pixel map or a contour plot.   You can save the slice
-locations, values and model fits in text files.  
+locations, values and model fits in text files.
 
 In the example, we make slices from 9 channels of a cube, one channel at
 a time.  We then fit Gaussians plus a baseline to them and output the
-fits into a text file.   
+fits into a text file.
 
-\begin{center} 
-\begin{tabular}{|l|l|} 
-\hline 
-\multicolumn{2}{|c|} {{\bf CGSLICE}} \\ 
-\hline 
-in=1333.icln                  & Input image \\ 
-type=p                        & Display as a pixel map \\ 
+\begin{center}
+\begin{tabular}{|l|l|}
+\hline
+\multicolumn{2}{|c|} {{\bf CGSLICE}} \\
+\hline
+in=1333.icln                  & Input image \\
+type=p                        & Display as a pixel map \\
 region=quarter(1,9)           & Display central quarter of \\
                               & first 9 channels \\
 xybin                         & Unset \\
-chan                          & Unset \\ 
-slev                          & Unset \\ 
+chan                          & Unset \\
+slev                          & Unset \\
 levs                          & Unset \\
-range=\#,\#                   & Image intensity range or unset for full range \\ 
+range=\#,\#                   & Image intensity range or unset for full range \\
 xrange                        & Auto x-range scaling \\
 yrange                        & Auto y-range scaling \\
 device=/xs                    & PGDISP server \\
 nxy=3,3                       & 9 plots on the page \\
 labtyp=hms,dms                & RA and DEC labelling \\
 options=fit,base              & Fit gaussian plus baseline \\
-csize                         & Unset \\ 
+csize                         & Unset \\
 posin                         & Define slices with cursor \\
 posout                        & Do not save slice locations \\
 valout                        & Do not save slice values \\
 modout=1333.model             & Save Gaussian fits in this file \\
-\hline 
-\end{tabular} 
+\hline
+\end{tabular}
 \end{center}
 
 \end{itemize}

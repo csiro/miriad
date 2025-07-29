@@ -1,13 +1,13 @@
 \chapter{General Information}
 
-\begin{latexonly}
-This manual is also available, in hypertext form, on the World
-Wide Web at 
-\begin{verse}
-{\verb+https://www.atnf.csiro.au/computing/software/miriad+.}
-\end{verse}
-This also contains information on retrieving and installing \miriad.
-\end{latexonly}
+%\begin{latexonly}
+%This manual is also available, in hypertext form, on the World
+%Wide Web at
+%\begin{verse}
+%{\verb+https://www.atnf.csiro.au/computing/software/miriad+.}
+%\end{verse}
+%This also contains information on retrieving and installing \miriad.
+%\end{latexonly}
 
 This manual serves as a reference guide for the
 \miriad\ package. It is assumed that the reader has some familiarity
@@ -19,7 +19,7 @@ The manual is split into two basic parts.  The first part (Chapters 2 to 6)
 introduces you to the \miriad\ package and its general concepts.  The second
 part (Chapters 7 to 22), which
 uses a cookbook approach, takes you through the steps of putting your data
-on the local disk and reducing them. 
+on the local disk and reducing them.
 
 The cookbook will describe how to reduce data from both the CABB and pre-CABB
 correlator eras. By default, it should be assumed that the methods described
@@ -33,14 +33,12 @@ with the \miriad\ package, we recommend that you read through Chapters
 
 For those interested, an overview of some of the history and design
 decisions of \miriad, the `standard reference' is: Sault R.J., Teuben P.J.,
-Wright M.C.H., 1995, \htmladdnormallink{``A retrospective view of Miriad''}
-{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1995ASPC...77..433S}
-in {\it Astronomical Data Analysis Software and
-Systems IV},
+Wright M.C.H., 1995, \href{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1995ASPC...77..433S}{``A retrospective view of Miriad''}
+in {\it Astronomical Data Analysis Software and Systems IV},
 ed. R. Shaw, H.E. Payne, J.J.E. Hayes, ASP Conf. Ser., {\bf 77}, 433-436.
 
-Please send any comments or suggestions to\\
-\htmladdnormallink{\verb+miriad@atnf.csiro.au+}{mailto:miriad@atnf.csiro.au}.
+Please send any comments or suggestions to
+\href{mailto:miriad@atnf.csiro.au}{miriad@atnf.csiro.au}.
 
 \section*{Recommended Reading}
 The following books tend to concentrate on the techniques of
@@ -74,46 +72,43 @@ radio telescopes is given in the following books.
 
 \end{itemize}
 
-The following are more specific to the ATCA and the practicalities 
+The following are more specific to the ATCA and the practicalities
 of observing and data reduction.
 
 \begin{itemize}
-\item  
-\htmladdnormallink{
-Journal of Electrical and Electronics Engineering, Australia: Special
-Issue}{https://www.narrabri.atnf.csiro.au/observing/iree.pdf}
+\item
+\href{https://www.narrabri.atnf.csiro.au/observing/iree.pdf}{Journal of Electrical and Electronics Engineering, Australia: Special
+Issue}
 -- The Australia Telescope, Volume 12, Number 2, June 1992.
 
 \item Australia Telescope Compact Array User's Guide \\
-\htmladdnormallink{
-https://www.narrabri.atnf.csiro.au/observing/users\_guide/html/atug.html}
-{https://www.narrabri.atnf.csiro.au/observing/users_guide/html/atug.html}
+\href{https://www.narrabri.atnf.csiro.au/observing/users_guide/html/atug.html}{https://www.narrabri.atnf.csiro.au/observing/users\_guide/html/atug.html}
 
 \end{itemize}
 A large amount of can be found on the ATNF web sites
 \begin{verse}
-  \htmladdnormallink{https://www.atnf.csiro.au}{https://www.atnf.csiro.au}\\
-  \htmladdnormallink{https://www.narrabri.atnf.csiro.au}{https://www.narrabri.atnf.csiro.au}
+  \href{https://www.atnf.csiro.au}{https://www.atnf.csiro.au}\\
+  \href{https://www.narrabri.atnf.csiro.au}{https://www.narrabri.atnf.csiro.au}
 \end{verse}
 
 \section*{Acknowledgements}
-Most of this manual was written by 
-Bob Sault (\htmladdnormallink{rsault@atnf.csiro.au}{mailto:bob.sault@csiro.au}) and
-Neil Killeen (\htmladdnormallink{nkilleen@atnf.csiro.au}{mailto:neil.killeen@csiro.au}).
-Other parts of this manual were written by 
-Peter Teuben (\htmladdnormallink{teuben@astro.umd.edu}{mailto:teuben@astro.umd.edu}
+Most of this manual was written by
+Bob Sault (\href{mailto:bob.sault@csiro.au}{rsault@atnf.csiro.au}) and
+Neil Killeen (\href{mailto:neil.killeen@csiro.au}{nkilleen@atnf.csiro.au}).
+Other parts of this manual were written by
+Peter Teuben (\href{mailto:teuben@astro.umd.edu}{teuben@astro.umd.edu}
 -- University of Maryland),
-Keith Jones (\htmladdnormallink{jones@galaxy.physics.uq.oz.au}{mailto:jones@galaxy.physics.uq.oz.au}
- -- University of Queensland) and 
-Tom Oosterloo (\htmladdnormallink{oosterloo@nfra.nl}{mailto:oosterloo@nfra.nl} 
+Keith Jones (\href{mailto:jones@galaxy.physics.uq.oz.au}{jones@galaxy.physics.uq.oz.au}
+ -- University of Queensland) and
+Tom Oosterloo (\href{mailto:oosterloo@nfra.nl}{oosterloo@nfra.nl}
 -- Netherlands Foundation for Research in Astronomy).
-Jamie Stevens (\htmladdnormallink{Jamie.Stevens@csiro.au}{mailto:Jamie.Stevens@csiro.au})
+Jamie Stevens (\href{mailto:Jamie.Stevens@csiro.au}{Jamie.Stevens@csiro.au})
 
 \newchapter
 \chapter{The User Interface}
 \label{c:iface}
 \section{Introduction}
-This chapter describes the user interfaces to 
+This chapter describes the user interfaces to
 \miriad.
 Each \miriad\ task has a number of parameters which can be specified.  With
 some parameters, you
@@ -122,10 +117,10 @@ the task.  With other parameters, if they are not set, a default value will
 be used, which may or may not be sufficient to run the task successfully.
 
 There are two approaches to running tasks: the command-line approach and
-the front-end (or shell) approach.  
+the front-end (or shell) approach.
 With the command-line approach, you give the \miriad\ command directly
 at the system prompt, in the same way as any other operating system
-command, such as {\tt ls}. 
+command, such as {\tt ls}.
 With the front-end approach, you interact with another program, which
 aids you in forming the command-line to a \miriad\ task.
 
@@ -150,7 +145,7 @@ The usual system prompt will be replaced by the {\tt miriad\%} prompt:
 \begin{verbatim}
    miriad%
 \end{verbatim}
-and {\tt miriad} will read a keyword file, {\tt lastexit}, with 
+and {\tt miriad} will read a keyword file, {\tt lastexit}, with
 \index{lastexit} the values of all
 parameters saved when you last exited {\tt miriad} (see EXIT below).
 This file will be created/read in from your current working directory.
@@ -162,15 +157,15 @@ passed to your host operating system. This means standard commands, such
 as {\tt ls}, are still usable
 and valid.
 
-\subsection*{INP, GO and TASK} 
+\subsection*{INP, GO and TASK}
 
 To inspect the inputs of a task, as well as to select the task, {\it e.g.}
 {\tt histo} type
 \begin{verbatim}
    miriad% inp histo
 \end{verbatim}
-{\tt miriad} will 
-show the parameters of the task along with the values, if any, 
+{\tt miriad} will
+show the parameters of the task along with the values, if any,
 previously set.  For example, if, the first time you run {\tt miriad}, you type:
 \begin{verbatim}
    miriad% inp histo
@@ -179,9 +174,9 @@ previously set.  For example, if, the first time you run {\tt miriad}, you type:
 \begin{verbatim}
    Task:   histo
    in       =
-   region   = 
-   range    =  
-   nbin     = 
+   region   =
+   range    =
+   nbin     =
 \end{verbatim}
 and will replace the {\tt miriad\%} prompt with a task prompt
 \begin{verbatim}
@@ -192,7 +187,7 @@ task {\tt histo} without using {\tt inp} by typing:
 \begin{verbatim}
    miriad% task histo
 \end{verbatim}
-{\tt miriad} will then replace the {\tt miriad\%} prompt with the 
+{\tt miriad} will then replace the {\tt miriad\%} prompt with the
 {\tt histo\%} prompt, but
 the inputs will not be printed out.  Either way
 a parameter can be set with:
@@ -207,11 +202,11 @@ will result in {\tt miriad} replying:
 \begin{verbatim}
    Task:   histo
    in       = gauss
-   region   =  
-   range    =  
-   nbin     =      
+   region   =
+   range    =
+   nbin     =
 \end{verbatim}
-Tasks are run either by typing {\tt go} {\it taskname} at 
+Tasks are run either by typing {\tt go} {\it taskname} at
 the {\tt miriad\%} prompt
 (advisable only if you know you like the inputs) or by typing {\tt go} at the
 {\it taskname}{\tt \%} prompt.  Thus, in the above example, typing:
@@ -220,7 +215,7 @@ the {\tt miriad\%} prompt
 \end{verbatim}
 would result in the task {\tt histo} running with {\tt in=gauss} as the only
 assigned parameter (all the other parameters would be set to their default
-values).  
+values).
 
 Any task can be run regardless of the chosen task, merely by typing:
 \begin{verbatim}
@@ -228,7 +223,7 @@ Any task can be run regardless of the chosen task, merely by typing:
 \end{verbatim}
 {\tt miriad} then executes the task {\tt itemize}
 (using whatever input parameters it finds from the {\tt lastexit} file
-or a previous run) and changes the default 
+or a previous run) and changes the default
 task and prompt to:
 \begin{verbatim}
    itemize%
@@ -277,12 +272,12 @@ the documentation usually contains extra links to other relevant material.
 
 \subsection*{EXIT and QUIT}
 
-{\tt exit} exits {\tt miriad}, and, 
+{\tt exit} exits {\tt miriad}, and,
 if any parameter values have been
 changed from the previous time you ran {\tt miriad}, all parameter values are
-saved in a keyword file {\tt lastexit}.  
+saved in a keyword file {\tt lastexit}.
 The parameter values from this file are read
-in automatically when you next run {\tt miriad}.  
+in automatically when you next run {\tt miriad}.
 {\tt quit} exits {\tt miriad} without
 saving the present parameter values in {\tt lastexit}.  This command is useful
 if you have changed parameter values you do not wish to save.
@@ -335,12 +330,12 @@ revert back to the {\tt miriad} shell.
 
 It is often convenient to assign
 the original default value to the parameter.  This\index{unset, miriad}
-`assignment' is accomplished with the command {\tt unset}.  
+`assignment' is accomplished with the command {\tt unset}.
 For example, if the
 task {\tt histo} had been run with inputs:
 \begin{verbatim}
    in       = gauss
-   region   =  
+   region   =
    range    = 0,1
    nbin     = 10
 \end{verbatim}
@@ -361,8 +356,8 @@ will result in {\tt miriad} replying
 \begin{verbatim}
    Task:   histo
    in       = gauss
-   region   =  
-   range    =  
+   region   =
+   range    =
    nbin     =
 \end{verbatim}
 
@@ -371,12 +366,12 @@ will result in {\tt miriad} replying
 As noted above, when you exit {\tt miriad}, all your inputs will be saved in
 the keyword file {\tt lastexit}. However, you can save and reload your current
 parameters at any time. The\index{save, miriad} command {\tt save}
-writes the current parameter values to a keyword file ({\it taskname}{\tt .def} 
+writes the current parameter values to a keyword file ({\it taskname}{\tt .def}
 if the task
 {\it taskname} has been selected) or to a user-specified file. The parameter
 settings in this keyword
 file (or a user-specified file) can be retrieved using\index{load, miriad}
-the command {\tt load}. 
+the command {\tt load}.
 Note that {\tt save} writes out {\bf all} parameter values, not just those for
 the specific task chosen.
 Example:
@@ -409,9 +404,9 @@ which expect the keyword files to be in the current directory. The \verb+-l+
 flag to {\tt tput} and {\tt tget} changes them to write/read the keyword
 file from the current directory.
 
-\begin{htmlonly}
-\subsection*{Summary of {\tt miriad}\ commands}
-\end{htmlonly}
+%\begin{htmlonly}
+%\subsection*{Summary of {\tt miriad}\ commands}
+%\end{htmlonly}
 
 \begin{table}
 \caption[{\tt Miriad} shell command overview]{{\tt Miriad} shell command overview}
@@ -486,9 +481,9 @@ editing the template, \verb+mirbug+ mails the report.
 \section{Indirect Parameter Input}
 \label{s:atfile}
 It is possible that the length of a parameter value can become
-large (indeed quite huge). In this case, it is convenient to store the 
+large (indeed quite huge). In this case, it is convenient to store the
 parameter \index{@file} value
-in a file and then to use the file name in place of the parameter 
+in a file and then to use the file name in place of the parameter
 value.
 
 To do this, the file name should be preceded by an `at' sign (\verb+@+).
@@ -506,7 +501,7 @@ line (separated by commas). Indeed an \verb+@+ file and other parameter
 values can be intermixed, separated by commas.
 
 The \verb+@+ file can contain many lines. An end-of-line is treated like
-a comma.  
+a comma.
 
 As described in Section~\ref{s:cmdline}, parameter input can
 also be made easier by using the {\tt -f} flag when \miriad\ commands are
@@ -525,7 +520,7 @@ At the system prompt type
 \begin{verbatim}
    % imgen out=gauss
 \end{verbatim}
-In this case, default values are used for all parameters, other 
+In this case, default values are used for all parameters, other
 than {\tt out}. The names of all parameters, and their default values, are
 described in a help file (see below) which is always available on line.
 
@@ -536,8 +531,8 @@ dataset {\tt gauss} that we just created:
 \end{verbatim}
 
 Several parameters can be given on the command line, separated by spaces.
-Often a parameter value consists of several numbers and/or 
-strings. These values 
+Often a parameter value consists of several numbers and/or
+strings. These values
 should be separated by commas. For example:
 \begin{verbatim}
    % histo in=gauss range=0,1 nbins=10
@@ -589,17 +584,17 @@ containing the special characters. For example:
 \end{verbatim}
 
 The command-line interface is quite appropriate for tasks that take relatively
-few parameters, or in 
+few parameters, or in
 shell scripts. However, it is cumbersome when a task has many parameters.
 Here the use of a keyword file comes in handy:
 
-Keyword files \index{keyword, files} are files containing 
-{\tt parameter=value} pairs, one per line, 
+Keyword files \index{keyword, files} are files containing
+{\tt parameter=value} pairs, one per line,
 and can be created with an editor
 (most front-ends to be discussed in the next sections create such {\tt .def}
 files by themselves) and passed to a \miriad\ task using the {\tt -f}
 \index{command line switch}
-command line switch, or flag. Hence the previous example 
+command line switch, or flag. Hence the previous example
 would be equivalent to:
 \begin{verbatim}
    % histo -f histo.def
@@ -617,7 +612,7 @@ need to be escaped or quoted.
 Help on a \miriad\ task can be obtained on the host command line with the
 command {\tt mirhelp}.
 Example:\index{mirhelp}
-\index{help, mirhelp} 
+\index{help, mirhelp}
 \begin{verbatim}
    % mirhelp histo
 \end{verbatim}
@@ -696,7 +691,7 @@ with {\tt srcnam} being successively set to {\tt 1934-638}, {\tt 0823-500}
 and {\tt vela}. The ``things'' inside the brackets are separate by spaces -- the
 C-shell generally likes spaces to separate different components of a command.
 \item Line 10: The body of the loop. The {\tt uvaver} command will be
-executed three times. The shell substitutes the string \verb+${srcnam}+ 
+executed three times. The shell substitutes the string \verb+${srcnam}+
 with the current value of the \verb+srcnam+ variable.
 Thus the {\tt select} parameter being successively
 set with {\tt source(1934-638)}, {\tt source(0823-500)} and

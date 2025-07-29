@@ -4,8 +4,6 @@
 #-----------------------------------------------------------------------------
 # Convert a Miriad doc file to html.  The taskref file lists user guide
 # references to tasks.
-#
-# $Id: doc2html,v 1.6 2009/05/04 05:05:10 cal103 Exp $
 #-----------------------------------------------------------------------------
 
 if ( $#argv < 2 ) then

@@ -1,0 +1,164 @@
+/************************************************************************/
+/*									*/
+/*  A set of FORTRAN-callable routines to allocate and free memory.	*/
+/*                                                                      */
+/*  Strictly speaking this is machine specific, but it should work on   */
+/*  most machines with fairly standard C support.			*/
+/*                                                                      */
+/*  These routines are only called by the memallo{c,p,x} routines if    */
+/*  MAXBUF (blank common memory) has been exhausted, and true dynamic   */
+/*  memory offered by malloc(3) needs to be used. If this interface is  */
+/*  broken and you need to have a working miriad, try setting MAXBUF    */
+/*  really large to fit your problem                                    */
+/*                                                                      */
+/*  History:                                                            */
+/*    26mar92 rjs  Original version.                                    */
+/*    27jul92 rjs  Significant changes, to support 'd','c' and 'l' data */
+/*		   types.						*/
+/*    23dec92 rjs  Use intf2c, to make it more system independent.	*/
+/*     5nov94 rjs  Try to be a bit more pedantic.			*/
+/*    18sep05 rjs  Changes to support different C and FORTRAN ints      */
+/*    29jan06 rjs  Call mallopt on 64-bit address machines on Linux	*/
+/*    13mar06 rjs  Coditional include of malloc.h, which appears not    */
+/*		   to be part of MacOS dialect.				*/
+/*    22jul09 rjs  Support ptrdiff data type.				*/
+/*    21mar12 pjt  Add some -DDEBUG output                              */
+/*    28aug13 mhw  Use ptrdiff for size.				*/
+/*    12may13 pjt  merged two previous CARMA/ATNF versions              */
+/*     8aug14 pjt  sanitized                                            */
+/*                                                                      */
+/************************************************************************/
+
+#include <stddef.h>
+#include <stdlib.h>
+#include <stdio.h>
+#if defined(linux)
+#include <malloc.h>
+#endif
+#include "miriad.h"
+
+/* The size of all data items should be a multiple of the base unit.
+   The base unit is preferably larger than 1 byte to help access
+   larger memory areas on machines better than 32 bit addressing.	*/
+
+#define base_unit sizeof(int)
+
+/************************************************************************/
+fortran integer function mmsize(integer type)
+/**mmsize -- Determine the size of a data element in terms of "int"s.	*/
+/*&rjs                                                                  */
+/*:miscellaneous                                                        */
+/*+ FORTRAN call sequence:
+
+        integer function mmsize(type)
+c
+	implicit none
+        integer type
+
+  This returns the size of a data element in terms of a standard "int".
+
+  Input:
+    type	The data type. Possible values are:
+		  ichar('i')	Normal integer.
+		  ichar('r')	Real.
+		  ichar('d')	Double precision.
+		  ichar('l')    Logical.
+		  ichar('c')    Complex.
+
+  Output:
+    mmsize	An integer giving the size in terms of ints.		*/
+
+/*--                                                                    */
+/*----------------------------------------------------------------------*/
+{
+  int size;
+  switch(type.val){
+    case 'i':	size = sizeof(fort_integer);			break;
+    case 'r':	size = sizeof(fort_real);			break;
+    case 'd':	size = sizeof(fort_double);			break;
+    case 'l':	size = sizeof(fort_logical);	   		break;
+    case 'c':	size = 2*sizeof(fort_real);			break;
+    default:	bug_c('f',"Unrecognised data type, in mmSize");
+  }
+  if(size % base_unit)bug_c('f',"Something wrong in mmSize");
+  return size/base_unit;
+}
+/************************************************************************/
+fortran subroutine mmalloc(ptrdiff ptr,integer data,ptrdiff size)
+/**mmalloc -- Allocate a block of memory.				*/
+/*&rjs                                                                  */
+/*:miscellaneous                                                        */
+/*+ FORTRAN call sequence:
+
+        subroutine mmalloc(ptr,data,size)
+c
+	implicit none
+        ptrdiff ptr
+        ptrdiff size
+	integer data(*)
+
+  This allocates memory on the heap. This returns a FORTRAN index,
+  relative to data(1) of the allocated memory.
+
+  Input:
+    data	The returned index is relative to data(1). That is, if
+		this routine returns index "i", the allocated memory is
+		at data(i).
+    size        Number of integers to allocate.
+
+  Output:
+    ptr		Index to the allocated data. If the allocation fails,
+		an index of zero is returned.				*/
+
+/*--                                                                    */
+/*----------------------------------------------------------------------*/
+{
+  ptrdiff_t offset;
+  fort_ptrdiff t;
+  fort_integer *s;
+  static int counter = 1;
+
+#if defined(linux)
+/*  if(sizeof(void *) > sizeof(fort_ptrdiff))mallopt(M_MMAP_MAX,0); */
+  if(sizeof(void *) > sizeof(int))mallopt(M_MMAP_MAX,0);
+#endif
+
+  s = (fort_integer *)malloc( (size_t)(size.val) * (size_t)(base_unit) );
+  *(ptr.addr) = 0;
+  if(s == (fort_integer *)NULL) return;
+  offset = s - data.addr;
+  t = (fort_ptrdiff)offset;
+#ifdef DEBUG
+  printf("MM_DEBUG: s=0x%lx  data=0x%lx count=%d\n",s,data.addr,counter++);
+  printf("MM_DEBUG: t=0x%lx  offset=0x%lx size=%ld\n",t,offset,size.val);
+  printf("          s=%ld data=%ld offset=%ld\n",s,data.addr,offset);
+  printf("          s=%d data=%d offset=%d\n",s,data.addr,offset);
+  printf("          sizeof(fort_ptrdiff)=%ld sizeof(ptrdiff_t)=%ld sizeof(fort_integer)=%ld\n",
+                    sizeof(fort_ptrdiff),    sizeof(ptrdiff_t),    sizeof(fort_integer));
+#endif
+  if(t != offset) bug_c('f',"Some odd form of rounding problem, in mmAlloc");
+  *(ptr.addr) = t+1;
+}
+/************************************************************************/
+fortran subroutine mmfree(integer data)
+/**mmfree -- Free a block of memory.					*/
+/*&rjs                                                                  */
+/*:miscellaneous                                                        */
+/*+ FORTRAN call sequence:
+
+        subroutine mmfree(data)
+        integer data(*)
+
+  This frees up a block of memory allocated with mmalloc.
+
+  Input:
+    data	Pointer to the block of memory to free.			*/
+
+/*--                                                                    */
+/*----------------------------------------------------------------------*/
+{
+#ifdef DEBUG
+  printf("MM_DEBUG: mmfree data=0x%lx\n",data.addr);
+#endif
+  free((char *)(data.addr));
+}

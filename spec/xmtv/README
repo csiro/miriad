@@ -1,4 +1,0 @@
-xmtv is an X-based TV server. It requires X11 revision 5 (you will
-know if you have an earlier version if you get warning messages about
-XtNcursorName). It also requires Athena Widgets (libXaw).
-

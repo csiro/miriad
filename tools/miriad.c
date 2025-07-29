@@ -39,8 +39,6 @@
 /*--                                                                        */
 
 
-#define VERSION_ID "version 1.5, 2007/06/12"
-
 /*****************************************************************************
 *  COMPILE DEFINE OPTIONS:
 *
@@ -117,8 +115,6 @@
 *    LGM's ideas:
 *      - also remember per keyword which program used it, such that they can
 *        be used next to each other
-*
-* $Id: miriad.c,v 1.7 2012/05/20 22:58:02 wie017 Exp $
 *****************************************************************************/
 
 #include <ctype.h>
@@ -138,6 +134,8 @@
 #include <readline/history.h>
 #include <readline/readline.h>
 #endif
+
+#include "version.h"
 
 #ifndef R_OK
 #define R_OK 4
@@ -222,7 +220,7 @@ int main(int ac, char* av[])
   char *argv[MAXARG];
 
   mecho = 0;
-  printf("Miriad shell %s\n",VERSION_ID);
+  printf("Miriad shell %s\n",MIRIAD_VERSION);
 #if defined(INTERRUPT)
   signal(SIGTERM, review);            /* catch interrupts */
   signal(SIGQUIT, review);            /* for review */
@@ -1039,7 +1037,7 @@ void get_vars(char* name)
     argv[2] = s;
     while(*s && *s != '\t' && *s != '\n')s++;
     *s = 0;
-    while (s-->argv[2] && *s ==' ') *s = 0; 
+    while (s-->argv[2] && *s ==' ') *s = 0;
     if(*argv[2])doset(3,argv);
   }
   fclose(fd);

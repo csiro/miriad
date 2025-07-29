@@ -38,7 +38,6 @@
 #       In view of its prevalance, we have settled on '*'.
 #
 # Original: 2010/08/19 MRC (from ancient lore).
-# $Id: mirf,v 1.7 2011/10/21 04:45:28 cal103 Exp $
 #-----------------------------------------------------------------------------
   DETAB=
   LOWER=

@@ -1,8 +1,5 @@
 #!/usr/local/bin/perl
 #
-# $Source: /var/tmp/RrsvEF/cvsroot/miriad-dist/RCS/scripts/web/mirman.pl,v $
-# $Id: mirman.pl,v 1.17 2019/01/10 23:18:37 mci156 Exp $
-#
 # Depends on 'rman' (PolyglotMan - formerly RosettaMan)
 #
 # Set up the environment.

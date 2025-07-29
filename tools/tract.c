@@ -21,7 +21,6 @@
 *    2:  File access error.
 *
 * Original: 1995/02/21 by Mark Calabretta, ATNF
-* $Id: tract.c,v 1.2 2006/10/19 06:16:47 cal103 Exp $
 *---------------------------------------------------------------------------*/
 
 #include <errno.h>

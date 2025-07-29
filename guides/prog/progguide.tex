@@ -17,13 +17,13 @@
 %  The ? modes to SelProbe
 %  memory management
 %  coordinate handling
-
 \nonstopmode
-\documentstyle[html,twoside,makeidx,epsf]{report}
-
+\input latexdefs.inc
+\documentclass{report}
+\usepackage{graphicx}
+\usepackage{makeidx}
 \makeindex
-\input defs.inc
-
+\usepackage[pdftex, colorlinks=true, linkcolor=blue]{hyperref}
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{2.5mm}
 \setlength{\textheight}{245mm}
@@ -35,11 +35,12 @@
 \pagestyle{headings}
 \addcontentsline{toc}{chapter}{Table of Contents}
 \begin{document}
-\begin{latexonly}
-\epsffile{titlepage.eps}
-\null\clearpage
-\null\clearpage
-\end{latexonly}
+\cleardoublepage
+\thispagestyle{empty}
+\vspace*{-1.61in}
+\hspace*{-1.4in}
+\includegraphics[width=\paperwidth,height=\paperheight]{titlepage.pdf}
+\newpage
 \tableofcontents
 
 \newpage
@@ -103,9 +104,9 @@ c   start of multi-line description block
 c@  keyword                                 (for tasks)
 c   multi-line keyword description          (for tasks)
 c<  standard keyword                        (for tasks - deprecated form)
-c-- 
+c--
 \end{verbatim}}
-For FORTRAN, comment lines can begin with either an uppercase or a 
+For FORTRAN, comment lines can begin with either an uppercase or a
 lowercase {\tt c}. In-line documentation in C is analogous, except that
 comment lines begin with a {\tt /*}. Note also that once a
 {\tt /*} is entered, everything until the next {\tt */} is considered
@@ -327,7 +328,7 @@ These routines always return a value, even if it is only the default
 value. To determine if a parameter was actually set by the use, the
 {\tt keyprsnt} routine can be called. This returns {\tt .true.} if a value for
 the keyword still remains. An alternate way to test if a value is still
-present is to use a default which is 
+present is to use a default which is
 clearly illegal (e.g. a blank string for a file name, or 0 for a
 pixel index).
 
@@ -394,7 +395,7 @@ of pixels in an image). All items are accessed by their name (a lower case
 string of up to 8 alphanumeric characters. Underscore and dollar
 characters are to be avoided). Convention dictates the names
 assigned to the various items within a data set. For example, the
-item name ``image'' is always used to store the pixel data of an image, 
+item name ``image'' is always used to store the pixel data of an image,
 ``naxis'' is the number of dimensions in an image, and ``naxis1'' is
 the number of pixels along the first axis of an image. New
 sorts of data items can be invented as the need arises.
@@ -409,7 +410,7 @@ a ``handle'' returned by one of the open routines.
 
 \section{UV Data Sets}\index{uv-data}
 \subsection{General}
-At the very least, a uv data set can be viewed as a sequence of 
+At the very least, a uv data set can be viewed as a sequence of
 correlation
 records, with associated u and v coordinates, time and baseline number.
 Associated with each correlation is a flag, indicating whether the
@@ -504,7 +505,7 @@ allows it to be read again.
 The routines {\tt uvread} and {\tt uvwrite} are routines used to read and
 write the correlation data (and the associated flagging information).
 Here {\tt preamble} is an array of four double precision elements, {\tt data}
-is an array of {\tt n} 
+is an array of {\tt n}
 complex elements, whereas {\tt flags} is an array of {\tt n} logical values.
 {\tt Preamble}, {\tt data} and {\tt flags} are output from {\tt uvread},
 whereas they are input to {\tt uvwrite}. The four elements of
@@ -550,7 +551,7 @@ data are required. {\tt Uvwread} should be called after the call to
 
 The routine {\tt uvwflgwr} is the ``wide'' equivalent of {\tt uvflgwr}.
 That is, by calling {\tt uvwflgwr}, you can overwrite the flags associated
-with the previous call to 
+with the previous call to
 {\tt uvwread} and {\tt uvwwrite}. Note that {\tt uvwflgwr} aborts if no
 flagging file exists.
 
@@ -642,7 +643,7 @@ present in the data-set. Before a variable is first read,
 {\tt length} will be zero, and {\tt update} will be {\tt .false.}.
 
 There is no special routine to return a complete list of the variables
-present in a uv data set, however this information is present in the 
+present in a uv data set, however this information is present in the
 item ``{\tt vartable}''. This is a text file with each line
 consisting of two fields separated by a blank. The first is the ``type''
 (either a, r, d, c, i or j) of the variable, the second is the variables name.
@@ -762,9 +763,9 @@ this particular call. While several processing can be performed
 simultaneously (several calls to {\tt uvset} will be needed to specify them
 all), others are mutually inconsistent. When mutually inconsistent
 steps are requested, the last requested step is honored. Each processing
-step requires further explanation. 
+step requires further explanation.
 \begin{description}
-\item[\verb+object='data'+] This gives operations on the spectral
+\item[\texttt{object='data'}] This gives operations on the spectral
 data. Type {\tt 'channel'} selects the channels to be returned, and possible
 averaging together of the channel data. If the original channels are
 numbers from 1 to $N$, then, by using \verb+type='channel'+, {\tt uvread} will
@@ -792,7 +793,7 @@ If there are fewer than $nchan$ channels, then dummy channels, which are
 flagged as bad, are added. If $nchan$ is specified as 0, then {\tt uvread}
 will return as many channels as possible.
 
-\item[\verb+object='reference'+] The ``reference line'' is a spectral channel,
+\item[\texttt{object='reference'}] The ``reference line'' is a spectral channel,
 or an average of spectral channels, which the main data is divided by. Typically
 the reference line would be a strong point source (e.g. a maser). The resultant
 data is essentially normalized and shifted, but it also has atmospheric-based
@@ -800,19 +801,19 @@ and instrument-base calibration problems removed. The extra parameters needed
 to describe the reference line is the same as for \verb+object='data'+, except
 that the number of channels, and the increment is ignored (there is only ever
 one reference line). The default is not to have a reference line.
-\item[\verb+object='coord'+] This sets the
+\item[\texttt{object='coord'}] This sets the
 units of the $u$ and $v$ coordinates returned in the preamble. Using
 {\tt 'wavelength'} or {\tt 'nanosec'} sets the units of the returned $u$
 and $v$. For {\tt 'wavelength'}, the sky frequency used is that of the first
 channel returned. The default value is {\tt 'nanosec'}.
-\item[\verb+object='planet'+] This causes 
+\item[\texttt{object='planet'}] This causes
 the $u$ and $v$ coordinates to be scaled and rotated, and the correlation
 values to be scaled,
 to adjust for changes when observing planets.
 The parameters {\tt plmaj, plmin} and {\tt plangle} give the reference
 size (arcseconds) and position angle (degrees) of the planet. If the reference
 size is 0, then the size of the first selected data record is used.
-\item[\verb+object='selection'+] This gives extra control over the uv
+\item[\texttt{object='selection'}] This gives extra control over the uv
 selection process (see \ref{sect:select}). Currently there is only
 one possible type, {\tt 'amplitude'}, which enables or disables the
 amplitude selection process. If the argument {\tt n} is positive, then
@@ -833,7 +834,7 @@ amplitude selection is not applied.
 \label{t:uvset-new}
 \end{table}
 \begin{description}
-\item[\verb+object='corr'+]
+\item[\texttt{object='corr'}]
 The uv routines allow the correlation data to be stored on disk, either
 as floating point numbers, or as 16 bit integers with an associated scale
 factor. The 16 bit format roughly halves the disk space required, but slows
@@ -844,7 +845,7 @@ can be used to override this rule. To be of use, it must be called before
 the first call to {\tt uvwrite}. The {\tt type} argument is a single
 character, being {\tt `r'} or {\tt `j'}, which instructs floating
 point or scaled integers, respectively, to be used.
-\item[\verb+object='data'+] This conrtols whether {\tt UVWRITE} writes the
+\item[\texttt{object='data'}] This conrtols whether {\tt UVWRITE} writes the
 data to the {\tt corr} or {\tt wcorr} variable. The default is to write it
 to the {\tt corr} item (i.e. it assumes that the data is spectral, rather
 than continuum data).
@@ -954,19 +955,19 @@ string indicating the information that is desired. The argument {\tt data}
 is a double precision array, containing the returned information.
 Possible values for {\tt object} are:
 \begin{description}
-\item[\verb+'restfreq'+] {\tt Data} contains the rest frequency (GHz) for
+\item[\texttt{'restfreq'}] {\tt Data} contains the rest frequency (GHz) for
 each channel returned by {\tt uvread}.
-\item[\verb+'velocity'+] {\tt Data} contains the velocity (km/s) for each
+\item[\texttt{'velocity'}] {\tt Data} contains the velocity (km/s) for each
 channel returned by {\tt uvread}.
-\item[\verb+'frequency'+] {\tt Data} contains the frequency (GHz) of the
+\item[\texttt{'frequency'}] {\tt Data} contains the frequency (GHz) of the
 channel returned by {\tt uvread}, after removing the doppler contribution.
-\item[\verb+'bandwidth'+] {\tt Data} contains the bandwidth (GHz) of each
+\item[\texttt{'bandwidth'}] {\tt Data} contains the bandwidth (GHz) of each
 channel returned by {\tt uvread}.
-\item[\verb+'sfreq'+] {\tt Data} contains the sky frequency (GHz) of each
+\item[\texttt{'sfreq'}] {\tt Data} contains the sky frequency (GHz) of each
 channel returned by {\tt uvread}.
-\item[\verb+'visno'+] {\tt Data} contains a single number, which is the
+\item[\texttt{'visno'}] {\tt Data} contains a single number, which is the
 visibility number (running from 1 upwards) of the last channel read.
-\item[\verb+'amprange'+] {\tt Data} contains three values. The first value
+\item[\texttt{'amprange'}] {\tt Data} contains three values. The first value
 indicate the sort of amplitude selection that was requested for this
 record, and the second and third values give a flux range.
 Possible value of data(1) are -1 (data outside the range [data(2),data(3)]
@@ -1162,7 +1163,7 @@ in all subsequent calls to identify the data set.
 
 {\tt Xyclose} closes the data set.
 
-{\tt Xyread} and {\tt xywrite} read or write a single row of the image. 
+{\tt Xyread} and {\tt xywrite} read or write a single row of the image.
 The row number is given by {\tt index}, and the pixel data is stored in
 {\tt array} (a real array). By default, {\tt xyread} and {\tt xywrite} access
 a row in the first image of a multi-image data set. The routine {\tt xysetpl}
@@ -1493,7 +1494,7 @@ is given by {\tt tin}, to the data set whose handle is {\tt tout}.
 
 The routine {\tt hdprobe} is used to probe the characteristics of an
 item.  The string {\tt descr} returns a brief description of the item
-(intended for people, not programs, to read). If the item consists of a 
+(intended for people, not programs, to read). If the item consists of a
 single value (or string), the description gives the value. Otherwise
 the description gives the type and size of the item (in human readable
 form). The string {\tt type} is one of {\tt 'nonexistent',
@@ -1548,7 +1549,7 @@ extra comment.
 
 \section{Low Level I/O Routines}\index{low-level-i/o}
 All i/o routines described above are built on top of a set of
-low level routines. In \miriad, a ``data set'' is a collection of 
+low level routines. In \miriad, a ``data set'' is a collection of
 named items. Each item is an unstructured, byte addressable collection of data.
 It is up
 to the higher level software to impose some structure to the data items, and
@@ -1587,7 +1588,7 @@ by {\tt hopen}, {\tt dataname} is a string giving the name of the data set,
 and {\tt status} is either {\tt 'old'} (when accessing an old data set)
 or {\tt 'new'} (when creating a data set). {\tt Iostat} is a error
 indicator, being zero if the operation was successful. Because of
-buffering performed by the i/o routines, it is very 
+buffering performed by the i/o routines, it is very
 important to close a data set when it is no longer needed.
 
 Before any item can be read or written, it must be ``opened'' with the
@@ -1598,7 +1599,7 @@ or {\tt 'scratch'} (if an item is opened with {\tt status='scratch'}, an item
 is created, but then destroyed when the item is closed). The outputs from
 {\tt haccess} are firstly a handle, {\tt item}, which is used to perform i/o on
 the item, and secondly a status return, {\tt iostat}. All items should be
-closed down, with {\tt hdaccess}, before the data set as a whole is closed. 
+closed down, with {\tt hdaccess}, before the data set as a whole is closed.
 
 The {\tt hdelete} subroutine deletes an item.
 The integer function {\tt hsize} returns the size of an item in bytes.
@@ -1976,7 +1977,7 @@ This tends to complicate the debugging process. To this end, RATTY
 attempts to make the minimum changes necessary to code to get it to compile.
 Comments and indentation are retained in the output, so that the output
 should
-be nearly as readable as the input. Additionally when 
+be nearly as readable as the input. Additionally when
 conditional compilation directives are avoided, it will be found that much
 code does not need to be preprocessed on a number of compilers.
 
@@ -2045,7 +2046,7 @@ or
 \begin{verbatim}
   #directive
 \end{verbatim}
-Either form can be used, but the `c\#' form is preferable, as 
+Either form can be used, but the `c\#' form is preferable, as
 the directive will be seen as a comment to a standard
 compiler. The directives are:
 \begin{description}

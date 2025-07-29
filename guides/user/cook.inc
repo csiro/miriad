@@ -956,8 +956,8 @@ in a correct fashion.
 The coordinates (and their
 description within the dataset) are treated in a fashion similar
 to \aips\ (see Eric Greisen's \aips\ memo No. 27,
-\htmladdnormallink{``{\it Non-linear coordinate systems in \aips}''}
-{ftp://ftp.aoc.nrao.edu/pub/software/aips/TEXT/PUBL/AIPSMEMO27.PS}).
+\href{ftp://ftp.aoc.nrao.edu/pub/software/aips/TEXT/PUBL/AIPSMEMO27.PS}
+{``{\it Non-linear coordinate systems in \aips}''}).
 
 \section{Image Region of Interest (region)}\label{s:region}
 Most image-related tasks can process a subset of the pixels in an input
@@ -1168,7 +1168,7 @@ Both averaging in frequency and time are performed by \task{uvaver}
 
 \begin{figure}
 \begin{center}
-\epsfxsize=12cm\leavevmode\epsffile{strategy.ps}
+\includegraphics[height=12cm]{strategy.pdf}
 \end{center}
 \caption{ATCA Data Reduction Strategy}
 \label{fig:strategy}
@@ -1313,7 +1313,7 @@ corrections that could have been done more easily right at the start.
 At frequencies above 10 GHz, the opacity of the atmosphere can be significant:
 in mediocre conditions, the signal loss can be 20\% at low elevations. With
 high-frequency data, an atmospheric opacity correction should be applied to
-the data; \task{atlod} will perform this correction if it is passed the 
+the data; \task{atlod} will perform this correction if it is passed the
 {\tt opcorr} option. This option can be safely included for data of any wavelength,
 as it does very little (and certainly does not harm the data) at low frequencies,
 and is completely ignored at 3mm wavelengths, where it is not appropriate.
@@ -1505,7 +1505,7 @@ Typical inputs for \task{atlod} are given below.
 \multicolumn{2}{|c|}{{\bf ATLOD}} \\
 \hline
 in=/dev/nrst0               & Input is either exabyte name\\
-in=2010-02-04_1844.C007	    & or RPFITS file.\\
+in=2010-02-04\_1844.C007	    & or RPFITS file.\\
 out=0823.uv                 & Output visibility data set.\\
 options=birdie,rfiflag,xycorr,opcorr & Normal CABB data options, or\\
 options=birdie,reweight,xycorr	    & Normal old-correlator continuum mode options, or\\
@@ -2144,7 +2144,7 @@ select=			&Normal visibility selection. Only visibilities\\
 \section{Correcting Visibilites}\label{s:atfix}\index{visibility datasets, correcting}
 \index{atfix}
 
-\subsection{Initial ``fixes'' to millimetre data}\label{s:atfix} 
+\subsection{Initial ``fixes'' to millimetre data}\label{s:atfix}
 There are a number of "fixes" that are important for short wavelength ATCA data,
 especially at the 3mm band.
 Note that there is no record in the data
@@ -2157,7 +2157,7 @@ performs the following functions:
 
 \item By default \task{atfix} applies the ``standard'' gain/elevation
 model for the antennas.  You can disable this by using
-\verb+options=nogainel+. 
+\verb+options=nogainel+.
 
 \item By default \task{atfix} corrects for a ``standard'' instrumental phase
 model.  You can disable this with \verb+options=noinst+.
@@ -2165,15 +2165,15 @@ model.  You can disable this with \verb+options=noinst+.
 \item As mentioned in Section~\ref{s:atmosop}, the ATCA uses a paddle to
 measure an above atmosphere system temperature.  The nature of the
 hardware means the measurement is done only typically every 5 to
-30~minutes.  When observing, the ATCA on-line system can either 
+30~minutes.  When observing, the ATCA on-line system can either
 apply a nominal system
 temperature value to the visibility data, or it can apply the actual
-measured system temperature values. When applying these measured values, 
+measured system temperature values. When applying these measured values,
 the on-line system will apply the
-most recent measurement. 
+most recent measurement.
 
 Task \task{atfix} includes an algorithm to interpolate measured
-system temperature values, between measurements, and to correct the 
+system temperature values, between measurements, and to correct the
 visibility data accordingly. In doing this it correctly handles whether
 a nominal temperature or the measured system temperature value was applied to the
 data on-line. The interpolation
@@ -2194,7 +2194,7 @@ On the night of an ATCA reconfiguration, a solution for the antenna
 positions is derived. The practise is to install this solution as
 the ``standard solution''. The on-line system will then use this solution in
 subsequent observations in that array configuration.
-The quality of this solution is important for the 
+The quality of this solution is important for the
 ultimate phase calibration of all data.
 
 Experience has shown that often
@@ -2202,15 +2202,15 @@ the position solution derived at the time of the reconfiguration is not
 necessarily the best possible. For example the solution will depend
 critically on the atmospheric phase stability at the time of the solution,
 and this might be less than ideal on the night of the reconfiguration.
-Consequently, improved solutions will often be derived at a later time. 
+Consequently, improved solutions will often be derived at a later time.
 If improved
 solutions become available, then high-frequency observers should correct their
 data accordingly.
 
-Updated solutions are sometimes stored in parameter files in the 
+Updated solutions are sometimes stored in parameter files in the
 \miriad\ system directory \verb+$MIRCAT+ (or otherwise can be obtained by
 request from ATCA observatory staff, or from
-\htmladdnormallink{https://www.narrabri.atnf.csiro.au/observing/antpos/}{this website}).
+\href{this website}{https://www.narrabri.atnf.csiro.au/observing/antpos/}).
 These solutions
 are distributed via the \miriad\ update mechanism, and
 have file names of the form ``\verb+dantpos.+{\em yymmdd}''. Here
@@ -2220,7 +2220,7 @@ Task \task{atfix} corrects the data for an improved antenna location
 solution via the {\tt dantpos} parameter.
 If an improved solution file is present, you can instruct \task{atfix}\
 to read this
-directly using the indirect parameter input mechanism 
+directly using the indirect parameter input mechanism
 (see Section~\ref{s:atfile}). For example, to use the antenna location
 solution appropriate for a hypothetical array reconfiguration
 that happened on 16 October 2002, use
@@ -2235,7 +2235,7 @@ from this flaw). While this might not seem a serious flaw (who cares about
 the antennas if they are not in use?), the unused antennas
 can still cause shadowing -- true antenna locations are needed
 for shadowing calculation. This was a particular issue with the interim
-3-antenna 3-mm system when observing in compact arrays. 
+3-antenna 3-mm system when observing in compact arrays.
 
 By giving a value to the {\tt array} parameter, \task{atfix} will fill in any
 antenna locations that are missing in the input visibility file.
@@ -2263,7 +2263,7 @@ Typical inputs to \task{atfix} are:
 \multicolumn{2}{|c|}{{\bf ATFIX}} \\
 \hline
 in=vela.uv		& Input visibility dataset.\\
-out=vela.fixed.uv	& Output corrected visibility dataset.\\  
+out=vela.fixed.uv	& Output corrected visibility dataset.\\
 dantpos=@\$MIRCAT/dantpos.021016 & Antenna location correction.\\
 \hline
 \end{tabular}
@@ -2653,7 +2653,7 @@ device=/xs & Specify PGPLOT device \\
 mode=amp & Display amplitude \\
 stokes=xx & Select first linear polarisation, or\\
 stokes=yy & Select second linear polarisation\\
-line & Unset for all channels
+line & Unset for all channels \\
 \hline
 \end{tabular}
 \end{center}
@@ -2712,7 +2712,7 @@ The display can also be changed to enable easier identification of bad data. Pre
 {\tt x} key will subtract the average channel values (which are shown in the bottom wedge)
 from each visibility in the main plot, essentially correcting for any bandpass effects. While
 this subtracting is in effect, the bottom wedge will be outlined in red. To reset this behaviour
-press {\tt x} again - the wedge will return to being outlined in white. The average time 
+press {\tt x} again - the wedge will return to being outlined in white. The average time
 values (shown in the right wedge) can be subtracted by pressing the {\tt d} key in the same manner.
 
 The colour scaling can be changed in various ways. To select for yourself the range to use,
@@ -2748,7 +2748,7 @@ remove all flagging actions on all baselines. Press {\tt ?} to make \task{pgflag
 some information about how many flagging operations have been made during this session.
 
 To exit \task{pgflag} and save all the flagging, press the {\tt q} key. If you want to exit
-\task{pgflag} without applying any of the flagging, press the {\tt a} key. You will be 
+\task{pgflag} without applying any of the flagging, press the {\tt a} key. You will be
 prompted to ensure that you don't exit the task accidentally.
 
 
@@ -3502,14 +3502,11 @@ information.
 
 \subsection{Polarisation}
 Much of the theory here has been borrowed from the memo
-\htmladdnormallink{`AT Polarisation Calibration'}
-{https://www.atnf.csiro.au/observers/memos/d97b7f\~{}1.pdf} (AT Memo 39.3/015).
+\href{https://www.atnf.csiro.au/observers/memos/d97b7f\~{}{`AT Polarisation Calibration'}1.pdf} (AT Memo 39.3/015).
 See that memo for more details.
 A more detailed description of polarimetric interferometry can be found in
-\htmladdnormallink{Hamaker, Bregman \& Sault (1996)}
-{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1996A\%26AS..117..137H}
-and \htmladdnormallink{Sault, Hamaker \& Bregman (1996)}
-{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1996A\%26AS..117..149S}
+\href{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1996A\%26AS..117..137H}{Hamaker, Bregman \& Sault (1996)}
+and \href{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1996A\%26AS..117..149S}{Sault, Hamaker \& Bregman (1996)}
 (A\&AS 117, 137 and A\&AS 117, 149).
 
 Recall from Chapter~\ref{c:visconcepts} that \miriad\ models a feed
@@ -3577,10 +3574,8 @@ thinking of them is the combination of the ellipticity and error in the
 position angle of the polarisation ellipses of each feed.
 
 Incorporating these leakage terms results in fairly gory equations -- see
-\htmladdnormallink{Hamaker, Bregman \& Sault (1996)}
-{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1996A\%26AS..117..137H}
-and \htmladdnormallink{Sault, Hamaker \& Bregman (1996)}
-{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1996A\%26AS..117..149S}
+\href{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1996A\%26AS..117..137H}{Hamaker, Bregman \& Sault (1996)}
+and \href{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1996A\%26AS..117..149S}{Sault, Hamaker \& Bregman (1996)}
 (A\&AS 117, 137 and A\&AS 117, 149) for more details.
 
 \subsection{Atmospheric opacity and system temperature}\label{s:atmosop}
@@ -3609,7 +3604,7 @@ T_{\rm sky} = T_{\rm 0}\left(1-\exp(-\tau/\sin e)\right)
 and the atmospheric transmissivity is $\exp(-\tau/\sin e)$.
 
 In converting correlation coefficients to visibility measurements, we
-can notionally include the effect of the atmospheric 
+can notionally include the effect of the atmospheric
 attenuation either in the effective system efficiency
 factor, or in an effective system temperature.
 The approach used will depend on the calibration scheme
@@ -3623,22 +3618,21 @@ the physical system
 temperature divided by the atmospheric transmissivity. The
 widespread use of above atmosphere system temperatures in millimetre
 astronomy
-follows on because the above atmosphere system temperature can be measured 
+follows on because the above atmosphere system temperature can be measured
 directly! It
 can be deduced
 by periodically flipping an absorber at atmospheric
 temperature in front of the feed system.
 The technique to do this is the so-called ``chopper wheel''
 method (e.g.
-\htmladdnormallink{Ulich 1980}
-{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1980ApL....21...21U}).
+\href{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1980ApL....21...21U}{Ulich 1980}).
 The ATCA uses the chopper wheel method (also called paddle or vane calibration)
 in its 3-mm system
 to determine an above atmosphere
 system temperature.
 
 This measurement will only be done occasionally. That is, unlike the
-centimetre, 12-mm and 7-mm bands, continuous measurement of system temperature 
+centimetre, 12-mm and 7-mm bands, continuous measurement of system temperature
 is not available at 3-mm wavelengths. To partly remedy this, \miriad's \task{atfix}
 includes an algorithm to ``interpolate'' the above-atmosphere
 system temperature measurements
@@ -3646,8 +3640,7 @@ based on changes in telescope elevation and weather.
 
 \subsection{Antenna gain considerations and flux calibration}
 One characteristic of the ATCA dishes is that they are big by 3-mm
-standards. Indeed \htmladdnormallink{van Hoerner (1967)}
-{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1967AJ.....72...35V}
+standards. Indeed \href{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1967AJ.....72...35V}{van Hoerner (1967)}
 has considered the limits to the size
 of an antenna before various effects become significant.
 For construction styles like the ATCA dishes, he suggests that 11m is the
@@ -3661,18 +3654,17 @@ date
 tend to bear this out, with changes in antenna gain of 25\% noted that
 appear to be related to thermal effects.
 Distortion of the dishes by gravity is also significant
-(eg \htmladdnormallink{Subrahmanyan 2005}
-{https://ieeexplore.ieee.org/iel5/8/32084/01492610.pdf?tp=&arnumber=1492610&isnumber=32084}). 
+(eg \href{https://ieeexplore.ieee.org/iel5/8/32084/01492610.pdf?tp=&arnumber=1492610&isnumber=32084}{Subrahmanyan 2005}).
 A gain/elevation
 correction will solve this - to first order at least.
 Because of the way the ATCA panels are set, the antenna gain peaks at
-about 60\degrees\ elevation. 
+about 60\degrees\ elevation.
 
 Note that gravitational
 and thermal distortions are coupled - a perfect correction for these effects
-is never possible. 
+is never possible.
 
-To first order, the gain change will be calibrated out provided the 
+To first order, the gain change will be calibrated out provided the
 phase calibrator is very close to the target source.
 Applying the standard gain/elevation curve to the data as the first step in
 the data reduction will also help.
@@ -3686,7 +3678,7 @@ elevation changes in a synthesis is to observe in a hybrid array -- hybrid array
 allow a synthesis to be performed without the need to track the source from
 horizon to horizon.
 
-The gain variations must be considered when attempting to correct the flux density 
+The gain variations must be considered when attempting to correct the flux density
 scale. The best approach to ensuring a good flux scale is to ensure that the
 phase and the flux density calibrators are observed nearly
 simultaneously and at the same elevation.
@@ -3747,7 +3739,7 @@ all observations at all wavelengths.
 There are two distinct calibration situations with the ATCA, depending
 on whether the correlator configuration produced all four polarisation
 products (\MM{XX}, \MM{YY}, \MM{XY} and \MM{YX}) or just two (\MM{XX} and \MM{YY}). The former
-is done for all CABB data, and for the old-correlator continuum mode and some spectral line modes, 
+is done for all CABB data, and for the old-correlator continuum mode and some spectral line modes,
 whereas the latter is true of other old-correlator spectral line modes.
 
 \subsection*{Calibration of Data with \MM{XX}, \MM{YY}, \MM{XY} and \MM{YX}}
@@ -4177,7 +4169,7 @@ a flow chart of the steps typically involved.
 
 \begin{figure}
 \begin{center}
-\epsfxsize=7cm\leavevmode\epsffile{polcal1.ps}
+\includegraphics[height=7cm]{polcal1.pdf}
 \end{center}
 \caption{Flow chart to prepare for calibration in \miriad.}
 \label{fig:polcal1}
@@ -4226,16 +4218,16 @@ particularly after a source change.
 
 Note that tracking errors should be distinguished from pointing errors.
 Tracking errors are the inability of the antenna drive system
-to follow the requested path. Pointing errors correspond 
+to follow the requested path. Pointing errors correspond
 to the difference between the position that the astronomer
 requests and the actual position. Tracking errors are caused by
 flaws in the drive servo system, whereas pointing errors are a sum of
 tracking errors and errors in the antenna pointing model.
 
 Since October 2003, tracking errors have been saved in the \miriad\ dataset.
-The uv variables corresponding to the rms and 
+The uv variables corresponding to the rms and
 maximum tracking
-error in a cycle are \verb+axisrms+ and \verb+axismax+. 
+error in a cycle are \verb+axisrms+ and \verb+axismax+.
 
 Both the maximum and rms give two tracking error values for each antenna, nominally corresponding
 to the tracking error in the azimuth and elevation axes. However the ATCA on-line
@@ -4356,12 +4348,12 @@ your observations:
 \item
 The two most commonly used flux calibrators at the ATCA are 1934-638 and the
 planet Uranus. For frequencies between 1 GHz and 10 GHz, 1934-638 is the preferred
-flux calibrator; its cm model is described in the memo \htmladdnormallink{``A revised flux scale for the AT
-Compact Array''}{https://www.atnf.csiro.au/observers/memos/d96783\~{}1.pdf}
+flux calibrator; its cm model is described in the memo \href{https://www.atnf.csiro.au/observers/memos/d96783\~{}{``A revised flux scale for the AT
+Compact Array''}1.pdf}
 (AT Memo 39.3/040). For frequencies above this, Uranus is the preferred flux
 calibrator, although until early 2010 the \miriad\ model did not correctly take
 into account how Uranus' brightness temperature changed with its orientiation to the
-Earth (a memo describing the new Uranus flux model is forthcoming). 
+Earth (a memo describing the new Uranus flux model is forthcoming).
 Other planets can be used as flux calibrators, but Uranus is the
 best choice in most situations since it is small enough to remain mostly unresolved
 on the short arrays that are used for most mm observations, and bright enough to
@@ -4369,9 +4361,8 @@ provide an accurate flux in a short observation.
 
 Since May 2010, the \miriad\ model of 1934-638 covers frequencies all the way up to
 the top of the 7mm band (50 GHz), so it can be used a flux calibrator now for all
-bands other than 3mm. The flux model in the 12mm band is described in the 
-\htmladdnormallink{memo by Bob Sault}
-{https://www.atnf.csiro.au/observers/memos/AT39.3_124.pdf}
+bands other than 3mm. The flux model in the 12mm band is described in the
+\href{https://www.atnf.csiro.au/observers/memos/AT39.3_124.pdf}{memo by Bob Sault}
 ``ATCA flux density scale at 12mm'' (2003).
 The flux model for frequencies above 25 GHz will be described in a forthcoming memo.
 
@@ -4419,7 +4410,7 @@ used as a bandpass calibrator as well at cm wavelengths.
 
 \begin{figure}
 \begin{center}
-\epsfxsize=14cm\leavevmode\epsffile{polcalnew.ps}
+\includegraphics[height=14cm]{polcalnew.pdf}
 \end{center}
 \caption{Flow chart for calibration in \miriad\ for most situations.}
 \label{fig:polcalnew}
@@ -4657,7 +4648,7 @@ Phase calibrator (is flux)     & Correct & Incorrect & Incorrect & Yes\\
 The goal is to get the phase calibrator calibrated such that it has the correct
 bandpass shape and slope, the correct flux scaling, and a useful phase solution.
 If you are lucky enough to have been observing 1934-638 as a phase calibrator,
-then you have almost finished your calibration, and you can skip to 
+then you have almost finished your calibration, and you can skip to
 step~\ref{scalingslope}.
 
 Before we go any further, we should understand what exactly we mean by each
@@ -4675,7 +4666,7 @@ be the case for most real sources? Unless \task{mfcal} knows how the flux densit
 of the source varies with frequency, it will have no way to determine whether a
 change in flux is due to instrumental response or a flux density change of the
 source. If you have used a source other than 1934-638 for your bandpass calibration,
-you should assume that \task{mfcal} has not properly accounted for the source's 
+you should assume that \task{mfcal} has not properly accounted for the source's
 flux behaviour when it has solved for the bandpass. In these cases, the bandpass
 slope will be incorrect.
 
@@ -4798,7 +4789,7 @@ options=xygains		   & of the \MM{X} and \MM{Y} gains \\
 \end{tabular}
 \end{center}
 
-In addition to plotting these solved-for \MM{XY} phases, it is probably worthwhile 
+In addition to plotting these solved-for \MM{XY} phases, it is probably worthwhile
 plotting antenna and bandpass gains and phases. If you see glitches
 in the solutions, check the data again. This might be due to bad data
 or interference. You might do some more flagging, and redo some of the
@@ -4876,7 +4867,7 @@ elevation corresponds most closely to the elevation during the flux calibrator's
 observation.  When the weather changes significantly during the
 observation, it is probably best to use a time range of the phase calibrator
 which is close to the flux calibrator's observation.  Tasks \task{uvplt} and
-\task{varplt} can plot source elevation as a function of time. 
+\task{varplt} can plot source elevation as a function of time.
 
 
 % Task \task{gpboot} can optionally correct the \MM{XY} phases of the
@@ -5033,11 +5024,11 @@ frequency bands that were available with the old correlator. The steps are as fo
 
 \begin{enumerate}
 \item The first step is not a step at all! Unlike the conventional approach,
-the approach described here {\it does not} split the 
+the approach described here {\it does not} split the
 data into separate single source, single frequency files before
-calibration. Rather the 
+calibration. Rather the
 current approach assumes that you have a single \miriad\ dataset containing
-bandpass calibrator, phase calibrator, flux density calibrator and 
+bandpass calibrator, phase calibrator, flux density calibrator and
 program source. We focus on data having two simultaneous frequency bands
 here, but the approach works equally well for one or many simultaneous
 frequency bands within the dataset.
@@ -5047,12 +5038,12 @@ dealing with two frequency bands, each with two polarisation products
 (XX and YY), it is
 generally appropriate to
 assume that the bandpasses of the bands and the phase offsets between
-bands and polarisations are constant with time. 
+bands and polarisations are constant with time.
 
 To determine the bandpasses and the phase offsets, you need
 to use \task{mfcal} on an observation of a strong continuum source.
-Typically this would be 
-1253-055, 1921-293 or 0537-441. 
+Typically this would be
+1253-055, 1921-293 or 0537-441.
 Typical inputs are as follows:
 
 \begin{center}
@@ -5061,7 +5052,7 @@ Typical inputs are as follows:
 \multicolumn{2}{|c|}{{\bf MFCAL}} \\
 \hline
 in=vela.fixed.uv	& Input multi-source, dual-band dataset.\\
-select=source(1921-293)	& Select the strong continuum ``bandpass'' calibrator.\\  
+select=source(1921-293)	& Select the strong continuum ``bandpass'' calibrator.\\
 \hline
 \end{tabular}
 \end{center}
@@ -5091,23 +5082,23 @@ according to their relative bandwidth. Consequently if one of the bands
 is quite narrow relative to the other, then it will contribute little to
 the overall gain solution.
 \item If the calibrator is an SiO maser, you will want to select only those
-channels that contain strong SiO signal. 
+channels that contain strong SiO signal.
 \item With either a continuum calibrator or an SiO maser, it is possible to
-either determine antenna gain calibrations for the two polarisation products 
+either determine antenna gain calibrations for the two polarisation products
 independently, or to determine a
 single joint solution for the two polarisations. The latter will give
 a $\sqrt{2}$ improvement in sensitivity in the solution process.
 The latter is also the
-desirable approach if the calibrator is strongly polarised (some SiO 
+desirable approach if the calibrator is strongly polarised (some SiO
 masers are more than 50\% polarised). Doing a joint solution is
 generally a reasonable approximation given that the antenna gains
 are dominated by changes common to both polarisations: in amplitude, it is
-from the physical antenna 
-gain change, and in phase it is from the atmosphere and instrumental 
+from the physical antenna
+gain change, and in phase it is from the atmosphere and instrumental
 contributions common to both polarisations.
 \end{itemize}
 
-Note in this calibration scheme, it is implicitly assumed that the antenna 
+Note in this calibration scheme, it is implicitly assumed that the antenna
 gain changes are common to both frequency bands. This is a reasonable
 approximation given that the frequency separation between the bands is
 at most 2.7 GHz and potentially much less. Consequently the fractional
@@ -5124,7 +5115,7 @@ two polarisations:
 \multicolumn{2}{|c|}{{\bf MFCAL}} \\
 \hline
 vis=vela.fixed.uv	& Input multi-source, dual-band dataset.\\
-select=source(1622-297)	& Select phase calibrator.\\  
+select=source(1622-297)	& Select phase calibrator.\\
 options=nopassol	& {\it Do not} solve for bandpass.\\
 stokes=i		& Do a joint solution for both polarisations.\\
 \hline
@@ -5133,7 +5124,7 @@ stokes=i		& Do a joint solution for both polarisations.\\
 To derive a separate solution for the two polarisation products, the
 {\tt stokes} keyword would be left unset. Note the use of \verb+options=nopassol+.
 This causes \task{mfcal} to not attempt to solve for the
-bandpass and phase offsets again, but rather to apply the previously 
+bandpass and phase offsets again, but rather to apply the previously
 determined bandpass and phase offset solutions.
 
 Typical inputs when using an SiO maser would be as follows:
@@ -5144,7 +5135,7 @@ Typical inputs to \task{mfcal} are as follows:
 \multicolumn{2}{|c|}{{\bf MFCAL}} \\
 \hline
 vis=vela.fixed.uv	& Input multi-source, dual-band dataset.\\
-select=source(oceti)	& Select SiO secondary calibrator.\\  
+select=source(oceti)	& Select SiO secondary calibrator.\\
 options=nopassol	& {\it Do not} solve for bandpass.\\
 stokes=i		& Do a joint solution for both polarisations.\\
 line=chan,20,45		& Select the range of channels where the SiO\\
@@ -5165,7 +5156,7 @@ You will most likely want to check this visibility function
 before observing and discovering that the planet is resolved out!
 {\bf NOTE} that \task{mfboot} and \task{plplt} do not include the effect of the
 ATCA's primary beam -- the planet is implicitly (and silently) assumed to be
-small compared with the primary beam. This may not be the case at 3-mm. 
+small compared with the primary beam. This may not be the case at 3-mm.
 If there is a significant change in the visibility function between baseline
 lengths of 0 and 22~metres,
 then primary beam effects are important, and you probably do not
@@ -5173,13 +5164,13 @@ want to use the planet (most likely it would be resolved out anyway).
 
 Task \task{planets} can give you basic information about a planet, including
 rise and set times (but note these are quoted at the horizon, not the ATCA's
-elevation limit), the planet's angular size at a particular time, and its 
+elevation limit), the planet's angular size at a particular time, and its
 RA and DEC (note that the
 ephemeris used for RA and DEC is not sufficiently accurate to point or
 phase track the telescope).
 
 Information on using the ATCA to observe a planet is available on-line at
-\htmladdnormallink{https://www.narrabri.atnf.csiro.au/observing/users_guide/html/new_atug_20.html#Scheduling-Strategy}.
+\href{https://www.narrabri.atnf.csiro.au/observing/users_guide/html/new_atug_20.html#Scheduling-Strategy}{Scheduling Strategy}.
 
 \section{The Interpolation Process}\index{calibration, interpolation}
 You should now have a program source dataset containing the
@@ -5210,7 +5201,7 @@ corresponding program source data are marked as flagged.
 
 This interpolation tolerance is stored as the {\tt interval} item
 the visibility dataset. It is given as a double precision number with
-units of days. Task \task{gpcal} sets its value as half a day ({\tt interval=0.5}). 
+units of days. Task \task{gpcal} sets its value as half a day ({\tt interval=0.5}).
 Although this is excessively generous, this will not be a
 problem unless there are large gaps between calibrator scans (perhaps because
 some calibrator scans had to be discarded). You can set the set the
@@ -5397,7 +5388,7 @@ per bin for calibration of amplitude (use for MWA data).
 The ATCA potentially can produce polarimetric data to very high precision, with
 polarimetric measurements down to the level of 1 part in 100000 of Stokes I.
 The extra steps to attain this are beyond the scope of this manual.
-\htmladdnormallink{David Rayner's memo}{https://www.atnf.csiro.au/observers/memos/circpolguide.pdf}
+\href{https://www.atnf.csiro.au/observers/memos/circpolguide.pdf}{David Rayner's memo}
 ``Circular polarization user's guide'' (2000) contains much useful information
 on this topic.
 
@@ -5406,8 +5397,8 @@ In August 1994, the nominal flux density of the ATCA's primary flux
 calibrator, 1934-638, was revised to give better agreement between
 the ATCA's flux density scale and the flux scales used in the northern
 hemisphere (the VLA in particular). For more discussion, see John
-Reynolds' memo \htmladdnormallink{``A revised flux scale for the AT
-Compact Array''}{https://www.atnf.csiro.au/observers/memos/d96783\~{}1.pdf}
+Reynolds' memo \href{https://www.atnf.csiro.au/observers/memos/d96783\~{}{``A revised flux scale for the AT
+Compact Array''}1.pdf}
 (AT Memo 39.3/040).
 
 This introduces a problem when mixing data (either combining or
@@ -5530,8 +5521,7 @@ respectively).
 weighting) minimises sidelobes, whereas natural weighting minimises
 the noise level. Robust weighting provides a compromise between the two,
 doing so in an optimal sense (similar to Wiener optimisation).
-See \htmladdnormallink{Dan Briggs' thesis}
-{https://www.aoc.nrao.edu/dissertations/dbriggs/}
+See \href{https://www.aoc.nrao.edu/dissertations/dbriggs/}{Dan Briggs' thesis}
 for more information.
 \item[Tapering] In signal processing theory, the optimum way to
 detect a signal of known form, which is buried in noise, is to convolve that
@@ -5916,8 +5906,7 @@ whether CLEAN or MEM was used) or the restoring beam.
 \label{s:clean}
 \index{deconvolution, H\"ogbom CLEAN}
 
-The CLEAN algorithm \htmladdnormallink{(H\"ogbom 1974)}
-{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1974A\%26AS...15..417H}
+The CLEAN algorithm \href{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1974A\%26AS...15..417H}{(H\"ogbom 1974)}
 (A\&AS 15, 417)
 represents the image as a number of point
 sources in an otherwise empty field of view.  A simple iterative procedure is
@@ -5945,8 +5934,7 @@ Jy per CLEAN beam area, which can be converted to Jy per unit area,
 because the equivalent area of the CLEAN beam can be calculated.
 
 \subsection*{The Clark CLEAN}\index{deconvolution, Clark CLEAN}
-The Clark CLEAN algorithm \htmladdnormallink{(Clark 1980)}
-{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1980A\%26A....89..377C}
+The Clark CLEAN algorithm \href{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1980A\%26A....89..377C}{(Clark 1980)}
 (A\&A 26, 89)
 is a variant of the H\"ogbom CLEAN,
 and aims at improved speed for large images. The original H\"ogbom algorithm
@@ -5992,8 +5980,7 @@ CLEAN's interpolation between the measured visibilities sufficiently
 well to prevent it putting in badly wrong values.
 
 Another variant of the CLEAN algorithm which helps suppress CLEAN stripes,
-is the SDI CLEAN \htmladdnormallink{(Steer, Dewdney, and Ito 1984)}
-{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1984A\%26A...137..159S}
+is the SDI CLEAN \href{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1984A\%26A...137..159S}{(Steer, Dewdney, and Ito 1984)}
 (A\&A 137, 159).
 In this variant
 any point in the residual image greater than some factor times the
@@ -6057,8 +6044,7 @@ approximations used in the minor cycle of a Clark CLEAN -- use a larger beam
 patch, and relax the criteria to perform a major cycle ({\it i.e.} perform fewer
 minor cycles per major cycle).
 
-\htmladdnormallink{Cornwell (1983)}
-{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1983A\%26A...121..281C}
+\href{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1983A\%26A...121..281C}{Cornwell (1983)}
 (A\&A 121, 281)
 suggested that the CLEAN stripe
 instability can be suppressed by the addition of a delta function to the
@@ -6482,8 +6468,7 @@ I_D = I \ast B_0 + (I\alpha) \ast B_1
 The problem of multi-frequency deconvolution is to estimate
 \MM{I} and $I\alpha$ images simultaneously. A more detailed discussion of the
 algorithm \task{mfclean} uses is
-given in \htmladdnormallink{Sault \& Wieringa (1994)}
-{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1994A\%26AS..108..585S}
+given in \href{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1994A\%26AS..108..585S}{Sault \& Wieringa (1994)}
 (A\&AS 108, 585).
 
 But how important are the effects that spectral variation causes?
@@ -6565,8 +6550,7 @@ It differs in that it can perform a joint deconvolution of the four
 Stokes parameters simultaneously. With polarised emission being potentially
 positive and negative valued, the entropy measure for this is different
 from a simple total intensity deconvolution. See
-\htmladdnormallink{Sault et al. (1999)}
-{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1999A\%26AS..139..387S}
+\href{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1999A\%26AS..139..387S}{Sault et al. (1999)}
 (A\&A, 139, 387) for more background on joint polarimetric deconvolution.
 
 Often joint polarimetric deconvolution does not do a better job than
@@ -6693,9 +6677,8 @@ is exacerbated when one antenna is absent from the data for a period
 of time, or you have flagged it out because of poor data quality.
 
 There are other problems to do with the east-west nature of the ATCA  -- see
-Bob Sault's technical memo \htmladdnormallink{`Some simulations of
-self-calibration for the AT'}
-{https://www.atnf.csiro.au/observers/memos/d96f87~{}1.pdf} (AT Memo 39.3/058).
+Bob Sault's technical memo \href{https://www.atnf.csiro.au/observers/memos/d96f87~{}{`Some simulations of
+self-calibration for the AT'}1.pdf} (AT Memo 39.3/058).
 One important point to keep in mind is that
 self-calibration with the ATCA  depends  crucially on the initial
 model that you start with -- much more so than with the VLA where you can
@@ -6735,7 +6718,7 @@ Figure~\ref{fig:selfcal} gives a typical self-calibration flow chart.
 
 \begin{figure}
 \begin{center}
-\epsfxsize=14cm\leavevmode\epsffile{selfcal.ps}
+\includegraphics[height=14cm]{selfcal.pdf}
 \end{center}
 \caption{Typical self-calibration path}
 \label{fig:selfcal}
@@ -6925,7 +6908,7 @@ should set the {\tt line} parameter explicitly.
 \item \task{selfcal} can cope with the case of several models being
 derived from different channel ranges from one visibility dataset.
 This might occur, for example, if multiple lines were being observed
-simultaneously (as often happens at millimeter wavelengths).  
+simultaneously (as often happens at millimeter wavelengths).
 In this case, the different models were formed with
 different {\tt line} parameters.  \task{selfcal} {\em must} rely on the
 record of the {\tt line} parameter stored in the model.
@@ -7188,8 +7171,7 @@ datasets, but not others -- the time varying Doppler frequency component has
 been lost somewhere. Although this loss will affect the calculation of
 \MM{u-v} coordinates, the error that it introduces is generally negligible
 (see the discussion in the spectral-line processing chapter of Neil Killeen's
-\htmladdnormallink{``Analysis of Australia Telescope Compact Array Data''}
-{https://www.atnf.csiro.au/computing/software/atca_aips/atcal_html.html}).
+\href{https://www.atnf.csiro.au/computing/software/atca_aips/atcal_html.html}{``Analysis of Australia Telescope Compact Array Data''}).
 
 Regardless of whether or not the observatory Doppler tracks, \miriad\ stores
 the radial velocity of the observatory (with respect to the rest frame)
@@ -7202,8 +7184,7 @@ Many of the ATCA correlator configurations are specifically intended
 for the spectral line observer. One aspect of the ATCA correlator
 that you should note is that the spectral resolution is often
 moderately different to the channel increment. For a full
-description of this, see the \htmladdnormallink{memo by Neil Killeen}
-{https://www.atnf.csiro.au/observers/memos/d98b8b\~{}1.pdf} (AT Memo 39.3/057).
+description of this, see the \href{https://www.atnf.csiro.au/observers/memos/d98b8b\~{}{memo by Neil Killeen}1.pdf} (AT Memo 39.3/057).
 
 \section{Spectral Line Processing and RPFITS files}\label{s:specrpfits}\index{atlod}
 When using \task{atlod} to read in spectral line data, there are a few
@@ -7455,15 +7436,12 @@ noise and artifacts resulting from the spectral line (and {\em not}
 artifacts from the continuum).  Consequently it is usually best to
 subtract the continuum from the data.  A good description of the
 algorithms to do this is given by
-\htmladdnormallink{Cornwell, Uson and Haddad (1992)}
-{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1992A\%26A...258..583C}.
+\href{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1992A\%26A...258..583C}{Cornwell, Uson and Haddad (1992)}.
 (A\&A 258, 583).
 Neil Killeen's
-\htmladdnormallink{``Analysis of Australia Telescope Compact Array Data''}
-{https://www.atnf.csiro.au/computing/software/atca_aips/atcal_html.html}
+\href{https://www.atnf.csiro.au/computing/software/atca_aips/atcal_html.html}{``Analysis of Australia Telescope Compact Array Data''}
 also gives a good summary as well as describing the \aips\
-possibilities.  The paper \htmladdnormallink{Sault (1994)}
-{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1994A\%26AS..107...55S}
+possibilities.  The paper \href{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1994A\%26AS..107...55S}{Sault (1994)}
 (A\&AS 107, 55)
 describes one of the algorithms in detail.
 Yet another summary is given below.
@@ -7652,8 +7630,7 @@ and a shift appropriate for the Sun is determined instead. Thus,
 if your continuum is dominated by the Sun, this will help eliminate it.
 You will normally want to use the ``\verb+twofit+'' option with this (see
 below).
-Also see \htmladdnormallink{Sault \& Noordam (1995)}
-{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1995A\%26AS..109..593S}
+Also see \href{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1995A\%26AS..109..593S}{Sault \& Noordam (1995)}
 (A\&AS 109, 593) for information and an example.
 \item {\tt twofit}: If an ``\verb+offset+'' is given, or if the ``\verb+sun+''
 option is used, \task{uvlin} normally fits for continuum just at the
@@ -7992,4 +7969,3 @@ axis=frequency		& or label as frequency.\\
 %\hline
 %\end{tabular}
 %\end{center}
-

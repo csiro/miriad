@@ -1,0 +1,1 @@
+#define MIRIAD_VERSION "@GIT_VERSION@"

@@ -5,7 +5,6 @@
 /*+
   docfmt formats a Miriad .doc file into a more readable form.
                                                                       */
-/*$Id: docfmt.c,v 1.5 2010/04/30 01:22:38 cal103 Exp $ */
 /*--                                                                  */
 /*
   History:

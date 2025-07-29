@@ -3,9 +3,6 @@
 \section{Introduction}
 \miriad's collection of tasks to analyse spectral cubes is
 of mixed quality. This chapter describes what \miriad\ has to offer.
-For some purposes, a better suite of software is available in
-the ATNF visualisation suite. This suite was briefly outlined in
-Section~\ref{s:visualisation}.
 
 \section{Moment Analysis}
 The task \task{moment} can be used to generate moment images from
@@ -31,7 +28,7 @@ this equation depending on which moment it is working out.  Here is what
 it finds:
 
 \begin{displaymath}
-M_0 = \int I(v) dv 
+M_0 = \int I(v) dv
 \end{displaymath}
 in units of Jy~\kms.
 
@@ -54,17 +51,17 @@ this analysis.
 
 
 \begin{center}
-\begin{tabular}{|l|l|} 
-\hline 
+\begin{tabular}{|l|l|}
+\hline
 \multicolumn{2}{|c|}{{\bf MOMENT}} \\
-\hline 
+\hline
 in=ngc253.icln      & Input cube \\
-region=quarter(40,480) & Select region \\             
+region=quarter(40,480) & Select region \\
 out=ngc253.m2          & Output image \\
 mom=2                  & Second moment \\
 axis=3                 & Cube in xyv order \\
 clip=0.002             & Clip below this value \\
-\hline 
+\hline
 \end{tabular}
 \end{center}
 
@@ -76,15 +73,15 @@ and write out the smoothed data set.  Any blanked
 pixels are treated as zeros.
 
 \begin{center}
-\begin{tabular}{|l|l|} 
-\hline 
+\begin{tabular}{|l|l|}
+\hline
 \multicolumn{2}{|c|}{{\bf HANNING}} \\
-\hline 
+\hline
 in=ngc253.icln      & Input cube \\
 region              & Unset for full cube \\
 out=ngc253.icln-hann  & Output image \\
 width=3              & Standard Hanning smooth \\
-\hline 
+\hline
 \end{tabular}
 \end{center}
 
@@ -95,15 +92,15 @@ velocity axis is the third axis.
 
 
 \begin{center}
-\begin{tabular}{|l|l|} 
-\hline 
+\begin{tabular}{|l|l|}
+\hline
 \multicolumn{2}{|c|}{{\bf IMSUB}} \\
-\hline 
+\hline
 in=ngc253.icln-hann     & Input cube \\
 out=ngc253.icln-hann-ind  & Output image \\
 region                   & Unset for full cube \\
 incr=1,1,2               & Pick out every other pixel on third axis \\
-\hline 
+\hline
 \end{tabular}
 \end{center}
 
@@ -179,7 +176,7 @@ and rms. Unfortunately this list is not written in to the log file.
 \item[Options] Select plot parameters. This is what happens:
 \begin{verbatim}
    Selection (type 1st character) :o
- 
+
       OPTIONS MENU
    Select alternative options [1/2] for the following
 
@@ -210,8 +207,8 @@ and rms. Unfortunately this list is not written in to the log file.
 {\em Now the main menu will reappear}. It is easy to get confused here between
 the main menu and this options menu that selects plot parameters.
 
-The contour setting option is of particular interest in making 
-contour plots. This is the equivalent of the \verb+levs+ input to \miriad\ 
+The contour setting option is of particular interest in making
+contour plots. This is the equivalent of the \verb+levs+ input to \miriad\
 \task{cgdisp}.
 \item[Pos-Vel] Plots a position velocity map. This is best described by walking
 through an example. We want a position velocity map made along the major axis
@@ -259,7 +256,7 @@ the same plot. The function we want corresponds to the C option -
 hence the carriage return.
 \begin{verbatim}
 
-   >Enter number of windows in x and y: [1,1]: 
+   >Enter number of windows in x and y: [1,1]:
    <cr>
 \end{verbatim}
 Notice a couple of things here. \task{velplot} inserted the carriage
@@ -291,7 +288,7 @@ Now we are finished and the main menu appears again. On exit we find the
 postscript file \verb+pvplot.ps+ in our directory.
 
 
-Still in the position-velocity option, let us 
+Still in the position-velocity option, let us
 go back to the question
 \begin{verbatim}
    Contour or Intensity plots ?[C]/I:
@@ -421,7 +418,7 @@ Suppose you have a galactic disk data cube and you want to plot
 spectra at positions along the major axis. Then the grid needs to be collapsed
 into a line and rotated to the PA of the disk major axis (say 40 degrees).
 You think the position x,y=-1200,1000 is on the major axis toward the top-left
-corner 
+corner
 of the x,y plane. You want 20 plots at 100arcsec intervals along the major
 axis. So the inputs to \task{velplot}/\verb+spectra+ would be:
 \begin{verbatim}
@@ -684,18 +681,16 @@ with \task{maths} to obtain the final 3-dimensional tilted ring model.
 
 There is a suite of tasks to help analyse Zeeman data.  These tasks
 implement the techniques discussed in gruesome detail
-by \htmladdnormallink{Sault, Killeen, Zmuidzinas \& Loushin (1990)}
-{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1990ApJS...74..437S}
-(ApJS 74, 437) and by 
-\htmladdnormallink{Killeen, Lo \& Crutcher (1992)}
-{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1992ApJ...385..585K}
-(ApJ 385, 585). 
+by \href{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1990ApJS...74..437S}{Sault, Killeen, Zmuidzinas \& Loushin (1990)}
+(ApJS 74, 437) and by
+\href{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1992ApJ...385..585K}{Killeen, Lo \& Crutcher (1992)}
+(ApJ 385, 585).
 
 
 \begin{itemize}
 
 \item \task{zeestat}:
-In the small-splitting Zeeman analysis, our goal is generally 
+In the small-splitting Zeeman analysis, our goal is generally
 to look for the characteristic ``S'' Zeeman signature
 in the Stokes \MM{V} spectrum.  It can be shown that this
 spectral signature is more accurately expected to follow the
@@ -709,21 +704,21 @@ where \MM{k} is a constant depending upon the particular spectral line,
 $B \cos \theta$ is the line-of-sight component of the magnetic field, and
 $I(\nu)$ is the total intensity spectrum.  The procedure is then to fit
 the derivative of the \MM{I} spectrum to the \MM{V} spectrum thus giving
-$B \cos \theta$. 
+$B \cos \theta$.
 
 Zeeman work can be very complicated, especially if the signal is weak
 (and the signal-to-noise ratio parameter $\eta$ -- see Sault et al. -- is close
 to the noise value), and a description of all the pros and cons of the
 fitting techniques is beyond this guide.  We suggest you read the above
-papers, and if you are still awake at the end, then run the software. 
+papers, and if you are still awake at the end, then run the software.
 
 Generally, the fit is done over some spatial and spectral region in
 which it is assumed the splitting is constant.  In the spatial averaging
-technique, all the spectra in the spatial region are averaged. 
+technique, all the spectra in the spatial region are averaged.
 However, if the spectra are not all similar in shape, this will average
 down the signal as well as the noise.  Thus, the spatial summing
 technique is also offered.  Here, all the spectra in the spatial area
-are fit simultaneously so that the signal is not averaged down. 
+are fit simultaneously so that the signal is not averaged down.
 However, one has to be concerned with the spatial correlation of the data
 when predicting the errors in this case.  This is a very big concern
 indeed (see \task{Zeesim} below).
@@ -740,7 +735,7 @@ does not affect the result itself much).  However, generally, this does
 not work well and accurate errors for spatially summed data should be
 obtained with a monte carlo technique implemented in the task
 \task{zeesim} described below.  The beam is not needed when spatially
-averaging. 
+averaging.
 
 If the spectra are spectrally correlated, this information can be
 transmitted to \task{zeestat} via the spectral correlation coefficient
@@ -750,7 +745,7 @@ must specify with {\tt freq}, to the nearest MHz, the rest frequency
 of the spectral line.  This is used to determine the conversion from
 splitting in channels to a magnetic field.  \task{zeestat} only knows
 about a few particular transitions.  If it does not know about yours,
-come and tell us, and we will add it in for you. 
+come and tell us, and we will add it in for you.
 
 You can read endlessly in the above papers about the pros and cons of
 least squares and maximum likelihood fitting techniques.  All the
@@ -767,27 +762,27 @@ derivative).  If you set {\tt mode=2}, \task{zeestat} will work out a
 two-sided derivative of the \MM{I} spectrum.  Otherwise it uses a one-sided
 derivative.  The former gives a lower noise derivative but performs less
 well for sharp spectral features.  In summary, we suggest you set {\tt
-mode=mxl} or maybe {\tt mode=mxl2}. 
+mode=mxl} or maybe {\tt mode=mxl2}.
 
 Set keyword {\tt aveop=s} for spatial summing and and {\tt aveop=a} for
 spatial averaging.  \task{zeestat} is rather an elderly task coded at
-the dawn of time.  It does not know about the {\tt region} keyword. 
+the dawn of time.  It does not know about the {\tt region} keyword.
 Thus you input the spectral range to fit with the {\tt chan} keyword,
 and the spatial area via the {\tt blc} (bottom left corner) and {\tt
-trc} (top right corner) keywords.  These are all in absolute pixels. 
-You can write the results to an ascii file with the {\tt out} keyword. 
+trc} (top right corner) keywords.  These are all in absolute pixels.
+You can write the results to an ascii file with the {\tt out} keyword.
 
 Here is a simple example of a spatially summed fit of spectrally
 uncorrelated OH main line spectra over channels 200 to 300 (only include
 channels that have strong \MM{I} signal) and over some small
-spatial region.  
+spatial region.
 
 
 \begin{center}
-\begin{tabular}{|l|l|} 
-\hline 
+\begin{tabular}{|l|l|}
+\hline
 \multicolumn{2}{|c|}{{\bf ZEESTAT}} \\
-\hline 
+\hline
 iin=sgra.Ivxy     & Input \MM{I} cube \\
 vin=sgra.Vvxy     & Input \MM{V} cube \\
 beam              & Unset as technique does not work \\
@@ -800,15 +795,14 @@ blc=240,255       & Spatial BLC to fit \\
 trc=260,278       & Spatial TRC to fit \\
 log               & Unset \\
 out=log.out       & Write results to this file \\
-\hline 
+\hline
 \end{tabular}
 \end{center}
 
 
 \item The task \task{zeesim} is used to get reliable estimates of the
 error in the fitted magnetic field derived by \task{zeestat}.  See
-\htmladdnormallink{Killeen, Lo \& Crutcher (1992)}
-{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1992ApJ...385..585K}
+\href{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1992ApJ...385..585K}{Killeen, Lo \& Crutcher (1992)}
 (ApJ, 385, 585) for gruesome details.  It is used when
 you have invoked spatial averaging, or when the signal-to-noise ratio
 is very poor for spatial averaging.  The technique involves taking the
@@ -816,8 +810,8 @@ actual spectra and fitting them, thus producing an estimate of the noise
 free true spectra.  Then \task{zeesim} adds noise (correlated by the beam if
 simulating spatial summing) back into the spectra and refits them to
 get the splitting.  The noise addition and refitting is performed as
-many times as is necessary to get a good histogram of the splitting. 
-The width of that histogram gives a good error estimate. 
+many times as is necessary to get a good histogram of the splitting.
+The width of that histogram gives a good error estimate.
 
 \task{zeesim} can work out the fiddle factor to apply to the error
 estimates of \task{zeestat} for may spatial regions at once.  It is much
@@ -826,11 +820,11 @@ to do one run per spatial region.  This is because the step of producing
 noise correlated by the beam is very expensive.  Multiple spatial
 regions can be input via a text file assigned to the keyword {\tt
 infile}.  A single spatial region can be entered through the usual {\tt
-blc} and {\tt trc} keywords. 
+blc} and {\tt trc} keywords.
 
 In this example, we run the simulation appropriate to the example of
 \task{zeestat} above.  You should do as many simulations as is necessary
-to get a decent histogram or until your computer tires. 
+to get a decent histogram or until your computer tires.
 
 It is important to use the {\tt nran} keyword if you restart the
 simulations and want to use the results in conjunction with a previous
@@ -838,14 +832,14 @@ run.  Computers only generate semi-random numbers.  If you give the
 generator the same seed you get the same random numbers.  {\tt nran}
 allows you to throw some random numbers before beginning the simulation
 procedure so you can get different noise to last time you ran the
-program. 
+program.
 
 
 \begin{center}
-\begin{tabular}{|l|l|} 
-\hline 
+\begin{tabular}{|l|l|}
+\hline
 \multicolumn{2}{|c|}{{\bf ZEESIM}} \\
-\hline 
+\hline
 iin=sgra.Ivxy     & Input \MM{I} cube \\
 vin=sgra.Vvxy     & Input \MM{V} cube \\
 beam=sgra.ivbem   & Give the beam \\
@@ -862,7 +856,7 @@ nruns=500         & Number of simulations \\
 infile            & Unset \\
 log=res,summ      & Log files for results \\
 nran=\#            & Throw away random numbers before simulating \\
-\hline 
+\hline
 \end{tabular}
 \end{center}
 

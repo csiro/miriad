@@ -1,2 +1,0 @@
-#!/bin/csh -f
-echo $MIRLIB/libmir.a /usr/local/lib/pgplot/libpgplot.a -lm /usr/lib/X11R5/libX11.a

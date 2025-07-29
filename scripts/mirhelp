@@ -21,8 +21,6 @@
 #    31-may-06 rjs  Added mozilla as a browser.
 #    28-jun-06 rjs  Added cygstart as a browser (standard web browser in the
 #                   cygwin environment).
-#
-# $Id: mirhelp,v 1.5 2009/05/04 05:57:26 cal103 Exp $
 #-----------------------------------------------------------------------------
 
 set webroot = "https://www.atnf.csiro.au/computing/software/miriad"

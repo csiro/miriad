@@ -16,8 +16,7 @@ determined by the `\verb+pbtype+' or `\verb+telescop+' item or variable
 Currently these models assume the primary beam is circularly symmetric and time
 independent. The task \task{pbplot} produces some information and can
 make a plot of the primary beam models. The model of the ATCA primary
-beam is described in \htmladdnormallink{Mark Wieringa \& Mike Kesteven's memo}
-{https://www.atnf.csiro.au/observers/memos/d97f7b\~{}1.pdf} (AT Memo 39.3/024).
+beam is described in \href{https://www.atnf.csiro.au/observers/memos/d97f7b\~{}{Mark Wieringa \& Mike Kesteven's memo}1.pdf} (AT Memo 39.3/024).
 
 If you wish to override \miriad's model, or if \miriad\ does not have a
 model of the telescope of interest, you may set the primary beam
@@ -29,7 +28,7 @@ a listing of the primary beam types known to \miriad.
 
 Setting a Gaussian primary beam type differs from setting
 other primary beams in that you also must give an additional parameter
-enclosed in brackets) giving the 
+enclosed in brackets) giving the
 FWHM of the primary beam, in arc
 seconds, at the reference frequency (the `reference frequency' for a
 visibility dataset is the frequency of the first channel imaged!!). For
@@ -77,14 +76,11 @@ particularly so for extended emission or when the signal-to-noise ratio
 is low. A description of the theory behind mosaicing can be found in
 the NRAO Synthesis Imaging Summer School (Lecture 15 -- Wide Field
 Imaging III: Mosaicing -- by Tim Cornwell). Other notable references
-are \htmladdnormallink{Cornwell (1988)}
-{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1988A\%26A...202..316C}
+are \href{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1988A\%26A...202..316C}{Cornwell (1988)}
 (A\&A, 143, 77)
-and  \htmladdnormallink{Cornwell, Holdaway \& Uson (1993)}
-{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1993A\%26A...271..697C}
+and  \href{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1993A\%26A...271..697C}{Cornwell, Holdaway \& Uson (1993)}
 (A\&A, 271, 697).
-\htmladdnormallink{Sault, Staveley-Smith and Brouw (1996)}
-{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1996A\%26AS..120..375S}
+\href{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1996A\%26AS..120..375S}{Sault, Staveley-Smith and Brouw (1996)}
 (A\&AS, 120, 376) describe some of the algorithms used by \miriad.
 
 \section{Mosaicing Observing Strategies}\label{s:mosobs}\index{mosaicing, observing strategies}
@@ -143,13 +139,13 @@ $\nu$ (GHz) &$\theta_{\rm hex}$ (arcmin) \\ \hline
 
 \item Dwell time: Most mosaiced experiments will continually switch
 between the different pointing centres (or a subset of them, if there
-are too many pointing centres to visit in a single observation). 
+are too many pointing centres to visit in a single observation).
 Normally they will be visited in a raster scan fashion.  Switching to a
 new pointing centre typically results in 0.5 to 4 seconds of `lost' time
 while the antennas are slewing to the new pointing.  This time can be a
 significant consideration in some experiments -- e.g.  if the
 integration time was 10 seconds, and the pointing centre was switched
-every integration, up to about 40\% of the observing time could be lost. 
+every integration, up to about 40\% of the observing time could be lost.
 To avoid this, you will want to dwell on a given pointing centre for as
 long as reasonable.  This must, however, be traded against loss of
 tangential \MM{u-v} coverage that occurs when each pointing is not
@@ -174,7 +170,7 @@ decide to suffer tangential holes in the \MM{u-v} coverage.
 ATCA  mosaic experiment, you
 will create a `mosaic file'. This gives a field
 offset, integration time and field name for each pointing centre. To
-simplify a step in the reduction process (the splitting step only), it is 
+simplify a step in the reduction process (the splitting step only), it is
 recommended that field names
 be composed of two parts, separated by an underscore character. This recommendation
 is purely to simplify some steps in the data reduction in \miriad. The first
@@ -222,7 +218,7 @@ is left as an exercise for the reader.
 For example, assuming a dataset containing calibrators and an observation
 of the LMC (with appropriately named fields), the following inputs will
 generate datasets for the calibrators and a single dataset for all the LMC
-data. 
+data.
 \begin{center}
 \begin{tabular}{|l|l|}
 \hline
@@ -235,7 +231,7 @@ options=mosaic	& Assume mosaic experiment, so create \\
 \end{tabular}
 \end{center}
 
-\item {\em Data Selection:} With mosaic visibility datasets, the \verb+select=ra+ 
+\item {\em Data Selection:} With mosaic visibility datasets, the \verb+select=ra+
 and \verb+select=dec+ selection sub-commands can be useful to extract or
 manipulate a subset of the visibility data.
 \item {\em Calibration:} Determining the calibration solutions does not differ from that
@@ -256,7 +252,7 @@ and deconvolution software.
 With the individual approach, a mosaic experiment is
 treated like a large
 number of conventional observations, where each pointing is
-imaged and deconvolved separately. In this case you, the user, are 
+imaged and deconvolved separately. In this case you, the user, are
 responsible for keeping track of all the pointings. Only as a final
 step are all the pointings pieced together.
 
@@ -270,7 +266,7 @@ there are disadvantages -- the joint approach depends more critically on
 the model of the primary beam.  Errors in the model of the primary beam
 will tend to be amplified by this approach, particularly when the
 \MM{u-v} coverage is poor.  Generally the joint approach will be limited
-to dynamic ranges of several hundred or so. 
+to dynamic ranges of several hundred or so.
 
 A more practical difference between the two approaches is that the joint
 approach generally uses significantly less disk space (this can be an
@@ -297,7 +293,7 @@ combined in a linear mosaicing process.  This linear mosaicing simply
 consists of a weighted average of the pixels in the individual
 pointings, with the weights determined by the primary beam
 response and the expected noise level.  The resultant output dirty image
-is thus an image of the entire region mosaiced. 
+is thus an image of the entire region mosaiced.
 
 The weights are computed to minimise the noise in the resultant image as well
 as to correct for primary beam attenuation. The output image, \MM{I(\elll,m)},
@@ -306,7 +302,7 @@ is given by
 I(\ell,m) = g(\ell,m) \frac{\sum_i P(\ell-\ell_i,m-m_i)I_i(\ell,m)/\sigma_i^2}
 		 {\sum_i P^2(\ell-\ell_i,m-m_i)/\sigma_i^2}.
 \]
-Here the summation, \MM{i}, is over the set of pointing centres, 
+Here the summation, \MM{i}, is over the set of pointing centres,
 $(\ell_i,m_i)$. $I_i(\ell,m)$ is the image formed from the \MM{i}'th pointing,
 and \MM{P(\elll,m)} is the primary beam pattern. The expected noise
 variance in the \MM{i}'th field is $\sigma_i^2$.
@@ -324,7 +320,7 @@ done by the function \MM{g(\elll,m)}. This function normally has a
 value of 1, but its value drops towards 0 at edges or holes.
 In this way, the noise level across a mosaiced image is crudely uniform.
 
-Task \task{invert} also applies geometric corrections to account for the fact 
+Task \task{invert} also applies geometric corrections to account for the fact
 that the sky is not a plane.
 For an east-west array, such as the ATCA, these corrections are exact,
 meaning that the coordinate geometry of the resultant images is also
@@ -379,7 +375,7 @@ corresponding degradation in deconvolution.
 in the main lobe of the primary beam (as \miriad\ only models the main
 lobe, making it larger has no beneficial effect).
 Table~\ref{t:mossize} gives these
-sizes as a function of frequency for the ATCA. 
+sizes as a function of frequency for the ATCA.
 \begin{table}
 \caption{Size of Main Lobe of the Primary Beam for ATCA dishes}
 \label{t:mossize}
@@ -568,10 +564,10 @@ by a conventional antenna-gain solver, to produce a table of
 antenna gains vs time.
 
 In reality, antenna gains will be a function of both time and pointing centre.
-However \task{selfcal} 
+However \task{selfcal}
 assumes that the gains are purely a function of time -- not
 pointing. In practice this should not be a great problem, as
-time and pointing change together, and 
+time and pointing change together, and
 integrations that are close in time will also be close on the sky.
 Note that, short of setting a self-calibration solution interval to
 be smaller than the integration time, you cannot be sure that a
@@ -594,7 +590,7 @@ in turn.
 by \task{mosmem}) to be de-mosaiced.
 \item {\tt vis} This will usually be the visibility dataset to be
 self-calibrated. This dataset is used to determine the pointings present
-and the primary beam to be used. 
+and the primary beam to be used.
 \item {\tt select}: This provides normal visibility selection. If only
 a subset of pointings are being processed, it is convenient to select them here.
 In this way, models are not generated for pointings that are not of
@@ -726,8 +722,7 @@ jointly processing the multiple Stokes parameters as well as
 processing the different pointings. With polarised emission being potentially
 positive and negative valued, the entropy measure for this is different
 from a simple total intensity deconvolution. See
-\htmladdnormallink{Sault et al. (1999)}
-{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1999A\%26AS..139..387S}
+\href{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1999A\%26AS..139..387S}{Sault et al. (1999)}
 (A\&A 139, 387) for more background on joint polarimetric deconvolution.
 
 \end{itemize}
@@ -735,7 +730,7 @@ from a simple total intensity deconvolution. See
 \section{The Individual Approach}\index{mosaicing, individual approach}
 The individual approach images, deconvolves, self-calibrates and restores
 each pointing separately. It is only when you are happy with the individual
-images that you would combine them -- using a linear mosaicing algorithm. 
+images that you would combine them -- using a linear mosaicing algorithm.
 
 As noted above, the individual approach is less automated and can produce
 fundamentally poorer deconvolutions. However in some high-dynamic range
@@ -747,7 +742,7 @@ the deconvolution). With the `individual approach', it is possible to
 deconvolve sources (and thus eliminate their sidelobes -- which is the
 important issue) beyond the limit
 where \miriad's primary beam model gives up. To do this, however, you
-must make images larger than the main primary beam lobe 
+must make images larger than the main primary beam lobe
 (see Table~\ref{t:mossize} above).
 
 In the following, we assume that the `joint approach' section has been
@@ -789,7 +784,7 @@ source being imaged. If there is a point source which dominates the
 image, you might choose its position as the tangent point to help reduce
 deconvolution problems.
 The tangent point is given through the \verb+offset+ keyword, in the format
-{\it hh:mm:ss,dd:mm:ss} (or as decimal hours and degrees). 
+{\it hh:mm:ss,dd:mm:ss} (or as decimal hours and degrees).
 
 As an example, consider an LMC observation, where we wish to image
 field 123 (which has field name \verb+lmc_123+). Assuming we have a
@@ -814,14 +809,14 @@ imsize=& Set output image size. \\
 
 \subsection*{Deconvolution, Restoration and Self-Calibration}
 Deconvolution is no different to conventional
-observing. When restoring, 
+observing. When restoring,
 you may wish to use the same restoring beam size
 for all fields. Otherwise treat each pointing as a separate observation.
 
 Much of the discussion in
 the self-calibration section of the `joint approach' applies equally
 well here. The major difference is, of course, that because the
-deconvolution step has been performed on the individual fields, the 
+deconvolution step has been performed on the individual fields, the
 \task{demos} step is not required. If you have split the visibility
 data into separate single-pointing datasets, you will not need to
 use \verb+options=mosaic+ (although it will not hurt). Also for single-pointing
@@ -878,9 +873,8 @@ see the help file on using the \verb+options+ keyword for these.
 \section{Combining Mosaics and Single Dish Data}\index{single dish, combining with mosaics}
 \index{mosaicing, combining single dish data}
 For a good discussion of the theory and practice of combining single
-dish and mosaic data, see the 
-\htmladdnormallink{paper by Snezana Stanimirovic}
-{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=2002sdra.conf..375S}
+dish and mosaic data, see the
+\href{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=2002sdra.conf..375S}{paper by Snezana Stanimirovic}
 (ASP Conf. Series, vol 278, p 375).
 
 
@@ -993,12 +987,12 @@ Unfortunately, \miriad\ is poorly equipped to solve these problems; these
 issues are left as a difficult exercise for the user.
 
 \item Flux scale calibration:
-The single-dish and mosaic images both should have flux units of Jy/beam. 
-Although appropriate calibration during the observations is obviously the 
-best method to ensuring that the flux scales of the mosaic and 
+The single-dish and mosaic images both should have flux units of Jy/beam.
+Although appropriate calibration during the observations is obviously the
+best method to ensuring that the flux scales of the mosaic and
 single-dish images are the same, this is not always
 achieved. The flux scales of two images, that are nominally in the same units,
-can differ by a modest, but appreciable, amount. 
+can differ by a modest, but appreciable, amount.
 
 A common approach to estimating flux calibration factor is to compare the
 single-dish and mosaic images in that annulus of spatial frequencies where both
@@ -1015,7 +1009,7 @@ The tasks to perform the linear and non-linear combination both have parameters
 for setting {\em and} deducing the flux calibration factor.
 
 \item Point-spread function: In principle, knowing the point-spread function
-(the ``beam'') of the single-dish image is just as important as it is for 
+(the ``beam'') of the single-dish image is just as important as it is for
 the mosaic.
 It is best to `map' this at the time of the single-dish observations and to
 account for any change in the beam that is caused by the single-dish imaging
@@ -1039,9 +1033,9 @@ produced.
 \end{enumerate}
 
 \subsection*{The Linear Method -- IMMERGE}
-The linear method, sometimes known as feathering, can be thought of in terms 
+The linear method, sometimes known as feathering, can be thought of in terms
 of operations in the
-Fourier (spatial frequency) domain of the images. If the single-dish 
+Fourier (spatial frequency) domain of the images. If the single-dish
 image  is a good representation of the object at low spatial frequencies,
 and if the mosaic
 image is a good representation at mid to high spatial frequencies, then the
@@ -1049,7 +1043,7 @@ two sorts of data can be merged in the Fourier plane to form an image
 accurate up to the resolution of the mosaic image. This is exactly what
 \task{immerge} does.
 
-The way that \task{immerge} normally combines the data is to give unit 
+The way that \task{immerge} normally combines the data is to give unit
 weight to the single-dish data
 at all spatial frequencies, and to taper the low spatial frequencies of
 the mosaic data. This tapering is such that the sum of single dish and tapered
@@ -1060,7 +1054,7 @@ add to give an overall response of a gaussian form.
 
 \begin{figure}
 \begin{center}
-\leavevmode\epsffile{immerge.ps}
+\includegraphics{immerge.pdf}
 \end{center}
 \caption{Spatial frequencies sampled by Parkes and the ATCA}
 \label{fig:immerge}
@@ -1075,7 +1069,7 @@ Because \task{immerge} assumes that the beams of both the single-dish and
 mosaic images are gaussian forms,
 you will want to use images which approximate this.
 Whereas single-dish images usually approximate this reasonably, a dirty
-mosaic does not. Instead, 
+mosaic does not. Instead,
 {\em you will want to use a deconvolved/restored mosaic}
 in the \task{immerge} process.
 
@@ -1115,16 +1109,16 @@ of {\tt region} parameter, {\em only plane selection} is allowed, with the
 Generally you would choose
 planes with appreciable structure which is well represented
 in both single-dish and mosaic data. The default is to include all planes.
-\item {\tt device} sets the PGPLOT plotting device where plots are make of 
+\item {\tt device} sets the PGPLOT plotting device where plots are make of
 a comparison between the data in the overlap region. Two plots are produced.
-For the first plot, the axes gives the 
+For the first plot, the axes gives the
 value of a pixel (both real or imaginary values are included) in the mosaic
 (\MM{x} axis) and single-dish data (\MM{y} axis). These pixel values are after
 tapering, scale factor fiddles, and after applying the calibration scale factor that
 has just be deduced. The data should follow a ``\MM{y=x}'' form (which is
 also plotted in red). The second plot gives the residual difference
-between the mosaic and single-dish data (i.e. the difference from \MM{y=x}) as 
-a function of spatial frequency. A trend in these residuals might suggest 
+between the mosaic and single-dish data (i.e. the difference from \MM{y=x}) as
+a function of spatial frequency. A trend in these residuals might suggest
 that the single-dish beam parameters are grossly wrong.
 Although the default is not to create a plot, there seems little reason
 why you would not want to inspect it.
@@ -1145,7 +1139,7 @@ For the  mosaic, normally \task{restor} will have
 saved the beam parameters in the dataset. However it is likely that you
 will need to add the single-dish beam parameters to the single-dish dataset.
 The items you want to set are {\tt bmaj}, {\tt bmin} and possible {\tt bpa}
-(beam major, minor axis size and position angle respectively), which are 
+(beam major, minor axis size and position angle respectively), which are
 set using \task{puthd}.
 
 \begin{center}
@@ -1172,7 +1166,7 @@ value=18.8,arcmin & Width is 18.8 arcminutes.\\
 
 When emission continues to the edge of the image (or near the edge),
 algorithms such as that used by \task{immerge} can suffer edge artifacts.
-If these are problematic, 
+If these are problematic,
 \task{immerge} has a some parameters which you might like to try to reduce
 the problem.
 Task \task{immerge} pads images with
@@ -1207,7 +1201,7 @@ The non-linear
 combination uses the task \task{mosmem} (and the maximum entropy principle)
 to perform a joint deconvolution of the mosaic and single-dish images. It
 finds the model which maximises the entropy, subject to two
-separate $\chi^2$ constraints (one each for the mosaic and 
+separate $\chi^2$ constraints (one each for the mosaic and
 single-dish images).
 Usage of \task{mosmem} is similar to that in Section~\ref{s:mosdeconv},
 expect that there are now two parameter values for the {\tt map},
@@ -1246,12 +1240,12 @@ out=lmc.sd\_beam	& Output is the beam dataset.\\
 
 Task \task{mosmem} needs to know the rms noise in the two input
 images. It determines this by multiplying the theoretical rms noise
-(the theoretical noise is required to be present in the dataset) with 
-the {\tt rmsfac} input parameter. While \task{invert} will have saved the 
+(the theoretical noise is required to be present in the dataset) with
+the {\tt rmsfac} input parameter. While \task{invert} will have saved the
 required noise information in the mosaic dataset, you will most likely have to
 add some estimate of the theoretical noise level to the single-dish
-dataset. You could estimate this by using \task{cgcurs} 
-(using {\tt options=stat}) to determine the rms level in some blank part 
+dataset. You could estimate this by using \task{cgcurs}
+(using {\tt options=stat}) to determine the rms level in some blank part
 of the sky (see Section~\ref{s:pgplot}). Task \task{puthd} can then be
 used to set the appropriate item (named, surprisingly, {\tt rms})
 in the single-dish image. For example:
@@ -1279,8 +1273,8 @@ determine this parameter by default. However \task{mosmem} still has the
 ability to solve for the calibration factor -- use {\tt options=dofactor}
 to turn this on. In this case, the {\tt factor} parameter is used as
 an initial estimate (it should be a reasonably good estimate). Unlike
-\task{immerge}, you do not need to tell \task{mosmem} what the overlap 
-annulus is -- this information is implicit in the beam datasets. 
+\task{immerge}, you do not need to tell \task{mosmem} what the overlap
+annulus is -- this information is implicit in the beam datasets.
 
 It might be instructive to compare the factor estimated by \task{mosmem} and
 \task{immerge} -- they can differ significantly, and yet both seem to
@@ -1288,7 +1282,7 @@ be consistent with the data.
 
 If you use {\tt options=dofactor} with a spectral cube, \task{mosmem} will
 work out a separate flux calibration factor for each plane. This is not
-what you probably want (particularly for planes that are predominantly noise!). 
+what you probably want (particularly for planes that are predominantly noise!).
 In this case, its better to deduce the calibration factor beforehand, and
 not to use {\tt options=dofactor} in \task{mosmem}.
 Some approaches to deduce the calibration factor beforehand include:
@@ -1341,8 +1335,7 @@ will want to correct the flux calibration factor manually before using either
 of these (e.g. \task{immerge} can do this for you).
 Some examples of using these approaches are given
 in the
-\htmladdnormallink{paper by Snezana Stanimirovic}
-{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=2002sdra.conf..375S}
+\href{https://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=2002sdra.conf..375S}{paper by Snezana Stanimirovic}
 (ASP Conf. Series, vol. 278, p. 375).
 
 \begin{itemize}
@@ -1373,7 +1366,7 @@ the residual primary beam attenuation present in the mosaic
 to the single-dish data. Task \task{mossen} will generate an
 image of the residual primary beam attenuation (set the {\tt gain}
 parameter).
-Having generated a 
+Having generated a
 the residual primary beam attenuation, you can then apply this to
 the single-dish image using \task{maths}.
 
@@ -1389,7 +1382,7 @@ this weighting reduces to nearly the same as that performed by
 w_{\rm mos} &=& \frac{\Omega_{\rm SD}}{\Omega_{\rm mos}+\Omega_{\rm SD}} \\
 w_{\rm SD} &=& \frac{\Omega_{\rm mos}}{\Omega_{\rm mos}+\Omega_{\rm SD}}
 \end{eqnarray*}
-(where $\Omega_{\rm mos}$ and $\Omega_{\rm SD}$ are the beam volumes of 
+(where $\Omega_{\rm mos}$ and $\Omega_{\rm SD}$ are the beam volumes of
 the synthesised mosaic beam and the single-dish beam respectively).
 
 To generate the effective beam dataset, you will also want to add
@@ -1398,7 +1391,7 @@ a component to the mosaic beam. Because of the process that
 component you add is not simply the single-dish beam -- the mosaicing process
 narrows down the width of the beams from that of individual
 pointings. If both the interferometer primary beam and the single-dish beam
-are gaussian forms with widths $\theta_{\rm int}$ and $\theta_{\rm SD}$ 
+are gaussian forms with widths $\theta_{\rm int}$ and $\theta_{\rm SD}$
 respectively, then you will want to add a gaussian to the mosaic beam
 dataset which has a width
 \[
@@ -1414,12 +1407,12 @@ you will want to add a gaussian to each plane.
 Task \task{imgen} can be used to do this,
 although it warns you that its handling of cubes
 is crude!
-With \task{imgen}, you can set the weighting by appropriately setting the 
+With \task{imgen}, you can set the weighting by appropriately setting the
 scaling factor ({\tt factor} parameter) and the amplitude of the
 gaussian ({\tt spar} parameter).
 
 Note that this technique ignores some edge effects.
-Also it uses the theoretical noise level derived for the 
+Also it uses the theoretical noise level derived for the
 mosaic observation. This will be close to what you want if the noise
-levels for all pointings are about the same. 
+levels for all pointings are about the same.
 \end{itemize}

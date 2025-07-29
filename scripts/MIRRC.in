@@ -3,8 +3,6 @@
 # Usage: source MIRRC
 #-----------------------------------------------------------------------------
 # Set Miriad environment variables.
-#
-# $Id: MIRRC.in,v 1.8 2020/10/12 03:54:35 mci156 Exp $
 #-----------------------------------------------------------------------------
 # Miriad root directory set by configure or otherwise.
   setenv MIR @MIRROOT@
@@ -12,22 +10,8 @@
 # Important Miriad subdirectories.
   setenv MIRCAT  $MIR/cat
   setenv MIRPDOC $MIR/doc
-  setenv MIRINC  $MIR/inc
-  setenv MIRPROG $MIR/prog
-  setenv MIRSUBS $MIR/subs
-  if (-e $MIR/man) setenv MIRMAN $MIR/man
-
-# Miriad architecture.
-  setenv MIRARCH `$MIR/scripts/mirarch`
-  if ("$MIRARCH" == unknown) then
-    echo "### Unknown host architecture -- no Miriad executables."
-  endif
-
-# Miriad system subdirectories.
-  setenv MIRARCHD $MIR/$MIRARCH
-  setenv MIRBIN   $MIRARCHD/bin
-  setenv MIRLIB   $MIRARCHD/lib
-  setenv MIRMAN   $MIRARCHD/man
+  setenv MIRBIN   $MIR/bin
+  setenv MIRLIB   $MIR/lib
 
 # Set up the user's directory to receive .def files.
   if (! $?MIRDEF) then
@@ -36,30 +20,4 @@
   endif
 
 # setenv PGPLOT_BUFFER TRUE
-  if (-e $MIRLIB/grfont.dat) setenv PGPLOT_FONT $MIRLIB/grfont.dat
-
-# Prefix MIRLIB to LD_LIBRARY_PATH
-  if ($?LD_LIBRARY_PATH) then
-    # test if it's there already
-    set _hasit = `echo "$LD_LIBRARY_PATH" | grep -c -F "$MIRLIB"`
-    if ("$_hasit" == "0") then
-      setenv LD_LIBRARY_PATH "${MIRLIB}:${LD_LIBRARY_PATH}"
-    endif
-    unset _hasit
-  else
-    setenv LD_LIBRARY_PATH "${MIRLIB}:${HOME}/lib:/usr/local/lib:/lib:/usr/lib"
-  endif
-
-# Set DYLD_FALLBACK_LIBRARY_PATH as well on Darwin/MacOSX. Append default value if empty
-  if ("$MIRARCH" == darwin_x86_64) then
-    if ($?DYLD_FALLBACK_LIBRARY_PATH) then
-      # test if it's there already
-      set _hasit = `echo "$LD_LIBRARY_PATH" | grep -c -F "$MIRLIB"`
-      if ("$_hasit" == "0") then
-        setenv DYLD_FALLBACK_LIBRARY_PATH "${MIRLIB}:$DYLD_FALLBACK_LIBRARY_PATH"
-      endif
-      unset _hasit
-    else
-      setenv DYLD_FALLBACK_LIBRARY_PATH "${MIRLIB}:${HOME}/lib:/usr/local/lib:/lib:/usr/lib"
-    endif
-  endif
+if (-e $MIRLIB/grfont.dat) setenv PGPLOT_FONT $MIRLIB/grfont.dat

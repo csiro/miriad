@@ -13,7 +13,6 @@
   Usage:
                 doc2man [-section] file.doc > file.man
                                                                         */
-/*$Id: doc2man.c,v 1.3 2010/04/28 07:41:05 cal103 Exp $*/
 /*--                                                                    */
 /*
   History:

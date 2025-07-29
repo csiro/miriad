@@ -52,7 +52,6 @@
 #   $MIR/specdoc/	...always updated.
 #
 # Original: 2006/11/28 Mark Calabretta, ATNF
-# $Id: mirsync,v 1.11 2015/03/04 03:06:36 wie017 Exp $
 #-----------------------------------------------------------------------------
 
   trap 'exit 1' 1 2 3 15

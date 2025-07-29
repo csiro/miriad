@@ -3,8 +3,6 @@
 # Usage: mirexport
 #-----------------------------------------------------------------------------
 # Generate Miriad update tar files for distribution from the ftp area.
-#
-# $Id: mirexport,v 1.9 2011/08/24 23:32:55 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Initialize.
   cd $MIR

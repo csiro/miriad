@@ -1,0 +1,39 @@
+name: Build Miriad
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-22.04, macos-14]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install dependencies (Linux)
+      if: runner.os == 'Linux'
+      run: sudo apt-get update && sudo apt-get install -y gfortran libx11-dev libpng-dev libreadline-dev
+
+    - name: Install dependencies (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        brew install gcc libx11 libpng readline xorgproto
+
+    - name: Configure CMake
+      run: cmake -S . -B build -DCMAKE_INSTALL_PREFIX=/miriad
+
+    - name: Build project
+      run: cmake --build build -- -j$(sysctl -n hw.logicalcpu 2>/dev/null || nproc)
+
+    - name: Run CPack packaging
+      run: cmake --build build --target package
+
+    - name: Upload package artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: miriad-package-${{ runner.os }}
+        path: build/*.tar.gz

@@ -1,8 +1,5 @@
 #!/usr/local/bin/perl -- -*- perl -*-
 #
-# $Source: /var/tmp/RrsvEF/cvsroot/miriad-dist/RCS/scripts/web/mirsearch.pl,v $
-# $Id: mirsearch.pl,v 1.6 2019/01/10 23:05:43 mci156 Exp $
-#
 # miriadsearch.pl    David Mar  13-Mar-1996
 # modified from: sitesearch.pl    David Mar  29-Sep-1995
 # modified for new server         Henrietta May 12 Mar 1998

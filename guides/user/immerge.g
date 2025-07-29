@@ -1,5 +1,5 @@
-set terminal postscript eps
-set output "immerge.ps"
+set terminal pdf
+set output "immerge.pdf"
 set yrange [-0.05:1.05]
 set nozeroaxis
 set samples 500
@@ -13,5 +13,3 @@ f2(lambda) = exp(-(lambda/fwhm2)**2)
 set xlabel "Spatial Frequency (wavelengths)"
 set ylabel "Amplitude"
 plot [0:3500] f1(x) title "Parkes", f2(x)-f1(x) title "Tapered ATCA", f2(x) title "Merged"
-
-

@@ -1,7 +1,0 @@
-#!/bin/csh -f
-
-cp $MIR/scripts/unix/irix/mircadd.csh $MIRBIN/mircadd
-cp $MIR/scripts/unix/irix/mirclnk.csh $MIRBIN/mirclnk
-chmod +x $MIRBIN/mircadd $MIRBIN/mirclnk
-touch $MIR/prog/imgen.for $MIR/prog/uvgen.for $MIR/prog/imstat.for $MIR/subs/noise.for
-mirupdate

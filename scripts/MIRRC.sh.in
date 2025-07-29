@@ -3,79 +3,43 @@
 # Usage: . MIRRC.sh
 #-----------------------------------------------------------------------------
 # Bourne shell (bash or ksh) version of MIRRC originally by George Martin.
-#
-# $Id: MIRRC.sh.in,v 1.9 2020/10/12 03:54:35 mci156 Exp $
 #-----------------------------------------------------------------------------
 # Miriad root directory set by configure or otherwise.
-  MIR=@MIRROOT@ ; export MIR
+  MIR=@MIRROOT@; export MIR
 
 # Important Miriad subdirectories.
   MIRCAT=$MIR/cat  ; export MIRCAT
   MIRPDOC=$MIR/doc ; export MIRPDOC
-  MIRINC=$MIR/inc  ; export MIRINC
-  MIRPROG=$MIR/prog; export MIRPROG
-  MIRSUBS=$MIR/subs; export MIRSUBS
-  [ -d $MIR/man ] && MIRMAN=$MIR/man ; export MIRMAN
-
-# Miriad architecture.
-  MIRARCH=`$MIR/scripts/mirarch` ; export MIRARCH
-  if [ "$MIRARCH" = unknown ]
-  then
-    echo "### Unknown host architecture -- no Miriad executables."
-  fi
-
-# Miriad system subdirectories.
-  MIRARCHD=$MIR/$MIRARCH ; export MIRARCHD
-  MIRBIN=$MIRARCHD/bin   ; export MIRBIN
-  MIRLIB=$MIRARCHD/lib   ; export MIRLIB
-  MIRMAN=$MIRARCHD/man   ; export MIRMAN
+  MIRBIN=$MIR/bin   ; export MIRBIN
+  MIRLIB=$MIR/lib   ; export MIRLIB
 
 # Set up the user's directory to receive .def files.
-  if [ -z "$MIRDEF" ]
+if [ -z "$MIRDEF" ]
+then
+  if [ -d $HOME/mirdef ]
   then
-    if [ -d $HOME/mirdef ]
-    then
-      MIRDEF=$HOME/mirdef
-    else
-      MIRDEF=.
-    fi
-
-    export MIRDEF
-  fi
-
-# PGPLOT_BUFFER=TRUE ; export PGPLOT_BUFFER
-  if [ -f $MIRLIB/grfont.dat ]
-  then
-    PGPLOT_FONT=$MIRLIB/grfont.dat ; export PGPLOT_FONT
-  fi
-
-# Prefix MIRLIB to LD_LIBRARY_PATH
-  if [ "${LD_LIBRARY_PATH}" != "" ]
-  then
-    _hasit=`echo "$LD_LIBRARY_PATH" | grep -c -F "$MIRLIB"`
-    if [ "$_hasit" = "0" ]
-    then
-      LD_LIBRARY_PATH="${MIRLIB}:${LD_LIBRARY_PATH}"
-    fi
-    unset _hasit
+    MIRDEF=$HOME/mirdef
   else
-    LD_LIBRARY_PATH="${MIRLIB}:${HOME}/lib:/usr/local/lib:/lib:/usr/lib"
+    MIRDEF=.
   fi
-  export LD_LIBRARY_PATH
+  export MIRDEF
+fi
 
-# Set DYLD_FALLBACK_LIBRARY_PATH as well on Darwin/MacOSX. Append default value if empty
-  if [ "$MIRARCH" = darwin_x86_64 ]
+if [ -f $MIRLIB/grfont.dat ]
+then
+  PGPLOT_FONT=$MIRLIB/grfont.dat ; export PGPLOT_FONT
+fi
+
+# Prefix MIRBIN to PATH
+if [ "${PATH}" != "" ]
+then
+  _hasit=`echo "$PATH" | grep -c -F "$MIRBIN"`
+  if [ "$_hasit" = "0" ]
   then
-    if [ "$DYLD_FALLBACK_LIBRARY_PATH" != "" ]
-    then
-      _hasit=`echo "$LD_LIBRARY_PATH" | grep -c -F "$MIRLIB"`
-      if [ "$_hasit" = "0" ]
-      then
-          DYLD_FALLBACK_LIBRARY_PATH="${MIRLIB}:$DYLD_FALLBACK_LIBRARY_PATH"
-      fi
-      unset _hasit
-    else
-      DYLD_FALLBACK_LIBRARY_PATH="${MIRLIB}:${HOME}/lib:/usr/local/lib:/lib:/usr/lib"
-    fi
-    export DYLD_FALLBACK_LIBRARY_PATH
+    PATH="${MIRBIN}:${PATH}"
   fi
+  unset _hasit
+else
+  PATH="${MIRBIN}:${HOME}/bin:/usr/local/bin:/bin:/usr/bin"
+fi
+export PATH
