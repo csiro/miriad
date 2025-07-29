@@ -43,7 +43,7 @@ Note that this will reduce a few other internal limits to compensate, so only us
 
 ## Installation from pre-built binaries
 
-To install Miriad from a tar file with the binary installation, just download the file for your architecture (Linux and MacOS provided in location TBD) and extract in your preferred installation location.
+To install Miriad from a tar file with the binary installation, just download the file for your architecture (Linux or MacOS) from the latest Release and extract in your preferred installation location.
 Then, from the installation directory, run
 ```bash
 . ./post_install.sh
