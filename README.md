@@ -59,6 +59,8 @@ to prepare the MIRRC.sh file and, if needed, allow the binaries to be executed.
 - Documentation for tasks and some keywords is accessible via `mirhelp task` from the command line or just `help task` from the miriad shell
 - The User manual and other documentation can be found here: https://www.atnf.csiro.au/computing/software/miriad/ (noting that some information on that page is not up to date)
 - Miriad images can be inspected interactively using the CARTA viewer (https://cartavis.org)
+- A PDF of the User Guide for Miriad (outdated in places but still a good reference) is available from the Release location.
+- If keen and you have TeX and some helper tasks installed, you can build the User and Programmer guides yourself using -DBUILD_GUIDES on the cmake configuration step.
 
 ## License
 Miriad is free software; you can redistribute it and/or modify
