@@ -125,6 +125,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <errno.h>
 
 #if defined(INTERRUPT)
 #include <signal.h>
@@ -628,9 +629,11 @@ void dosource(int argc, char* argv[])
 /****************************************************************************/
 void doview(int argc, char* argv[])
 {
-  int i,n;
+  int i, n;
   FILE *fd;
-  char name[MAXBUF],command[MAXBUF],*viewer,*task;
+  char name[MAXBUF], *viewer, *task;
+  pid_t cpid;
+  int status;
 
   if(argc > 2) fprintf(stderr,"### Extra arguments on line ignored.\n");
   task = (argc > 1 ? argv[1] : taskname);
@@ -652,8 +655,21 @@ void doview(int argc, char* argv[])
     fclose(fd);
     if((viewer = getenv("VISUAL")) == NULL)
         if((viewer = getenv("EDITOR")) == NULL) viewer = "vi";
-    sprintf(command,"%s %s",viewer,name);
-    system(command);
+    cpid = fork();
+    if (cpid < 0) {
+      perror("doview: fork failed");
+      return;
+    } else if (cpid == 0) {
+      /* child process: run the viewer */
+      execlp(viewer, viewer, name, (char *)NULL);
+      /* If execlp returns, it failed */
+      perror("doview: execlp failed");
+      _exit(127);
+    } else {
+      /* parent process: wait for child */
+      while (waitpid(cpid, &status, 0) < 0 && errno == EINTR) ;
+      /* ignore status, just continue */
+    }
     get_vars(name);
   }
 }
@@ -926,7 +942,8 @@ void dotget(int argc, char* argv[])
     }
     get_vars(path);
     if(task != taskname)strcpy(taskname,task);
-    doinp(1,"inp");
+    char *arglist[] = { "inp", NULL };
+    doinp(1, arglist);
   } else fprintf(stderr,"### Could not read %s.def\n",task);
 }
 
