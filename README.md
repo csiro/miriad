@@ -43,7 +43,7 @@ Note that this will reduce a few other internal limits to compensate, so only us
 
 ## Installation from pre-built binaries
 
-To install Miriad from a tar file with the binary installation, just download the file for your architecture (Linux and MacOS provided in location TBD) and extract in your preferred installation location.
+To install Miriad from a tar file with the binary installation, just download the file for your architecture (Linux or MacOS) from the latest Release and extract in your preferred installation location.
 Then, from the installation directory, run
 ```bash
 . ./post_install.sh
@@ -59,6 +59,12 @@ to prepare the MIRRC.sh file and, if needed, allow the binaries to be executed.
 - Documentation for tasks and some keywords is accessible via `mirhelp task` from the command line or just `help task` from the miriad shell
 - The User manual and other documentation can be found here: https://www.atnf.csiro.au/computing/software/miriad/ (noting that some information on that page is not up to date)
 - Miriad images can be inspected interactively using the CARTA viewer (https://cartavis.org)
+- A PDF of the User Guide for Miriad (outdated in places but still a good reference) is available from the Release location.
+- If keen and you have TeX and some helper tasks installed, you can build the User and Programmer guides yourself by adding the following to the cmake configuration step:
+```
+-DBUILD_GUIDES
+```
+
 
 ## License
 Miriad is free software; you can redistribute it and/or modify
