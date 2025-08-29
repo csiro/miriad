@@ -27,7 +27,16 @@ jobs:
         brew install gfortran libx11 libpng readline xorgproto
 
     - name: Configure CMake
-      run: cmake -S . -B build -DCMAKE_INSTALL_PREFIX=/miriad -DCMAKE_Fortran_COMPILER=gfortran
+      run: |
+        if [ "$RUNNER_OS" == "macOS" ]; then
+          FC=$(ls $(brew --prefix)/bin/gfortran-* | head -n1)
+        else
+          FC=gfortran
+        fi
+        echo "Using Fortran compiler: $FC"
+        cmake -S . -B build -DCMAKE_INSTALL_PREFIX=/miriad -DCMAKE_Fortran_COMPILER=$FC
+      env:
+        RUNNER_OS: ${{ runner.os }}
 
     - name: Build project
       run: cmake --build build -- -j$(sysctl -n hw.logicalcpu 2>/dev/null || nproc)
