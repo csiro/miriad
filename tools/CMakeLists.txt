@@ -3,7 +3,9 @@ add_executable(ratty ratty.c)
 add_executable(intf2c intf2c.c)
 # Extract docs from sources
 add_executable(doc doc.c)
-install(TARGETS ratty intf2c doc DESTINATION bin)
+# Command line editing
+add_executable(ercmd ercmd.c)
+install(TARGETS ratty intf2c doc ercmd DESTINATION bin)
 
 
 # Preprocessor tools aggregate target
