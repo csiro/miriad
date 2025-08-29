@@ -27,7 +27,7 @@ jobs:
         brew install gfortran libx11 libpng readline xorgproto
 
     - name: Configure CMake
-      run: cmake -S . -B build -DCMAKE_INSTALL_PREFIX=/miriad
+      run: cmake -S . -B build -DCMAKE_INSTALL_PREFIX=/miriad -DCMAKE_Fortran_COMPILER=gfortran
 
     - name: Build project
       run: cmake --build build -- -j$(sysctl -n hw.logicalcpu 2>/dev/null || nproc)
