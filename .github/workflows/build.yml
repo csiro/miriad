@@ -25,7 +25,7 @@ jobs:
       if: runner.os == 'macOS'
       run: |
         brew install gfortran libx11 libpng readline xorgproto
-        ln -sfn $(ls $(brew --prefix)/bin/gfortran-*) /usr/local/bin/gfortran
+        ln -sfn $(ls $(brew --prefix)/bin/gfortran-*) $(brew --prefix)/bin/gfortran
         
     - name: Configure CMake
       run: cmake -S . -B build -DCMAKE_INSTALL_PREFIX=/miriad
