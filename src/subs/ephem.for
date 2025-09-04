@@ -102,7 +102,7 @@ c
 	d0 = (d2 - d1)
 	r0 = (r2 - r1) * cos(dec)
 	theta = -atan2(r0,d0)
-c	
+c
 	end
 c************************************************************************
 c* Precess -- Precess from one mean RA,DEC to another.
@@ -254,7 +254,7 @@ c
 	T = (T - 2451545d0) / 36525d0
 c
 	GMST = 24110.54841 +(8640184.812866 + (0.093104 - 6.2e-6*T)*T)*T
-	GMST = GMST / (3600*24) + UT * 
+	GMST = GMST / (3600*24) + UT *
      *	 (1.002737909350795d0 + (5.9006d-11 - 5.9d-15*T)*T)
 	lst = 2*dpi*mod(GMST+long/(2*dpi),1.d0)
 	if(lst.lt.0)lst = lst + 2*dpi
@@ -276,8 +276,8 @@ c  above the reference geoid.
 c
 c  Reference:
 c    Kenneth R. Lang, "Astrophysical Formulae", pages 493-497.
-c    Values for flattening and equatorial radius from John Reynolds,
-c    who says they are the IAU 1976 values.
+c    Bowring, B. R. (1976). Survey Review, 23(181), 323–327.
+c    Values for flattening and equatorial radius from WGS84
 c
 c  Input:
 c   x,y,z	CIO coordinates, in meters.
@@ -289,13 +289,28 @@ c------------------------------------------------------------------------
 c f  -- Earth's flattening factor
 c ae -- Earth's equatorial radius, in meters.
 c
-	double precision f,ae,fm12
-	parameter(f=1/298.257,ae=6.378140d6,fm12=(1-f*(2-f)))
+	double precision f, ae, e2, b, ep2
+c  Use WGS84 parameters for flattening and equatorial radius
+	parameter(f=1/298.257223563d0, ae=6378137.0d0, e2=2*f-f*f)
+	parameter(b=ae*(1-f),ep2=(ae*ae-b*b)/(b*b))
+	double precision p, theta, sint, cost, sinl, N
+c  Old formula has significant errors for lat and height
+c	fm12=(1-f*(2-f))
+c	long = atan2(y,x)
+c	lat =  atan(z/sqrt(x*x+y*y)/fm12)
+c	height = z/sin(lat) - ae*fm12/sqrt(1-f*(2-f)*sin(lat)**2)
 c
+c  Using Bowring's closed-form approximation
+	p = sqrt(x*x+y*y)
 	long = atan2(y,x)
-	lat =  atan(z/sqrt(x*x+y*y)/fm12)
-	height = z/sin(lat) - ae*fm12/sqrt(1-f*(2-f)*sin(lat)**2)
-c
+	theta = atan2(z * ae, p * b)
+	sint = sin(theta)
+	cost = cos(theta)
+	lat = atan2( z + ep2 *b * sint**3, p - e2 * ae * cost**3)
+	sinl = sin(lat)
+	N = ae / sqrt(1.d0 - e2 *sinl*sinl)
+	height = p / cos(lat) - N
+
 	end
 c************************************************************************
 c* llh2xyz -- Convert from latitude/longitude/height to CIO (x,y,z).
@@ -327,7 +342,7 @@ c f  -- Earth's flattening factor
 c ae -- Earth's equatorial radius, in meters.
 c
 	double precision f,ae,fm12
-	parameter(f=1/298.257,ae=6.378140d6,fm12=(1-f*(2-f)))
+	parameter(f=1/298.257223563d0, ae=6378137.0d0, fm12=(1-f*(2-f)))
 c
 	double precision Nphi
 c
@@ -335,7 +350,7 @@ c
 	x = (Nphi+height)*cos(long)*cos(lat)
 	y = (Nphi+height)*sin(long)*cos(lat)
 	z = (fm12*Nphi+height)*sin(lat)
-c 
+c
 	end
 c************************************************************************
 c* Sph2lmn -- Convert from spherical coordinates to direction cosines.
@@ -347,7 +362,7 @@ c
 	implicit none
 	double precision ra,dec,lmn(3)
 c
-c  Convert spherical coordinates (e.g. ra,dec or long,lat) into 
+c  Convert spherical coordinates (e.g. ra,dec or long,lat) into
 c  direction cosines.
 c
 c  Input:
@@ -371,7 +386,7 @@ c
 	double precision ra,dec,lmn(3)
 c
 c  Convert from direction cosines into spherical coordinates
-c  (e.g. ra,dec or long,lat) into 
+c  (e.g. ra,dec or long,lat) into
 c
 c  Input:
 c    lmn	Direction cosines.
@@ -576,7 +591,7 @@ c
 	cosdec = cos(dec)
 	rapp = ra +  (-vel(1)*sinra + vel(2)*cosra)/
      *				     (0.001*cmks*cosdec)
-	dapp = dec + (-vel(1)*cosra*sindec - vel(2)*sinra*sindec 
+	dapp = dec + (-vel(1)*cosra*sindec - vel(2)*sinra*sindec
      *		    + vel(3)*cosdec)/(0.001*cmks)
 c
 	end
@@ -688,7 +703,7 @@ c  Various parameters.
 	cosra  = cos(rmean)
 	tandec = tan(dmean)
 c
-	rtrue = rmean + (coseps + sineps*sinra*tandec)*dpsi 
+	rtrue = rmean + (coseps + sineps*sinra*tandec)*dpsi
      *		      - cosra*tandec*deps
 	dtrue = dmean + sineps*cosra*dpsi + sinra*deps
 	end
@@ -1022,7 +1037,7 @@ c
 *
 *  Author:   P.T.Wallace   Starlink   10 April 1990
 *  Modified: Bob Sault		       7 July  1997
-*  
+*
 *-
 
       IMPLICIT NONE
