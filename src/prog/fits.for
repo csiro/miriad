@@ -1972,7 +1972,7 @@ c  Convert them to the Miriad system: y is local East, z is parallel to
 c  pole Units are nanosecs.
 c
 	badan = .false.
-	if(abs(xc)+abs(yc)+abs(yc).eq.0)then
+	if(abs(xc)+abs(yc)+abs(zc).eq.0)then
 	  call goodxyz(idx,xyz,n)
 	  if(idx.ne.0)then
 	    xref = xyz(1,idx)
