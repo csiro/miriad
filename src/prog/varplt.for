@@ -357,7 +357,7 @@ c
 c     Unwrap phases
 c       dowrap      logical, if to do it at all
 c       n           number of points in array
-c       phs         array of 'n' phases [in degrees] to unwrap in-place 
+c       phs         array of 'n' phases [in degrees] to unwrap in-place
 c
 c------------------------------------------------------------------------
       LOGICAL dowrap
@@ -440,7 +440,7 @@ c
 	logical dotime,first
 c------------------------------------------------------------------------
 	integer ctime,cnum, cdnum
-	parameter(ctime=12,cnum=15,cdnum=22)
+	parameter(ctime=12,cnum=15,cdnum=23)
 	integer isec,imin,ihr,iday,i
 	logical dospace,more
 c
@@ -471,7 +471,7 @@ c
 	  else
 	    if (vtype.eq.'d') then
 	      write(line(length+1:length+cdnum),'(1pg22.15)') vals(i)
-	      length = length + cdnum 
+	      length = length + cdnum
 	    else
 	      write(line(length+1:length+cnum),'(1pg15.8)')vals(i)
 	      length = length + cnum
@@ -524,7 +524,7 @@ c  Do the plots.
 c
 	if(overlay)call PGSet(dotime,equal,vis,
      *	  xaxis,xunit,xlo,xhi,1,1,1,1,yaxis,yunit,ylo,yhi,1,1,1,1)
-c	  
+c
 	ky = 0
 	do y2=1,ydim2
 	  do y1=1,ydim1
@@ -955,7 +955,7 @@ c
      *	  'dra     ','arcsec  ',	1, rad2arc,
      *	  'epoch   ','years   ',	1, 1.d0,
      *	  'evector ','degrees ',	1, rad2deg/
-	data (names(i),units(i),dim2s(i),scales(i),i=18,34)/	
+	data (names(i),units(i),dim2s(i),scales(i),i=18,34)/
      *	  'focus   ','volts   ',	1, 1.d0,
      *	  'freq    ','GHz     ',	1, 1.d0,
      *	  'freqif  ','GHz     ',	1, 1.d0,
