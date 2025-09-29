@@ -1,6 +1,7 @@
 # Miriad
 
-Miriad is a radio astronomy data reduction package designed for calibration, imaging, and analysis of interferometric observations.
+Miriad is a radio astronomy data reduction package designed for calibration, imaging, and analysis of interferometric observations. 
+This version is especially tailored for CSIRO's ATCA.
 
 ## Features
 
@@ -22,7 +23,7 @@ brew install gcc libpng readline libx11
 # For linux:
 sudo apt install gfortran libx11-dev libpng-dev libreadline-dev
 
-git clone --branch cmake --depth 1  https://github.com/csiro-internal/miriad.git
+git clone --depth 1  https://github.com/csiro-internal/miriad.git
 cd miriad
 # replace <install_path> with the path to your new Miriad installation (e.g., $HOME/miriad or /opt/miriad)
 cmake -S . -B build -DCMAKE_INSTALL_PREFIX=<install_path>
