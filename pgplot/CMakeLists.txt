@@ -38,6 +38,20 @@ set_target_properties(pgplot PROPERTIES
 
 add_dependencies(pgplot pgplot_ext)
 
+# Custom command to declare cpgplot.h as an output depending on pgplot_ext
+add_custom_command(
+  OUTPUT ${PGPLOT_SRC_DIR}/cpgplot.h
+  DEPENDS pgplot_ext
+  COMMAND ${CMAKE_COMMAND} -E echo "Header cpgplot.h is present after pgplot_ext"
+  COMMENT "Declaring cpgplot.h as a generated header"
+)
+
+# Custom target for pgplot headers
+add_custom_target(pgplot_headers DEPENDS ${PGPLOT_SRC_DIR}/cpgplot.h)
+
+# Ensure pgplot depends on the headers as well
+add_dependencies(pgplot pgplot_headers)
+
 # Install grfont.dat and rgb.txt from the PGPLOT source directory into lib
 install(FILES
   ${PGPLOT_SRC_DIR}/grfont.dat
