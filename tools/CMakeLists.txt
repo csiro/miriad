@@ -14,11 +14,16 @@ add_custom_target(preprocessor_tools DEPENDS ratty intf2c doc)
 
 # Get Git version
 execute_process(
-  COMMAND git describe --tags --dirty
+  COMMAND git describe --tags --dirty --always
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
   OUTPUT_VARIABLE GIT_VERSION
   OUTPUT_STRIP_TRAILING_WHITESPACE
+  ERROR_QUIET
 )
+
+if(NOT GIT_VERSION)
+  set(GIT_VERSION "unknown")
+endif()
 
 # Configure version header
 configure_file(
