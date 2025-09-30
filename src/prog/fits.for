@@ -95,9 +95,9 @@ c         nod2     Use the conventions of NOD2 FITS files.
 c@ velocity
 c       Velocity information. This is only used for op=uvin,
 c       and is only relevant for line observations.  The default is
-c       to use the information present in the FITS header.  The
-c       "velocity" parameter allows this information to be overriden or
-c       the velocity system to be changed.
+c       lsr as this is what is usually needed for line obervations.
+c       The "velocity" parameter allows this information to be overriden
+c       or the velocity system to be changed.
 c
 c       Within each line visibility data-set, Miriad stores the velocity
 c       of the observatory wrt a rest frame.  This allows account to be
@@ -106,7 +106,8 @@ c
 c       The fits task will determine the observatory velocity either by
 c       being given a velocity at a given channel (wrt a rest frame) or
 c       by using a model of Earth and solar system motion (accurate to
-c       5 m/s).
+c       5 m/s). For higher accuracy you can use the veldop.py script
+c       to recalculate velocities using astropy.
 c
 c       The "velocity" parameter can be used to specify the velocity of
 c       a particular channel.  The parameter consists of three values:
@@ -284,7 +285,7 @@ c     Externals.
 c-----------------------------------------------------------------------
       call keymatch('velocity',nopts,opts,1,string,nout)
       if (nout.eq.0) then
-        velsys = 0
+        velsys = LSRRADIO
         altr = .false.
       else
         velsys = vals(binsrcha(string,opts,nopts))
