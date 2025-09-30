@@ -34,10 +34,15 @@ version.h.in)
 
 # Prepare for versioning
 execute_process(
-  COMMAND git describe --tags --dirty
+  COMMAND git describe --tags --dirty --always
   OUTPUT_VARIABLE GIT_VERSION
   OUTPUT_STRIP_TRAILING_WHITESPACE
+  ERROR_QUIET
 )
+
+if(NOT GIT_VERSION)
+  set(GIT_VERSION "unknown")
+endif()
 
 execute_process(
   COMMAND git log -1 --format=%cd --date=short
