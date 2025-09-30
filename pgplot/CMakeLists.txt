@@ -18,7 +18,7 @@ ExternalProject_Add(pgplot_ext
   CONFIGURE_COMMAND
     ${CMAKE_COMMAND} -E chdir ${PGPLOT_SRC_DIR}
     ${PGPLOT_SRC_DIR}/makemake . ${PGPLOT_PLATFORM} gfortran_gcc
-  BUILD_COMMAND make
+  BUILD_COMMAND make -j1
   INSTALL_COMMAND ""
   BUILD_IN_SOURCE 1
   PATCH_COMMAND patch -p1 < ${CMAKE_SOURCE_DIR}/patches/pgplot531.patch
