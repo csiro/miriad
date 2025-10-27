@@ -2499,6 +2499,7 @@ c-----------------------------------------------------------------------
       integer LSRRADIO
       parameter (LSRRADIO=257)
       include 'fits.h'
+      include 'mirconst.h'
       integer i,j,k,l
       logical newsrc,newfreq,newconfg,newlst,newchi,newvel,neweq
       logical neweph
@@ -2613,6 +2614,12 @@ c
         call jullst(time,long(config),lst)
         lst = lst + eq
         call uvputvrd(tno,'lst',lst,1)
+c
+c  Compute the az and el of the antennas.
+c
+        call azel(raapp(srcidx),decapp(srcidx),lst,lat(config),az,el)
+        call uvputvrd(tno,'antaz',az*180.d0/DPI,1)
+        call uvputvrd(tno,'antel',el*180.d0/DPI,1)
       endif
 c
 c  Compute and save the parallactic angle.  Recompute whenever LST
@@ -2623,8 +2630,6 @@ c
       if (newchi) then
         call parang(raapp(srcidx),decapp(srcidx),lst,lat(config),chi)
         if (mount(config).eq.NASMYTH) then
-          call azel(raapp(srcidx),decapp(srcidx),lst,lat(config),
-     *                                                         az,el)
           chi2 = -el
           call uvputvrr(tno,'chi2',chi2,1)
         else
