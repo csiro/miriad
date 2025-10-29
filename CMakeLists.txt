@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.19)
 # Get today's date as YYYY.MM.DD
 string(TIMESTAMP MIRIAD_DATE "%Y.%m.%d")
 
@@ -57,7 +57,7 @@ set (f2c_flags
 )
 
 # Compiler flags
-add_compile_options($<$<COMPILE_LANGUAGE:C>:-DDEBUG>)
+# add_compile_options($<$<COMPILE_LANGUAGE:C>:-DDEBUG>)
 add_compile_options($<$<COMPILE_LANGUAGE:C>:-Wno-deprecated-non-prototype>)
 add_compile_options($<$<COMPILE_LANGUAGE:C>:-Wno-format>)
 add_compile_options($<$<COMPILE_LANGUAGE:C>:-Wno-sometimes-uninitialized>)
