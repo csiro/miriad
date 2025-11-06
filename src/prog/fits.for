@@ -486,6 +486,10 @@ c
       blfound = .false.
       if (dobl) call BlInit(lu,nif,blfound)
 c
+c  Load any WX tables (weather)
+c
+      call WxLoad(lu,wxfound)
+c
 c  Give a summary about various tables.
 c
       call tabinfo(lu,blfound)
@@ -928,6 +932,64 @@ c
 
       end
 
+c***********************************************************************
+
+      subroutine WxLoad(lu,wxfound)
+
+      integer lu
+      logical wxfound
+c-----------------------------------------------------------------------
+c  Load any AIPS WX tables.
+c-----------------------------------------------------------------------
+      include 'fits.h'
+      integer nval
+      character type*1,units*16
+      real dewc(MAXTIME),b,c,t0, prfac
+      parameter (b=17.625, c=243.04)
+c-----------------------------------------------------------------------
+c     Look for WX tables.
+      ntab = 0
+      call ftabLoc(lu,'AIPS WX',wxfound)
+      if (wxfound) then
+        nval = 0
+        call ftabInfo(lu,'TIME',type,units,nwth,nval)
+        if (nwth.gt.MAXTIME) call bug('f','Too many times in WX table')
+        if (nval.ne.1 .or. type.ne.'D')
+     *    call bug('f','Something screwy with WX table')
+        call output('  Using weather table information')
+        call ftabGetd(lu,'TIME',0,timewth)
+c        call ftabGetr(lu,'TIME_INTERVAL',0,interval)
+
+c        call ftabGeti(lu,'ANTENNA_NO',0,antno)
+c        call ftabGeti(lu,'SUBARRAY',0,subarr)
+        call ftabGetr(lu,'TEMPERATURE',0,tempc)
+        call ftabGetr(lu,'PRESSURE',0,pressmb)
+        call ftabGetr(lu,'DEWPOINT',0,dewc)
+        call ftabGetr(lu,'WIND_VELOCITY',0,wind)
+        call ftabGetr(lu,'WIND_DIRECTION',0,winddir)
+        call ftabGetr(lu,'WVR_H2O',0,wvr)
+c        call ftabGetr(lu,'IONOS_ELECTRON',0,elec)
+c
+c       Convert dew point to relative humidity
+c       Convert sea level pressure to actual
+c       Convert wind in m/s to km/h
+c       Convert times to JD, t0 is start of ut day
+c
+        prfac = 1.0
+        if (telescop.eq.'atca') prfac = 0.975
+        t0 = int(timeref - 0.5) + 0.5
+        do i = 1, nwth
+          dewc(i) = max(-50.0,dewc(i))
+          relhum(i) = 100 * exp(b*dewc(i)/(c+dewc(i)))/
+     *      exp(b*tempc(i)/(c+tempc(i)))
+          pressmb(i) = prfac * pressmb(i)
+          wind(i) = wind(i) * 3.6
+          timewth(i) = timewth(i) + t0
+        enddo
+        call output('  Saving weather data')
+      endif
+
+      end
 c***********************************************************************
 
       subroutine BlInit(lu,nif1,blfound)
@@ -1401,7 +1463,7 @@ c  Give information on the tables in the file.
 c
 c-----------------------------------------------------------------------
       integer NTAB
-      parameter (NTAB=6)
+      parameter (NTAB=7)
       character tabs(NTAB)*8
       logical found,givecal
       character ename*16
@@ -1410,7 +1472,8 @@ c     Externals.
       integer binsrcha
 
       data tabs/'AIPS AN ','AIPS CH ','AIPS FG ',
-     *          'AIPS FQ ','AIPS OB ','AIPS SU '/
+     *          'AIPS FQ ','AIPS OB ','AIPS SU ',
+     *          'AIPS WX '/
 c-----------------------------------------------------------------------
       call ftabloc(lu,' ',found)
       if (.not.found) call bug('f','Something is screwy')
@@ -1438,8 +1501,6 @@ c
           call output('   ... it is assumed FILLM applied these.')
         else if (ename.eq.'AIPS PO') then
           call output('  Ingoring AIPS planetary ephemeris table')
-        else if (ename.eq.'AIPS WX') then
-          call output('  Ignoring AIPS weather table')
         else if (ename.eq.'AIPS TY') then
           call output('  Ignoring AIPS system flux cal table values')
           call output('   ... it is assumed FILLM applied these.')
@@ -2150,7 +2211,7 @@ c
         s = itoaf(nconfig)
         ls = len1(s)
         write(line,'(a,a,a,f6.2,a)')
-     *    '  Decrementing times for configration ',s(1:ls),' by',
+     *    '  Decrementing times for configuration ',s(1:ls),' by',
      *        -ut1utc,' seconds (UTC-UT1).'
         call output(line)
       endif
@@ -2474,6 +2535,8 @@ c
       config = -1
       Tprev = -1
       inited = .true.
+      wthid = 0
+      T0 = -1
 
       end
 
@@ -2498,18 +2561,20 @@ c               the value corrected for clock differences.
 c-----------------------------------------------------------------------
       integer LSRRADIO
       parameter (LSRRADIO=257)
+      double precision mjd0
+      parameter(mjd0= 2400000.5d0)
       include 'fits.h'
       include 'mirconst.h'
-      integer i,j,k,l
+      integer i,j,k,l,wid
       logical newsrc,newfreq,newconfg,newlst,newchi,newvel,neweq
-      logical neweph
+      logical neweph, newwth
       real chi,chi2,dT
       double precision lst,vel,az,el
       double precision sfreq0(MAXIF),sdf0(MAXIF),rfreq0(MAXIF)
 c
 c  Externals.
 c
-      integer binsrchi,len1
+      integer binsrchi,len1, binsrchd
       double precision eqeq
 c
       if (.not.inited) call TabInit(tno)
@@ -2535,6 +2600,23 @@ c
       newconfg = config.ne.confg
       config = confg
       if (config.gt.nconfig) config = 1
+
+c     get latest weather
+      if (time.gt.tprev) then
+        wid = binsrchd(time,timewth,nwth)
+        newwth = wthid.ne.wid
+        if (newwth) then
+          wthid = wid
+          call uvputvrr(tno,'airtemp',tempc(wthid),1)
+          call uvputvrr(tno,'pressmb',pressmb(wthid),1)
+          call uvputvrr(tno,'relhumid',relhum(wthid),1)
+          call uvputvrr(tno,'wind',wind(wthid),1)
+          call uvputvrr(tno,'winddir',winddir(wthid),1)
+c        call uvputvrr(tno,'precipmm',rainmm(wthid),1)
+c        call uvputvrr(tno,'smonrms',real(wvr(wthid)),1)
+        endif
+      endif
+
 c
 c  Correct the time
 c

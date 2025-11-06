@@ -16,6 +16,9 @@ else()
   set(MIRIAD_VARIANT "")
 endif()
 
+# Debug option
+option(DEBUG "Enable debug compilation" OFF)
+
 message(STATUS "Building Miriad version ${PROJECT_VERSION}${MIRIAD_VARIANT}")
 
 
@@ -64,6 +67,9 @@ add_compile_options($<$<COMPILE_LANGUAGE:C>:-Wno-sometimes-uninitialized>)
 add_compile_options($<$<COMPILE_LANGUAGE:Fortran>:-fno-automatic>)
 add_compile_options($<$<COMPILE_LANGUAGE:Fortran>:-fallow-argument-mismatch>)
 add_compile_options($<$<COMPILE_LANGUAGE:Fortran>:-w>)
+if (DEBUG)
+  add_compile_options($<$<COMPILE_LANGUAGE:Fortran>:-g>)
+endif()
 
 # Dependencies
 find_package(X11 REQUIRED)

@@ -2,9 +2,9 @@ c***********************************************************************
 	program varlist
 	implicit none
 C
-C    List all variable names, types, and lengths in a u,v data set 
+C    List all variable names, types, and lengths in a u,v data set
 C
-C    user inputs:  dataset   - name of u,v data set 
+C    user inputs:  dataset   - name of u,v data set
 C                  outfile  - output file for listing; default = logfile
 C
 c= varlist - List all variables in dataset
@@ -27,7 +27,7 @@ c    rjs   7nov89    Some standardising and cosmetic changes.
 c    lgm  12nov89    Fix so printed variable lengths are non-zero
 c    pjt  30jun93    Wow, 2.5 years of bugfree riding, but now added MAXCHAN
 c    rjs  16sep93    Call logclose.
-c    rjs  27apr95    Distinguish between zero-length and unset 
+c    rjs  27apr95    Distinguish between zero-length and unset
 c    vjm  29mar12    Handle longer dataset names
 c  ToDo
 c    * fix questionable practice to find all uv vars (at most 300 now)
@@ -89,7 +89,7 @@ C
 	if(option(1:3) .eq. 'nam') then
 		do iv=1,nvar,5
 		   jv = min(nvar,iv+4)
-		   write(line,'(10x,5(a8,3x))') 
+		   write(line,'(10x,5(a8,3x))')
      *				(var(ivar)(3:10),ivar=iv,jv)
 		   call LogWrite(line,more)
 		enddo
