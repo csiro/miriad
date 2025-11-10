@@ -88,3 +88,49 @@ c
 	  endif
 	enddo
 	end
+c************************************************************************
+c*binsrchd -- Search a sorted list of doubles for insertion place.
+c:search,binary-search
+c+
+	integer function binsrchd(key,keys,nkeys)
+c
+	implicit none
+	integer nkeys
+	double precision key,keys(nkeys)
+c
+c  Search for interval where given key would be inserted in a list. Return the
+c  index of the lower bound. If key less than all, return 0.
+c  A binary search is used.
+c
+c  Input:
+c    key	The double to search for.
+c    keys	A list of doubles. These are assumed to be in
+c		order to allow a binary search.
+c    nkeys	The number of integers.
+c
+c  Output:
+c    binsrchd	Either the index (if interval found in the
+c		list), or zero.
+c--
+c------------------------------------------------------------------------
+	integer j,k,l
+c
+	k = 1
+	l = nkeys
+	binsrchd = 0
+	do while(k.le.l)
+	  j = (k+l)/2
+	  if(key.lt.keys(j))then
+	    l = j - 1
+	  else if(key.gt.keys(j))then
+	    k = j + 1
+	  else
+	    binsrchd = j
+	    return
+	  endif
+	enddo
+c   If not found, l will be index of last smaller element or zero
+	binsrchd = l
+	return
+
+	end
