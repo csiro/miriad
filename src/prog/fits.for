@@ -971,7 +971,7 @@ c        call ftabGeti(lu,'SUBARRAY',0,subarr)
 c        call ftabGetr(lu,'IONOS_ELECTRON',0,elec)
 c
 c       Convert dew point to relative humidity
-c       Convert sea level pressure to actual
+c       Convert sea level pressure to actual surface pressure
 c       Convert wind in m/s to km/h
 c       Convert times to JD, t0 is start of ut day
 c
@@ -980,8 +980,8 @@ c
         t0 = int(timeref - 0.5) + 0.5
         do i = 1, nwth
           dewc(i) = max(-50.0,dewc(i))
-          relhum(i) = 100 * exp(b*dewc(i)/(c+dewc(i)))/
-     *      exp(b*tempc(i)/(c+tempc(i)))
+          relhum(i) = 100 * exp(b*dewc(i)/(c+dewc(i))-
+     *      b*tempc(i)/(c+tempc(i)))
           pressmb(i) = prfac * pressmb(i)
           wind(i) = wind(i) * 3.6
           timewth(i) = timewth(i) + t0
@@ -2613,7 +2613,6 @@ c     get latest weather
           call uvputvrr(tno,'wind',wind(wthid),1)
           call uvputvrr(tno,'winddir',winddir(wthid),1)
 c        call uvputvrr(tno,'precipmm',rainmm(wthid),1)
-c        call uvputvrr(tno,'smonrms',real(wvr(wthid)),1)
         endif
       endif
 
