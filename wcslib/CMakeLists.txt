@@ -4,7 +4,7 @@ set(WCSLIB_PREFIX ${CMAKE_BINARY_DIR}/wcslib)
 set(WCSLIB_SRC_DIR ${WCSLIB_PREFIX}/src/wcslib_ext)
 
 ExternalProject_Add(wcslib_ext
-  URL https://www.atnf.csiro.au/computing/software/wcs/WCS/wcslib-8.4.tar.bz2
+  URL https://www.atnf.csiro.au/computing/software/wcs/wcslib-releases/wcslib-8.4.tar.bz2
   URL_HASH SHA256=960b844426d14a8b53cdeed78258aa9288cded99a7732c0667c64fa6a50126dc
   PREFIX ${WCSLIB_PREFIX}
   CONFIGURE_COMMAND ./configure --prefix=${WCSLIB_PREFIX}
