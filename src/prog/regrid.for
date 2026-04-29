@@ -25,7 +25,7 @@ c       (WCS) standard as defined in "WCS Paper II",
 c       Calabretta & Greisen (2002), A&A 395, 1077.
 c@ in
 c       The input image name.  In the first instance, coordinate
-c       descriptors for the output image are copied from the input.  
+c       descriptors for the output image are copied from the input.
 c       They may then be overridden by other parameters as described
 c       below.  No default.
 c@ out
@@ -130,7 +130,7 @@ c           AIR  Airy (1,D)
 c         Cylindricals:
 c           CYP  Cylindrical perspective (2,G|D)
 c           CEA  Cylindrical equal area (1,E,G)
-c           CAR  Plate carrée (aka Cartesian) (0,G) - please note that
+c           CAR  Plate carrï¿½e (aka Cartesian) (0,G) - please note that
 c                this is NOT the same as the simple linear system used
 c                previously unless the reference coordinates (CRVAL)
 c                are (0,0)
@@ -200,7 +200,7 @@ c@ options
 c       Extra processing options that alter the axis description defined
 c       by the template image, axis descriptors, or input image.
 c       Several can be given, separated by commas, with minimum-match.
-c         altprj    Interpret a CAR (plate carée) projection in the
+c         altprj    Interpret a CAR (plate carï¿½e) projection in the
 c                   input ot template image as a simple linear
 c                   coordinate system with an additional 1/cos(lat0)
 c                   scaling factor applied when computing the longitude,
@@ -232,6 +232,11 @@ c@ tol
 c       Interpolation tolerance.  Tolerate an error of the specified
 c       amount in converting pixel locations in the input to the output.
 c       Must be less that 0.5.  The default is 0.05.
+c@ div
+c       Number of divisions of the coordinate axes to use with offset
+c       option. Some projections, like TAN, require finer division near
+c       discontinuities. Default is 10 on first 3 axes. Suggested
+c       maximum: 200. Specify up to 3 values.
 c
 c--
 c  History:
@@ -255,7 +260,7 @@ c-----------------------------------------------------------------------
      *          maxc(3), maxv(3), minc(3), minv(3), n, naxes,
      *          nAxIn(MAXNAX), nAxOut(MAXNAX), nAxTem(MAXNAX), nblank,
      *          nBuf(3), ndesc, nIAxes, npv, nTAxes, nxy, off(3),
-     *          offset, order(3), xyzero
+     *          offset, order(3), xyzero, div(3), ndiv
       ptrdiff   xv, yv, zv, valid, rBuf, lBuf
       real      tol, fblank
       double precision cdelt, crpix, crval, desc(4,MAXNAX), latpol,
@@ -318,6 +323,15 @@ c     Get the input parameters.
       call keyr('tol',tol,0.05)
       if (tol.lt.0.0 .or. tol.ge.0.5)
      *  call bug('f','Invalid value for the tol parameter')
+
+      if (doOff) then
+        call mkeyi('div',div,3,ndiv)
+        do i=ndiv+1,3
+          div(i) = 10
+        enddo
+        if (div(1).le.0.or.div(2).le.0.or.div(3).le.0)
+     *    call bug('f',"Invalid div values")
+      endif
 
       call keyfin
 
@@ -515,7 +529,7 @@ c     Set up output celestial coordinates.
       call setCel(lIn, cOut, doDesc, doEqEq, doGalEq)
 
 c     Set up offset coordinates.
-      if (doOff) call doOffset(lIn,nAxIn,cOut,nAxOut)
+      if (doOff) call doOffset(lIn,nAxIn,cOut,nAxOut,div)
 
 c     Initialise coordinate conversions.
       call pCvtInit(cOut,lIn)
@@ -848,9 +862,9 @@ c       Put coordinates in the normal orientation, i.e. with north up.
 
 c***********************************************************************
 
-      subroutine doOffset(lIn,nAxIn,lOut,nAxOut)
+      subroutine doOffset(lIn,nAxIn,lOut,nAxOut,div)
 
-      integer lIn,lOut,nAxIn(3),nAxOut(3)
+      integer lIn,lOut,nAxIn(3),nAxOut(3),div(3)
 c-----------------------------------------------------------------------
       include 'maxdim.h'
 
@@ -858,19 +872,18 @@ c-----------------------------------------------------------------------
       double precision TOL
       parameter (NV = 10, TOL = 0.49d0)
 
-      logical first, valid(NV,NV,NV), warned, weird(3)
+      logical first, valid(div(1),div(2),div(3)), warned, weird(3)
       integer i, j, k, l, maxv(3), minv(3), nv1, nv2, nv3
-      double precision crpix, in(3), out(3,NV,NV,NV)
+      double precision crpix, in(3), out(3,div(1),div(2),div(3))
 
       external  itoaf
       character itoaf*2
 c-----------------------------------------------------------------------
       call pCvtInit(lIn,lOut)
 
-      nv1 = min(max(3,nAxIn(1)),NV)
-      nv2 = min(max(3,nAxIn(2)),NV)
-      nv3 = min(max(3,nAxIn(3)),NV)
-
+      nv1 = min(max(3,nAxIn(1)),div(1))
+      nv2 = min(max(3,nAxIn(2)),div(2))
+      nv3 = min(max(3,nAxIn(3)),div(3))
       first = .true.
       do k = 1, nv3
         do j = 1, nv2
@@ -1161,7 +1174,7 @@ c-----------------------------------------------------------------------
               zv(i,j) = real(out(3))
             else
               zv(i,j) = real(in(3))
-            endif            
+            endif
           endif
         enddo
       enddo
