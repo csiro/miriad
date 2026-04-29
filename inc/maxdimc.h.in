@@ -25,7 +25,7 @@
 #define MAXBUF  16777216
 
 /* Maximum number of pixels on an image axis. */
-#define MAXDIM  32768
+#define MAXDIM  @MAXDIM@
 
 /* Maximum number of image axes. */
 #define MAXNAX  7
@@ -46,4 +46,4 @@
 #define MAXWIDE @MAXWIDE@
 
 /* Maximum number of mosaic pointings. */
-#define MAXPNT 20000
+#define MAXPNT @MAXPNT@
