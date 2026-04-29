@@ -130,7 +130,7 @@ c           AIR  Airy (1,D)
 c         Cylindricals:
 c           CYP  Cylindrical perspective (2,G|D)
 c           CEA  Cylindrical equal area (1,E,G)
-c           CAR  Plate carr�e (aka Cartesian) (0,G) - please note that
+c           CAR  Plate Carrée (aka Cartesian) (0,G) - please note that
 c                this is NOT the same as the simple linear system used
 c                previously unless the reference coordinates (CRVAL)
 c                are (0,0)
@@ -200,7 +200,7 @@ c@ options
 c       Extra processing options that alter the axis description defined
 c       by the template image, axis descriptors, or input image.
 c       Several can be given, separated by commas, with minimum-match.
-c         altprj    Interpret a CAR (plate car�e) projection in the
+c         altprj    Interpret a CAR (Plate Carrée) projection in the
 c                   input ot template image as a simple linear
 c                   coordinate system with an additional 1/cos(lat0)
 c                   scaling factor applied when computing the longitude,
