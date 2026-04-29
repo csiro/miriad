@@ -868,9 +868,8 @@ c***********************************************************************
 c-----------------------------------------------------------------------
       include 'maxdim.h'
 
-      integer NV
       double precision TOL
-      parameter (NV = 10, TOL = 0.49d0)
+      parameter (TOL = 0.49d0)
 
       logical first, valid(div(1),div(2),div(3)), warned, weird(3)
       integer i, j, k, l, maxv(3), minv(3), nv1, nv2, nv3
