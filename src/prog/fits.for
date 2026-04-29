@@ -1652,8 +1652,6 @@ c
         call output('  Using antenna table information')
         nconfig = nconfig + 1
         call ftabInfo(lu,'STABXYZ',type,units,n,nxyz)
-        if (nconfig.gt.MAXCONFG)
-     *    call bug('f','Too many array configurations')
         if (nxyz.ne.3 .or. n.le.0 .or. type.ne.'D')
      *    call bug('f','Something is screwy with the antenna table')
         if (n.gt.MAXANT) call bug('f','Too many antennas for me')
@@ -1728,6 +1726,10 @@ c
         emok = emok .and. .not.badmnt
 
         call ftabNxt(lu,'AIPS AN',found)
+        if (nconfig.ge.MAXCONFG) then
+          call bug('w','Too many array configurations')
+          found = .false.
+        endif
       enddo
 c
 c  If no antenna table was found, try for an OB table!

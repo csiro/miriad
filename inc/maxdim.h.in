@@ -1,29 +1,18 @@
 C=======================================================================
 C-----------------------------------------------------------------------
 C     Size of an INTEGER array used to implement a memory heap.  This
-C     array is the sole variable in blank COMMON in Miriad.  Trial-and-
-C     error compilations on an x86-64 system with gcc/g77 show that the
-C     limit on MAXBUF for which most tasks build successfully is
-C     1073741823 (2**30 - 1) which corresponds to 4GiB.  With MAXDIM
-C     less than 32768 the limit for which all tasks build successfully
-C     is about 260000000; unsuccessful links produce messages about
-C     truncated relocations, imom being the worst offender.
+C     array is the sole variable in blank COMMON in Miriad.
 C     The default value allocates 128MiB (for normal 4-byte INTEGERs).
       INTEGER   MAXBUF
       PARAMETER(MAXBUF = @MAXBUF@)
 
 C     Maximum image axis length.  Array dimensions are typically a few
 C     times MAXDIM (never MAXDIM**2) so MAXDIM is associated with a much
-C     smaller allocation of static memory than MAXBUF.  Thus the default
-C     value of MAXDIM is quite generous.
-C     The current value of MAXDIM is the largest value that keeps the
-C     memory allocation to store a single image plane below the current
-C     limit of 8GB. Note that invert is limited to 32768, the highest
-C     power of 2 below the limit.
+C     smaller allocation of static memory than MAXBUF.
       INTEGER   MAXDIM
-      PARAMETER(MAXDIM = 32768)
+      PARAMETER(MAXDIM = @MAXDIM@)
 
-C     Maximum number of antennas (ATA=64).
+C     Maximum number of antennas.
       INTEGER   MAXANT
       PARAMETER(MAXANT = @MAXANT@)
 
@@ -45,9 +34,9 @@ C     Maximum number of wideband channels.
 
 C     Maximum number of frequency bins in gains table
       INTEGER   MAXFBIN
-      PARAMETER(MAXFBIN = 16)
+      PARAMETER(MAXFBIN = @MAXFBIN@)
 
 C     Maximum number of mosaic pointings
       INTEGER   MAXPNT
-      PARAMETER(MAXPNT = 20000)
+      PARAMETER(MAXPNT = @MAXPNT@)
 C=======================================================================
