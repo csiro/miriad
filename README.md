@@ -18,7 +18,7 @@ To build Miriad using CMake:
 ```bash
 # For MacOS:
 # if you have XQuartz installed (brew install xquartz), which you probably should, you can omit libx11
-brew install gcc libpng readline libx11
+brew install gcc libpng readline libx11 libext
 
 # For linux:
 sudo apt install gfortran libx11-dev libpng-dev libreadline-dev
