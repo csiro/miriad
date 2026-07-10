@@ -107,7 +107,7 @@ c
 	      call insert(array(k1),k2-k1+1)
 	      k1 = k2
 	    else
-	      call split(array,k1,k2,temp,i)
+	      call qsplit(array,k1,k2,temp,i)
 	      if(i-k1.lt.k2-i+1)then
 	        stack = stack + 1
 	        start(stack) = i+1
@@ -125,7 +125,7 @@ c
 c
 	end
 c************************************************************************
-	subroutine split(array,i,j,pivot,part)
+	subroutine qsplit(array,i,j,pivot,part)
 c
 	implicit none
 	integer i,j,part

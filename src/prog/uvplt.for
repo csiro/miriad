@@ -3135,7 +3135,7 @@ c
                 ipl1 = int(log10(real(a1a2(kp,1)))) + 1
                 ipl2 = int(log10(real(a1a2(kp,2)))) + 1
                 write(title(il1+3:),
-     *            '('//fmt(ipl1)//'''-'''//fmt(ipl2)//')')
+     *            '('//fmt(ipl1)//',''-'','//fmt(ipl2)//')')
      *            a1a2(kp,1), a1a2(kp,2)
               endif
 c
