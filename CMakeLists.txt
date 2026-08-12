@@ -73,6 +73,12 @@ add_compile_options($<$<COMPILE_LANGUAGE:Fortran>:-w>)
 if (DEBUG)
   add_compile_options($<$<COMPILE_LANGUAGE:Fortran>:-g>)
 endif()
+if (LARGEN)
+  # LARGEN's enlarged COMMON blocks (e.g. MAXBUF) overflow the default
+  # small memory model's 32-bit relocations, so linking needs a wider model.
+  add_compile_options($<$<COMPILE_LANGUAGE:C>:-mcmodel=medium>)
+  add_compile_options($<$<COMPILE_LANGUAGE:Fortran>:-mcmodel=medium>)
+endif()
 
 # Dependencies
 find_package(X11 REQUIRED)
