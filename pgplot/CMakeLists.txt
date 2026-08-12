@@ -10,6 +10,14 @@ else()
   set(PGPLOT_PLATFORM linux)
 endif()
 
+set(PGPLOT_EXTRA_ARGS "")
+if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.24)
+  # DOWNLOAD_EXTRACT_TIMESTAMP is only recognized by ExternalProject_Add on
+  # CMake >= 3.24; on older versions it gets silently swallowed into the
+  # preceding PATCH_COMMAND argument list, corrupting the patch invocation.
+  list(APPEND PGPLOT_EXTRA_ARGS DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
+endif()
+
 ExternalProject_Add(pgplot_ext
   URL https://sites.astro.caltech.edu/~tjp/pgplot/macos/pgplot531.tar.gz
   URL_HASH SHA256=4bcb09a03b19ebfe30e79435a54e641478099e674f4df8a289fdbde3a827f7bf
@@ -22,7 +30,7 @@ ExternalProject_Add(pgplot_ext
   INSTALL_COMMAND ""
   BUILD_IN_SOURCE 1
   PATCH_COMMAND patch -p1 < ${CMAKE_SOURCE_DIR}/patches/pgplot531.patch
-  DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+  ${PGPLOT_EXTRA_ARGS}
 )
 
 # Define an imported library target for the built PGPLOT static library
