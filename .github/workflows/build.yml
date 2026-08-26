@@ -15,7 +15,7 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Install dependencies (Linux)
       if: runner.os == 'Linux'
@@ -37,7 +37,7 @@ jobs:
       run: cmake --build build --target package
 
     - name: Upload package artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: miriad-package-${{ runner.os }}
         path: build/*.tar.gz
