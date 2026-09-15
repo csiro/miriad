@@ -1131,7 +1131,7 @@ int task_args(char* task)
       if ((dir = getenv("MIRPDOC"))) {
         while (dir) {
           if ((t = strchr(dir, ':'))) {
-            sprintf(path, "%.*s/%s.doc", (t-dir), dir, task);
+            sprintf(path, "%.*s/%s.doc", (int)(t-dir), dir, task);
             dir = t + 1;
           } else {
             sprintf(path, "%s/%s.doc", dir, task);
