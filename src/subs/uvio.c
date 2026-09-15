@@ -4797,11 +4797,11 @@ private void uvinfo_variance(UV *uv,double *data)
       if(nsyst >= nants*(offset+1)) syst +=  nants*offset;
       t2 = syst;
       for(j=0; j < nants; j++){
-	t1 = syst;
+        t1 = syst;
         for(i=0; i <= j; i++){
-	  *tab++ = factor * *t1++ * *t2;
-	}
-	t2++;
+          *tab++ = (double)factor * *t1++ * *t2;
+        }
+        t2++;
       }
     }
   }
@@ -4952,9 +4952,9 @@ private void uvinfo_variancef(UV *uv,double *data)
           t1c=t1+line->start;
           t2c=t2+line->start;
           for (k=0; k<n; k++) {
-            *tab = factor * *t1c * *t2c;
+            *tab = (double)factor * *t1c * *t2c;
             if (line->width>1) {
-              for (l=1 ; l<line->width; l++) *tab += factor * t1c[l] * t2c[l];
+              for (l=1 ; l<line->width; l++) *tab += (double)factor * t1c[l] * t2c[l];
               *tab /=line->width;
             }
             t1c+=line->step; t2c+=line->step;
